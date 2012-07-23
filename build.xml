@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="jitsi-videobridge">
+
+  <property file="local.properties" />
+  <property name="output" value="classes" />
+  <property name="run.arg.line" value="" />
+  <property name="run.jvmarg.line" value="" />
+
+  <path id="compile.classpath">
+    <fileset dir="lib" includes="*.jar" />
+  </path>
+  <path id="run.classpath">
+    <path refid="compile.classpath" />
+    <pathelement location="${output}" />
+  </path>
+
+  <target name="clean">
+    <delete failonerror="false" includeemptydirs="true">
+      <fileset dir="${output}" />
+    </delete>
+  </target>
+
+  <target name="compile">
+    <mkdir dir="${output}" />
+    <javac
+        classpathref="compile.classpath"
+        destdir="${output}"
+        fork="true"
+        source="1.5"
+        srcdir="src"
+        target="1.5" />
+  </target>
+
+  <target name="run">
+    <java
+        classname="org.jitsi.videobridge.Main"
+        classpathref="run.classpath"
+        failonerror="true"
+        fork="true" >
+      <jvmarg line="${run.jvmarg.line}" />
+      <arg line="${run.arg.line}" />
+    </java>
+  </target>
+
+</project>
