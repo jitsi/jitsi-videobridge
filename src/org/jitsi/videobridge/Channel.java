@@ -120,10 +120,15 @@ public class Channel
 
         stream
             = getMediaService().createMediaStream(this.content.getMediaType());
+        /*
+         * Add the PropertyChangeListener to the MediaStream prior to performing
+         * further initialization so that we do not miss changes to the values
+         * of properties we may be interested in.
+         */
+        stream.addPropertyChangeListener(streamPropertyChangeListener);
         stream.setConnector(streamConnector);
         stream.setName(this.id);
         stream.setRTPTranslator(this.content.getRTPTranslator());
-        stream.addPropertyChangeListener(streamPropertyChangeListener);
         stream.start();
 
         touch();
@@ -581,7 +586,7 @@ public class Channel
             if (newValue instanceof RTPConnectorInputStream)
             {
                 String rtpConnectorPropertyName
-                    = propertyName.substring(0, prefix.length());
+                    = propertyName.substring(prefix.length());
                 DatagramPacketFilter datagramPacketFilter;
 
                 if (rtpConnectorPropertyName.equals("controlInputStream"))
