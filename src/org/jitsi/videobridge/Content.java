@@ -8,13 +8,8 @@ package org.jitsi.videobridge;
 
 import java.util.*;
 
-import javax.media.*;
-import javax.media.protocol.*;
-
-import net.java.sip.communicator.impl.neomedia.*;
-import net.java.sip.communicator.impl.neomedia.format.*;
-import net.java.sip.communicator.service.neomedia.*;
-import net.java.sip.communicator.service.neomedia.format.*;
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.service.neomedia.*;
 
 /**
  * Represents a content in the terms of Jitsi VideoBridge.
@@ -35,14 +30,6 @@ public class Content
     private final Conference conference;
 
     /**
-     * The <tt>DataSource</tt> which is used by all <tt>Channel</tt>s created by
-     * this instance to make a call to
-     * {@link StreamRTPManager#createSendStream(DataSource, int)} in order to
-     * have <tt>OutputDataStream</tt>s to send RTP and RTCP through.
-     */
-    private final PushBufferDataSource dataSource;
-
-    /**
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Content</tt>.
      */
@@ -54,6 +41,13 @@ public class Content
      * this <tt>Content</tt> is considered inactive.
      */
     private long lastActivityTime;
+
+    /**
+     * The <tt>MediaType</tt> of this <tt>Content</tt>. The implementation
+     * detects the <tt>MediaType</tt> by looking at the {@link #name} of this
+     * instance.
+     */
+    private final MediaType mediaType;
 
     /**
      * The name of this <tt>Content</tt>.
@@ -76,25 +70,7 @@ public class Content
         this.conference = conference;
         this.name = name;
 
-        /*
-         * Jitsi VideoBridge is a relay so it does not capture media. But
-         * RTPManager.createSendStream(DataSource,int) must be called to make
-         * RTPManager create an OutputDataStream i.e. to send packets to through
-         * the associated Channel. Create a minimal DataSource which will not
-         * capture/push any media and will go through the method call. The
-         * stream it provides must have a Format and the Format have a payload
-         * type number assigned in RTPManager. The specifics of the Format do
-         * not matter to RTPTranslatorImpl.
-         */
-        MediaFormat mediaFormat
-            = MediaType.AUDIO.toString().equals(this.name)
-                ? MediaUtils.getMediaFormat("PCMU", 8000)
-                : MediaUtils.getMediaFormat("H264", 90000);
-        @SuppressWarnings("unchecked")
-        Format format
-            = ((MediaFormatImpl<? extends Format>) mediaFormat).getFormat();
-
-        this.dataSource = new PushBufferDataSourceImpl(format);
+        mediaType = MediaType.parseString(this.name);
 
         touch();
     }
@@ -241,23 +217,6 @@ public class Content
     }
 
     /**
-     * Gets the <tt>DataSource</tt> which is used by all <tt>Channel</tt>s
-     * created by this instance to make a call to
-     * {@link StreamRTPManager#createSendStream(DataSource, int)} in order to
-     * have <tt>OutputDataStream</tt>s to send RTP and RTCP through.
-     *
-     * @return the <tt>DataSource</tt> which is used by all <tt>Channel</tt>s
-     * created by this instance to make a call to
-     * <tt>StreamRTPManager.createSendStream(DataSource, int)</tt> in order to
-     * have <tt>OutputDataStream</tt>s to send RTP and RTCP through.
-     */
-    public PushBufferDataSource getDataSource()
-    {
-        return dataSource;
-    }
-
-
-    /**
      * Gets the time in milliseconds of the last activity related to this
      * <tt>Content</tt>.
      *
@@ -270,6 +229,18 @@ public class Content
         {
             return lastActivityTime;
         }
+    }
+
+    /**
+     * Gets the <tt>MediaType</tt> of this <tt>Content</tt>. The implementation
+     * detects the <tt>MediaType</tt> by looking at the <tt>name</tt> of this
+     * instance.
+     *
+     * @return the <tt>MediaType</tt> of this <tt>Content</tt>
+     */
+    public MediaType getMediaType()
+    {
+        return mediaType;
     }
 
     public final String getName()

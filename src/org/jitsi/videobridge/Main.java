@@ -6,8 +6,7 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.service.neomedia.*;
-
+import org.jitsi.service.neomedia.*;
 import org.jivesoftware.whack.*;
 import org.xmpp.component.*;
 

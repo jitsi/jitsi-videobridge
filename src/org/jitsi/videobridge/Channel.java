@@ -6,27 +6,25 @@
  */
 package org.jitsi.videobridge;
 
+import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
 
 import javax.media.*;
-import javax.media.control.*;
-import javax.media.format.*;
-import javax.media.protocol.*;
 import javax.media.rtp.*;
 
-import net.java.sip.communicator.impl.neomedia.*;
-import net.java.sip.communicator.impl.neomedia.format.*;
-import net.java.sip.communicator.impl.neomedia.transform.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
-import net.java.sip.communicator.service.neomedia.*;
-import net.java.sip.communicator.service.neomedia.format.*;
 import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.util.*;
 
 import org.ice4j.socket.*;
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.format.*;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.format.*;
 import org.osgi.framework.*;
 
 /**
@@ -73,29 +71,39 @@ public class Channel
      */
     private long lastActivityTime;
 
-    private final RTPTransformUDPConnector rtpConnector;
+    /**
+     * THe <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to the terms
+     * of Jitsi VideoBridge and which adapts this <tt>Channel</tt> to the terms
+     * of <tt>neomedia</tt>.
+     */
+    private final MediaStream stream;
 
     /**
-     * The <tt>SessionAddress</tt> which is or is to be the target of
-     * {@link #rtpConnector}. When <tt>DatagramPacket</tt>s are received through
-     * the <tt>DatagramSocket</tt>s of this <tt>Channel</tt>, their first RTP
-     * and RTCP sources will determine, respectively, the RTP and RTCP targets.
+     * The <tt>StreamConnector</tt> which is is to be the <tt>connector</tt> of
+     * {@link #stream}.
      */
-    private final SessionAddress rtpConnectorTarget = new SessionAddress();
+    private final StreamConnector streamConnector;
 
     /**
-     * The <tt>SendStream</tt> created by this <tt>Channel</tt> in order to
-     * enable the {@link RTPTranslator} implementation to send media.
+     * The <tt>PropertyChangeListener</tt> which listens to changes of the
+     * values of {@link #stream}'s properties.
      */
-    private SendStream sendStream;
+    private final PropertyChangeListener streamPropertyChangeListener
+        = new PropertyChangeListener()
+                {
+                    public void propertyChange(PropertyChangeEvent ev)
+                    {
+                        streamPropertyChange(ev);
+                    }
+                };
 
     /**
-     * The <tt>SrtpControl</tt> which deals with the media security of this
-     * <tt>Channel</tt>.
+     * The <tt>SessionAddress</tt> which is or is to be the <tt>target</tt> of
+     * {@link #stream}. When <tt>DatagramPacket</tt>s are received through the
+     * <tt>DatagramSocket</tt>s of this <tt>Channel</tt>, their first RTP and
+     * RTCP sources will determine, respectively, the RTP and RTCP targets.
      */
-    private final SrtpControl srtpControl;
-
-    private final StreamRTPManager streamRTPManager;
+    private final SessionAddress streamTarget = new SessionAddress();
 
     public Channel(Content content, String id)
         throws Exception
@@ -108,83 +116,15 @@ public class Channel
         this.content = content;
         this.id = id;
 
-        streamRTPManager
-            = new StreamRTPManager(this.content.getRTPTranslator());
+        streamConnector = createStreamConnector();
 
-        rtpConnector
-            = new RTPTransformUDPConnector(createStreamConnector())
-            {
-                @Override
-                protected TransformUDPInputStream createControlInputStream()
-                    throws IOException
-                {
-                    TransformUDPInputStream controlInputStream
-                        = super.createControlInputStream();
-
-                    /*
-                     * When the first DatagramPacket arrives on the control
-                     * DatagramSocket, make its source the only acceptable one
-                     * and use it as the control target of rtpConnector.
-                     */
-                    controlInputStream.addDatagramPacketFilter(
-                            new DatagramPacketFilter()
-                            {
-                                public boolean accept(DatagramPacket p)
-                                {
-                                    return
-                                        acceptControlInputStreamDatagramPacket(
-                                                p);
-                                }
-                            });
-                    return controlInputStream;
-                }
-
-                @Override
-                protected TransformUDPInputStream createDataInputStream()
-                    throws IOException
-                {
-                    TransformUDPInputStream dataInputStream
-                        = super.createDataInputStream();
-
-                    /*
-                     * When the first DatagramPacket arrives on the data
-                     * DatagramSocket, make its source the only acceptable one
-                     * and use it as the data target of rtpConnector.
-                     */
-                    dataInputStream.addDatagramPacketFilter(
-                            new DatagramPacketFilter()
-                            {
-                                public boolean accept(DatagramPacket p)
-                                {
-                                    return
-                                        acceptDataInputStreamDatagramPacket(p);
-                                }
-                            });
-                    return dataInputStream;
-                }
-            };
-
-        // ZRTP
-        BundleContext bundleContext
-            = this.content.getConference().getVideoBridge().getComponent()
-                    .getBundleContext();
-        SrtpControl srtpControl = null;
-
-        if (bundleContext != null)
-        {
-            MediaService mediaService
-                = ServiceUtils.getService(bundleContext, MediaService.class);
-
-            if (mediaService != null)
-            {
-                srtpControl = mediaService.createZrtpControl();
-                srtpControl.setConnector(rtpConnector);
-            }
-        }
-        this.srtpControl = srtpControl;
-        rtpConnector.setEngine(createTransformEngineChain());
-
-        streamRTPManager.initialize(rtpConnector);
+        stream
+            = getMediaService().createMediaStream(this.content.getMediaType());
+        stream.setConnector(streamConnector);
+        stream.setName(this.id);
+        stream.setRTPTranslator(this.content.getRTPTranslator());
+        stream.addPropertyChangeListener(streamPropertyChangeListener);
+        stream.start();
 
         touch();
     }
@@ -206,24 +146,27 @@ public class Channel
      */
     private boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
     {
-        InetAddress controlAddress = rtpConnectorTarget.getControlAddress();
+        InetAddress ctrlAddr = streamTarget.getControlAddress();
+        int ctrlPort = streamTarget.getControlPort();
         boolean accept;
 
-        if (controlAddress == null)
+        if (ctrlAddr == null)
         {
-            rtpConnectorTarget.setControlHostAddress(p.getAddress());
-            rtpConnectorTarget.setControlPort(p.getPort());
+            streamTarget.setControlHostAddress(p.getAddress());
+            streamTarget.setControlPort(p.getPort());
 
-            if (rtpConnectorTarget.getDataAddress() != null)
+            InetAddress dataAddr = streamTarget.getDataAddress();
+            int dataPort = streamTarget.getDataPort();
+
+            if (dataAddr != null)
             {
-                try
-                {
-                    getRTPConnector().addTarget(rtpConnectorTarget);
-                }
-                catch (IOException ioe)
-                {
-                    ioe.printStackTrace(System.err);
-                }
+                ctrlAddr = streamTarget.getControlAddress();
+                ctrlPort = streamTarget.getControlPort();
+
+                stream.setTarget(
+                        new MediaStreamTarget(
+                                dataAddr, dataPort,
+                                ctrlAddr, ctrlPort));
             }
 
             accept = true;
@@ -231,8 +174,7 @@ public class Channel
         else
         {
             accept
-                = controlAddress.equals(p.getAddress())
-                    && (rtpConnectorTarget.getControlPort() == p.getPort());
+                = ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort());
         }
 
         // Note that this Channel is still active.
@@ -258,30 +200,43 @@ public class Channel
      */
     private boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
     {
-        InetAddress dataAddress = rtpConnectorTarget.getDataAddress();
+        InetAddress dataAddr = streamTarget.getDataAddress();
+        int dataPort = streamTarget.getDataPort();
         boolean accept;
 
-        if (dataAddress == null)
+        if (dataAddr == null)
         {
-            rtpConnectorTarget.setDataHostAddress(p.getAddress());
-            rtpConnectorTarget.setDataPort(p.getPort());
+            streamTarget.setDataHostAddress(p.getAddress());
+            streamTarget.setDataPort(p.getPort());
+            dataAddr = streamTarget.getDataAddress();
+            dataPort = streamTarget.getDataPort();
 
-            try
+            InetAddress ctrlAddr = streamTarget.getControlAddress();
+            int ctrlPort = streamTarget.getControlPort();
+            MediaStreamTarget newStreamTarget;
+
+            if (ctrlAddr == null)
             {
-                getRTPConnector().addTarget(rtpConnectorTarget);
+                newStreamTarget
+                    = new MediaStreamTarget(
+                            new InetSocketAddress(dataAddr, dataPort),
+                            null);
             }
-            catch (IOException ioe)
+            else
             {
-                ioe.printStackTrace(System.err);
+                newStreamTarget
+                    = new MediaStreamTarget(
+                            dataAddr, dataPort,
+                            ctrlAddr, ctrlPort);
             }
+            stream.setTarget(newStreamTarget);
 
             accept = true;
         }
         else
         {
             accept
-                = dataAddress.equals(p.getAddress())
-                    && (rtpConnectorTarget.getDataPort() == p.getPort());
+                = dataAddr.equals(p.getAddress()) && (dataPort == p.getPort());
         }
 
         // Note that this Channel is still active.
@@ -364,28 +319,6 @@ public class Channel
     }
 
     /**
-     * Initializes a new <tt>TransformEngineChain</tt> instance which is to be
-     * used as the <tt>TransformEngine</tt> of {@link #rtpConnector}.
-     *
-     * @return a new <tt>TransformEngineChain</tt> instance which is to be used
-     * as the <tt>TransformEngine</tt> of <tt>rtpConnector</tt>
-     */
-    private TransformEngineChain createTransformEngineChain()
-    {
-        SrtpControl srtpControl = getSrtpControl();
-        List<TransformEngine> transformEngines
-            = new LinkedList<TransformEngine>();
-
-        if (srtpControl != null)
-            transformEngines.add(srtpControl.getTransformEngine());
-
-        return
-            new TransformEngineChain(
-                    transformEngines.toArray(
-                            new TransformEngine[transformEngines.size()]));
-    }
-
-    /**
      * Expires this <tt>Channel</tt>.
      */
     public void expire()
@@ -404,16 +337,11 @@ public class Channel
         }
         finally
         {
-            SrtpControl srtpControl = getSrtpControl();
-
-            if (srtpControl != null)
-                srtpControl.cleanup();
-
-            getRTPConnector().removeTargets();
-
             try
             {
-                getStreamRTPManager().dispose();
+                stream.close();
+                stream.removePropertyChangeListener(
+                        streamPropertyChangeListener);
             }
             catch (Throwable t)
             {
@@ -421,7 +349,35 @@ public class Channel
                 if (t instanceof ThreadDeath)
                     throw (ThreadDeath) t;
             }
+            finally
+            {
+                try
+                {
+                    streamConnector.close();
+                }
+                catch (Throwable t)
+                {
+                    t.printStackTrace(System.err);
+                    if (t instanceof ThreadDeath)
+                        throw (ThreadDeath) t;
+                }
+            }
         }
+    }
+
+    /**
+     * Gets the <tt>BundleContext</tt> associated with this <tt>Channel</tt>.
+     * The method is a convenience which gets the <tt>BundleContext</tt>
+     * associated with the XMPP component implementation in which the
+     * <tt>VideoBridge</tt> associated with this instance is executing.
+     *
+     * @return the <tt>BundleContext</tt> associated with this <tt>Channel</tt>
+     */
+    private BundleContext getBundleContext()
+    {
+        return
+            getContent().getConference().getVideoBridge().getComponent()
+                    .getBundleContext();
     }
 
     /**
@@ -449,8 +405,7 @@ public class Channel
     public String getHost()
     {
         return
-            getRTPConnector().getConnector().getDataSocket().getLocalAddress()
-                    .getHostAddress();
+            streamConnector.getDataSocket().getLocalAddress().getHostAddress();
     }
 
     /**
@@ -482,37 +437,35 @@ public class Channel
         }
     }
 
-    public int getRTCPPort()
+    /**
+     * Returns a <tt>MediaService</tt> implementation (if any).
+     *
+     * @return a <tt>MediaService</tt> implementation (if any)
+     */
+    private MediaService getMediaService()
     {
-        return
-            getRTPConnector().getConnector().getControlSocket().getLocalPort();
+        MediaService mediaService
+            = ServiceUtils.getService(getBundleContext(), MediaService.class);
+
+        /*
+         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
+         * the MediaService implementation. In the form of a temporary
+         * workaround, get it through LibJitsi.
+         */
+        if (mediaService == null)
+            mediaService = LibJitsi.getMediaService();
+
+        return mediaService;
     }
 
-    public AbstractRTPConnector getRTPConnector()
+    public int getRTCPPort()
     {
-        return rtpConnector;
+        return streamConnector.getControlSocket().getLocalPort();
     }
 
     public int getRTPPort()
     {
-        return getRTPConnector().getConnector().getDataSocket().getLocalPort();
-    }
-
-    /**
-     * Gets the <tt>SrtpControl</tt> which deals with the media security of this
-     * <tt>Channel</tt>.
-     *
-     * @return the <tt>SrtpControl</tt> which deals with the media security of
-     * this <tt>Channel</tt>
-     */
-    public SrtpControl getSrtpControl()
-    {
-        return srtpControl;
-    }
-
-    public StreamRTPManager getStreamRTPManager()
-    {
-        return streamRTPManager;
+        return streamConnector.getDataSocket().getLocalPort();
     }
 
     /**
@@ -563,119 +516,107 @@ public class Channel
     {
         /*
          * Convert the PayloadTypePacketExtensions into Formats and let the
-         * StreamRTPManager about them.
+         * MediaStream know about them.
          */
-        StreamRTPManager streamRTPManager = getStreamRTPManager();
         List<Format> formats = new ArrayList<Format>();
 
         if ((payloadTypes != null) && (payloadTypes.size() > 0))
         {
-            BundleContext bundleContext
-                = getContent().getConference().getVideoBridge().getComponent()
-                        .getBundleContext();
+            MediaService mediaService = getMediaService();
 
-            if (bundleContext != null)
+            if (mediaService != null)
             {
-                MediaService mediaService
-                    = ServiceUtils.getService(
-                            bundleContext,
-                            MediaService.class);
-
-                if (mediaService != null)
+                for (PayloadTypePacketExtension payloadType : payloadTypes)
                 {
-                    for (PayloadTypePacketExtension payloadType : payloadTypes)
+                    MediaFormat mediaFormat
+                        = JingleUtils.payloadTypeToMediaFormat(
+                                payloadType,
+                                mediaService,
+                                null);
+
+                    if (mediaFormat != null)
                     {
-                        MediaFormat mediaFormat
-                            = JingleUtils.payloadTypeToMediaFormat(
-                                    payloadType,
-                                    mediaService,
-                                    null);
+                        stream.addDynamicRTPPayloadType(
+                                (byte) payloadType.getID(),
+                                mediaFormat);
 
-                        if (mediaFormat != null)
-                        {
-                            @SuppressWarnings("unchecked")
-                            Format format
-                                = ((MediaFormatImpl<? extends Format>)
-                                        mediaFormat)
-                                    .getFormat();
+                        @SuppressWarnings("unchecked")
+                        Format format
+                            = ((MediaFormatImpl<? extends Format>)
+                                    mediaFormat)
+                                .getFormat();
 
-                            streamRTPManager.addFormat(
-                                    format,
-                                    payloadType.getID());
-                            formats.add(format);
-                        }
+                        formats.add(format);
                     }
                 }
             }
         }
 
+        touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Notifies this <tt>Channel</tt> that the value of a property of
+     * {@link #stream} has changed from a specific old value to a specific new
+     * value.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the name of the
+     * property which had its value changed and the old and new values of that
+     * property
+     */
+    private void streamPropertyChange(PropertyChangeEvent ev)
+    {
         /*
-         * As noted elsewhere, a SendStream must be created to allow the
-         * RTPTranslator implementation to send media.
+         * TODO The following is based on an internal property which has been
+         * introduced specifically for Jitsi VideoBridge and should not be used
+         * anywhere else because it will likely be removed.
          */
-        if (sendStream == null)
+        String propertyName = ev.getPropertyName();
+        String prefix = MediaStreamImpl.class.getName() + ".rtpConnector.";
+
+        if (propertyName.startsWith(prefix))
         {
-            PushBufferDataSource dataSource = getContent().getDataSource();
-            PushBufferStream[] streams = dataSource.getStreams();
-            int streamCount = streams.length;
+            Object newValue = ev.getNewValue();
 
-            for (int streamIndex = 0; streamIndex < streamCount; streamIndex++)
+            if (newValue instanceof RTPConnectorInputStream)
             {
-                PushBufferStream stream = streams[streamIndex];
+                String rtpConnectorPropertyName
+                    = propertyName.substring(0, prefix.length());
+                DatagramPacketFilter datagramPacketFilter;
 
-                /*
-                 * If Formats have been set on this Channel, use one of them for
-                 * the SendStream. It does not really matter because the
-                 * DataSource will not provide any media.
-                 */
-                if (formats.size() > 0)
+                if (rtpConnectorPropertyName.equals("controlInputStream"))
                 {
-                    FormatControl formatControl
-                        = (FormatControl)
-                            stream.getControl(FormatControl.class.getName());
-
-                    if (formatControl != null)
-                        formatControl.setFormat(formats.get(0));
+                    datagramPacketFilter
+                        = new DatagramPacketFilter()
+                        {
+                            public boolean accept(DatagramPacket p)
+                            {
+                                return
+                                    acceptControlInputStreamDatagramPacket(p);
+                            }
+                        };
                 }
-
-                /*
-                 * If the DataSource turns out to have a Format which is not
-                 * registered with the StreamRTPManager, register the Format in
-                 * question with a made-up payload type (number). It imposes a
-                 * slight risk but it should not happen anyway if Formats have
-                 * actually been set on this Channel.
-                 */
-                Format format = stream.getFormat();
-
-                if ((format != null) && !formats.contains(format))
+                else if (rtpConnectorPropertyName.equals("dataInputStream"))
                 {
-                    streamRTPManager.addFormat(
-                            format,
-                            (format instanceof AudioFormat) ? 0 : 99);
+                    datagramPacketFilter
+                        = new DatagramPacketFilter()
+                        {
+                            public boolean accept(DatagramPacket p)
+                            {
+                                return acceptDataInputStreamDatagramPacket(p);
+                            }
+                        };
                 }
+                else
+                    datagramPacketFilter = null;
 
-                try
+                if (datagramPacketFilter != null)
                 {
-                    sendStream
-                        = streamRTPManager.createSendStream(
-                                dataSource,
-                                streamIndex);
+                    ((RTPConnectorInputStream) newValue)
+                        .addDatagramPacketFilter(datagramPacketFilter);
                 }
-                catch (IOException ioe)
-                {
-                    ioe.printStackTrace(System.err);
-                }
-                catch (UnsupportedFormatException ufe)
-                {
-                    ufe.printStackTrace(System.err);
-                }
-
-                if (sendStream != null)
-                    break;
             }
         }
-
-        touch(); // It seems this Channel is still active.
     }
 
     /**

@@ -8,13 +8,13 @@ package org.jitsi.videobridge;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.neomedia.*;
 import net.java.sip.communicator.impl.osgi.framework.launch.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.cobri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.service.configuration.*;
 
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.util.*;
 import org.jivesoftware.smack.provider.*;
 import org.osgi.framework.*;
@@ -40,6 +40,9 @@ public class ComponentImpl
     private static final String[][] BUNDLES
         = {
             {
+                "net/java/sip/communicator/impl/libjitsi/LibJitsiActivator"
+            },
+            {
                 "net/java/sip/communicator/util/UtilActivator",
                 "net/java/sip/communicator/impl/fileaccess/FileAccessActivator"
             },
@@ -60,9 +63,6 @@ public class ComponentImpl
             },
             {
                 "net/java/sip/communicator/service/gui/internal/GuiServiceActivator"
-            },
-            {
-                "net/java/sip/communicator/impl/neomedia/NeomediaActivator"
             },
             {
                 "org/jitsi/videobridge/ComponentImplBundleActivator"

@@ -11,7 +11,7 @@
 	<classpathentry kind="lib" path="lib/jitsi-android-osgi.jar"/>
 	<classpathentry kind="lib" path="lib/json.jar"/>
 	<classpathentry kind="lib" path="lib/libidn.jar"/>
-	<classpathentry kind="lib" path="lib/neomedia.jar"/>
+	<classpathentry kind="lib" path="lib/libjitsi.jar"/>
 	<classpathentry kind="lib" path="lib/netaddr.jar"/>
 	<classpathentry kind="lib" path="lib/osgi.core.jar"/>
 	<classpathentry kind="lib" path="lib/packetlogging.jar"/>
