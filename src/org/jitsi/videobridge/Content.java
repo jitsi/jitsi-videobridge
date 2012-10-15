@@ -8,8 +8,12 @@ package org.jitsi.videobridge;
 
 import java.util.*;
 
-import org.jitsi.impl.neomedia.*;
+import net.java.sip.communicator.util.*;
+
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.device.*;
+import org.osgi.framework.*;
 
 /**
  * Represents a content in the terms of Jitsi VideoBridge.
@@ -50,15 +54,29 @@ public class Content
     private final MediaType mediaType;
 
     /**
+     * The <tt>MediaDevice</tt> which mixes the media received by those of
+     * {@link #channels} which use a mixer as their RTP-level relay.
+     */
+    private MediaDevice mixer;
+
+    /**
      * The name of this <tt>Content</tt>.
      */
     private final String name;
 
     /**
-     * The <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
-     * between {@link #channels}.
+     * The <tt>Object</tt> which synchronizes the access to the RTP-level relays
+     * (i.e. {@link #mixer} and {@link #rtpTranslator}) provided by this
+     * <tt>Content</tt>.
      */
-    private final RTPTranslator rtpTranslator = new RTPTranslatorImpl();
+    private final Object rtpLevelRelaySyncRoot = new Object();
+
+    /**
+     * The <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
+     * between those {@link #channels} which use a translator as their RTP-level
+     * relay.
+     */
+    private RTPTranslator rtpTranslator;
 
     public Content(Conference conference, String name)
     {
@@ -131,7 +149,11 @@ public class Content
                 }
             }
 
-            getRTPTranslator().dispose();
+            synchronized (rtpLevelRelaySyncRoot)
+            {
+                if (rtpTranslator != null)
+                    rtpTranslator.dispose();
+            }
         }
     }
 
@@ -172,6 +194,20 @@ public class Content
         return
             Long.toHexString(
                     System.currentTimeMillis() + VideoBridge.RANDOM.nextLong());
+    }
+
+    /**
+     * Gets the <tt>BundleContext</tt> associated with this <tt>Conent</tt>.
+     * The method is a convenience which gets the <tt>BundleContext</tt>
+     * associated with the XMPP component implementation in which the
+     * <tt>VideoBridge</tt> associated with this instance is executing.
+     *
+     * @return the <tt>BundleContext</tt> associated with this <tt>Content</tt>
+     */
+    private BundleContext getBundleContext()
+    {
+        return
+            getConference().getVideoBridge().getComponent().getBundleContext();
     }
 
     public Channel getChannel(String id)
@@ -232,6 +268,27 @@ public class Content
     }
 
     /**
+     * Returns a <tt>MediaService</tt> implementation (if any).
+     *
+     * @return a <tt>MediaService</tt> implementation (if any)
+     */
+    MediaService getMediaService()
+    {
+        MediaService mediaService
+            = ServiceUtils.getService(getBundleContext(), MediaService.class);
+
+        /*
+         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
+         * the MediaService implementation. In the form of a temporary
+         * workaround, get it through LibJitsi.
+         */
+        if (mediaService == null)
+            mediaService = LibJitsi.getMediaService();
+
+        return mediaService;
+    }
+
+    /**
      * Gets the <tt>MediaType</tt> of this <tt>Content</tt>. The implementation
      * detects the <tt>MediaType</tt> by looking at the <tt>name</tt> of this
      * instance.
@@ -243,6 +300,40 @@ public class Content
         return mediaType;
     }
 
+    /**
+     * Gets the <tt>MediaDevice</tt> which mixes the media received by the
+     * <tt>Channels</tt>  of this <tt>Content</tt> which use a mixer as their
+     * RTP-level relay.
+     *
+     * @return the <tt>MediaDevice</tt> which mixes the media received by the
+     * <tt>Channels</tt>  of this <tt>Content</tt> which use a mixer as their
+     * RTP-level relay
+     */
+    public MediaDevice getMixer()
+    {
+        if (mixer == null)
+        {
+            MediaType mediaType = getMediaType();
+            MediaDevice device;
+
+            if (MediaType.AUDIO.equals(mediaType))
+                device = new AudioSilenceMediaDevice();
+            else
+                device = null;
+
+            if (device == null)
+            {
+                throw new UnsupportedOperationException(
+                        "The mixer type of RTP-level relay is not supported"
+                                + " for "
+                                + mediaType);
+            }
+            else
+                mixer = getMediaService().createMixer(device);
+        }
+        return mixer;
+    }
+
     public final String getName()
     {
         return name;
@@ -250,14 +341,21 @@ public class Content
 
     /**
      * Gets the <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
-     * between the <tt>Channel</tt>s of this <tt>Content</tt>.
+     * between the <tt>Channel</tt>s of this <tt>Content</tt> which use a
+     * translator as their RTP-level relay.
      *
      * @return the <tt>RTPTranslator</tt> which forwards the RTP and RTCP
-     * traffic between the <tt>Channel</tt>s of this <tt>Content</tt>
+     * traffic between the <tt>Channel</tt>s of this <tt>Content</tt> which use
+     * a translator as their RTP-level relay
      */
     public RTPTranslator getRTPTranslator()
     {
-        return rtpTranslator;
+        synchronized (rtpLevelRelaySyncRoot)
+        {
+            if (rtpTranslator == null)
+                rtpTranslator = getMediaService().createRTPTranslator();
+            return rtpTranslator;
+        }
     }
 
     /**

@@ -22,7 +22,6 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.format.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.osgi.framework.*;
@@ -72,6 +71,13 @@ public class Channel
     private long lastActivityTime;
 
     /**
+     * The type of RTP-level relay (in the terms specified by RFC 3550 "RTP: A
+     * Transport Protocol for Real-Time Applications" in section 2.3 "Mixers and
+     * Translators") used for this <tt>Channel</tt>.
+     */
+    private final RTPLevelRelayType rtpLevelRelayType;
+
+    /**
      * THe <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to the terms
      * of Jitsi VideoBridge and which adapts this <tt>Channel</tt> to the terms
      * of <tt>neomedia</tt>.
@@ -116,10 +122,16 @@ public class Channel
         this.content = content;
         this.id = id;
 
+        MediaType mediaType = this.content.getMediaType();
+
+        rtpLevelRelayType
+            = /*MediaType.AUDIO.equals(mediaType)
+                ? RTPLevelRelayType.MIXER
+                :*/ RTPLevelRelayType.TRANSLATOR;
+
         streamConnector = createStreamConnector();
 
-        stream
-            = getMediaService().createMediaStream(this.content.getMediaType());
+        stream = getMediaService().createMediaStream(mediaType);
         /*
          * Add the PropertyChangeListener to the MediaStream prior to performing
          * further initialization so that we do not miss changes to the values
@@ -128,7 +140,32 @@ public class Channel
         stream.addPropertyChangeListener(streamPropertyChangeListener);
         stream.setConnector(streamConnector);
         stream.setName(this.id);
-        stream.setRTPTranslator(this.content.getRTPTranslator());
+
+        /*
+         * If the RTP-level relay to be used for this Channel is a mixer, then
+         * the stream will have a MediaDevice and will not have an
+         * RTPTranslator. If the RTP-level relay to be used for this Channel is
+         * a translator, then the stream will not have a MediaDevice and will
+         * have an RTPTranslator.
+         */
+        switch (getRTPLevelRelayType())
+        {
+        case MIXER:
+            stream.setDevice(this.content.getMixer());
+            /*
+             * It is necessary to start receiving media in order to determine
+             * the MediaFormat in which the stream will send the media it
+             * generates.
+             */
+            stream.setDirection(MediaDirection.RECVONLY);
+            break;
+        case TRANSLATOR:
+            stream.setRTPTranslator(this.content.getRTPTranslator());
+            break;
+        default:
+            throw new IllegalStateException("rtpLevelRelayType");
+        }
+
         stream.start();
 
         touch();
@@ -246,7 +283,29 @@ public class Channel
 
         // Note that this Channel is still active.
         if (accept)
+        {
             touch();
+
+            if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType())
+                    && (p.getLength() >= 12))
+            {
+                Map<Byte, MediaFormat> payloadTypes
+                    = stream.getDynamicRTPPayloadTypes();
+
+                if (payloadTypes != null)
+                {
+                    int payloadType = p.getData()[p.getOffset() + 1] & 0x7f;
+                    MediaFormat format
+                        = payloadTypes.get(Byte.valueOf((byte) payloadType));
+
+                    if ((format != null) && !format.equals(stream.getFormat()))
+                    {
+                        stream.setFormat(format);
+                        stream.setDirection(MediaDirection.SENDRECV);
+                    }
+                }
+            }
+        }
 
         return accept;
     }
@@ -371,21 +430,6 @@ public class Channel
     }
 
     /**
-     * Gets the <tt>BundleContext</tt> associated with this <tt>Channel</tt>.
-     * The method is a convenience which gets the <tt>BundleContext</tt>
-     * associated with the XMPP component implementation in which the
-     * <tt>VideoBridge</tt> associated with this instance is executing.
-     *
-     * @return the <tt>BundleContext</tt> associated with this <tt>Channel</tt>
-     */
-    private BundleContext getBundleContext()
-    {
-        return
-            getContent().getConference().getVideoBridge().getComponent()
-                    .getBundleContext();
-    }
-
-    /**
      * Gets the <tt>Content</tt> which has initialized this <tt>Channel</tt>.
      *
      * @return the <tt>Content</tt> which has initialized this <tt>Content</tt>
@@ -449,23 +493,26 @@ public class Channel
      */
     private MediaService getMediaService()
     {
-        MediaService mediaService
-            = ServiceUtils.getService(getBundleContext(), MediaService.class);
-
-        /*
-         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
-         * the MediaService implementation. In the form of a temporary
-         * workaround, get it through LibJitsi.
-         */
-        if (mediaService == null)
-            mediaService = LibJitsi.getMediaService();
-
-        return mediaService;
+        return getContent().getMediaService();
     }
 
     public int getRTCPPort()
     {
         return streamConnector.getControlSocket().getLocalPort();
+    }
+
+    /**
+     * Gets the type of RTP-level relay (in the terms specified by RFC 3550
+     * "RTP: A Transport Protocol for Real-Time Applications" in section 2.3
+     * "Mixers and Translators") used for this <tt>Channel</tt>.
+     *
+     * @return the type of RTP-level relay (in the terms specified by RFC 3550
+     * "RTP: A Transport Protocol for Real-Time Applications" in section 2.3
+     * "Mixers and Translators") used for this <tt>Channel</tt>
+     */
+    public RTPLevelRelayType getRTPLevelRelayType()
+    {
+        return rtpLevelRelayType;
     }
 
     public int getRTPPort()
