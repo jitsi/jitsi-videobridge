@@ -125,9 +125,9 @@ public class Channel
         MediaType mediaType = this.content.getMediaType();
 
         rtpLevelRelayType
-            = /*MediaType.AUDIO.equals(mediaType)
+            = MediaType.AUDIO.equals(mediaType)
                 ? RTPLevelRelayType.MIXER
-                :*/ RTPLevelRelayType.TRANSLATOR;
+                : RTPLevelRelayType.TRANSLATOR;
 
         streamConnector = createStreamConnector();
 

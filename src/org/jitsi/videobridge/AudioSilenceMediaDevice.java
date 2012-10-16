@@ -37,6 +37,18 @@ public class AudioSilenceMediaDevice
     /**
      * {@inheritDoc}
      *
+     * Overrides the super implementation to disable the very playback because
+     * Jitsi VideoBridge is a server-side technology.
+     */
+    @Override
+    protected Processor createPlayer(DataSource dataSource)
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * Overrides the super implementation to initialize a
      * <tt>MediaDeviceSession</tt> which disables the very playback because
      * Jitsi VideoBridge is a server-side technology.

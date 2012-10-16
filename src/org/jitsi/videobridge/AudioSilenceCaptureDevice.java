@@ -124,10 +124,6 @@ public class AudioSilenceCaptureDevice
             buffer.setFormat(format);
             buffer.setLength(frameSizeInBytes);
             buffer.setOffset(0);
-System.err.println(
-        getClass().getName() + ".read: now=" + System.currentTimeMillis()
-            + "; hashCode=" + hashCode() + "; frameSizeInBytes="
-            + frameSizeInBytes + ";");
         }
 
         public void run()
