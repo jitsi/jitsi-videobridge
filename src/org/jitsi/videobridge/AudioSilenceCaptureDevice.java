@@ -28,6 +28,18 @@ public class AudioSilenceCaptureDevice
     extends AbstractPushBufferCaptureDevice
 {
     /**
+     * The compile-time flag which determines whether
+     * <tt>AudioSilenceCaptureDevice</tt> and, more specifically,
+     * <tt>AudioSilenceStream</tt> are to be used by <tt>AudioMixer</tt> for the
+     * mere purposes of ticking the clock which makes <tt>AudioMixer</tt> read
+     * media from its inputs, mix it, and write it to its outputs. The preferred
+     * value is <tt>true</tt> because it causes the <tt>AudioMixer</tt> to not
+     * push media unless at least one <tt>Channel</tt> is receiving actual
+     * media.
+     */
+    private static final boolean CLOCK_ONLY = true;
+
+    /**
      * The list of <tt>Format</tt>s supported by the
      * <tt>AudioSilenceCaptureDevice</tt> instances.
      */
@@ -95,35 +107,42 @@ public class AudioSilenceCaptureDevice
         public void read(Buffer buffer)
             throws IOException
         {
-            AudioFormat format = (AudioFormat) getFormat();
-            int frameSizeInBytes
-                = format.getChannels()
-                    * (((int) format.getSampleRate()) / 50)
-                    * (format.getSampleSizeInBits() / 8);
-
-            Object data = buffer.getData();
-            byte[] bytes;
-
-            if (data instanceof byte[])
+            if (CLOCK_ONLY)
             {
-                bytes = (byte[]) data;
-                if (bytes.length <= frameSizeInBytes)
+                buffer.setLength(0);
+            }
+            else
+            {
+                AudioFormat format = (AudioFormat) getFormat();
+                int frameSizeInBytes
+                    = format.getChannels()
+                        * (((int) format.getSampleRate()) / 50)
+                        * (format.getSampleSizeInBits() / 8);
+
+                Object data = buffer.getData();
+                byte[] bytes;
+
+                if (data instanceof byte[])
+                {
+                    bytes = (byte[]) data;
+                    if (bytes.length <= frameSizeInBytes)
+                    {
+                        bytes = new byte[frameSizeInBytes];
+                        buffer.setData(bytes);
+                    }
+                }
+                else
                 {
                     bytes = new byte[frameSizeInBytes];
                     buffer.setData(bytes);
                 }
-            }
-            else
-            {
-                bytes = new byte[frameSizeInBytes];
-                buffer.setData(bytes);
-            }
 
-            Arrays.fill(bytes, 0, frameSizeInBytes, (byte) 0);
+                Arrays.fill(bytes, 0, frameSizeInBytes, (byte) 0);
 
-            buffer.setFormat(format);
-            buffer.setLength(frameSizeInBytes);
-            buffer.setOffset(0);
+                buffer.setFormat(format);
+                buffer.setLength(frameSizeInBytes);
+                buffer.setOffset(0);
+            }
         }
 
         public void run()
