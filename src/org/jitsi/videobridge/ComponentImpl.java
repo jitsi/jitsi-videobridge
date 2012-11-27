@@ -36,6 +36,8 @@ public class ComponentImpl
     /**
      * The locations of the OSGi bundles (or rather of the class files of their
      * <tt>BundleActivator</tt> implementations) comprising Jitsi Video Bridge.
+     * An element of the <tt>BUNDLES</tt> array is an array of <tt>String</tt>s
+     * and represents an OSGi start level.
      */
     private static final String[][] BUNDLES
         = {
@@ -81,7 +83,7 @@ public class ComponentImpl
     private static final String NAME = "JitsiVideoBridge";
 
     /**
-     * The (default) subdomain of the address with which <tt>ComponentImpl</tt>
+     * The (default) sub-domain of the address with which <tt>ComponentImpl</tt>
      * instances are to be added to their respective <tt>ComponentManager</tt>s.
      */
     public static final String SUBDOMAIN = "jitsi-videobridge";
@@ -129,6 +131,13 @@ public class ComponentImpl
         return "conference";
     }
 
+    /**
+     * Gets the OSGi <tt>BundleContext</tt> in which this Jabber component is
+     * executing.
+     *
+     * @return the OSGi <tt>BundleContext</tt> in which this Jabber component is
+     * executing
+     */
     public BundleContext getBundleContext()
     {
         return bundleContext;
@@ -157,6 +166,151 @@ public class ComponentImpl
     }
 
     /**
+     * Handles a <tt>CobriConferenceIQ</tt> stanza which represents a request.
+     *
+     * @param conferenceIQ the <tt>CobriConferenceIQ</tt> stanza represents the
+     * request to handle
+     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
+     * represents the response to the specified request or <tt>null</tt> to
+     * reply with <tt>feature-not-implemented</tt>
+     * @throws Exception to reply with <tt>internal-server-error</tt> to the
+     * specified request
+     */
+    private org.jivesoftware.smack.packet.IQ handleCobriConferenceIQ(
+            CobriConferenceIQ conferenceIQ)
+        throws Exception
+    {
+        /*
+         * The presence of the id attribute in the conference element
+         * signals whether a new conference is to be created or an existing
+         * conference is to be modified.
+         */
+        String id = conferenceIQ.getID();
+        String focus = conferenceIQ.getFrom();
+        Conference conference
+            = (id == null)
+                ? videoBridge.createConference(focus)
+                : videoBridge.getConference(id, focus);
+        CobriConferenceIQ responseConferenceIQ;
+
+        if (conference == null)
+        {
+            /*
+             * Possible reasons for having no Conference instance include
+             * failure to produce an ID which identifies an existing Conference
+             * instance or the JID of a conference focus which owns an existing
+             * Conference instance with a valid ID. 
+             */
+            responseConferenceIQ = null;
+        }
+        else
+        {
+            responseConferenceIQ = new CobriConferenceIQ();
+            conference.describe(responseConferenceIQ);
+
+            for (CobriConferenceIQ.Content contentIQ
+                    : conferenceIQ.getContents())
+            {
+                /*
+                 * The content element springs into existence whenever it
+                 * gets mentioned, it does not need explicit creation (in
+                 * contrast to the conference and channel elements).
+                 */
+                Content content
+                    = conference.getOrCreateContent(contentIQ.getName());
+
+                if (content == null)
+                {
+                    responseConferenceIQ = null;
+                }
+                else
+                {
+                    CobriConferenceIQ.Content responseContentIQ
+                        = new CobriConferenceIQ.Content(content.getName());
+
+                    responseConferenceIQ.addContent(responseContentIQ);
+
+                    for (CobriConferenceIQ.Channel channelIQ
+                            : contentIQ.getChannels())
+                    {
+                        String channelID = channelIQ.getID();
+                        int channelExpire = channelIQ.getExpire();
+                        Channel channel;
+
+                        /*
+                         * The presence of the id attribute in the channel
+                         * element signals whether a new channel is to be
+                         * created or an existing channel is to be modified.
+                         */
+                        if (channelID == null)
+                        {
+                            /*
+                             * An expire attribute in the channel element
+                             * with value equal to zero requests the
+                             * immediate expiration of the channel in
+                             * question. Consequently, it does not make
+                             * sense to have it in a channel allocation
+                             * request.
+                             */
+                            if (channelExpire == 0)
+                                channel = null;
+                            else
+                                channel = content.createChannel();
+                        }
+                        else
+                            channel = content.getChannel(channelID);
+
+                        if (channel == null)
+                        {
+                            responseConferenceIQ = null;
+                        }
+                        else
+                        {
+                            if (channelExpire
+                                    != CobriConferenceIQ.Channel
+                                            .EXPIRE_NOT_SPECIFIED)
+                            {
+                                channel.setExpire(channelExpire);
+                                /*
+                                 * If the request indicates that it wants
+                                 * the channel expired and the channel is
+                                 * indeed expired, then the request is valid
+                                 * and has correctly been acted upon.
+                                 */
+                                if ((channelExpire == 0)
+                                        && channel.isExpired())
+                                    continue;
+                            }
+
+                            channel.setPayloadTypes(
+                                    channelIQ.getPayloadTypes());
+
+                            CobriConferenceIQ.Channel responseChannelIQ
+                                = new CobriConferenceIQ.Channel();
+
+                            channel.describe(responseChannelIQ);
+                            responseContentIQ.addChannel(responseChannelIQ);
+                        }
+
+                        if (responseConferenceIQ == null)
+                            break;
+                    }
+                }
+
+                if (responseConferenceIQ == null)
+                    break;
+            }
+        }
+
+        if (responseConferenceIQ != null)
+        {
+            responseConferenceIQ.setType(
+                    org.jivesoftware.smack.packet.IQ.Type.RESULT);
+        }
+        return responseConferenceIQ;
+    }
+
+    /**
      * Handles an <tt>org.xmpp.packet.IQ</tt> stanza of type <tt>get</tt> or
      * <tt>set</tt> which represents a request. Converts the specified
      * <tt>org.xmpp.packet.IQ</tt> to an
@@ -178,7 +332,7 @@ public class ComponentImpl
     {
         try
         {
-            System.err.println("RECV: " + iq.toXML());
+            logd("RECV: " + iq.toXML());
 
             org.jivesoftware.smack.packet.IQ smackIQ = IQUtils.convert(iq);
             org.jivesoftware.smack.packet.IQ resultSmackIQ = handleIQ(smackIQ);
@@ -190,14 +344,14 @@ public class ComponentImpl
             {
                 resultIQ = IQUtils.convert(resultSmackIQ);
 
-                System.err.println("SENT: " + resultIQ.toXML());
+                logd("SENT: " + resultIQ.toXML());
             }
                 
             return resultIQ;
         }
         catch (Exception e)
         {
-            e.printStackTrace(System.err);
+            loge(e);
             throw e;
         }
     }
@@ -218,148 +372,20 @@ public class ComponentImpl
             org.jivesoftware.smack.packet.IQ iq)
         throws Exception
     {
-        org.jivesoftware.smack.packet.IQ resultIQ = null;
+        org.jivesoftware.smack.packet.IQ resultIQ;
 
         if (iq instanceof CobriConferenceIQ)
         {
-            CobriConferenceIQ requestConferenceIQ = (CobriConferenceIQ) iq;
-            /*
-             * The presence of the id attribute in the conference element
-             * signals whether a new conference is to be created or an existing
-             * conference is to be modified.
-             */
-            String conferenceID = requestConferenceIQ.getID();
-            Conference conference
-                = (conferenceID == null)
-                    ? videoBridge.createConference()
-                    : videoBridge.getConference(conferenceID);
-            CobriConferenceIQ responseConferenceIQ;
-
-            if (conference == null)
+            resultIQ = handleCobriConferenceIQ((CobriConferenceIQ) iq);
+            if (resultIQ != null)
             {
-                responseConferenceIQ = null;
-            }
-            else
-            {
-                responseConferenceIQ = new CobriConferenceIQ();
-                responseConferenceIQ.setID(conference.getID());
-
-                for (CobriConferenceIQ.Content requestContentIQ
-                        : requestConferenceIQ.getContents())
-                {
-                    /*
-                     * The content element springs into existence whenever it
-                     * gets mentioned, it does not need explicit creation (in
-                     * contrast to the conference and channel elements).
-                     */
-                    Content content
-                        = conference.getOrCreateContent(
-                                requestContentIQ.getName());
-
-                    if (content == null)
-                    {
-                        responseConferenceIQ = null;
-                    }
-                    else
-                    {
-                        CobriConferenceIQ.Content responseContentIQ
-                            = new CobriConferenceIQ.Content(content.getName());
-
-                        responseConferenceIQ.addContent(responseContentIQ);
-
-                        for (CobriConferenceIQ.Channel requestChannelIQ
-                                : requestContentIQ.getChannels())
-                        {
-                            String channelID = requestChannelIQ.getID();
-                            int channelExpire = requestChannelIQ.getExpire();
-                            Channel channel;
-
-                            /*
-                             * The presence of the id attribute in the channel
-                             * element signals whether a new channel is to be
-                             * created or an existing channel is to be modified.
-                             */
-                            if (channelID == null)
-                            {
-                                /*
-                                 * An expire attribute in the channel element
-                                 * with value equal to zero requests the
-                                 * immediate expiration of the channel in
-                                 * question. Consequently, it does not make
-                                 * sense to have it in a channel allocation
-                                 * request.
-                                 */
-                                if (channelExpire == 0)
-                                    channel = null;
-                                else
-                                    channel = content.createChannel();
-                            }
-                            else
-                                channel = content.getChannel(channelID);
-
-                            if (channel == null)
-                            {
-                                responseConferenceIQ = null;
-                            }
-                            else
-                            {
-                                if (channelExpire
-                                        != CobriConferenceIQ.Channel
-                                                .EXPIRE_NOT_SPECIFIED)
-                                {
-                                    channel.setExpire(channelExpire);
-                                    /*
-                                     * If the request indicates that it wants
-                                     * the channel expired and the channel is
-                                     * indeed expired, then the request is valid
-                                     * and has correctly been acted upon.
-                                     */
-                                    if ((channelExpire == 0)
-                                            && channel.isExpired())
-                                        continue;
-                                }
-
-                                channel.setPayloadTypes(
-                                        requestChannelIQ.getPayloadTypes());
-
-                                CobriConferenceIQ.Channel responseChannelIQ
-                                    = new CobriConferenceIQ.Channel();
-
-                                responseChannelIQ.setExpire(
-                                        channel.getExpire());
-                                responseChannelIQ.setHost(channel.getHost());
-                                responseChannelIQ.setID(channel.getID());
-                                responseChannelIQ.setRTCPPort(
-                                        channel.getRTCPPort());
-                                responseChannelIQ.setRTPPort(
-                                        channel.getRTPPort());
-                                responseContentIQ.addChannel(responseChannelIQ);
-                            }
-
-                            if (responseConferenceIQ == null)
-                                break;
-                        }
-                    }
-
-                    if (responseConferenceIQ == null)
-                        break;
-                }
-            }
-
-            if (responseConferenceIQ != null)
-            {
-                resultIQ = responseConferenceIQ;
-                resultIQ.setType(org.jivesoftware.smack.packet.IQ.Type.RESULT);
+                resultIQ.setFrom(iq.getTo());
+                resultIQ.setPacketID(iq.getPacketID());
+                resultIQ.setTo(iq.getFrom());
             }
         }
-
-        if (resultIQ != null)
-        {
-            resultIQ.setFrom(iq.getTo());
-            resultIQ.setPacketID(iq.getPacketID());
-            resultIQ.setTo(iq.getFrom());
-        }
-
+        else
+            resultIQ = null;
         return resultIQ;
     }
 
@@ -405,6 +431,26 @@ public class ComponentImpl
         IQ resultIQ = handleIQ(iq);
 
         return (resultIQ == null) ? super.handleIQSet(iq) : resultIQ;
+    }
+
+    /**
+     * Logs a specific <tt>String</tt> at debug level.
+     *
+     * @param s the <tt>String</tt> to log at debug level 
+     */
+    private static void logd(String s)
+    {
+        System.err.println(s);
+    }
+
+    /**
+     * Logs a specific <tt>Throwable</tt> at error level.
+     *
+     * @param t the <tt>Throwable</tt> to log at error level
+     */
+    private static void loge(Throwable t)
+    {
+        t.printStackTrace(System.err);
     }
 
     /**
@@ -456,6 +502,59 @@ public class ComponentImpl
         startOSGi();
     }
 
+    /**
+     * Implements a helper to send <tt>org.jivesoftware.smack.packet.IQ</tt>s.
+     *
+     * @param iq the <tt>org.jivesoftware.smack.packet.IQ</tt> to send
+     * @throws Exception if an error occurs during the conversion of the
+     * specified <tt>iq</tt> to an <tt>org.xmpp.packet.IQ</tt> instance or while
+     * sending the specified <tt>iq</tt>
+     */
+    void send(org.jivesoftware.smack.packet.IQ iq)
+        throws Exception
+    {
+        try
+        {
+            /*
+             * The javadoc on ComponentManager.sendPacket(Component,Packet)
+             * which is invoked by AbstractComponent.send(Packet) says that the
+             * value of the from property of the Packet must not be null;
+             * otherwise, an IllegalArgumentException will be thrown.
+             */
+            String from = iq.getFrom();
+
+            if ((from == null) || (from.length() == 0))
+            {
+                JID fromJID = getJID();
+
+                if (fromJID != null)
+                    iq.setFrom(fromJID.toString());
+            }
+
+            Packet packet = IQUtils.convert(iq);
+
+            send(packet);
+
+            logd("SENT: " + packet.toXML());
+        }
+        catch (Exception e)
+        {
+            loge(e);
+            throw e;
+        }
+    }
+
+    /**
+     * Starts this Jabber component implementation and the Jitsi VideoBridge it
+     * provides in a specific OSGi <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the OSGi <tt>BundleContext</tt> in which this Jabber
+     * component implementation and the Jitsi VideoBridge it provides are to be
+     * started
+     * @throws Exception if anything irreversible goes wrong while starting this
+     * Jabber component implementation and the Jitsi VideoBridge it provides in
+     * the specified <tt>bundleContext</tt>
+     */
     public void start(BundleContext bundleContext)
         throws Exception
     {
@@ -487,7 +586,7 @@ public class ComponentImpl
     }
 
     /**
-     * Starts the OSGi implementation and the Jitsi Video Bridge bundles.
+     * Starts the OSGi implementation and the Jitsi VideoBridge bundles.
      */
     private void startOSGi()
     {
@@ -553,6 +652,17 @@ public class ComponentImpl
         }
     }
 
+    /**
+     * Stops this Jabber component implementation and the Jitsi VideoBridge it
+     * provides in a specific OSGi <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the OSGi <tt>BundleContext</tt> in which this Jabber
+     * component implementation and the Jitsi VideoBridge it provides are to be
+     * stopped
+     * @throws Exception if anything irreversible goes wrong while stopping this
+     * Jabber component implementation and the Jitsi VideoBridge it provides in
+     * the specified <tt>bundleContext</tt>
+     */
     public void stop(BundleContext bundleContext)
         throws Exception
     {

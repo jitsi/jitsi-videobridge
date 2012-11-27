@@ -325,8 +325,7 @@ public class Content
             {
                 throw new UnsupportedOperationException(
                         "The mixer type of RTP-level relay is not supported"
-                                + " for "
-                                + mediaType);
+                                + " for " + mediaType);
             }
             else
                 mixer = getMediaService().createMixer(device);

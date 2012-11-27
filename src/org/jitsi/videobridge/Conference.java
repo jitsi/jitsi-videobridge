@@ -8,6 +8,8 @@ package org.jitsi.videobridge;
 
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.cobri.*;
+
 /**
  * Represents a conference in the terms of Jitsi VideoBridge.
  *
@@ -26,6 +28,16 @@ public class Conference
      */
     private boolean expired = false;
 
+    /**
+     * The JID of the conference focus who has initialized this instance and
+     * from whom requests to manage this instance must come or they will be
+     * ignored.
+     */
+    private final String focus;
+
+    /**
+     * The (unique) identifier/ID of this instance.
+     */
     private final String id;
 
     /**
@@ -40,15 +52,49 @@ public class Conference
      */
     private final VideoBridge videoBridge;
 
-    public Conference(VideoBridge videoBridge, String id)
+    /**
+     * Initializes a new <tt>Conference</tt> instance which is to represent a
+     * conference in the terms of Jitsi VideoBridge which has a specific
+     * (unique) ID and is managed by a conference focus with a specific JID.
+     *
+     * @param videoBridge the <tt>VideoBridge</tt> on which the new
+     * <tt>Conference</tt> instance is to be initialized
+     * @param id the (unique) ID of the new instance to be initialized
+     * @param focus the JID of the conference focus who has requested the
+     * initialization of the new instance and from whom further/future requests
+     * to manage the new instance must come or they will be ignored
+     */
+    public Conference(VideoBridge videoBridge, String id, String focus)
     {
         if (videoBridge == null)
             throw new NullPointerException("videoBridge");
         if (id == null)
             throw new NullPointerException("id");
+        if (focus == null)
+            throw new NullPointerException("focus");
 
         this.videoBridge = videoBridge;
         this.id = id;
+        this.focus = focus;
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>CobriConferenceIQ</tt> to the values of the respective
+     * properties of this instance. Thus, the specified <tt>iq</tt> may be
+     * thought of as a description of this instance.
+     * <p>
+     * <b>Note</b>: The copying of the values is shallow i.e. the
+     * <tt>Component</tt>s of this instance are not described in the specified
+     * <tt>iq</tt>.
+     * </p>
+     *
+     * @param iq the <tt>CobriConferenceIQ</tt> to set the values of the
+     * properties of this instance on
+     */
+    public void describe(CobriConferenceIQ iq)
+    {
+        iq.setID(getID());
     }
 
     public void expire()
@@ -122,6 +168,25 @@ public class Conference
         }
     }
 
+    /**
+     * Gets the JID of the conference focus who has initialized this instance
+     * and from whom requests to manage this instance must come or they will be
+     * ignored.
+     *
+     * @return the JID of the conference focus who has initialized this instance
+     * and from whom requests to manage this instance must come or they will be
+     * ignored
+     */
+    public final String getFocus()
+    {
+        return focus;
+    }
+
+    /**
+     * Gets the (unique) identifier/ID of this instance.
+     *
+     * @return the (unique) identifier/ID of this instance
+     */
     public final String getID()
     {
         return id;

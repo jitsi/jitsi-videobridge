@@ -25,6 +25,10 @@ public class Main
      */
     private static final Object exitSyncRoot = new Object();
 
+    /**
+     * The name of the command-line argument which specifies the IP address or
+     * the name of the XMPP host to connect to.
+     */
     private static final String HOST_ARG_NAME = "--host=";
 
     /**
@@ -47,6 +51,10 @@ public class Main
      */
     private static final String MIN_PORT_ARG_NAME = "--min-port=";
 
+    /**
+     * The name of the command-line argument which specifies the port of the
+     * XMPP host to connect on.
+     */
     private static final String PORT_ARG_NAME = "--port=";
 
     /**
@@ -55,6 +63,11 @@ public class Main
      */
     private static final int PORT_ARG_VALUE = 5275;
 
+    /**
+     * The name of the command-line argument which specifies the secret key for
+     * the sub-domain of the Jabber component implemented by this application
+     * with which it is to authenticate to the XMPP server to connect to.
+     */
     private static final String SECRET_ARG_NAME = "--secret=";
 
     /**
@@ -118,6 +131,11 @@ public class Main
 
         componentManager.addComponent(subdomain, component);
 
+        /*
+         * The application has nothing more to do but wait for ComponentImpl to
+         * perform its duties. Presently, there is no specific shutdown
+         * procedure and the application just gets killed.
+         */
         while (true)
         {
             boolean interrupted = false;

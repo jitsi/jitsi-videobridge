@@ -14,6 +14,7 @@ import java.util.*;
 import javax.media.*;
 import javax.media.rtp.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.cobri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
 import net.java.sip.communicator.service.netaddr.*;
@@ -23,6 +24,8 @@ import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.device.*;
+import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
 import org.osgi.framework.*;
 
@@ -38,6 +41,15 @@ public class Channel
      * expire.
      */
     public static final int DEFAULT_EXPIRE = 60;
+
+    /**
+     * A (dumb) <tt>SimpleAudioLevelListener</tt> instance which is to be set on
+     * <tt>AudioMediaStream</tt> via
+     * {@link AudioMediaStream#setStreamAudioLevelListener(
+     * SimpleAudioLevelListener)} in order to have the audio levels of the
+     * contributing sources calculated at all.
+     */
+    private static SimpleAudioLevelListener streamAudioLevelListener;
 
     /**
      * The <tt>Content</tt> which has initialized this <tt>Channel</tt>.
@@ -69,6 +81,14 @@ public class Channel
      * this <tt>Channel</tt> is considered inactive.
      */
     private long lastActivityTime;
+
+    /**
+     * The list of RTP SSRCs received on this <tt>Channel</tt>. An elements at
+     * an even index represents a SSRC and its consecutive element at an odd
+     * index specifies the time in milliseconds when the SSRC was last seen (in
+     * order to enable timing out SSRCs).
+     */
+    private long[] receiveSSRCs = CobriConferenceIQ.NO_SSRCS;
 
     /**
      * The type of RTP-level relay (in the terms specified by RFC 3550 "RTP: A
@@ -151,7 +171,27 @@ public class Channel
         switch (getRTPLevelRelayType())
         {
         case MIXER:
-            stream.setDevice(this.content.getMixer());
+            MediaDevice device = this.content.getMixer();
+
+            stream.setDevice(device);
+
+            if (MediaType.AUDIO.equals(mediaType))
+            {
+                /*
+                 * Allow the Jitsi VideoBridge server to send the audio levels
+                 * of the contributing sources to the telephony conference
+                 * participants .
+                 */
+                List<RTPExtension> rtpExtensions
+                    = device.getSupportedExtensions();
+
+                if (rtpExtensions.size() == 1)
+                    stream.addRTPExtension((byte) 1, rtpExtensions.get(0));
+
+                ((AudioMediaStream) stream).setStreamAudioLevelListener(
+                        getStreamAudioLevelListener());
+            }
+
             /*
              * It is necessary to start receiving media in order to determine
              * the MediaFormat in which the stream will send the media it
@@ -219,9 +259,45 @@ public class Channel
                 = ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort());
         }
 
-        // Note that this Channel is still active.
         if (accept)
+        {
+            // Note that this Channel is still active.
             touch();
+
+            /*
+             * Does the data of the specified DatagramPacket resemble (a header
+             * of) an RTCP packet?
+             */
+            if (p.getLength() > 8)
+            {
+                byte[] data = p.getData();
+                int offset = p.getOffset();
+                byte b0 = data[offset];
+
+                if ((/* v */ ((b0 & 0xc0) >>> 6) == 2)
+                        && (/* pt */ (data[offset + 1] & 0xff)
+                                == /* BYE */ 203))
+                {
+                    int sc = b0 & 0x1f;
+
+                    if (sc > 0)
+                    {
+                        /*
+                         * The focus who has organized the telephony conference
+                         * of this Channel receives the RTP streams of the
+                         * participants on a single Channel. Consequently, it is
+                         * unable to associate the participants with the SSRCs
+                         * of the RTP streams that they send. The information
+                         * will be provided to the focus by the Jitsi
+                         * VideoBridge server.
+                         */
+                        long ssrc = RTPTranslatorImpl.readInt(data, offset + 4);
+
+                        removeReceiveSSRC(ssrc);
+                    }
+                }
+            }
+        }
 
         return accept;
     }
@@ -281,33 +357,105 @@ public class Channel
                 = dataAddr.equals(p.getAddress()) && (dataPort == p.getPort());
         }
 
-        // Note that this Channel is still active.
         if (accept)
         {
+            // Note that this Channel is still active.
             touch();
 
-            if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType())
-                    && (p.getLength() >= 12))
+            /*
+             * Does the data of the specified DatagramPacket resemble (a header
+             * of) an RTP packet?
+             */
+            if (p.getLength() >= 12)
             {
-                Map<Byte, MediaFormat> payloadTypes
-                    = stream.getDynamicRTPPayloadTypes();
+                byte[] data = p.getData();
+                int offset = p.getOffset();
 
-                if (payloadTypes != null)
+                if (/* v */ ((data[offset] & 0xc0) >>> 6) == 2)
                 {
-                    int payloadType = p.getData()[p.getOffset() + 1] & 0x7f;
-                    MediaFormat format
-                        = payloadTypes.get(Byte.valueOf((byte) payloadType));
+                    /*
+                     * The focus who has organized the telephony conference of
+                     * this Channel receives the RTP streams of the participants
+                     * on a single Channel. Consequently, it is unable to
+                     * associate the participants with the SSRCs of the RTP
+                     * streams that they send. The information will be provided
+                     * to the focus by the Jitsi VideoBridge server.
+                     */
+                    long ssrc = RTPTranslatorImpl.readInt(data, offset + 8);
 
-                    if ((format != null) && !format.equals(stream.getFormat()))
+                    addReceiveSSRC(ssrc);
+
+                    /*
+                     * When performing content mixing (rather than RTP
+                     * translation/relay), the MediaStream needs a MediaFormat
+                     * to be set in order to make it capable of sending media
+                     * data.
+                     */
+                    if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
                     {
-                        stream.setFormat(format);
-                        stream.setDirection(MediaDirection.SENDRECV);
+                        Map<Byte, MediaFormat> payloadTypes
+                            = stream.getDynamicRTPPayloadTypes();
+
+                        if (payloadTypes != null)
+                        {
+                            int pt = data[offset + 1] & 0x7f;
+                            MediaFormat format
+                                = payloadTypes.get(Byte.valueOf((byte) pt));
+
+                            if ((format != null)
+                                    && !format.equals(stream.getFormat()))
+                            {
+                                stream.setFormat(format);
+                                stream.setDirection(MediaDirection.SENDRECV);
+                            }
+                        }
                     }
                 }
             }
         }
 
         return accept;
+    }
+
+    /**
+     * Adds a specific RTP SSRC to the list of SSRCs received on this
+     * <tt>Channel</tt>. If the specified <tt>receiveSSRC</tt> is in the list
+     * already, the method does not add it but updates the time at which it was
+     * last seen.
+     *
+     * @param receiveSSRC the RTP SSRC to be added to the list of SSRCs received
+     * on this <tt>Channel</tt>
+     */
+    private synchronized void addReceiveSSRC(long receiveSSRC)
+    {
+        long now = System.currentTimeMillis();
+
+        // contains
+        final int length = receiveSSRCs.length;
+
+        for (int i = 0; i < length; i += 2)
+        {
+            if (receiveSSRCs[i] == receiveSSRC)
+            {
+                receiveSSRCs[i + 1] = now;
+                /*
+                 * The update of the time at which the specified receiveSSRC was
+                 * last seen does not constitute a change in the value of the
+                 * receiveSSRCs property of this instance.
+                 */
+                return;
+            }
+        }
+
+        // add
+        long[] newReceiveSSRCs = new long[length + 2];
+
+        System.arraycopy(receiveSSRCs, 0, newReceiveSSRCs, 0, length);
+        newReceiveSSRCs[length] = receiveSSRC;
+        newReceiveSSRCs[length + 1] = now;
+        receiveSSRCs = newReceiveSSRCs;
+
+        receiveSSRCsChanged();
     }
 
     /**
@@ -380,6 +528,25 @@ public class Channel
         streamConnector.getControlSocket();
 
         return streamConnector;
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>CobriConferenceIQ.Channel</tt> to the values of the respective
+     * properties of this instance. Thus, the specified <tt>iq</tt> may be
+     * thought of as a description of this instance.
+     *
+     * @param iq the <tt>CobriConferenceIQ.Channel</tt> to set the values of the
+     * properties of this instance on
+     */
+    public void describe(CobriConferenceIQ.Channel iq)
+    {
+        iq.setExpire(getExpire());
+        iq.setHost(getHost());
+        iq.setID(getID());
+        iq.setRTCPPort(getRTCPPort());
+        iq.setRTPPort(getRTPPort());
+        iq.setSSRCs(getReceiveSSRCs());
     }
 
     /**
@@ -496,6 +663,28 @@ public class Channel
         return getContent().getMediaService();
     }
 
+    /**
+     * Gets a list of the RTP SSRCs received on this <tt>Channel</tt>.
+     *
+     * @return an array of <tt>long</tt>s which represents a list of the RTP
+     * SSRCs received on this <tt>Channel</tt>
+     */
+    public synchronized long[] getReceiveSSRCs()
+    {
+        final int length = this.receiveSSRCs.length;
+
+        if (length == 0)
+            return CobriConferenceIQ.NO_SSRCS;
+        else
+        {
+            long[] receiveSSRCs = new long[length / 2];
+
+            for (int src = 0, dst = 0; src < length; src += 2, dst++)
+                receiveSSRCs[dst] = this.receiveSSRCs[src];
+            return receiveSSRCs;
+        }
+    }
+
     public int getRTCPPort()
     {
         return streamConnector.getControlSocket().getLocalPort();
@@ -521,6 +710,37 @@ public class Channel
     }
 
     /**
+     * Gets a (dumb) <tt>SimpleAudioLevelListener</tt> instance which is to be
+     * set on <tt>AudioMediaStream</tt> via
+     * {@link AudioMediaStream#setStreamAudioLevelListener(
+     * SimpleAudioLevelListener)} in order to have the audio levels of the
+     * contributing sources calculated at all.
+     *
+     * @return a (dumb) <tt>SimpleAudioLevelListener</tt> instance
+     */
+    private static SimpleAudioLevelListener getStreamAudioLevelListener()
+    {
+        if (streamAudioLevelListener == null)
+        {
+            streamAudioLevelListener
+                = new SimpleAudioLevelListener()
+                {
+                    public void audioLevelChanged(int level)
+                    {
+                        /*
+                         * Whatever, the Jitsi VideoBridge is not interested in
+                         * the audio levels. However, an existing/non-null
+                         * streamAudioLevelListener has to be set on an
+                         * AudioMediaStream in order to have the audio levels of
+                         * the contributing sources calculated at all.
+                         */
+                    }
+                };
+        }
+        return streamAudioLevelListener;
+    }
+
+    /**
      * Gets the indicator which determines whether {@link #expire()} has been
      * called on this <tt>Channel</tt>.
      *
@@ -533,6 +753,110 @@ public class Channel
         {
             return expired;
         }
+    }
+
+    /**
+     * Notifies this instance that the value of the <tt>receiveSSRCs</tt>
+     * property/field of this instance has changed i.e. at least one RTP SSRC
+     * has been added to or removed from the list of SSRCs received on this
+     * <tt>Channel</tt>.
+     */
+    private void receiveSSRCsChanged()
+    {
+        /*
+         * Notify the focus who has organized the telephony conference
+         * associated with this instance in order to allow the focus to build
+         * SSRC-CallPeer associates.
+         */
+        boolean interrupted = false;
+
+        try
+        {
+            Content content = getContent();
+            Conference conference = content.getConference();
+            CobriConferenceIQ conferenceIQ = new CobriConferenceIQ();
+
+            conference.describe(conferenceIQ);
+
+            CobriConferenceIQ.Content contentIQ
+                = conferenceIQ.getOrCreateContent(content.getName());
+            CobriConferenceIQ.Channel channelIQ
+                = new CobriConferenceIQ.Channel();
+
+            describe(channelIQ);
+            contentIQ.addChannel(channelIQ);
+
+            conferenceIQ.setTo(conference.getFocus());
+            conferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.SET);
+
+            conference.getVideoBridge().getComponent().send(conferenceIQ);
+        }
+        catch (Throwable t)
+        {
+            /*
+             * A telephony conference will still function, albeit with reduced
+             * SSRC-dependent functionality such as audio levels.
+             */
+            if (t instanceof InterruptedException)
+                interrupted = true;
+            else if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+        }
+        if (interrupted)
+            Thread.currentThread().interrupt();
+    }
+
+    /**
+     * Removes a specific RTP SSRC from the list of SSRCs received on this
+     * <tt>Channel</tt>.
+     *
+     * @param receiveSSRC the RTP SSRC to be removed from the list of SSRCs
+     * received on this <tt>Channel</tt>
+     */
+    private synchronized void removeReceiveSSRC(long receiveSSRC)
+    {
+        final int length = receiveSSRCs.length;
+        boolean removed = false;
+
+        if (length == 2)
+        {
+            if (receiveSSRCs[0] == receiveSSRC)
+            {
+                receiveSSRCs = CobriConferenceIQ.NO_SSRCS;
+                removed = true;
+            }
+        }
+        else
+        {
+            for (int i = 0; i < length; i += 2)
+            {
+                if (receiveSSRCs[i] == receiveSSRC)
+                {
+                    long[] newReceiveSSRCs = new long[length - 2];
+
+                    if (i != 0)
+                    {
+                        System.arraycopy(
+                                receiveSSRCs, 0,
+                                newReceiveSSRCs, 0,
+                                i);
+                    }
+                    if (i != newReceiveSSRCs.length)
+                    {
+                        System.arraycopy(
+                                receiveSSRCs, i + 2,
+                                newReceiveSSRCs, i,
+                                newReceiveSSRCs.length - i);
+                    }
+
+                    removed = true;
+                    break;
+                }
+            }
+        }
+
+        if (removed)
+            receiveSSRCsChanged();
     }
 
     /**

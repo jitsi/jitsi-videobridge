@@ -58,16 +58,21 @@ public class VideoBridge
      * Initializes a new {@link Conference} instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>VideoBridge</tt> and
      * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances.
+     * instances. The new instance is owned by a specific conference focus i.e.
+     * further/future requests to manage the new instance must come from the
+     * specified <tt>focus</tt> or they will be ignored.
      *
+     * @param focus a <tt>String</tt> which specifies the JID of the conference
+     * focus which will own the new instance i.e. from whom further/future
+     * requests to manage the new instance must come or they will be ignored 
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>VideoBridge</tt>
      */
-    public Conference createConference()
+    public Conference createConference(String focus)
     {
         Conference conference = null;
 
-        while (conference == null)
+        do
         {
             String id = generateConferenceID();
 
@@ -75,11 +80,12 @@ public class VideoBridge
             {
                 if (!conferences.containsKey(id))
                 {
-                    conference = new Conference(this, id);
+                    conference = new Conference(this, id, focus);
                     conferences.put(id, conference);
                 }
             }
         }
+        while (conference == null);
 
         return conference;
     }
@@ -135,14 +141,20 @@ public class VideoBridge
     }
 
     /**
-     * Gets an existing {@link Conference} with a specific ID.
+     * Gets an existing {@link Conference} with a specific ID and a specific
+     * conference focus.
      *
      * @param id the ID of the existing <tt>Conference</tt> to get
-     * @return an existing <tt>Conference</tt> with the specified ID or
-     * <tt>null</tt> if no <tt>Conference</tt> with the specified ID is known to
-     * this <tt>VideoBridge</tt>
+     * @param focus the JID of the conference focus of the existing
+     * <tt>Conference</tt> to get. A <tt>Conference</tt> does not take orders
+     * from a (remote) entity other than the conference focus who has
+     * initialized it.
+     * @return an existing <tt>Conference</tt> with the specified ID and the
+     * specified conference focus or <tt>null</tt> if no <tt>Conference</tt>
+     * with the specified ID and the specified conference focus is known to this
+     * <tt>VideoBridge</tt>
      */
-    public Conference getConference(String id)
+    public Conference getConference(String id, String focus)
     {
         Conference conference;
 
@@ -151,9 +163,20 @@ public class VideoBridge
             conference = conferences.get(id);
         }
 
-        // It seems the conference is still active.
         if (conference != null)
-            conference.touch();
+        {
+            /*
+             * A conference is owned by the focus who has initialized it and it
+             * may be managed by that focus only.
+             */
+            if (conference.getFocus().equals(focus))
+            {
+                // It seems the conference is still active.
+                conference.touch();
+            }
+            else
+                conference = null;
+        }
 
         return conference;
     }
