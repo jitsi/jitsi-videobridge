@@ -93,10 +93,30 @@ public class AudioSilenceCaptureDevice
         extends AbstractPushBufferStream
         implements Runnable
     {
+        /**
+         * The indicator which determines whether {@link #start()} has been
+         * invoked on this instance without an intervening {@link #stop()}.
+         */
         private boolean started;
 
+        /**
+         * The <tt>Thread</tt> which pushes available media data out of this
+         * instance to its consumer i.e. <tt>BufferTransferHandler</tt>.
+         */
         private Thread thread;
 
+        /**
+         * Initializes a new <tt>AudioSilenceStream</tt> which is to be exposed
+         * by a specific <tt>AudioSilenceCaptureDevice</tt> and which is to have
+         * its <tt>Format</tt>-related information abstracted by a specific
+         * <tt>FormatControl</tt>.
+         *
+         * @param dataSource the <tt>AudioSilenceCaptureDevice</tt> which is
+         * initializing the new instance and which is to expose it in its array
+         * of <tt>PushBufferStream</tt>s
+         * @param formatControl the <tt>FormatControl</tt> which is to abstract
+         * the <tt>Format</tt>-related information of the new instance
+         */
         public AudioSilenceStream(
                 AudioSilenceCaptureDevice dataSource,
                 FormatControl formatControl)
@@ -104,6 +124,16 @@ public class AudioSilenceCaptureDevice
             super(dataSource, formatControl);
         }
 
+        /**
+         * Reads available media data from this instance into a specific
+         * <tt>Buffer</tt>.
+         *
+         * @param buffer the <tt>Buffer</tt> to write the available media data
+         * into
+         * @throws IOException if an I/O error has prevented the reading of
+         * available media data from this instance into the specified
+         * <tt>buffer</tt>
+         */
         public void read(Buffer buffer)
             throws IOException
         {
@@ -145,6 +175,10 @@ public class AudioSilenceCaptureDevice
             }
         }
 
+        /**
+         * Runs in {@link #thread} and pushes available media data out of this
+         * instance to its consumer i.e. <tt>BufferTransferHandler</tt>.
+         */
         public void run()
         {
             try
@@ -209,6 +243,12 @@ public class AudioSilenceCaptureDevice
             }
         }
 
+        /**
+         * Starts the transfer of media data from this instance.
+         *
+         * @throws IOException if an error has prevented the start of the
+         * transfer of media from this instance
+         */
         @Override
         public synchronized void start()
             throws IOException
@@ -241,6 +281,12 @@ public class AudioSilenceCaptureDevice
             }
         }
 
+        /**
+         * Stops the transfer of media data from this instance.
+         *
+         * @throws IOException if an error has prevented the stopping of the
+         * transfer of media from this instance
+         */
         @Override
         public synchronized void stop()
             throws IOException

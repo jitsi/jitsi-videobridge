@@ -70,8 +70,8 @@ public class Channel
 
     /**
      * The ID of this <tt>Channel</tt> (which is unique within the list of
-     * <tt>Channel</tt> listed in {@link #content} while this instance is listed
-     * there as well).
+     * <tt>Channel</tt>s listed in {@link #content} while this instance is
+     * listed there as well).
      */
     private final String id;
 
@@ -131,6 +131,18 @@ public class Channel
      */
     private final SessionAddress streamTarget = new SessionAddress();
 
+    /**
+     * Initializes a new <tt>Channel</tt> instance which is to have a specific
+     * ID. The initialization is to be considered requested by a specific
+     * <tt>Content</tt>.
+     *
+     * @param content the <tt>Content</tt> which is initializing the new
+     * instance
+     * @param id the ID of the new instance. It is expected to be unique within
+     * the list of <tt>Channel</tt>s listed in <tt>content</tt> while the new
+     * instance is listed there as well.
+     * @throws Exception if an error occurs while initializing the new instance
+     */
     public Channel(Content content, String id)
         throws Exception
     {
@@ -461,7 +473,7 @@ public class Channel
     /**
      * Initializes the pair of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
      * {@link #rtpConnector} is to use.
-     * 
+     *
      * @return a new <tt>StreamConnector</tt> instance which represents the pair
      * of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
      * <tt>rtpConnector</tt> is to use
@@ -550,7 +562,9 @@ public class Channel
     }
 
     /**
-     * Expires this <tt>Channel</tt>.
+     * Expires this <tt>Channel</tt>. Releases the resources acquired by this
+     * instance throughout its life time and prepares it to be garbage
+     * collected.
      */
     public void expire()
     {
@@ -618,6 +632,13 @@ public class Channel
         return expire;
     }
 
+    /**
+     * Gets the IP address (represented as a <tt>String</tt>) of the host on
+     * which this <tt>Channel</tt> has been allocated.
+     *
+     * @return a <tt>String</tt> which represents the IP address of the host on
+     * which this <tt>Channel</tt> has been allocated
+     */
     public String getHost()
     {
         return
@@ -685,6 +706,13 @@ public class Channel
         }
     }
 
+    /**
+     * Gets the port which has been allocated by this <tt>Channel</tt> for the
+     * purposes of receiving RTCP packets.
+     *
+     * @return the port which has been allocated by this <tt>Channel</tt> for
+     * the purposes of receiving RTCP packets
+     */
     public int getRTCPPort()
     {
         return streamConnector.getControlSocket().getLocalPort();
@@ -704,6 +732,13 @@ public class Channel
         return rtpLevelRelayType;
     }
 
+    /**
+     * Gets the port which has been allocated by this <tt>Channel</tt> for the
+     * purposes of receiving RTP packets.
+     *
+     * @return the port which has been allocated by this <tt>Channel</tt> for
+     * the purposes of receiving RTP packets
+     */
     public int getRTPPort()
     {
         return streamConnector.getDataSocket().getLocalPort();

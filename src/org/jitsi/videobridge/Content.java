@@ -78,6 +78,14 @@ public class Content
      */
     private RTPTranslator rtpTranslator;
 
+    /**
+     * Initializes a new <tt>Content</tt> instance which is to be a part of a
+     * specific <tt>Conference</tt> and which is to have a specific name.
+     *
+     * @param conference the <tt>Conference</tt> which is initializing the new
+     * instance
+     * @param name the name of the new instance
+     */
     public Content(Conference conference, String name)
     {
         if (conference == null)
@@ -93,6 +101,15 @@ public class Content
         touch();
     }
 
+    /**
+     * Initializes a new <tt>Channel</tt> instance and adds it to the list of
+     * <tt>Channel</tt>s of this <tt>Content</tt>. The new <tt>Channel</tt>
+     * instance has an ID which is unique within the list of <tt>Channel</tt>s
+     * of this <tt>Content</tt>.
+     *
+     * @return
+     * @throws Exception
+     */
     public Channel createChannel()
         throws Exception
     {
@@ -116,7 +133,9 @@ public class Content
     }
 
     /**
-     * Expires this <tt>Content</tt>.
+     * Expires this <tt>Content</tt> and its associated <tt>Channel</tt>s.
+     * Releases the resources acquired by this instance throughout its life time
+     * and prepares it to be garbage collected.
      */
     public void expire()
     {
@@ -210,6 +229,15 @@ public class Content
             getConference().getVideoBridge().getComponent().getBundleContext();
     }
 
+    /**
+     * Returns a <tt>Channel</tt> from the list of <tt>Channel</tt>s of this
+     * <tt>Content</tt> which has a specific ID.
+     *
+     * @param id the ID of the <tt>Channel</tt> to be returned
+     * @return a <tt>Channel</tt> from the list of <tt>Channel</tt>s of this
+     * <tt>Content</tt> which has the specified <tt>id</tt> if such a
+     * <tt>Channel</tt> exists; otherwise, <tt>null</tt>
+     */
     public Channel getChannel(String id)
     {
         Channel channel;
@@ -333,6 +361,11 @@ public class Content
         return mixer;
     }
 
+    /**
+     * Gets the name of this <tt>Content</tt>.
+     *
+     * @return the name of this <tt>Content</tt>
+     */
     public final String getName()
     {
         return name;

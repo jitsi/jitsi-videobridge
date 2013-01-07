@@ -119,12 +119,24 @@ public class ComponentImpl
     {
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Gets the namespaces of features that this <tt>Component</tt>
+     * offers/supports i.e. {@link CobriConferenceIQ#NAMESPACE}. 
+     */
     @Override
     protected String[] discoInfoFeatureNamespaces()
     {
         return new String[] { CobriConferenceIQ.NAMESPACE };
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Gets the type of the Service Discovery Identity of this
+     * <tt>Component</tt> i.e. &quot;conference&quot;.
+     */
     @Override
     protected String discoInfoIdentityCategoryType()
     {

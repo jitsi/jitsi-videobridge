@@ -35,7 +35,7 @@ public final class IQUtils
      * Converts a specific <tt>org.jivesoftware.smack.packet.IQ</tt> instance
      * into a new <tt>org.xmpp.packet.iQ</tt> instance which represents the same
      * stanza.
-     * 
+     *
      * @param smackIQ the <tt>org.jivesoftware.smack.packet.IQ</tt> instance to
      * convert to a new <tt>org.xmpp.packet.IQ</tt> instance
      * @return a new <tt>org.xmpp.packet.IQ</tt> instance which represents the
@@ -81,7 +81,7 @@ public final class IQUtils
      * Converts a specific <tt>org.xmpp.packet.iQ</tt> instance into a new
      * <tt>org.jivesoftware.smack.packet.IQ</tt> instance which represents the
      * same stanza.
-     * 
+     *
      * @param iq the <tt>org.xmpp.packet.IQ</tt> instance to convert to a new
      * <tt>org.jivesoftware.smack.packet.IQ</tt> instance
      * @return a new <tt>org.jivesoftware.smack.packet.IQ</tt> instance which

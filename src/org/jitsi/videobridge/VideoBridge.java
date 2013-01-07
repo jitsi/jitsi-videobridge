@@ -316,6 +316,11 @@ public class VideoBridge
             }
         }
 
+        /**
+         * Runs the loop in the background which expires the {@link Channel}s of
+         * {@link #videoBridge} if they have been inactive for more than their
+         * advertised <tt>expire</tt> number of seconds.
+         */
         @Override
         public void run()
         {

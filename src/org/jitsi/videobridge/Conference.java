@@ -97,6 +97,12 @@ public class Conference
         iq.setID(getID());
     }
 
+    /**
+     * Expires this <tt>Conference</tt>, its <tt>Content</tt>s and their
+     * respective <tt>Channel</tt>s. Releases the resources acquired by this
+     * instance throughout its life time and prepares it to be garbage
+     * collected.
+     */
     public void expire()
     {
         synchronized (this)
@@ -129,6 +135,7 @@ public class Conference
             }
         }
     }
+
     /**
      * Expires a specific <tt>Content</tt> of this <tt>Conference</tt> (i.e. if
      * the specified <tt>content</tt> is not in the list of <tt>Content</tt>s of
@@ -207,6 +214,18 @@ public class Conference
         }
     }
 
+    /**
+     * Gets a <tt>Content</tt> of this <tt>Conference</tt> which has a specific
+     * name. If a <tt>Content</tt> of this <tt>Conference</tt> with the
+     * specified <tt>name</tt> does not exist at the time the method is invoked,
+     * the method initializes a new <tt>Content</tt> instance with the specified
+     * <tt>name</tt> and adds it to the list of <tt>Content</tt>s of this
+     * <tt>Conference</tt>.
+     *
+     * @param name the name of the <tt>Content</tt> which is to be retrieved
+     * @return a <tt>Content</tt> of this <tt>Conference</tt> which has the
+     * specified <tt>name</tt>
+     */
     public Content getOrCreateContent(String name)
     {
         synchronized (contents)
