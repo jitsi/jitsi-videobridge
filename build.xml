@@ -5,6 +5,9 @@
   <property name="output" value="classes" />
   <property name="run.arg.line" value="" />
   <property name="run.jvmarg.line" value="" />
+  <property name="dist" value="dist" />
+  <property name="doc" value="doc"/>
+  <property name="java.doc" value="${doc}/api"/>
 
   <path id="compile.classpath">
     <fileset dir="lib" includes="*.jar" />
@@ -14,9 +17,17 @@
     <pathelement location="${output}" />
   </path>
 
+  <condition property="build.label"
+             value="-${label}"
+             else="">
+    <isset property="label"/>
+  </condition>
+
   <target name="clean">
     <delete failonerror="false" includeemptydirs="true">
       <fileset dir="${output}" />
+      <fileset dir="${dist}" />
+      <fileset dir="${doc}" />
     </delete>
   </target>
 
@@ -42,4 +53,64 @@
     </java>
   </target>
 
+  <target name="jar" depends="compile">
+    <jar
+        compress="true"
+        destfile="jitsi-videobridge.jar">
+      <fileset casesensitive="no" dir="${output}">
+        <include name="**/*.class" />
+        <include name="**/*.properties" />
+        <exclude name="${output}/jitsi-videobridge.jar" />
+      </fileset>
+    </jar>
+  </target>
+
+  <target
+      name="make"
+      depends="compile,jar"
+      description="Incrementally compile and jar/package the project." />
+
+  <target
+      name="rebuild"
+      depends="clean,make"
+      description="Clean and make the project." />
+
+  <!-- JAVADOC -->
+  <target name="javadoc"
+      description="Generates project javadoc.">
+      <javadoc author="true" destdir="${java.doc}" package="true"
+          version="true" use="true" windowtitle="Jitsi API"
+          classpathref="compile.classpath" source="1.5+" maxmemory="256m">
+          <packageset dir="src">
+              <include name="**"/>
+          </packageset>
+          <tag name="todo" description="To do:"/>
+          <tag name="note" description="Note:"/>
+          <link href="${j2se_api}" />
+          <header>
+              <![CDATA[
+              <b> Jitsi: the OpenSource Java VoIP and Instant Messaging client. </b>
+              ]]>
+          </header>
+          <bottom>
+              <![CDATA[
+              <font size="-1">
+                  <a href="http://jitsi.org"> Jitsi, the OpenSource Java VoIP and Instant Messaging client. </a>
+                  <br>
+                      <a href="http://gnu.org"> Distributable under LGPL license. </a>
+                  <br>
+              </font>
+              ]]>
+          </bottom>
+      </javadoc>
+  </target>
+
+  <!-- build all binaries and the jitsi-videobridge.jar -->
+  <target name="dist" depends="make">
+
+      <zip destfile="${dist}/jitsi-videobridge${build.label}.zip">
+          <zipfileset file="jitsi-videobridge.jar" />
+          <zipfileset dir="lib" includes="*.jar" prefix="lib"/>
+      </zip>
+  </target>
 </project>
