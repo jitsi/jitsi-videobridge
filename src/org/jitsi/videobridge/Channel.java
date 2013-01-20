@@ -801,7 +801,7 @@ public class Channel
         /*
          * Notify the focus who has organized the telephony conference
          * associated with this instance in order to allow the focus to build
-         * SSRC-CallPeer associates.
+         * SSRC-CallPeer associations.
          */
         boolean interrupted = false;
 
