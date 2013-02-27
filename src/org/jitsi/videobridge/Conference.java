@@ -8,7 +8,7 @@ package org.jitsi.videobridge;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.cobri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
 /**
  * Represents a conference in the terms of Jitsi VideoBridge.
@@ -80,7 +80,7 @@ public class Conference
 
     /**
      * Sets the values of the properties of a specific
-     * <tt>CobriConferenceIQ</tt> to the values of the respective
+     * <tt>ColibriConferenceIQ</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
      * thought of as a description of this instance.
      * <p>
@@ -89,10 +89,10 @@ public class Conference
      * <tt>iq</tt>.
      * </p>
      *
-     * @param iq the <tt>CobriConferenceIQ</tt> to set the values of the
+     * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
      * properties of this instance on
      */
-    public void describe(CobriConferenceIQ iq)
+    public void describe(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
     }

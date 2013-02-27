@@ -14,7 +14,7 @@ import java.util.*;
 import javax.media.*;
 import javax.media.rtp.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.cobri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
 import net.java.sip.communicator.service.netaddr.*;
@@ -88,7 +88,7 @@ public class Channel
      * index specifies the time in milliseconds when the SSRC was last seen (in
      * order to enable timing out SSRCs).
      */
-    private long[] receiveSSRCs = CobriConferenceIQ.NO_SSRCS;
+    private long[] receiveSSRCs = ColibriConferenceIQ.NO_SSRCS;
 
     /**
      * The type of RTP-level relay (in the terms specified by RFC 3550 "RTP: A
@@ -544,14 +544,14 @@ public class Channel
 
     /**
      * Sets the values of the properties of a specific
-     * <tt>CobriConferenceIQ.Channel</tt> to the values of the respective
+     * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
      * thought of as a description of this instance.
      *
-     * @param iq the <tt>CobriConferenceIQ.Channel</tt> to set the values of the
+     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> to set the values of the
      * properties of this instance on
      */
-    public void describe(CobriConferenceIQ.Channel iq)
+    public void describe(ColibriConferenceIQ.Channel iq)
     {
         iq.setExpire(getExpire());
         iq.setHost(getHost());
@@ -695,7 +695,7 @@ public class Channel
         final int length = this.receiveSSRCs.length;
 
         if (length == 0)
-            return CobriConferenceIQ.NO_SSRCS;
+            return ColibriConferenceIQ.NO_SSRCS;
         else
         {
             long[] receiveSSRCs = new long[length / 2];
@@ -809,14 +809,14 @@ public class Channel
         {
             Content content = getContent();
             Conference conference = content.getConference();
-            CobriConferenceIQ conferenceIQ = new CobriConferenceIQ();
+            ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
             conference.describe(conferenceIQ);
 
-            CobriConferenceIQ.Content contentIQ
+            ColibriConferenceIQ.Content contentIQ
                 = conferenceIQ.getOrCreateContent(content.getName());
-            CobriConferenceIQ.Channel channelIQ
-                = new CobriConferenceIQ.Channel();
+            ColibriConferenceIQ.Channel channelIQ
+                = new ColibriConferenceIQ.Channel();
 
             describe(channelIQ);
             contentIQ.addChannel(channelIQ);
@@ -857,7 +857,7 @@ public class Channel
         {
             if (receiveSSRCs[0] == receiveSSRC)
             {
-                receiveSSRCs = CobriConferenceIQ.NO_SSRCS;
+                receiveSSRCs = ColibriConferenceIQ.NO_SSRCS;
                 removed = true;
             }
         }

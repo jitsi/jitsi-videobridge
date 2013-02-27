@@ -10,7 +10,7 @@ import java.util.*;
 
 import net.java.sip.communicator.impl.osgi.framework.launch.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.cobri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.impl.neomedia.*;
@@ -123,12 +123,12 @@ public class ComponentImpl
      * {@inheritDoc}
      *
      * Gets the namespaces of features that this <tt>Component</tt>
-     * offers/supports i.e. {@link CobriConferenceIQ#NAMESPACE}. 
+     * offers/supports i.e. {@link ColibriConferenceIQ#NAMESPACE}. 
      */
     @Override
     protected String[] discoInfoFeatureNamespaces()
     {
-        return new String[] { CobriConferenceIQ.NAMESPACE };
+        return new String[] { ColibriConferenceIQ.NAMESPACE };
     }
 
     /**
@@ -178,9 +178,9 @@ public class ComponentImpl
     }
 
     /**
-     * Handles a <tt>CobriConferenceIQ</tt> stanza which represents a request.
+     * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
-     * @param conferenceIQ the <tt>CobriConferenceIQ</tt> stanza represents the
+     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents the
      * request to handle
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
@@ -188,8 +188,8 @@ public class ComponentImpl
      * @throws Exception to reply with <tt>internal-server-error</tt> to the
      * specified request
      */
-    private org.jivesoftware.smack.packet.IQ handleCobriConferenceIQ(
-            CobriConferenceIQ conferenceIQ)
+    private org.jivesoftware.smack.packet.IQ handleColibriConferenceIQ(
+            ColibriConferenceIQ conferenceIQ)
         throws Exception
     {
         /*
@@ -203,7 +203,7 @@ public class ComponentImpl
             = (id == null)
                 ? videoBridge.createConference(focus)
                 : videoBridge.getConference(id, focus);
-        CobriConferenceIQ responseConferenceIQ;
+        ColibriConferenceIQ responseConferenceIQ;
 
         if (conference == null)
         {
@@ -217,10 +217,10 @@ public class ComponentImpl
         }
         else
         {
-            responseConferenceIQ = new CobriConferenceIQ();
+            responseConferenceIQ = new ColibriConferenceIQ();
             conference.describe(responseConferenceIQ);
 
-            for (CobriConferenceIQ.Content contentIQ
+            for (ColibriConferenceIQ.Content contentIQ
                     : conferenceIQ.getContents())
             {
                 /*
@@ -237,12 +237,12 @@ public class ComponentImpl
                 }
                 else
                 {
-                    CobriConferenceIQ.Content responseContentIQ
-                        = new CobriConferenceIQ.Content(content.getName());
+                    ColibriConferenceIQ.Content responseContentIQ
+                        = new ColibriConferenceIQ.Content(content.getName());
 
                     responseConferenceIQ.addContent(responseContentIQ);
 
-                    for (CobriConferenceIQ.Channel channelIQ
+                    for (ColibriConferenceIQ.Channel channelIQ
                             : contentIQ.getChannels())
                     {
                         String channelID = channelIQ.getID();
@@ -279,7 +279,7 @@ public class ComponentImpl
                         else
                         {
                             if (channelExpire
-                                    != CobriConferenceIQ.Channel
+                                    != ColibriConferenceIQ.Channel
                                             .EXPIRE_NOT_SPECIFIED)
                             {
                                 channel.setExpire(channelExpire);
@@ -297,8 +297,8 @@ public class ComponentImpl
                             channel.setPayloadTypes(
                                     channelIQ.getPayloadTypes());
 
-                            CobriConferenceIQ.Channel responseChannelIQ
-                                = new CobriConferenceIQ.Channel();
+                            ColibriConferenceIQ.Channel responseChannelIQ
+                                = new ColibriConferenceIQ.Channel();
 
                             channel.describe(responseChannelIQ);
                             responseContentIQ.addChannel(responseChannelIQ);
@@ -386,9 +386,9 @@ public class ComponentImpl
     {
         org.jivesoftware.smack.packet.IQ resultIQ;
 
-        if (iq instanceof CobriConferenceIQ)
+        if (iq instanceof ColibriConferenceIQ)
         {
-            resultIQ = handleCobriConferenceIQ((CobriConferenceIQ) iq);
+            resultIQ = handleColibriConferenceIQ((ColibriConferenceIQ) iq);
             if (resultIQ != null)
             {
                 resultIQ.setFrom(iq.getTo());
@@ -576,21 +576,21 @@ public class ComponentImpl
 
         // <conference>
         providerManager.addIQProvider(
-                CobriConferenceIQ.ELEMENT_NAME,
-                CobriConferenceIQ.NAMESPACE,
-                new CobriIQProvider());
+                ColibriConferenceIQ.ELEMENT_NAME,
+                ColibriConferenceIQ.NAMESPACE,
+                new ColibriIQProvider());
         /*
          * <payload-type> and <parameter> defined by XEP-0167: Jingle RTP
          * Sessions
          */
         providerManager.addExtensionProvider(
                 PayloadTypePacketExtension.ELEMENT_NAME,
-                CobriConferenceIQ.NAMESPACE,
+                ColibriConferenceIQ.NAMESPACE,
                 new DefaultPacketExtensionProvider<PayloadTypePacketExtension>(
                         PayloadTypePacketExtension.class));
         providerManager.addExtensionProvider(
                 ParameterPacketExtension.ELEMENT_NAME,
-                CobriConferenceIQ.NAMESPACE,
+                ColibriConferenceIQ.NAMESPACE,
                 new DefaultPacketExtensionProvider<ParameterPacketExtension>(
                         ParameterPacketExtension.class));
 
