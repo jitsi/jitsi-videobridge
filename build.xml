@@ -9,6 +9,18 @@
   <property name="doc" value="doc"/>
   <property name="java.doc" value="${doc}/api"/>
 
+  <condition property="build.label" value="build.SVN">
+    <not>
+      <isset property="build.label"/>
+    </not>
+  </condition>
+
+  <property name="packname.win" value="${ant.project.name}-win-${build.label}"/>
+  <property name="packname.win64" value="${ant.project.name}-win64-${build.label}"/>
+  <property name="packname.lin" value="${ant.project.name}-lin-${build.label}"/>
+  <property name="packname.lin64" value="${ant.project.name}-lin64-${build.label}"/>
+  <property name="packname.osx" value="${ant.project.name}-osx-${build.label}"/>
+
   <path id="compile.classpath">
     <fileset dir="lib" includes="*.jar" />
   </path>
@@ -105,12 +117,67 @@
       </javadoc>
   </target>
 
-  <!-- build all binaries and the jitsi-videobridge.jar -->
-  <target name="dist" depends="make">
+    <target name="dist.win" depends="make">
+        <zip destfile="${dist}/${packname.win}.zip">
+            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.win}" />
+            <zipfileset dir="lib" prefix="${packname.win}/lib">
+                <exclude name="native/windows-64/**"/>
+                <exclude name="native/linux/**"/>
+                <exclude name="native/linux-64/**"/>
+                <exclude name="native/osx/**"/>
+            </zipfileset>
+        </zip>
+    </target>
 
-      <zip destfile="${dist}/jitsi-videobridge${build.label}.zip">
-          <zipfileset file="jitsi-videobridge.jar" />
-          <zipfileset dir="lib" includes="*.jar" prefix="lib"/>
-      </zip>
-  </target>
+    <target name="dist.win64" depends="make">
+        <zip destfile="${dist}/${packname.win64}.zip">
+            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.win64}" />
+            <zipfileset dir="lib" prefix="${packname.win64}/lib">
+                <exclude name="native/windows/**"/>
+                <exclude name="native/linux/**"/>
+                <exclude name="native/linux-64/**"/>
+                <exclude name="native/osx/**"/>
+            </zipfileset>
+        </zip>
+    </target>
+
+    <target name="dist.lin" depends="make">
+        <zip destfile="${dist}/${packname.lin}.zip">
+            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.lin}" />
+            <zipfileset dir="lib" prefix="${packname.lin}/lib">
+                <exclude name="native/windows-64/**"/>
+                <exclude name="native/linux-64/**"/>
+                <exclude name="native/windows/**"/>
+                <exclude name="native/osx/**"/>
+            </zipfileset>
+        </zip>
+    </target>
+
+    <target name="dist.lin64" depends="make">
+        <zip destfile="${dist}/${packname.lin64}.zip">
+            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.lin64}" />
+            <zipfileset dir="lib" prefix="${packname.lin64}/lib">
+                <exclude name="native/windows-64/**"/>
+                <exclude name="native/linux/**"/>
+                <exclude name="native/windows/**"/>
+                <exclude name="native/osx/**"/>
+            </zipfileset>
+        </zip>
+    </target>
+
+    <target name="dist.osx" depends="make">
+        <zip destfile="${dist}/${packname.osx}.zip">
+            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.osx}" />
+            <zipfileset dir="lib" prefix="${packname.osx}/lib">
+                <exclude name="native/windows-64/**"/>
+                <exclude name="native/linux/**"/>
+                <exclude name="native/linux-64/**"/>
+                <exclude name="native/windows/**"/>
+            </zipfileset>
+        </zip>
+    </target>
+
+    <!-- build all binaries and the jitsi-videobridge.jar for all supported platforms -->
+    <target name="dist" depends="dist.win, dist.win64, dist.lin, dist.lin64, dist.osx" />
+
 </project>
