@@ -1,183 +1,182 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="jitsi-videobridge">
 
-  <property file="local.properties" />
-  <property name="output" value="classes" />
-  <property name="run.arg.line" value="" />
-  <property name="run.jvmarg.line" value="" />
-  <property name="dist" value="dist" />
-  <property name="doc" value="doc"/>
-  <property name="java.doc" value="${doc}/api"/>
+    <property file="local.properties" />
+    <property name="output" value="classes" />
+    <property name="run.arg.line" value="" />
+    <property name="run.jvmarg.line" value="" />
+    <property name="dist" value="dist" />
+    <property name="doc" value="doc"/>
+    <property name="java.doc" value="${doc}/api"/>
 
-  <condition property="build.label" value="build.SVN">
-    <not>
-      <isset property="build.label"/>
-    </not>
-  </condition>
+    <condition property="label" value="build.SVN">
+        <not>
+            <isset property="label"/>
+        </not>
+    </condition>
 
-  <property name="packname.win" value="${ant.project.name}-win-${build.label}"/>
-  <property name="packname.win64" value="${ant.project.name}-win64-${build.label}"/>
-  <property name="packname.lin" value="${ant.project.name}-lin-${build.label}"/>
-  <property name="packname.lin64" value="${ant.project.name}-lin64-${build.label}"/>
-  <property name="packname.osx" value="${ant.project.name}-osx-${build.label}"/>
+    <property name="packname.win" value="${ant.project.name}-windows-x86-${label}"/>
+    <property name="packname.win64" value="${ant.project.name}-windows-x64-${label}"/>
+    <property name="packname.lin" value="${ant.project.name}-linux-x86-${label}"/>
+    <property name="packname.lin64" value="${ant.project.name}-linux-x64-${label}"/>
+    <property name="packname.macosx" value="${ant.project.name}-macosx-${label}"/>
 
-  <path id="compile.classpath">
-    <fileset dir="lib" includes="*.jar" />
-  </path>
-  <path id="run.classpath">
-    <path refid="compile.classpath" />
-    <pathelement location="${output}" />
-  </path>
+    <path id="compile.classpath">
+        <fileset dir="lib" includes="*.jar" />
+    </path>
+    <path id="run.classpath">
+        <path refid="compile.classpath" />
+        <pathelement location="${output}" />
+    </path>
 
-  <condition property="build.label"
-             value="-${label}"
-             else="">
-    <isset property="label"/>
-  </condition>
+    <target name="clean">
+        <delete failonerror="false" includeemptydirs="true">
+            <fileset dir="${output}" />
+            <fileset dir="${dist}" />
+            <fileset dir="${doc}" />
+        </delete>
+    </target>
 
-  <target name="clean">
-    <delete failonerror="false" includeemptydirs="true">
-      <fileset dir="${output}" />
-      <fileset dir="${dist}" />
-      <fileset dir="${doc}" />
-    </delete>
-  </target>
+    <target name="compile">
+        <mkdir dir="${output}" />
+        <javac
+            classpathref="compile.classpath"
+            destdir="${output}"
+            fork="true"
+            source="1.5"
+            srcdir="src"
+            target="1.5" />
+    </target>
 
-  <target name="compile">
-    <mkdir dir="${output}" />
-    <javac
-        classpathref="compile.classpath"
-        destdir="${output}"
-        fork="true"
-        source="1.5"
-        srcdir="src"
-        target="1.5" />
-  </target>
+    <target name="run">
+        <java
+            classname="org.jitsi.videobridge.Main"
+            classpathref="run.classpath"
+            failonerror="true"
+            fork="true" >
+            <jvmarg line="${run.jvmarg.line}" />
+            <arg line="${run.arg.line}" />
+        </java>
+    </target>
 
-  <target name="run">
-    <java
-        classname="org.jitsi.videobridge.Main"
-        classpathref="run.classpath"
-        failonerror="true"
-        fork="true" >
-      <jvmarg line="${run.jvmarg.line}" />
-      <arg line="${run.arg.line}" />
-    </java>
-  </target>
+    <target name="jar" depends="compile">
+        <jar
+            compress="true"
+            destfile="jitsi-videobridge.jar">
+        <fileset casesensitive="no" dir="${output}">
+            <include name="**/*.class" />
+            <include name="**/*.properties" />
+            <exclude name="${output}/jitsi-videobridge.jar" />
+        </fileset>
+        </jar>
+    </target>
 
-  <target name="jar" depends="compile">
-    <jar
-        compress="true"
-        destfile="jitsi-videobridge.jar">
-      <fileset casesensitive="no" dir="${output}">
-        <include name="**/*.class" />
-        <include name="**/*.properties" />
-        <exclude name="${output}/jitsi-videobridge.jar" />
-      </fileset>
-    </jar>
-  </target>
+    <target
+        name="make"
+        depends="compile,jar"
+        description="Incrementally compile and jar/package the project." />
 
-  <target
-      name="make"
-      depends="compile,jar"
-      description="Incrementally compile and jar/package the project." />
+    <target
+        name="rebuild"
+        depends="clean,make"
+        description="Clean and make the project." />
 
-  <target
-      name="rebuild"
-      depends="clean,make"
-      description="Clean and make the project." />
-
-  <!-- JAVADOC -->
-  <target name="javadoc"
-      description="Generates project javadoc.">
-      <javadoc author="true" destdir="${java.doc}" package="true"
-          version="true" use="true" windowtitle="Jitsi API"
-          classpathref="compile.classpath" source="1.5+" maxmemory="256m">
-          <packageset dir="src">
-              <include name="**"/>
-          </packageset>
-          <tag name="todo" description="To do:"/>
-          <tag name="note" description="Note:"/>
-          <link href="${j2se_api}" />
-          <header>
-              <![CDATA[
-              <b> Jitsi: the OpenSource Java VoIP and Instant Messaging client. </b>
-              ]]>
-          </header>
-          <bottom>
-              <![CDATA[
-              <font size="-1">
-                  <a href="http://jitsi.org"> Jitsi, the OpenSource Java VoIP and Instant Messaging client. </a>
-                  <br>
-                      <a href="http://gnu.org"> Distributable under LGPL license. </a>
-                  <br>
-              </font>
-              ]]>
-          </bottom>
-      </javadoc>
-  </target>
+    <!-- JAVADOC -->
+    <target name="javadoc"
+        description="Generates project javadoc.">
+        <javadoc author="true" destdir="${java.doc}" package="true"
+            version="true" use="true" windowtitle="Jitsi API"
+            classpathref="compile.classpath" source="1.5+" maxmemory="256m">
+            <packageset dir="src">
+                <include name="**"/>
+            </packageset>
+            <tag name="todo" description="To do:"/>
+            <tag name="note" description="Note:"/>
+            <link href="${j2se_api}" />
+            <header>
+                <![CDATA[
+                <b> Jitsi: the OpenSource Java VoIP and Instant Messaging client. </b>
+                ]]>
+            </header>
+            <bottom>
+                <![CDATA[
+                <font size="-1">
+                    <a href="http://jitsi.org"> Jitsi, the OpenSource Java VoIP and Instant Messaging client. </a>
+                    <br>
+                        <a href="http://gnu.org"> Distributable under LGPL license. </a>
+                    <br>
+                </font>
+                ]]>
+            </bottom>
+        </javadoc>
+    </target>
 
     <target name="dist.win" depends="make">
-        <zip destfile="${dist}/${packname.win}.zip">
+        <zip destfile="${dist}/windows/${packname.win}.zip">
             <zipfileset file="jitsi-videobridge.jar" prefix="${packname.win}" />
             <zipfileset dir="lib" prefix="${packname.win}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/linux-64/**"/>
-                <exclude name="native/osx/**"/>
+                <exclude name="native/macosx/**"/>
             </zipfileset>
+            <zipfileset file="resources/install/windows/jvb.bat" prefix="${packname.win}" />
         </zip>
     </target>
 
     <target name="dist.win64" depends="make">
-        <zip destfile="${dist}/${packname.win64}.zip">
+        <zip destfile="${dist}/windows/${packname.win64}.zip">
             <zipfileset file="jitsi-videobridge.jar" prefix="${packname.win64}" />
             <zipfileset dir="lib" prefix="${packname.win64}/lib">
                 <exclude name="native/windows/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/linux-64/**"/>
-                <exclude name="native/osx/**"/>
+                <exclude name="native/macosx/**"/>
             </zipfileset>
+            <zipfileset file="resources/install/windows/jvb.bat" prefix="${packname.win64}" />
         </zip>
     </target>
 
     <target name="dist.lin" depends="make">
-        <zip destfile="${dist}/${packname.lin}.zip">
+        <zip destfile="${dist}/linux/${packname.lin}.zip">
             <zipfileset file="jitsi-videobridge.jar" prefix="${packname.lin}" />
             <zipfileset dir="lib" prefix="${packname.lin}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux-64/**"/>
                 <exclude name="native/windows/**"/>
-                <exclude name="native/osx/**"/>
+                <exclude name="native/macosx/**"/>
             </zipfileset>
+            <zipfileset file="resources/install/linux/jvb.sh" prefix="${packname.lin}" filemode="755"/>
         </zip>
     </target>
 
     <target name="dist.lin64" depends="make">
-        <zip destfile="${dist}/${packname.lin64}.zip">
+        <zip destfile="${dist}/linux/${packname.lin64}.zip">
             <zipfileset file="jitsi-videobridge.jar" prefix="${packname.lin64}" />
             <zipfileset dir="lib" prefix="${packname.lin64}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/windows/**"/>
-                <exclude name="native/osx/**"/>
+                <exclude name="native/macosx/**"/>
             </zipfileset>
+            <zipfileset file="resources/install/linux/jvb.sh" prefix="${packname.lin64}" filemode="755"/>
         </zip>
     </target>
 
-    <target name="dist.osx" depends="make">
-        <zip destfile="${dist}/${packname.osx}.zip">
-            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.osx}" />
-            <zipfileset dir="lib" prefix="${packname.osx}/lib">
+    <target name="dist.macosx" depends="make">
+        <zip destfile="${dist}/macosx/${packname.macosx}.zip">
+            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.macosx}" />
+            <zipfileset dir="lib" prefix="${packname.macosx}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/linux-64/**"/>
                 <exclude name="native/windows/**"/>
             </zipfileset>
+            <zipfileset file="resources/install/macosx/jvb.sh" prefix="${packname.macosx}" filemode="755"/>
         </zip>
     </target>
 
     <!-- build all binaries and the jitsi-videobridge.jar for all supported platforms -->
-    <target name="dist" depends="dist.win, dist.win64, dist.lin, dist.lin64, dist.osx" />
+    <target name="dist" depends="dist.win, dist.win64, dist.lin, dist.lin64, dist.macosx" />
 
 </project>

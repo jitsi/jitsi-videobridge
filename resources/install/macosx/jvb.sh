@@ -27,4 +27,5 @@ mainClass="org.jitsi.videobridge.Main"
 
 cp=$(JARS=(jitsi-videobridge.jar lib/*.jar); IFS=:; echo "${JARS[*]}")
 
-java -Djava.library.path=lib/native/linux -cp $cp $mainClass --secret="$secret" --port="$port" --host="$host" --min-port="$minPort" --max-port="$maxPort"
+java -Djava.library.path=lib/native/macosx -cp $cp $mainClass --secret="$secret" --port="$port" --host="$host" --min-port="$minPort" --max-port="$maxPort"
+
