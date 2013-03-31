@@ -38,6 +38,12 @@ public class Main
     private static final String HOST_ARG_VALUE = "localhost";
 
     /**
+     * The name of the command-line argument which specifies the XMPP domain
+     * to use.
+     */
+    private static final String DOMAIN_ARG_NAME = "--domain=";
+
+    /**
      * The name of the command-line argument which specifies the value of the
      * <tt>System</tt> property
      * {@link DefaultStreamConnector#MAX_PORT_NUMBER_PROPERTY_NAME}.
@@ -82,11 +88,12 @@ public class Main
         throws Exception
     {
         // Parse the command-line arguments.
-        String host = HOST_ARG_VALUE;
+        String host = null;
         String maxPort = null;
         String minPort = null;
         int port = PORT_ARG_VALUE;
         String secret = null;
+        String domain = null;
 
         for (String arg : args)
         {
@@ -100,7 +107,15 @@ public class Main
                 port = Integer.parseInt(arg.substring(PORT_ARG_NAME.length()));
             else if (arg.startsWith(SECRET_ARG_NAME))
                 secret = arg.substring(SECRET_ARG_NAME.length());
+            else if (arg.startsWith(DOMAIN_ARG_NAME))
+                domain = arg.substring(DOMAIN_ARG_NAME.length());
         }
+
+        if (host == null)
+            host = (domain != null)
+                    ? domain
+                    : HOST_ARG_VALUE;
+        System.err.println("Host:" + host + ", domain:"+domain);
 
         // Start Jitsi VideoBridge as an external Jabber component. 
         ExternalComponentManager componentManager
@@ -109,6 +124,8 @@ public class Main
 
         componentManager.setMultipleAllowed(subdomain, true);
         componentManager.setSecretKey(subdomain, secret);
+        if (domain != null)
+            componentManager.setServerName(domain);
 
         /*
          * Before initializing the Component implementation, set any System

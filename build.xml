@@ -42,6 +42,7 @@
         <javac
             classpathref="compile.classpath"
             destdir="${output}"
+	    debug="true"
             fork="true"
             source="1.5"
             srcdir="src"
@@ -133,7 +134,7 @@
                 <exclude name="native/linux-64/**"/>
                 <exclude name="native/macosx/**"/>
             </zipfileset>
-            <zipfileset file="resources/install/windows/jvb.bat" prefix="${packname.win64}" />
+            <zipfileset file="resources/install/windows-64/jvb.bat" prefix="${packname.win64}" />
         </zip>
     </target>
 
@@ -159,7 +160,7 @@
                 <exclude name="native/windows/**"/>
                 <exclude name="native/macosx/**"/>
             </zipfileset>
-            <zipfileset file="resources/install/linux/jvb.sh" prefix="${packname.lin64}" filemode="755"/>
+            <zipfileset file="resources/install/linux-64/jvb.sh" prefix="${packname.lin64}" filemode="755"/>
         </zip>
     </target>
 
