@@ -115,7 +115,6 @@ public class Main
             host = (domain != null)
                     ? domain
                     : HOST_ARG_VALUE;
-        System.err.println("Host:" + host + ", domain:"+domain);
 
         // Start Jitsi VideoBridge as an external Jabber component. 
         ExternalComponentManager componentManager
