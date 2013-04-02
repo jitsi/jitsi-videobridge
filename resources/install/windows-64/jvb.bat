@@ -7,9 +7,13 @@ goto :begin
 
 :usage
 echo Usage:
-echo %0 secret [port] [host] [minPort] [maxPort]
-echo.
-echo Default values are:
+echo %0 [OPTIONS], where options can be:
+echo	--secret=SECRET	sets the shared secret used to authenticate to the XMPP server
+echo 	--domain=DOMAIN	sets the XMPP domain (default: host, if host is set, none otherwise)
+echo 	--min-port=MP	sets the min port used for media (default: 10000)
+echo 	--max-port=MP	sets the max port used for media (default: 20000)
+echo 	--host=HOST	sets the hostname of the XMPP server (default: localhost)
+echo 	--port=PORT	sets the port of the XMPP server (default: 5275)
 echo.
 exit /B 1
 
@@ -18,38 +22,10 @@ exit /B 1
 :: needed to overcome weird loop behavior in conjunction with variable expansion
 SETLOCAL enabledelayedexpansion
 
-set secret=%1
-
-if "%2"=="" (
-    set port=5275
-) else (
-    set port=%2
-)
-
-if "%3"=="" (
-    set host=localhost
-) else (
-    set host=%3
-)
-
-if "%4"=="" (
-    set minPort=10000
-) else (
-    set minPort=%4
-)
-
-if "%5"=="" (
-    set maxPort=20000
-) else (
-    set maxPort=%5
-)
-
 set mainClass=org.jitsi.videobridge.Main
-
 set cp=jitsi-videobridge.jar
-
 FOR %%F IN (lib/*.jar) DO (
   SET cp=!cp!;lib/%%F%
 )
 
-java -Djava.library.path=lib/native/windows-64 -cp %cp% %mainClass% --secret=%secret% --port=%port% --host=%host% --min-port=%minPort% --max-port=%maxPort%
+echo java -Djava.library.path=lib/native/windows-64 -cp %cp% %mainClass% %1 %2 %3 %4 %5 %6 %7 %8 %9

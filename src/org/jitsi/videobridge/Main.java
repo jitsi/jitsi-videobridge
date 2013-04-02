@@ -51,11 +51,24 @@ public class Main
     private static final String MAX_PORT_ARG_NAME = "--max-port=";
 
     /**
+     * The default value of the {@link #MAX_PORT_ARG_NAME} command-line argument
+     * if it is not explicitly provided.
+     */
+    private static final String MAX_PORT_ARG_VALUE = "20000";
+
+    /**
      * The name of the command-line argument which specifies the value of the
      * <tt>System</tt> property
      * {@link DefaultStreamConnector#MIN_PORT_NUMBER_PROPERTY_NAME}.
      */
     private static final String MIN_PORT_ARG_NAME = "--min-port=";
+
+    /**
+     * The default value of the {@link #MIN_PORT_ARG_NAME} command-line argument
+     * if
+     * it is not explicitly provided.
+     */
+    private static final String MIN_PORT_ARG_VALUE = "10000";
 
     /**
      * The name of the command-line argument which specifies the port of the
@@ -89,8 +102,8 @@ public class Main
     {
         // Parse the command-line arguments.
         String host = null;
-        String maxPort = null;
-        String minPort = null;
+        String maxPort = MAX_PORT_ARG_VALUE;
+        String minPort = MIN_PORT_ARG_VALUE;
         int port = PORT_ARG_VALUE;
         String secret = null;
         String domain = null;
