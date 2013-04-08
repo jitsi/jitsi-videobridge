@@ -16,6 +16,7 @@ import javax.media.protocol.*;
 
 import net.sf.fmj.media.util.*;
 
+import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.*;
 
 /**
@@ -149,25 +150,13 @@ public class AudioSilenceCaptureDevice
                         * (((int) format.getSampleRate()) / 50)
                         * (format.getSampleSizeInBits() / 8);
 
-                Object data = buffer.getData();
-                byte[] bytes;
+                byte[] data
+                    = AbstractCodec2.validateByteArraySize(
+                            buffer,
+                            frameSizeInBytes,
+                            false);
 
-                if (data instanceof byte[])
-                {
-                    bytes = (byte[]) data;
-                    if (bytes.length <= frameSizeInBytes)
-                    {
-                        bytes = new byte[frameSizeInBytes];
-                        buffer.setData(bytes);
-                    }
-                }
-                else
-                {
-                    bytes = new byte[frameSizeInBytes];
-                    buffer.setData(bytes);
-                }
-
-                Arrays.fill(bytes, 0, frameSizeInBytes, (byte) 0);
+                Arrays.fill(data, 0, frameSizeInBytes, (byte) 0);
 
                 buffer.setFormat(format);
                 buffer.setLength(frameSizeInBytes);

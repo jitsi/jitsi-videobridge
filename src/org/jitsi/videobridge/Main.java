@@ -19,6 +19,12 @@ import org.xmpp.component.*;
 public class Main
 {
     /**
+     * The name of the command-line argument which specifies the XMPP domain
+     * to use.
+     */
+    private static final String DOMAIN_ARG_NAME = "--domain=";
+
+    /**
      * The <tt>Object</tt> which synchronizes the access to the state related to
      * the decision whether the application is to exit. At the time of this
      * writing, the application just runs until it is killed.
@@ -36,12 +42,6 @@ public class Main
      * it is not explicitly provided.
      */
     private static final String HOST_ARG_VALUE = "localhost";
-
-    /**
-     * The name of the command-line argument which specifies the XMPP domain
-     * to use.
-     */
-    private static final String DOMAIN_ARG_NAME = "--domain=";
 
     /**
      * The name of the command-line argument which specifies the value of the
@@ -110,7 +110,9 @@ public class Main
 
         for (String arg : args)
         {
-            if (arg.startsWith(HOST_ARG_NAME))
+            if (arg.startsWith(DOMAIN_ARG_NAME))
+                domain = arg.substring(DOMAIN_ARG_NAME.length());
+            else if (arg.startsWith(HOST_ARG_NAME))
                 host = arg.substring(HOST_ARG_NAME.length());
             else if (arg.startsWith(MAX_PORT_ARG_NAME))
                 maxPort = arg.substring(MAX_PORT_ARG_NAME.length());
@@ -120,14 +122,10 @@ public class Main
                 port = Integer.parseInt(arg.substring(PORT_ARG_NAME.length()));
             else if (arg.startsWith(SECRET_ARG_NAME))
                 secret = arg.substring(SECRET_ARG_NAME.length());
-            else if (arg.startsWith(DOMAIN_ARG_NAME))
-                domain = arg.substring(DOMAIN_ARG_NAME.length());
         }
 
         if (host == null)
-            host = (domain != null)
-                    ? domain
-                    : HOST_ARG_VALUE;
+            host = (domain != null) ? domain : HOST_ARG_VALUE;
 
         // Start Jitsi VideoBridge as an external Jabber component. 
         ExternalComponentManager componentManager
