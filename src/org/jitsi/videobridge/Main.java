@@ -105,7 +105,7 @@ public class Main
         String maxPort = MAX_PORT_ARG_VALUE;
         String minPort = MIN_PORT_ARG_VALUE;
         int port = PORT_ARG_VALUE;
-        String secret = null;
+        String secret = "";
         String domain = null;
 
         for (String arg : args)
