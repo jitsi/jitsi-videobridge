@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<html>
+<head>
+	<title>Jitsi Video Bridge Plugin Readme</title>
+    <style type="text/css">
+        BODY {
+            font-size : 100%;
+        }
+        BODY, TD, TH {
+            font-family : tahoma, verdana, arial, helvetica, sans-serif;
+            font-size : 0.8em;
+        }
+        H2 {
+             font-size : 10pt;
+             font-weight : bold;
+        }
+        A:hover {
+            text-decoration : none;
+        }
+        H1 {
+            font-family : tahoma, arial, helvetica, sans-serif;
+            font-size : 1.4em;
+            font-weight: bold;
+            border-bottom : 1px #ccc solid;
+            padding-bottom : 2px;
+        }
+
+        TT {
+            font-family : courier new;
+            font-weight : bold;
+            color : #060;
+        }
+        PRE {
+            font-family : courier new;
+            font-size : 100%;
+        }
+        #datatable TH {
+            color : #fff;
+            background-color : #2A448C;
+            text-align : left;
+        }
+        #datatable TD {
+            background-color : #FAF6EF;
+        }
+        #datatable .name {
+            background-color : #DCE2F5;
+        }
+    </style>
+</head>
+<body>
+
+<h1>
+Jitsi Video Bridge Plugin Readme
+</h1>
+
+<h2>Overview</h2>
+
+<p>
+The Jitsi Video Bridge Plugin is an XMPP server component that allows for
+multiuser video communication. Unlike the expensive dedicated hardware videobridges,
+Jitsi Videobridge does not mix the video channels into a composite video stream,
+but only relays the received video channels to all call participants.
+Therefore, while it does need to run on a server with good network bandwidth,
+CPU horsepower is not that critical for performance.
+
+</p>
+
+<h2>Installation</h2>
+
+<p>Copy jitsiVideobridge.jar into the plugins directory of your Openfire server. The
+plugin will then be automatically deployed. To upgrade to a new version, copy the new
+ jitsiVideobridge.jar file over the existing file.</p>
+
+<h2>Configuration</h2>
+
+Under Server settings -> Jitsi Videobridge tab you can configure it.
+
+</body>
+</html>

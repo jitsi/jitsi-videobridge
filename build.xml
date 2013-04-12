@@ -180,4 +180,57 @@
     <!-- build all binaries and the jitsi-videobridge.jar for all supported platforms -->
     <target name="dist" depends="dist.win, dist.win64, dist.lin, dist.lin64, dist.macosx" />
 
+    <!--
+        The easiest way to build the plugin is:
+        1. execute in jitsi-videobridge $ ant clean dist.openfire
+        2. add a soft link in openfire source plugins
+            folder (openfire_src_X.X.X/src/plugins)
+            jitsiVideobridge -> jitsi-videobridge/dist/openfire/jitsiVideobridge
+        3. in openfire build folder (openfire_src_X.X.X/build) execute:
+            $ ant plugin -Dplugin=jitsiVideobridge
+    -->
+    <target name="dist.openfire" depends="jar">
+        <copy todir="${dist}/openfire/jitsiVideobridge">
+            <fileset dir="openfire"/>
+        </copy>
+        <copy file="jitsi-videobridge.jar"
+              todir="${dist}/openfire/jitsiVideobridge/lib"/>
+        <copy todir="${dist}/openfire/jitsiVideobridge/lib">
+            <fileset dir="lib">
+                <exclude name="native/**"/>
+                <exclude name="bouncycastle.jar"/>
+            </fileset>
+        </copy>
+        <jar compress="true"
+             destfile="${dist}/openfire/jitsiVideobridge/lib/jitsi-videobridge-native-linux-64.jar">
+            <fileset casesensitive="no" dir="lib/native/linux-64/">
+                <include name="*" />
+            </fileset>
+        </jar>
+        <jar compress="true"
+             destfile="${dist}/openfire/jitsiVideobridge/lib/jitsi-videobridge-native-linux-32.jar">
+            <fileset casesensitive="no" dir="lib/native/linux/">
+                <include name="*" />
+            </fileset>
+        </jar>
+        <jar compress="true"
+             destfile="${dist}/openfire/jitsiVideobridge/lib/jitsi-videobridge-native-windows-64.jar">
+            <fileset casesensitive="no" dir="lib/native/windows-64/">
+                <include name="*" />
+            </fileset>
+        </jar>
+        <jar compress="true"
+             destfile="${dist}/openfire/jitsiVideobridge/lib/jitsi-videobridge-native-windows-32.jar">
+            <fileset casesensitive="no" dir="lib/native/windows/">
+                <include name="*" />
+            </fileset>
+        </jar>
+        <jar compress="true"
+             destfile="${dist}/openfire/jitsiVideobridge/lib/jitsi-videobridge-native-macosx.jar">
+            <fileset casesensitive="no" dir="lib/native/macosx/">
+                <include name="*" />
+            </fileset>
+        </jar>
+    </target>
+
 </project>

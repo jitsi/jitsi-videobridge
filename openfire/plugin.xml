@@ -5,6 +5,19 @@
     <description>Integrates Jitsi Video Bridge into Openfire.</description>
     <licenseType>other</licenseType>
     <minServerVersion>3.0.0</minServerVersion>
-    <name>Jitsi Video Bridge Openfire Plugin</name>
+    <name>Jitsi Video Bridge</name>
     <version>1.0</version>
+
+   <adminconsole>
+        <tab id="tab-server">
+            <sidebar id="siderbar-jvb"
+                     name="${plugin.title}">
+                <item id="jitsi-videobridge-settings"
+                      name="${plugin.title}"
+                      description="${plugin.title.description}"
+                      url="jitsi-videobridge.jsp"/>
+            </sidebar>
+        </tab>
+    </adminconsole> 
+
 </plugin>
