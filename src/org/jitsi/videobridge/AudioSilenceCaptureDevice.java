@@ -14,10 +14,9 @@ import javax.media.control.*;
 import javax.media.format.*;
 import javax.media.protocol.*;
 
-import net.sf.fmj.media.util.*;
-
 import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.jmfext.media.protocol.*;
+import org.jitsi.impl.neomedia.jmfext.media.renderer.audio.*;
 
 /**
  * Implements a <tt>CaptureDevice</tt> which provides silence in the form of
@@ -172,8 +171,12 @@ public class AudioSilenceCaptureDevice
         {
             try
             {
-                Thread.currentThread().setPriority(
-                        MediaThread.getAudioPriority());
+                /*
+                 * Make sure that the current thread which implements the actual
+                 * ticking of the clock implemented by this instance uses a
+                 * thread priority considered appropriate for audio processing.
+                 */
+                AbstractAudioRenderer.useAudioThreadPriority();
 
                 while (true)
                 {
