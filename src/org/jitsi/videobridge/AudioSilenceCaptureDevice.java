@@ -40,6 +40,13 @@ public class AudioSilenceCaptureDevice
     private static final boolean CLOCK_ONLY = true;
 
     /**
+     * The interval of time in milliseconds between two consecutive ticks of the
+     * clock used by <tt>AudioSilenceCaptureDevice</tt> and, more specifically,
+     * <tt>AudioSilenceStream</tt>.
+     */
+    private static final long CLOCK_TICK_INTERVAL = 20;
+
+    /**
      * The list of <tt>Format</tt>s supported by the
      * <tt>AudioSilenceCaptureDevice</tt> instances.
      */
@@ -178,14 +185,54 @@ public class AudioSilenceCaptureDevice
                  */
                 AbstractAudioRenderer.useAudioThreadPriority();
 
+                /*
+                 * The method implements a clock which ticks at a certain and
+                 * regular interval of time which is not affected by the
+                 * duration of the execution of, for example, the invocation of
+                 * BufferTransferHandler.transferData(PushBufferStream).
+                 *
+                 * XXX The implementation utilizes System.currentTimeMillis()
+                 * and, consequently, may be broken by run-time adjustments to
+                 * the system time. 
+                 */
+                long tickTime = System.currentTimeMillis();
+
                 while (true)
                 {
-                    try
+                    long sleepInterval = tickTime - System.currentTimeMillis();
+                    boolean tick = (sleepInterval <= 0);
+
+                    if (tick)
                     {
-                        Thread.sleep(20);
+                        /*
+                         * The current thread has woken up just in time or too
+                         * late for the next scheduled clock tick and,
+                         * consequently, the clock should tick right now.
+                         */
+                        tickTime += CLOCK_TICK_INTERVAL;
                     }
-                    catch (InterruptedException ie)
+                    else
                     {
+                        /*
+                         * The current thread has woken up too early for the
+                         * next scheduled clock tick and, consequently, it
+                         * should sleep until the time of the next scheduled
+                         * clock tick comes.
+                         */
+                        try
+                        {
+                            Thread.sleep(sleepInterval);
+                        }
+                        catch (InterruptedException ie)
+                        {
+                        }
+                        /*
+                         * The clock will not tick and spurious wakeups will be
+                         * handled. However, the current thread will first check
+                         * whether it is still utilized by this
+                         * AudioSilenceStream in order to not delay stop
+                         * requests.
+                         */
                     }
 
                     synchronized (this)
@@ -200,22 +247,25 @@ public class AudioSilenceCaptureDevice
                             break;
                     }
 
-                    BufferTransferHandler transferHandler
-                        = this.transferHandler;
-
-                    if (transferHandler != null)
+                    if (tick)
                     {
-                        try
+                        BufferTransferHandler transferHandler
+                            = this.transferHandler;
+
+                        if (transferHandler != null)
                         {
-                            transferHandler.transferData(this);
-                        }
-                        catch (Throwable t)
-                        {
-                            if (t instanceof ThreadDeath)
-                                throw (ThreadDeath) t;
-                            else
+                            try
                             {
-                                // TODO Auto-generated method stub
+                                transferHandler.transferData(this);
+                            }
+                            catch (Throwable t)
+                            {
+                                if (t instanceof ThreadDeath)
+                                    throw (ThreadDeath) t;
+                                else
+                                {
+                                    // TODO Auto-generated method stub
+                                }
                             }
                         }
                     }
@@ -247,7 +297,9 @@ public class AudioSilenceCaptureDevice
         {
             if (thread == null)
             {
-                thread = new Thread(this, getClass().getName());
+                String className = getClass().getName();
+
+                thread = new Thread(this, className);
                 thread.setDaemon(true);
 
                 boolean started = false;
@@ -260,14 +312,12 @@ public class AudioSilenceCaptureDevice
                 finally
                 {
                     this.started = started;
-
                     if (!started)
                     {
                         thread = null;
                         notifyAll();
 
-                        throw new IOException(
-                                "Failed to start " + getClass().getName());
+                        throw new IOException("Failed to start " + className);
                     }
                 }
             }
