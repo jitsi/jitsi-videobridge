@@ -13,8 +13,10 @@ if [[ "$1" == "--help"  || $# -lt 1 ]]; then
     exit 1
 fi
 
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
 mainClass="org.jitsi.videobridge.Main"
-cp=$(JARS=(jitsi-videobridge.jar lib/*.jar); IFS=:; echo "${JARS[*]}")
-libs="lib/native/linux-64"
+cp=$(JARS=($SCRIPT_DIR/jitsi-videobridge.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
+libs="$SCRIPT_DIR/lib/native/linux-64"
 
 java -Djava.library.path=$libs -cp $cp $mainClass $@
