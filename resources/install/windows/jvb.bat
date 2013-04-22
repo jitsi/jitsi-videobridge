@@ -28,4 +28,4 @@ FOR %%F IN (lib/*.jar) DO (
   SET cp=!cp!;lib/%%F%
 )
 
-java -Djava.library.path=lib/native/windows -cp %cp% %mainClass% %1 %2 %3 %4 %5 %6 %7 %8 %9
+java -Djava.library.path=lib/native/windows -cp %cp% %mainClass% %*
