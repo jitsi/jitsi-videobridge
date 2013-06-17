@@ -20,6 +20,7 @@
     <property name="packname.lin" value="${ant.project.name}-linux-x86-${label}"/>
     <property name="packname.lin64" value="${ant.project.name}-linux-x64-${label}"/>
     <property name="packname.macosx" value="${ant.project.name}-macosx-${label}"/>
+    <property name="packname.src" value="${ant.project.name}-src-${label}"/>
 
     <path id="compile.classpath">
         <fileset dir="lib" includes="*.jar" />
@@ -42,7 +43,7 @@
         <javac
             classpathref="compile.classpath"
             destdir="${output}"
-	    debug="true"
+            debug="true"
             fork="true"
             source="1.5"
             srcdir="src"
@@ -174,6 +175,17 @@
                 <exclude name="native/windows/**"/>
             </zipfileset>
             <zipfileset file="resources/install/macosx/jvb.sh" prefix="${packname.macosx}" filemode="755"/>
+        </zip>
+    </target>
+
+    <target name="dist.src" depends="make">
+        <zip destfile="${dist}/src/${packname.src}.zip">
+            <zipfileset dir="." prefix="${packname.src}">
+                <exclude name="classes/"/>
+                <exclude name="dist/"/>
+                <exclude name=".git/"/>
+                <exclude name="jitsi-videobridge.jar"/>
+            </zipfileset>
         </zip>
     </target>
 
