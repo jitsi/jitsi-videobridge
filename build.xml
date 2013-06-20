@@ -190,7 +190,7 @@
     </target>
 
     <!-- build all binaries and the jitsi-videobridge.jar for all supported platforms -->
-    <target name="dist" depends="dist.win, dist.win64, dist.lin, dist.lin64, dist.macosx" />
+    <target name="dist" depends="dist.win, dist.win64, dist.lin, dist.lin64, dist.macosx, dist.src" />
 
     <!--
         The easiest way to build the plugin is:
