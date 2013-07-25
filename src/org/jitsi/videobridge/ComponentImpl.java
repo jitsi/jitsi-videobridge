@@ -296,6 +296,7 @@ public class ComponentImpl
 
                             channel.setPayloadTypes(
                                     channelIQ.getPayloadTypes());
+                            channel.setDirection(channelIQ.getDirection());
 
                             ColibriConferenceIQ.Channel responseChannelIQ
                                 = new ColibriConferenceIQ.Channel();

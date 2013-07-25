@@ -305,7 +305,8 @@ public class Channel
                          */
                         long ssrc = RTPTranslatorImpl.readInt(data, offset + 4);
 
-                        removeReceiveSSRC(ssrc);
+                        if (removeReceiveSSRC(ssrc))
+                            notifyFocus();
                     }
                 }
             }
@@ -395,7 +396,8 @@ public class Channel
                      */
                     long ssrc = RTPTranslatorImpl.readInt(data, offset + 8);
 
-                    addReceiveSSRC(ssrc);
+                    boolean notify = false;
+                    notify |= addReceiveSSRC(ssrc);
 
                     /*
                      * When performing content mixing (rather than RTP
@@ -419,9 +421,13 @@ public class Channel
                             {
                                 stream.setFormat(format);
                                 stream.setDirection(MediaDirection.SENDRECV);
+                                notify = true;
                             }
                         }
                     }
+
+                    if (notify)
+                        notifyFocus();
                 }
             }
         }
@@ -437,8 +443,12 @@ public class Channel
      *
      * @param receiveSSRC the RTP SSRC to be added to the list of SSRCs received
      * on this <tt>Channel</tt>
+     *
+     * @return <tt>true</tt> if <tt>receiveSSRC</tt> was added to the list
+     * (was not previously there), and <tt>false</tt> if it was already in the
+     * list.
      */
-    private synchronized void addReceiveSSRC(long receiveSSRC)
+    private synchronized boolean addReceiveSSRC(long receiveSSRC)
     {
         long now = System.currentTimeMillis();
 
@@ -455,7 +465,7 @@ public class Channel
                  * last seen does not constitute a change in the value of the
                  * receiveSSRCs property of this instance.
                  */
-                return;
+                return false;
             }
         }
 
@@ -467,7 +477,7 @@ public class Channel
         newReceiveSSRCs[length + 1] = now;
         receiveSSRCs = newReceiveSSRCs;
 
-        receiveSSRCsChanged();
+        return true;
     }
 
     /**
@@ -559,6 +569,10 @@ public class Channel
         iq.setRTCPPort(getRTCPPort());
         iq.setRTPPort(getRTPPort());
         iq.setSSRCs(getReceiveSSRCs());
+        if (stream != null)
+        {
+            iq.setDirection(stream.getDirection());
+        }
     }
 
     /**
@@ -791,18 +805,11 @@ public class Channel
     }
 
     /**
-     * Notifies this instance that the value of the <tt>receiveSSRCs</tt>
-     * property/field of this instance has changed i.e. at least one RTP SSRC
-     * has been added to or removed from the list of SSRCs received on this
-     * <tt>Channel</tt>.
+     * Notifies the focus of this <tt>Channel</tt>'s <tt>Conference</tt>
+     * of the current state of this <tt>Channel</tt>.
      */
-    private void receiveSSRCsChanged()
+    private void notifyFocus()
     {
-        /*
-         * Notify the focus who has organized the telephony conference
-         * associated with this instance in order to allow the focus to build
-         * SSRC-CallPeer associations.
-         */
         boolean interrupted = false;
 
         try
@@ -847,8 +854,12 @@ public class Channel
      *
      * @param receiveSSRC the RTP SSRC to be removed from the list of SSRCs
      * received on this <tt>Channel</tt>
+     *
+     * @return <tt>true</tt> if <tt>receiveSSRC</tt> was found in the list of
+     * SSRCs received on this <tt>Channel</tt> and removed. And <tt>false</tt>
+     * if <tt>receiveSSRC</tt> was not found in the list.
      */
-    private synchronized void removeReceiveSSRC(long receiveSSRC)
+    private synchronized boolean removeReceiveSSRC(long receiveSSRC)
     {
         final int length = receiveSSRCs.length;
         boolean removed = false;
@@ -890,8 +901,7 @@ public class Channel
             }
         }
 
-        if (removed)
-            receiveSSRCsChanged();
+        return removed;
     }
 
     /**
@@ -1042,6 +1052,19 @@ public class Channel
         {
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
+        }
+    }
+
+    public void setDirection(MediaDirection direction)
+    {
+        if (stream != null && streamTarget != null
+                && streamTarget.getDataAddress() != null)
+        {
+            /*
+             * Make sure we only modify the stream direction after latching has
+             * finished.
+             */
+            stream.setDirection(direction);
         }
     }
 }
