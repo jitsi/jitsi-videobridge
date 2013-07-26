@@ -1,0 +1,9 @@
+Some of the files here, notably libjitsi.jar, are OSGi bundles from the Jitsi
+project. In Jitsi they are generated in the 'sc-bundles' directory by the
+'bundles' ant target. To update the files here, run 'ant rebuild' in Jitsi and
+then copy the files, e.g.:
+for i in *; do
+  if [ -e ../../jitsi/sc-bundles/$i ]; then
+    cp ../../jitsi/sc-bundles/$i .; 
+    fi;
+done
