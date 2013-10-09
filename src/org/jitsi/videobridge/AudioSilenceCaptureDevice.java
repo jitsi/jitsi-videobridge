@@ -71,7 +71,7 @@ public class AudioSilenceCaptureDevice
      * Implements
      * {@link AbstractPushBufferCaptureDevice#createStream(int, FormatControl)}.
      */
-    protected AbstractPushBufferStream createStream(
+    protected AudioSilenceStream createStream(
             int streamIndex,
             FormatControl formatControl)
     {
@@ -97,7 +97,7 @@ public class AudioSilenceCaptureDevice
      * of audio media.
      */
     private static class AudioSilenceStream
-        extends AbstractPushBufferStream
+        extends AbstractPushBufferStream<AudioSilenceCaptureDevice>
         implements Runnable
     {
         /**
