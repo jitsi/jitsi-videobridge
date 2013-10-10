@@ -3,15 +3,15 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/bouncycastle.jar"/>
-	<classpathentry kind="lib" path="lib/configuration.jar"/>
 	<classpathentry kind="lib" path="lib/concurrentlinkedhashmap-lru.jar"/>
+	<classpathentry kind="lib" path="lib/configuration.jar"/>
 	<classpathentry kind="lib" path="lib/dns.jar"/>
 	<classpathentry kind="lib" path="lib/dom4j.jar"/>
 	<classpathentry kind="lib" path="lib/fileaccess.jar"/>
 	<classpathentry kind="lib" path="lib/jitsi-android-osgi.jar"/>
 	<classpathentry kind="lib" path="lib/json.jar"/>
 	<classpathentry kind="lib" path="lib/libidn.jar"/>
-	<classpathentry kind="lib" path="lib/libjitsi.jar"/>
+	<classpathentry kind="lib" path="lib/libjitsi.jar" sourcepath="../libjitsi/src"/>
 	<classpathentry kind="lib" path="lib/netaddr.jar"/>
 	<classpathentry kind="lib" path="lib/osgi.core.jar"/>
 	<classpathentry kind="lib" path="lib/packetlogging.jar"/>

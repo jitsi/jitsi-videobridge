@@ -580,6 +580,7 @@ public class ComponentImpl
                 ColibriConferenceIQ.ELEMENT_NAME,
                 ColibriConferenceIQ.NAMESPACE,
                 new ColibriIQProvider());
+
         /*
          * <payload-type> and <parameter> defined by XEP-0167: Jingle RTP
          * Sessions
@@ -594,6 +595,26 @@ public class ComponentImpl
                 ColibriConferenceIQ.NAMESPACE,
                 new DefaultPacketExtensionProvider<ParameterPacketExtension>(
                         ParameterPacketExtension.class));
+
+        providerManager.addExtensionProvider(
+                IceUdpTransportPacketExtension.ELEMENT_NAME,
+                IceUdpTransportPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider
+                    <IceUdpTransportPacketExtension>(
+                        IceUdpTransportPacketExtension.class));
+        providerManager.addExtensionProvider(
+                RawUdpTransportPacketExtension.ELEMENT_NAME,
+                RawUdpTransportPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider
+                    <RawUdpTransportPacketExtension>(
+                        RawUdpTransportPacketExtension.class));
+        // DTLS-SRTP
+        providerManager.addExtensionProvider(
+                DtlsFingerprintPacketExtension.ELEMENT_NAME,
+                DtlsFingerprintPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider
+                    <DtlsFingerprintPacketExtension>(
+                        DtlsFingerprintPacketExtension.class));
 
         videoBridge = new VideoBridge(this);
     }
