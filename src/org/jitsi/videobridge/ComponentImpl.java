@@ -9,6 +9,7 @@ package org.jitsi.videobridge;
 import java.util.*;
 
 import net.java.sip.communicator.impl.osgi.framework.launch.*;
+import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -128,7 +129,13 @@ public class ComponentImpl
     @Override
     protected String[] discoInfoFeatureNamespaces()
     {
-        return new String[] { ColibriConferenceIQ.NAMESPACE };
+        return
+            new String[]
+                    {
+                        ColibriConferenceIQ.NAMESPACE,
+                        ProtocolProviderServiceJabberImpl
+                            .URN_XMPP_JINGLE_DTLS_SRTP
+                    };
     }
 
     /**
@@ -257,20 +264,21 @@ public class ComponentImpl
                         if (channelID == null)
                         {
                             /*
-                             * An expire attribute in the channel element
-                             * with value equal to zero requests the
-                             * immediate expiration of the channel in
-                             * question. Consequently, it does not make
-                             * sense to have it in a channel allocation
-                             * request.
+                             * An expire attribute in the channel element with
+                             * value equal to zero requests the immediate
+                             * expiration of the channel in question.
+                             * Consequently, it does not make sense to have it
+                             * in a channel allocation request.
                              */
-                            if (channelExpire == 0)
-                                channel = null;
-                            else
-                                channel = content.createChannel();
+                            channel
+                                = (channelExpire == 0)
+                                    ? null
+                                    : content.createChannel();
                         }
                         else
+                        {
                             channel = content.getChannel(channelID);
+                        }
 
                         if (channel == null)
                         {
@@ -296,8 +304,14 @@ public class ComponentImpl
 
                             channel.setPayloadTypes(
                                     channelIQ.getPayloadTypes());
+                            channel.setTransport(channelIQ.getTransport());
+
                             channel.setDirection(channelIQ.getDirection());
 
+                            /*
+                             * Provide (a description of) the current state of
+                             * the channel as part of the response.
+                             */
                             ColibriConferenceIQ.Channel responseChannelIQ
                                 = new ColibriConferenceIQ.Channel();
 

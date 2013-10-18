@@ -23,6 +23,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.format.*;
+import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
@@ -33,6 +34,7 @@ import org.osgi.framework.*;
  * Represents channel in the terms of Jitsi VideoBridge.
  *
  * @author Lyubomir Marinov
+ * @author Boris Grozev
  */
 public class Channel
 {
@@ -163,7 +165,13 @@ public class Channel
 
         streamConnector = createStreamConnector();
 
-        stream = getMediaService().createMediaStream(mediaType);
+        MediaService mediaService = getMediaService();
+
+        stream
+            = mediaService.createMediaStream(
+                    null,
+                    mediaType,
+                    mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP));
         /*
          * Add the PropertyChangeListener to the MediaStream prior to performing
          * further initialization so that we do not miss changes to the values
@@ -216,6 +224,30 @@ public class Channel
             break;
         default:
             throw new IllegalStateException("rtpLevelRelayType");
+        }
+
+        /*
+         * Start the SrtpControl of the MediaStream. As far as our experience
+         * with Jitsi goes, the SrtpControl is started prior to the MediaStream
+         * there.
+         */
+        SrtpControl srtpControl = stream.getSrtpControl();
+
+        if (srtpControl != null)
+        {
+            if (srtpControl instanceof DtlsControl)
+            {
+                DtlsControl dtlsControl = (DtlsControl) srtpControl;
+
+                /*
+                 * It makes sense to always start the DTLS-SRTP endpoint
+                 * represented by this Channel as a server because Jitsi
+                 * Videobridge is a server-side endpoint and thus is supposed to
+                 * have a public IP. 
+                 */
+                dtlsControl.setDtlsProtocol(DtlsControl.DTLS_SERVER_PROTOCOL);
+            }
+            srtpControl.start(mediaType);
         }
 
         stream.start();
@@ -382,9 +414,32 @@ public class Channel
             if (p.getLength() >= 12)
             {
                 byte[] data = p.getData();
-                int offset = p.getOffset();
+                int off = p.getOffset();
+                int v = ((data[off] & 0xc0) >>> 6);
 
-                if (/* v */ ((data[offset] & 0xc0) >>> 6) == 2)
+                /*
+                 * Prior to adding support for DTLS-SRTP to Jitsi Videobridge,
+                 * the SrtpControl of the MediaStream of this Channel was set to
+                 * a ZrtpControl. Consequently, the RTP PacketTransformer of
+                 * ZrtpControlImpl used to swallow the ZRTP messages. For the
+                 * purposes of compatibility, do not accept the ZRTP messages.  
+                 */
+                if (v == 0)
+                {
+                    if ((data[off] & 0x10) /* x */ == 0x10)
+                    {
+                        byte[] zrtpMagicCookie = ZrtpRawPacket.ZRTP_MAGIC;
+
+                        if ((data[off + 4] == zrtpMagicCookie[0])
+                                && (data[off + 5] == zrtpMagicCookie[1])
+                                && (data[off + 6] == zrtpMagicCookie[2])
+                                && (data[off + 7] == zrtpMagicCookie[3]))
+                        {
+                            accept = false;
+                        }
+                    }
+                }
+                else if (v == 2)
                 {
                     /*
                      * The focus who has organized the telephony conference of
@@ -394,7 +449,7 @@ public class Channel
                      * streams that they send. The information will be provided
                      * to the focus by the Jitsi VideoBridge server.
                      */
-                    long ssrc = RTPTranslatorImpl.readInt(data, offset + 8);
+                    long ssrc = RTPTranslatorImpl.readInt(data, off + 8);
 
                     boolean notify = false;
                     notify |= addReceiveSSRC(ssrc);
@@ -412,7 +467,7 @@ public class Channel
 
                         if (payloadTypes != null)
                         {
-                            int pt = data[offset + 1] & 0x7f;
+                            int pt = data[off + 1] & 0x7f;
                             MediaFormat format
                                 = payloadTypes.get(Byte.valueOf((byte) pt));
 
@@ -558,20 +613,61 @@ public class Channel
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
      * thought of as a description of this instance.
      *
-     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> to set the values of the
-     * properties of this instance on
+     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
+     * values of the properties of this instance
      */
     public void describe(ColibriConferenceIQ.Channel iq)
     {
+        iq.setDirection(stream.getDirection());
         iq.setExpire(getExpire());
         iq.setHost(getHost());
         iq.setID(getID());
         iq.setRTCPPort(getRTCPPort());
         iq.setRTPPort(getRTPPort());
         iq.setSSRCs(getReceiveSSRCs());
-        if (stream != null)
+
+        describeSrtpControl(iq);
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
+     * properties of the <tt>SrtpControl</tT> of the <tt>MediaStream</tt> of
+     * this instance.
+     * 
+     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
+     * values of the properties of the <tt>SrtpControl</tt> of the
+     * <tt>MediaStream</tt> of this instance
+     */
+    private void describeSrtpControl(ColibriConferenceIQ.Channel iq)
+    {
+        SrtpControl srtpControl = stream.getSrtpControl();
+
+        if (srtpControl instanceof DtlsControl)
         {
-            iq.setDirection(stream.getDirection());
+            DtlsControl dtlsControl = (DtlsControl) srtpControl;
+            String fingerprint = dtlsControl.getLocalFingerprint();
+            String hash = dtlsControl.getLocalFingerprintHashFunction();
+
+            IceUdpTransportPacketExtension transportPE = iq.getTransport();
+
+            if (transportPE == null)
+            {
+                transportPE = new RawUdpTransportPacketExtension();
+                iq.setTransport(transportPE);
+            }
+
+            DtlsFingerprintPacketExtension fingerprintPE
+                = transportPE.getFirstChildOfType(
+                        DtlsFingerprintPacketExtension.class);
+
+            if (fingerprintPE == null)
+            {
+                fingerprintPE = new DtlsFingerprintPacketExtension();
+                transportPE.addChildExtension(fingerprintPE);
+            }
+            fingerprintPE.setFingerprint(fingerprint);
+            fingerprintPE.setHash(hash);
         }
     }
 
@@ -905,6 +1001,24 @@ public class Channel
     }
 
     /**
+     * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
+     * <p>
+     * <b>Note</b>: The method does nothing if latching has not finished.
+     * </p>
+     *
+     * @param direction the <tt>MediaDirection</tt> to set on the
+     * <tt>MediaStream</tt> of this <tt>Channel</tt>
+     */
+    public void setDirection(MediaDirection direction)
+    {
+        // XXX We modify the stream direction only after latching has finished.
+        if (streamTarget.getDataAddress() != null)
+            stream.setDirection(direction);
+
+        touch(); // It seems this Channel is still active.
+    }
+
+    /**
      * Sets the number of seconds of inactivity after which this
      * <tt>Channel</tt> is to expire.
      *
@@ -970,6 +1084,43 @@ public class Channel
                         formats.add(format);
                     }
                 }
+            }
+        }
+
+        touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Sets a specific <tt>IceUdpTransportPacketExtension</tt> on this
+     * <tt>Channel</tt>.
+     *
+     * @param transport the <tt>IceUdpTransportPacketExtension</tt> to be set on
+     * this <tt>Channel</tt>
+     */
+    public void setTransport(IceUdpTransportPacketExtension transport)
+    {
+        if (transport != null)
+        {
+            SrtpControl srtpControl = stream.getSrtpControl();
+
+            if (srtpControl instanceof DtlsControl)
+            {
+                List<DtlsFingerprintPacketExtension> dfpes
+                    = transport.getChildExtensionsOfType(
+                            DtlsFingerprintPacketExtension.class);
+                Map<String,String> remoteFingerprints
+                    = new LinkedHashMap<String,String>();
+
+                for (DtlsFingerprintPacketExtension dfpe : dfpes)
+                {
+                    remoteFingerprints.put(
+                            dfpe.getHash(),
+                            dfpe.getFingerprint());
+                }
+
+                DtlsControl dtlsControl = (DtlsControl) srtpControl;
+
+                dtlsControl.setRemoteFingerprints(remoteFingerprints);
             }
         }
 
@@ -1052,19 +1203,6 @@ public class Channel
         {
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
-        }
-    }
-
-    public void setDirection(MediaDirection direction)
-    {
-        if (stream != null && streamTarget != null
-                && streamTarget.getDataAddress() != null)
-        {
-            /*
-             * Make sure we only modify the stream direction after latching has
-             * finished.
-             */
-            stream.setDirection(direction);
         }
     }
 }
