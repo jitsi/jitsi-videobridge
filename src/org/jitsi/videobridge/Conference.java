@@ -1,5 +1,5 @@
 /*
- * Jitsi VideoBridge, OpenSource video conferencing.
+ * Jitsi Videobridge, OpenSource video conferencing.
  *
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
@@ -11,7 +11,7 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
 /**
- * Represents a conference in the terms of Jitsi VideoBridge.
+ * Represents a conference in the terms of Jitsi Videobridge.
  *
  * @author Lyubomir Marinov
  */
@@ -48,32 +48,32 @@ public class Conference
     private long lastActivityTime;
 
     /**
-     * The <tt>VideoBridge</tt> which has initialized this <tt>Conference</tt>.
+     * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
-    private final VideoBridge videoBridge;
+    private final Videobridge videobridge;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
-     * conference in the terms of Jitsi VideoBridge which has a specific
+     * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
      *
-     * @param videoBridge the <tt>VideoBridge</tt> on which the new
+     * @param videobridge the <tt>Videobridge</tt> on which the new
      * <tt>Conference</tt> instance is to be initialized
      * @param id the (unique) ID of the new instance to be initialized
      * @param focus the JID of the conference focus who has requested the
      * initialization of the new instance and from whom further/future requests
      * to manage the new instance must come or they will be ignored
      */
-    public Conference(VideoBridge videoBridge, String id, String focus)
+    public Conference(Videobridge videobridge, String id, String focus)
     {
-        if (videoBridge == null)
+        if (videobridge == null)
             throw new NullPointerException("videoBridge");
         if (id == null)
             throw new NullPointerException("id");
         if (focus == null)
             throw new NullPointerException("focus");
 
-        this.videoBridge = videoBridge;
+        this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
     }
@@ -115,7 +115,7 @@ public class Conference
 
         try
         {
-            getVideoBridge().expireConference(this);
+            getVideobridge().expireConference(this);
         }
         finally
         {
@@ -247,15 +247,15 @@ public class Conference
     }
 
     /**
-     * Gets the <tt>VideoBridge</tt> which has initialized this
+     * Gets the <tt>Videobridge</tt> which has initialized this
      * <tt>Conference</tt>.
      *
-     * @return the <tt>VideoBridge</tt> which has initialized this
+     * @return the <tt>Videobridge</tt> which has initialized this
      * <tt>Conference</tt>
      */
-    public final VideoBridge getVideoBridge()
+    public final Videobridge getVideobridge()
     {
-        return videoBridge;
+        return videobridge;
     }
 
     /**

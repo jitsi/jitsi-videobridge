@@ -1,5 +1,5 @@
 /*
- * Jitsi VideoBridge, OpenSource video conferencing.
+ * Jitsi Videobridge, OpenSource video conferencing.
  *
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
@@ -14,6 +14,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.ice4j.stack.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.util.*;
@@ -81,7 +82,7 @@ public class ComponentImpl
     /**
      * The (default) name of <tt>ComponentImpl</tt> instances.
      */
-    private static final String NAME = "JitsiVideoBridge";
+    private static final String NAME = "JitsiVideobridge";
 
     /**
      * The (default) sub-domain of the address with which <tt>ComponentImpl</tt>
@@ -107,11 +108,11 @@ public class ComponentImpl
     private final Object frameworkSyncRoot = new Object();
 
     /**
-     * The <tt>VideoBridge</tt> which creates, lists and destroys
+     * The <tt>Videobridge</tt> which creates, lists and destroys
      * {@link Conference} instances and which is being represented as a Jabber
      * component by this instance.
      */
-    private VideoBridge videoBridge;
+    private Videobridge videoBridge;
 
     /**
      * Initializes a new <tt>ComponentImpl</tt> instance.
@@ -301,6 +302,17 @@ public class ComponentImpl
                                         && channel.isExpired())
                                     continue;
                             }
+
+                            /*
+                             * XXX The attribute initiator is optional. If a
+                             * value is not specified, then the Channel
+                             * initiator is to be assumed default or to not be
+                             * changed.
+                             */
+                            Boolean initiator = channelIQ.isInitiator();
+
+                            if (initiator != null)
+                                channel.setInitiator(initiator);
 
                             channel.setPayloadTypes(
                                     channelIQ.getPayloadTypes());
@@ -518,7 +530,7 @@ public class ComponentImpl
                 ConfigurationService.PNAME_CONFIGURATION_FILE_IS_READ_ONLY,
                 trueString);
 
-        // Jitsi VideoBridge is a relay so it does not need to capture media.
+        // Jitsi Videobridge is a relay so it does not need to capture media.
         System.setProperty(
                 MediaServiceImpl.DISABLE_AUDIO_SUPPORT_PNAME,
                 trueString);
@@ -572,14 +584,14 @@ public class ComponentImpl
     }
 
     /**
-     * Starts this Jabber component implementation and the Jitsi VideoBridge it
+     * Starts this Jabber component implementation and the Jitsi Videobridge it
      * provides in a specific OSGi <tt>BundleContext</tt>.
      *
      * @param bundleContext the OSGi <tt>BundleContext</tt> in which this Jabber
-     * component implementation and the Jitsi VideoBridge it provides are to be
+     * component implementation and the Jitsi Videobridge it provides are to be
      * started
      * @throws Exception if anything irreversible goes wrong while starting this
-     * Jabber component implementation and the Jitsi VideoBridge it provides in
+     * Jabber component implementation and the Jitsi Videobridge it provides in
      * the specified <tt>bundleContext</tt>
      */
     public void start(BundleContext bundleContext)
@@ -610,19 +622,37 @@ public class ComponentImpl
                 new DefaultPacketExtensionProvider<ParameterPacketExtension>(
                         ParameterPacketExtension.class));
 
+        // ICE-UDP <transport>
         providerManager.addExtensionProvider(
                 IceUdpTransportPacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider
                     <IceUdpTransportPacketExtension>(
                         IceUdpTransportPacketExtension.class));
+        // Raw UDP <transport>
         providerManager.addExtensionProvider(
                 RawUdpTransportPacketExtension.ELEMENT_NAME,
                 RawUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider
                     <RawUdpTransportPacketExtension>(
                         RawUdpTransportPacketExtension.class));
-        // DTLS-SRTP
+
+        PacketExtensionProvider candidatePacketExtensionProvider
+            = new DefaultPacketExtensionProvider<CandidatePacketExtension>(
+                    CandidatePacketExtension.class);
+
+        // ICE-UDP <candidate>
+        providerManager.addExtensionProvider(
+                CandidatePacketExtension.ELEMENT_NAME,
+                IceUdpTransportPacketExtension.NAMESPACE,
+                candidatePacketExtensionProvider);
+        // Raw UDP <candidate>
+        providerManager.addExtensionProvider(
+                CandidatePacketExtension.ELEMENT_NAME,
+                RawUdpTransportPacketExtension.NAMESPACE,
+                candidatePacketExtensionProvider);
+
+        // DTLS-SRTP <fingerprint>
         providerManager.addExtensionProvider(
                 DtlsFingerprintPacketExtension.ELEMENT_NAME,
                 DtlsFingerprintPacketExtension.NAMESPACE,
@@ -630,11 +660,14 @@ public class ComponentImpl
                     <DtlsFingerprintPacketExtension>(
                         DtlsFingerprintPacketExtension.class));
 
-        videoBridge = new VideoBridge(this);
+        // TODO Packet logging for ice4j is not supported at this time.
+        StunStack.setPacketLogger(null);
+
+        videoBridge = new Videobridge(this);
     }
 
     /**
-     * Starts the OSGi implementation and the Jitsi VideoBridge bundles.
+     * Starts the OSGi implementation and the Jitsi Videobridge bundles.
      */
     private void startOSGi()
     {
@@ -701,14 +734,14 @@ public class ComponentImpl
     }
 
     /**
-     * Stops this Jabber component implementation and the Jitsi VideoBridge it
+     * Stops this Jabber component implementation and the Jitsi Videobridge it
      * provides in a specific OSGi <tt>BundleContext</tt>.
      *
      * @param bundleContext the OSGi <tt>BundleContext</tt> in which this Jabber
-     * component implementation and the Jitsi VideoBridge it provides are to be
+     * component implementation and the Jitsi Videobridge it provides are to be
      * stopped
      * @throws Exception if anything irreversible goes wrong while stopping this
-     * Jabber component implementation and the Jitsi VideoBridge it provides in
+     * Jabber component implementation and the Jitsi Videobridge it provides in
      * the specified <tt>bundleContext</tt>
      */
     public void stop(BundleContext bundleContext)

@@ -1,5 +1,5 @@
 /*
- * Jitsi VideoBridge, OpenSource video conferencing.
+ * Jitsi Videobridge, OpenSource video conferencing.
  *
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
@@ -14,7 +14,7 @@ import org.jitsi.service.neomedia.*;
 
 /**
  * Implements a <tt>MediaDevice</tt> which provides silence in the form of audio
- * media and does not play back any (audio) media (because Jitsi VideoBridge is
+ * media and does not play back any (audio) media (because Jitsi Videobridge is
  * a server-side technology).
  *
  * @author Lyubomir Marinov
@@ -38,7 +38,7 @@ public class AudioSilenceMediaDevice
      * {@inheritDoc}
      *
      * Overrides the super implementation to disable the very playback because
-     * Jitsi VideoBridge is a server-side technology.
+     * Jitsi Videobridge is a server-side technology.
      */
     @Override
     protected Processor createPlayer(DataSource dataSource)
@@ -51,7 +51,7 @@ public class AudioSilenceMediaDevice
      *
      * Overrides the super implementation to initialize a
      * <tt>MediaDeviceSession</tt> which disables the very playback because
-     * Jitsi VideoBridge is a server-side technology.
+     * Jitsi Videobridge is a server-side technology.
      */
     @Override
     public MediaDeviceSession createSession()
@@ -63,7 +63,7 @@ public class AudioSilenceMediaDevice
                          * {@inheritDoc}
                          *
                          * Overrides the super implementation to disable the
-                         * very playback because Jitsi VideoBridge is a
+                         * very playback because Jitsi Videobridge is a
                          * server-side technology.
                          */
                         @Override

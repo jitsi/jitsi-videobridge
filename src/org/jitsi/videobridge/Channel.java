@@ -1,5 +1,5 @@
 /*
- * Jitsi VideoBridge, OpenSource video conferencing.
+ * Jitsi Videobridge, OpenSource video conferencing.
  *
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
@@ -8,8 +8,10 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
+import java.lang.reflect.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import javax.media.*;
 import javax.media.rtp.*;
@@ -17,8 +19,7 @@ import javax.media.rtp.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
-import net.java.sip.communicator.service.netaddr.*;
-import net.java.sip.communicator.util.*;
+import net.java.sip.communicator.service.protocol.*;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
@@ -28,21 +29,33 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
-import org.osgi.framework.*;
+import org.jitsi.util.event.*;
 
 /**
- * Represents channel in the terms of Jitsi VideoBridge.
+ * Represents channel in the terms of Jitsi Videobridge.
  *
  * @author Lyubomir Marinov
  * @author Boris Grozev
  */
 public class Channel
+    extends PropertyChangeNotifier
 {
     /**
      * The default number of seconds of inactivity after which <tt>Channel</tt>s
      * expire.
      */
     public static final int DEFAULT_EXPIRE = 60;
+
+    private static final ExecutorService executorService
+        = Executors.newCachedThreadPool();
+
+    /**
+     * The name of the <tt>Channel</tt> property which indicates whether the
+     * conference focus is the initiator/offerer (as opposed to the
+     * responder/answerer) of the media negotiation associated with the
+     * <tt>Channel</tt>.
+     */
+    public static final String INITIATOR_PROPERTY = "initiator";
 
     /**
      * A (dumb) <tt>SimpleAudioLevelListener</tt> instance which is to be set on
@@ -78,6 +91,13 @@ public class Channel
     private final String id;
 
     /**
+     * The indicator which determines whether the conference focus is the
+     * initiator/offerer (as opposed to the responder/answerer) of the media
+     * negotiation associated with this instance.
+     */
+    private boolean initiator = true;
+
+    /**
      * The time in milliseconds of the last activity related to this
      * <tt>Channel</tt>. In the time interval between the last activity and now,
      * this <tt>Channel</tt> is considered inactive.
@@ -101,16 +121,10 @@ public class Channel
 
     /**
      * THe <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to the terms
-     * of Jitsi VideoBridge and which adapts this <tt>Channel</tt> to the terms
+     * of Jitsi Videobridge and which adapts this <tt>Channel</tt> to the terms
      * of <tt>neomedia</tt>.
      */
     private final MediaStream stream;
-
-    /**
-     * The <tt>StreamConnector</tt> which is is to be the <tt>connector</tt> of
-     * {@link #stream}.
-     */
-    private final StreamConnector streamConnector;
 
     /**
      * The <tt>PropertyChangeListener</tt> which listens to changes of the
@@ -132,6 +146,22 @@ public class Channel
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
      */
     private final SessionAddress streamTarget = new SessionAddress();
+
+    /**
+     * The <tt>TransportManager</tt> that represents the Jingle transport of
+     * this <tt>Channel</tt>.
+     */
+    private TransportManager transportManager;
+
+    /**
+     * The <tt>Object</tt> which synchronizes the access to
+     * {@link #transportManager}.
+     */
+    private final Object transportManagerSyncRoot = new Object();
+
+    private
+        WrapupConnectivityEstablishmentCommand
+            wrapupConnectivityEstablishmentCommand;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -163,8 +193,6 @@ public class Channel
                 ? RTPLevelRelayType.MIXER
                 : RTPLevelRelayType.TRANSLATOR;
 
-        streamConnector = createStreamConnector();
-
         MediaService mediaService = getMediaService();
 
         stream
@@ -178,7 +206,6 @@ public class Channel
          * of properties we may be interested in.
          */
         stream.addPropertyChangeListener(streamPropertyChangeListener);
-        stream.setConnector(streamConnector);
         stream.setName(this.id);
 
         /*
@@ -198,7 +225,7 @@ public class Channel
             if (MediaType.AUDIO.equals(mediaType))
             {
                 /*
-                 * Allow the Jitsi VideoBridge server to send the audio levels
+                 * Allow the Jitsi Videobridge server to send the audio levels
                  * of the contributing sources to the telephony conference
                  * participants .
                  */
@@ -226,39 +253,13 @@ public class Channel
             throw new IllegalStateException("rtpLevelRelayType");
         }
 
-        /*
-         * Start the SrtpControl of the MediaStream. As far as our experience
-         * with Jitsi goes, the SrtpControl is started prior to the MediaStream
-         * there.
-         */
-        SrtpControl srtpControl = stream.getSrtpControl();
-
-        if (srtpControl != null)
-        {
-            if (srtpControl instanceof DtlsControl)
-            {
-                DtlsControl dtlsControl = (DtlsControl) srtpControl;
-
-                /*
-                 * It makes sense to always start the DTLS-SRTP endpoint
-                 * represented by this Channel as a server because Jitsi
-                 * Videobridge is a server-side endpoint and thus is supposed to
-                 * have a public IP. 
-                 */
-                dtlsControl.setDtlsProtocol(DtlsControl.DTLS_SERVER_PROTOCOL);
-            }
-            srtpControl.start(mediaType);
-        }
-
-        stream.start();
-
         touch();
     }
 
     /**
      * Determines whether a specific <tt>DatagramPacket</tt> received on the
      * control <tt>DatagramSocket</tt> of this <tt>Channel</tt> is to be
-     * accepted for further processing within Jitsi VideoBridge or is to be
+     * accepted for further processing within Jitsi Videobridge or is to be
      * rejected/dropped. When the first <tt>DatagramPacket</tt> arrives, makes
      * its source the only acceptable one for the control
      * <tt>DatagramSocket</tt> and uses it as the control target of
@@ -267,7 +268,7 @@ public class Channel
      * @param p the <tt>DatagramPacket</tt> received on the control
      * <tt>DatagramSocket</tt> of this <tt>Channel</tt>
      * @return <tt>true</tt> if the specified <tt>DatagramPacket</tt> is to be
-     * accepted for further processing within Jitsi VideoBridge or
+     * accepted for further processing within Jitsi Videobridge or
      * <tt>false</tt> to reject/drop it
      */
     private boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
@@ -333,7 +334,7 @@ public class Channel
                          * unable to associate the participants with the SSRCs
                          * of the RTP streams that they send. The information
                          * will be provided to the focus by the Jitsi
-                         * VideoBridge server.
+                         * Videobridge server.
                          */
                         long ssrc = RTPTranslatorImpl.readInt(data, offset + 4);
 
@@ -350,7 +351,7 @@ public class Channel
     /**
      * Determines whether a specific <tt>DatagramPacket</tt> received on the
      * data <tt>DatagramSocket</tt> of this <tt>Channel</tt> is to be accepted
-     * for further processing within Jitsi VideoBridge or is to be
+     * for further processing within Jitsi Videobridge or is to be
      * rejected/dropped. When the first <tt>DatagramPacket</tt> arrives, makes
      * its source the only acceptable one for the data <tt>DatagramSocket</tt>
      * and uses it as the data target of {@link #rtpConnector}.
@@ -358,7 +359,7 @@ public class Channel
      * @param p the <tt>DatagramPacket</tt> received on the data
      * <tt>DatagramSocket</tt> of this <tt>Channel</tt>
      * @return <tt>true</tt> if the specified <tt>DatagramPacket</tt> is to be
-     * accepted for further processing within Jitsi VideoBridge or
+     * accepted for further processing within Jitsi Videobridge or
      * <tt>false</tt> to reject/drop it
      */
     private boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
@@ -447,7 +448,7 @@ public class Channel
                      * on a single Channel. Consequently, it is unable to
                      * associate the participants with the SSRCs of the RTP
                      * streams that they send. The information will be provided
-                     * to the focus by the Jitsi VideoBridge server.
+                     * to the focus by the Jitsi Videobridge server.
                      */
                     long ssrc = RTPTranslatorImpl.readInt(data, off + 8);
 
@@ -549,62 +550,15 @@ public class Channel
     private StreamConnector createStreamConnector()
         throws IOException
     {
-        /*
-         * Determine the local InetAddress the new StreamConnector is to attempt
-         * to bind to.
-         */
-        ComponentImpl component
-            = getContent().getConference().getVideoBridge().getComponent();
-        BundleContext bundleContext = component.getBundleContext();
-        NetworkAddressManagerService nams
-            = ServiceUtils.getService(
-                    bundleContext,
-                    NetworkAddressManagerService.class);
-        InetAddress bindAddr = null;
-
-        if (nams != null)
+        synchronized (transportManagerSyncRoot)
         {
-            String domain = component.getDomain();
+            TransportManager transportManager = this.transportManager;
 
-            if ((domain != null) && (domain.length() != 0))
-            {
-                /*
-                 * The domain reported by the Jabber component contains its
-                 * dedicated subdomain and the goal here is to get the domain of
-                 * the XMPP server.
-                 */
-                int subdomainEnd = domain.indexOf('.');
-
-                if (subdomainEnd >= 0)
-                    domain = domain.substring(subdomainEnd + 1);
-                if (domain.length() != 0)
-                {
-                    try
-                    {
-                        bindAddr
-                            = nams.getLocalHost(
-                                    NetworkUtils.getInetAddress(domain));
-                    }
-                    catch (UnknownHostException uhe)
-                    {
-                        uhe.printStackTrace(System.err);
-                    }
-                }
-            }
+            return
+                (transportManager == null)
+                    ? null
+                    : transportManager.getStreamConnector();
         }
-        if (bindAddr == null)
-            bindAddr = InetAddress.getLocalHost();
-
-        StreamConnector streamConnector = new DefaultStreamConnector(bindAddr);
-
-        /*
-         * Try to follow the convention that the RTCP port is the next one after
-         * the RTP port.
-         */
-        streamConnector.getDataSocket();
-        streamConnector.getControlSocket();
-
-        return streamConnector;
     }
 
     /**
@@ -620,12 +574,11 @@ public class Channel
     {
         iq.setDirection(stream.getDirection());
         iq.setExpire(getExpire());
-        iq.setHost(getHost());
         iq.setID(getID());
-        iq.setRTCPPort(getRTCPPort());
-        iq.setRTPPort(getRTPPort());
+        iq.setInitiator(isInitiator());
         iq.setSSRCs(getReceiveSSRCs());
 
+        describeTransportManager(iq);
         describeSrtpControl(iq);
     }
 
@@ -672,6 +625,30 @@ public class Channel
     }
 
     /**
+     * Sets the values of the properties of a specific
+     * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
+     * properties of {@link #transportManager}.
+     * 
+     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
+     * values of the properties of <tt>transportManager</tt>
+     */
+    private void describeTransportManager(ColibriConferenceIQ.Channel iq)
+    {
+        TransportManager transportManager;
+
+        try
+        {
+            transportManager = getTransportManager();
+        }
+        catch (IOException ioe)
+        {
+            throw new UndeclaredThrowableException(ioe);
+        }
+        if (transportManager != null)
+            transportManager.describe(iq);
+    }
+
+    /**
      * Expires this <tt>Channel</tt>. Releases the resources acquired by this
      * instance throughout its life time and prepares it to be garbage
      * collected.
@@ -700,7 +677,7 @@ public class Channel
             }
             catch (Throwable t)
             {
-                t.printStackTrace(System.err);
+                t.printStackTrace();
                 if (t instanceof ThreadDeath)
                     throw (ThreadDeath) t;
             }
@@ -708,11 +685,16 @@ public class Channel
             {
                 try
                 {
-                    streamConnector.close();
+                    synchronized (transportManagerSyncRoot)
+                    {
+                        wrapupConnectivityEstablishmentCommand = null;
+                        if (transportManager != null)
+                            transportManager.close();
+                    }
                 }
                 catch (Throwable t)
                 {
-                    t.printStackTrace(System.err);
+                    t.printStackTrace();
                     if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                 }
@@ -740,19 +722,6 @@ public class Channel
     public int getExpire()
     {
         return expire;
-    }
-
-    /**
-     * Gets the IP address (represented as a <tt>String</tt>) of the host on
-     * which this <tt>Channel</tt> has been allocated.
-     *
-     * @return a <tt>String</tt> which represents the IP address of the host on
-     * which this <tt>Channel</tt> has been allocated
-     */
-    public String getHost()
-    {
-        return
-            streamConnector.getDataSocket().getLocalAddress().getHostAddress();
     }
 
     /**
@@ -817,18 +786,6 @@ public class Channel
     }
 
     /**
-     * Gets the port which has been allocated by this <tt>Channel</tt> for the
-     * purposes of receiving RTCP packets.
-     *
-     * @return the port which has been allocated by this <tt>Channel</tt> for
-     * the purposes of receiving RTCP packets
-     */
-    public int getRTCPPort()
-    {
-        return streamConnector.getControlSocket().getLocalPort();
-    }
-
-    /**
      * Gets the type of RTP-level relay (in the terms specified by RFC 3550
      * "RTP: A Transport Protocol for Real-Time Applications" in section 2.3
      * "Mixers and Translators") used for this <tt>Channel</tt>.
@@ -840,18 +797,6 @@ public class Channel
     public RTPLevelRelayType getRTPLevelRelayType()
     {
         return rtpLevelRelayType;
-    }
-
-    /**
-     * Gets the port which has been allocated by this <tt>Channel</tt> for the
-     * purposes of receiving RTP packets.
-     *
-     * @return the port which has been allocated by this <tt>Channel</tt> for
-     * the purposes of receiving RTP packets
-     */
-    public int getRTPPort()
-    {
-        return streamConnector.getDataSocket().getLocalPort();
     }
 
     /**
@@ -873,7 +818,7 @@ public class Channel
                     public void audioLevelChanged(int level)
                     {
                         /*
-                         * Whatever, the Jitsi VideoBridge is not interested in
+                         * Whatever, the Jitsi Videobridge is not interested in
                          * the audio levels. However, an existing/non-null
                          * streamAudioLevelListener has to be set on an
                          * AudioMediaStream in order to have the audio levels of
@@ -883,6 +828,40 @@ public class Channel
                 };
         }
         return streamAudioLevelListener;
+    }
+
+    /**
+     * Gets the <tt>TransportManager</tt> which represents the Jingle transport
+     * of this <tt>Channel</tt>. If the <tt>TransportManager</tt> has not been
+     * created yet, it is created.
+     *
+     * @return the <tt>TransportManager</tt> which represents the Jingle
+     * transport of this <tt>Channel</tt>
+     */
+    private TransportManager getTransportManager()
+        throws IOException
+    {
+        synchronized (transportManagerSyncRoot)
+        {
+            if (transportManager == null)
+            {
+                transportManager = new IceUdpTransportManager(this);
+                wrapupConnectivityEstablishmentCommand = null;
+
+                /*
+                 * XXX The implementation of the Jingle Raw UDP transport does
+                 * not establish connectivity so maybeStartStream() is invoked
+                 * bellow in case we decide to change the default
+                 * TransportManager in the future. 
+                 */
+                if (RawUdpTransportPacketExtension.NAMESPACE.equals(
+                        transportManager.getXmlNamespace()))
+                {
+                    maybeStartStream();
+                }
+            }
+            return transportManager;
+        }
     }
 
     /**
@@ -898,6 +877,63 @@ public class Channel
         {
             return expired;
         }
+    }
+
+    /**
+     * Gets the indicator which determines whether the conference focus is the
+     * initiator/offerer (as opposed to the responder/answerer) of the media
+     * negotiation associated with this instance.
+     *
+     * @return <tt>true</tt> if the conference focus is the initiator/offerer
+     * (as opposed to the responder/answerer) of the media negotiation
+     * associated with this instance; otherwise, <tt>false</tt>
+     */
+    public boolean isInitiator()
+    {
+        return initiator;
+    }
+
+    private void maybeStartStream()
+        throws IOException
+    {
+        StreamConnector connector = createStreamConnector();
+
+        if (connector == null)
+            return;
+        else
+            stream.setConnector(connector);
+
+        if (!stream.isStarted())
+        {
+            /*
+             * Start the SrtpControl of the MediaStream. As far as our
+             * experience with Jitsi goes, the SrtpControl is started prior to
+             * the MediaStream there.
+             */
+            SrtpControl srtpControl = stream.getSrtpControl();
+
+            if (srtpControl != null)
+            {
+                if (srtpControl instanceof DtlsControl)
+                {
+                    DtlsControl dtlsControl = (DtlsControl) srtpControl;
+
+                    /*
+                     * It makes sense to always start the DTLS-SRTP endpoint
+                     * represented by this Channel as a server because Jitsi
+                     * Videobridge is a server-side endpoint and thus is
+                     * supposed to have a public IP. 
+                     */
+                    dtlsControl.setDtlsProtocol(
+                            DtlsControl.DTLS_SERVER_PROTOCOL);
+                }
+                srtpControl.start(getContent().getMediaType());
+            }
+
+            stream.start();
+        }
+
+        touch(); // It seems this Channel is still active.
     }
 
     /**
@@ -927,7 +963,7 @@ public class Channel
             conferenceIQ.setTo(conference.getFocus());
             conferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.SET);
 
-            conference.getVideoBridge().getComponent().send(conferenceIQ);
+            conference.getVideobridge().getComponent().send(conferenceIQ);
         }
         catch (Throwable t)
         {
@@ -1000,6 +1036,59 @@ public class Channel
         return removed;
     }
 
+    private void runInWrapupConnectivityEstablishmentCommand(
+            WrapupConnectivityEstablishmentCommand
+                wrapupConnectivityEstablishmentCommand)
+    {
+        TransportManager transportManager
+            = wrapupConnectivityEstablishmentCommand.transportManager;
+
+        synchronized (transportManagerSyncRoot)
+        {
+            if (transportManager != this.transportManager)
+                return;
+            if (wrapupConnectivityEstablishmentCommand
+                    != this.wrapupConnectivityEstablishmentCommand)
+            {
+                return;
+            }
+            if (isExpired())
+                return;
+        }
+
+        try
+        {
+            transportManager.wrapupConnectivityEstablishment();
+        }
+        catch (OperationFailedException ofe)
+        {
+            ofe.printStackTrace();
+            return;
+        }
+
+        synchronized (transportManagerSyncRoot)
+        {
+            if (transportManager != this.transportManager)
+                return;
+            if (wrapupConnectivityEstablishmentCommand
+                    != this.wrapupConnectivityEstablishmentCommand)
+            {
+                return;
+            }
+            if (isExpired())
+                return;
+
+            try
+            {
+                maybeStartStream();
+            }
+            catch (IOException ioe)
+            {
+                ioe.printStackTrace();
+            }
+        }
+    }
+
     /**
      * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
      * <p>
@@ -1037,6 +1126,29 @@ public class Channel
             expire();
         else
             touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Sets the indicator which determines whether the conference focus is the
+     * initiator/offerer (as opposed to the responder/answerer) of the media
+     * negotiation associated with this instance.
+     *
+     * @param initiator <tt>true</tt> if the conference focus is the
+     * initiator/offerer (as opposed to the responder/answerer) of the media
+     * negotiation associated with this instance; otherwise, <tt>false</tt>
+     */
+    public void setInitiator(boolean initiator)
+    {
+        boolean oldValue = this.initiator;
+
+        this.initiator = initiator;
+
+        boolean newValue = this.initiator;
+
+        touch(); // It seems this Channel is still active.
+
+        if (oldValue != newValue)
+            firePropertyChange(INITIATOR_PROPERTY, oldValue, newValue);
     }
 
     /**
@@ -1098,9 +1210,13 @@ public class Channel
      * this <tt>Channel</tt>
      */
     public void setTransport(IceUdpTransportPacketExtension transport)
+        throws IOException
     {
         if (transport != null)
         {
+            setTransportManager(transport.getNamespace());
+
+            // DTLS-SRTP
             SrtpControl srtpControl = stream.getSrtpControl();
 
             if (srtpControl instanceof DtlsControl)
@@ -1108,19 +1224,83 @@ public class Channel
                 List<DtlsFingerprintPacketExtension> dfpes
                     = transport.getChildExtensionsOfType(
                             DtlsFingerprintPacketExtension.class);
-                Map<String,String> remoteFingerprints
-                    = new LinkedHashMap<String,String>();
 
-                for (DtlsFingerprintPacketExtension dfpe : dfpes)
+                if (!dfpes.isEmpty())
                 {
-                    remoteFingerprints.put(
-                            dfpe.getHash(),
-                            dfpe.getFingerprint());
+                    Map<String,String> remoteFingerprints
+                        = new LinkedHashMap<String,String>();
+
+                    for (DtlsFingerprintPacketExtension dfpe : dfpes)
+                    {
+                        remoteFingerprints.put(
+                                dfpe.getHash(),
+                                dfpe.getFingerprint());
+                    }
+
+                    DtlsControl dtlsControl = (DtlsControl) srtpControl;
+
+                    dtlsControl.setRemoteFingerprints(remoteFingerprints);
                 }
+            }
 
-                DtlsControl dtlsControl = (DtlsControl) srtpControl;
+            TransportManager transportManager = getTransportManager();
 
-                dtlsControl.setRemoteFingerprints(remoteFingerprints);
+            if (transportManager != null)
+            {
+                if (transportManager.startConnectivityEstablishment(transport))
+                    wrapupConnectivityEstablishment(transportManager);
+                else
+                    maybeStartStream();
+            }
+        }
+
+        touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Sets the XML namespace of the Jingle transport of this <tt>Channel</tt>.
+     * If {@link #transportManager} is non-<tt>null</tt> and does not have the
+     * specified <tt>xmlNamespace</tt>, it is closed and replaced with a new
+     * <tt>TransportManager</tt> instance which has the specified
+     * <tt>xmlNamespace</tt>. If <tt>transportManager</tt> is non-<tt>null</tt>
+     * and has the specified <tt>xmlNamespace</tt>, the method does nothing.
+     *
+     * @param xmlNamespace the XML namespace of the Jingle transport to be set
+     * on this <tt>Channel</tt>
+     * @throws IOException
+     */
+    private void setTransportManager(String xmlNamespace)
+        throws IOException
+    {
+        synchronized (transportManagerSyncRoot)
+        {
+            if ((transportManager != null)
+                    && !transportManager.getXmlNamespace().equals(xmlNamespace))
+            {
+                wrapupConnectivityEstablishmentCommand = null;
+                transportManager.close();
+                transportManager = null;
+            }
+
+            if (transportManager == null)
+            {
+                wrapupConnectivityEstablishmentCommand = null;
+
+                if (IceUdpTransportPacketExtension.NAMESPACE.equals(
+                        xmlNamespace))
+                {
+                    transportManager = new IceUdpTransportManager(this);
+                }
+                else if (RawUdpTransportPacketExtension.NAMESPACE.equals(
+                        xmlNamespace))
+                {
+                    transportManager = new RawUdpTransportManager(this);
+                }
+                else
+                {
+                    throw new IllegalArgumentException(
+                            "Unsupported Jingle transport " + xmlNamespace);
+                }
             }
         }
 
@@ -1139,8 +1319,8 @@ public class Channel
     private void streamPropertyChange(PropertyChangeEvent ev)
     {
         /*
-         * TODO The following is based on an internal property which has been
-         * introduced specifically for Jitsi VideoBridge and should not be used
+         * XXX The following is based on an internal property which has been
+         * introduced specifically for Jitsi Videobridge and should not be used
          * anywhere else because it will likely be removed.
          */
         String propertyName = ev.getPropertyName();
@@ -1203,6 +1383,72 @@ public class Channel
         {
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
+        }
+    }
+
+    private void wrapupConnectivityEstablishment(
+            TransportManager transportManager)
+    {
+        synchronized (transportManagerSyncRoot)
+        {
+            if (transportManager != this.transportManager)
+                return;
+
+            if ((wrapupConnectivityEstablishmentCommand != null)
+                    && (wrapupConnectivityEstablishmentCommand.transportManager
+                            != transportManager))
+            {
+                wrapupConnectivityEstablishmentCommand = null;
+            }
+            if (wrapupConnectivityEstablishmentCommand == null)
+            {
+                wrapupConnectivityEstablishmentCommand
+                    = new WrapupConnectivityEstablishmentCommand(
+                            transportManager);
+
+                boolean execute = false;
+
+                try
+                {
+                    executorService.execute(
+                            wrapupConnectivityEstablishmentCommand);
+                    execute = true;
+                }
+                finally
+                {
+                    if (!execute)
+                        wrapupConnectivityEstablishmentCommand = null;
+                }
+            }
+        }
+    }
+
+    private class WrapupConnectivityEstablishmentCommand
+        implements Runnable
+    {
+        public final TransportManager transportManager;
+
+        public WrapupConnectivityEstablishmentCommand(
+                TransportManager transportManager)
+        {
+            this.transportManager = transportManager;
+        }
+
+        @Override
+        public void run()
+        {
+            try
+            {
+                runInWrapupConnectivityEstablishmentCommand(this);
+            }
+            finally
+            {
+                synchronized (transportManagerSyncRoot)
+                {
+                    if (wrapupConnectivityEstablishmentCommand == this)
+                        wrapupConnectivityEstablishmentCommand = null;
+                }
+            }
         }
     }
 }

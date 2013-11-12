@@ -1,5 +1,5 @@
 /*
- * Jitsi VideoBridge, OpenSource video conferencing.
+ * Jitsi Videobridge, OpenSource video conferencing.
  *
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
@@ -11,7 +11,7 @@ import org.jivesoftware.whack.*;
 import org.xmpp.component.*;
 
 /**
- * Provides the <tt>main</tt> entry point of the Jitsi VideoBridge application
+ * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
  * which implements an external Jabber component.
  *
  * @author Lyubomir Marinov
@@ -90,7 +90,7 @@ public class Main
     private static final String SECRET_ARG_NAME = "--secret=";
 
     /**
-     * Represents the <tt>main</tt> entry point of the Jitsi VideoBridge
+     * Represents the <tt>main</tt> entry point of the Jitsi Videobridge
      * application which implements an external Jabber component.
      *
      * @param args the arguments provided to the application on the command line
@@ -127,7 +127,7 @@ public class Main
         if (host == null)
             host = (domain != null) ? domain : HOST_ARG_VALUE;
 
-        // Start Jitsi VideoBridge as an external Jabber component. 
+        // Start Jitsi Videobridge as an external Jabber component. 
         ExternalComponentManager componentManager
             = new ExternalComponentManager(host, port);
         String subdomain = ComponentImpl.SUBDOMAIN;

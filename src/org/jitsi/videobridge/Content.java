@@ -1,5 +1,5 @@
 /*
- * Jitsi VideoBridge, OpenSource video conferencing.
+ * Jitsi Videobridge, OpenSource video conferencing.
  *
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
@@ -16,7 +16,7 @@ import org.jitsi.service.neomedia.device.*;
 import org.osgi.framework.*;
 
 /**
- * Represents a content in the terms of Jitsi VideoBridge.
+ * Represents a content in the terms of Jitsi Videobridge.
  *
  * @author Lyubomir Marinov
  */
@@ -212,21 +212,21 @@ public class Content
     {
         return
             Long.toHexString(
-                    System.currentTimeMillis() + VideoBridge.RANDOM.nextLong());
+                    System.currentTimeMillis() + Videobridge.RANDOM.nextLong());
     }
 
     /**
      * Gets the <tt>BundleContext</tt> associated with this <tt>Conent</tt>.
      * The method is a convenience which gets the <tt>BundleContext</tt>
      * associated with the XMPP component implementation in which the
-     * <tt>VideoBridge</tt> associated with this instance is executing.
+     * <tt>Videobridge</tt> associated with this instance is executing.
      *
      * @return the <tt>BundleContext</tt> associated with this <tt>Content</tt>
      */
     private BundleContext getBundleContext()
     {
         return
-            getConference().getVideoBridge().getComponent().getBundleContext();
+            getConference().getVideobridge().getComponent().getBundleContext();
     }
 
     /**

@@ -15,6 +15,7 @@
 	<classpathentry kind="lib" path="lib/netaddr.jar"/>
 	<classpathentry kind="lib" path="lib/osgi.core.jar"/>
 	<classpathentry kind="lib" path="lib/packetlogging.jar"/>
+	<classpathentry kind="lib" path="lib/protocol.jar"/>
 	<classpathentry kind="lib" path="lib/protocol-jabber.jar"/>
 	<classpathentry kind="lib" path="lib/protocol-media.jar"/>
 	<classpathentry kind="lib" path="lib/resourcemanager.jar"/>
