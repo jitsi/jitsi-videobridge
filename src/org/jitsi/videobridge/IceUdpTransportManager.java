@@ -22,6 +22,11 @@ import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.jitsi.service.neomedia.*;
 
+/**
+ * Implements the Jingle ICE-UDP transport.
+ *
+ * @author Lyubomir Marinov
+ */
 public class IceUdpTransportManager
     extends TransportManager
 {
@@ -32,8 +37,16 @@ public class IceUdpTransportManager
     private static final int[] COMPONENT_IDS
         = new int[] { Component.RTP, Component.RTCP };
 
+    /**
+     * The <tt>Agent</tt> which implements the ICE protocol and which is used
+     * by this instance to implement the Jingle ICE-UDP transport.
+     */
     private final Agent iceAgent;
 
+    /**
+     * The <tt>StreamConnector</tt> that represents the datagram sockets
+     * allocated by this instance for the purposes of RTP and RTCP transmission.
+     */
     private StreamConnector streamConnector;
 
     /**
@@ -79,6 +92,9 @@ public class IceUdpTransportManager
             iceAgent.free();
     }
 
+    /**
+     * Closes {@link #streamConnector} (if it exists).
+     */
     private synchronized void closeStreamConnector()
     {
         if (streamConnector != null)
@@ -88,6 +104,17 @@ public class IceUdpTransportManager
         }
     }
 
+    /**
+     * Initializes a new <tt>Agent</tt> instance which implements the ICE
+     * protocol and which is to be used by this instance to implement the Jingle
+     * ICE-UDP transport.
+     *
+     * @return a new <tt>Agent</tt> instance which implements the ICE protocol
+     * and which is to be used by this instance to implement the Jingle ICE-UDP
+     * transport
+     * @throws IOException if initializing a new <tt>Agent</tt> instance for the
+     * purposes of this <tt>TransportManager</tt> fails
+     */
     private Agent createIceAgent()
         throws IOException
     {
@@ -135,6 +162,16 @@ public class IceUdpTransportManager
         return iceAgent;
     }
 
+    /**
+     * Initializes a new <tt>StreamConnector</tt> instance that represents the
+     * datagram sockets allocated and negotiated by {@link #iceAgent} for the
+     * purposes of RTCP and RTP transmission.
+     *
+     * @return a new <tt>StreamConnector</tt> instance that represents the
+     * datagram sockets allocated and negotiated by <tt>iceAgent</tt> for the
+     * purposes of RTCP and RTP transmission. If <tt>iceAgent</tt> has not
+     * completed yet or has failed, <tt>null</tt>.
+     */
     private StreamConnector createStreamConnector()
     {
         DatagramSocket[] streamConnectorSockets = getStreamConnectorSockets();
@@ -209,6 +246,14 @@ public class IceUdpTransportManager
         pe.addChildExtension(candidatePE);
     }
 
+    /**
+     * Generates an ID to be set on a <tt>CandidatePacketExntension</tt> to
+     * represent a specific <tt>LocalCandidate</tt>.
+     *
+     * @param candidate the <tt>LocalCandidate</tt> whose ID is to be generated
+     * @return an ID to be set on a <tt>CandidatePacketExtension</tt> to
+     * represent the specified <tt>candidate</tt>
+     */
     private String generateCandidateID(LocalCandidate candidate)
     {
         StringBuilder candidateID = new StringBuilder();

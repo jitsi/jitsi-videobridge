@@ -16,15 +16,33 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.service.neomedia.*;
 import org.osgi.framework.*;
 
+/**
+ * Implements the Jingle Raw UDP transport.
+ *
+ * @author Lyubomir Marinov
+ */
 public class RawUdpTransportManager
     extends TransportManager
 {
+    /**
+     * The generation of the candidates produced by this Jingle transport.
+     */
     private final int generation;
 
+    /**
+     * The ID of the RTCP candidate produced by this Jingle transport.
+     */
     private final String rtcpCandidateID;
 
+    /**
+     * The ID of the RTP candidate produced by this Jingle transport.
+     */
     private final String rtpCandidateID;
 
+    /**
+     * The <tt>StreamConnector</tt> that represents the datagram sockets
+     * allocated by this instance for the purposes of RTP and RTCP transmission.
+     */
     private final StreamConnector streamConnector;
 
     /**
@@ -60,6 +78,16 @@ public class RawUdpTransportManager
             streamConnector.close();
     }
 
+    /**
+     * Allocates the datagram sockets expected of this <tt>TransportManager</tt>
+     * for the purposes of RTCP and RTP transmission and represents them in the
+     * form of a <tt>StreamConnector</tt> instance.
+     *
+     * @return a new <tt>StreamConnector</tt> which represents the datagram
+     * sockets allocated by this instance for the purposes of RTCP and RTP
+     * transmission
+     * @throws IOException if the allocation of datagram sockets fails
+     */
     private StreamConnector createStreamConnector()
         throws IOException
     {

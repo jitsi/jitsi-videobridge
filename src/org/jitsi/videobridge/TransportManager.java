@@ -14,6 +14,11 @@ import net.java.sip.communicator.service.protocol.*;
 
 import org.jitsi.service.neomedia.*;
 
+/**
+ * Represents the state of a Jingle transport as used by {@link Channel}.
+ *
+ * @author Lyubomir Marinov
+ */
 public abstract class TransportManager
 {
     /**
@@ -26,6 +31,10 @@ public abstract class TransportManager
      */
     private final Channel channel;
 
+    /**
+     * The <tt>PropertyChangeListener</tt> which listens to changes in the
+     * values of the properties of {@link #channel}. Facilitates extenders.
+     */
     private final PropertyChangeListener channelPropertyChangeListener
         = new PropertyChangeListener()
                 {
@@ -161,9 +170,32 @@ public abstract class TransportManager
      */
     public abstract String getXmlNamespace();
 
+    /**
+     * Starts establishing connectivity between the local endpoint represented
+     * by this instance and the remote endpoint represented by a specific
+     * <tt>IceUdpTransportPacketExtension</tt>. The method should return
+     * quickly. If the connectivity establishment requires a lengthy amount of
+     * time to complete, the method should start executing it asynchronously.
+     * 
+     * @param transport an <tt>IceUdpTransportPacketExtension</tt> which
+     * specifies connectivity-related information about the remote endpoint
+     * @return <tt>true</tt> if asynchronous connectivity establishment has been
+     * started and the results of it are to be awaited by invoking
+     * {@link #wrapupConnectivityEstablishment()}; otherwise, <tt>false</tt>.
+     * <tt>TransportManager</tt>s which do not perform/require connectivity
+     * establishment should return <tt>false</tt>.
+     */
     public abstract boolean startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport);
 
+    /**
+     * Awaits for any ongoing connectivity establishment started by
+     * {@link #startConnectivityEstablishment(IceUdpTransportPacketExtension)}
+     * to complete.
+     *
+     * @throws OperationFailedException if the connectivity establishment has
+     * failed
+     */
     public abstract void wrapupConnectivityEstablishment()
         throws OperationFailedException;
 }

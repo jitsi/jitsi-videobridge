@@ -46,6 +46,10 @@ public class Channel
      */
     public static final int DEFAULT_EXPIRE = 60;
 
+    /**
+     * The pool of threads utilized by <tt>Channel</tt> (e.g. to invoke
+     * {@link WrapupConnectivityEstablishmentCommand}).
+     */
     private static final ExecutorService executorService
         = Executors.newCachedThreadPool();
 
@@ -159,6 +163,10 @@ public class Channel
      */
     private final Object transportManagerSyncRoot = new Object();
 
+    /**
+     * The <tt>WrapupConnectivityEstablishmentCommand</tt> submitted to
+     * {@link #executorService} and not completed yet.
+     */
     private
         WrapupConnectivityEstablishmentCommand
             wrapupConnectivityEstablishmentCommand;
@@ -893,6 +901,17 @@ public class Channel
         return initiator;
     }
 
+    /**
+     * Starts {@link #stream} if it has not been started yet and if the state of
+     * this <tt>Channel</tt> meets the prerequisites to invoke
+     * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
+     * started only after a <tt>StreamConnector</tt> has been set on it and this
+     * <tt>Channel</tt> may be able to provide a <tt>StreamConnector</tt> only
+     * after {@link #wrapupConnectivityEstablishment(TransportManager)} has
+     * completed on {@link #transportManager}.
+     * 
+     * @throws IOException if anything goes wrong while starting <tt>stream</tt>
+     */
     private void maybeStartStream()
         throws IOException
     {
@@ -1036,6 +1055,20 @@ public class Channel
         return removed;
     }
 
+    /**
+     * Runs in a (pooled) thread associated with a specific
+     * <tt>WrapupConnectivityEstablishmentCommand</tt> to invoke
+     * {@link TransportManager#wrapupConnectivityEstablishment()} on a specific
+     * <tt>TransportManager</tt> and then {@link #maybeStartStream()} on this
+     * <tt>Channel</tt> if the <tt>TransportManager</tt> succeeds at producing a
+     * <tt>StreamConnector</tt>.
+     *
+     * @param wrapupConnectivityEstablishmentCommand the
+     * <tt>WrapupConnectivityEstablishmentCommand</tt> which is running in a
+     * (pooled) thread and which specifies the <tt>TransportManager</tt> on
+     * which <tt>TransportManager.wrapupConnectivityEstablishment</tt> is to be
+     * invoked.
+     */
     private void runInWrapupConnectivityEstablishmentCommand(
             WrapupConnectivityEstablishmentCommand
                 wrapupConnectivityEstablishmentCommand)
@@ -1043,6 +1076,11 @@ public class Channel
         TransportManager transportManager
             = wrapupConnectivityEstablishmentCommand.transportManager;
 
+        /*
+         * TransportManager.wrapupConnectivityEstablishment() may take a long
+         * time to complete. Do not even execute it if it will be of no use to
+         * the current state of this Channel.
+         */
         synchronized (transportManagerSyncRoot)
         {
             if (transportManager != this.transportManager)
@@ -1068,6 +1106,12 @@ public class Channel
 
         synchronized (transportManagerSyncRoot)
         {
+            /*
+             * TransportManager.wrapupConnectivityEstablishment() may have taken
+             * a long time to complete. Do not attempt to modify the stream of
+             * this Channel if it will be of no use to the current state of this
+             * Channel.
+             */
             if (transportManager != this.transportManager)
                 return;
             if (wrapupConnectivityEstablishmentCommand
@@ -1386,6 +1430,17 @@ public class Channel
         }
     }
 
+    /**
+     * Schedules the asynchronous execution of
+     * {@link TransportManager#wrapupConnectivityEstablishment()} on a specific
+     * <tt>TransportManager</tt> in a (pooled) thread in anticipation of a
+     * <tt>StreamConnector</tt> to be set on {@link #stream}.
+     *
+     * @param transportManager the <tt>TransportManager</tt> on which
+     * <tt>TransportManager.wrapupConnectivityEstablishment()</tt> is to be
+     * invoked in anticipation of a <tt>StreamConnector</tt> to be set on
+     * <tt>stream</tt>.
+     */
     private void wrapupConnectivityEstablishment(
             TransportManager transportManager)
     {
@@ -1423,11 +1478,35 @@ public class Channel
         }
     }
 
+    /**
+     * Implements a <tt>Runnable</tt> to be executed in a (pooled) thread in
+     * order to invoke
+     * {@link TransportManager#wrapupConnectivityEstablishment()} on a specific
+     * <tt>TransportManager</tt> and possibly set a <tt>StreamConnector</tt> on
+     * and start {@link #stream}.
+     *
+     * @author Lyubomir Marinov
+     */
     private class WrapupConnectivityEstablishmentCommand
         implements Runnable
     {
+        /**
+         * The <tt>TransportManager</tt> on which this instance is to invoke
+         * {@link TransportManager#wrapupConnectivityEstablishment()}.
+         */
         public final TransportManager transportManager;
 
+        /**
+         * Initializes a new <tt>WrapupConnectivityEstablishmentCommand</tt>
+         * which is to invoke
+         * {@link TransportManager#wrapupConnectivityEstablishment()} on a
+         * specific <tt>TransportManager</tt> and possibly set a
+         * <tt>StreamConnector</tt> on and start {@link #stream}.
+         *
+         * @param transportManager the <tt>TransportManager</tt> on which the
+         * new instance is to invoke
+         * <tt>TransportManager.wrapupConnectivityEstablishment()</tt> 
+         */
         public WrapupConnectivityEstablishmentCommand(
                 TransportManager transportManager)
         {
