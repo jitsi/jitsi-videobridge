@@ -15,11 +15,21 @@
         </not>
     </condition>
 
-    <property name="packname.win" value="${ant.project.name}-windows-x86-${label}"/>
-    <property name="packname.win64" value="${ant.project.name}-windows-x64-${label}"/>
-    <property name="packname.lin" value="${ant.project.name}-linux-x86-${label}"/>
-    <property name="packname.lin64" value="${ant.project.name}-linux-x64-${label}"/>
-    <property name="packname.macosx" value="${ant.project.name}-macosx-${label}"/>
+    <property
+        name="packname.win"
+        value="${ant.project.name}-windows-x86-${label}"/>
+    <property
+        name="packname.win64"
+    	value="${ant.project.name}-windows-x64-${label}"/>
+    <property
+        name="packname.lin"
+        value="${ant.project.name}-linux-x86-${label}"/>
+    <property
+        name="packname.lin64"
+    	value="${ant.project.name}-linux-x64-${label}"/>
+    <property
+    	name="packname.macosx"
+        value="${ant.project.name}-macosx-${label}"/>
     <property name="packname.src" value="${ant.project.name}-src-${label}"/>
 
     <path id="compile.classpath">
@@ -51,12 +61,22 @@
     </target>
 
     <target name="run">
+        <condition
+            	property="run.java.library.path"
+            	value="-Djava.library.path=${basedir}/lib/native/windows-64">
+            <os arch="amd64" family="windows" />
+        </condition>
+        <condition property="run.java.library.path" value="">
+	        <not>
+	            <isset property="run.java.library.path"/>
+	        </not>
+	    </condition>
         <java
-            classname="org.jitsi.videobridge.Main"
-            classpathref="run.classpath"
-            failonerror="true"
-            fork="true" >
-            <jvmarg line="${run.jvmarg.line}" />
+	            classname="org.jitsi.videobridge.Main"
+	            classpathref="run.classpath"
+	            failonerror="true"
+	            fork="true" >
+            <jvmarg line="${run.java.library.path} ${run.jvmarg.line}" />
             <arg line="${run.arg.line}" />
         </java>
     </target>
