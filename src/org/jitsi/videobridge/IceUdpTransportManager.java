@@ -220,7 +220,7 @@ public class IceUdpTransportManager
         org.ice4j.ice.Component component = candidate.getParentComponent();
 
         candidatePE.setComponent(component.getComponentID());
-        candidatePE.setFoundation(Integer.parseInt(candidate.getFoundation()));
+        candidatePE.setFoundation(candidate.getFoundation());
         candidatePE.setGeneration(
                 component.getParentStream().getParentAgent().getGeneration());
         candidatePE.setID(generateCandidateID(candidate));
@@ -449,7 +449,7 @@ public class IceUdpTransportManager
                             component,
                             org.ice4j.ice.CandidateType.parse(
                                     candidate.getType().toString()),
-                            Integer.toString(candidate.getFoundation()),
+                            candidate.getFoundation(),
                             candidate.getPriority(),
                             relatedCandidate);
 
