@@ -9,6 +9,7 @@ package org.jitsi.videobridge;
 import java.io.*;
 import java.net.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.util.*;
@@ -151,6 +152,52 @@ public class RawUdpTransportManager
         streamConnector.getControlSocket();
 
         return streamConnector;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Overrides the super implementation to add compatibility with legacy Jitsi
+     * and Jitsi Videobridge.
+     */
+    @Override
+    @SuppressWarnings("deprecation") // Compatibility with legacy Jitsi and
+                                     // Jitsi Videobridge
+    public void describe(ColibriConferenceIQ.Channel iq)
+    {
+        super.describe(iq);
+
+        IceUdpTransportPacketExtension transport = iq.getTransport();
+
+        if (transport != null)
+        {
+            String host = null;
+            int rtcpPort = 0;
+            int rtpPort = 0;
+
+            for (CandidatePacketExtension candidate
+                    : transport.getCandidateList())
+            {
+                switch (candidate.getComponent())
+                {
+                case CandidatePacketExtension.RTCP_COMPONENT_ID:
+                    rtcpPort = candidate.getPort();
+                    break;
+                case CandidatePacketExtension.RTP_COMPONENT_ID:
+                    rtpPort = candidate.getPort();
+                    break;
+                default:
+                    continue;
+                }
+
+                if ((host == null) || (host.length() == 0))
+                    host = candidate.getIP();
+            }
+
+            iq.setHost(host);
+            iq.setRTCPPort(rtcpPort);
+            iq.setRTPPort(rtpPort);
+        }
     }
 
     /**

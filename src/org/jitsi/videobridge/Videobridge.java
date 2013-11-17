@@ -9,6 +9,12 @@ package org.jitsi.videobridge;
 import java.lang.ref.*;
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.util.*;
+
+import org.jitsi.service.configuration.*;
+import org.osgi.framework.*;
+
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
  * {@link Conference} instances.
@@ -23,6 +29,12 @@ public class Videobridge
      * waiting for the value of {@link System#currentTimeMillis()} to change.
      */
     static final Random RANDOM = new Random();
+
+    /**
+     * The XML namespace of the <tt>TransportManager</tt> type to be initialized
+     * by <tt>Channel</tt> by default.
+     */
+    private static String defaultTransportManager;
 
     /**
      * The <tt>ComponentImpl</tt> which has initialized this
@@ -193,6 +205,49 @@ public class Videobridge
             Collection<Conference> values = conferences.values();
 
             return values.toArray(new Conference[values.size()]);
+        }
+    }
+
+    /**
+     * Gets the XML namespace of the <tt>TransportManager</tt> type to be
+     * initialized by <tt>Channel</tt> by default.
+     *
+     * @return the XML namespace of the <tt>TransportManager</tt> type to be
+     * initialized by <tt>Channel</tt> by default
+     */
+    public String getDefaultTransportManager()
+    {
+        synchronized (Videobridge.class)
+        {
+            if (defaultTransportManager == null)
+            {
+                BundleContext bundleContext = getComponent().getBundleContext();
+
+                if (bundleContext != null)
+                {
+                    ConfigurationService cfg
+                        = ServiceUtils.getService(
+                                bundleContext,
+                                ConfigurationService.class);
+
+                    if (cfg != null)
+                    {
+                        defaultTransportManager
+                            = cfg.getString(
+                                    Videobridge.class.getName()
+                                        + ".defaultTransportManager");
+                    }
+                }
+                if (!IceUdpTransportPacketExtension.NAMESPACE.equals(
+                            defaultTransportManager)
+                        && !RawUdpTransportPacketExtension.NAMESPACE.equals(
+                                defaultTransportManager))
+                {
+                    defaultTransportManager
+                        = IceUdpTransportPacketExtension.NAMESPACE;
+                }
+            }
+            return defaultTransportManager;
         }
     }
 

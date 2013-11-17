@@ -135,7 +135,11 @@ public class ComponentImpl
                     {
                         ColibriConferenceIQ.NAMESPACE,
                         ProtocolProviderServiceJabberImpl
-                            .URN_XMPP_JINGLE_DTLS_SRTP
+                            .URN_XMPP_JINGLE_DTLS_SRTP,
+                        ProtocolProviderServiceJabberImpl
+                            .URN_XMPP_JINGLE_ICE_UDP_1,
+                        ProtocolProviderServiceJabberImpl
+                            .URN_XMPP_JINGLE_RAW_UDP_0
                     };
     }
 

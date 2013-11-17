@@ -570,6 +570,32 @@ public class Channel
     }
 
     /**
+     * Initializes a new <tt>TransportManager</tt> instance which has a specific
+     * XML namespace.
+     *
+     * @param xmlNamespace the XML namespace of the new
+     * <tt>TransportManager</tt> instance to be initialized
+     * @return a new <tt>TransportManager</tt> instance which has the specified
+     * <tt>xmlNamespace</tt>
+     * @throws IOException if an error occurs during the initialization of the
+     * new <tt>TransportManager</tt> instance which has the specified
+     * <tt>xmlNamespace</tt>
+     */
+    private TransportManager createTransportManager(String xmlNamespace)
+        throws IOException
+    {
+        if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+            return new IceUdpTransportManager(this);
+        else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+            return new RawUdpTransportManager(this);
+        else
+        {
+            throw new IllegalArgumentException(
+                    "Unsupported Jingle transport " + xmlNamespace);
+        }
+    }
+
+    /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
@@ -853,14 +879,17 @@ public class Channel
         {
             if (transportManager == null)
             {
-                transportManager = new IceUdpTransportManager(this);
                 wrapupConnectivityEstablishmentCommand = null;
+                transportManager
+                    = createTransportManager(
+                            getContent()
+                                .getConference()
+                                    .getVideobridge()
+                                        .getDefaultTransportManager());
 
                 /*
-                 * XXX The implementation of the Jingle Raw UDP transport does
-                 * not establish connectivity so maybeStartStream() is invoked
-                 * bellow in case we decide to change the default
-                 * TransportManager in the future. 
+                 * The implementation of the Jingle Raw UDP transport does not
+                 * establish connectivity. 
                  */
                 if (RawUdpTransportPacketExtension.NAMESPACE.equals(
                         transportManager.getXmlNamespace()))
@@ -1329,22 +1358,7 @@ public class Channel
             if (transportManager == null)
             {
                 wrapupConnectivityEstablishmentCommand = null;
-
-                if (IceUdpTransportPacketExtension.NAMESPACE.equals(
-                        xmlNamespace))
-                {
-                    transportManager = new IceUdpTransportManager(this);
-                }
-                else if (RawUdpTransportPacketExtension.NAMESPACE.equals(
-                        xmlNamespace))
-                {
-                    transportManager = new RawUdpTransportManager(this);
-                }
-                else
-                {
-                    throw new IllegalArgumentException(
-                            "Unsupported Jingle transport " + xmlNamespace);
-                }
+                transportManager = createTransportManager(xmlNamespace);
             }
         }
 
