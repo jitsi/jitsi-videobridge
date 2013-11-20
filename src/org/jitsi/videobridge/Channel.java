@@ -570,6 +570,26 @@ public class Channel
     }
 
     /**
+     * Initializes a <tt>MediaStreamTarget</tt> instance which identifies the
+     * remote addresses to transmit RTP and RTCP to and from.
+     *
+     * @return a <tt>MediaStreamTarget</tt> instance which identifies the
+     * remote addresses to transmit RTP and RTCP to and from
+     */
+    private MediaStreamTarget createStreamTarget()
+    {
+        synchronized (transportManagerSyncRoot)
+        {
+            TransportManager transportManager = this.transportManager;
+
+            return
+                (transportManager == null)
+                    ? null
+                    : transportManager.getStreamTarget();
+        }
+    }
+
+    /**
      * Initializes a new <tt>TransportManager</tt> instance which has a specific
      * XML namespace.
      *
@@ -944,12 +964,38 @@ public class Channel
     private void maybeStartStream()
         throws IOException
     {
+        // connector
         StreamConnector connector = createStreamConnector();
 
         if (connector == null)
             return;
         else
             stream.setConnector(connector);
+
+        // target
+        MediaStreamTarget streamTarget = createStreamTarget();
+
+        if (streamTarget != null)
+        {
+            InetSocketAddress dataAddr = streamTarget.getDataAddress();
+
+            if (dataAddr != null)
+            {
+                this.streamTarget.setDataHostAddress(dataAddr.getAddress());
+                this.streamTarget.setDataPort(dataAddr.getPort());
+            }
+
+            InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
+
+            if (ctrlAddr != null)
+            {
+                this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
+                this.streamTarget.setControlPort(ctrlAddr.getPort());
+            }
+
+            if (dataAddr != null)
+                stream.setTarget(streamTarget);
+        }
 
         if (!stream.isStarted())
         {

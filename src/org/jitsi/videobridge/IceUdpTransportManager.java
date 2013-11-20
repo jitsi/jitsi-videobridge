@@ -362,6 +362,56 @@ public class IceUdpTransportManager
      * {@inheritDoc}
      */
     @Override
+    public MediaStreamTarget getStreamTarget()
+    {
+        IceMediaStream stream
+            = iceAgent.getStream(getChannel().getContent().getName());
+        MediaStreamTarget streamTarget = null;
+
+        if (stream != null)
+        {
+            InetSocketAddress[] streamTargetAddresses
+                = new InetSocketAddress[COMPONENT_IDS.length];
+            int streamTargetAddressCount = 0;
+
+            for (int i = 0; i < COMPONENT_IDS.length; i++)
+            {
+                Component component = stream.getComponent(COMPONENT_IDS[i]);
+
+                if (component != null)
+                {
+                    CandidatePair selectedPair = component.getSelectedPair();
+
+                    if (selectedPair != null)
+                    {
+                        InetSocketAddress streamTargetAddress
+                            = selectedPair
+                                .getRemoteCandidate()
+                                    .getTransportAddress();
+
+                        if (streamTargetAddress != null)
+                        {
+                            streamTargetAddresses[i] = streamTargetAddress;
+                            streamTargetAddressCount++;
+                        }
+                    }
+                }
+            }
+            if (streamTargetAddressCount > 0)
+            {
+                streamTarget
+                    = new MediaStreamTarget(
+                            streamTargetAddresses[0 /* RTP */],
+                            streamTargetAddresses[1 /* RTCP */]);
+            }
+        }
+        return streamTarget;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String getXmlNamespace()
     {
         return IceUdpTransportPacketExtension.NAMESPACE;

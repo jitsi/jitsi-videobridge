@@ -63,6 +63,11 @@
     <target name="run">
         <condition
             	property="run.java.library.path"
+            	value="-Djava.library.path=${basedir}/lib/native/macosx">
+            <os family="mac" />
+        </condition>
+        <condition
+            	property="run.java.library.path"
             	value="-Djava.library.path=${basedir}/lib/native/windows-64">
             <os arch="amd64" family="windows" />
         </condition>

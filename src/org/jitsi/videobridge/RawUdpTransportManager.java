@@ -251,6 +251,19 @@ public class RawUdpTransportManager
 
     /**
      * {@inheritDoc}
+     *
+     * The implementation of <tt>RawUdpTransportManager</tt> always returns
+     * <tt>null</tt> because it does not establish connectivity and,
+     * consequently, does not learn the remote addresses and requires latching.
+     */
+    @Override
+    public MediaStreamTarget getStreamTarget()
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public String getXmlNamespace()

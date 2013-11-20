@@ -162,6 +162,16 @@ public abstract class TransportManager
     public abstract StreamConnector getStreamConnector();
 
     /**
+     * Gets the <tt>MediaStreamTarget</tt> which represents the remote addresses
+     * to transmit RTP and RTCP to and from. A non-<tt>null</tt> remote address
+     * will disable latching on the associated component.
+     *
+     * @return the <tt>MediaStreamTarget</tt> which represents the remote
+     * addresses to transmit RTP and RTCP to and from
+     */
+    public abstract MediaStreamTarget getStreamTarget();
+
+    /**
      * Gets the XML namespace of the Jingle transport implemented by this
      * <tt>TransportManager</tt>.
      *
