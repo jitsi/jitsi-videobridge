@@ -16,6 +16,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.ice4j.stack.*;
 import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.util.*;
 import org.jivesoftware.smack.provider.*;
@@ -541,6 +542,16 @@ public class ComponentImpl
         System.setProperty(
                 MediaServiceImpl.DISABLE_VIDEO_SUPPORT_PNAME,
                 trueString);
+
+        // It makes no sense for Jitsi Videobridge to pace its RTP output.
+        if (System.getProperty(
+                    DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD)
+                == null)
+        {
+            System.setProperty(
+                    DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD,
+                    Integer.toString(Integer.MAX_VALUE));
+        }
 
         startOSGi();
     }
