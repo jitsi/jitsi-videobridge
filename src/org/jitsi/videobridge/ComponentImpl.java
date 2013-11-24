@@ -622,21 +622,6 @@ public class ComponentImpl
                 ColibriConferenceIQ.NAMESPACE,
                 new ColibriIQProvider());
 
-        /*
-         * <payload-type> and <parameter> defined by XEP-0167: Jingle RTP
-         * Sessions
-         */
-        providerManager.addExtensionProvider(
-                PayloadTypePacketExtension.ELEMENT_NAME,
-                ColibriConferenceIQ.NAMESPACE,
-                new DefaultPacketExtensionProvider<PayloadTypePacketExtension>(
-                        PayloadTypePacketExtension.class));
-        providerManager.addExtensionProvider(
-                ParameterPacketExtension.ELEMENT_NAME,
-                ColibriConferenceIQ.NAMESPACE,
-                new DefaultPacketExtensionProvider<ParameterPacketExtension>(
-                        ParameterPacketExtension.class));
-
         // ICE-UDP <transport>
         providerManager.addExtensionProvider(
                 IceUdpTransportPacketExtension.ELEMENT_NAME,

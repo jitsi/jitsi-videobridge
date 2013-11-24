@@ -20,6 +20,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
 import net.java.sip.communicator.service.protocol.*;
+import net.sf.fmj.media.rtp.*;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
@@ -94,6 +95,8 @@ public class Channel
      */
     private final String id;
 
+    private final long initialLocalSSRC;
+
     /**
      * The indicator which determines whether the conference focus is the
      * initiator/offerer (as opposed to the responder/answerer) of the media
@@ -117,11 +120,18 @@ public class Channel
     private long[] receiveSSRCs = ColibriConferenceIQ.NO_SSRCS;
 
     /**
-     * The type of RTP-level relay (in the terms specified by RFC 3550 "RTP: A
-     * Transport Protocol for Real-Time Applications" in section 2.3 "Mixers and
-     * Translators") used for this <tt>Channel</tt>.
+     * The type of RTP-level relay (in the terms specified by RFC 3550
+     * &quot;RTP: A Transport Protocol for Real-Time Applications&quot; in
+     * section 2.3 &quot;Mixers and Translators&quot;) used for this
+     * <tt>Channel</tt>.
      */
     private final RTPLevelRelayType rtpLevelRelayType;
+
+    /**
+     * The <tt>SSRCFactory</tt> which is utilized by {@link #stream} to generate
+     * new synchronization source (SSRC) identifiers. 
+     */
+    private final SSRCFactoryImpl ssrcFactory = new SSRCFactoryImpl();
 
     /**
      * THe <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to the terms
@@ -215,6 +225,7 @@ public class Channel
          */
         stream.addPropertyChangeListener(streamPropertyChangeListener);
         stream.setName(this.id);
+        stream.setSSRCFactory(ssrcFactory);
 
         /*
          * If the RTP-level relay to be used for this Channel is a mixer, then
@@ -253,8 +264,22 @@ public class Channel
              * generates.
              */
             stream.setDirection(MediaDirection.RECVONLY);
+
+            /*
+             * Jitsi Videobridge pre-announces the local synchronization (SSRC)
+             * identifier in the case of content mixing.
+             */
+            initialLocalSSRC = ssrcFactory.doGenerateSSRC() & 0xFFFFFFFFL;
             break;
+
         case TRANSLATOR:
+            /*
+             * TODO Jitsi Videobridge does not currently pre-announce the local
+             * synchronization source (SSRC) identifiers in the case of RTP
+             * translation.
+             */
+            initialLocalSSRC = -1;
+
             stream.setRTPTranslator(this.content.getRTPTranslator());
             break;
         default:
@@ -630,6 +655,15 @@ public class Channel
         iq.setExpire(getExpire());
         iq.setID(getID());
         iq.setInitiator(isInitiator());
+        iq.setRTPLevelRelayType(rtpLevelRelayType);
+
+        if (initialLocalSSRC != -1)
+        {
+            SourcePacketExtension source = new SourcePacketExtension();
+
+            source.setSSRC(initialLocalSSRC);
+            iq.addSource(source);
+        }
         iq.setSSRCs(getReceiveSSRCs());
 
         describeTransportManager(iq);
@@ -1412,6 +1446,29 @@ public class Channel
     }
 
     /**
+     * Generates a new synchronization source (SSRC) identifier.
+     *
+     * @param
+     * @param i the number of times that the method has been executed prior to
+     * the current invocation
+     * @return a randomly chosen <tt>int</tt> value which is to be utilized as a
+     * new synchronization source (SSRC) identifier should it be found to be
+     * globally unique within the associated RTP session or
+     * <tt>Long.MAX_VALUE</tt> to cancel the operation
+     */
+    private long ssrcFactoryGenerateSSRC(String cause, int i)
+    {
+        if (initialLocalSSRC != -1)
+        {
+            if (i == 0)
+                return (int) initialLocalSSRC;
+            else if (cause.equals(GenerateSSRCCause.REMOVE_SEND_STREAM.name()))
+                return Long.MAX_VALUE;
+        }
+        return ssrcFactory.doGenerateSSRC();
+    }
+
+    /**
      * Notifies this <tt>Channel</tt> that the value of a property of
      * {@link #stream} has changed from a specific old value to a specific new
      * value.
@@ -1535,6 +1592,32 @@ public class Channel
                         wrapupConnectivityEstablishmentCommand = null;
                 }
             }
+        }
+    }
+
+    private class SSRCFactoryImpl
+        implements SSRCFactory
+    {
+        private int i = 0;
+
+        /**
+         * The <tt>Random</tt> instance used by this <tt>SSRCFactory</tt> to
+         * generate new synchronization source (SSRC) identifiers.
+         */
+        private final Random random = new Random();
+
+        public int doGenerateSSRC()
+        {
+            return random.nextInt();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public long generateSSRC(String cause)
+        {
+            return ssrcFactoryGenerateSSRC(cause, i++);
         }
     }
 
