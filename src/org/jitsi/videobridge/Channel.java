@@ -62,6 +62,8 @@ public class Channel
      */
     public static final String INITIATOR_PROPERTY = "initiator";
 
+    private static final long[] NO_RECEIVE_SSRCS = new long[0];
+
     /**
      * A (dumb) <tt>SimpleAudioLevelListener</tt> instance which is to be set on
      * <tt>AudioMediaStream</tt> via
@@ -117,7 +119,7 @@ public class Channel
      * index specifies the time in milliseconds when the SSRC was last seen (in
      * order to enable timing out SSRCs).
      */
-    private long[] receiveSSRCs = ColibriConferenceIQ.NO_SSRCS;
+    private long[] receiveSSRCs = NO_RECEIVE_SSRCS;
 
     /**
      * The type of RTP-level relay (in the terms specified by RFC 3550
@@ -369,7 +371,7 @@ public class Channel
                          * will be provided to the focus by the Jitsi
                          * Videobridge server.
                          */
-                        long ssrc = RTPTranslatorImpl.readInt(data, offset + 4);
+                        int ssrc = RTPTranslatorImpl.readInt(data, offset + 4);
 
                         if (removeReceiveSSRC(ssrc))
                             notifyFocus();
@@ -483,10 +485,8 @@ public class Channel
                      * streams that they send. The information will be provided
                      * to the focus by the Jitsi Videobridge server.
                      */
-                    long ssrc = RTPTranslatorImpl.readInt(data, off + 8);
-
-                    boolean notify = false;
-                    notify |= addReceiveSSRC(ssrc);
+                    int ssrc = RTPTranslatorImpl.readInt(data, off + 8);
+                    boolean notify = addReceiveSSRC(ssrc);
 
                     /*
                      * When performing content mixing (rather than RTP
@@ -532,12 +532,10 @@ public class Channel
      *
      * @param receiveSSRC the RTP SSRC to be added to the list of SSRCs received
      * on this <tt>Channel</tt>
-     *
      * @return <tt>true</tt> if <tt>receiveSSRC</tt> was added to the list
-     * (was not previously there), and <tt>false</tt> if it was already in the
-     * list.
+     * (i.e. was not previously there); otherwise, <tt>false</tt>
      */
-    private synchronized boolean addReceiveSSRC(long receiveSSRC)
+    private synchronized boolean addReceiveSSRC(int receiveSSRC)
     {
         long now = System.currentTimeMillis();
 
@@ -546,7 +544,7 @@ public class Channel
 
         for (int i = 0; i < length; i += 2)
         {
-            if (receiveSSRCs[i] == receiveSSRC)
+            if (((int) receiveSSRCs[i]) == receiveSSRC)
             {
                 receiveSSRCs[i + 1] = now;
                 /*
@@ -562,7 +560,7 @@ public class Channel
         long[] newReceiveSSRCs = new long[length + 2];
 
         System.arraycopy(receiveSSRCs, 0, newReceiveSSRCs, 0, length);
-        newReceiveSSRCs[length] = receiveSSRC;
+        newReceiveSSRCs[length] = 0xFFFFFFFFL & receiveSSRC;
         newReceiveSSRCs[length + 1] = now;
         receiveSSRCs = newReceiveSSRCs;
 
@@ -854,10 +852,10 @@ public class Channel
     /**
      * Gets a list of the RTP SSRCs received on this <tt>Channel</tt>.
      *
-     * @return an array of <tt>long</tt>s which represents a list of the RTP
+     * @return an array of <tt>int</tt>s which represents a list of the RTP
      * SSRCs received on this <tt>Channel</tt>
      */
-    public synchronized long[] getReceiveSSRCs()
+    public synchronized int[] getReceiveSSRCs()
     {
         final int length = this.receiveSSRCs.length;
 
@@ -865,10 +863,10 @@ public class Channel
             return ColibriConferenceIQ.NO_SSRCS;
         else
         {
-            long[] receiveSSRCs = new long[length / 2];
+            int[] receiveSSRCs = new int[length / 2];
 
             for (int src = 0, dst = 0; src < length; src += 2, dst++)
-                receiveSSRCs[dst] = this.receiveSSRCs[src];
+                receiveSSRCs[dst] = (int) this.receiveSSRCs[src];
             return receiveSSRCs;
         }
     }
@@ -1114,21 +1112,19 @@ public class Channel
      *
      * @param receiveSSRC the RTP SSRC to be removed from the list of SSRCs
      * received on this <tt>Channel</tt>
-     *
      * @return <tt>true</tt> if <tt>receiveSSRC</tt> was found in the list of
-     * SSRCs received on this <tt>Channel</tt> and removed. And <tt>false</tt>
-     * if <tt>receiveSSRC</tt> was not found in the list.
+     * SSRCs received on this <tt>Channel</tt>; otherwise, <tt>false</tt>
      */
-    private synchronized boolean removeReceiveSSRC(long receiveSSRC)
+    private synchronized boolean removeReceiveSSRC(int receiveSSRC)
     {
         final int length = receiveSSRCs.length;
         boolean removed = false;
 
         if (length == 2)
         {
-            if (receiveSSRCs[0] == receiveSSRC)
+            if (((int) receiveSSRCs[0]) == receiveSSRC)
             {
-                receiveSSRCs = ColibriConferenceIQ.NO_SSRCS;
+                receiveSSRCs = NO_RECEIVE_SSRCS;
                 removed = true;
             }
         }
@@ -1136,7 +1132,7 @@ public class Channel
         {
             for (int i = 0; i < length; i += 2)
             {
-                if (receiveSSRCs[i] == receiveSSRC)
+                if (((int) receiveSSRCs[i]) == receiveSSRC)
                 {
                     long[] newReceiveSSRCs = new long[length - 2];
 
