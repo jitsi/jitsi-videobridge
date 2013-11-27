@@ -61,20 +61,40 @@
     </target>
 
     <target name="run">
-        <condition
-            	property="run.java.library.path"
-            	value="-Djava.library.path=${basedir}/lib/native/macosx">
-            <os family="mac" />
-        </condition>
-        <condition
-            	property="run.java.library.path"
-            	value="-Djava.library.path=${basedir}/lib/native/windows-64">
+        <condition property="run.lib.native" value="windows-64">
             <os arch="amd64" family="windows" />
         </condition>
-        <condition property="run.java.library.path" value="">
-	        <not>
-	            <isset property="run.java.library.path"/>
-	        </not>
+        <condition property="run.lib.native" value="windows">
+            <os arch="i386" family="windows" />
+        </condition>
+        <condition property="run.lib.native" value="macosx">
+            <os family="mac" />
+        </condition>
+        <condition property="run.lib.native" value="linux-64">
+            <and>
+                <equals
+                        arg1="${os.name}"
+                        arg2="linux"
+                        casesensitive="false"
+                        trim="true"/>
+                <os arch="amd64" />
+            </and>
+        </condition>
+        <condition property="run.lib.native" value="linux">
+            <and>
+                <equals
+                        arg1="${os.name}"
+                        arg2="linux"
+                        casesensitive="false"
+                        trim="true"/>
+                <os arch="i386" />
+            </and>
+        </condition>
+        <condition
+                else=""
+                property="run.java.library.path"
+                value="-Djava.library.path=${basedir}/lib/native/${run.lib.native}">
+            <isset property="run.lib.native"/>
 	    </condition>
         <java
 	            classname="org.jitsi.videobridge.Main"
