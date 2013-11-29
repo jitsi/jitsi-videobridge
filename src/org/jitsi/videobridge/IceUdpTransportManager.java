@@ -433,19 +433,6 @@ public class IceUdpTransportManager
         boolean startConnectivityEstablishment = false;
 
         {
-            List<CandidatePacketExtension> candidates
-                = transport.getChildExtensionsOfType(
-                        CandidatePacketExtension.class);
-
-            if (iceAgentStateIsRunning && (candidates.size() == 0))
-                return false;
-
-            // Sort the remote candidates (host < reflexive < relayed) in order
-            // to create first the host, then the reflexive, the relayed
-            // candidates and thus be able to set the relative-candidate
-            // matching the rel-addr/rel-port attribute.
-            Collections.sort(candidates);
-
             String media = getChannel().getContent().getName();
             IceMediaStream stream = iceAgent.getStream(media);
 
@@ -459,6 +446,19 @@ public class IceUdpTransportManager
 
             if (password != null)
                 stream.setRemotePassword(password);
+
+            List<CandidatePacketExtension> candidates
+                = transport.getChildExtensionsOfType(
+                        CandidatePacketExtension.class);
+
+            if (iceAgentStateIsRunning && (candidates.size() == 0))
+                return false;
+
+            // Sort the remote candidates (host < reflexive < relayed) in order
+            // to create first the host, then the reflexive, the relayed
+            // candidates and thus be able to set the relative-candidate
+            // matching the rel-addr/rel-port attribute.
+            Collections.sort(candidates);
 
             int generation = iceAgent.getGeneration();
 
