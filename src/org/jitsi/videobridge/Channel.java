@@ -1044,14 +1044,10 @@ public class Channel
                 {
                     DtlsControl dtlsControl = (DtlsControl) srtpControl;
 
-                    /*
-                     * It makes sense to always start the DTLS-SRTP endpoint
-                     * represented by this Channel as a server because Jitsi
-                     * Videobridge is a server-side endpoint and thus is
-                     * supposed to have a public IP. 
-                     */
-                    dtlsControl.setDtlsProtocol(
-                            DtlsControl.DTLS_SERVER_PROTOCOL);
+                    dtlsControl.setSetup(
+                            isInitiator()
+                                ? DtlsControl.Setup.PASSIVE
+                                : DtlsControl.Setup.ACTIVE);
                 }
                 srtpControl.start(getContent().getMediaType());
             }
@@ -1297,7 +1293,25 @@ public class Channel
         touch(); // It seems this Channel is still active.
 
         if (oldValue != newValue)
+        {
+            /*
+             * We will, of course, fire a PropertyChangeEvent to the outside
+             * world. We will first handle the property change inside though.
+             */
+            SrtpControl srtpControl = stream.getSrtpControl();
+
+            if (srtpControl instanceof DtlsControl)
+            {
+                DtlsControl dtlsControl = (DtlsControl) srtpControl;
+
+                dtlsControl.setSetup(
+                        isInitiator()
+                            ? DtlsControl.Setup.PASSIVE
+                            : DtlsControl.Setup.ACTIVE);
+            }
+
             firePropertyChange(INITIATOR_PROPERTY, oldValue, newValue);
+        }
     }
 
     /**

@@ -64,6 +64,33 @@ public class IceUdpTransportManager
     }
 
     /**
+     * Determines whether at least one <tt>LocalCandidate</tt> of a specific ICE
+     * <tt>Component</tt> can reach (in the terms of the ice4j library) a
+     * specific <tt>RemoteCandidate</tt>
+     *
+     * @param component the ICE <tt>Component</tt> which contains the
+     * <tt>LocalCandidate</tt>s to check whether at least one of them can reach
+     * the specified <tt>remoteCandidate</tt>
+     * @param remoteCandidate the <tt>RemoteCandidate</tt> to check whether at
+     * least one of the <tt>LocalCandidate</tt>s of the specified
+     * <tt>component</tt> can reach it
+     * @return <tt>true</tt> if at least one <tt>LocalCandidate</tt> of the
+     * specified <tt>component</tt> can reach the specified
+     * <tt>remoteCandidate</tt>
+     */
+    private boolean canReach(
+            Component component,
+            RemoteCandidate remoteCandidate)
+    {
+        for (LocalCandidate localCandidate : component.getLocalCandidates())
+        {
+            if (localCandidate.canReach(remoteCandidate))
+                return true;
+        }
+        return false;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -430,7 +457,7 @@ public class IceUdpTransportManager
          */
         boolean iceAgentStateIsRunning
             = IceProcessingState.RUNNING.equals(iceAgent.getState());
-        boolean startConnectivityEstablishment = false;
+        int remoteCandidateCount = 0;
 
         {
             String media = getChannel().getContent().getName();
@@ -503,28 +530,49 @@ public class IceUdpTransportManager
                             candidate.getPriority(),
                             relatedCandidate);
 
+                /*
+                 * XXX IceUdpTransportManager harvests host candidates only and
+                 * the ICE Components utilize the UDP protocol/transport only at
+                 * the time of this writing. The ice4j library will, of course,
+                 * check the theoretical reachability between the local and the
+                 * remote candidates. However, we would like (1) to not mess
+                 * with a possibly running iceAgent and (2) to return a
+                 * consistent return value.
+                 */
+                if (!canReach(component, remoteCandidate))
+                    continue;
+
                 if (iceAgentStateIsRunning)
-                {
                     component.addUpdateRemoteCandidates(remoteCandidate);
-                }
                 else
-                {
                     component.addRemoteCandidate(remoteCandidate);
-                    startConnectivityEstablishment = true;
-                }
+                remoteCandidateCount++;
             }
         }
 
         if (iceAgentStateIsRunning)
         {
-            // update all components of all streams
-            for (IceMediaStream stream : iceAgent.getStreams())
+            if (remoteCandidateCount == 0)
             {
-                for (Component component : stream.getComponents())
-                    component.updateRemoteCandidates();
+                /*
+                 * XXX Effectively, the check above but realizing that all
+                 * candidates were ignored:
+                 *
+                 * iceAgentStateIsRunning && (candidates.size() == 0)
+                 */
+                return false;
+            }
+            else
+            {
+                // update all components of all streams
+                for (IceMediaStream stream : iceAgent.getStreams())
+                {
+                    for (Component component : stream.getComponents())
+                        component.updateRemoteCandidates();
+                }
             }
         }
-        else if (startConnectivityEstablishment)
+        else if (remoteCandidateCount != 0)
         {
             /*
              * Once again because the ICE Agent does not support adding
@@ -540,18 +588,18 @@ public class IceUdpTransportManager
                 {
                     if (component.getRemoteCandidateCount() < 1)
                     {
-                        startConnectivityEstablishment = false;
+                        remoteCandidateCount = 0;
                         break;
                     }
                 }
-                if (!startConnectivityEstablishment)
+                if (remoteCandidateCount == 0)
                     break;
             }
-            if (startConnectivityEstablishment)
+            if (remoteCandidateCount != 0)
                 iceAgent.startConnectivityEstablishment();
         }
 
-        return iceAgentStateIsRunning || startConnectivityEstablishment;
+        return iceAgentStateIsRunning || (remoteCandidateCount != 0);
     }
 
     /**
