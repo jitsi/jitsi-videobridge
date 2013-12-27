@@ -13,7 +13,6 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import javax.media.*;
 import javax.media.rtp.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -24,7 +23,6 @@ import net.sf.fmj.media.rtp.*;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.format.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
@@ -1328,8 +1326,6 @@ public class Channel
          * Convert the PayloadTypePacketExtensions into Formats and let the
          * MediaStream know about them.
          */
-        List<Format> formats = new ArrayList<Format>();
-
         if ((payloadTypes != null) && (payloadTypes.size() > 0))
         {
             MediaService mediaService = getMediaService();
@@ -1349,14 +1345,6 @@ public class Channel
                         stream.addDynamicRTPPayloadType(
                                 (byte) payloadType.getID(),
                                 mediaFormat);
-
-                        @SuppressWarnings("unchecked")
-                        Format format
-                            = ((MediaFormatImpl<? extends Format>)
-                                    mediaFormat)
-                                .getFormat();
-
-                        formats.add(format);
                     }
                 }
             }
