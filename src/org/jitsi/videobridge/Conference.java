@@ -6,9 +6,12 @@
  */
 package org.jitsi.videobridge;
 
+import java.lang.ref.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+
+import org.jitsi.util.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -18,9 +21,36 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 public class Conference
 {
     /**
+     * The <tt>Logger</tt> used by the <tt>Conference</tt> class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Conference.class);
+
+    /**
+     * Logs a specific <tt>String</tt> at debug level.
+     *
+     * @param s the <tt>String</tt> to log at debug level 
+     */
+    private static void logd(String s)
+    {
+        /*
+         * FIXME Jitsi Videobridge uses the defaults of java.util.logging at the
+         * time of this writing but wants to log at debug level at all times for
+         * the time being in order to facilitate early development.
+         */
+        logger.info(s);
+    }
+
+    /**
      * The <tt>Content</tt>s of this <tt>Conference</tt>.
      */
     private final List<Content> contents = new LinkedList<Content>();
+
+    /**
+     * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
+     */
+    private final List<WeakReference<Endpoint>> endpoints
+        = new LinkedList<WeakReference<Endpoint>>();
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -113,9 +143,11 @@ public class Conference
                 expired = true;
         }
 
+        Videobridge videobridge = getVideobridge();
+
         try
         {
-            getVideobridge().expireConference(this);
+            videobridge.expireConference(this);
         }
         finally
         {
@@ -128,11 +160,19 @@ public class Conference
                 }
                 catch (Throwable t)
                 {
-                    t.printStackTrace(System.err);
+                    logger.warn(
+                            "Failed to expire content " + content.getName()
+                                + " of conference " + getID() + "!",
+                            t);
                     if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                 }
             }
+
+            logd(
+                    "Expired conference " + getID() + ". The total number of"
+                        + " conferences is now "
+                        + videobridge.getConferenceCount() + ".");
         }
     }
 
@@ -222,7 +262,7 @@ public class Conference
      * <tt>name</tt> and adds it to the list of <tt>Content</tt>s of this
      * <tt>Conference</tt>.
      *
-     * @param name the name of the <tt>Content</tt> which is to be retrieved
+     * @param name the name of the <tt>Content</tt> which is to be returned
      * @return a <tt>Content</tt> of this <tt>Conference</tt> which has the
      * specified <tt>name</tt>
      */
@@ -242,7 +282,45 @@ public class Conference
             Content content = new Content(this, name);
 
             contents.add(content);
+
+            logd("Created content " + name + " of conference " + getID() + ".");
+
             return content;
+        }
+    }
+
+    /**
+     * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
+     * has a specific identifier/ID. If an <tt>Endpoint</tt> participating in
+     * this <tt>Conference</tt> with the specified <tt>id</tt> does not exist at
+     * the time the method is invoked, the method initializes a new
+     * <tt>Endpoint</tt> instance with the specified <tt>id</tt> and adds it to
+     * the list of <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
+     *
+     * @param id the identifier/ID of the <tt>Endpoint</tt> which is to be
+     * returned
+     * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
+     * which has the specified <tt>id</tt>
+     */
+    public Endpoint getOrCreateEndpoint(String id)
+    {
+        synchronized (endpoints)
+        {
+            for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
+                    i.hasNext();)
+            {
+                Endpoint endpoint = i.next().get();
+
+                if (endpoint == null)
+                    i.remove();
+                else if (endpoint.getID().equals(id))
+                    return endpoint;
+            }
+
+            Endpoint endpoint = new Endpoint(id);
+
+            endpoints.add(new WeakReference<Endpoint>(endpoint));
+            return endpoint;
         }
     }
 

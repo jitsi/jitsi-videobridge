@@ -20,6 +20,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
 import net.java.sip.communicator.service.protocol.*;
 import net.sf.fmj.media.rtp.*;
+import net.sf.fmj.media.rtp.RTPHeader;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
@@ -28,6 +29,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 
 /**
@@ -39,6 +41,12 @@ import org.jitsi.util.event.*;
 public class Channel
     extends PropertyChangeNotifier
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>Channel</tt> class and its instances
+     * to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Channel.class);
+
     /**
      * The default number of seconds of inactivity after which <tt>Channel</tt>s
      * expire.
@@ -63,18 +71,30 @@ public class Channel
     private static final long[] NO_RECEIVE_SSRCS = new long[0];
 
     /**
-     * A (dumb) <tt>SimpleAudioLevelListener</tt> instance which is to be set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setStreamAudioLevelListener(
-     * SimpleAudioLevelListener)} in order to have the audio levels of the
-     * contributing sources calculated at all.
+     * Logs a specific <tt>String</tt> at debug level.
+     *
+     * @param s the <tt>String</tt> to log at debug level 
      */
-    private static SimpleAudioLevelListener streamAudioLevelListener;
+    private static void logd(String s)
+    {
+        /*
+         * FIXME Jitsi Videobridge uses the defaults of java.util.logging at the
+         * time of this writing but wants to log at debug level at all times for
+         * the time being in order to facilitate early development.
+         */
+        logger.info(s);
+    }
 
     /**
      * The <tt>Content</tt> which has initialized this <tt>Channel</tt>.
      */
     private final Content content;
+
+    /**
+     * The <tt>Endpoint</tt> of the conference participant associated with this
+     * <tt>Channel</tt>.
+     */
+    private Endpoint endpoint;
 
     /**
      * The number of seconds of inactivity after which this <tt>Channel</tt>
@@ -112,7 +132,13 @@ public class Channel
     private long lastActivityTime;
 
     /**
-     * The list of RTP SSRCs received on this <tt>Channel</tt>. An elements at
+     * The maximum number of video RTP stream to be sent from Jitsi Videobridge
+     * to the endpoint associated with this video <tt>Channel</tt>.
+     */
+    private Integer lastN;
+
+    /**
+     * The list of RTP SSRCs received on this <tt>Channel</tt>. An element at
      * an even index represents a SSRC and its consecutive element at an odd
      * index specifies the time in milliseconds when the SSRC was last seen (in
      * order to enable timing out SSRCs).
@@ -139,6 +165,16 @@ public class Channel
      * of <tt>neomedia</tt>.
      */
     private final MediaStream stream;
+
+    /**
+     * The <tt>SimpleAudioLevelListener</tt> instance which is set on
+     * <tt>AudioMediaStream</tt> via
+     * {@link AudioMediaStream#setStreamAudioLevelListener(
+     * SimpleAudioLevelListener)} in order to have the audio levels of the
+     * contributing sources calculated and to end enable the functionality of
+     * {@link #lastN}.
+     */
+    private SimpleAudioLevelListener streamAudioLevelListener;
 
     /**
      * The <tt>PropertyChangeListener</tt> which listens to changes of the
@@ -282,6 +318,7 @@ public class Channel
 
             stream.setRTPTranslator(this.content.getRTPTranslator());
             break;
+
         default:
             throw new IllegalStateException("rtpLevelRelayType");
         }
@@ -346,7 +383,7 @@ public class Channel
              * Does the data of the specified DatagramPacket resemble (a header
              * of) an RTCP packet?
              */
-            if (p.getLength() > 8)
+            if (p.getLength() > RTCPHeader.SIZE)
             {
                 byte[] data = p.getData();
                 int offset = p.getOffset();
@@ -445,7 +482,7 @@ public class Channel
              * Does the data of the specified DatagramPacket resemble (a header
              * of) an RTP packet?
              */
-            if (p.getLength() >= 12)
+            if (p.getLength() >= RTPHeader.SIZE)
             {
                 byte[] data = p.getData();
                 int off = p.getOffset();
@@ -626,9 +663,13 @@ public class Channel
         throws IOException
     {
         if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+        {
             return new IceUdpTransportManager(this);
+        }
         else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+        {
             return new RawUdpTransportManager(this);
+        }
         else
         {
             throw new IllegalArgumentException(
@@ -648,9 +689,16 @@ public class Channel
     public void describe(ColibriConferenceIQ.Channel iq)
     {
         iq.setDirection(stream.getDirection());
+
+        Endpoint endpoint = getEndpoint();
+
+        if (endpoint != null)
+            iq.setEndpoint(endpoint.getID());
+
         iq.setExpire(getExpire());
         iq.setID(getID());
         iq.setInitiator(isInitiator());
+        iq.setLastN(lastN);
         iq.setRTPLevelRelayType(rtpLevelRelayType);
 
         if (initialLocalSSRC != -1)
@@ -747,9 +795,11 @@ public class Channel
                 expired = true;
         }
 
+        Content content = getContent();
+
         try
         {
-            getContent().expireChannel(this);
+            content.expireChannel(this);
         }
         finally
         {
@@ -761,7 +811,12 @@ public class Channel
             }
             catch (Throwable t)
             {
-                t.printStackTrace();
+                logger.warn(
+                        "Failed to close the MediaStream/stream of channel "
+                            + getID() + " of content " + content.getName()
+                            + " of conference "
+                            + content.getConference().getID() + "!",
+                        t);
                 if (t instanceof ThreadDeath)
                     throw (ThreadDeath) t;
             }
@@ -778,10 +833,21 @@ public class Channel
                 }
                 catch (Throwable t)
                 {
-                    t.printStackTrace();
+                    logger.warn(
+                            "Failed to close the"
+                                + " TransportManager/transportManager of"
+                                + " channel " + getID() + " of content "
+                                + content.getName() + " of conference "
+                                + content.getConference().getID() + "!",
+                            t);
                     if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                 }
+
+                logd(
+                        "Expired channel " + getID() + " of content "
+                            + content.getName() + " of conference "
+                            + content.getConference().getID() + ".");
             }
         }
     }
@@ -794,6 +860,18 @@ public class Channel
     public final Content getContent()
     {
         return content;
+    }
+
+    /**
+     * Gets the <tt>Endpoint</tt> of the conference participant associated with
+     * this <tt>Channel</tt>.
+     *
+     * @return the <tt>Endpoint</tt> of the conference participant associated
+     * with this <tt>Channel</tt>
+     */
+    public Endpoint getEndpoint()
+    {
+        return endpoint;
     }
 
     /**
@@ -884,32 +962,27 @@ public class Channel
     }
 
     /**
-     * Gets a (dumb) <tt>SimpleAudioLevelListener</tt> instance which is to be
-     * set on <tt>AudioMediaStream</tt> via
+     * Gets the <tt>SimpleAudioLevelListener</tt> instance which is set on
+     * <tt>AudioMediaStream</tt> via
      * {@link AudioMediaStream#setStreamAudioLevelListener(
      * SimpleAudioLevelListener)} in order to have the audio levels of the
-     * contributing sources calculated at all.
+     * contributing sources calculated and to enable the functionality of
+     * {@link #lastN}.
      *
-     * @return a (dumb) <tt>SimpleAudioLevelListener</tt> instance
+     * @return the <tt>SimpleAudioLevelListener</tt> instance
      */
-    private static SimpleAudioLevelListener getStreamAudioLevelListener()
+    private SimpleAudioLevelListener getStreamAudioLevelListener()
     {
         if (streamAudioLevelListener == null)
         {
             streamAudioLevelListener
                 = new SimpleAudioLevelListener()
-                {
-                    public void audioLevelChanged(int level)
-                    {
-                        /*
-                         * Whatever, the Jitsi Videobridge is not interested in
-                         * the audio levels. However, an existing/non-null
-                         * streamAudioLevelListener has to be set on an
-                         * AudioMediaStream in order to have the audio levels of
-                         * the contributing sources calculated at all.
-                         */
-                    }
-                };
+                        {
+                            public void audioLevelChanged(int level)
+                            {
+                                streamAudioLevelChanged(level);
+                            }
+                        };
         }
         return streamAudioLevelListener;
     }
@@ -1027,6 +1100,8 @@ public class Channel
                 stream.setTarget(streamTarget);
         }
 
+        Content content = getContent();
+
         if (!stream.isStarted())
         {
             /*
@@ -1047,11 +1122,17 @@ public class Channel
                                 ? DtlsControl.Setup.PASSIVE
                                 : DtlsControl.Setup.ACTIVE);
                 }
-                srtpControl.start(getContent().getMediaType());
+                srtpControl.start(content.getMediaType());
             }
 
             stream.start();
         }
+
+        logd(
+                "Direction of channel " + getID() + " of content "
+                    + content.getName() + " of conference "
+                    + content.getConference().getID() + " is "
+                    + stream.getDirection() + ".");
 
         touch(); // It seems this Channel is still active.
     }
@@ -1096,8 +1177,11 @@ public class Channel
             else if (t instanceof ThreadDeath)
                 throw (ThreadDeath) t;
         }
-        if (interrupted)
-            Thread.currentThread().interrupt();
+        finally
+        {
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -1199,7 +1283,15 @@ public class Channel
         }
         catch (OperationFailedException ofe)
         {
-            ofe.printStackTrace();
+            Content content = getContent();
+
+            logger.error(
+                    "Failed to wrapup the connectivity establishment of the"
+                        + " TransportManager/transportManager of channel "
+                        + getID() + " of content " + content.getName()
+                        + " of conference " + content.getConference().getID()
+                        + "!",
+                    ofe);
             return;
         }
 
@@ -1227,7 +1319,14 @@ public class Channel
             }
             catch (IOException ioe)
             {
-                ioe.printStackTrace();
+                Content content = getContent();
+
+                logger.error(
+                        "Failed to start the MediaStream/stream of channel "
+                            + getID() + " of content " + content.getName()
+                            + " of conference "
+                            + content.getConference().getID() + "!",
+                        ioe);
             }
         }
     }
@@ -1248,6 +1347,51 @@ public class Channel
             stream.setDirection(direction);
 
         touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Sets the identifier of the endpoint of the conference participant
+     * associated with this <tt>Channel</tt>.
+     *
+     * @param endpoint the identifier of the endpoint of the conference
+     * participant associated with this <tt>Channel</tt>
+     */
+    public void setEndpoint(String endpoint)
+    {
+        try
+        {
+            Endpoint oldValue = this.endpoint;
+
+            // Is the endpoint really changing?
+            if (oldValue == null)
+            {
+                if (endpoint == null)
+                    return;
+            }
+            else if (oldValue.getID().equals(endpoint))
+            {
+                return;
+            }
+
+            // The endpoint is really changing.
+            Endpoint newValue
+                = getContent().getConference().getOrCreateEndpoint(endpoint);
+
+            if (oldValue != newValue)
+            {
+                if (oldValue != null)
+                    oldValue.removeChannel(this);
+
+                this.endpoint = newValue;
+
+                if (newValue != null)
+                    newValue.addChannel(this);
+            }
+        }
+        finally
+        {
+            touch(); // It seems this Channel is still active.
+        }
     }
 
     /**
@@ -1310,6 +1454,21 @@ public class Channel
 
             firePropertyChange(INITIATOR_PROPERTY, oldValue, newValue);
         }
+    }
+
+    /**
+     * Sets the maximum number of video RTP streams to be sent from Jitsi
+     * Videobridge to the endpoint associated with this video <tt>Channel</tt>.
+     *
+     * @param lastN the maximum number of video RTP streams to be sent from
+     * Jitsi Videobridge to the endpoint associated with this video
+     * <tt>Channel</tt>
+     */
+    public void setLastN(Integer lastN)
+    {
+        this.lastN = lastN;
+
+        touch(); // It seems this Channel is still active.
     }
 
     /**
@@ -1437,6 +1596,16 @@ public class Channel
             {
                 wrapupConnectivityEstablishmentCommand = null;
                 transportManager = createTransportManager(xmlNamespace);
+
+                Content content = getContent();
+
+                logd(
+                        "Set " + transportManager.getClass().getSimpleName()
+                            + " #"
+                            + Integer.toHexString(transportManager.hashCode())
+                            + " on channel " + getID() + " of content "
+                            + content.getName() + " of conference "
+                            + content.getConference().getID() + ".");
             }
         }
 
@@ -1464,6 +1633,23 @@ public class Channel
                 return Long.MAX_VALUE;
         }
         return ssrcFactory.doGenerateSSRC();
+    }
+
+    /**
+     * Notifies this instance about a change in the audio level of the (remote)
+     * endpoint/conference participant associated with this <tt>Channel</tt>.
+     *
+     * @param level the new/current audio level of the (remote)
+     * endpoint/conference participant associated with this <tt>Channel</tt>
+     */
+    private void streamAudioLevelChanged(int level)
+    {
+        /*
+         * Whatever, the Jitsi Videobridge is not interested in the audio
+         * levels. However, an existing/non-null streamAudioLevelListener has to
+         * be set on an AudioMediaStream in order to have the audio levels of
+         * the contributing sources calculated at all.
+         */
     }
 
     /**

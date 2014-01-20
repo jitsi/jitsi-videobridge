@@ -21,6 +21,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.Logger;
 
 /**
  * Implements the Jingle ICE-UDP transport.
@@ -31,11 +32,33 @@ public class IceUdpTransportManager
     extends TransportManager
 {
     /**
+     * The <tt>Logger</tt> used by the <tt>IceUdpTransportManager</tt> class and
+     * its instances to print debug information.
+     */
+    private static final Logger logger
+        = Logger.getLogger(IceUdpTransportManager.class);
+
+    /**
      * The ICE <tt>Component</tt> IDs in their common order used, for example,
      * by <tt>DefaultStreamConnector</tt>, <tt>MediaStreamTarget</tt>.
      */
     private static final int[] COMPONENT_IDS
         = new int[] { Component.RTP, Component.RTCP };
+
+    /**
+     * Logs a specific <tt>String</tt> at debug level.
+     *
+     * @param s the <tt>String</tt> to log at debug level 
+     */
+    private static void logd(String s)
+    {
+        /*
+         * FIXME Jitsi Videobridge uses the defaults of java.util.logging at the
+         * time of this writing but wants to log at debug level at all times for
+         * the time being in order to facilitate early development.
+         */
+        logger.info(s);
+    }
 
     /**
      * The <tt>Agent</tt> which implements the ICE protocol and which is used
@@ -61,6 +84,15 @@ public class IceUdpTransportManager
         super(channel);
 
         iceAgent = createIceAgent();
+        iceAgent.addStateChangeListener(
+                new PropertyChangeListener()
+                        {
+                            @Override
+                            public void propertyChange(PropertyChangeEvent ev)
+                            {
+                                iceAgentStateChange(ev);
+                            }
+                        });
     }
 
     /**
@@ -442,6 +474,50 @@ public class IceUdpTransportManager
     public String getXmlNamespace()
     {
         return IceUdpTransportPacketExtension.NAMESPACE;
+    }
+
+    /**
+     * Notifies this instance about a change of the value of the <tt>state</tt>
+     * property of {@link #iceAgent}.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the old and new
+     * values of the <tt>state</tt> property of {@link #iceAgent}.
+     */
+    private void iceAgentStateChange(PropertyChangeEvent ev)
+    {
+        /*
+         * Log the changes in the ICE processing state of this
+         * IceUdpTransportManager for the purposes of debugging.
+         */
+
+        boolean interrupted = false;
+
+        try
+        {
+            Channel channel = getChannel();
+            Content content = channel.getContent();
+            Conference conference = content.getConference();
+
+            logd(
+                    "ICE processing state of " + getClass().getSimpleName()
+                        + " #" + Integer.toHexString(hashCode())
+                        + " of channel " + channel.getID() + " of content "
+                        + content.getName() + " of conference "
+                        + conference.getID() + " changed from "
+                        + ev.getOldValue() + " to " + ev.getNewValue() + ".");
+        }
+        catch (Throwable t)
+        {
+            if (t instanceof InterruptedException)
+                interrupted = true;
+            else if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+        }
+        finally
+        {
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
     }
 
     /**

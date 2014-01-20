@@ -13,6 +13,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.configuration.*;
+import org.jitsi.util.Logger;
 import org.osgi.framework.*;
 
 /**
@@ -24,11 +25,32 @@ import org.osgi.framework.*;
 public class Videobridge
 {
     /**
+     * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Videobridge.class);
+
+    /**
      * The pseudo-random generator which is to be used when generating
      * {@link Conference} and {@link Channel} IDs in order to minimize busy
      * waiting for the value of {@link System#currentTimeMillis()} to change.
      */
     static final Random RANDOM = new Random();
+
+    /**
+     * Logs a specific <tt>String</tt> at debug level.
+     *
+     * @param s the <tt>String</tt> to log at debug level 
+     */
+    private static void logd(String s)
+    {
+        /*
+         * FIXME Jitsi Videobridge uses the defaults of java.util.logging at the
+         * time of this writing but wants to log at debug level at all times for
+         * the time being in order to facilitate early development.
+         */
+        logger.info(s);
+    }
 
     /**
      * The XML namespace of the <tt>TransportManager</tt> type to be initialized
@@ -63,6 +85,8 @@ public class Videobridge
 
         this.component = component;
 
+        logConfigurationServiceProperties();
+
         new ExpireThread(this).start();
     }
 
@@ -94,6 +118,11 @@ public class Videobridge
                 {
                     conference = new Conference(this, id, focus);
                     conferences.put(id, conference);
+
+                    logd(
+                            "Created conference " + id + ". The total number of"
+                                + " conferences is now " + getConferenceCount()
+                                + ".");
                 }
             }
         }
@@ -194,6 +223,19 @@ public class Videobridge
     }
 
     /**
+     * Gets the number of <tt>Conference</tt>s of this <tt>Videobridge</tt>.
+     *
+     * @return the number of <tt>Conference</tt>s of this <tt>Videobridge</tt>
+     */
+    public int getConferenceCount()
+    {
+        synchronized (conferences)
+        {
+            return conferences.size();
+        }
+    }
+
+    /**
      * Gets the <tt>Conference</tt>s of this <tt>Videobridge</tt>.
      *
      * @return the <tt>Conference</tt>s of this <tt>Videobridge</tt>
@@ -252,6 +294,54 @@ public class Videobridge
     }
 
     /**
+     * Logs the properties of the <tt>ConfigurationService</tt> for the purposes
+     * of debugging.
+     */
+    private void logConfigurationServiceProperties()
+    {
+        if (!logger.isInfoEnabled())
+            return;
+
+        boolean interrupted = false;
+
+        try
+        {
+            BundleContext bundleContext = getComponent().getBundleContext();
+
+            if (bundleContext != null)
+            {
+                ConfigurationService cfg
+                    = ServiceUtils.getService(
+                            bundleContext,
+                            ConfigurationService.class);
+
+                if (cfg != null)
+                {
+                    for (String p : cfg.getAllPropertyNames())
+                    {
+                        Object v = cfg.getProperty(p);
+
+                        if (v != null)
+                            logger.info(p + "=" + v);
+                    }
+                }
+            }
+        }
+        catch (Throwable t)
+        {
+            if (t instanceof InterruptedException)
+                interrupted = true;
+            else if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+        }
+        finally
+        {
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
      * Implements a <tt>Thread</tt> which expires the {@link Channel}s of a
      * specific <tt>Videobridge</tt>.
      */
@@ -263,18 +353,18 @@ public class Videobridge
          * this instance. <tt>WeakReference</tt>d to allow this instance to
          * determine when it is to stop executing.
          */
-        private final WeakReference<Videobridge> videoBridge;
+        private final WeakReference<Videobridge> videobridge;
 
         /**
          * Initializes a new <tt>ExpireThread</tt> instance which is to expire
          * the {@link Channel}s of a specific <tt>Videobridge</tt>.
          *
-         * @param videoBridge the <tt>Videobridge</tt> which is to have its
+         * @param videobridge the <tt>Videobridge</tt> which is to have its
          * <tt>Channel</tt>s expired by the new instance
          */
-        public ExpireThread(Videobridge videoBridge)
+        public ExpireThread(Videobridge videobridge)
         {
-            this.videoBridge = new WeakReference<Videobridge>(videoBridge);
+            this.videobridge = new WeakReference<Videobridge>(videobridge);
 
             setDaemon(true);
             setName(getClass().getName());
@@ -285,13 +375,13 @@ public class Videobridge
          * they have been inactive for more than their advertised
          * <tt>expire</tt> number of seconds.
          *
-         * @param videoBridge the <tt>Videobridge</tt> which is to have its
+         * @param videobridge the <tt>Videobridge</tt> which is to have its
          * <tt>Channel</tt>s expired if they have been inactive for more than
          * their advertised <tt>expire</tt> number of seconds
          */
-        private void expire(Videobridge videoBridge)
+        private void expire(Videobridge videobridge)
         {
-            for (Conference conference : videoBridge.getConferences())
+            for (Conference conference : videobridge.getConferences())
             {
                 /*
                  * The Conferences will live an iteration more than the
@@ -311,7 +401,10 @@ public class Videobridge
                         }
                         catch (Throwable t)
                         {
-                            t.printStackTrace(System.err);
+                            logger.warn(
+                                    "Failed to expire conference "
+                                        + conference.getID() + "!",
+                                    t);
                             if (t instanceof ThreadDeath)
                                 throw (ThreadDeath) t;
                         }
@@ -339,7 +432,12 @@ public class Videobridge
                                 }
                                 catch (Throwable t)
                                 {
-                                    t.printStackTrace(System.err);
+                                    logger.warn(
+                                            "Failed to expire content "
+                                                + content.getName()
+                                                + " of conference "
+                                                + conference.getID() + "!",
+                                            t);
                                     if (t instanceof ThreadDeath)
                                         throw (ThreadDeath) t;
                                 }
@@ -359,7 +457,14 @@ public class Videobridge
                                     }
                                     catch (Throwable t)
                                     {
-                                        t.printStackTrace(System.err);
+                                        logger.warn(
+                                                "Failed to expire channel "
+                                                    + channel.getID()
+                                                    + " of content "
+                                                    + content.getName()
+                                                    + " of conference "
+                                                    + conference.getID() + "!",
+                                                t);
                                         if (t instanceof ThreadDeath)
                                             throw (ThreadDeath) t;
                                     }
@@ -373,7 +478,7 @@ public class Videobridge
 
         /**
          * Runs the loop in the background which expires the {@link Channel}s of
-         * {@link #videoBridge} if they have been inactive for more than their
+         * {@link #videobridge} if they have been inactive for more than their
          * advertised <tt>expire</tt> number of seconds.
          */
         @Override
@@ -382,15 +487,15 @@ public class Videobridge
             long wakeup = -1;
             final long sleep = Channel.DEFAULT_EXPIRE * 1000;
 
-            while (true)
+            do
             {
                 /*
                  * If the Videobridge of this instance is not referenced
                  * anymore, then it is time for this Thread to stop executing.
                  */
-                Videobridge videoBridge = this.videoBridge.get();
+                Videobridge videobridge = this.videobridge.get();
 
-                if (videoBridge == null)
+                if (videobridge == null)
                     break;
 
                 /*
@@ -425,15 +530,20 @@ public class Videobridge
 
                 try
                 {
-                    expire(videoBridge);
+                    expire(videobridge);
                 }
                 catch (Throwable t)
                 {
-                    t.printStackTrace(System.err);
+                    logger.error(
+                            "Failed to complete an iteration of automatic"
+                                + " expiry of channels, contents, and"
+                                + " conferences!",
+                            t);
                     if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                 }
             }
+            while (true);
         }
     }
 }

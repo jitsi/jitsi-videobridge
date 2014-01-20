@@ -15,6 +15,7 @@ import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.Logger;
 import org.osgi.framework.*;
 
 /**
@@ -25,6 +26,13 @@ import org.osgi.framework.*;
 public class RawUdpTransportManager
     extends TransportManager
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>RawUdpTransportManager</tt> class and
+     * its instances to print debug information.
+     */
+    private static final Logger logger
+        = Logger.getLogger(RawUdpTransportManager.class);
+
     /**
      * The generation of the candidates produced by this Jingle transport.
      */
@@ -96,12 +104,10 @@ public class RawUdpTransportManager
          * Determine the local InetAddress the new StreamConnector is to attempt
          * to bind to.
          */
-        ComponentImpl component
-            = getChannel()
-                .getContent()
-                    .getConference()
-                        .getVideobridge()
-                            .getComponent();
+        Channel channel = getChannel();
+        Content content = channel.getContent();
+        Conference conference = content.getConference();
+        ComponentImpl component = conference.getVideobridge().getComponent();
         BundleContext bundleContext = component.getBundleContext();
         NetworkAddressManagerService nams
             = ServiceUtils.getService(
@@ -134,7 +140,13 @@ public class RawUdpTransportManager
                     }
                     catch (UnknownHostException uhe)
                     {
-                        uhe.printStackTrace(System.err);
+                        logger.info(
+                                "Failed to get InetAddress from " + domain
+                                    + " for channel " + channel.getID()
+                                    + " of content " + content.getName()
+                                    + " of conference " + conference.getID()
+                                    + ".",
+                                uhe);
                     }
                 }
             }

@@ -27,8 +27,8 @@ import org.xmpp.component.*;
 import org.xmpp.packet.*;
 
 /**
- * Implements <tt>org.xmpp.component.Component</tt> to provide Jitsi Video
- * Bridge as an internal Jabber component.
+ * Implements <tt>org.xmpp.component.Component</tt> to provide Jitsi Videobridge
+ * as an internal Jabber component.
  *
  * @author Lyubomir Marinov
  */
@@ -38,7 +38,7 @@ public class ComponentImpl
 {
     /**
      * The locations of the OSGi bundles (or rather of the class files of their
-     * <tt>BundleActivator</tt> implementations) comprising Jitsi Video Bridge.
+     * <tt>BundleActivator</tt> implementations) comprising Jitsi Videobridge.
      * An element of the <tt>BUNDLES</tt> array is an array of <tt>String</tt>s
      * and represents an OSGi start level.
      */
@@ -78,7 +78,7 @@ public class ComponentImpl
      * The (default) description of <tt>ComponentImpl</tt> instances.
      */
     private static final String DESCRIPTION
-        = "Jitsi Video Bridge Jabber Component";
+        = "Jitsi Videobridge Jabber Component";
 
     /**
      * The (default) name of <tt>ComponentImpl</tt> instances.
@@ -113,7 +113,7 @@ public class ComponentImpl
      * {@link Conference} instances and which is being represented as a Jabber
      * component by this instance.
      */
-    private Videobridge videoBridge;
+    private Videobridge videobridge;
 
     /**
      * Initializes a new <tt>ComponentImpl</tt> instance.
@@ -193,8 +193,8 @@ public class ComponentImpl
     /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
-     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents the
-     * request to handle
+     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
+     * the request to handle
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
@@ -214,8 +214,8 @@ public class ComponentImpl
         String focus = conferenceIQ.getFrom();
         Conference conference
             = (id == null)
-                ? videoBridge.createConference(focus)
-                : videoBridge.getConference(id, focus);
+                ? videobridge.createConference(focus)
+                : videobridge.getConference(id, focus);
         ColibriConferenceIQ responseConferenceIQ;
 
         if (conference == null)
@@ -307,6 +307,26 @@ public class ComponentImpl
                                         && channel.isExpired())
                                     continue;
                             }
+
+                            /*
+                             * The attribute endpoint is optional. If a value is
+                             * not specified, then the Channel endpoint is to
+                             * not be changed.
+                             */
+                            String endpoint = channelIQ.getEndpoint();
+
+                            if (endpoint != null)
+                                channel.setEndpoint(endpoint);
+
+                            /*
+                             * The attribute last-n is optional. If a value is
+                             * not specified, then the Channel lastN is to not
+                             * be changed.
+                             */
+                            Integer lastN = channelIQ.getLastN();
+
+                            if (lastN != null)
+                                channel.setLastN(lastN);
 
                             /*
                              * XXX The attribute initiator is optional. If a
@@ -529,7 +549,7 @@ public class ComponentImpl
         /*
          * The design at the time of this writing considers the configuration
          * file read-only (in a read-only directory) and provides only manual
-         * editing for it. 
+         * editing for it.
          */
         System.setProperty(
                 ConfigurationService.PNAME_CONFIGURATION_FILE_IS_READ_ONLY,
@@ -663,7 +683,7 @@ public class ComponentImpl
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
 
-        videoBridge = new Videobridge(this);
+        videobridge = new Videobridge(this);
     }
 
     /**
@@ -750,11 +770,11 @@ public class ComponentImpl
         if (this.bundleContext == bundleContext)
             this.bundleContext = null;
 
-        videoBridge = null;
+        videobridge = null;
     }
 
     /**
-     * Stops the Jitsi Video Bridge bundles and the OSGi implementation.
+     * Stops the Jitsi Videobridge bundles and the OSGi implementation.
      */
     private void stopOSGi()
     {

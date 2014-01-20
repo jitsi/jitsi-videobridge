@@ -13,6 +13,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
+import org.jitsi.util.Logger;
 import org.osgi.framework.*;
 
 /**
@@ -22,6 +23,27 @@ import org.osgi.framework.*;
  */
 public class Content
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>Content</tt> class and its instances
+     * to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Content.class);
+
+    /**
+     * Logs a specific <tt>String</tt> at debug level.
+     *
+     * @param s the <tt>String</tt> to log at debug level 
+     */
+    private static void logd(String s)
+    {
+        /*
+         * FIXME Jitsi Videobridge uses the defaults of java.util.logging at the
+         * time of this writing but wants to log at debug level at all times for
+         * the time being in order to facilitate early development.
+         */
+        logger.info(s);
+    }
+
     /**
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
      */
@@ -125,6 +147,11 @@ public class Content
                 {
                     channel = new Channel(this, id);
                     channels.put(id, channel);
+
+                    logd(
+                            "Created channel " + id + " of content "
+                                + getName() + " of conference "
+                                + getConference().getID());
                 }
             }
         }
@@ -147,9 +174,11 @@ public class Content
                 expired = true;
         }
 
+        Conference conference = getConference();
+
         try
         {
-            getConference().expireContent(this);
+            conference.expireContent(this);
         }
         finally
         {
@@ -162,7 +191,11 @@ public class Content
                 }
                 catch (Throwable t)
                 {
-                    t.printStackTrace(System.err);
+                    logger.warn(
+                            "Failed to expire channel " + channel.getID()
+                                + " of content " + getName() + " of conference "
+                                + conference.getID() + "!",
+                            t);
                     if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                 }
@@ -173,6 +206,10 @@ public class Content
                 if (rtpTranslator != null)
                     rtpTranslator.dispose();
             }
+
+            logd(
+                    "Expired content " + getName() + " of conference "
+                        + conference.getID() + ".");
         }
     }
 

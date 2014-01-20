@@ -11,6 +11,7 @@
 	<classpathentry kind="lib" path="lib/dom4j.jar"/>
 	<classpathentry kind="lib" path="lib/fileaccess.jar"/>
 	<classpathentry kind="lib" path="lib/jitsi-android-osgi.jar"/>
+	<classpathentry kind="lib" path="lib/jnalib.jar"/>
 	<classpathentry kind="lib" path="lib/json.jar"/>
 	<classpathentry kind="lib" path="lib/libidn.jar"/>
 	<classpathentry kind="lib" path="lib/libjitsi.jar" sourcepath="../libjitsi/src"/>
