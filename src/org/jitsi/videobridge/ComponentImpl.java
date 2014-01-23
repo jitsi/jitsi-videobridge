@@ -70,6 +70,9 @@ public class ComponentImpl
                 "net/java/sip/communicator/service/gui/internal/GuiServiceActivator"
             },
             {
+                "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
+            },
+            {
                 "org/jitsi/videobridge/ComponentImplBundleActivator"
             }
         };

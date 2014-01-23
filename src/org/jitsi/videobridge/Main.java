@@ -6,6 +6,8 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.service.protocol.*;
+
 import org.jitsi.service.neomedia.*;
 import org.jivesoftware.whack.*;
 import org.xmpp.component.*;
@@ -143,14 +145,50 @@ public class Main
          */
         if ((maxPort != null) && (maxPort.length() != 0))
         {
+            // Jingle Raw UDP transport
             System.setProperty(
                     DefaultStreamConnector.MAX_PORT_NUMBER_PROPERTY_NAME,
+                    maxPort);
+            // Jingle ICE-UDP transport
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MAX_AUDIO_PORT_NUMBER_PROPERTY_NAME,
+                    maxPort);
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MAX_DATA_CHANNEL_PORT_NUMBER_PROPERTY_NAME,
+                    maxPort);
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MAX_MEDIA_PORT_NUMBER_PROPERTY_NAME,
+                    maxPort);
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MAX_VIDEO_PORT_NUMBER_PROPERTY_NAME,
                     maxPort);
         }
         if ((minPort != null) && (minPort.length() != 0))
         {
+            // Jingle Raw UDP transport
             System.setProperty(
                     DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
+                    minPort);
+            // Jingle ICE-UDP transport
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MIN_AUDIO_PORT_NUMBER_PROPERTY_NAME,
+                    minPort);
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MIN_DATA_CHANNEL_PORT_NUMBER_PROPERTY_NAME,
+                    minPort);
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
+                    minPort);
+            System.setProperty(
+                    OperationSetBasicTelephony
+                        .MIN_VIDEO_PORT_NUMBER_PROPERTY_NAME,
                     minPort);
         }
 

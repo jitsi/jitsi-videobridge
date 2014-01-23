@@ -46,6 +46,12 @@ public class IceUdpTransportManager
         = new int[] { Component.RTP, Component.RTCP };
 
     /**
+     * The indicator which determines whether the one-time method
+     * {@link JitsiTransportManager#initializePortNumbers()} is to be executed.
+     */
+    private static boolean initializePortNumbers = true;
+
+    /**
      * Logs a specific <tt>String</tt> at debug level.
      *
      * @param s the <tt>String</tt> to log at debug level 
@@ -192,6 +198,20 @@ public class IceUdpTransportManager
         iceAgent.setControlling(channel.isInitiator());
 
         // createIceStream
+
+        /*
+         * Read the ranges of ports to be utilized from the ConfigurationService
+         * once.
+         */
+        synchronized (IceUdpTransportManager.class)
+        {
+            if (initializePortNumbers)
+            {
+                initializePortNumbers = false;
+                JitsiTransportManager.initializePortNumbers();
+            }
+        }
+
         PortTracker portTracker
             = JitsiTransportManager.getPortTracker(content.getMediaType());
         IceMediaStream iceStream
@@ -632,9 +652,8 @@ public class IceUdpTransportManager
             {
                 /*
                  * XXX Effectively, the check above but realizing that all
-                 * candidates were ignored:
-                 *
-                 * iceAgentStateIsRunning && (candidates.size() == 0)
+                 * candidates were ignored: iceAgentStateIsRunning
+                 * && (candidates.size() == 0).
                  */
                 return false;
             }
@@ -767,6 +786,12 @@ public class IceUdpTransportManager
             return
                 net.java.sip.communicator.service.protocol.media.TransportManager
                     .getPortTracker(mediaType);
+        }
+
+        public static void initializePortNumbers()
+        {
+            net.java.sip.communicator.service.protocol.media.TransportManager
+                .initializePortNumbers();
         }
 
         private JitsiTransportManager(MediaAwareCallPeer<?,?,?> callPeer)
