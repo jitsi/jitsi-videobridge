@@ -1491,6 +1491,15 @@ public class Channel
 
             if (mediaService != null)
             {
+                /*
+                 * TODO We will try to recognize Google Chrome (in distinction
+                 * with Jitsi) acting as the remote endpoint in order to use
+                 * RTPExtension.SSRC_AUDIO_LEVEL_URN instead of
+                 * RTPExtension.CSRC_AUDIO_LEVEL_URN while we do not support the
+                 * negotiation of RTP header extension IDs.
+                 */
+                boolean googleChrome = false;
+
                 for (PayloadTypePacketExtension payloadType : payloadTypes)
                 {
                     MediaFormat mediaFormat
@@ -1499,12 +1508,42 @@ public class Channel
                                 mediaService,
                                 null);
 
-                    if (mediaFormat != null)
+                    if (mediaFormat == null)
+                    {
+                        if (!googleChrome
+                                && "iSAC".equalsIgnoreCase(
+                                        payloadType.getName()))
+                        {
+                            googleChrome = true;
+                        }
+                    }
+                    else
                     {
                         stream.addDynamicRTPPayloadType(
                                 (byte) payloadType.getID(),
                                 mediaFormat);
                     }
+                }
+
+                if (googleChrome && (stream instanceof AudioMediaStream))
+                {
+                    /*
+                     * TODO Use RTPExtension.SSRC_AUDIO_LEVEL_URN instead of
+                     * RTPExtension.CSRC_AUDIO_LEVEL_URN while we do not support
+                     * the negotiation of RTP header extension IDs.
+                     */
+                    URI uri;
+
+                    try
+                    {
+                        uri = new URI(RTPExtension.SSRC_AUDIO_LEVEL_URN);
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        uri = null;
+                    }
+                    if (uri != null)
+                        stream.addRTPExtension((byte) 1, new RTPExtension(uri));
                 }
             }
         }
