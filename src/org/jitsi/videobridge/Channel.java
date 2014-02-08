@@ -803,6 +803,8 @@ public class Channel
         }
         finally
         {
+            Conference conference = content.getConference();
+
             try
             {
                 stream.close();
@@ -814,8 +816,7 @@ public class Channel
                 logger.warn(
                         "Failed to close the MediaStream/stream of channel "
                             + getID() + " of content " + content.getName()
-                            + " of conference "
-                            + content.getConference().getID() + "!",
+                            + " of conference " + conference.getID() + "!",
                         t);
                 if (t instanceof ThreadDeath)
                     throw (ThreadDeath) t;
@@ -838,16 +839,21 @@ public class Channel
                                 + " TransportManager/transportManager of"
                                 + " channel " + getID() + " of content "
                                 + content.getName() + " of conference "
-                                + content.getConference().getID() + "!",
+                                + conference.getID() + "!",
                             t);
                     if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                 }
 
+                Videobridge videobridge = conference.getVideobridge();
+
                 logd(
                         "Expired channel " + getID() + " of content "
                             + content.getName() + " of conference "
-                            + content.getConference().getID() + ".");
+                            + conference.getID()
+                            + ". The total number of conferences is now "
+                            + videobridge.getConferenceCount() + ", channels "
+                            + videobridge.getChannelCount() + ".");
             }
         }
     }

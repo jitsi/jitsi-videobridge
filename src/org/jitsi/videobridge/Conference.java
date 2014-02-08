@@ -172,7 +172,8 @@ public class Conference
             logd(
                     "Expired conference " + getID() + ". The total number of"
                         + " conferences is now "
-                        + videobridge.getConferenceCount() + ".");
+                        + videobridge.getConferenceCount() + ", channels "
+                        + videobridge.getChannelCount() + ".");
         }
     }
 
@@ -268,25 +269,37 @@ public class Conference
      */
     public Content getOrCreateContent(String name)
     {
+        Content content;
+
         synchronized (contents)
         {
-            for (Content content : contents)
+            for (Content aContent : contents)
             {
-                if (content.getName().equals(name))
+                if (aContent.getName().equals(name))
                 {
-                    content.touch(); // It seems the content is still active.
-                    return content;
+                    aContent.touch(); // It seems the content is still active.
+                    return aContent;
                 }
             }
 
-            Content content = new Content(this, name);
-
+            content = new Content(this, name);
             contents.add(content);
-
-            logd("Created content " + name + " of conference " + getID() + ".");
-
-            return content;
         }
+
+        /*
+         * The method Videobridge.getChannelCount() should better be executed
+         * outside synchronized blocks in order to reduce the risks of causing
+         * deadlocks.
+         */
+        Videobridge videobridge = getVideobridge();
+
+        logd(
+                "Created content " + name + " of conference " + getID()
+                    + ". The total number of conferences is now "
+                    + videobridge.getConferenceCount() + ", channels "
+                    + videobridge.getChannelCount() + ".");
+
+        return content;
     }
 
     /**

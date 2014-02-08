@@ -137,7 +137,7 @@ public class Content
     {
         Channel channel = null;
 
-        while (channel == null)
+        do
         {
             String id = generateChannelID();
 
@@ -147,14 +147,25 @@ public class Content
                 {
                     channel = new Channel(this, id);
                     channels.put(id, channel);
-
-                    logd(
-                            "Created channel " + id + " of content "
-                                + getName() + " of conference "
-                                + getConference().getID());
                 }
             }
         }
+        while (channel == null);
+
+        /*
+         * The method Videobridge.getChannelCount() should better be executed
+         * outside synchronized blocks in order to reduce the risks of causing
+         * deadlocks.
+         */
+        Conference conference = getConference();
+        Videobridge videobridge = conference.getVideobridge();
+
+        logd(
+                "Created channel " + channel.getID() + " of content "
+                    + getName() + " of conference " + conference.getID()
+                    + ". The total number of conferences is now "
+                    + videobridge.getConferenceCount() + ", channels "
+                    + videobridge.getChannelCount() + ".");
 
         return channel;
     }
@@ -207,9 +218,14 @@ public class Content
                     rtpTranslator.dispose();
             }
 
+            Videobridge videobridge = conference.getVideobridge();
+
             logd(
                     "Expired content " + getName() + " of conference "
-                        + conference.getID() + ".");
+                        + conference.getID()
+                        + ". The total number of conferences is now "
+                        + videobridge.getConferenceCount() + ", channels "
+                        + videobridge.getChannelCount() + ".");
         }
     }
 
@@ -289,6 +305,19 @@ public class Content
             channel.touch();
 
         return channel;
+    }
+
+    /**
+     * Gets the number of <tt>Channel</tt>s of this <tt>Content</tt>.
+     *
+     * @return the number of <tt>Channel</tt>s of this <tt>Content</tt>
+     */
+    public int getChannelCount()
+    {
+        synchronized (channels)
+        {
+            return channels.size();
+        }
     }
 
     /**

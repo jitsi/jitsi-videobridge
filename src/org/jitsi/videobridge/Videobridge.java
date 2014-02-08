@@ -118,15 +118,21 @@ public class Videobridge
                 {
                     conference = new Conference(this, id, focus);
                     conferences.put(id, conference);
-
-                    logd(
-                            "Created conference " + id + ". The total number of"
-                                + " conferences is now " + getConferenceCount()
-                                + ".");
                 }
             }
         }
         while (conference == null);
+
+        /*
+         * The method Videobridge.getChannelCount() should better be executed
+         * outside synchronized blocks in order to reduce the risks of causing
+         * deadlocks.
+         */
+        logd(
+                "Created conference " + conference.getID()
+                    + ". The total number of conferences is now "
+                    + getConferenceCount() + ", channels " + getChannelCount()
+                    + ".");
 
         return conference;
     }
@@ -167,6 +173,24 @@ public class Videobridge
     private String generateConferenceID()
     {
         return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
+    }
+
+    /**
+     * Gets the number of <tt>Channel</tt>s in this <tt>Videobridge</tt> (across
+     * all <tt>Conference</tt>s and <tt>Content</tt>s).
+     *
+     * @return the number of <tt>Channel</tt>s in this <tt>Videobridge</tt>
+     */
+    int getChannelCount()
+    {
+        int channelCount = 0;
+
+        for (Conference conference : getConferences())
+        {
+            for (Content contents : conference.getContents())
+                channelCount += contents.getChannelCount();
+        }
+        return channelCount;
     }
 
     /**
