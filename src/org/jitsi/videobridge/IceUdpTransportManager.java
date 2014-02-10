@@ -73,6 +73,40 @@ public class IceUdpTransportManager
     private final Agent iceAgent;
 
     /**
+     * The <tt>PropertyChangeListener</tt> which is (to be) notified about
+     * changes in the <tt>state</tt> of {@link #iceAgent}.
+     */
+    private final PropertyChangeListener iceAgentStateChangeListener
+        = new PropertyChangeListener()
+                {
+                    @Override
+                    public void propertyChange(PropertyChangeEvent ev)
+                    {
+                        iceAgentStateChange(ev);
+                    }
+                };
+
+    /**
+     * The <tt>IceMediaStream</tt> of {@link #iceAgent} associated with the
+     * <tt>Channel</tt> of this instance.
+     */
+    private final IceMediaStream iceStream;
+
+    /**
+     * The <tt>PropertyChangeListener</tt> which is (to be) notified about
+     * changes in the properties of the <tt>CandidatePair</tt>s of
+     * {@link #iceStream}.
+     */
+    private final PropertyChangeListener iceStreamPairChangeListener
+        = new PropertyChangeListener()
+                {
+                    @Override
+                    public void propertyChange(PropertyChangeEvent ev)
+                    {
+                        iceStreamPairChange(ev);
+                    }
+                };
+    /**
      * The <tt>StreamConnector</tt> that represents the datagram sockets
      * allocated by this instance for the purposes of RTP and RTCP transmission.
      */
@@ -90,15 +124,9 @@ public class IceUdpTransportManager
         super(channel);
 
         iceAgent = createIceAgent();
-        iceAgent.addStateChangeListener(
-                new PropertyChangeListener()
-                        {
-                            @Override
-                            public void propertyChange(PropertyChangeEvent ev)
-                            {
-                                iceAgentStateChange(ev);
-                            }
-                        });
+        iceAgent.addStateChangeListener(iceAgentStateChangeListener);
+        iceStream = iceAgent.getStream(getChannel().getContent().getName());
+        iceStream.addPairChangeListener(iceStreamPairChangeListener);
     }
 
     /**
@@ -153,8 +181,16 @@ public class IceUdpTransportManager
     {
         super.close();
 
+        if (iceStream != null)
+        {
+            iceStream.removePairStateChangeListener(
+                    iceStreamPairChangeListener);
+        }
         if (iceAgent != null)
+        {
+            iceAgent.removeStateChangeListener(iceAgentStateChangeListener);
             iceAgent.free();
+        }
     }
 
     /**
@@ -196,6 +232,7 @@ public class IceUdpTransportManager
         Agent iceAgent = nams.createIceAgent();
 
         iceAgent.setControlling(channel.isInitiator());
+        iceAgent.setPerformConsentFreshness(true);
 
         // createIceStream
 
@@ -537,6 +574,23 @@ public class IceUdpTransportManager
         {
             if (interrupted)
                 Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Notifies this instance about a change of the value of a property of a
+     * <tt>CandidatePair</tt> of {@link #iceStream}.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the
+     * <tt>CandidatePair</tt>, the name of the <tt>CandidatePair</tt> property,
+     * and its old and new values
+     */
+    private void iceStreamPairChange(PropertyChangeEvent ev)
+    {
+        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED.equals(
+                ev.getPropertyName()))
+        {
+            getChannel().touch();
         }
     }
 
