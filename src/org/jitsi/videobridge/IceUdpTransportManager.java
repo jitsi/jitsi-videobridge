@@ -249,14 +249,12 @@ public class IceUdpTransportManager
         Content content = channel.getContent();
         NetworkAddressManagerService nams
             = ServiceUtils.getService(
-                    content
-                        .getConference()
-                            .getVideobridge()
-                                .getComponent()
-                                    .getBundleContext(),
-                    NetworkAddressManagerService.class);
+                    getBundleContext(), NetworkAddressManagerService.class);
         Agent iceAgent = nams.createIceAgent();
 
+        //add videobridge specific harvesters such as a mapping and an Amazon
+        //AWS EC2 harvester
+        appendVideobridgeHarvesters(iceAgent);
         iceAgent.setControlling(channel.isInitiator());
         iceAgent.setPerformConsentFreshness(true);
 
@@ -300,10 +298,6 @@ public class IceUdpTransportManager
             if (t instanceof ThreadDeath)
                 throw (ThreadDeath) t;
         }
-
-        //add videobridge specific harvesters such as a mapping and an Amazon
-        //AWS EC2 harvester
-        appendVideobridgeHarvesters(iceAgent);
 
         return iceAgent;
     }
@@ -362,7 +356,7 @@ public class IceUdpTransportManager
                     = new TransportAddress(publicAddressStr, 9, Transport.UDP);
 
             logger.info("Will append a NAT harvester for " +
-                        localAddress + "=" + publicAddress);
+                        localAddress + "=>" + publicAddress);
 
         }
         catch(Exception exc)
