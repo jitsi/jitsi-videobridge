@@ -31,6 +31,7 @@ import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.osgi.framework.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -866,6 +867,19 @@ public class Channel
     public final Content getContent()
     {
         return content;
+    }
+
+    /**
+     * Gets the <tt>BundleContext</tt> associated with this <tt>Channel</tt>.
+     * The method is a convenience which gets the <tt>BundleContext</tt>
+     * associated with the XMPP component implementation in which the
+     * <tt>Videobridge</tt> associated with this instance is executing.
+     *
+     * @return the <tt>BundleContext</tt> associated with this <tt>Channel</tt>
+     */
+    public BundleContext getBundleContext()
+    {
+        return getContent().getBundleContext();
     }
 
     /**

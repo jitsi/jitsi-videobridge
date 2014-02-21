@@ -269,17 +269,16 @@ public class Content
     }
 
     /**
-     * Gets the <tt>BundleContext</tt> associated with this <tt>Conent</tt>.
+     * Gets the <tt>BundleContext</tt> associated with this <tt>Content</tt>.
      * The method is a convenience which gets the <tt>BundleContext</tt>
      * associated with the XMPP component implementation in which the
      * <tt>Videobridge</tt> associated with this instance is executing.
      *
      * @return the <tt>BundleContext</tt> associated with this <tt>Content</tt>
      */
-    private BundleContext getBundleContext()
+    public BundleContext getBundleContext()
     {
-        return
-            getConference().getVideobridge().getComponent().getBundleContext();
+        return getConference().getBundleContext();
     }
 
     /**

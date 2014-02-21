@@ -20,8 +20,11 @@ import net.java.sip.communicator.util.*;
 
 import org.ice4j.*;
 import org.ice4j.ice.*;
+import org.ice4j.ice.harvest.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
+import org.osgi.framework.*;
 
 /**
  * Implements the Jingle ICE-UDP transport.
@@ -50,6 +53,29 @@ public class IceUdpTransportManager
      * {@link JitsiTransportManager#initializePortNumbers()} is to be executed.
      */
     private static boolean initializePortNumbers = true;
+
+    /**
+     * Contains the name of the property flag that may indicate that AWS address
+     * harvesting should be explicitly disabled.
+     */
+    private static final String DISABLE_AWS_HARVESTER
+                                = "org.jitsi.videobridge.DISABLE_AWS_HARVESTER";
+
+    /**
+     * Contains the name of the property that would tell us if we should use
+     * address mapping as one of our NAT traversal options as well as the local
+     * address that we should be mapping.
+     */
+    private static final String NAT_HARVESTER_LOCAL_ADDRESS
+                        = "org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS";
+
+    /**
+     * Contains the name of the property that would tell us if we should use
+     * address mapping as one of our NAT traversal options as well as the public
+     * address that we should be using in addition to our local one.
+     */
+    private static final String NAT_HARVESTER_PUBLIC_ADDRESS
+                        = "org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS";
 
     /**
      * Logs a specific <tt>String</tt> at debug level.
@@ -275,7 +301,97 @@ public class IceUdpTransportManager
                 throw (ThreadDeath) t;
         }
 
+        //add videobridge specific harvesters such as a mapping and an Amazon
+        //AWS EC2 harvester
+        appendVideobridgeHarvesters(iceAgent);
+
         return iceAgent;
+    }
+
+    /**
+     * Adds to <tt>iceAgent</tt> videobridge specific candidate harvesters such
+     * as an Amazon AWS EC2 specific harvester.
+     *
+     * @param iceAgent the {@link Agent} that we'd like to append new harvesters
+     * to.
+     */
+    private void appendVideobridgeHarvesters(Agent iceAgent)
+    {
+        AwsCandidateHarvester awsHarvester = null;
+
+        //does this look like an Amazon AWS EC2 machine?
+        if(AwsCandidateHarvester.smellsLikeAnEC2())
+        {
+            awsHarvester = new AwsCandidateHarvester();
+        }
+
+        ConfigurationService cfg = ServiceUtils.getService(
+                    getBundleContext(), ConfigurationService.class);
+
+        //if no configuration is found then we simply log and bail
+        if (cfg == null)
+        {
+            logger.info("No configuration found. "
+                + "Will continue without custom candidate harvesters");
+            return;
+        }
+
+        //append the AWS harvester for AWS machines.
+        if( awsHarvester != null
+            && !cfg.getBoolean(DISABLE_AWS_HARVESTER, false))
+        {
+            logger.info("Appending an AWS harvester to the ICE agent.");
+            iceAgent.addCandidateHarvester(awsHarvester);
+        }
+
+        //if configured, append a mapping harvester.
+        String localAddressStr = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
+        String publicAddressStr = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
+
+        if (localAddressStr == null || publicAddressStr == null)
+            return;
+
+        TransportAddress localAddress;
+        TransportAddress publicAddress;
+
+        try
+        {
+            localAddress
+                    = new TransportAddress(localAddressStr, 9, Transport.UDP);
+            publicAddress
+                    = new TransportAddress(publicAddressStr, 9, Transport.UDP);
+
+            logger.info("Will append a NAT harvester for " +
+                        localAddress + "=" + publicAddress);
+
+        }
+        catch(Exception exc)
+        {
+            logger.info("Failed to create a NAT harvester for"
+                        + " local address=" + localAddressStr
+                        + " and public address=" + publicAddressStr);
+            return;
+        }
+
+        MappingCandidateHarvester natHarvester
+            = new MappingCandidateHarvester(publicAddress, localAddress);
+
+        iceAgent.addCandidateHarvester(natHarvester);
+    }
+
+    /**
+     * Gets the <tt>BundleContext</tt> associated with the <tt>Channel</tt>
+     * that this {@link TransportManager} is servicing. The method is a
+     * convenience which gets the <tt>BundleContext</tt> associated with the
+     * XMPP component implementation in which the <tt>Videobridge</tt>
+     * associated with this instance is executing.
+     *
+     * @return the <tt>BundleContext</tt> associated with this
+     * <tt>IceUdpTransportManager</tt>
+     */
+    public BundleContext getBundleContext()
+    {
+        return getChannel().getBundleContext();
     }
 
     /**

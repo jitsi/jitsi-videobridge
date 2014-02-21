@@ -12,6 +12,7 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
 import org.jitsi.util.*;
+import org.osgi.framework.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -349,6 +350,17 @@ public class Conference
         return videobridge;
     }
 
+    /**
+     * Returns the OSGi <tt>BundleContext</tt> in which this Conference is
+     * executing.
+     *
+     * @return the OSGi <tt>BundleContext</tt> in which the Conference is
+     * executing.
+     */
+    public BundleContext getBundleContext()
+    {
+        return getVideobridge().getBundleContext();
+    }
     /**
      * Sets the time in milliseconds of the last activity related to this
      * <tt>Conference</tt> to the current system time.

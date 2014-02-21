@@ -366,6 +366,18 @@ public class Videobridge
     }
 
     /**
+     * Returns the OSGi <tt>BundleContext</tt> in which the Videobridge is
+     * executing.
+     *
+     * @return the OSGi <tt>BundleContext</tt> in which the Videobridge is
+     * executing.
+     */
+    public BundleContext getBundleContext()
+    {
+        return getComponent().getBundleContext();
+    }
+
+    /**
      * Implements a <tt>Thread</tt> which expires the {@link Channel}s of a
      * specific <tt>Videobridge</tt>.
      */
