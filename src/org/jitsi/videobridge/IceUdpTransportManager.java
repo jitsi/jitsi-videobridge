@@ -62,6 +62,13 @@ public class IceUdpTransportManager
                                 = "org.jitsi.videobridge.DISABLE_AWS_HARVESTER";
 
     /**
+     * Contains the name of the property flag that may indicate that AWS address
+     * harvesting should be forced without first trying to auto dectect it.
+     */
+    private static final String FORCE_AWS_HARVESTER
+                                = "org.jitsi.videobridge.FORCE_AWS_HARVESTER";
+
+    /**
      * Contains the name of the property that would tell us if we should use
      * address mapping as one of our NAT traversal options as well as the local
      * address that we should be mapping.
@@ -329,6 +336,18 @@ public class IceUdpTransportManager
                 + "Will continue without custom candidate harvesters");
             return;
         }
+
+        //now that we have a conf service, check if AWS use is forced and
+        //comply if necessary.
+        if (awsHarvester == null
+            && cfg.getBoolean(FORCE_AWS_HARVESTER, false))
+        {
+            //ok. this doesn't look like an EC2 machine but since you
+            //insist ... we'll behave as if it is.
+            logger.info("Forcing use of AWS candidate harvesting.");
+            awsHarvester = new AwsCandidateHarvester();
+        }
+
 
         //append the AWS harvester for AWS machines.
         if( awsHarvester != null
