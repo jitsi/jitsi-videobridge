@@ -282,8 +282,7 @@ public class IceUdpTransportManager
 
         PortTracker portTracker
             = JitsiTransportManager.getPortTracker(content.getMediaType());
-        IceMediaStream iceStream
-            = nams.createIceStream(
+        IceMediaStream iceStream = nams.createIceStream(
                     portTracker.getPort(),
                     /* streamName */ content.getName(),
                     iceAgent);
@@ -292,13 +291,9 @@ public class IceUdpTransportManager
         try
         {
             portTracker.setNextPort(
-                    1
-                        + iceStream
-                            .getComponent(Component.RTCP)
-                                .getLocalCandidates()
-                                    .get(0)
-                                        .getTransportAddress()
-                                            .getPort());
+                1 + iceStream.getComponent(Component.RTCP)
+                    .getLocalCandidates()
+                        .get(0).getTransportAddress().getPort());
         }
         catch (Throwable t)
         {
