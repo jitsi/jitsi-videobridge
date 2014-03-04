@@ -116,6 +116,11 @@ public class Channel
      */
     private final String id;
 
+    /**
+     * The local synchronization source identifier (SSRC) to be pre-announced.
+     * Currently, the value is taken into account in the case of content mixing
+     * and not in the case of RTP translation.
+     */
     private final long initialLocalSSRC;
 
     /**
@@ -152,7 +157,7 @@ public class Channel
      * section 2.3 &quot;Mixers and Translators&quot;) used for this
      * <tt>Channel</tt>.
      */
-    private final RTPLevelRelayType rtpLevelRelayType;
+    private RTPLevelRelayType rtpLevelRelayType;
 
     /**
      * The <tt>SSRCFactory</tt> which is utilized by {@link #stream} to generate
@@ -241,14 +246,8 @@ public class Channel
         this.content = content;
         this.id = id;
 
-        MediaType mediaType = this.content.getMediaType();
-
-        rtpLevelRelayType
-            = MediaType.AUDIO.equals(mediaType)
-                ? RTPLevelRelayType.MIXER
-                : RTPLevelRelayType.TRANSLATOR;
-
         MediaService mediaService = getMediaService();
+        MediaType mediaType = getContent().getMediaType();
 
         stream
             = mediaService.createMediaStream(
@@ -265,64 +264,13 @@ public class Channel
         stream.setSSRCFactory(ssrcFactory);
 
         /*
-         * If the RTP-level relay to be used for this Channel is a mixer, then
-         * the stream will have a MediaDevice and will not have an
-         * RTPTranslator. If the RTP-level relay to be used for this Channel is
-         * a translator, then the stream will not have a MediaDevice and will
-         * have an RTPTranslator.
+         * Jitsi Videobridge pre-announces the local synchronization source
+         * identifier (SSRC) in the case of content mixing and not in the case
+         * of RTP translation. Anyway, this distinction will be put in effect at
+         * the time the value is queried for the purposes of simplification
+         * here.
          */
-        switch (getRTPLevelRelayType())
-        {
-        case MIXER:
-            MediaDevice device = this.content.getMixer();
-
-            stream.setDevice(device);
-
-            if (MediaType.AUDIO.equals(mediaType))
-            {
-                /*
-                 * Allow the Jitsi Videobridge server to send the audio levels
-                 * of the contributing sources to the telephony conference
-                 * participants .
-                 */
-                List<RTPExtension> rtpExtensions
-                    = device.getSupportedExtensions();
-
-                if (rtpExtensions.size() == 1)
-                    stream.addRTPExtension((byte) 1, rtpExtensions.get(0));
-
-                ((AudioMediaStream) stream).setStreamAudioLevelListener(
-                        getStreamAudioLevelListener());
-            }
-
-            /*
-             * It is necessary to start receiving media in order to determine
-             * the MediaFormat in which the stream will send the media it
-             * generates.
-             */
-            stream.setDirection(MediaDirection.RECVONLY);
-
-            /*
-             * Jitsi Videobridge pre-announces the local synchronization (SSRC)
-             * identifier in the case of content mixing.
-             */
-            initialLocalSSRC = ssrcFactory.doGenerateSSRC() & 0xFFFFFFFFL;
-            break;
-
-        case TRANSLATOR:
-            /*
-             * TODO Jitsi Videobridge does not currently pre-announce the local
-             * synchronization source (SSRC) identifiers in the case of RTP
-             * translation.
-             */
-            initialLocalSSRC = -1;
-
-            stream.setRTPTranslator(this.content.getRTPTranslator());
-            break;
-
-        default:
-            throw new IllegalStateException("rtpLevelRelayType");
-        }
+        initialLocalSSRC = ssrcFactory.doGenerateSSRC() & 0xFFFFFFFFL;
 
         touch();
     }
@@ -689,6 +637,18 @@ public class Channel
      */
     public void describe(ColibriConferenceIQ.Channel iq)
     {
+        /*
+         * FIXME The attribute rtp-level-relay-type/Channel property
+         * rtpLevelRelayType is pretty much the most important given that Jitsi
+         * Videobridge implements an RTP-level relay. Unfortunately, we do not
+         * currently support switching between the differents types of RTP-level
+         * relays. The following is a hack/workaround making sure that the
+         * attribute/property in question has a value as soon as necessary and
+         * before this Channel is made available to the conference focus for
+         * consumption.
+         */
+        iq.setRTPLevelRelayType(getRTPLevelRelayType());
+
         iq.setDirection(stream.getDirection());
 
         Endpoint endpoint = getEndpoint();
@@ -700,7 +660,8 @@ public class Channel
         iq.setID(getID());
         iq.setInitiator(isInitiator());
         iq.setLastN(lastN);
-        iq.setRTPLevelRelayType(rtpLevelRelayType);
+
+        long initialLocalSSRC = getInitialLocalSSRC();
 
         if (initialLocalSSRC != -1)
         {
@@ -921,6 +882,22 @@ public class Channel
     }
 
     /**
+     * Gets the local synchronization source identifier (SSRC) to be
+     * pre-announced in the case of content mixing and not in the case of RTP
+     * translation.
+     *
+     * @return the local synchronization source identifier (SSRC) to be
+     * pre-announced in the case of content mixing; <tt>-1</tt>, otherwise
+     */
+    private long getInitialLocalSSRC()
+    {
+        return
+            RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType())
+                ? initialLocalSSRC
+                : -1;
+    }
+
+    /**
      * Gets the time in milliseconds of the last activity related to this
      * <tt>Channel</tt>.
      *
@@ -978,6 +955,14 @@ public class Channel
      */
     public RTPLevelRelayType getRTPLevelRelayType()
     {
+        /*
+         * Jitsi Videobridge implements an RTP-level relay and it always knows
+         * the type of RTP-level relay that it implements. In other words, make
+         * sure that a default value is chosen if no explicit value has been
+         * specified yet.
+         */
+        if (rtpLevelRelayType == null)
+            setRTPLevelRelayType(RTPLevelRelayType.TRANSLATOR);
         return rtpLevelRelayType;
     }
 
@@ -1354,7 +1339,7 @@ public class Channel
     /**
      * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
      * <p>
-     * <b>Note</b>: The method does nothing if latching has not finished.
+     * <b>Warning</b>: The method does nothing if latching has not finished.
      * </p>
      *
      * @param direction the <tt>MediaDirection</tt> to set on the
@@ -1572,6 +1557,87 @@ public class Channel
     }
 
     /**
+     * Sets the type of RTP-level relay (in the terms specified by RFC 3550
+     * "RTP: A Transport Protocol for Real-Time Applications" in section 2.3
+     * "Mixers and Translators") to use for this <tt>Channel</tt>.
+     *
+     * @param rtpLevelRelayType the type of RTP-level relay (in the terms
+     * specified by RFC 3550 "RTP: A Transport Protocol for Real-Time
+     * Applications" in section 2.3 "Mixers and Translators") to use for this
+     * <tt>Channel</tt>
+     */
+    public void setRTPLevelRelayType(RTPLevelRelayType rtpLevelRelayType)
+    {
+        if (rtpLevelRelayType == null)
+            throw new NullPointerException("rtpLevelRelayType");
+
+        if (this.rtpLevelRelayType == null)
+        {
+            this.rtpLevelRelayType = rtpLevelRelayType;
+
+            /*
+             * If the RTP-level relay to be used for this Channel is a mixer,
+             * then the stream will have a MediaDevice and will not have an
+             * RTPTranslator. If the RTP-level relay to be used for this Channel
+             * is a translator, then the stream will not have a MediaDevice and
+             * will have an RTPTranslator.
+             */
+            switch (getRTPLevelRelayType())
+            {
+            case MIXER:
+                Content content = getContent();
+                MediaDevice device = content.getMixer();
+
+                stream.setDevice(device);
+
+                if (MediaType.AUDIO.equals(content.getMediaType()))
+                {
+                    /*
+                     * Allow the Jitsi Videobridge server to send the audio
+                     * levels of the contributing sources to the telephony
+                     * conference participants.
+                     */
+                    List<RTPExtension> rtpExtensions
+                        = device.getSupportedExtensions();
+
+                    if (rtpExtensions.size() == 1)
+                        stream.addRTPExtension((byte) 1, rtpExtensions.get(0));
+
+                    ((AudioMediaStream) stream).setStreamAudioLevelListener(
+                            getStreamAudioLevelListener());
+                }
+
+                /*
+                 * It is necessary to start receiving media in order to
+                 * determine the MediaFormat in which the stream will send the
+                 * media it generates.
+                 */
+                if (stream.getFormat() == null)
+                    stream.setDirection(MediaDirection.RECVONLY);
+                break;
+
+            case TRANSLATOR:
+                stream.setRTPTranslator(getContent().getRTPTranslator());
+                break;
+
+            default:
+                throw new IllegalStateException("rtpLevelRelayType");
+            }
+
+        }
+        else if (!this.rtpLevelRelayType.equals(rtpLevelRelayType))
+        {
+            /*
+             * TODO The implementation of Channel at the time of this writing
+             * does not support switching between the various types of RTP-level
+             * replays.
+             */
+        }
+
+        touch(); // It seems this Channel is still active.
+    }
+
+    /**
      * Sets a specific <tt>IceUdpTransportPacketExtension</tt> on this
      * <tt>Channel</tt>.
      *
@@ -1674,7 +1740,7 @@ public class Channel
     /**
      * Generates a new synchronization source (SSRC) identifier.
      *
-     * @param
+     * @param cause
      * @param i the number of times that the method has been executed prior to
      * the current invocation
      * @return a randomly chosen <tt>int</tt> value which is to be utilized as a

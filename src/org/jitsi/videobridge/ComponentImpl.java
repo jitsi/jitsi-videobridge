@@ -312,6 +312,24 @@ public class ComponentImpl
                             }
 
                             /*
+                             * The attribute rtp-level-relay-type specifies the
+                             * vale of pretty much the most important Channel
+                             * property given that Jitsi Videobridge implements
+                             * an RTP-level relay. Consequently, it is
+                             * intuitively a sign of common sense to take the
+                             * value into account as possible.
+                             * 
+                             * The attribute rtp-level-relay-type is optional.
+                             * If a value is not specified, then the Channel
+                             * rtpLevelRelayType is to not be changed.
+                             */
+                            RTPLevelRelayType rtpLevelRelayType
+                                = channelIQ.getRTPLevelRelayType();
+
+                            if (rtpLevelRelayType != null)
+                                channel.setRTPLevelRelayType(rtpLevelRelayType);
+
+                            /*
                              * The attribute endpoint is optional. If a value is
                              * not specified, then the Channel endpoint is to
                              * not be changed.
