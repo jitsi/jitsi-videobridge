@@ -17,6 +17,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.ice4j.stack.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.device.*;
+import org.jitsi.impl.neomedia.transform.csrc.*;
+import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.util.*;
 import org.jivesoftware.smack.provider.*;
@@ -565,34 +567,12 @@ public class ComponentImpl
     {
         super.postComponentStart();
 
-        String trueString = Boolean.toString(true);
-
         /*
-         * The design at the time of this writing considers the configuration
-         * file read-only (in a read-only directory) and provides only manual
-         * editing for it.
+         * Before we start OSGi and, more specifically, the very Jitsi
+         * Videobridge application, set the default values of the System
+         * properties which affect the (optional) behavior of the application.
          */
-        System.setProperty(
-                ConfigurationService.PNAME_CONFIGURATION_FILE_IS_READ_ONLY,
-                trueString);
-
-        // Jitsi Videobridge is a relay so it does not need to capture media.
-        System.setProperty(
-                MediaServiceImpl.DISABLE_AUDIO_SUPPORT_PNAME,
-                trueString);
-        System.setProperty(
-                MediaServiceImpl.DISABLE_VIDEO_SUPPORT_PNAME,
-                trueString);
-
-        // It makes no sense for Jitsi Videobridge to pace its RTP output.
-        if (System.getProperty(
-                    DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD)
-                == null)
-        {
-            System.setProperty(
-                    DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD,
-                    Integer.toString(Integer.MAX_VALUE));
-        }
+        setSystemPropertyDefaults();
 
         startOSGi();
     }
@@ -636,6 +616,67 @@ public class ComponentImpl
         {
             loge(e);
             throw e;
+        }
+    }
+
+    /**
+     * Sets default values on <tt>System</tt> properties which affect the
+     * (optional) behavior of the Jitsi Videobridge application and the
+     * libraries that it utilizes. Because <tt>ConfigurationServiceImpl</tt>
+     * will override <tt>System</tt> property values, the set default
+     * <tt>System</tt> property values will not prevent the user from overriding
+     * them. 
+     */
+    private void setSystemPropertyDefaults()
+    {
+        /*
+         * XXX A default System property value specified bellow will eventually
+         * be set only if the System property in question does not have a value
+         * set yet.
+         */
+
+        Map<String,String> defaults = new HashMap<String,String>();
+        String true_ = Boolean.toString(true);
+        String false_ = Boolean.toString(false);
+
+        /*
+         * The design at the time of this writing considers the configuration
+         * file read-only (in a read-only directory) and provides only manual
+         * editing for it.
+         */
+        defaults.put(
+                ConfigurationService.PNAME_CONFIGURATION_FILE_IS_READ_ONLY,
+                true_);
+
+        // Jitsi Videobridge is a relay so it does not need to capture media.
+        defaults.put(
+                MediaServiceImpl.DISABLE_AUDIO_SUPPORT_PNAME,
+                true_);
+        defaults.put(
+                MediaServiceImpl.DISABLE_VIDEO_SUPPORT_PNAME,
+                true_);
+
+        // It makes no sense for Jitsi Videobridge to pace its RTP output.
+        defaults.put(
+                DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD,
+                Integer.toString(Integer.MAX_VALUE));
+
+        /*
+         * XXX Explicitly support JitMeet by default because is is the primary
+         * use case of Jitsi Videobridge right now.
+         */
+        defaults.put(
+                SsrcTransformEngine
+                    .DROP_MUTED_AUDIO_SOURCE_IN_REVERSE_TRANSFORM,
+                true_);
+        defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
+
+        for (Map.Entry<String,String> e : defaults.entrySet())
+        {
+            String key = e.getKey();
+
+            if (System.getProperty(key) == null)
+                System.setProperty(key, e.getValue());
         }
     }
 
