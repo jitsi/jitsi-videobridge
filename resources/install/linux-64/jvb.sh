@@ -19,4 +19,4 @@ mainClass="org.jitsi.videobridge.Main"
 cp=$(JARS=($SCRIPT_DIR/jitsi-videobridge.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
 libs="$SCRIPT_DIR/lib/native/linux-64"
 
-java -Djava.library.path=$libs -cp $cp $mainClass $@
+java -Xmx3072m -XX:-HeapDumpOnOutOfMemoryError -Djava.library.path=$libs -cp $cp $mainClass $@
