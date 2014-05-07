@@ -297,7 +297,9 @@ public class IceUdpTransportManager
         }
         catch (Throwable t)
         {
-            if (t instanceof ThreadDeath)
+            if (t instanceof InterruptedException)
+                Thread.currentThread().interrupt();
+            else if (t instanceof ThreadDeath)
                 throw (ThreadDeath) t;
         }
 
@@ -886,6 +888,7 @@ public class IceUdpTransportManager
         PropertyChangeListener propertyChangeListener
             = new PropertyChangeListener()
             {
+                @Override
                 public void propertyChange(PropertyChangeEvent ev)
                 {
                     Object newValue = ev.getNewValue();
