@@ -152,19 +152,7 @@ public class Main
             // Jingle ICE-UDP transport
             System.setProperty(
                     OperationSetBasicTelephony
-                        .MAX_AUDIO_PORT_NUMBER_PROPERTY_NAME,
-                    maxPort);
-            System.setProperty(
-                    OperationSetBasicTelephony
-                        .MAX_DATA_CHANNEL_PORT_NUMBER_PROPERTY_NAME,
-                    maxPort);
-            System.setProperty(
-                    OperationSetBasicTelephony
                         .MAX_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                    maxPort);
-            System.setProperty(
-                    OperationSetBasicTelephony
-                        .MAX_VIDEO_PORT_NUMBER_PROPERTY_NAME,
                     maxPort);
         }
         if ((minPort != null) && (minPort.length() != 0))
@@ -176,19 +164,7 @@ public class Main
             // Jingle ICE-UDP transport
             System.setProperty(
                     OperationSetBasicTelephony
-                        .MIN_AUDIO_PORT_NUMBER_PROPERTY_NAME,
-                    minPort);
-            System.setProperty(
-                    OperationSetBasicTelephony
-                        .MIN_DATA_CHANNEL_PORT_NUMBER_PROPERTY_NAME,
-                    minPort);
-            System.setProperty(
-                    OperationSetBasicTelephony
                         .MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                    minPort);
-            System.setProperty(
-                    OperationSetBasicTelephony
-                        .MIN_VIDEO_PORT_NUMBER_PROPERTY_NAME,
                     minPort);
         }
 
