@@ -94,7 +94,7 @@ public abstract class TransportManager
      * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
      * values of the properties of this instance
      */
-    public void describe(ColibriConferenceIQ.Channel iq)
+    public void describe(ColibriConferenceIQ.ChannelCommon iq)
     {
         IceUdpTransportPacketExtension pe = iq.getTransport();
         String namespace = getXmlNamespace();

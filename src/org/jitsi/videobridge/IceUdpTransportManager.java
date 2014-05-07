@@ -30,6 +30,7 @@ import org.osgi.framework.*;
  * Implements the Jingle ICE-UDP transport.
  *
  * @author Lyubomir Marinov
+ * @author Pawel Domas
  */
 public class IceUdpTransportManager
     extends TransportManager
@@ -45,8 +46,14 @@ public class IceUdpTransportManager
      * The ICE <tt>Component</tt> IDs in their common order used, for example,
      * by <tt>DefaultStreamConnector</tt>, <tt>MediaStreamTarget</tt>.
      */
-    private static final int[] COMPONENT_IDS
+    private static final int[] MEDIA_COMPONENT_IDS
         = new int[] { Component.RTP, Component.RTCP };
+
+    /**
+     * Single component ID used for DATA media type.
+     */
+    private static final int[] DATA_COMPONENT_IDS
+        = new int[] { Component.RTP };
 
     /**
      * The indicator which determines whether the one-time method
@@ -153,6 +160,18 @@ public class IceUdpTransportManager
         iceAgent.addStateChangeListener(iceAgentStateChangeListener);
         iceStream = iceAgent.getStream(getChannel().getContent().getName());
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
+    }
+
+    /**
+     * Returns an array of ICE media stream component IDs relevant to the
+     * <tt>MediaType</tt> configured in this instance.
+     * @return an array of ICE media stream component IDs relevant to the
+     *         <tt>MediaType</tt> configured in this instance.
+     */
+    protected int[] getComponentIDs()
+    {
+        return getChannel().getContent().getMediaType() == MediaType.DATA
+            ? DATA_COMPONENT_IDS : MEDIA_COMPONENT_IDS;
     }
 
     /**
@@ -275,8 +294,13 @@ public class IceUdpTransportManager
 
         PortTracker portTracker
             = JitsiTransportManager.getPortTracker(content.getMediaType());
+
+        // Audio and Video uses RTP + RTCP components,
+        // Data uses single single component.
+
         IceMediaStream iceStream
             = nams.createIceStream(
+                    getComponentIDs().length,
                     portTracker.getPort(),
                     /* streamName */ content.getName(),
                     iceAgent);
@@ -407,7 +431,9 @@ public class IceUdpTransportManager
                 ? null
                 : new DefaultStreamConnector(
                         streamConnectorSockets[0 /* RTP */],
-                        streamConnectorSockets[1 /* RTCP */]);
+                        /* RTCP(null for DATA media type) */
+                        streamConnectorSockets.length > 1
+                            ? streamConnectorSockets[1] : null);
     }
 
     /**
@@ -489,7 +515,7 @@ public class IceUdpTransportManager
 
         candidateID.append(conference.getID());
         candidateID.append(Long.toHexString(content.hashCode()));
-        candidateID.append(channel.getID());
+        candidateID.append(Long.toHexString(channel.hashCode()));
 
         Agent iceAgent
             = candidate.getParentComponent().getParentStream().getParentAgent();
@@ -521,8 +547,9 @@ public class IceUdpTransportManager
             if ((streamConnectorSockets != null)
                     && ((streamConnector.getDataSocket()
                                     != streamConnectorSockets[0 /* RTP */])
-                            || (streamConnector.getControlSocket()
-                                    != streamConnectorSockets[1 /* RTCP */])))
+                    || (streamConnectorSockets.length == 2 /* RTCP */
+                            && streamConnector.getControlSocket()
+                                    != streamConnectorSockets[1 ])))
             {
                 // Recreate the streamConnector.
                 closeStreamConnector();
@@ -537,11 +564,11 @@ public class IceUdpTransportManager
     /**
      * Gets an array of <tt>DatagramSocket</tt>s which represents the sockets to
      * be used by the <tt>StreamConnector</tt> of this instance in the order of
-     * {@link #COMPONENT_IDS} if {@link #iceAgent} has completed.
+     * {@link #MEDIA_COMPONENT_IDS} if {@link #iceAgent} has completed.
      *
      * @return an array of <tt>DatagramSocket</tt>s which represents the sockets
      * to be used by the <tt>StreamConnector</tt> of this instance in the order
-     * of {@link #COMPONENT_IDS} if {@link #iceAgent} has completed; otherwise,
+     * of {@link #MEDIA_COMPONENT_IDS} if {@link #iceAgent} has completed; otherwise,
      * <tt>null</tt>
      */
     private DatagramSocket[] getStreamConnectorSockets()
@@ -551,13 +578,14 @@ public class IceUdpTransportManager
 
         if (stream != null)
         {
+            int [] componentIds = getComponentIDs();
             DatagramSocket[] streamConnectorSockets
-                = new DatagramSocket[COMPONENT_IDS.length];
+                = new DatagramSocket[componentIds.length];
             int streamConnectorSocketCount = 0;
 
-            for (int i = 0; i < COMPONENT_IDS.length; i++)
+            for (int i = 0; i < componentIds.length; i++)
             {
-                Component component = stream.getComponent(COMPONENT_IDS[i]);
+                Component component = stream.getComponent(componentIds[i]);
 
                 if (component != null)
                 {
@@ -596,13 +624,15 @@ public class IceUdpTransportManager
 
         if (stream != null)
         {
+            int[] componentIds = getComponentIDs();
+
             InetSocketAddress[] streamTargetAddresses
-                = new InetSocketAddress[COMPONENT_IDS.length];
+                = new InetSocketAddress[componentIds.length];
             int streamTargetAddressCount = 0;
 
-            for (int i = 0; i < COMPONENT_IDS.length; i++)
+            for (int i = 0; i < componentIds.length; i++)
             {
-                Component component = stream.getComponent(COMPONENT_IDS[i]);
+                Component component = stream.getComponent(componentIds[i]);
 
                 if (component != null)
                 {
@@ -625,10 +655,20 @@ public class IceUdpTransportManager
             }
             if (streamTargetAddressCount > 0)
             {
-                streamTarget
-                    = new MediaStreamTarget(
+                if(componentIds.length == 2)
+                {
+                    streamTarget
+                        = new MediaStreamTarget(
+                                streamTargetAddresses[0 /* RTP */],
+                                streamTargetAddresses[1 /* RTCP */]);
+                }
+                else
+                {
+                    streamTarget
+                        = new MediaStreamTarget(
                             streamTargetAddresses[0 /* RTP */],
-                            streamTargetAddresses[1 /* RTCP */]);
+                            null);
+                }
             }
         }
         return streamTarget;

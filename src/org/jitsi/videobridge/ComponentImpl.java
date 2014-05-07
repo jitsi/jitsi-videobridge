@@ -265,7 +265,7 @@ public class ComponentImpl
                     {
                         String channelID = channelIQ.getID();
                         int channelExpire = channelIQ.getExpire();
-                        Channel channel;
+                        RtpChannel channel;
 
                         /*
                          * The presence of the id attribute in the channel
@@ -288,7 +288,8 @@ public class ComponentImpl
                         }
                         else
                         {
-                            channel = content.getChannel(channelID);
+                            channel
+                                = (RtpChannel) content.getChannel(channelID);
                         }
 
                         if (channel == null)
@@ -320,7 +321,7 @@ public class ComponentImpl
                              * an RTP-level relay. Consequently, it is
                              * intuitively a sign of common sense to take the
                              * value into account as possible.
-                             * 
+                             *
                              * The attribute rtp-level-relay-type is optional.
                              * If a value is not specified, then the Channel
                              * rtpLevelRelayType is to not be changed.
@@ -381,6 +382,67 @@ public class ComponentImpl
 
                         if (responseConferenceIQ == null)
                             break;
+                    }
+
+                    for(ColibriConferenceIQ.SctpConnection sctpConnIq
+                        : contentIQ.getSctpConnections())
+                    {
+                        if(responseConferenceIQ == null)
+                            break;
+
+                        Endpoint endpoint
+                            = conference.getOrCreateEndpoint(
+                                    sctpConnIq.getEndpoint());
+
+                        int sctpPort = sctpConnIq.getPort();
+
+                        SctpConnection sctpConn
+                            = content.getSctpConnection(endpoint);
+
+                        int sctpExpire = sctpConnIq.getExpire();
+
+                        if(sctpConn == null && sctpExpire == 0)
+                        {
+                            // Expire request for already expired/non-existing
+                            // SCTP connection
+                            continue;
+                        }
+
+                        if(sctpConn == null)
+                        {
+                            sctpConn
+                                = content.createSctpConnection(
+                                        endpoint, sctpPort);
+                        }
+
+                        // Expire
+                        if (sctpExpire
+                                != ColibriConferenceIQ.Channel
+                                        .EXPIRE_NOT_SPECIFIED)
+                        {
+                            sctpConn.setExpire(sctpExpire);
+                        }
+
+                        // Check if SCTP connection has expired
+                        if(sctpConn.isExpired())
+                            continue;
+
+                        // Initiator
+                        Boolean initiator = sctpConnIq.isInitiator();
+
+                        if (initiator != null)
+                            sctpConn.setInitiator(initiator);
+
+                        // Transport
+                        sctpConn.setTransport(sctpConnIq.getTransport());
+
+                        // Response
+                        ColibriConferenceIQ.SctpConnection responseSctpIq
+                            = new ColibriConferenceIQ.SctpConnection();
+
+                        sctpConn.describe(responseSctpIq);
+
+                        responseContentIQ.addSctpConnection(responseSctpIq);
                     }
                 }
 
@@ -527,6 +589,7 @@ public class ComponentImpl
      */
     private static void logd(String s)
     {
+        //s = s.replace(">", ">\n");
         System.err.println(s);
     }
 

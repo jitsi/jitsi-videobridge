@@ -51,6 +51,13 @@ public class Content
         = new HashMap<String, Channel>();
 
     /**
+     * The <tt>SctpConnection</tt>s of this <tt>Content</tt> mapped by their
+     * <tt>Endpoint</tt>s.
+     */
+    private Map<Endpoint, SctpConnection> sctpConnections
+        = new HashMap<Endpoint, SctpConnection>();
+
+    /**
      * The <tt>Conference</tt> which has initialized this <tt>Content</tt>.
      */
     private final Conference conference;
@@ -124,18 +131,18 @@ public class Content
     }
 
     /**
-     * Initializes a new <tt>Channel</tt> instance and adds it to the list of
-     * <tt>Channel</tt>s of this <tt>Content</tt>. The new <tt>Channel</tt>
-     * instance has an ID which is unique within the list of <tt>Channel</tt>s
-     * of this <tt>Content</tt>.
+     * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
+     * <tt>RtpChannel</tt>s of this <tt>Content</tt>. The new
+     * <tt>RtpChannel</tt> instance has an ID which is unique within the list of
+     * <tt>RtpChannel</tt>s of this <tt>Content</tt>.
      *
      * @return
      * @throws Exception
      */
-    public Channel createChannel()
+    public RtpChannel createChannel()
         throws Exception
     {
-        Channel channel = null;
+        RtpChannel channel = null;
 
         do
         {
@@ -145,7 +152,7 @@ public class Content
             {
                 if (!channels.containsKey(id))
                 {
-                    channel = new Channel(this, id);
+                    channel = new RtpChannel(this, id);
                     channels.put(id, channel);
                 }
             }
@@ -168,6 +175,51 @@ public class Content
                     + videobridge.getChannelCount() + ".");
 
         return channel;
+    }
+
+    /**
+     * Creates new <tt>SctpConnection</tt> with given <tt>Endpoint</tt> on given
+     * <tt>sctpPort</tt>.
+     * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt>
+     * @param sctpPort remote SCTP port that will be used by new
+     *                 <tt>SctpConnection</tt>.
+     * @return new <tt>SctpConnection</tt> with given <tt>Endpoint</tt>
+     * @throws Exception if an error occurs while initializing the new instance
+     * @throws IllegalArgumentException if <tt>SctpConnection</tt> already
+     *         exists for given <tt>Endpoint</tt>.
+     */
+    public SctpConnection createSctpConnection(Endpoint endpoint, int sctpPort)
+        throws Exception
+    {
+        if(this.sctpConnections.containsKey(endpoint))
+        {
+            throw new IllegalArgumentException(
+                "SctpConnection for " + endpoint.getID() + " already exists");
+        }
+
+        SctpConnection sctpConnection
+            = new SctpConnection(this, endpoint, sctpPort);
+
+        sctpConnections.put(endpoint, sctpConnection);
+
+        synchronized (channels)
+        {
+            channels.put(sctpConnection.getID(), sctpConnection);
+        }
+
+        return sctpConnection;
+    }
+
+    /**
+     * Returns <tt>SctpConnection</tt> for given <tt>Endpoint</tt>.
+     * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt> that
+     *                 we're looking for.
+     * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any
+     *         or <tt>null</tt> otherwise.
+     */
+    public SctpConnection getSctpConnection(Endpoint endpoint)
+    {
+        return sctpConnections.get(endpoint);
     }
 
     /**

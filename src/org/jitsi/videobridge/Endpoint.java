@@ -6,6 +6,9 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.util.*;
+
+import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
@@ -13,14 +16,21 @@ import java.util.*;
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
  *
  * @author Lyubomir Marinov
+ * @author Pawel Domas
  */
 public class Endpoint
 {
     /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
-    private final List<WeakReference<Channel>> channels
-        = new LinkedList<WeakReference<Channel>>();
+    private final List<WeakReference<RtpChannel>> channels
+        = new LinkedList<WeakReference<RtpChannel>>();
+
+    /**
+     * SCTP connection bound to this endpoint.
+     */
+    private WeakReference<SctpConnection> sctpConnection
+        = new WeakReference<SctpConnection>(null);
 
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -53,17 +63,17 @@ public class Endpoint
      * this <tt>Endpoint</tt> changed as a result of the method invocation;
      * otherwise, <tt>false</tt>
      */
-    public boolean addChannel(Channel channel)
+    public boolean addChannel(RtpChannel channel)
     {
         if (channel == null)
             throw new NullPointerException("channel");
 
         synchronized (channels)
         {
-            for (Iterator<WeakReference<Channel>> i = channels.iterator();
+            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
                     i.hasNext();)
             {
-                Channel c = i.next().get();
+                RtpChannel c = i.next().get();
 
                 if (c == null)
                     i.remove();
@@ -71,7 +81,7 @@ public class Endpoint
                     return false;
             }
 
-            return channels.add(new WeakReference<Channel>(channel));
+            return channels.add(new WeakReference<RtpChannel>(channel));
         }
     }
 
@@ -95,14 +105,14 @@ public class Endpoint
      * this <tt>Endpoint</tt> changed as a result of the method invocation;
      * otherwise, <tt>false</tt>
      */
-    public boolean removeChannel(Channel channel)
+    public boolean removeChannel(RtpChannel channel)
     {
         if (channel == null)
             return false;
 
         synchronized (channels)
         {
-            for (Iterator<WeakReference<Channel>> i = channels.iterator();
+            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
                     i.hasNext();)
             {
                 Channel c = i.next().get();
@@ -120,5 +130,94 @@ public class Endpoint
         }
 
         return false;
+    }
+
+    /**
+     * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
+     * @param sctpConnection the <tt>SctpConnection</tt> that will be bound to
+     *                       this <tt>Endpoint</tt>.
+     */
+    public void setSctpConnection(SctpConnection sctpConnection)
+    {
+        this.sctpConnection
+            = new WeakReference<SctpConnection>(sctpConnection);
+
+        // FIXME: remove
+        if(sctpConnection != null)
+        {
+            new WebRTCDataChannelSample(sctpConnection);
+        }
+    }
+
+    /**
+     * Returns an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>.
+     * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>
+     *         or <tt>null</tt> otherwise.
+     */
+    public SctpConnection getSctpConnection()
+    {
+        return this.sctpConnection.get();
+    }
+
+    /**
+     * Sample usage of SctpConnection for sending the data.
+     * FIXME: remove
+     *
+     * @author Pawel Domas
+     */
+    class WebRTCDataChannelSample
+        implements SctpConnection.WebRtcDataStreamListener
+    {
+        private final Logger logger
+            = Logger.getLogger(WebRTCDataChannelSample.class);
+
+        private final SctpConnection sctp;
+
+        WebRTCDataChannelSample(SctpConnection sctpConnection)
+        {
+            this.sctp = sctpConnection;
+            sctpConnection.addChannelListener(this);
+        }
+
+        @Override
+        public void onSctpConnectionReady()
+        {
+            final WebRtcDataStream channel1;
+            try
+            {
+                channel1 = sctp.openChannel(
+                    0, 0, 0, 1, "BridgeTo" + getID());
+                new Thread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        sendHello(channel1);
+                    }
+                }).start();
+            }
+            catch (IOException e)
+            {
+                logger.error(e, e);
+            }
+        }
+
+        @Override
+        public void onChannelOpened(WebRtcDataStream newStream)
+        {
+            //sendHello(newStream);
+        }
+
+        private void sendHello(WebRtcDataStream dataStream)
+        {
+            try
+            {
+                dataStream.sendString("Hello "+getID());
+            }
+            catch (IOException e)
+            {
+                logger.error("Error sending text", e);
+            }
+        }
     }
 }
