@@ -45,6 +45,11 @@ public class WebRtcDataStream
     private boolean acknowledged;
 
     /**
+     * Data callback that will be fired whenever data is received.
+     */
+    private DataCallback dataCallback;
+
+    /**
      * Initializes new instance of <tt>WebRtcDataStream</tt> with specified
      * parameters.
      * @param socket the SCTP socket used for transport.
@@ -72,6 +77,17 @@ public class WebRtcDataStream
     }
 
     /**
+     * Returns SCTP stream id on which this <tt>WebRtcDataStream</tt> is
+     * running.
+     * @return SCTP stream id on which this <tt>WebRtcDataStream</tt> is
+     *         running.
+     */
+    public int getSid()
+    {
+        return sid;
+    }
+
+    /**
      * Indicates whether this stream has been acknowledged by remote peer.
      * @return <tt>true</tt> if this stream has been acknowledged by remote peer
      */
@@ -93,8 +109,8 @@ public class WebRtcDataStream
      */
     public void onStringMsg(String stringMsg)
     {
-        // FIXME: replace with callback/listener or stream interface
-        logger.info("!!! SCTP STRING: " + stringMsg);
+        if(dataCallback != null)
+            dataCallback.onStringData(this, stringMsg);
     }
 
     /**
@@ -133,8 +149,8 @@ public class WebRtcDataStream
      */
     public void onBinaryMsg(byte[] binMsg)
     {
-        // FIXME: replace with callback/listener or stream interface
-        logger.info("!!! SCTP BIN: " + binMsg.length);
+        if(dataCallback != null)
+            dataCallback.onBinaryData(this, binMsg);
     }
 
     /**
@@ -151,5 +167,44 @@ public class WebRtcDataStream
         {
             throw new IOException("Failed to send the data");
         }
+    }
+
+    /**
+     * Sets the callback that will be fired whenever string or binary message is
+     * received on this <tt>WebRtcDataStream</tt>.
+     *
+     * @param dataCallback the callback that will be fired when any message is
+     *                     received on this <tt>WebRtcDataStream</tt>.
+     */
+    public void setDataCallback(DataCallback dataCallback)
+    {
+        this.dataCallback = dataCallback;
+    }
+
+    /**
+     * Interface used to receive data on this stream.
+     * It is message oriented and supports text or binary payload.
+     */
+    public interface DataCallback
+    {
+        /**
+         * Fired when <tt>String</tt> message is received on this
+         * <tt>WebRtcDataStream</tt>.
+         *
+         * @param src the <tt>WebRtcDataStream</tt> on which this message was
+         *            received.
+         * @param msg <tt>String</tt> message content.
+         */
+        public void onStringData(WebRtcDataStream src, String msg);
+
+        /**
+         * Fired when binary message is received on this
+         * <tt>WebRtcDataStream</tt>.
+         *
+         * @param src the <tt>WebRtcDataStream</tt> on which this message was
+         *            received.
+         * @param data <tt>byte</tt> buffer that contains message content.
+         */
+        public void onBinaryData(WebRtcDataStream src, byte[] data);
     }
 }

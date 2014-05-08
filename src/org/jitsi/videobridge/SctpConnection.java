@@ -84,7 +84,7 @@ public class SctpConnection
 
     /**
      * DTLS transport buffer size.
-     * Note: randomly choosen.
+     * Note: randomly chosen.
      */
     private final static int DTLS_BUFFER_SIZE = 2048;
 
@@ -347,6 +347,7 @@ public class SctpConnection
         sctpSocket.connect(remoteSctpPort);
 
         // Notify that from now on SCTP connection is considered functional
+        sctpSocket.setDataCallback(this);
         notifySctpConnectionReady();
 
         // Receive loop, breaks when SCTP socket is closed
@@ -471,7 +472,8 @@ public class SctpConnection
             buffer.get(protocolRaw);
             String protocol = new String(protocolRaw);
 
-            logger.info("WebRTC data channel open request: "
+            logger.info("WebRTC data channel open request"
+                            + " on SID: " + sid
                             + " type: " + channelType
                             + " prio: " + priority
                             + " reliab: " + reliability

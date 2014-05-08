@@ -160,13 +160,14 @@ public class Endpoint
     }
 
     /**
-     * Sample usage of SctpConnection for sending the data.
+     * Sample usage of SctpConnection for sending/receiving the data.
      * FIXME: remove
      *
      * @author Pawel Domas
      */
     class WebRTCDataChannelSample
-        implements SctpConnection.WebRtcDataStreamListener
+        implements SctpConnection.WebRtcDataStreamListener,
+                   WebRtcDataStream.DataCallback
     {
         private final Logger logger
             = Logger.getLogger(WebRTCDataChannelSample.class);
@@ -185,16 +186,9 @@ public class Endpoint
             final WebRtcDataStream channel1;
             try
             {
+                // onChannelOpened will be triggered for this channel
                 channel1 = sctp.openChannel(
                     0, 0, 0, 1, "BridgeTo" + getID());
-                new Thread(new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        sendHello(channel1);
-                    }
-                }).start();
             }
             catch (IOException e)
             {
@@ -205,7 +199,9 @@ public class Endpoint
         @Override
         public void onChannelOpened(WebRtcDataStream newStream)
         {
-            //sendHello(newStream);
+            newStream.setDataCallback(this);
+
+            sendHello(newStream);
         }
 
         private void sendHello(WebRtcDataStream dataStream)
@@ -218,6 +214,24 @@ public class Endpoint
             {
                 logger.error("Error sending text", e);
             }
+        }
+
+        @Override
+        public void onStringData(WebRtcDataStream src, String msg)
+        {
+            logger.error("!!! GOT STRING"
+                             + " ON STREAM: " + src.getLabel()
+                             + " RUNS ON SID: " + src.getSid()
+                             + " CONTENT: " + msg);
+        }
+
+        @Override
+        public void onBinaryData(WebRtcDataStream src, byte[] data)
+        {
+            logger.error("!!! GOT BIN"
+                             + " ON STREAM: " + src.getLabel()
+                             + " RUNS ON SID: " + src.getSid()
+                             + " CONTENT LEN: " + data.length);
         }
     }
 }

@@ -530,7 +530,6 @@ public class DtlsLayer
         {
             this.setup = setup;
         }
-        logger.error("!!! USING SETUP "+setup);
     }
 
     public DTLSTransport startDtls(DatagramTransport datagramTransport)
