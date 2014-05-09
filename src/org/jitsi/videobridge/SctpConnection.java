@@ -279,7 +279,7 @@ public class SctpConnection
             {
                 try
                 {
-                    Sctp.init(0);
+                    Sctp.init();
 
                     runOnDtlsTransport(finalDtlsTransport);
                 }
@@ -289,10 +289,17 @@ public class SctpConnection
                 }
                 finally
                 {
-                    Sctp.finish();
+                    try
+                    {
+                        Sctp.finish();
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error("Failed to shutdown SCTP stack", e);
+                    }
                 }
             }
-        }).start();
+        }, "SctpConnectionReceiveThread").start();
     }
 
     private void runOnDtlsTransport(final DTLSTransport transport)
@@ -394,7 +401,14 @@ public class SctpConnection
         if(ppid == WEB_RTC_PPID_CTRL)
         {
             // Channel control PPID
-            onCtrlPacket(data, sid);
+            try
+            {
+                onCtrlPacket(data, sid);
+            }
+            catch (IOException e)
+            {
+                logger.error("IOException when processing ctrl packet", e);
+            }
         }
         else if(ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
         {
@@ -428,6 +442,7 @@ public class SctpConnection
      * @param sid SCTP stream id on which the data has arrived.
      */
     private void onCtrlPacket(byte[] data, int sid)
+        throws IOException
     {
         java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
 
@@ -504,6 +519,7 @@ public class SctpConnection
      * @param sid SCTP stream identifier to be used for sending ack.
      */
     private void sendOpenChannelAck(int sid)
+        throws IOException
     {
         // Send ACK
         byte[] ack = new byte[] { MSG_CHANNEL_ACK };
