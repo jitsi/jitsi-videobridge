@@ -183,17 +183,23 @@ public class Endpoint
         @Override
         public void onSctpConnectionReady()
         {
-            final WebRtcDataStream channel1;
-            try
+            new Thread(new Runnable()
             {
-                // onChannelOpened will be triggered for this channel
-                channel1 = sctp.openChannel(
-                    0, 0, 0, 1, "BridgeTo" + getID());
-            }
-            catch (IOException e)
-            {
-                logger.error(e, e);
-            }
+                @Override
+                public void run()
+                {
+                    try
+                    {
+                        // onChannelOpened will be triggered for this channel
+                        sctp.openChannel(0, 0, 0, 1, "BridgeTo" + getID());
+                    }
+                    catch (Exception e)
+                    {
+                        logger.error("Error allocating new WebRTC data channel" +
+                                         " to " + getID(), e);
+                    }
+                }
+            }).start();
         }
 
         @Override
@@ -208,18 +214,21 @@ public class Endpoint
         {
             try
             {
+                logger.info("!!! " + getID() + " sending hello SID: "
+                                + dataStream.getSid());
+
                 dataStream.sendString("Hello "+getID());
             }
             catch (IOException e)
             {
-                logger.error("Error sending text", e);
+                logger.error("Error sending text to " + getID(), e);
             }
         }
 
         @Override
         public void onStringData(WebRtcDataStream src, String msg)
         {
-            logger.error("!!! GOT STRING"
+            logger.error("!!! " + getID() + " SENT US A STRING"
                              + " ON STREAM: " + src.getLabel()
                              + " RUNS ON SID: " + src.getSid()
                              + " CONTENT: " + msg);
@@ -228,7 +237,7 @@ public class Endpoint
         @Override
         public void onBinaryData(WebRtcDataStream src, byte[] data)
         {
-            logger.error("!!! GOT BIN"
+            logger.error("!!! " + getID() + " SENT US BIN DATA "
                              + " ON STREAM: " + src.getLabel()
                              + " RUNS ON SID: " + src.getSid()
                              + " CONTENT LEN: " + data.length);

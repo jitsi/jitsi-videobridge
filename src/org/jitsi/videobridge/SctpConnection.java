@@ -350,7 +350,9 @@ public class SctpConnection
             }
         });
 
-        logger.info("Connecting SCTP to port: " + remoteSctpPort);
+        logger.info("Connecting SCTP to port: " + remoteSctpPort +
+            " to " + getEndpoint().getID());
+
         sctpSocket.connect(remoteSctpPort);
 
         // Notify that from now on SCTP connection is considered functional
@@ -449,6 +451,7 @@ public class SctpConnection
         int messageType = buffer.get();
         if(messageType == MSG_CHANNEL_ACK)
         {
+            logger.info(getEndpoint().getID() + " ACK received SID: "+sid);
             // Open channel ACK
             WebRtcDataStream channel = channels.get(sid);
             if(channel != null)
@@ -487,7 +490,8 @@ public class SctpConnection
             buffer.get(protocolRaw);
             String protocol = new String(protocolRaw);
 
-            logger.info("WebRTC data channel open request"
+            logger.info("!!! " + getEndpoint().getID() +
+                " data channel open request"
                             + " on SID: " + sid
                             + " type: " + channelType
                             + " prio: " + priority
