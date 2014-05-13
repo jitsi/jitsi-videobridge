@@ -325,28 +325,21 @@ public class SctpConnection
         {
             @Override
             public void onConnOut(org.jitsi.sctp4j.SctpSocket s, byte[] packet)
+                throws IOException
             {
-                try
-                {
-                    if(LOG_SCTP_PACKETS)
-                        LibJitsi.getPacketLoggingService().logPacket(
-                            PacketLoggingService.ProtocolName.ICE4J,
-                            new byte[]{0,0,0,1},
-                            5000,
-                            new byte[]{0,0,0,2},
-                            remoteSctpPort,
-                            PacketLoggingService.TransportName.UDP,
-                            true,
-                            packet);
+                if(LOG_SCTP_PACKETS)
+                    LibJitsi.getPacketLoggingService().logPacket(
+                        PacketLoggingService.ProtocolName.ICE4J,
+                        new byte[]{0,0,0,1},
+                        5000,
+                        new byte[]{0,0,0,2},
+                        remoteSctpPort,
+                        PacketLoggingService.TransportName.UDP,
+                        true,
+                        packet);
 
-                    // Send through DTLS transport
-                    transport.send(packet, 0, packet.length);
-                }
-                catch (IOException e)
-                {
-                    // FIXME: propagate error back to SCTP stack
-                    logger.error(e);
-                }
+                // Send through DTLS transport
+                transport.send(packet, 0, packet.length);
             }
         });
 
