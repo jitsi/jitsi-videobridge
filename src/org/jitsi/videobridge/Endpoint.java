@@ -143,10 +143,10 @@ public class Endpoint
             = new WeakReference<SctpConnection>(sctpConnection);
 
         // FIXME: remove
-        if(sctpConnection != null)
-        {
-            new WebRTCDataChannelSample(sctpConnection);
-        }
+        //if(sctpConnection != null)
+        //{
+        //    new WebRTCDataChannelSample(sctpConnection);
+        //}
     }
 
     /**

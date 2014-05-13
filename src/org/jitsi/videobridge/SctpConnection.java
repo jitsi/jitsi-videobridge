@@ -109,6 +109,14 @@ public class SctpConnection
     private SctpSocket sctpSocket;
 
     /**
+     * Indicates whether this <tt>SctpConnection</tt> is connected to other
+     * peer.
+     *
+     * FIXME: used SCTP notification for that
+     */
+    private boolean ready;
+
+    /**
      * ICE/UDP transport used by DTLS layer.
      */
     private DatagramTransportImpl datagramTransport;
@@ -192,6 +200,19 @@ public class SctpConnection
     public String getID()
     {
         return "SCTP_with_" + getEndpoint().getID();
+    }
+
+
+    /**
+     * Returns <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
+     * other peer and operational.
+     *
+     * @return <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
+     * other peer and operational.
+     */
+    public boolean isReady()
+    {
+        return ready;
     }
 
     /**
@@ -317,8 +338,11 @@ public class SctpConnection
                 "videobridgeSctp");
         }
 
-        // Fixme: local SCTP port is hardcoded in bridge offer SDP(Jitsi Meet)
-        this.sctpSocket = Sctp.createSocket(5000);
+        synchronized (this)
+        {
+            // Fixme: local SCTP port is hardcoded in bridge offer SDP(Jitsi Meet)
+            this.sctpSocket = Sctp.createSocket(5000);
+        }
 
         // Implement output network link for SCTP stack on DTLS transport
         sctpSocket.setLink(new NetworkLink()
@@ -350,6 +374,8 @@ public class SctpConnection
 
         // Notify that from now on SCTP connection is considered functional
         sctpSocket.setDataCallback(this);
+
+        ready = true;
         notifySctpConnectionReady();
 
         // Receive loop, breaks when SCTP socket is closed
@@ -407,7 +433,12 @@ public class SctpConnection
         }
         else if(ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
         {
-            WebRtcDataStream channel = channels.get(sid);
+            WebRtcDataStream channel;
+
+            synchronized (this)
+            {
+                channel = channels.get(sid);
+            }
 
             if(channel == null)
             {
@@ -436,7 +467,7 @@ public class SctpConnection
      * @param data raw packet data that arrived on control PPID.
      * @param sid SCTP stream id on which the data has arrived.
      */
-    private void onCtrlPacket(byte[] data, int sid)
+    private synchronized void onCtrlPacket(byte[] data, int sid)
         throws IOException
     {
         java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
@@ -560,8 +591,8 @@ public class SctpConnection
      *         WebRTC data channel.
      * @throws IOException if IO error occurs.
      */
-    public WebRtcDataStream openChannel(int type, int prio, long reliab,
-                                        int sid,  String label)
+    public synchronized WebRtcDataStream openChannel(
+            int type, int prio, long reliab, int sid,  String label)
         throws IOException
     {
         if(channels.containsKey(sid))
@@ -687,9 +718,13 @@ public class SctpConnection
     {
         try
         {
-            if (sctpSocket != null)
+            synchronized (this)
             {
-                sctpSocket.close();
+                if (sctpSocket != null)
+                {
+                    sctpSocket.close();
+                }
+                sctpSocket = null;
             }
         }
         finally
@@ -698,6 +733,32 @@ public class SctpConnection
             {
                 datagramTransport.close();
             }
+        }
+    }
+
+    /**
+     * Returns default <tt>WebRtcDataStream</tt> if it's ready or <tt>null</tt>
+     * otherwise.
+     * @return <tt>WebRtcDataStream</tt> if it's ready or <tt>null</tt>
+     *         otherwise.
+     * @throws IOException
+     */
+    public WebRtcDataStream getDefaultDataStream()
+        throws IOException
+    {
+        synchronized (this)
+        {
+            if(sctpSocket == null)
+                return null;
+
+            // Channel that runs on sid 0
+            WebRtcDataStream def = channels.get(0);
+            if (def == null)
+            {
+                def = openChannel(0, 0, 0, 0, "default");
+            }
+            // Must be acknowledged before use
+            return def.isAcknowledged() ? def : null;
         }
     }
 
