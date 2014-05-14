@@ -40,7 +40,8 @@ import java.util.*;
  */
 public class SctpConnection
     extends Channel
-    implements SctpDataCallback
+    implements SctpDataCallback,
+               SctpSocket.NotificationListener
 {
     /**
      * The logger
@@ -111,8 +112,6 @@ public class SctpConnection
     /**
      * Indicates whether this <tt>SctpConnection</tt> is connected to other
      * peer.
-     *
-     * FIXME: used SCTP notification for that
      */
     private boolean ready;
 
@@ -370,13 +369,12 @@ public class SctpConnection
         logger.info("Connecting SCTP to port: " + remoteSctpPort +
             " to " + getEndpoint().getID());
 
+        sctpSocket.setNotificationListener(this);
+
         sctpSocket.connect(remoteSctpPort);
 
         // Notify that from now on SCTP connection is considered functional
         sctpSocket.setDataCallback(this);
-
-        ready = true;
-        notifySctpConnectionReady();
 
         // Receive loop, breaks when SCTP socket is closed
         while (true)
@@ -759,6 +757,43 @@ public class SctpConnection
             }
             // Must be acknowledged before use
             return def.isAcknowledged() ? def : null;
+        }
+    }
+
+    /**
+     * Implements notification in order to track socket state.
+     */
+    @Override
+    public synchronized void onSctpNotification(SctpSocket socket,
+                                   SctpNotification notification)
+    {
+        logger.info("Socket("+socket+") "+notification);
+
+        if(notification.sn_type == SctpNotification.SCTP_ASSOC_CHANGE)
+        {
+            SctpNotification.AssociationChange assocChange
+                = (SctpNotification.AssociationChange) notification;
+            switch (assocChange.state)
+            {
+                case SctpNotification.AssociationChange.SCTP_COMM_UP:
+                    ready = true;
+                    notifySctpConnectionReady();
+                    break;
+
+                case SctpNotification.AssociationChange.SCTP_COMM_LOST:
+                case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
+                case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
+                    ready = false;
+                    try
+                    {
+                        closeStream();
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error("Error closing sctp socket", e);
+                    }
+                    break;
+            }
         }
     }
 
