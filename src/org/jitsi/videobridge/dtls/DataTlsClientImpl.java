@@ -46,6 +46,30 @@ public class DataTlsClientImpl
 
     /**
      * {@inheritDoc}
+     *
+     * Overrides the super implementation to explicitly specify cipher suites
+     * which we know to be supported by Bouncy Castle. At the time of this
+     * writing, we know that Bouncy Castle implements Client Key Exchange only
+     * with <tt>TLS_ECDHE_WITH_XXX</tt> and <tt>TLS_RSA_WITH_XXX</tt>.
+     */
+    @Override
+    public int[] getCipherSuites()
+    {
+        return
+            new int[]
+                {
+/* core/src/main/java/org/bouncycastle/crypto/tls/DefaultTlsClient.java */
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+                    CipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256,
+                    CipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA256,
+                    CipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA
+                };
+    }
+
+    /**
+     * {@inheritDoc}
      */
     public synchronized TlsAuthentication getAuthentication()
         throws IOException

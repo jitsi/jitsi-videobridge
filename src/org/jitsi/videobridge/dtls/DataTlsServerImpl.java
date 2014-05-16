@@ -8,10 +8,8 @@ package org.jitsi.videobridge.dtls;
 
 import org.bouncycastle.crypto.tls.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.*;
 
 import java.io.*;
-import java.util.*;
 
 /**
  * FIXME: class copied from org.jitsi.impl.neomedia.transform.dtls.TlsServerImpl
@@ -32,6 +30,10 @@ public class DataTlsServerImpl
      */
     private static final Logger logger = Logger.getLogger(DataTlsServerImpl.class);
 
+    /**
+     *
+     * @see TlsServer#getCertificateRequest()
+     */
     private final CertificateRequest certificateRequest
         = new CertificateRequest(
                 new short[] { ClientCertificateType.rsa_sign },
@@ -40,6 +42,16 @@ public class DataTlsServerImpl
 
     private final DtlsLayer dtlsLayer;
 
+    /**
+     *
+     * @see DefaultTlsServer#getRSAEncryptionCredentials()
+     */
+    private TlsEncryptionCredentials rsaEncryptionCredentials;
+
+    /**
+     *
+     * @see DefaultTlsServer#getRSASignerCredentials()
+     */
     private TlsSignerCredentials rsaSignerCredentials;
 
     /**
@@ -49,6 +61,42 @@ public class DataTlsServerImpl
     public DataTlsServerImpl(DtlsLayer dtlsLayer)
     {
         this.dtlsLayer = dtlsLayer;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Overrides the super implementation to explicitly specify cipher suites
+     * which we know to be supported by Bouncy Castle. At the time of this
+     * writing, we know that Bouncy Castle implements Client Key Exchange only
+     * with <tt>TLS_ECDHE_WITH_XXX</tt> and <tt>TLS_RSA_WITH_XXX</tt>.
+     */
+    @Override
+    protected int[] getCipherSuites()
+    {
+        return
+            new int[]
+                {
+/* core/src/main/java/org/bouncycastle/crypto/tls/DefaultTlsServer.java */
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+                    CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+                    CipherSuite.TLS_RSA_WITH_AES_256_GCM_SHA384,
+                    CipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256,
+                    CipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA256,
+                    CipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA256,
+                    CipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
+                    CipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA
+/* core/src/test/java/org/bouncycastle/crypto/tls/test/MockDTLSServer.java */
+//                        CipherSuite.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+//                        CipherSuite.TLS_ECDHE_RSA_WITH_ESTREAM_SALSA20_SHA1,
+//                        CipherSuite.TLS_ECDHE_RSA_WITH_SALSA20_SHA1,
+//                        CipherSuite.TLS_RSA_WITH_ESTREAM_SALSA20_SHA1,
+//                        CipherSuite.TLS_RSA_WITH_SALSA20_SHA1
+                };
     }
 
     /**
@@ -85,6 +133,34 @@ public class DataTlsServerImpl
 
     /**
      * {@inheritDoc}
+     *
+     * Depending on the <tt>selectedCipherSuite</tt>, <tt>DefaultTlsServer</tt>
+     * will require either <tt>rsaEncryptionCredentials</tt> or
+     * <tt>rsaSignerCredentials</tt> neither of which is implemented by
+     * <tt>DefaultTlsServer</tt>.
+     */
+    @Override
+    protected TlsEncryptionCredentials getRSAEncryptionCredentials()
+        throws IOException
+    {
+        if (rsaEncryptionCredentials == null)
+        {
+            rsaEncryptionCredentials
+                = new DefaultTlsEncryptionCredentials(
+                context,
+                dtlsLayer.getCertificate(),
+                dtlsLayer.getKeyPair().getPrivate());
+        }
+        return rsaEncryptionCredentials;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Depending on the <tt>selectedCipherSuite</tt>, <tt>DefaultTlsServer</tt>
+     * will require either <tt>rsaEncryptionCredentials</tt> or
+     * <tt>rsaSignerCredentials</tt> neither of which is implemented by
+     * <tt>DefaultTlsServer</tt>.
      */
     @Override
     protected TlsSignerCredentials getRSASignerCredentials()
