@@ -134,6 +134,16 @@ public class SctpConnection
         = new HashMap<Integer, WebRtcDataStream>();
 
     /**
+     * Generator used to track debug IDs.
+     */
+    private static int debugIdGen = -1;
+
+    /**
+     * Debug ID used to distinguish SCTP sockets in packet logs.
+     */
+    private final int debugId;
+
+    /**
      * Initializes new <tt>SctpConnection</tt> instance.
      *
      * @param content the <tt>Content</tt> which is initializing the new
@@ -154,6 +164,14 @@ public class SctpConnection
         this.remoteSctpPort = remoteSctpPort;
 
         this.dtlsLayer = new DtlsLayer();
+
+        this.debugId = generateDebugId();
+    }
+
+    private static synchronized int generateDebugId()
+    {
+        debugIdGen += 2;
+        return debugIdGen;
     }
 
     /**
@@ -228,7 +246,7 @@ public class SctpConnection
     {
         super.describe(iq);
 
-        describeSrtpControl((ColibriConferenceIQ.SctpConnection)iq);
+        describeSrtpControl((ColibriConferenceIQ.SctpConnection) iq);
     }
 
     /**
@@ -353,9 +371,9 @@ public class SctpConnection
                 if(LOG_SCTP_PACKETS)
                     LibJitsi.getPacketLoggingService().logPacket(
                         PacketLoggingService.ProtocolName.ICE4J,
-                        new byte[]{0,0,0,1},
+                        new byte[]{0,0,0, (byte) debugId},
                         5000,
-                        new byte[]{0,0,0,2},
+                        new byte[]{0,0,0, (byte) (debugId +1)},
                         remoteSctpPort,
                         PacketLoggingService.TransportName.UDP,
                         true,
@@ -371,7 +389,27 @@ public class SctpConnection
 
         sctpSocket.setNotificationListener(this);
 
-        sctpSocket.connect(remoteSctpPort);
+        sctpSocket.listen();
+
+        // FIXME: manage threads
+        new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    while (!sctpSocket.accept())
+                    {
+                        Thread.sleep(100);
+                    }
+                }
+                catch (Exception e)
+                {
+                    logger.error("Error accepting SCTP connection", e);
+                }
+            }
+        }, "SctpAcceptThread").start();
 
         // Notify that from now on SCTP connection is considered functional
         sctpSocket.setDataCallback(this);
@@ -392,9 +430,9 @@ public class SctpConnection
             if(LOG_SCTP_PACKETS)
                 LibJitsi.getPacketLoggingService().logPacket(
                     PacketLoggingService.ProtocolName.ICE4J,
-                    new byte[]{0,0,0,2},
+                    new byte[]{0,0,0, (byte) (debugId +1)},
                     remoteSctpPort,
-                    new byte[]{0,0,0,1},
+                    new byte[]{0,0,0, (byte) debugId},
                     5000,
                     PacketLoggingService.TransportName.UDP,
                     false,
