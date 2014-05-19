@@ -423,10 +423,6 @@ public class SctpConnection
             if(received <= 0)
                 break;
 
-            // FIXME: fix buffer allocations
-            byte[] packet = new byte[received];
-            System.arraycopy(receiveBuffer, 0, packet, 0, received);
-
             if(LOG_SCTP_PACKETS)
                 LibJitsi.getPacketLoggingService().logPacket(
                     PacketLoggingService.ProtocolName.ICE4J,
@@ -436,10 +432,10 @@ public class SctpConnection
                     5000,
                     PacketLoggingService.TransportName.UDP,
                     false,
-                    packet);
+                    receiveBuffer, 0, received);
 
             // Pass network packet to SCTP stack
-            sctpSocket.onConnIn(packet);
+            sctpSocket.onConnIn(receiveBuffer, 0, received);
         }
 
         // Eventually close the socket, although it should happen from expire()
