@@ -9,7 +9,8 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
-import org.bouncycastle.crypto.tls.*;
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.transform.dtls.*;
 
 import org.jitsi.sctp4j.*;
 import org.jitsi.service.configuration.*;
@@ -17,8 +18,8 @@ import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.dtls.DtlsLayer;
 
+import javax.media.rtp.*;
 import java.io.*;
 import java.net.*;
 import java.nio.*;
@@ -97,7 +98,7 @@ public class SctpConnection
     /**
      * DTLS layer used by this <tt>SctpConnection</tt>.
      */
-    private final DtlsLayer dtlsLayer;
+    private final DtlsControlImpl dtlsControl;
 
     /**
      * Remote SCTP port.
@@ -114,11 +115,6 @@ public class SctpConnection
      * peer.
      */
     private boolean ready;
-
-    /**
-     * ICE/UDP transport used by DTLS layer.
-     */
-    private DatagramTransportImpl datagramTransport;
 
     /**
      * List of <tt>WebRtcDataStreamListener</tt>s that will be notified whenever
@@ -144,6 +140,11 @@ public class SctpConnection
     private final int debugId;
 
     /**
+     * Datagram socket for ICE/UDP layer.
+     */
+    private DatagramSocket iceUdpSocket;
+
+    /**
      * Initializes new <tt>SctpConnection</tt> instance.
      *
      * @param content the <tt>Content</tt> which is initializing the new
@@ -163,7 +164,7 @@ public class SctpConnection
 
         this.remoteSctpPort = remoteSctpPort;
 
-        this.dtlsLayer = new DtlsLayer();
+        this.dtlsControl = new DtlsControlImpl();
 
         this.debugId = generateDebugId();
     }
@@ -201,7 +202,7 @@ public class SctpConnection
                         dfpe.getFingerprint());
                 }
 
-                dtlsLayer.setRemoteFingerprints(remoteFingerprints);
+                dtlsControl.setRemoteFingerprints(remoteFingerprints);
             }
         }
 
@@ -258,8 +259,8 @@ public class SctpConnection
      */
     protected void describeSrtpControl(ColibriConferenceIQ.SctpConnection iq)
     {
-        String fingerprint = dtlsLayer.getLocalFingerprint();
-        String hash = dtlsLayer.getLocalFingerprintHashFunction();
+        String fingerprint = dtlsControl.getLocalFingerprint();
+        String hash = dtlsControl.getLocalFingerprintHashFunction();
 
         IceUdpTransportPacketExtension transportPE = iq.getTransport();
 
@@ -289,26 +290,17 @@ public class SctpConnection
         throws IOException
     {
         // connector
-        StreamConnector connector = createStreamConnector();
+        final StreamConnector connector = createStreamConnector();
 
         if (connector == null)
             return;
 
-        dtlsLayer.setSetup(
+        dtlsControl.setSetup(
             isInitiator()
                 ? DtlsControl.Setup.PASSIVE
                 : DtlsControl.Setup.ACTIVE);
 
-        this.datagramTransport
-            = new DatagramTransportImpl(connector, createStreamTarget());
-
-        final DTLSTransport finalDtlsTransport
-            = dtlsLayer.startDtls(datagramTransport);
-
-        if(finalDtlsTransport == null)
-        {
-            throw new RuntimeException("Failed to start DTLS");
-        }
+        dtlsControl.start(MediaType.DATA);
 
         new Thread(new Runnable()
         {
@@ -319,7 +311,7 @@ public class SctpConnection
                 {
                     Sctp.init();
 
-                    runOnDtlsTransport(finalDtlsTransport);
+                    runOnDtlsTransport(connector);
                 }
                 catch (IOException e)
                 {
@@ -340,9 +332,26 @@ public class SctpConnection
         }, "SctpConnectionReceiveThread").start();
     }
 
-    private void runOnDtlsTransport(final DTLSTransport transport)
+    private void runOnDtlsTransport(StreamConnector connector)
         throws IOException
     {
+        RTPConnectorUDPImpl rtpConnector
+            = new RTPConnectorUDPImpl(connector);
+
+        MediaStreamTarget streamTarget = createStreamTarget();
+
+        rtpConnector.addTarget(
+            new SessionAddress(
+                streamTarget.getDataAddress().getAddress(),
+                streamTarget.getDataAddress().getPort())
+        );
+
+        dtlsControl.setConnector(rtpConnector);
+
+        DtlsTransformEngine engine = dtlsControl.getTransformEngine();
+        final DtlsPacketTransformer transformer
+            = (DtlsPacketTransformer) engine.getRTPTransformer();
+
         byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
 
         if(LOG_SCTP_PACKETS)
@@ -368,19 +377,19 @@ public class SctpConnection
             public void onConnOut(org.jitsi.sctp4j.SctpSocket s, byte[] packet)
                 throws IOException
             {
-                if(LOG_SCTP_PACKETS)
+                if (LOG_SCTP_PACKETS)
                     LibJitsi.getPacketLoggingService().logPacket(
                         PacketLoggingService.ProtocolName.ICE4J,
-                        new byte[]{0,0,0, (byte) debugId},
+                        new byte[]{0, 0, 0, (byte) debugId},
                         5000,
-                        new byte[]{0,0,0, (byte) (debugId +1)},
+                        new byte[]{0, 0, 0, (byte) (debugId + 1)},
                         remoteSctpPort,
                         PacketLoggingService.TransportName.UDP,
                         true,
                         packet);
 
                 // Send through DTLS transport
-                transport.send(packet, 0, packet.length);
+                transformer.sendOverDtls(packet, 0, packet.length);
             }
         });
 
@@ -415,31 +424,48 @@ public class SctpConnection
         sctpSocket.setDataCallback(this);
 
         // Receive loop, breaks when SCTP socket is closed
-        while (true)
+        this.iceUdpSocket = rtpConnector.getDataSocket();
+        DatagramPacket rcvPacket
+            = new DatagramPacket(receiveBuffer, 0, receiveBuffer.length);
+
+        try
         {
-            int received
-                = transport.receive(receiveBuffer, 0, receiveBuffer.length, 0);
+            while (true)
+            {
+                iceUdpSocket.receive(rcvPacket);
 
-            if(received <= 0)
-                break;
+                RawPacket raw = new RawPacket(
+                    rcvPacket.getData(), rcvPacket.getOffset(),
+                    rcvPacket.getLength());
 
-            if(LOG_SCTP_PACKETS)
-                LibJitsi.getPacketLoggingService().logPacket(
-                    PacketLoggingService.ProtocolName.ICE4J,
-                    new byte[]{0,0,0, (byte) (debugId +1)},
-                    remoteSctpPort,
-                    new byte[]{0,0,0, (byte) debugId},
-                    5000,
-                    PacketLoggingService.TransportName.UDP,
-                    false,
-                    receiveBuffer, 0, received);
+                raw = transformer.reverseTransform(raw);
+                // Check for app data
+                if (raw == null)
+                    continue;
 
-            // Pass network packet to SCTP stack
-            sctpSocket.onConnIn(receiveBuffer, 0, received);
+                if(LOG_SCTP_PACKETS)
+                    LibJitsi.getPacketLoggingService().logPacket(
+                        PacketLoggingService.ProtocolName.ICE4J,
+                        new byte[]{0,0,0, (byte) (debugId +1)},
+                        remoteSctpPort,
+                        new byte[]{0,0,0, (byte) debugId},
+                        5000,
+                        PacketLoggingService.TransportName.UDP,
+                        false,
+                        raw.getBuffer(), raw.getOffset(), raw.getLength());
+
+                // Pass network packet to SCTP stack
+                sctpSocket.onConnIn(
+                    raw.getBuffer(), raw.getOffset(), raw.getLength());
+            }
+        }
+        finally
+        {
+            // Eventually close the socket, although it should happen from
+            // expire()
+            sctpSocket.close();
         }
 
-        // Eventually close the socket, although it should happen from expire()
-        sctpSocket.close();
     }
 
     /**
@@ -732,10 +758,10 @@ public class SctpConnection
     {
         if (isInitiator() != initiator)
         {
-            dtlsLayer.setSetup(
-                    isInitiator()
-                        ? DtlsControl.Setup.PASSIVE
-                        : DtlsControl.Setup.ACTIVE);
+            dtlsControl.setSetup(
+                isInitiator()
+                    ? DtlsControl.Setup.PASSIVE
+                    : DtlsControl.Setup.ACTIVE);
         }
 
         super.setInitiator(initiator);
@@ -761,9 +787,9 @@ public class SctpConnection
         }
         finally
         {
-            if(datagramTransport != null)
+            if(iceUdpSocket != null)
             {
-                datagramTransport.close();
+                iceUdpSocket.close();
             }
         }
     }
@@ -850,93 +876,5 @@ public class SctpConnection
          *                  WebRTC data channel.
          */
         public void onChannelOpened(WebRtcDataStream newStream);
-    }
-
-    /**
-     * Implements <tt>DatagramTransport</tt> for DTLS layer.
-     * Runs on ICE/UDP socket returned by ice4j.
-     *
-     * @author Pawel Domas
-     */
-    class DatagramTransportImpl
-        implements DatagramTransport
-    {
-        /**
-         * Remote address selected during ICE negotiations.
-         * Used as UDP packets destination address.
-         */
-        private final InetSocketAddress remoteAddr;
-
-        /**
-         * Socket returned by ice4j that represents local endpoint.
-         */
-        private final DatagramSocket datagramSocket;
-
-        /**
-         * Creates new <tt>DatagramTransportImpl</tt> from given
-         * <tt>StreamConnector</tt> and <tt>MediaStreamTarget</tt> that server
-         * as UDP transport layer for DTLS packets.
-         *
-         * @param connector <tt>StreamConnector</tt> that describes local
-         *                  endpoint.
-         * @param target <tt>MediaStreamTarget</tt> that describes remote
-         *               endpoint.
-         */
-        public DatagramTransportImpl(StreamConnector connector,
-                                     MediaStreamTarget target)
-        {
-            this.datagramSocket = connector.getDataSocket();
-            this.remoteAddr = target.getDataAddress();
-        }
-
-        @Override
-        public int getReceiveLimit()
-            throws IOException
-        {
-            return DTLS_BUFFER_SIZE;
-        }
-
-        @Override
-        public int getSendLimit()
-            throws IOException
-        {
-            return DTLS_BUFFER_SIZE;
-        }
-
-        @Override
-        public int receive(byte[] bytes, int off, int len, int waitMillis)
-            throws IOException
-        {
-            datagramSocket.setSoTimeout(waitMillis);
-
-            DatagramPacket p = new DatagramPacket(bytes, off, len);
-            try
-            {
-                datagramSocket.receive(p);
-
-                return p.getLength();
-            }
-            catch (SocketTimeoutException e)
-            {
-                return -1;
-            }
-        }
-
-        @Override
-        public void send(byte[] bytes, int off, int len)
-            throws IOException
-        {
-            DatagramPacket packet = new DatagramPacket(bytes, off, len);
-            packet.setAddress(remoteAddr.getAddress());
-            packet.setPort(remoteAddr.getPort());
-            datagramSocket.send(packet);
-        }
-
-        @Override
-        public void close()
-            throws IOException
-        {
-            datagramSocket.close();
-        }
     }
 }
