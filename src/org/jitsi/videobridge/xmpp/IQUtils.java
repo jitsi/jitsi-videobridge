@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.util;
+package org.jitsi.videobridge.xmpp;
 
 import java.io.*;
 
@@ -21,7 +21,7 @@ import org.xmpp.packet.*;
  *
  * @author Lyubomir Marinov
  */
-public final class IQUtils
+final class IQUtils
 {
     /**
      * The <tt>XmlPullParserFactory</tt> instance which is to create

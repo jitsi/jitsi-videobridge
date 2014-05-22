@@ -71,6 +71,7 @@ public class AudioSilenceCaptureDevice
      * Implements
      * {@link AbstractPushBufferCaptureDevice#createStream(int, FormatControl)}.
      */
+    @Override
     protected AudioSilenceStream createStream(
             int streamIndex,
             FormatControl formatControl)
@@ -141,6 +142,7 @@ public class AudioSilenceCaptureDevice
          * available media data from this instance into the specified
          * <tt>buffer</tt>
          */
+        @Override
         public void read(Buffer buffer)
             throws IOException
         {
@@ -174,6 +176,7 @@ public class AudioSilenceCaptureDevice
          * Runs in {@link #thread} and pushes available media data out of this
          * instance to its consumer i.e. <tt>BufferTransferHandler</tt>.
          */
+        @Override
         public void run()
         {
             try

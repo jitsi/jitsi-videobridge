@@ -6,10 +6,15 @@
  */
 package org.jitsi.videobridge;
 
+import java.util.*;
+
 import net.java.sip.communicator.service.protocol.*;
 
 import org.jitsi.service.neomedia.*;
+import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.whack.*;
+import org.osgi.framework.*;
 import org.xmpp.component.*;
 
 /**
@@ -20,6 +25,12 @@ import org.xmpp.component.*;
  */
 public class Main
 {
+    /**
+     * The name of the command-line argument which specifies the application
+     * programming interfaces (APIs) to enable for Jitsi Videobridge.
+     */
+    private static final String APIS_ARG_NAME = "--apis=";
+
     /**
      * The name of the command-line argument which specifies the XMPP domain
      * to use.
@@ -103,6 +114,7 @@ public class Main
         throws Exception
     {
         // Parse the command-line arguments.
+        List<String> apis = new LinkedList<String>();
         String host = null;
         String maxPort = MAX_PORT_ARG_VALUE;
         String minPort = MIN_PORT_ARG_VALUE;
@@ -112,37 +124,61 @@ public class Main
 
         for (String arg : args)
         {
-            if (arg.startsWith(DOMAIN_ARG_NAME))
+            if (arg.startsWith(APIS_ARG_NAME))
+            {
+                for (String api
+                        : arg.substring(APIS_ARG_NAME.length()).split(","))
+                {
+                    if ((api != null)
+                            && (api.length() != 0)
+                            && !apis.contains(api))
+                    {
+                        apis.add(api);
+                    }
+                }
+            }
+            else if (arg.startsWith(DOMAIN_ARG_NAME))
+            {
                 domain = arg.substring(DOMAIN_ARG_NAME.length());
+            }
             else if (arg.startsWith(HOST_ARG_NAME))
+            {
                 host = arg.substring(HOST_ARG_NAME.length());
+            }
             else if (arg.startsWith(MAX_PORT_ARG_NAME))
+            {
                 maxPort = arg.substring(MAX_PORT_ARG_NAME.length());
+            }
             else if (arg.startsWith(MIN_PORT_ARG_NAME))
+            {
                 minPort = arg.substring(MIN_PORT_ARG_NAME.length());
+            }
             else if (arg.startsWith(PORT_ARG_NAME))
+            {
                 port = Integer.parseInt(arg.substring(PORT_ARG_NAME.length()));
+            }
             else if (arg.startsWith(SECRET_ARG_NAME))
+            {
                 secret = arg.substring(SECRET_ARG_NAME.length());
+            }
         }
 
+        if (apis.isEmpty())
+            apis.add(Videobridge.XMPP_API);
         if (host == null)
-            host = (domain != null) ? domain : HOST_ARG_VALUE;
-
-        // Start Jitsi Videobridge as an external Jabber component. 
-        ExternalComponentManager componentManager
-            = new ExternalComponentManager(host, port);
-        String subdomain = ComponentImpl.SUBDOMAIN;
-
-        componentManager.setMultipleAllowed(subdomain, true);
-        componentManager.setSecretKey(subdomain, secret);
-        if (domain != null)
-            componentManager.setServerName(domain);
+            host = (domain == null) ? HOST_ARG_VALUE : domain;
 
         /*
-         * Before initializing the Component implementation, set any System
-         * properties it uses.
+         * Before initializing the application programming interfaces (APIs) of
+         * Jitsi Videobridge, set any System properties which they use and which
+         * may be specified by the command-line arguments.
          */
+        System.setProperty(
+                Videobridge.REST_API_PNAME,
+                Boolean.toString(apis.contains(Videobridge.REST_API)));
+        System.setProperty(
+                Videobridge.XMPP_API_PNAME,
+                Boolean.toString(apis.contains(Videobridge.XMPP_API)));
         if ((maxPort != null) && (maxPort.length() != 0))
         {
             // Jingle Raw UDP transport
@@ -168,32 +204,69 @@ public class Main
                     minPort);
         }
 
-        Component component = new ComponentImpl();
-
-        componentManager.addComponent(subdomain, component);
-
         /*
-         * The application has nothing more to do but wait for ComponentImpl to
-         * perform its duties. Presently, there is no specific shutdown
-         * procedure and the application just gets killed.
+         * Start OSGi. It will invoke the application programming interfaces
+         * (APIs) of Jitsi Videobridge. Each of them will keep the application
+         * alive. 
          */
-        while (true)
-        {
-            boolean interrupted = false;
+        OSGi.start(
+                new BundleActivator()
+                {
+                    @Override
+                    public void start(BundleContext bundleContext)
+                        throws Exception
+                    {
+                        // TODO Auto-generated method stub
+                    }
 
-            synchronized (exitSyncRoot)
+                    @Override
+                    public void stop(BundleContext bundleContext)
+                        throws Exception
+                    {
+                        // TODO Auto-generated method stub
+                    }
+                });
+
+        // Start Jitsi Videobridge as an external Jabber component.
+        if (apis.contains(Videobridge.XMPP_API))
+        {
+            ExternalComponentManager componentManager
+                = new ExternalComponentManager(host, port);
+            String subdomain = ComponentImpl.SUBDOMAIN;
+
+            componentManager.setMultipleAllowed(subdomain, true);
+            componentManager.setSecretKey(subdomain, secret);
+            if (domain != null)
+                componentManager.setServerName(domain);
+    
+            Component component = new ComponentImpl();
+
+            componentManager.addComponent(subdomain, component);
+
+            /*
+             * The application has nothing more to do but wait for ComponentImpl
+             * to perform its duties. Presently, there is no specific shutdown
+             * procedure and the application just gets killed.
+             */
+            do
             {
-                try
+                boolean interrupted = false;
+    
+                synchronized (exitSyncRoot)
                 {
-                    exitSyncRoot.wait();
+                    try
+                    {
+                        exitSyncRoot.wait();
+                    }
+                    catch (InterruptedException ie)
+                    {
+                        interrupted = true;
+                    }
                 }
-                catch (InterruptedException ie)
-                {
-                    interrupted = true;
-                }
+                if (interrupted)
+                    Thread.currentThread().interrupt();
             }
-            if (interrupted)
-                Thread.currentThread().interrupt();
+            while (true);
         }
     }
 }

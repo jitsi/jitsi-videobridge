@@ -10,6 +10,10 @@
 	<classpathentry kind="lib" path="lib/dnsservice.jar"/>
 	<classpathentry kind="lib" path="lib/dom4j.jar"/>
 	<classpathentry kind="lib" path="lib/fileaccess.jar"/>
+	<classpathentry kind="lib" path="lib/jetty-http-9.1.5.v20140505.jar"/>
+	<classpathentry kind="lib" path="lib/jetty-io-9.1.5.v20140505.jar"/>
+	<classpathentry kind="lib" path="lib/jetty-server-9.1.5.v20140505.jar"/>
+	<classpathentry kind="lib" path="lib/jetty-util-9.1.5.v20140505.jar"/>
 	<classpathentry kind="lib" path="lib/jitsi-android-osgi.jar"/>
 	<classpathentry kind="lib" path="lib/jnalib.jar"/>
 	<classpathentry kind="lib" path="lib/json.jar"/>
@@ -22,6 +26,7 @@
 	<classpathentry kind="lib" path="lib/protocol-jabber.jar"/>
 	<classpathentry kind="lib" path="lib/protocol-media.jar"/>
 	<classpathentry kind="lib" path="lib/resourcemanager.jar"/>
+	<classpathentry kind="lib" path="lib/servlet-api-3.1.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api.jar"/>
 	<classpathentry kind="lib" path="lib/smack.jar"/>
 	<classpathentry kind="lib" path="lib/tinder.jar"/>

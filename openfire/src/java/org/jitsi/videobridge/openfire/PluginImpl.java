@@ -14,7 +14,7 @@ import java.util.jar.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.openfire.container.*;
 import org.jivesoftware.util.*;
 import org.slf4j.*;
@@ -383,5 +383,4 @@ public class PluginImpl
     {
         propertyDeleted(property, params);
     }
-
 }

@@ -16,6 +16,7 @@ import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.xmpp.*;
 import org.osgi.framework.*;
 
 /**
@@ -105,10 +106,7 @@ public class RawUdpTransportManager
          * to bind to.
          */
         Channel channel = getChannel();
-        Content content = channel.getContent();
-        Conference conference = content.getConference();
-        ComponentImpl component = conference.getVideobridge().getComponent();
-        BundleContext bundleContext = component.getBundleContext();
+        BundleContext bundleContext = channel.getBundleContext();
         NetworkAddressManagerService nams
             = ServiceUtils.getService(
                     bundleContext,
@@ -117,38 +115,47 @@ public class RawUdpTransportManager
 
         if (nams != null)
         {
-            String domain = component.getDomain();
+            Content content = channel.getContent();
+            Conference conference = content.getConference();
+            Videobridge videobridge = conference.getVideobridge();
 
-            if ((domain != null) && (domain.length() != 0))
+            for (ComponentImpl component : videobridge.getComponents())
             {
-                /*
-                 * The domain reported by the Jabber component contains its
-                 * dedicated subdomain and the goal here is to get the domain of
-                 * the XMPP server.
-                 */
-                int subdomainEnd = domain.indexOf('.');
+                String domain = component.getDomain();
 
-                if (subdomainEnd >= 0)
-                    domain = domain.substring(subdomainEnd + 1);
-                if (domain.length() != 0)
+                if ((domain != null) && (domain.length() != 0))
                 {
-                    try
+                    /*
+                     * The domain reported by the Jabber component contains its
+                     * dedicated subdomain and the goal here is to get the
+                     * domain of the XMPP server.
+                     */
+                    int subdomainEnd = domain.indexOf('.');
+
+                    if (subdomainEnd >= 0)
+                        domain = domain.substring(subdomainEnd + 1);
+                    if (domain.length() != 0)
                     {
-                        bindAddr
-                            = nams.getLocalHost(
-                                    NetworkUtils.getInetAddress(domain));
-                    }
-                    catch (UnknownHostException uhe)
-                    {
-                        logger.info(
-                                "Failed to get InetAddress from " + domain
-                                    + " for channel " + channel.getID()
-                                    + " of content " + content.getName()
-                                    + " of conference " + conference.getID()
-                                    + ".",
-                                uhe);
+                        try
+                        {
+                            bindAddr
+                                = nams.getLocalHost(
+                                        NetworkUtils.getInetAddress(domain));
+                        }
+                        catch (UnknownHostException uhe)
+                        {
+                            logger.info(
+                                    "Failed to get InetAddress from " + domain
+                                        + " for channel " + channel.getID()
+                                        + " of content " + content.getName()
+                                        + " of conference " + conference.getID()
+                                        + ".",
+                                    uhe);
+                        }
                     }
                 }
+                if (bindAddr != null)
+                    break;
             }
         }
         if (bindAddr == null)
