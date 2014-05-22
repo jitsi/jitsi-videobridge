@@ -40,6 +40,12 @@ public class Videobridge
      */
     private static final Logger logger = Logger.getLogger(Videobridge.class);
 
+    /**
+     * The optional flag which specifies to
+     * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)} that
+     * <tt>ColibriConferenceIQ</tt>s without an associated conference focus are
+     * allowed.
+     */
     public static final int OPTION_ALLOW_NO_FOCUS = 1;
 
     /**
@@ -49,13 +55,27 @@ public class Videobridge
      */
     static final Random RANDOM = new Random();
 
+    /**
+     * The REST-like HTTP/JSON API of Jitsi Videobridge.
+     */
     public static final String REST_API = "rest";
 
+    /**
+     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
+     * of the REST-like HTTP/JSON API of Jitsi Videobridge.
+     */
     public static final String REST_API_PNAME
         = "org.jitsi.videobridge." + REST_API;
 
+    /**
+     * The XMPP API of Jitsi Videobridge.
+     */
     public static final String XMPP_API = "xmpp";
 
+    /**
+     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
+     * of the XMPP API of Jitsi Videobridge.
+     */
     public static final String XMPP_API_PNAME
         = "org.jitsi.videobridge." + XMPP_API;
 
@@ -210,6 +230,13 @@ public class Videobridge
         return channelCount;
     }
 
+    /**
+     * Gets the <tt>ComponentImpl</tt> instances which implement the XMPP API of
+     * this <tt>Videobridge</tt>.
+     *
+     * @return the <tt>ComponentImpl</tt> instances which implement the XMPP API
+     * of this <tt>Videobridge</tt>
+     */
     public Collection<ComponentImpl> getComponents()
     {
         return ComponentImpl.getComponents(getBundleContext());
@@ -566,6 +593,12 @@ public class Videobridge
         return responseConferenceIQ;
     }
 
+    /**
+     * Starts this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the <tt>BundleContext</tt> in which this
+     * <tt>Videobridge</tt> is to start
+     */
     void start(BundleContext bundleContext)
         throws Exception
     {
@@ -621,6 +654,12 @@ public class Videobridge
         this.bundleContext = bundleContext;
     }
 
+    /**
+     * Stops this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the <tt>BundleContext</tt> in which this
+     * <tt>Videobridge</tt> is to stop
+     */
     void stop(BundleContext bundleContext)
         throws Exception
     {

@@ -45,6 +45,16 @@ public class ComponentImpl
      */
     public static final String SUBDOMAIN = "jitsi-videobridge";
 
+    /**
+     * Gets the <tt>ComponentImpl</tt> instances registered as OSGi services in
+     * a specific <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the <tt>BundleContext</tt> from which the registered
+     * <tt>ComponentImpl</tt> instances registered as OSGi services are to be
+     * returned
+     * @return the <tt>ComponentImpl</tt> instances registered as OSGi services
+     * in the specified <tt>bundleContext</tt>
+     */
     public static Collection<ComponentImpl> getComponents(
             BundleContext bundleContext)
     {

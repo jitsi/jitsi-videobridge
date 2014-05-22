@@ -23,27 +23,191 @@ import org.json.simple.parser.*;
 import org.osgi.framework.*;
 
 /**
+ * Implements a Jetty <tt>Handler</tt> which is to provide the HTTP interface of
+ * the JSON public API of <tt>Videobridge</tt>.
+ * <p>
+ * The REST API of Jitsi Videobridge serves resources with
+ * <tt>Content-Type: application/json</tt> under the base target
+ * <tt>/colibri</tt>:
+ * <table>
+ *   <thead>
+ *     <tr>
+ *       <th>HTTP Method</th>
+ *       <th>Resource</th>
+ *       <th>Response</th>
+ *     </tr>
+ *   </thead>
+ *   <tbody>
+ *     <tr>
+ *       <td>GET</td>
+ *       <td>/colibri/conferences</td>
+ *       <td>
+ *         200 OK with a JSON array/list of JSON objects which represent
+ *         conferences with <tt>id</tt> only. For example:
+ * <code>
+ * [
+ *   { &quot;id&quot; : &quot;a1b2c3&quot; },
+ *   { &quot;id&quot; : &quot;d4e5f6&quot; }
+ * ]
+ * </code>
+ *       </td>
+ *     </tr>
+ *     <tr>
+ *       <td>POST</td>
+ *       <td>/colibri/conferences</td>
+ *       <td>
+ *         <p>
+ *         200 OK with a JSON object which represents the created conference if
+ *         the request was with <tt>Content-Type: application/json</tt> and was
+ *         a JSON object which represented a conference without <tt>id</tt> and,
+ *         optionally, with contents and channels without <tt>id</tt>s. For
+ *         example, a request could look like:
+ *         </p>
+ * <code>
+ * {
+ *   &quot;contents&quot; :
+ *     [
+ *       {
+ *         &quot;name&quot; : &quot;audio&quot;,
+ *         &quot;channels&quot; : [ { &quot;expire&quot; : 60 } ]
+ *       },
+ *       {
+ *         &quot;name&quot; : &quot;video&quot;,
+ *         &quot;channels&quot; : [ { &quot;expire&quot; : 60 } ]
+ *       }
+ *     ]
+ * }
+ * </code>
+ *         <p>
+ *         The respective response could look like:
+ *         </p>
+ * <code>
+ * {
+ *   &quot;id&quot; : &quot;conference1&quot;,
+ *   &quot;contents&quot; :
+ *     [
+ *       {
+ *         &quot;name&quot; : &quot;audio&quot;,
+ *         &quot;channels&quot; :
+ *           [
+ *             { &quot;id&quot; : &quot;channelA&quot; },
+ *             { &quot;expire&quot; : 60 },
+ *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ *           ]
+ *       },
+ *       {
+ *         &quot;name&quot; : &quot;video&quot;,
+ *         &quot;channels&quot; :
+ *           [
+ *             { &quot;id&quot; : &quot;channelV&quot; },
+ *             { &quot;expire&quot; : 60 },
+ *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ *           ]
+ *       }
+ *     ]
+ * }
+ * </code>
+ *       </td>
+ *     </tr>
+ *     <tr>
+ *       <td>GET</td>
+ *       <td>/colibri/conferences/{id}</td>
+ *       <td>
+ *         200 OK with a JSON object which represents the conference with the 
+ *         specified <tt>id</tt>. For example:
+ * <code>
+ * {
+ *   &quot;id&quot; : &quot;{id}&quot;,
+ *   &quot;contents&quot; :
+ *     [
+ *       {
+ *         &quot;name&quot; : &quot;audio&quot;,
+ *         &quot;channels&quot; :
+ *           [
+ *             { &quot;id&quot; : &quot;channelA&quot; },
+ *             { &quot;expire&quot; : 60 },
+ *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ *           ]
+ *       },
+ *       {
+ *         &quot;name&quot; : &quot;video&quot;,
+ *         &quot;channels&quot; :
+ *           [
+ *             { &quot;id&quot; : &quot;channelV&quot; },
+ *             { &quot;expire&quot; : 60 },
+ *             { &quot;rtp-level-relay-type&quot; : &quot;translator&quot; }
+ *           ]
+ *       }
+ *     ]
+ * }
+ * </code>
+ *       </td>
+ *     </tr>
+ *     <tr>
+ *       <td>PATCH</td>
+ *       <td>/colibri/conferences/{id}</td>
+ *       <td>
+ *         <p>
+ *         200 OK with a JSON object which represents the modified conference if
+ *         the request was with <tt>Content-Type: application/json</tt> and was
+ *         a JSON object which represented a conference without <tt>id</tt> or
+ *         with the specified <tt>id</tt> and, optionally, with contents and
+ *         channels with or without <tt>id</tt>s.
+ *         </p>
+ *       </td>
+ *     </tr>
+ *   </tbody>
+ * </table>
+ * </p>
  *
  * @author Lyubomir Marinov
  */
 class HandlerImpl
     extends AbstractHandler
 {
+    /**
+     * The HTTP resource which list the JSON representation of the
+     * <tt>Conference</tt>s of <tt>Videobridge</tt>.
+     */
     private static final String CONFERENCES = "conferences";
 
+    /**
+     * The default base HTTP resource of COLIBRI-related JSON representations of
+     * <tt>Videobridge</tt>.
+     */
     private static final String DEFAULT_COLIBRI_TARGET = "/colibri/";
 
+    /**
+     * The default suffix/extension of the HTTP resources which provide access
+     * to JSON representations of COLIBRI-related entities of
+     * <tt>Videobridge</tt>.
+     */
     private static final String DEFAULT_JSON_TARGET = null;
 
+    /**
+     * The HTTP GET method.
+     */
     private static final String GET_HTTP_METHOD = "GET";
 
+    /**
+     * The MIME type of HTTP content in JSON format.
+     */
     private static final String JSON_CONTENT_TYPE = "application/json";
 
+    /**
+     * The MIME type of HTTP content in JSON format with a charset.
+     */
     private static final String JSON_CONTENT_TYPE_WITH_CHARSET
         = JSON_CONTENT_TYPE + ";charset=UTF-8";
 
+    /**
+     * The HTTP PATCH method.
+     */
     private static final String PATCH_HTTP_METHOD = "PATCH";
 
+    /**
+     * The HTTP POST method.
+     */
     private static final String POST_HTTP_METHOD = "POST";
 
     /**
@@ -51,8 +215,16 @@ class HandlerImpl
      */
     private final BundleContext bundleContext;
 
+    /**
+     * The base HTTP resource of COLIBRI-related JSON representations of
+     * <tt>Videobridge</tt>.
+     */
     private String colibriTarget;
 
+    /**
+     * The suffix/extension of the HTTP resources which provide access to JSON
+     * representations of COLIBRI-related entities of <tt>Videobridge</tt>.
+     */
     private String jsonTarget;
 
     /**
@@ -74,6 +246,18 @@ class HandlerImpl
             jsonTarget = "." + jsonTarget;
     }
 
+    /**
+     * Retrieves a JSON representation of a <tt>Conference</tt> with ID
+     * <tt>target</tt> of (the associated) <tt>Videobridge</tt>.
+     *
+     * @param target the ID of the <tt>Conference</tt> of (the associated)
+     * <tt>Videobridge</tt> to represent in JSON format
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
     private void doGetConferenceJSON(
             String target,
             Request baseRequest,
@@ -119,6 +303,15 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Lists the <tt>Conference</tt>s of (the associated) <tt>Videobridge</tt>.
+     *
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
     private void doGetConferencesJSON(
             Request baseRequest,
             HttpServletRequest request,
@@ -157,6 +350,18 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Modifies a <tt>Conference</tt> with ID <tt>target</tt> in (the
+     * associated) <tt>Videobridge</tt>.
+     *
+     * @param target the ID of the <tt>Conference</tt> to modify in (the
+     * associated) <tt>Videobridge</tt>
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
     private void doPatchConferenceJSON(
             String target,
             Request baseRequest,
@@ -252,6 +457,16 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Creates a new <tt>Conference</tt> in (the associated)
+     * <tt>Videobridge</tt>.
+     *
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
     private void doPostConferencesJSON(
             Request baseRequest,
             HttpServletRequest request,
@@ -333,11 +548,27 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Gets the <tt>BundleContext</tt> in which this Jetty <tt>Handler</tt> has
+     * been started.
+     *
+     * @return the <tt>BundleContext</tt> in which this Jetty <tt>Handler</tt>
+     * has been started or <tt>null</tt> if this Jetty <tt>Handler</tt> has not
+     * been started in a <tt>BundleContext</tt>
+     */
     public BundleContext getBundleContext()
     {
         return bundleContext;
     }
 
+    /**
+     * Gets the <tt>Videobridge</tt> instance available to this Jetty
+     * <tt>Handler</tt>.
+     *
+     * @return the <tt>Videobridge</tt> instance available to this Jetty
+     * <tt>Handler</tt> or <tt>null</tt> if no <tt>Videobridge</tt> instance is
+     * available to this Jetty <tt>Handler</tt>
+     */
     public Videobridge getVideobridge()
     {
         BundleContext bundleContext = getBundleContext();
@@ -355,6 +586,9 @@ class HandlerImpl
         return videobridge;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void handle(
             String target,
@@ -377,6 +611,10 @@ class HandlerImpl
             {
                 target
                     = target.substring(0, target.length() - jsonTargetLength);
+                /*
+                 * All responses to request for resources under the base
+                 * /colibri/ are in JSON format.
+                 */
                 response.setContentType(JSON_CONTENT_TYPE_WITH_CHARSET);
 
                 handleColibriJSON(target, baseRequest, request, response);
@@ -391,6 +629,18 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Handles an HTTP request for a COLIBRI-related resource (e.g.
+     * <tt>Conference</tt>, <tt>Content</tt>, and <tt>Channel</tt>) represented
+     * in JSON format.
+     *
+     * @param target
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
     private void handleColibriJSON(
             String target,
             Request baseRequest,
@@ -427,6 +677,10 @@ class HandlerImpl
             }
             else
             {
+                /*
+                 * The target at this point of the execution is reduced to a
+                 * Conference ID.
+                 */
                 if (GET_HTTP_METHOD.equals(requestMethod))
                 {
                     // Retrieve a representation of a Conference of Videobridge.
@@ -454,6 +708,16 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Determines whether a specific MIME type of HTTP content specifies a JSON
+     * representation.
+     *
+     * @param contentType the MIME type of HTTP content to determine whether it
+     * specifies a JSON representation
+     * @return <tt>true</tt> if <tt>contentType</tt> stands for a MIME type of
+     * HTTP content which specifies a JSON representation; otherwise,
+     * <tt>false</tt>
+     */
     private boolean isJSONContentType(String contentType)
     {
         return

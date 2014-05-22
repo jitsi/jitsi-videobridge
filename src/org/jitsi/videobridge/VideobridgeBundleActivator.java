@@ -31,6 +31,8 @@ public class VideobridgeBundleActivator
 
     /**
      * Starts the <tt>Videobridge</tt> OSGi bundle in a <tt>BundleContext</tt>.
+     * Initializes and starts a new <tt>Videobridge</tt> instance and registers
+     * it as an OSGi service in the specified <tt>bundleContext</tt>.
      *
      * @param the <tt>BundleContext</tt> in which the <tt>Videobridge</tt> OSGi
      * bundle is to start
@@ -64,6 +66,9 @@ public class VideobridgeBundleActivator
 
     /**
      * Stops the <tt>Videobridge</tt> OSGi bundle in a <tt>BundleContext</tt>.
+     * Unregisters and stops a <tt>Videobridge</tt> instance in the specified
+     * <tt>BundleContext</tt> if such an instance has been registered and
+     * started.
      *
      * @param the <tt>BundleContext</tt> in which the <tt>Videobridge</tt> OSGi
      * bundle is to stop

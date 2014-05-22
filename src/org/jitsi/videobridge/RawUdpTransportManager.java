@@ -115,6 +115,11 @@ public class RawUdpTransportManager
 
         if (nams != null)
         {
+            /*
+             * If there are any ComponentImpl instances implementing the XMPP
+             * API of Jitsi Videobridge, their domains may be used as a hint to
+             * the NetworkAddressManagerService.
+             */
             Content content = channel.getContent();
             Conference conference = content.getConference();
             Videobridge videobridge = conference.getVideobridge();
