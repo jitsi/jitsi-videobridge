@@ -20,6 +20,16 @@ import org.xmpp.component.*;
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
  * which implements an external Jabber component.
+ * <p>
+ * Jitsi Videobridge implements two application programming interfaces (APIs):
+ * XMPP and REST (HTTP/JSON). The APIs to be activated by the application are
+ * specified with the command-line argument <tt>--apis=</tt> the value of which
+ * is a comma-separated list of <tt>xmpp</tt> and <tt>rest</tt>. The default
+ * value is <tt>xmpp</tt> (i.e. if the command-line argument <tt>--apis=</tt> is
+ * not explicitly specified, the application behaves as if <tt>--args=xmpp</tt>
+ * is specified). For example, specify <tt>--apis=rest,xmpp</tt> on the comamnd
+ * line to simultaneously enable the two APIs.
+ * </p>
  *
  * @author Lyubomir Marinov
  */
