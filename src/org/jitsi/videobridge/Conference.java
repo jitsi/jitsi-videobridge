@@ -107,8 +107,6 @@ public class Conference
             throw new NullPointerException("videoBridge");
         if (id == null)
             throw new NullPointerException("id");
-        if (focus == null)
-            throw new NullPointerException("focus");
 
         this.videobridge = videobridge;
         this.id = id;
@@ -123,15 +121,49 @@ public class Conference
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
      * thought of as a description of this instance.
      * <p>
-     * <b>Note</b>: The copying of the values is shallow i.e. the
-     * <tt>Component</tt>s of this instance are not described in the specified
+     * <b>Note</b>: The copying of the values is deep i.e. the
+     * <tt>Contents</tt>s of this instance are described in the specified
      * <tt>iq</tt>.
      * </p>
      *
      * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
      * properties of this instance on
      */
-    public void describe(ColibriConferenceIQ iq)
+    public void describeDeep(ColibriConferenceIQ iq)
+    {
+        describeShallow(iq);
+
+        for (Content content : getContents())
+        {
+            ColibriConferenceIQ.Content contentIQ
+                = iq.getOrCreateContent(content.getName());
+
+            for (Channel channel : content.getChannels())
+            {
+                ColibriConferenceIQ.Channel channelIQ
+                    = new ColibriConferenceIQ.Channel();
+
+                channel.describe(channelIQ);
+                contentIQ.addChannel(channelIQ);
+            }
+        }
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>ColibriConferenceIQ</tt> to the values of the respective
+     * properties of this instance. Thus, the specified <tt>iq</tt> may be
+     * thought of as a description of this instance.
+     * <p>
+     * <b>Note</b>: The copying of the values is shallow i.e. the
+     * <tt>Content</tt>s of this instance are not described in the specified
+     * <tt>iq</tt>.
+     * </p>
+     *
+     * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
+     * properties of this instance on
+     */
+    public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
     }

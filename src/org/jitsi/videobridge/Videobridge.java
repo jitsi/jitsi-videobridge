@@ -6,14 +6,18 @@
  */
 package org.jitsi.videobridge;
 
-import java.lang.ref.*;
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.util.*;
 
+import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.xmpp.*;
+import org.jivesoftware.smack.provider.*;
 import org.osgi.framework.*;
 
 /**
@@ -25,10 +29,24 @@ import org.osgi.framework.*;
 public class Videobridge
 {
     /**
+     * The XML namespace of the <tt>TransportManager</tt> type to be initialized
+     * by <tt>Channel</tt> by default.
+     */
+    private static String defaultTransportManager;
+
+    /**
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger = Logger.getLogger(Videobridge.class);
+
+    /**
+     * The optional flag which specifies to
+     * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)} that
+     * <tt>ColibriConferenceIQ</tt>s without an associated conference focus are
+     * allowed.
+     */
+    public static final int OPTION_ALLOW_NO_FOCUS = 1;
 
     /**
      * The pseudo-random generator which is to be used when generating
@@ -36,6 +54,30 @@ public class Videobridge
      * waiting for the value of {@link System#currentTimeMillis()} to change.
      */
     static final Random RANDOM = new Random();
+
+    /**
+     * The REST-like HTTP/JSON API of Jitsi Videobridge.
+     */
+    public static final String REST_API = "rest";
+
+    /**
+     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
+     * of the REST-like HTTP/JSON API of Jitsi Videobridge.
+     */
+    public static final String REST_API_PNAME
+        = "org.jitsi.videobridge." + REST_API;
+
+    /**
+     * The XMPP API of Jitsi Videobridge.
+     */
+    public static final String XMPP_API = "xmpp";
+
+    /**
+     * The (base) <tt>System</tt> and/or <tt>ConfigurationService</tt> property
+     * of the XMPP API of Jitsi Videobridge.
+     */
+    public static final String XMPP_API_PNAME
+        = "org.jitsi.videobridge." + XMPP_API;
 
     /**
      * Logs a specific <tt>String</tt> at debug level.
@@ -53,16 +95,10 @@ public class Videobridge
     }
 
     /**
-     * The XML namespace of the <tt>TransportManager</tt> type to be initialized
-     * by <tt>Channel</tt> by default.
+     * The (OSGi) <tt>BundleContext</tt> in which this <tt>Videobridge</tt> has
+     * been started.
      */
-    private static String defaultTransportManager;
-
-    /**
-     * The <tt>ComponentImpl</tt> which has initialized this
-     * <tt>Videobridge</tt>.
-     */
-    private final ComponentImpl component;
+    private BundleContext bundleContext;
 
     /**
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
@@ -72,22 +108,11 @@ public class Videobridge
         = new HashMap<String, Conference>();
 
     /**
-     * Initializes a new <tt>Videobridge</tt> instance which is initialized by a
-     * specific <tt>ComponentImpl</tt>.
-     *
-     * @param component the <tt>ComponentImpl</tt> which initialized the new
-     * instance
+     * Initializes a new <tt>Videobridge</tt> instance.
      */
-    public Videobridge(ComponentImpl component)
+    public Videobridge()
     {
-        if (component == null)
-            throw new NullPointerException("component");
-
-        this.component = component;
-
-        logConfigurationServiceProperties();
-
-        new ExpireThread(this).start();
+        new VideobridgeExpireThread(this).start();
     }
 
     /**
@@ -176,6 +201,18 @@ public class Videobridge
     }
 
     /**
+     * Returns the OSGi <tt>BundleContext</tt> in which this
+     * <tt>Videobridge</tt> is executing.
+     *
+     * @return the OSGi <tt>BundleContext</tt> in which this
+     * <tt>Videobridge</tt> is executing.
+     */
+    public BundleContext getBundleContext()
+    {
+        return bundleContext;
+    }
+
+    /**
      * Gets the number of <tt>Channel</tt>s in this <tt>Videobridge</tt> (across
      * all <tt>Conference</tt>s and <tt>Content</tt>s).
      *
@@ -194,15 +231,15 @@ public class Videobridge
     }
 
     /**
-     * Gets the <tt>ComponentImpl</tt> which has initialized this
-     * <tt>Videobridge</tt>.
+     * Gets the <tt>ComponentImpl</tt> instances which implement the XMPP API of
+     * this <tt>Videobridge</tt>.
      *
-     * @return the <tt>ComponentImpl</tt> which has initialized this
-     * <tt>Videobridge</tt>
+     * @return the <tt>ComponentImpl</tt> instances which implement the XMPP API
+     * of this <tt>Videobridge</tt>
      */
-    public ComponentImpl getComponent()
+    public Collection<ComponentImpl> getComponents()
     {
-        return component;
+        return ComponentImpl.getComponents(getBundleContext());
     }
 
     /**
@@ -234,13 +271,19 @@ public class Videobridge
              * A conference is owned by the focus who has initialized it and it
              * may be managed by that focus only.
              */
-            if (conference.getFocus().equals(focus))
+            String conferenceFocus = conference.getFocus();
+
+            if ((conferenceFocus == null)
+                    ? (focus == null)
+                    : conferenceFocus.equals(focus))
             {
                 // It seems the conference is still active.
                 conference.touch();
             }
             else
+            {
                 conference = null;
+            }
         }
 
         return conference;
@@ -287,7 +330,7 @@ public class Videobridge
         {
             if (defaultTransportManager == null)
             {
-                BundleContext bundleContext = getComponent().getBundleContext();
+                BundleContext bundleContext = getBundleContext();
 
                 if (bundleContext != null)
                 {
@@ -318,268 +361,366 @@ public class Videobridge
     }
 
     /**
-     * Logs the properties of the <tt>ConfigurationService</tt> for the purposes
-     * of debugging.
-     */
-    private void logConfigurationServiceProperties()
-    {
-        if (!logger.isInfoEnabled())
-            return;
-
-        boolean interrupted = false;
-
-        try
-        {
-            BundleContext bundleContext = getComponent().getBundleContext();
-
-            if (bundleContext != null)
-            {
-                ConfigurationService cfg
-                    = ServiceUtils.getService(
-                            bundleContext,
-                            ConfigurationService.class);
-
-                if (cfg != null)
-                {
-                    for (String p : cfg.getAllPropertyNames())
-                    {
-                        Object v = cfg.getProperty(p);
-
-                        if (v != null)
-                            logger.info(p + "=" + v);
-                    }
-                }
-            }
-        }
-        catch (Throwable t)
-        {
-            if (t instanceof InterruptedException)
-                interrupted = true;
-            else if (t instanceof ThreadDeath)
-                throw (ThreadDeath) t;
-        }
-        finally
-        {
-            if (interrupted)
-                Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Returns the OSGi <tt>BundleContext</tt> in which the Videobridge is
-     * executing.
+     * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
-     * @return the OSGi <tt>BundleContext</tt> in which the Videobridge is
-     * executing.
+     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
+     * the request to handle
+     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
+     * represents the response to the specified request or <tt>null</tt> to
+     * reply with <tt>feature-not-implemented</tt>
+     * @throws Exception to reply with <tt>internal-server-error</tt> to the
+     * specified request
      */
-    public BundleContext getBundleContext()
+    public ColibriConferenceIQ handleColibriConferenceIQ(
+            ColibriConferenceIQ conferenceIQ)
+        throws Exception
     {
-        return getComponent().getBundleContext();
+        return handleColibriConferenceIQ(conferenceIQ, 0);
     }
 
     /**
-     * Implements a <tt>Thread</tt> which expires the {@link Channel}s of a
-     * specific <tt>Videobridge</tt>.
+     * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
+     *
+     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
+     * the request to handle
+     * @param options
+     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
+     * represents the response to the specified request or <tt>null</tt> to
+     * reply with <tt>feature-not-implemented</tt>
+     * @throws Exception to reply with <tt>internal-server-error</tt> to the
+     * specified request
      */
-    private static class ExpireThread
-        extends Thread
+    public ColibriConferenceIQ handleColibriConferenceIQ(
+            ColibriConferenceIQ conferenceIQ,
+            int options)
+        throws Exception
     {
-        /**
-         * The <tt>Videobridge</tt> which has its {@link Channel}s expired by
-         * this instance. <tt>WeakReference</tt>d to allow this instance to
-         * determine when it is to stop executing.
-         */
-        private final WeakReference<Videobridge> videobridge;
+        String focus = conferenceIQ.getFrom();
+        Conference conference;
 
-        /**
-         * Initializes a new <tt>ExpireThread</tt> instance which is to expire
-         * the {@link Channel}s of a specific <tt>Videobridge</tt>.
-         *
-         * @param videobridge the <tt>Videobridge</tt> which is to have its
-         * <tt>Channel</tt>s expired by the new instance
-         */
-        public ExpireThread(Videobridge videobridge)
+        if ((focus == null) && ((options & OPTION_ALLOW_NO_FOCUS) == 0))
         {
-            this.videobridge = new WeakReference<Videobridge>(videobridge);
+            throw new NullPointerException("focus");
+        }
+        else
+        {
+            /*
+             * The presence of the id attribute in the conference element
+             * signals whether a new conference is to be created or an existing
+             * conference is to be modified.
+             */
+            String id = conferenceIQ.getID();
 
-            setDaemon(true);
-            setName(getClass().getName());
+            conference
+                = (id == null)
+                    ? createConference(focus)
+                    : getConference(id, focus);
         }
 
-        /**
-         * Expires the {@link Channel}s of a specific <tt>Videobridge</tt> if
-         * they have been inactive for more than their advertised
-         * <tt>expire</tt> number of seconds.
-         *
-         * @param videobridge the <tt>Videobridge</tt> which is to have its
-         * <tt>Channel</tt>s expired if they have been inactive for more than
-         * their advertised <tt>expire</tt> number of seconds
-         */
-        private void expire(Videobridge videobridge)
+        ColibriConferenceIQ responseConferenceIQ;
+
+        if (conference == null)
         {
-            for (Conference conference : videobridge.getConferences())
+            /*
+             * Possible reasons for having no Conference instance include
+             * failure to produce an ID which identifies an existing Conference
+             * instance or the JID of a conference focus which owns an existing
+             * Conference instance with a valid ID. 
+             */
+            responseConferenceIQ = null;
+        }
+        else
+        {
+            responseConferenceIQ = new ColibriConferenceIQ();
+            conference.describeShallow(responseConferenceIQ);
+
+            for (ColibriConferenceIQ.Content contentIQ
+                    : conferenceIQ.getContents())
             {
                 /*
-                 * The Conferences will live an iteration more than the
-                 * Contents.
+                 * The content element springs into existence whenever it
+                 * gets mentioned, it does not need explicit creation (in
+                 * contrast to the conference and channel elements).
                  */
-                Content[] contents = conference.getContents();
+                Content content
+                    = conference.getOrCreateContent(contentIQ.getName());
 
-                if (contents.length == 0)
+                if (content == null)
                 {
-                    if ((conference.getLastActivityTime()
-                                + 1000L * Channel.DEFAULT_EXPIRE)
-                            < System.currentTimeMillis())
-                    {
-                        try
-                        {
-                            conference.expire();
-                        }
-                        catch (Throwable t)
-                        {
-                            logger.warn(
-                                    "Failed to expire conference "
-                                        + conference.getID() + "!",
-                                    t);
-                            if (t instanceof ThreadDeath)
-                                throw (ThreadDeath) t;
-                        }
-                    }
+                    responseConferenceIQ = null;
                 }
                 else
                 {
-                    for (Content content : conference.getContents())
-                    {
-                        /*
-                         * The Contents will live an iteration more than the
-                         * Channels.
-                         */
-                        Channel[] channels = content.getChannels();
+                    ColibriConferenceIQ.Content responseContentIQ
+                        = new ColibriConferenceIQ.Content(content.getName());
 
-                        if (channels.length == 0)
+                    responseConferenceIQ.addContent(responseContentIQ);
+
+                    for (ColibriConferenceIQ.Channel channelIQ
+                            : contentIQ.getChannels())
+                    {
+                        String channelID = channelIQ.getID();
+                        int channelExpire = channelIQ.getExpire();
+                        RtpChannel channel;
+
+                        /*
+                         * The presence of the id attribute in the channel
+                         * element signals whether a new channel is to be
+                         * created or an existing channel is to be modified.
+                         */
+                        if (channelID == null)
                         {
-                            if ((content.getLastActivityTime()
-                                        + 1000L * Channel.DEFAULT_EXPIRE)
-                                    < System.currentTimeMillis())
-                            {
-                                try
-                                {
-                                    content.expire();
-                                }
-                                catch (Throwable t)
-                                {
-                                    logger.warn(
-                                            "Failed to expire content "
-                                                + content.getName()
-                                                + " of conference "
-                                                + conference.getID() + "!",
-                                            t);
-                                    if (t instanceof ThreadDeath)
-                                        throw (ThreadDeath) t;
-                                }
-                            }
+                            /*
+                             * An expire attribute in the channel element with
+                             * value equal to zero requests the immediate
+                             * expiration of the channel in question.
+                             * Consequently, it does not make sense to have it
+                             * in a channel allocation request.
+                             */
+                            channel
+                                = (channelExpire == 0)
+                                    ? null
+                                    : content.createChannel();
                         }
                         else
                         {
-                            for (Channel channel : channels)
+                            channel
+                                = (RtpChannel) content.getChannel(channelID);
+                        }
+
+                        if (channel == null)
+                        {
+                            responseConferenceIQ = null;
+                        }
+                        else
+                        {
+                            if (channelExpire
+                                    != ColibriConferenceIQ.Channel
+                                            .EXPIRE_NOT_SPECIFIED)
                             {
-                                if ((channel.getLastActivityTime()
-                                            + 1000L * channel.getExpire())
-                                        < System.currentTimeMillis())
-                                {
-                                    try
-                                    {
-                                        channel.expire();
-                                    }
-                                    catch (Throwable t)
-                                    {
-                                        logger.warn(
-                                                "Failed to expire channel "
-                                                    + channel.getID()
-                                                    + " of content "
-                                                    + content.getName()
-                                                    + " of conference "
-                                                    + conference.getID() + "!",
-                                                t);
-                                        if (t instanceof ThreadDeath)
-                                            throw (ThreadDeath) t;
-                                    }
-                                }
+                                channel.setExpire(channelExpire);
+                                /*
+                                 * If the request indicates that it wants
+                                 * the channel expired and the channel is
+                                 * indeed expired, then the request is valid
+                                 * and has correctly been acted upon.
+                                 */
+                                if ((channelExpire == 0)
+                                        && channel.isExpired())
+                                    continue;
                             }
+
+                            /*
+                             * The attribute rtp-level-relay-type specifies the
+                             * vale of pretty much the most important Channel
+                             * property given that Jitsi Videobridge implements
+                             * an RTP-level relay. Consequently, it is
+                             * intuitively a sign of common sense to take the
+                             * value into account as possible.
+                             * 
+                             * The attribute rtp-level-relay-type is optional.
+                             * If a value is not specified, then the Channel
+                             * rtpLevelRelayType is to not be changed.
+                             */
+                            RTPLevelRelayType rtpLevelRelayType
+                                = channelIQ.getRTPLevelRelayType();
+
+                            if (rtpLevelRelayType != null)
+                                channel.setRTPLevelRelayType(rtpLevelRelayType);
+
+                            /*
+                             * The attribute endpoint is optional. If a value is
+                             * not specified, then the Channel endpoint is to
+                             * not be changed.
+                             */
+                            String endpoint = channelIQ.getEndpoint();
+
+                            if (endpoint != null)
+                                channel.setEndpoint(endpoint);
+
+                            /*
+                             * The attribute last-n is optional. If a value is
+                             * not specified, then the Channel lastN is to not
+                             * be changed.
+                             */
+                            Integer lastN = channelIQ.getLastN();
+
+                            if (lastN != null)
+                                channel.setLastN(lastN);
+
+                            /*
+                             * XXX The attribute initiator is optional. If a
+                             * value is not specified, then the Channel
+                             * initiator is to be assumed default or to not be
+                             * changed.
+                             */
+                            Boolean initiator = channelIQ.isInitiator();
+
+                            if (initiator != null)
+                                channel.setInitiator(initiator);
+
+                            channel.setPayloadTypes(
+                                    channelIQ.getPayloadTypes());
+                            channel.setTransport(channelIQ.getTransport());
+
+                            channel.setDirection(channelIQ.getDirection());
+
+                            /*
+                             * Provide (a description of) the current state of
+                             * the channel as part of the response.
+                             */
+                            ColibriConferenceIQ.Channel responseChannelIQ
+                                = new ColibriConferenceIQ.Channel();
+
+                            channel.describe(responseChannelIQ);
+                            responseContentIQ.addChannel(responseChannelIQ);
                         }
+
+                        if (responseConferenceIQ == null)
+                            break;
                     }
-                }
-            }
-        }
 
-        /**
-         * Runs the loop in the background which expires the {@link Channel}s of
-         * {@link #videobridge} if they have been inactive for more than their
-         * advertised <tt>expire</tt> number of seconds.
-         */
-        @Override
-        public void run()
-        {
-            long wakeup = -1;
-            final long sleep = Channel.DEFAULT_EXPIRE * 1000;
-
-            do
-            {
-                /*
-                 * If the Videobridge of this instance is not referenced
-                 * anymore, then it is time for this Thread to stop executing.
-                 */
-                Videobridge videobridge = this.videobridge.get();
-
-                if (videobridge == null)
-                    break;
-
-                /*
-                 * Run the command of this Thread scheduled with a fixed delay.
-                 */
-                long now = System.currentTimeMillis();
-
-                if (wakeup != -1)
-                {
-                    long slept = now - wakeup;
-
-                    if (slept < sleep)
+                    for(ColibriConferenceIQ.SctpConnection sctpConnIq
+                        : contentIQ.getSctpConnections())
                     {
-                        boolean interrupted = false;
+                        Endpoint endpoint
+                            = conference.getOrCreateEndpoint(
+                                    sctpConnIq.getEndpoint());
 
-                        try
-                        {
-                            Thread.sleep(sleep - slept);
-                        }
-                        catch (InterruptedException ie)
-                        {
-                            interrupted = true;
-                        }
-                        if (interrupted)
-                            Thread.currentThread().interrupt();
+                        int sctpPort = sctpConnIq.getPort();
 
-                        continue;
+                        SctpConnection sctpConn
+                            = content.getSctpConnection(endpoint);
+
+                        int sctpExpire = sctpConnIq.getExpire();
+
+                        if(sctpConn == null && sctpExpire == 0)
+                        {
+                            // Expire request for already expired/non-existing
+                            // SCTP connection
+                            continue;
+                        }
+
+                        if(sctpConn == null)
+                        {
+                            sctpConn
+                                = content.createSctpConnection(
+                                        endpoint, sctpPort);
+                        }
+
+                        // Expire
+                        if (sctpExpire
+                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                        {
+                            sctpConn.setExpire(sctpExpire);
+                        }
+
+                        // Check if SCTP connection has expired
+                        if(sctpConn.isExpired())
+                            continue;
+
+                        // Initiator
+                        Boolean initiator = sctpConnIq.isInitiator();
+
+                        if (initiator != null)
+                            sctpConn.setInitiator(initiator);
+
+                        // Transport
+                        sctpConn.setTransport(sctpConnIq.getTransport());
+
+                        // Response
+                        ColibriConferenceIQ.SctpConnection responseSctpIq
+                            = new ColibriConferenceIQ.SctpConnection();
+
+                        sctpConn.describe(responseSctpIq);
+
+                        responseContentIQ.addSctpConnection(responseSctpIq);
                     }
                 }
 
-                wakeup = now;
-
-                try
-                {
-                    expire(videobridge);
-                }
-                catch (Throwable t)
-                {
-                    logger.error(
-                            "Failed to complete an iteration of automatic"
-                                + " expiry of channels, contents, and"
-                                + " conferences!",
-                            t);
-                    if (t instanceof ThreadDeath)
-                        throw (ThreadDeath) t;
-                }
+                if (responseConferenceIQ == null)
+                    break;
             }
-            while (true);
         }
+
+        if (responseConferenceIQ != null)
+        {
+            responseConferenceIQ.setType(
+                    org.jivesoftware.smack.packet.IQ.Type.RESULT);
+        }
+        return responseConferenceIQ;
+    }
+
+    /**
+     * Starts this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the <tt>BundleContext</tt> in which this
+     * <tt>Videobridge</tt> is to start
+     */
+    void start(BundleContext bundleContext)
+        throws Exception
+    {
+        ProviderManager providerManager = ProviderManager.getInstance();
+
+        // <conference>
+        providerManager.addIQProvider(
+                ColibriConferenceIQ.ELEMENT_NAME,
+                ColibriConferenceIQ.NAMESPACE,
+                new ColibriIQProvider());
+
+        // ICE-UDP <transport>
+        providerManager.addExtensionProvider(
+                IceUdpTransportPacketExtension.ELEMENT_NAME,
+                IceUdpTransportPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider
+                    <IceUdpTransportPacketExtension>(
+                        IceUdpTransportPacketExtension.class));
+        // Raw UDP <transport>
+        providerManager.addExtensionProvider(
+                RawUdpTransportPacketExtension.ELEMENT_NAME,
+                RawUdpTransportPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider
+                    <RawUdpTransportPacketExtension>(
+                        RawUdpTransportPacketExtension.class));
+
+        PacketExtensionProvider candidatePacketExtensionProvider
+            = new DefaultPacketExtensionProvider<CandidatePacketExtension>(
+                    CandidatePacketExtension.class);
+
+        // ICE-UDP <candidate>
+        providerManager.addExtensionProvider(
+                CandidatePacketExtension.ELEMENT_NAME,
+                IceUdpTransportPacketExtension.NAMESPACE,
+                candidatePacketExtensionProvider);
+        // Raw UDP <candidate>
+        providerManager.addExtensionProvider(
+                CandidatePacketExtension.ELEMENT_NAME,
+                RawUdpTransportPacketExtension.NAMESPACE,
+                candidatePacketExtensionProvider);
+
+        // DTLS-SRTP <fingerprint>
+        providerManager.addExtensionProvider(
+                DtlsFingerprintPacketExtension.ELEMENT_NAME,
+                DtlsFingerprintPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider
+                    <DtlsFingerprintPacketExtension>(
+                        DtlsFingerprintPacketExtension.class));
+
+        // TODO Packet logging for ice4j is not supported at this time.
+        StunStack.setPacketLogger(null);
+
+        this.bundleContext = bundleContext;
+    }
+
+    /**
+     * Stops this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the <tt>BundleContext</tt> in which this
+     * <tt>Videobridge</tt> is to stop
+     */
+    void stop(BundleContext bundleContext)
+        throws Exception
+    {
+        this.bundleContext = null;
     }
 }

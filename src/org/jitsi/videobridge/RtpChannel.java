@@ -8,7 +8,6 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
-import java.lang.reflect.*;
 import java.net.*;
 import java.util.*;
 
@@ -17,7 +16,6 @@ import javax.media.rtp.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
-import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 
@@ -28,6 +26,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.videobridge.xmpp.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -717,49 +716,55 @@ public class RtpChannel
     }
 
     /**
-     * Notifies the focus of this <tt>Channel</tt>'s <tt>Conference</tt>
-     * of the current state of this <tt>Channel</tt>.
+     * Called when new <tt>Endpoint</tt> is being set on this <tt>Channel</tt>.
+     * Notifies the focus of this <tt>Channel</tt>'s <tt>Conference</tt> about
+     * the current state of this <tt>Channel</tt>.
      */
     private void notifyFocus()
     {
-        boolean interrupted = false;
+        Content content = getContent();
+        Conference conference = content.getConference();
+        String focus = conference.getFocus();
 
-        try
+        if (focus == null)
+            return;
+
+        Collection<ComponentImpl> components
+            = conference.getVideobridge().getComponents();
+
+        if (!components.isEmpty())
         {
-            Content content = getContent();
-            Conference conference = content.getConference();
-            ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
+            try
+            {
+                ColibriConferenceIQ conferenceIQ = new ColibriConferenceIQ();
 
-            conference.describe(conferenceIQ);
+                conference.describeShallow(conferenceIQ);
 
-            ColibriConferenceIQ.Content contentIQ
-                = conferenceIQ.getOrCreateContent(content.getName());
-            ColibriConferenceIQ.Channel channelIQ
-                = new ColibriConferenceIQ.Channel();
+                ColibriConferenceIQ.Content contentIQ
+                    = conferenceIQ.getOrCreateContent(content.getName());
+                ColibriConferenceIQ.Channel channelIQ
+                    = new ColibriConferenceIQ.Channel();
 
-            describe(channelIQ);
-            contentIQ.addChannel(channelIQ);
+                describe(channelIQ);
+                contentIQ.addChannel(channelIQ);
 
-            conferenceIQ.setTo(conference.getFocus());
-            conferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.SET);
+                conferenceIQ.setTo(focus);
+                conferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.SET);
 
-            conference.getVideobridge().getComponent().send(conferenceIQ);
-        }
-        catch (Throwable t)
-        {
-            /*
-             * A telephony conference will still function, albeit with reduced
-             * SSRC-dependent functionality such as audio levels.
-             */
-            if (t instanceof InterruptedException)
-                interrupted = true;
-            else if (t instanceof ThreadDeath)
-                throw (ThreadDeath) t;
-        }
-        finally
-        {
-            if (interrupted)
-                Thread.currentThread().interrupt();
+                for (ComponentImpl component : components)
+                    component.send(conferenceIQ);
+            }
+            catch (Throwable t)
+            {
+                /*
+                 * A telephony conference will still function, albeit with reduced
+                 * SSRC-dependent functionality such as audio levels.
+                 */
+                if (t instanceof InterruptedException)
+                    Thread.currentThread().interrupt();
+                else if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+            }
         }
     }
 

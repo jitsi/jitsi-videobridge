@@ -38,6 +38,7 @@ public abstract class TransportManager
     private final PropertyChangeListener channelPropertyChangeListener
         = new PropertyChangeListener()
                 {
+                    @Override
                     public void propertyChange(PropertyChangeEvent ev)
                     {
                         channelPropertyChange(ev);

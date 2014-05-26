@@ -344,12 +344,12 @@ public class IceUdpTransportManager
 
         //does this look like an Amazon AWS EC2 machine?
         if(AwsCandidateHarvester.smellsLikeAnEC2())
-        {
             awsHarvester = new AwsCandidateHarvester();
-        }
 
-        ConfigurationService cfg = ServiceUtils.getService(
-                    getBundleContext(), ConfigurationService.class);
+        ConfigurationService cfg
+            = ServiceUtils.getService(
+                    getBundleContext(),
+                    ConfigurationService.class);
 
         //if no configuration is found then we simply log and bail
         if (cfg == null)
