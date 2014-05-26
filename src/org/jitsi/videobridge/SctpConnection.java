@@ -6,9 +6,6 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 
@@ -117,6 +114,12 @@ public class SctpConnection
     private boolean ready;
 
     /**
+     * Flag prevents from starting this connection multiple times from
+     * {@link #maybeStartStream()}.
+     */
+    private boolean started;
+
+    /**
      * List of <tt>WebRtcDataStreamListener</tt>s that will be notified whenever
      * new WebRTC data channel is opened.
      */
@@ -164,7 +167,7 @@ public class SctpConnection
 
         this.remoteSctpPort = remoteSctpPort;
 
-        this.dtlsControl = new DtlsControlImpl();
+        this.dtlsControl = new DtlsControlImpl(true);
 
         this.debugId = generateDebugId();
     }
@@ -173,40 +176,6 @@ public class SctpConnection
     {
         debugIdGen += 2;
         return debugIdGen;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * FIXME: merge this method with the one used by {@link RtpChannel}
-     *        once DTLS common code base is extracted. See {@link DtlsLayer}.
-     */
-    public void setTransport(IceUdpTransportPacketExtension transport)
-        throws IOException
-    {
-        if (transport != null)
-        {
-            List<DtlsFingerprintPacketExtension> dfpes
-                = transport.getChildExtensionsOfType(
-                        DtlsFingerprintPacketExtension.class);
-
-            if (!dfpes.isEmpty())
-            {
-                Map<String,String> remoteFingerprints
-                    = new LinkedHashMap<String,String>();
-
-                for (DtlsFingerprintPacketExtension dfpe : dfpes)
-                {
-                    remoteFingerprints.put(
-                        dfpe.getHash(),
-                        dfpe.getFingerprint());
-                }
-
-                dtlsControl.setRemoteFingerprints(remoteFingerprints);
-            }
-        }
-
-        super.setTransport(transport);
     }
 
     /**
@@ -234,61 +203,23 @@ public class SctpConnection
     }
 
     /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ.SctpConnection</tt> to the values
-     * of the respective properties of this instance. Thus, the specified
-     * <tt>iq</tt> may be thought of as a description of this instance.
-     *
-     * @param iq the <tt>ColibriConferenceIQ.SctpConnection</tt> on which to set
-     *           the values of the properties of this instance
+     * {@inheritDoc}
      */
     @Override
-    public void describe(ColibriConferenceIQ.ChannelCommon iq)
+    protected DtlsControl getDtlsControl()
     {
-        super.describe(iq);
-
-        describeSrtpControl((ColibriConferenceIQ.SctpConnection) iq);
-    }
-
-    /**
-     * Puts the description of DTLS part of the transport into given
-     * <tt>ColibriConferenceIQ.SctpConnection</tt>.
-     *
-     * FIXME: merge this method with the one used by {@link RtpChannel}
-     *        once DTLS common code base is extracted. See {@link DtlsLayer}.
-     */
-    protected void describeSrtpControl(ColibriConferenceIQ.SctpConnection iq)
-    {
-        String fingerprint = dtlsControl.getLocalFingerprint();
-        String hash = dtlsControl.getLocalFingerprintHashFunction();
-
-        IceUdpTransportPacketExtension transportPE = iq.getTransport();
-
-        if (transportPE == null)
-        {
-            transportPE = new RawUdpTransportPacketExtension();
-            iq.setTransport(transportPE);
-        }
-
-        DtlsFingerprintPacketExtension fingerprintPE
-            = transportPE.getFirstChildOfType(
-            DtlsFingerprintPacketExtension.class);
-
-        if (fingerprintPE == null)
-        {
-            fingerprintPE = new DtlsFingerprintPacketExtension();
-            transportPE.addChildExtension(fingerprintPE);
-        }
-        fingerprintPE.setFingerprint(fingerprint);
-        fingerprintPE.setHash(hash);
+        return dtlsControl;
     }
 
     /**
      * {@inheritDoc}
      */
-    protected void maybeStartStream()
+    protected synchronized void maybeStartStream()
         throws IOException
     {
+        if(started)
+            return;
+
         // connector
         final StreamConnector connector = createStreamConnector();
 
@@ -330,6 +261,8 @@ public class SctpConnection
                 }
             }
         }, "SctpConnectionReceiveThread").start();
+
+        started = true;
     }
 
     private void runOnDtlsTransport(StreamConnector connector)
@@ -373,6 +306,8 @@ public class SctpConnection
         // Implement output network link for SCTP stack on DTLS transport
         sctpSocket.setLink(new NetworkLink()
         {
+            private final RawPacket rawPacket = new RawPacket();
+
             @Override
             public void onConnOut(org.jitsi.sctp4j.SctpSocket s, byte[] packet)
                 throws IOException
@@ -389,7 +324,10 @@ public class SctpConnection
                         packet);
 
                 // Send through DTLS transport
-                transformer.sendOverDtls(packet, 0, packet.length);
+                rawPacket.setBuffer(packet);
+                rawPacket.setLength(packet.length);
+
+                transformer.transform(rawPacket);
             }
         });
 
@@ -463,7 +401,8 @@ public class SctpConnection
         {
             // Eventually close the socket, although it should happen from
             // expire()
-            sctpSocket.close();
+            if(sctpSocket != null)
+                sctpSocket.close();
         }
 
     }
@@ -533,7 +472,7 @@ public class SctpConnection
         int messageType = buffer.get();
         if(messageType == MSG_CHANNEL_ACK)
         {
-            logger.info(getEndpoint().getID() + " ACK received SID: "+sid);
+            logger.info(getEndpoint().getID() + " ACK received SID: " + sid);
             // Open channel ACK
             WebRtcDataStream channel = channels.get(sid);
             if(channel != null)
@@ -747,24 +686,6 @@ public class SctpConnection
 
         if (newValue != null)
             newValue.setSctpConnection(this);
-    }
-
-    /**
-     * {@inheritDoc}
-     * FIXME: to be removed once DTLS common code base is extracted
-     */
-    @Override
-    public void setInitiator(boolean initiator)
-    {
-        if (isInitiator() != initiator)
-        {
-            dtlsControl.setSetup(
-                isInitiator()
-                    ? DtlsControl.Setup.PASSIVE
-                    : DtlsControl.Setup.ACTIVE);
-        }
-
-        super.setInitiator(initiator);
     }
 
     /**

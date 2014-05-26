@@ -447,6 +447,17 @@ public class RtpChannel
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void closeStream()
+    {
+        stream.close();
+        stream.removePropertyChangeListener(
+            streamPropertyChangeListener);
+    }
+
+    /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ.ChannelCommon</tt> to the values of the
      * respective properties of this instance. Thus, the specified <tt>iq</tt>
@@ -490,60 +501,24 @@ public class RtpChannel
         }
         iq.setSSRCs(getReceiveSSRCs());
 
-        describeSrtpControl(iq);
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
-     * properties of the <tt>SrtpControl</tT> of the <tt>MediaStream</tt> of
-     * this instance.
-     * 
-     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
-     * values of the properties of the <tt>SrtpControl</tt> of the
-     * <tt>MediaStream</tt> of this instance
-     */
-    private void describeSrtpControl(ColibriConferenceIQ.Channel iq)
-    {
-        SrtpControl srtpControl = stream.getSrtpControl();
-
-        if (srtpControl instanceof DtlsControl)
-        {
-            DtlsControl dtlsControl = (DtlsControl) srtpControl;
-            String fingerprint = dtlsControl.getLocalFingerprint();
-            String hash = dtlsControl.getLocalFingerprintHashFunction();
-
-            IceUdpTransportPacketExtension transportPE = iq.getTransport();
-
-            if (transportPE == null)
-            {
-                transportPE = new RawUdpTransportPacketExtension();
-                iq.setTransport(transportPE);
-            }
-
-            DtlsFingerprintPacketExtension fingerprintPE
-                = transportPE.getFirstChildOfType(
-                        DtlsFingerprintPacketExtension.class);
-
-            if (fingerprintPE == null)
-            {
-                fingerprintPE = new DtlsFingerprintPacketExtension();
-                transportPE.addChildExtension(fingerprintPE);
-            }
-            fingerprintPE.setFingerprint(fingerprint);
-            fingerprintPE.setHash(hash);
-        }
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected void closeStream()
+    protected DtlsControl getDtlsControl()
     {
-        stream.close();
-        stream.removePropertyChangeListener(
-            streamPropertyChangeListener);
+        SrtpControl srtpControl = stream.getSrtpControl();
+
+        if(srtpControl instanceof DtlsControl)
+        {
+            return (DtlsControl) srtpControl;
+        }
+        else
+        {
+            return null;
+        }
     }
 
     /**
@@ -789,6 +764,19 @@ public class RtpChannel
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
+    {
+        if (oldValue != null)
+            oldValue.removeChannel(this);
+
+        if (newValue != null)
+            newValue.addChannel(this);
+    }
+
+    /**
      * Removes a specific RTP SSRC from the list of SSRCs received on this
      * <tt>Channel</tt>.
      *
@@ -858,55 +846,6 @@ public class RtpChannel
             stream.setDirection(direction);
 
         touch(); // It seems this Channel is still active.
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
-    {
-        if (oldValue != null)
-            oldValue.removeChannel(this);
-
-        if (newValue != null)
-            newValue.addChannel(this);
-    }
-
-    /**
-     * Sets the indicator which determines whether the conference focus is the
-     * initiator/offerer (as opposed to the responder/answerer) of the media
-     * negotiation associated with this instance.
-     *
-     * @param initiator <tt>true</tt> if the conference focus is the
-     * initiator/offerer (as opposed to the responder/answerer) of the media
-     * negotiation associated with this instance; otherwise, <tt>false</tt>
-     */
-    @Override
-    public void setInitiator(boolean initiator)
-    {
-        touch(); // It seems this Channel is still active.
-
-        if (isInitiator() != initiator)
-        {
-            /*
-             * We will, of course, fire a PropertyChangeEvent to the outside
-             * world. We will first handle the property change inside though.
-             */
-            SrtpControl srtpControl = stream.getSrtpControl();
-
-            if (srtpControl instanceof DtlsControl)
-            {
-                DtlsControl dtlsControl = (DtlsControl) srtpControl;
-
-                dtlsControl.setSetup(
-                        isInitiator()
-                            ? DtlsControl.Setup.PASSIVE
-                            : DtlsControl.Setup.ACTIVE);
-            }
-        }
-
-        super.setInitiator(initiator);
     }
 
     /**
@@ -1083,52 +1022,6 @@ public class RtpChannel
         }
 
         touch(); // It seems this Channel is still active.
-    }
-
-    /**
-     * Sets a specific <tt>IceUdpTransportPacketExtension</tt> on this
-     * <tt>Channel</tt>.
-     *
-     * @param transport the <tt>IceUdpTransportPacketExtension</tt> to be set on
-     * this <tt>Channel</tt>
-     */
-    @Override
-    public void setTransport(IceUdpTransportPacketExtension transport)
-        throws IOException
-    {
-        if (transport != null)
-        {
-            // DTLS-SRTP
-            SrtpControl srtpControl = stream.getSrtpControl();
-
-            if (srtpControl instanceof DtlsControl)
-            {
-                List<DtlsFingerprintPacketExtension> dfpes
-                    = transport.getChildExtensionsOfType(
-                            DtlsFingerprintPacketExtension.class);
-
-                if (!dfpes.isEmpty())
-                {
-                    Map<String,String> remoteFingerprints
-                        = new LinkedHashMap<String,String>();
-
-                    for (DtlsFingerprintPacketExtension dfpe : dfpes)
-                    {
-                        remoteFingerprints.put(
-                                dfpe.getHash(),
-                                dfpe.getFingerprint());
-                    }
-
-                    DtlsControl dtlsControl = (DtlsControl) srtpControl;
-
-                    dtlsControl.setRemoteFingerprints(remoteFingerprints);
-                }
-            }
-        }
-
-        touch(); // It seems this Channel is still active.
-
-        super.setTransport(transport);
     }
 
     /**

@@ -16,6 +16,7 @@ import org.osgi.framework.*;
 
 import java.io.*;
 import java.lang.reflect.*;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -241,6 +242,7 @@ public abstract class Channel
         iq.setInitiator(isInitiator());
 
         describeTransportManager(iq);
+        describeSrtpControl(iq);
     }
 
     /**
@@ -251,8 +253,46 @@ public abstract class Channel
      * @param iq the <tt>ColibriConferenceIQ.ChannelCommon</tt> on which to set
      *           the values of the properties of <tt>transportManager</tt>
      */
-    protected void describeTransportManager(
-        ColibriConferenceIQ.ChannelCommon iq)
+    private void describeSrtpControl(ColibriConferenceIQ.ChannelCommon iq)
+    {
+        DtlsControl dtlsControl = getDtlsControl();
+
+        if (dtlsControl != null)
+        {
+            String fingerprint = dtlsControl.getLocalFingerprint();
+            String hash = dtlsControl.getLocalFingerprintHashFunction();
+
+            IceUdpTransportPacketExtension transportPE = iq.getTransport();
+
+            if (transportPE == null)
+            {
+                transportPE = new RawUdpTransportPacketExtension();
+                iq.setTransport(transportPE);
+            }
+
+            DtlsFingerprintPacketExtension fingerprintPE
+                = transportPE.getFirstChildOfType(
+                        DtlsFingerprintPacketExtension.class);
+
+            if (fingerprintPE == null)
+            {
+                fingerprintPE = new DtlsFingerprintPacketExtension();
+                transportPE.addChildExtension(fingerprintPE);
+            }
+            fingerprintPE.setFingerprint(fingerprint);
+            fingerprintPE.setHash(hash);
+        }
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
+     * properties of {@link #transportManager}.
+     *
+     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
+     * values of the properties of <tt>transportManager</tt>
+     */
+    private void describeTransportManager(ColibriConferenceIQ.ChannelCommon iq)
     {
         TransportManager transportManager;
 
@@ -373,6 +413,16 @@ public abstract class Channel
     {
         return getContent().getBundleContext();
     }
+
+    /**
+     * Child classes should implement this method and return
+     * <tt>DtlsControl</tt> instance if they are willing to use DTLS transport.
+     * Otherwise <tt>null</tt> should be returned.
+     *
+     * @return <tt>DtlsControl</tt> if this instance supports DTLS transport or
+     *         <tt>null</tt> otherwise.
+     */
+    protected abstract DtlsControl getDtlsControl();
 
     /**
      * Gets the <tt>Endpoint</tt> of the conference participant associated with
@@ -502,6 +552,15 @@ public abstract class Channel
      * @throws IOException if anything goes wrong while starting <tt>stream</tt>
      */
     protected abstract void maybeStartStream() throws IOException;
+
+    /**
+     * Called when new <tt>Endpoint</tt> is being set on this <tt>Channel</tt>.
+     *
+     * @param oldValue old <tt>Endpoint</tt>, can be <tt>null</tt>.
+     * @param newValue new <tt>Endpoint</tt>, can be <tt>null</tt>.
+     */
+    protected abstract void onEndpointChanged(Endpoint oldValue,
+                                              Endpoint newValue);
 
     /**
      * Runs in a (pooled) thread associated with a specific
@@ -638,15 +697,6 @@ public abstract class Channel
     }
 
     /**
-     * Called when new <tt>Endpoint</tt> is being set on this <tt>Channel</tt>.
-     *
-     * @param oldValue old <tt>Endpoint</tt>, can be <tt>null</tt>.
-     * @param newValue new <tt>Endpoint</tt>, can be <tt>null</tt>.
-     */
-    protected abstract void onEndpointChanged(Endpoint oldValue,
-                                              Endpoint newValue);
-
-    /**
      * Sets the number of seconds of inactivity after which this
      * <tt>Channel</tt> is to expire.
      *
@@ -688,6 +738,16 @@ public abstract class Channel
 
         if (oldValue != newValue)
         {
+            DtlsControl dtlsControl = getDtlsControl();
+
+            if(dtlsControl != null)
+            {
+                dtlsControl.setSetup(
+                    isInitiator()
+                        ? DtlsControl.Setup.PASSIVE
+                        : DtlsControl.Setup.ACTIVE);
+            }
+
             firePropertyChange(INITIATOR_PROPERTY, oldValue, newValue);
         }
     }
@@ -705,6 +765,31 @@ public abstract class Channel
         if (transport != null)
         {
             setTransportManager(transport.getNamespace());
+
+            // DTLS-SRTP
+            DtlsControl dtlsControl = getDtlsControl();
+
+            if (dtlsControl != null)
+            {
+                List<DtlsFingerprintPacketExtension> dfpes
+                    = transport.getChildExtensionsOfType(
+                            DtlsFingerprintPacketExtension.class);
+
+                if (!dfpes.isEmpty())
+                {
+                    Map<String,String> remoteFingerprints
+                        = new LinkedHashMap<String,String>();
+
+                    for (DtlsFingerprintPacketExtension dfpe : dfpes)
+                    {
+                        remoteFingerprints.put(
+                                dfpe.getHash(),
+                                dfpe.getFingerprint());
+                    }
+
+                    dtlsControl.setRemoteFingerprints(remoteFingerprints);
+                }
+            }
 
             TransportManager transportManager = getTransportManager();
 
