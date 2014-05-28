@@ -10,6 +10,7 @@ import java.util.*;
 
 import net.java.sip.communicator.service.protocol.*;
 
+import org.ice4j.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -224,6 +225,9 @@ public class Main
                         .MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
                     minPort);
         }
+
+        // Initialize the ice4j stack.
+        StackProperties.initialize();
 
         /*
          * Start OSGi. It will invoke the application programming interfaces
