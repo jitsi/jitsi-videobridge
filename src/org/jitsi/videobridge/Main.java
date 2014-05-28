@@ -113,6 +113,12 @@ public class Main
     private static final String SECRET_ARG_NAME = "--secret=";
 
     /**
+     * The name of the command-line argument which specifies sub-domain name for
+     * the videobridge component.
+     */
+    private static final String SUBDOMAIN_ARG_NAME = "--subdomain=";
+
+    /**
      * Represents the <tt>main</tt> entry point of the Jitsi Videobridge
      * application which implements an external Jabber component.
      *
@@ -131,6 +137,7 @@ public class Main
         int port = PORT_ARG_VALUE;
         String secret = "";
         String domain = null;
+        String componentSubdomain = null;
 
         for (String arg : args)
         {
@@ -170,6 +177,10 @@ public class Main
             else if (arg.startsWith(SECRET_ARG_NAME))
             {
                 secret = arg.substring(SECRET_ARG_NAME.length());
+            }
+            else if (arg.startsWith(SUBDOMAIN_ARG_NAME))
+            {
+                componentSubdomain = arg.substring(SUBDOMAIN_ARG_NAME.length());
             }
         }
 
@@ -243,6 +254,11 @@ public class Main
             ExternalComponentManager componentManager
                 = new ExternalComponentManager(host, port);
             String subdomain = ComponentImpl.SUBDOMAIN;
+            // Override subdomain with cmd argument value
+            if(componentSubdomain != null)
+            {
+                subdomain = componentSubdomain;
+            }
 
             componentManager.setMultipleAllowed(subdomain, true);
             componentManager.setSecretKey(subdomain, secret);
