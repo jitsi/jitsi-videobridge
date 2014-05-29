@@ -35,6 +35,14 @@ public class Videobridge
     private static String defaultTransportManager;
 
     /**
+     * The name of configuration property used to specify default processing
+     * options passed as the second argument to
+     * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)}.
+     */
+    private static final String DEFAULT_OPTIONS_PROPERTY_NAME
+        = "org.jitsi.videobridge.defaultOptions";
+
+    /**
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
      * instances to print debug information.
      */
@@ -47,6 +55,14 @@ public class Videobridge
      * allowed.
      */
     public static final int OPTION_ALLOW_NO_FOCUS = 1;
+
+    /**
+     * The optional flag which specifies to
+     * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)} that
+     * <tt>ColibriConferenceIQ</tt>s can be accessed by any peer(not only by the
+     * focus that created the conference).
+     */
+    public static final int OPTION_ALLOW_ANY_FOCUS = 2;
 
     /**
      * The pseudo-random generator which is to be used when generating
@@ -108,6 +124,12 @@ public class Videobridge
         = new HashMap<String, Conference>();
 
     /**
+     * Default options passed as second argument to
+     * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)}
+     */
+    private int defaultProcessingOptions;
+
+    /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
     public Videobridge()
@@ -119,13 +141,15 @@ public class Videobridge
      * Initializes a new {@link Conference} instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
      * adds the new instance to the list of existing <tt>Conference</tt>
-     * instances. The new instance is owned by a specific conference focus i.e.
-     * further/future requests to manage the new instance must come from the
-     * specified <tt>focus</tt> or they will be ignored.
+     * instances. Optionally the new instance is owned by a specific conference
+     * focus i.e. further/future requests to manage the new instance must come
+     * from the specified <tt>focus</tt> or they will be ignored. If the focus
+     * is not specified this safety check is overridden.
      *
-     * @param focus a <tt>String</tt> which specifies the JID of the conference
-     * focus which will own the new instance i.e. from whom further/future
-     * requests to manage the new instance must come or they will be ignored 
+     * @param focus (optional) a <tt>String</tt> which specifies the JID of
+     * the conference focus which will own the new instance i.e. from whom
+     * further/future requests to manage the new instance must come or they will
+     * be ignored. Pass <tt>null</tt> to override this safety check.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
@@ -247,10 +271,11 @@ public class Videobridge
      * conference focus.
      *
      * @param id the ID of the existing <tt>Conference</tt> to get
-     * @param focus the JID of the conference focus of the existing
+     * @param focus (optional) the JID of the conference focus of the existing
      * <tt>Conference</tt> to get. A <tt>Conference</tt> does not take orders
      * from a (remote) entity other than the conference focus who has
-     * initialized it.
+     * initialized it. Pass <tt>null</tt> if you want any participant to be able
+     * to modify the conference.
      * @return an existing <tt>Conference</tt> with the specified ID and the
      * specified conference focus or <tt>null</tt> if no <tt>Conference</tt>
      * with the specified ID and the specified conference focus is known to this
@@ -268,14 +293,12 @@ public class Videobridge
         if (conference != null)
         {
             /*
-             * A conference is owned by the focus who has initialized it and it
-             * may be managed by that focus only.
+             * (Optional) A conference is owned by the focus who has initialized
+             * it and it may be managed by that focus only.
              */
             String conferenceFocus = conference.getFocus();
 
-            if ((conferenceFocus == null)
-                    ? (focus == null)
-                    : conferenceFocus.equals(focus))
+            if ((conferenceFocus == null) || conferenceFocus.equals(focus))
             {
                 // It seems the conference is still active.
                 conference.touch();
@@ -375,7 +398,8 @@ public class Videobridge
             ColibriConferenceIQ conferenceIQ)
         throws Exception
     {
-        return handleColibriConferenceIQ(conferenceIQ, 0);
+        return handleColibriConferenceIQ(conferenceIQ,
+                                         defaultProcessingOptions);
     }
 
     /**
@@ -397,6 +421,13 @@ public class Videobridge
     {
         String focus = conferenceIQ.getFrom();
         Conference conference;
+
+        if((options & OPTION_ALLOW_ANY_FOCUS) > 0)
+        {
+            // Ack like the focus was not provided at all
+            options |= OPTION_ALLOW_NO_FOCUS;
+            focus = null;
+        }
 
         if ((focus == null) && ((options & OPTION_ALLOW_NO_FOCUS) == 0))
         {
@@ -660,6 +691,16 @@ public class Videobridge
     void start(BundleContext bundleContext)
         throws Exception
     {
+        ConfigurationService config
+            = ServiceUtils.getService(bundleContext,
+                                      ConfigurationService.class);
+
+        this.defaultProcessingOptions
+            = config.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
+
+        logger.info("Default videobridge processing options: 0x"
+                        + Integer.toHexString(defaultProcessingOptions));
+
         ProviderManager providerManager = ProviderManager.getInstance();
 
         // <conference>

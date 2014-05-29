@@ -2,12 +2,16 @@
 <project name="jitsi-videobridge">
 
     <property file="local.properties" />
+    <property name="src" value="src" />
+    <property name="src.test" value="test" />
     <property name="output" value="classes" />
+    <property name="output.test" value="test-classes" />
     <property name="run.arg.line" value="" />
     <property name="run.jvmarg.line" value="" />
     <property name="dist" value="dist" />
     <property name="doc" value="doc"/>
     <property name="java.doc" value="${doc}/api"/>
+    <property name="junit.reports" value="junit-reports"/>
 
     <condition property="label" value="build.SVN">
         <not>
@@ -39,12 +43,22 @@
         <path refid="compile.classpath" />
         <pathelement location="${output}" />
     </path>
+    <path id="test.classpath">
+        <path refid="run.classpath" />
+        <fileset dir="test-lib" includes="*.jar" />
+    </path>
+    <path id="run.test.classpath">
+        <path refid="test.classpath" />
+        <pathelement location="${output.test}" />
+    </path>
 
     <target name="clean">
         <delete failonerror="false" includeemptydirs="true">
             <fileset dir="${output}" />
+            <fileset dir="${output.test}" />
             <fileset dir="${dist}" />
             <fileset dir="${doc}" />
+            <fileset dir="${junit.reports}" />
         </delete>
     </target>
 
@@ -56,8 +70,20 @@
             debug="true"
             fork="true"
             source="1.5"
-            srcdir="src"
+            srcdir="${src}"
             target="1.5" />
+    </target>
+
+    <target name="compile-test" depends="compile">
+        <mkdir dir="${output.test}" />
+        <javac
+                classpathref="test.classpath"
+                destdir="${output.test}"
+                debug="true"
+                fork="true"
+                source="1.5"
+                srcdir="${src.test}"
+                target="1.5" />
     </target>
 
     <target name="run">
@@ -106,6 +132,19 @@
         </java>
     </target>
 
+    <target name="test" depends="compile-test">
+        <mkdir dir="${junit.reports}"/>
+        <junit printsummary="yes" haltonfailure="true" fork="true" forkmode="once">
+            <formatter type="xml" />
+            <classpath refid="run.test.classpath"/>
+            <sysproperty
+                    key="java.library.path"
+                    path="lib/native/linux-64:lib/native/linux:lib/native/mac:lib/native/windows-64:lib/native/windows" />
+            <test name="org.jitsi.videobridge.VideoBridgeTestSuite"
+                  todir="${junit.reports}"/>
+        </junit>
+    </target>
+
     <target name="jar" depends="compile">
         <jar
             compress="true"
@@ -134,7 +173,7 @@
         <javadoc author="true" destdir="${java.doc}" package="true"
             version="true" use="true" windowtitle="Jitsi API"
             classpathref="compile.classpath" source="1.5+" maxmemory="256m">
-            <packageset dir="src">
+            <packageset dir="${src}">
                 <include name="**"/>
             </packageset>
             <tag name="todo" description="To do:"/>
@@ -224,7 +263,7 @@
     </target>
 
     <target name="dist.src" depends="make">
-        <zip destfile="${dist}/src/${packname.src}.zip">
+        <zip destfile="${dist}/${src}/${packname.src}.zip">
             <zipfileset dir="." prefix="${packname.src}">
                 <exclude name="classes/"/>
                 <exclude name="dist/"/>

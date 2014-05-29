@@ -9,6 +9,7 @@ if [[ "$1" == "--help"  || $# -lt 1 ]]; then
     echo -e "\t--max-port=MP\t sets the max port used for media (default: 20000)"
     echo -e "\t--host=HOST\t sets the hostname of the XMPP server (default: domain, if domain is set, \"localhost\" otherwise)"
     echo -e "\t--port=PORT\t sets the port of the XMPP server (default: 5275)"
+    echo -e "\t--subdomain=SUBDOMAIN\t sets the sub-domain used to bind JVB XMPP component (default: jitsi-videobridge)"
     echo
     exit 1
 fi

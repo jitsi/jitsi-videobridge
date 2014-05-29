@@ -40,6 +40,15 @@ public class RtpChannel
     private static final long[] NO_RECEIVE_SSRCS = new long[0];
 
     /**
+     * The <tt>CsrcAudioLevelListener</tt> instance which is set on
+     * <tt>AudioMediaStream</tt> via
+     * {@link AudioMediaStream#setCsrcAudioLevelListener(
+     * CsrcAudioLevelListener)} in order to receive the audio levels of the
+     * contributing sources.
+     */
+    private CsrcAudioLevelListener csrcAudioLevelListener;
+
+    /**
      * The ID of this <tt>Channel</tt> (which is unique within the list of
      * <tt>Channel</tt>s listed in {@link #content} while this instance is
      * listed there as well).
@@ -503,6 +512,32 @@ public class RtpChannel
     }
 
     /**
+     * Gets the <tt>CsrcAudioLevelListener</tt> instance which is set on
+     * <tt>AudioMediaStream</tt> via
+     * {@link AudioMediaStream#setCsrcAudioLevelListener(
+     * CsrcAudioLevelListener)} in order to receive the audio levels of the
+     * contributing sources.
+     *
+     * @return the <tt>CsrcAudioLevelListener</tt> instance
+     */
+    private CsrcAudioLevelListener getCsrcAudioLevelListener()
+    {
+        if (csrcAudioLevelListener == null)
+        {
+            csrcAudioLevelListener
+                = new CsrcAudioLevelListener()
+            {
+                @Override
+                public void audioLevelsReceived(long[] levels)
+                {
+                    streamAudioLevelsReceived(levels);
+                }
+            };
+        }
+        return csrcAudioLevelListener;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -940,7 +975,16 @@ public class RtpChannel
                         uri = null;
                     }
                     if (uri != null)
+                    {
                         stream.addRTPExtension((byte) 1, new RTPExtension(uri));
+                        /*
+                         * Feed the client-to-mixer audio levels into the
+                         * algorithm which detects/identifies the
+                         * active/dominant speaker.
+                         */
+                        ((AudioMediaStream) stream).setCsrcAudioLevelListener(
+                            getCsrcAudioLevelListener());
+                    }
                 }
             }
         }
@@ -1067,6 +1111,57 @@ public class RtpChannel
          * be set on an AudioMediaStream in order to have the audio levels of
          * the contributing sources calculated at all.
          */
+    }
+
+    /**
+     * Notifies this instance that {@link #stream} has received the audio levels
+     * of the contributors to this <tt>Channel</tt>.
+     *
+     * @param levels a <tt>long</tt> array in which the elements at the even
+     * indices specify the CSRC IDs and the elements at the odd indices
+     * specify the respective audio levels
+     */
+    private void streamAudioLevelsReceived(long[] levels)
+    {
+        if (levels != null)
+        {
+            /*
+             * Forward the audio levels of the contributors to this Channel to
+             * the active/dominant speaker detection/identification algorithm.
+             */
+            int[] receiveSSRCs = getReceiveSSRCs();
+
+            if (receiveSSRCs.length != 0)
+            {
+                for (int i = 0, count = levels.length / 2; i < count; i++)
+                {
+                    int i2 = i * 2;
+                    long ssrc = levels[i2];
+                    boolean isReceiveSSRC = false;
+
+                    for (int receiveSSRC : receiveSSRCs)
+                    {
+                        if (ssrc == (0xFFFFFFFFL & receiveSSRC))
+                        {
+                            isReceiveSSRC = true;
+                            break;
+                        }
+                    }
+                    if (isReceiveSSRC)
+                    {
+                        ActiveSpeakerDetector activeSpeakerDetector
+                            = getContent().getActiveSpeakerDetector();
+
+                        if (activeSpeakerDetector != null)
+                        {
+                            int level = (int) levels[i2 + 1];
+
+                            activeSpeakerDetector.levelChanged(ssrc, level);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**

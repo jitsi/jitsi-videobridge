@@ -10,6 +10,7 @@ import java.util.*;
 
 import net.java.sip.communicator.service.protocol.*;
 
+import org.ice4j.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -20,6 +21,16 @@ import org.xmpp.component.*;
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
  * which implements an external Jabber component.
+ * <p>
+ * Jitsi Videobridge implements two application programming interfaces (APIs):
+ * XMPP and REST (HTTP/JSON). The APIs to be activated by the application are
+ * specified with the command-line argument <tt>--apis=</tt> the value of which
+ * is a comma-separated list of <tt>xmpp</tt> and <tt>rest</tt>. The default
+ * value is <tt>xmpp</tt> (i.e. if the command-line argument <tt>--apis=</tt> is
+ * not explicitly specified, the application behaves as if <tt>--args=xmpp</tt>
+ * is specified). For example, specify <tt>--apis=rest,xmpp</tt> on the comamnd
+ * line to simultaneously enable the two APIs.
+ * </p>
  *
  * @author Lyubomir Marinov
  */
@@ -103,6 +114,12 @@ public class Main
     private static final String SECRET_ARG_NAME = "--secret=";
 
     /**
+     * The name of the command-line argument which specifies sub-domain name for
+     * the videobridge component.
+     */
+    private static final String SUBDOMAIN_ARG_NAME = "--subdomain=";
+
+    /**
      * Represents the <tt>main</tt> entry point of the Jitsi Videobridge
      * application which implements an external Jabber component.
      *
@@ -121,6 +138,7 @@ public class Main
         int port = PORT_ARG_VALUE;
         String secret = "";
         String domain = null;
+        String componentSubdomain = null;
 
         for (String arg : args)
         {
@@ -160,6 +178,10 @@ public class Main
             else if (arg.startsWith(SECRET_ARG_NAME))
             {
                 secret = arg.substring(SECRET_ARG_NAME.length());
+            }
+            else if (arg.startsWith(SUBDOMAIN_ARG_NAME))
+            {
+                componentSubdomain = arg.substring(SUBDOMAIN_ARG_NAME.length());
             }
         }
 
@@ -204,6 +226,9 @@ public class Main
                     minPort);
         }
 
+        // Initialize the ice4j stack.
+        StackProperties.initialize();
+
         /*
          * Start OSGi. It will invoke the application programming interfaces
          * (APIs) of Jitsi Videobridge. Each of them will keep the application
@@ -233,6 +258,11 @@ public class Main
             ExternalComponentManager componentManager
                 = new ExternalComponentManager(host, port);
             String subdomain = ComponentImpl.SUBDOMAIN;
+            // Override subdomain with cmd argument value
+            if(componentSubdomain != null)
+            {
+                subdomain = componentSubdomain;
+            }
 
             componentManager.setMultipleAllowed(subdomain, true);
             componentManager.setSecretKey(subdomain, secret);

@@ -12,6 +12,9 @@ import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.event.*;
 import org.jitsi.util.*;
 import org.osgi.framework.*;
 
@@ -44,6 +47,33 @@ public class Conference
     }
 
     /**
+     * The <tt>ActiveSpeakerChangedListener</tt> which listens to
+     * {@link #activeSpeakerDetector} about changes in the active/dominant
+     * speaker in this multipoint conference.
+     */
+    private final ActiveSpeakerChangedListener activeSpeakerChangedListener
+        = new ActiveSpeakerChangedListener()
+                {
+                    @Override
+                    public void activeSpeakerChanged(long ssrc)
+                    {
+                        Conference.this.activeSpeakerChanged(ssrc);
+                    }
+                };
+
+    /**
+     * The <tt>ActiveSpeakerDetector</tt> which detects/identifies the
+     * active/dominant speaker in this <tt>Conference</tt>. 
+     */
+    private ActiveSpeakerDetector activeSpeakerDetector;
+
+    /**
+     * The <tt>Object</tt> which synchronizes the access to
+     * {@link #activeSpeakerDetector}. 
+     */
+    private final Object activeSpeakerDetectorSyncRoot = new Object();
+
+    /**
      * The <tt>Content</tt>s of this <tt>Conference</tt>.
      */
     private final List<Content> contents = new LinkedList<Content>();
@@ -63,7 +93,8 @@ public class Conference
     /**
      * The JID of the conference focus who has initialized this instance and
      * from whom requests to manage this instance must come or they will be
-     * ignored.
+     * ignored. If <tt>null</tt> value is assigned we don't care who modifies
+     * the conference.
      */
     private final String focus;
 
@@ -99,12 +130,13 @@ public class Conference
      * @param id the (unique) ID of the new instance to be initialized
      * @param focus the JID of the conference focus who has requested the
      * initialization of the new instance and from whom further/future requests
-     * to manage the new instance must come or they will be ignored
+     * to manage the new instance must come or they will be ignored.
+     * Pass <tt>null</tt> to override this safety check.
      */
     public Conference(Videobridge videobridge, String id, String focus)
     {
         if (videobridge == null)
-            throw new NullPointerException("videoBridge");
+            throw new NullPointerException("videobridge");
         if (id == null)
             throw new NullPointerException("id");
 
@@ -113,6 +145,37 @@ public class Conference
         this.focus = focus;
 
         this.randomSpeakerGenerator = new RandomSpeakerGenerator();
+    }
+
+    /**
+     * Notifies this <tt>Conference</tt> that the active/dominant speaker has
+     * changed to one identified by a specific synchronization source
+     * identifier/SSRC.
+     * 
+     * @param ssrc the synchronization source identifier/SSRC of the new
+     * active/dominant speaker
+     */
+    private void activeSpeakerChanged(long ssrc)
+    {
+        Endpoint endpoint = findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+
+        /*
+         * TODO (1) Take into account whether the new "active speaker" Endpoint
+         * is null. (2) Even if the synchronization source identifier/SSRC of
+         * the "active speaker" changes, the old and the new SSRCs may
+         * (technically) resolve to one and the same Endpoint i.e. the "active
+         * speaker" Endpoint may not have changed at all. (3) The last "active
+         * speaker" Endpoint may disappear from the list of Endpoints of this
+         * Conference because no Channel is referencing it anymore so another
+         * Endpoint may have to be artifically elected as the new
+         * "active speaker" Endpoint. Anyway, the need for each of these will
+         * likely best be answered once we make use of the "active speaker"
+         * Endpoint.  
+         */
+        logd(
+                "Active speaker in conference " + getID() + " is now endpoint "
+                    + ((endpoint == null) ? "(null)" : endpoint.getID())
+                    + ", SSRC " + ssrc);
     }
 
     /**
@@ -244,6 +307,84 @@ public class Conference
         }
         if (expireContent)
             content.expire();
+    }
+
+    /**
+     * Finds a <tt>Channel</tt> of this <tt>Conference</tt> which receives a
+     * specific SSRC and is with a specific <tt>MediaType</tt>.
+     *
+     * @param receiveSSRC the SSRC of a received RTP stream whose receiving
+     * <tt>Channel</tt> in this <tt>Conference</tt> is to be found
+     * @param mediaType the <tt>MediaType</tt> of the <tt>Channel</tt> to be
+     * found
+     * @return the <tt>Channel</tt> in this <tt>Conference</tt> which receives
+     * the specified <tt>ssrc</tt> and is with the specified <tt>mediaType</tt>;
+     * otherwise, <tt>null</tt>
+     */
+    Channel findChannelByReceiveSSRC(long receiveSSRC, MediaType mediaType)
+    {
+        for (Content content : getContents())
+        {
+            if (mediaType.equals(content.getMediaType()))
+            {
+                Channel channel = content.findChannelByReceiveSSRC(receiveSSRC);
+                if (channel != null)
+                    return channel;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
+     * stream with a specific SSRC and with a specific <tt>MediaType</tt>.
+     *
+     * @param receiveSSRC the SSRC of an RTP stream received by this
+     * <tt>Conference</tt> whose sending <tt>Endpoint</tt> is to be found
+     * @param mediaType the <tt>MediaType</tt> of the RTP stream identified by
+     * the specified <tt>ssrc</tt>
+     * @return <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
+     * stream with the specified <tt>ssrc</tt> and with the specified
+     * <tt>mediaType</tt>; otherwise, <tt>null</tt>
+     */
+    Endpoint findEndpointByReceiveSSRC(long receiveSSRC, MediaType mediaType)
+    {
+        Channel channel = findChannelByReceiveSSRC(receiveSSRC, mediaType);
+
+        return (channel == null) ? null : channel.getEndpoint();
+    }
+
+    /**
+     * Gets the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
+     * active/dominant speaker in this <tt>Conference</tt>.
+     *
+     * @return the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
+     * active/dominant speaker in this <tt>Conference</tt>
+     */
+    ActiveSpeakerDetector getActiveSpeakerDetector()
+    {
+        synchronized (activeSpeakerDetectorSyncRoot)
+        {
+            if (activeSpeakerDetector == null)
+            {
+                activeSpeakerDetector = new ActiveSpeakerDetectorImpl();
+                activeSpeakerDetector.addActiveSpeakerChangedListener(
+                        activeSpeakerChangedListener);
+            }
+            return activeSpeakerDetector;
+        }
+    }
+
+    /**
+     * Returns the OSGi <tt>BundleContext</tt> in which this Conference is
+     * executing.
+     *
+     * @return the OSGi <tt>BundleContext</tt> in which the Conference is
+     * executing.
+     */
+    public BundleContext getBundleContext()
+    {
+        return getVideobridge().getBundleContext();
     }
 
     /**
@@ -392,17 +533,6 @@ public class Conference
         return videobridge;
     }
 
-    /**
-     * Returns the OSGi <tt>BundleContext</tt> in which this Conference is
-     * executing.
-     *
-     * @return the OSGi <tt>BundleContext</tt> in which the Conference is
-     * executing.
-     */
-    public BundleContext getBundleContext()
-    {
-        return getVideobridge().getBundleContext();
-    }
     /**
      * Sets the time in milliseconds of the last activity related to this
      * <tt>Conference</tt> to the current system time.

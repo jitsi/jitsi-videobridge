@@ -20,6 +20,7 @@ import org.osgi.framework.*;
  * Represents a content in the terms of Jitsi Videobridge.
  *
  * @author Lyubomir Marinov
+ * @author Boris Grozev
  */
 public class Content
 {
@@ -318,6 +319,47 @@ public class Content
         return
             Long.toHexString(
                     System.currentTimeMillis() + Videobridge.RANDOM.nextLong());
+    }
+
+    /**
+     * Returns a <tt>Channel</tt> of this <tt>Content</tt>, which has
+     * <tt>receiveSSRC</tt> in its list of received SSRCs, or <tt>null</tt> in
+     * case no such <tt>Channel</tt> exists.
+     *
+     * @param receiveSSRC the SSRC to search for.
+     * @return a <tt>Channel</tt> of this <tt>Content</tt>, which has
+     * <tt>receiveSSRC</tt> in its list of received SSRCs, or <tt>null</tt> in
+     * case no such <tt>Channel</tt> exists.
+     */
+    Channel findChannelByReceiveSSRC(long receiveSSRC)
+    {
+        for (Channel channel : getChannels())
+        {
+            //FIXME: fix instanceof
+            if(!(channel instanceof RtpChannel))
+                continue;
+
+            RtpChannel rtpChannel = (RtpChannel) channel;
+
+            for (int channelReceiveSSRC : rtpChannel.getReceiveSSRCs())
+            {
+                if (receiveSSRC == (0xFFFFFFFFL & channelReceiveSSRC))
+                    return channel;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gets the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
+     * active/dominant speaker in this <tt>Content</tt>.
+     *
+     * @return the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
+     * active/dominant speaker in this <tt>Content</tt>
+     */
+    ActiveSpeakerDetector getActiveSpeakerDetector()
+    {
+        return getConference().getActiveSpeakerDetector();
     }
 
     /**
