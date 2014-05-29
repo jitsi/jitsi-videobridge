@@ -116,11 +116,6 @@ public class Conference
     private final Videobridge videobridge;
 
     /**
-     * FIXME: for testing purpose only, to be removed
-     */
-    private final RandomSpeakerGenerator randomSpeakerGenerator;
-
-    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -143,8 +138,6 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
-
-        this.randomSpeakerGenerator = new RandomSpeakerGenerator();
     }
 
     /**
@@ -176,6 +169,11 @@ public class Conference
                 "Active speaker in conference " + getID() + " is now endpoint "
                     + ((endpoint == null) ? "(null)" : endpoint.getID())
                     + ", SSRC " + ssrc);
+
+        if(endpoint != null)
+        {
+            broadcastMessage("activeSpeaker:"+endpoint.getID());
+        }
     }
 
     /**
@@ -246,8 +244,6 @@ public class Conference
             else
                 expired = true;
         }
-
-        randomSpeakerGenerator.expire();
 
         Videobridge videobridge = getVideobridge();
 
@@ -549,134 +545,78 @@ public class Conference
     }
 
     /**
-     * Class switches active speaker in random intervals from 0 to 10 seconds.
+     * Broadcasts string message to al participants over default data channel.
      *
-     * @author Pawel Domas
+     * @param msg the message to be advertised across conference peers.
      */
-    class RandomSpeakerGenerator
-        implements Runnable
+    private void broadcastMessage(String msg)
     {
-        private final Thread thread;
-        private boolean run = true;
+        ArrayList<WeakReference<Endpoint>> endpointsCopy;
 
-        private final Random r = new Random();
-
-        public RandomSpeakerGenerator()
+        synchronized (endpoints)
         {
-            this.thread = new Thread(this, "RandomActiveSpeakerThread");
-            this.thread.start();
+            endpointsCopy
+                = new ArrayList<WeakReference<Endpoint>>(endpoints);
         }
 
-        @Override
-        public void run()
+        int endpointsCount = endpointsCopy.size();
+
+        if(endpointsCount == 0)
+            return;
+
+        for(WeakReference<Endpoint> endpoint : endpoints)
         {
-            while (run)
-            {
-                List<WeakReference<Endpoint>> endpointsCopy;
+            Endpoint toNotify = endpoint.get();
+            if(toNotify == null)
+                continue;
 
-                synchronized (this)
-                {
-                    try
-                    {
-                        // Random interval from 0 to 10 seconds
-                        this.wait(r.nextInt(10000));
-                        if(!run)
-                            break;
-                    }
-                    catch (InterruptedException e)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
+            sendMessageOnDataChannel(toNotify, msg);
+        }
+    }
 
-                    synchronized (endpoints)
-                    {
-                        endpointsCopy
-                            = new ArrayList<WeakReference<Endpoint>>(endpoints);
-                    }
-                }
+    /**
+     * Sends given <tt>String</tt> <tt>msg</tt> to given <tt>endpoint</tt>
+     * over default data channel.
+     *
+     * @param endpoint message recipient.
+     * @param msg message text to be sent.
+     */
+    private void sendMessageOnDataChannel(Endpoint endpoint, String msg)
+    {
+        String endpointId = endpoint.getID();
 
-                int endpointsCount = endpointsCopy.size();
+        SctpConnection sctpConnection = endpoint.getSctpConnection();
 
-                if(endpointsCount == 0)
-                    continue;
-
-                int idx = r.nextInt(endpointsCount);
-                WeakReference<Endpoint> activeSpeakerCandidate
-                    = endpointsCopy.get(idx);
-
-                Endpoint newActiveSpeaker = activeSpeakerCandidate.get();
-                if(newActiveSpeaker == null)
-                {
-                    // Maybe we'll have luck next time
-                    logger.error("Selected disposed endpoint, continue");
-                    continue;
-                }
-
-                String activeSpeakerId = newActiveSpeaker.getID();
-
-                logger.info("New active speaker: "+activeSpeakerId);
-
-                for(WeakReference<Endpoint> endpoint : endpointsCopy)
-                {
-                    Endpoint toNotify = endpoint.get();
-                    if(toNotify == null)
-                        continue;
-
-                    SctpConnection sctpConnection
-                        = toNotify.getSctpConnection();
-                    if(sctpConnection == null)
-                    {
-                        logger.warn(
-                            "No SCTP connection with " + toNotify.getID());
-                        continue;
-                    }
-
-                    if(!sctpConnection.isReady())
-                    {
-                        logger.warn(
-                            "SCTP connection with " + toNotify.getID()
-                                + " not ready yet");
-                        continue;
-                    }
-
-                    try
-                    {
-                        WebRtcDataStream dataStream
-                            = sctpConnection.getDefaultDataStream();
-
-                        if(dataStream == null)
-                        {
-                            logger.warn("WebRtc data channel not opened yet");
-                            continue;
-                        }
-
-                        dataStream.sendString(
-                            "activeSpeaker:"+activeSpeakerId
-                        );
-                    }
-                    catch (IOException e)
-                    {
-                        logger.error("SCTP error", e);
-                    }
-                }
-            }
+        if(sctpConnection == null)
+        {
+            logger.warn("No SCTP connection with " + endpointId);
+            return;
         }
 
-        public void expire()
+        if(!sctpConnection.isReady())
         {
-            synchronized (this)
+            logger.warn(
+                "SCTP connection with " + endpointId + " not ready yet");
+            return;
+        }
+
+        try
+        {
+            WebRtcDataStream dataStream
+                = sctpConnection.getDefaultDataStream();
+
+            if(dataStream == null)
             {
-                run = false;
-                this.notifyAll();
+                logger.warn(
+                    "WebRtc data channel not opened yet " + endpointId);
+                return;
             }
-            try
-            {
-                this.thread.join();
-            }
-            catch (InterruptedException e)
-            {
-                Thread.currentThread().interrupt();
-            }
+
+            dataStream.sendString(msg);
+        }
+        catch (IOException e)
+        {
+            logger.error("SCTP error, endpoint: " + endpointId, e);
         }
     }
 }
