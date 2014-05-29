@@ -92,7 +92,8 @@ public class Conference
     /**
      * The JID of the conference focus who has initialized this instance and
      * from whom requests to manage this instance must come or they will be
-     * ignored.
+     * ignored. If <tt>null</tt> value is assigned we don't care who modifies
+     * the conference.
      */
     private final String focus;
 
@@ -123,7 +124,8 @@ public class Conference
      * @param id the (unique) ID of the new instance to be initialized
      * @param focus the JID of the conference focus who has requested the
      * initialization of the new instance and from whom further/future requests
-     * to manage the new instance must come or they will be ignored
+     * to manage the new instance must come or they will be ignored.
+     * Pass <tt>null</tt> to override this safety check.
      */
     public Conference(Videobridge videobridge, String id, String focus)
     {
