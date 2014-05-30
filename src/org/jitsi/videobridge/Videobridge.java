@@ -704,18 +704,15 @@ public class Videobridge
             {
                 for (String propertyName : ice4jPropertyNames)
                 {
-                    if (propertyName.startsWith("org.ice4j."))
-                    {
-                        String propertyValue = config.getString(propertyName);
+                    String propertyValue = config.getString(propertyName);
 
-                        // we expect the getString to return either null or a
-                        // non-empty String object.
-                        if (propertyValue == null)
-                            continue;
+                    // we expect the getString to return either null or a
+                    // non-empty String object.
+                    if (propertyValue == null)
+                        continue;
 
-                        System.setProperty(propertyName,
-                                propertyValue);
-                    }
+                    System.setProperty(propertyName,
+                            propertyValue);
                 }
             }
         }
