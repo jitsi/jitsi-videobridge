@@ -329,4 +329,20 @@
         </jar>
     </target>
 
+    <property name="debian.dir" value="resources/install/debian"/>
+    <target name="deb-64" depends="make">
+        <mkdir dir="${debian.dir}/opt/jitsi-videobridge"/>
+        <copy todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}/lib" overwrite="true" includeEmptyDirs="No">
+            <fileset dir="lib/">
+                <exclude name="native/macos*/*"/>
+                <exclude name="native/windows*/*"/>
+                <exclude name="native/linux/*"/>
+            </fileset>
+        </copy>
+        <symlink resource="jitsi-videobridge-${label}" overwrite="true" link="${debian.dir}/opt/jitsi-videobridge/current"/>
+        <copy file="jitsi-videobridge.jar" todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}" overwrite="true"/>
+        <copy file="resources/install/linux-64/jvb.sh" todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}" overwrite="true"/>
+        <chmod file="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}/jvb.sh" perm="755"/>
+    </target>
+
 </project>
