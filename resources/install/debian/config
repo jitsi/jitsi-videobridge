@@ -1,0 +1,8 @@
+#!/bin/sh -e
+
+# Source debconf library.
+. /usr/share/debconf/confmodule
+
+# server hostname
+db_input critical jitsi-videobridge/jvb-hostname || true
+db_go

@@ -1,0 +1,4 @@
+debian/etc/*                            /etc/
+debian/opt/jitsi-videobridge/*          /opt/jitsi-videobridge/
+debian/usr/share/doc/*                  /usr/share/doc/
+debian/usr/lib/prosody/modules/*        /usr/lib/prosody/modules/

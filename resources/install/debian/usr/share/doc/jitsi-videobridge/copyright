@@ -1,0 +1,8 @@
+Format: http://dep.debian.net/deps/dep5
+Upstream-Name: Jitsi Videobridge
+Upstream-Contact: Emil Ivov <emcho@jitsi.org>
+Source: https://download.jitsi.org/jitsi-videobridge/linux/
+
+Files: *
+Copyright: 2013-2014 Jitsi
+License: LGPL-2.1
