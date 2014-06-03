@@ -43,18 +43,22 @@ case "$1" in
     echo "$NAME."
     ;;
   stop)
-# FIXME
-    echo -n "Stopping $DESC: "
-    killall java
-    rm $PIDFILE
 #    start-stop-daemon --stop --quiet --exec $DAEMON
+    echo -n "Stopping $DESC: "
+#    killall java
+    `ps ax | grep jitsi-videobridge | grep -v grep | cut -d " " -f1 | xargs kill`
+    rm $PIDFILE
     echo "$NAME."
+    ;;
+  reload)
+    echo 'Not yet implemented.'
+    ;;
+  status)
+    echo 'Not yet implemented.'
     ;;
   *)
     N=/etc/init.d/$NAME
-# FIXME
-    # echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
-    echo "Usage: $N {start|stop}" >&2
+    echo "Usage: $N {start|stop|reload|status}" >&2
     exit 1
     ;;
 esac
