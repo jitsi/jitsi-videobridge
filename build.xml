@@ -329,8 +329,33 @@
         </jar>
     </target>
 
+
+    <!-- Debian related targets -->
+
     <property name="debian.dir" value="resources/install/debian"/>
-    <target name="deb-64" depends="make">
+    <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
+    <property name="dpkg-buildpackage" value="/usr/bin/dpkg-buildpackage"/>
+    <property name="dh_testdir" value="/usr/bin/dh_testdir"/>
+    <!-- Can we build debian packages? -->
+    <condition property="dpkg.build.present">
+      <and>
+        <available file="${dpkg-buildpackage}"/>
+        <available file="${dh_testdir}"/>
+      </and>
+    </condition>
+    <!-- Can we deploy debian packages? -->
+    <condition property="dpkg.scan.present">
+      <available file="${dpkg-scanpackages}"/>
+    </condition>
+
+    <!-- Outputs a warning notifying the user that a dpkg tool is missing. -->
+    <target name="dpkg-build-warning" unless="dpkg.build.present">
+      <echo message="Either the ${dpkg-buildpackage} tool or the debhelper tools was not found on your system."/>
+      <echo message="Try installing the 'dpkg-dev' and 'debhelper' packages"/>
+    </target>
+
+    <!-- Builds the debian 64-bit package. -->
+    <target name="deb-64" depends="make,dpkg-build-warning">
         <mkdir dir="${debian.dir}/opt/jitsi-videobridge"/>
         <copy todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}/lib" overwrite="true" includeEmptyDirs="No">
             <fileset dir="lib/">
@@ -343,6 +368,19 @@
         <copy file="jitsi-videobridge.jar" todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}" overwrite="true"/>
         <copy file="resources/install/linux-64/jvb.sh" todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}" overwrite="true"/>
         <chmod file="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${label}/jvb.sh" perm="755"/>
+
+        <tar destfile="${debian.dir}/../jitsi-videobridge.debian.tar.gz" basedir="resources/install" includes="debian" compression="gzip"/>
+        <tar destfile="${debian.dir}/../jitsi-videobridge.orig.tar.gz" compression="gzip"/>
+
+        <exec executable="${dpkg-buildpackage}" dir="${debian.dir}/../">
+            <arg value="-tc"/>
+            <arg value="-us"/>
+            <arg value="-uc"/>
+            <arg value="-b"/>
+            <arg value="-d"/>
+<!--            <arg value="-a${deb-arch}"/> -->
+        </exec>
+
     </target>
 
 </project>
