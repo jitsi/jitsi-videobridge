@@ -6,16 +6,16 @@
  */
 package org.jitsi.videobridge;
 
+import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.event.*;
 import org.jitsi.util.*;
+import org.jitsi.util.event.*;
 import org.osgi.framework.*;
 
 /**
@@ -24,7 +24,17 @@ import org.osgi.framework.*;
  * @author Lyubomir Marinov
  */
 public class Conference
+     extends PropertyChangeNotifier
+     implements PropertyChangeListener
 {
+    /**
+     * The name of the <tt>Conference</tt> property <tt>endpoints</tt> which
+     * lists the <tt>Endpoint</tt>s participating in/contributing to the
+     * <tt>Conference</tt>.
+     */
+    public static final String ENDPOINTS_PROPERTY_NAME
+        = Conference.class.getName() + ".endpoints";
+
     /**
      * The <tt>Logger</tt> used by the <tt>Conference</tt> class and its
      * instances to print debug information.
@@ -45,33 +55,6 @@ public class Conference
          */
         logger.info(s);
     }
-
-    /**
-     * The <tt>ActiveSpeakerChangedListener</tt> which listens to
-     * {@link #activeSpeakerDetector} about changes in the active/dominant
-     * speaker in this multipoint conference.
-     */
-    private final ActiveSpeakerChangedListener activeSpeakerChangedListener
-        = new ActiveSpeakerChangedListener()
-                {
-                    @Override
-                    public void activeSpeakerChanged(long ssrc)
-                    {
-                        Conference.this.activeSpeakerChanged(ssrc);
-                    }
-                };
-
-    /**
-     * The <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in this <tt>Conference</tt>. 
-     */
-    private ActiveSpeakerDetector activeSpeakerDetector;
-
-    /**
-     * The <tt>Object</tt> which synchronizes the access to
-     * {@link #activeSpeakerDetector}. 
-     */
-    private final Object activeSpeakerDetectorSyncRoot = new Object();
 
     /**
      * The <tt>Content</tt>s of this <tt>Conference</tt>.
@@ -110,6 +93,14 @@ public class Conference
      */
     private long lastActivityTime;
 
+    private final PropertyChangeListener propertyChangeListener;
+
+    /**
+     * The speech activity (representation) of the <tt>Endpoint</tt>s of this
+     * <tt>Conference</tt>.
+     */
+    private final ConferenceSpeechActivity speechActivity;
+
     /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
@@ -138,42 +129,10 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
-    }
 
-    /**
-     * Notifies this <tt>Conference</tt> that the active/dominant speaker has
-     * changed to one identified by a specific synchronization source
-     * identifier/SSRC.
-     * 
-     * @param ssrc the synchronization source identifier/SSRC of the new
-     * active/dominant speaker
-     */
-    private void activeSpeakerChanged(long ssrc)
-    {
-        Endpoint endpoint = findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
-
-        /*
-         * TODO (1) Take into account whether the new "active speaker" Endpoint
-         * is null. (2) Even if the synchronization source identifier/SSRC of
-         * the "active speaker" changes, the old and the new SSRCs may
-         * (technically) resolve to one and the same Endpoint i.e. the "active
-         * speaker" Endpoint may not have changed at all. (3) The last "active
-         * speaker" Endpoint may disappear from the list of Endpoints of this
-         * Conference because no Channel is referencing it anymore so another
-         * Endpoint may have to be artifically elected as the new
-         * "active speaker" Endpoint. Anyway, the need for each of these will
-         * likely best be answered once we make use of the "active speaker"
-         * Endpoint.  
-         */
-        logd(
-                "Active speaker in conference " + getID() + " is now endpoint "
-                    + ((endpoint == null) ? "(null)" : endpoint.getID())
-                    + ", SSRC " + ssrc);
-
-        if(endpoint != null)
-        {
-            broadcastMessage("activeSpeaker:"+endpoint.getID());
-        }
+        propertyChangeListener = new WeakReferencePropertyChangeListener(this);
+        speechActivity = new ConferenceSpeechActivity(this);
+        speechActivity.addPropertyChangeListener(propertyChangeListener);
     }
 
     /**
@@ -227,6 +186,29 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
+    }
+
+    /**
+     * Notifies this instance that {@link #speechActivity} has identified a
+     * speaker switch event in this multipoint conference and there is now a new
+     * dominant speaker.
+     */
+    private void dominantSpeakerChanged()
+    {
+        Endpoint dominantSpeaker = speechActivity.getDominantEndpoint();
+
+        logd(
+                "The dominant speaker in conference " + getID()
+                    + " is now the endpoint "
+                    + ((dominantSpeaker == null)
+                        ? "(null)"
+                        : dominantSpeaker.getID())
+                    + ".");
+
+        if (dominantSpeaker != null)
+        {
+            broadcastMessage("activeSpeaker:" + dominantSpeaker.getID());
+        }
     }
 
     /**
@@ -351,27 +333,6 @@ public class Conference
     }
 
     /**
-     * Gets the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in this <tt>Conference</tt>.
-     *
-     * @return the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in this <tt>Conference</tt>
-     */
-    ActiveSpeakerDetector getActiveSpeakerDetector()
-    {
-        synchronized (activeSpeakerDetectorSyncRoot)
-        {
-            if (activeSpeakerDetector == null)
-            {
-                activeSpeakerDetector = new ActiveSpeakerDetectorImpl();
-                activeSpeakerDetector.addActiveSpeakerChangedListener(
-                        activeSpeakerChangedListener);
-            }
-            return activeSpeakerDetector;
-        }
-    }
-
-    /**
      * Returns the OSGi <tt>BundleContext</tt> in which this Conference is
      * executing.
      *
@@ -394,6 +355,46 @@ public class Conference
         {
             return contents.toArray(new Content[contents.size()]);
         }
+    }
+
+    /**
+     * Gets the <tt>Endpoint</tt>s participating in/contributing to this
+     * <tt>Conference</tt>.
+     *
+     * @return the <tt>Endpoint</tt>s participating in/contributing to this
+     * <tt>Conference</tt>
+     */
+    public List<Endpoint> getEndpoints()
+    {
+        List<Endpoint> endpoints;
+        boolean changed = false;
+
+        synchronized (this.endpoints)
+        {
+            endpoints = new ArrayList<Endpoint>(this.endpoints.size());
+
+            for (Iterator<WeakReference<Endpoint>> i
+                        = this.endpoints.iterator();
+                    i.hasNext();)
+            {
+                Endpoint endpoint = i.next().get();
+
+                if (endpoint == null)
+                {
+                    i.remove();
+                    changed = true;
+                }
+                else
+                {
+                    endpoints.add(endpoint);
+                }
+            }
+        }
+
+        if (changed)
+            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+
+        return endpoints;
     }
 
     /**
@@ -497,24 +498,57 @@ public class Conference
      */
     public Endpoint getOrCreateEndpoint(String id)
     {
+        Endpoint endpoint = null;
+        boolean changed = false;
+
         synchronized (endpoints)
         {
             for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
                     i.hasNext();)
             {
-                Endpoint endpoint = i.next().get();
-
-                if (endpoint == null)
+                Endpoint e = i.next().get();
+                if (e == null)
+                {
                     i.remove();
-                else if (endpoint.getID().equals(id))
-                    return endpoint;
+                    changed = true;
+                }
+                else if (e.getID().equals(id))
+                {
+                    endpoint = e;
+                }
             }
 
-            Endpoint endpoint = new Endpoint(id);
+            if (endpoint == null)
+            {
+                endpoint = new Endpoint(id);
+                /*
+                 * The propertyChangeListener will weakly reference this
+                 * Conference and will unregister itself from the endpoint
+                 * sooner or later.
+                 */
+                endpoint.addPropertyChangeListener(propertyChangeListener);
 
-            endpoints.add(new WeakReference<Endpoint>(endpoint));
-            return endpoint;
+                endpoints.add(new WeakReference<Endpoint>(endpoint));
+                changed = true;
+            }
         }
+
+        if (changed)
+            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+
+        return endpoint;
+    }
+
+    /**
+     * Gets the speech activity (representation) of the <tt>Endpoint</tt>s of
+     * this <tt>Conference</tt>.
+     *
+     * @return the speech activity (representation) of the <tt>Endpoint</tt>s of
+     * this <tt>Conference</tt>
+     */
+    ConferenceSpeechActivity getSpeechActivity()
+    {
+        return speechActivity;
     }
 
     /**
@@ -527,6 +561,81 @@ public class Conference
     public final Videobridge getVideobridge()
     {
         return videobridge;
+    }
+
+    /**
+     * Notifies this instance that there was a change in the value of a property
+     * of an object in which this instance is interested.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the object of
+     * interest, the name of the property and the old and new values of that
+     * property
+     */
+    public void propertyChange(PropertyChangeEvent ev)
+    {
+        Object source = ev.getSource();
+
+        if (speechActivity == source)
+        {
+            String propertyName = ev.getPropertyName();
+
+            if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
+                    propertyName))
+            {
+                dominantSpeakerChanged();
+            }
+            else if (ConferenceSpeechActivity.ENDPOINTS_PROPERTY_NAME.equals(
+                    propertyName))
+            {
+                speechActivityEndpointsChanged();
+            }
+        }
+    }
+
+    private void speechActivityEndpointsChanged()
+    {
+        List<Endpoint> endpoints = null;
+
+        for (Content content : getContents())
+        {
+            if (MediaType.VIDEO.equals(content.getMediaType()))
+            {
+                Set<Endpoint> endpointsToAskForKeyframes = null;
+
+                endpoints = speechActivity.getEndpoints();
+                for (Channel channel : content.getChannels())
+                {
+                    //FIXME: remove instance of
+                    if (!(channel instanceof RtpChannel))
+                    {
+                        continue;
+                    }
+
+                    RtpChannel rtpChannel = (RtpChannel) channel;
+
+                    List<Endpoint> channelEndpointsToAskForKeyframes
+                        = rtpChannel.lastNEndpointsChanged(endpoints);
+
+                    if ((channelEndpointsToAskForKeyframes != null)
+                            && !channelEndpointsToAskForKeyframes.isEmpty())
+                    {
+                        if (endpointsToAskForKeyframes == null)
+                        {
+                            endpointsToAskForKeyframes
+                                = new HashSet<Endpoint>();
+                        }
+                        endpointsToAskForKeyframes.addAll(
+                                channelEndpointsToAskForKeyframes);
+                    }
+                }
+
+                if ((endpointsToAskForKeyframes != null)
+                        && !endpointsToAskForKeyframes.isEmpty())
+                {
+                    content.askForKeyframes(endpointsToAskForKeyframes);
+                }
+            }
+        }
     }
 
     /**

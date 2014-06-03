@@ -6,18 +6,19 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.service.protocol.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
-import org.jitsi.util.event.*;
-import org.osgi.framework.*;
-
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.*;
+
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.service.protocol.*;
+
+import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
+import org.jitsi.util.event.*;
+import org.osgi.framework.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -46,7 +47,7 @@ public abstract class Channel
      * {@link WrapupConnectivityEstablishmentCommand}).
      */
     private static final ExecutorService executorService
-        = Executors.newCachedThreadPool();
+        = ExecutorUtils.newCachedThreadPool(true, "Channel");
 
     /**
      * The name of the <tt>Channel</tt> property which indicates whether the
@@ -333,6 +334,7 @@ public abstract class Channel
         {
             Conference conference = content.getConference();
 
+            // stream
             try
             {
                 closeStream();
@@ -347,40 +349,51 @@ public abstract class Channel
                 if (t instanceof ThreadDeath)
                     throw (ThreadDeath) t;
             }
-            finally
+
+            // transportManager
+            try
             {
-                try
+                synchronized (transportManagerSyncRoot)
                 {
-                    synchronized (transportManagerSyncRoot)
-                    {
-                        wrapupConnectivityEstablishmentCommand = null;
-                        if (transportManager != null)
-                            transportManager.close();
-                    }
+                    wrapupConnectivityEstablishmentCommand = null;
+                    if (transportManager != null)
+                        transportManager.close();
                 }
-                catch (Throwable t)
-                {
-                    logger.warn(
-                            "Failed to close the"
-                                + " TransportManager/transportManager of"
-                                + " channel " + getID() + " of content "
-                                + content.getName() + " of conference "
-                                + conference.getID() + "!",
-                            t);
-                    if (t instanceof ThreadDeath)
-                        throw (ThreadDeath) t;
-                }
-
-                Videobridge videobridge = conference.getVideobridge();
-
-                logd(
-                        "Expired channel " + getID() + " of content "
-                            + content.getName() + " of conference "
-                            + conference.getID()
-                            + ". The total number of conferences is now "
-                            + videobridge.getConferenceCount() + ", channels "
-                            + videobridge.getChannelCount() + ".");
             }
+            catch (Throwable t)
+            {
+                logger.warn(
+                        "Failed to close the TransportManager/transportManager"
+                            + " of channel " + getID() + " of content "
+                            + content.getName() + " of conference "
+                            + conference.getID() + "!",
+                        t);
+                if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+            }
+
+            // endpoint
+            try
+            {
+                Endpoint endpoint = getEndpoint();
+                // Handle new null Endpoint == remove from Endpoint
+                onEndpointChanged(endpoint, null);
+            }
+            catch (Throwable t)
+            {
+                if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+            }
+
+            Videobridge videobridge = conference.getVideobridge();
+
+            logd(
+                    "Expired channel " + getID() + " of content "
+                        + content.getName() + " of conference "
+                        + conference.getID()
+                        + ". The total number of conferences is now "
+                        + videobridge.getConferenceCount() + ", channels "
+                        + videobridge.getChannelCount() + ".");
         }
     }
 

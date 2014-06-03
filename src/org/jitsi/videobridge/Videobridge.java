@@ -13,6 +13,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.util.*;
 
+import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.Logger;
@@ -749,6 +750,41 @@ public class Videobridge
 
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
+
+        // Make all ice4j properties system properties.
+
+        if (config != null)
+        {
+            List<String> ice4jPropertyNames =
+                    config.getPropertyNamesByPrefix("org.ice4j.", false);
+
+            if (ice4jPropertyNames != null && ice4jPropertyNames.size() != 0)
+            {
+                for (String propertyName : ice4jPropertyNames)
+                {
+                    String propertyValue = config.getString(propertyName);
+
+                    // we expect the getString to return either null or a
+                    // non-empty String object.
+                    if (propertyValue == null)
+                        continue;
+
+                    System.setProperty(propertyName,
+                            propertyValue);
+                }
+            }
+        }
+
+        // Initialize the the host candidate interface filters in the ice4j
+        // stack.
+        try
+        {
+            HostCandidateHarvester.initializeInterfaceFilters();
+        }
+        catch (Exception e){
+            logger.warn("There were errors during host " +
+                    "candidate interface filters initialization.", e);
+        }
 
         this.bundleContext = bundleContext;
     }

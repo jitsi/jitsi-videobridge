@@ -77,8 +77,6 @@ public class FocusControlTest
     public static void setUp()
         throws InterruptedException
     {
-        StackProperties.initialize();
-
         OSGi.start(
             new BundleActivator()
             {

@@ -8,6 +8,7 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
+import java.lang.ref.*;
 import java.net.*;
 import java.util.*;
 
@@ -21,11 +22,13 @@ import net.sf.fmj.media.rtp.RTPHeader;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.event.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -36,8 +39,15 @@ import org.jitsi.videobridge.xmpp.*;
  */
 public class RtpChannel
     extends Channel
+    implements PropertyChangeListener
 {
     private static final long[] NO_RECEIVE_SSRCS = new long[0];
+
+    /**
+     * The speech activity of the <tt>Endpoint</tt>s in the multipoint
+     * conference in which this <tt>Channel</tt> is participating.
+     */
+    private ConferenceSpeechActivity conferenceSpeechActivity;
 
     /**
      * The <tt>CsrcAudioLevelListener</tt> instance which is set on
@@ -47,6 +57,21 @@ public class RtpChannel
      * contributing sources.
      */
     private CsrcAudioLevelListener csrcAudioLevelListener;
+
+    /**
+     * Gets the <tt>Channel</tt> which uses a specific <tt>MediaStream</tt>.
+     *
+     * @param stream a <tt>MediaStream</tt> which was initialized by a
+     * <tt>Channel</tt>
+     * @return the <tt>Channel</tt> which uses the specified
+     * <tt>MediaStream</tt> or <tt>null</tt> if the <tt>mediaStream</tt> was not
+     * initialized by a <tt>Channel</tt> or is no longer used by a
+     * <tt>Channel</tt>
+     */
+    static RtpChannel getChannel(MediaStream stream)
+    {
+        return (RtpChannel) stream.getProperty(RtpChannel.class.getName());
+    }
 
     /**
      * The ID of this <tt>Channel</tt> (which is unique within the list of
@@ -67,6 +92,20 @@ public class RtpChannel
      * to the endpoint associated with this video <tt>Channel</tt>.
      */
     private Integer lastN;
+
+    /**
+     * The <tt>Endpoint</tt>s in the multipoint conference in which this
+     * <tt>Channel</tt> is participating ordered by
+     * {@link #conferenceSpeechActivity} and used by this <tt>Channel</tt> for
+     * the support of {@link #lastN}.
+     */
+    private List<WeakReference<Endpoint>> lastNEndpoints;
+
+    /**
+     * The <tt>Object</tt> which synchronizes the access to
+     * {@link #lastNEndpoints}.
+     */
+    private final Object lastNSyncRoot = new Object();
 
     /**
      * The list of RTP SSRCs received on this <tt>Channel</tt>. An element at
@@ -164,6 +203,7 @@ public class RtpChannel
          */
         stream.addPropertyChangeListener(streamPropertyChangeListener);
         stream.setName(this.id);
+        stream.setProperty(RtpChannel.class.getName(), this);
         stream.setSSRCFactory(ssrcFactory);
 
         /*
@@ -174,6 +214,18 @@ public class RtpChannel
          * here.
          */
         initialLocalSSRC = ssrcFactory.doGenerateSSRC() & 0xFFFFFFFFL;
+
+        conferenceSpeechActivity
+            = getContent().getConference().getSpeechActivity();
+        if (conferenceSpeechActivity != null)
+        {
+            /*
+             * The PropertyChangeListener will weakly reference this instance
+             * and will unregister itself from the conference sooner or later.
+             */
+             conferenceSpeechActivity.addPropertyChangeListener(
+                    new WeakReferencePropertyChangeListener(this));
+        }
 
         touch();
     }
@@ -455,14 +507,32 @@ public class RtpChannel
     }
 
     /**
+     * Asks this <tt>Channel</tt> to request keyframes in the RTP video streams
+     * that it receives.
+     */
+    void askForKeyframes()
+    {
+        int[] receiveSSRCs = getReceiveSSRCs();
+
+        if (receiveSSRCs.length != 0)
+        {
+            RTCPFeedbackMessageSender rtcpFeedbackMessageSender
+                = getContent().getRTCPFeedbackMessageSender();
+
+            if (rtcpFeedbackMessageSender != null)
+                rtcpFeedbackMessageSender.sendFIR(stream, receiveSSRCs);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     protected void closeStream()
     {
+        stream.setProperty(Channel.class.getName(), null);
+        removeStreamListeners();
         stream.close();
-        stream.removePropertyChangeListener(
-            streamPropertyChangeListener);
     }
 
     /**
@@ -509,6 +579,36 @@ public class RtpChannel
         }
         iq.setSSRCs(getReceiveSSRCs());
 
+    }
+
+    /**
+     * Notifies this instance that {@link #conferenceSpeechActivity} has
+     * identified a speaker switch event in the multipoint conference and there
+     * is now a new dominant speaker.
+     */
+    private void dominantSpeakerChanged()
+    {
+        /*
+         * TODO Invoke conferenceSpeechActivity.getDominantEndpoint() and, for
+         * example, notify the Jitsi Videobridge client about the dominance
+         * switch to a new speaker.
+         */
+    }
+
+    /**
+     * Notifies this instance that certain <tt>Endpoint</tt>s are entering the
+     * list of <tt>Endpoint</tt>s defined by {@link #lastN}.
+     *
+     * @param endpoints the <tt>Endpoint</tt>s which are entering the list of
+     * <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+     */
+    private void endpointsEnteringLastN(List<Endpoint> endpoints)
+    {
+        /*
+         * TODO For example, notify the Jitsi Videobridge client that Jitsi
+         * Videobridge will start sending RTP video streams with the SSRCs of
+         * the specified endpoints.
+         */
     }
 
     /**
@@ -666,6 +766,168 @@ public class RtpChannel
     }
 
     /**
+     * Determines whether a specific <tt>Channel</tt> is within the set of
+     * <tt>Channel</tt>s limitted by {@link #lastN} i.e. whether the RTP video
+     * streams of the specified channel are to be sent to the remote endpoint of
+     * this <tt>Channel</tt>.
+     *
+     * @param channel
+     * @return
+     */
+    private boolean isInLastN(Channel channel)
+    {
+        Integer lastNInteger = this.lastN;
+
+        if (lastNInteger == null)
+            return true;
+
+        int lastNInt = lastNInteger.intValue();
+
+        if (lastNInt < 0)
+            return true;
+
+        Endpoint channelEndpoint = channel.getEndpoint();
+
+        if (channelEndpoint == null)
+            return true;
+
+        ConferenceSpeechActivity conferenceSpeechActivity
+            = this.conferenceSpeechActivity;
+
+        if (conferenceSpeechActivity == null)
+            return true;
+        if (lastNInt == 0)
+            return false;
+
+        Endpoint thisEndpoint = getEndpoint();
+        boolean inLastN = false;
+
+        synchronized (lastNSyncRoot)
+        {
+            if (lastNEndpoints == null)
+            {
+                List<Endpoint> endpoints
+                    = conferenceSpeechActivity.getEndpoints();
+
+                lastNEndpoints
+                    = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
+                for (Endpoint endpoint : endpoints)
+                    lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
+            }
+            if (lastNEndpoints != null)
+            {
+                int n = 0;
+
+                for (WeakReference<Endpoint> wr : lastNEndpoints)
+                {
+                    Endpoint e = wr.get();
+
+                    if (e != null)
+                    {
+                        if (e.equals(thisEndpoint))
+                        {
+                            continue;
+                        }
+                        else if (e.equals(channelEndpoint))
+                        {
+                            inLastN = true;
+                            break;
+                        }
+                    }
+
+                    ++n;
+                    if (n >= lastNInt)
+                        break;
+                }
+            }
+        }
+        return inLastN;
+    }
+
+    /**
+     * Notifies this instance that {@link #conferenceSpeechActivity} has ordered
+     * the <tt>Endpoint</tt>s in the multipoint conference in which this
+     * <tt>Channel</tt> is participating and the new order may affect the set of
+     * <tt>lastN</tt> <tt>Endpoint</tt>s translated to the remote endpoint of
+     * this <tt>Channel</tt>.
+     *
+     * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
+     * <tt>conferenceSpeechActivity</tt>
+     * @return a list of the <tt>Endpoint</tt>s which should be asked for
+     * (video) keyframes because, for example, they are entering the set of
+     * <tt>lastN</tt> <tt>Endpoint</tt>s of this <tt>Channel</tt>
+     */
+    List<Endpoint> lastNEndpointsChanged(List<Endpoint> endpoints)
+    {
+        List<Endpoint> endpointsEnteringLastN = null;
+        Endpoint thisEndpoint = getEndpoint();
+
+        synchronized (lastNSyncRoot)
+        {
+            // Determine which Endpoints are entering the list of lastN.
+            Integer lastNInteger = this.lastN;
+            int lastNInt
+                = (lastNInteger == null) ? -1 : lastNInteger.intValue();
+
+            if (lastNInt > 0)
+            {
+                endpointsEnteringLastN = new ArrayList<Endpoint>(lastNInt);
+                // At most the first lastN are entering the list of lastN.
+                for (Endpoint e : endpoints)
+                {
+                    if (!e.equals(thisEndpoint))
+                    {
+                        endpointsEnteringLastN.add(e);
+                        if (endpointsEnteringLastN.size() >= lastNInt)
+                            break;
+                    }
+                }
+                if (lastNEndpoints != null)
+                {
+                    /*
+                     * Some of these first lastN are already in the list of
+                     * lastN.
+                     */
+                    int n = 0;
+
+                    for (WeakReference<Endpoint> wr : lastNEndpoints)
+                    {
+                        Endpoint e = wr.get();
+
+                        if (e != null)
+                        {
+                            if (e.equals(thisEndpoint))
+                                continue;
+                            else
+                                endpointsEnteringLastN.remove(e);
+                        }
+
+                        ++n;
+                        if (n >= lastNInt)
+                            break;
+                    }
+                }
+            }
+
+            // Remember the Endpoints for the purposes of lastN.
+            lastNEndpoints
+                = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
+            for (Endpoint endpoint : endpoints)
+                lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
+        }
+
+        // Handle the Endpoints entering the list of lastN.
+        if ((endpointsEnteringLastN != null)
+            && !endpointsEnteringLastN.isEmpty())
+        {
+            endpointsEnteringLastN(endpointsEnteringLastN);
+        }
+
+        // Request keyframes from the Enpoints entering the list of lastN.
+        return endpointsEnteringLastN;
+    }
+
+    /**
      * Starts {@link #stream} if it has not been started yet and if the state of
      * this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
@@ -817,6 +1079,31 @@ public class RtpChannel
     }
 
     /**
+     * Notifies this instance that there was a change in the value of a property
+     * of an object in which this instance is interested.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the object of
+     * interest, the name of the property and the old and new values of that
+     * property
+     */
+    public void propertyChange(PropertyChangeEvent ev)
+    {
+        Object source = ev.getSource();
+
+        if ((conferenceSpeechActivity == source)
+            && (conferenceSpeechActivity != null))
+        {
+            String propertyName = ev.getPropertyName();
+
+            if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
+                propertyName))
+            {
+                dominantSpeakerChanged();
+            }
+        }
+    }
+
+    /**
      * Removes a specific RTP SSRC from the list of SSRCs received on this
      * <tt>Channel</tt>.
      *
@@ -868,6 +1155,82 @@ public class RtpChannel
         }
 
         return removed;
+    }
+
+    /**
+     * Removes the listeners that this <tt>Channel</tt> has added to
+     * {@link #stream} because this <tt>Channel</tt> is expiring.
+     * <p>
+     * <b>Warning</b>: The procedure must complete without throwing any
+     * exceptions; otherwise, the <tt>stream</tt> will not be closed.
+     * </p>
+     */
+    private void removeStreamListeners()
+    {
+        try
+        {
+            stream.removePropertyChangeListener(
+                streamPropertyChangeListener);
+
+            if (stream instanceof AudioMediaStream)
+            {
+                AudioMediaStream audioStream = (AudioMediaStream) stream;
+                CsrcAudioLevelListener csrcAudioLevelListener
+                    = this.csrcAudioLevelListener;
+                SimpleAudioLevelListener streamAudioLevelListener
+                    = this.streamAudioLevelListener;
+
+                if (csrcAudioLevelListener != null)
+                {
+                    audioStream.setCsrcAudioLevelListener(
+                        csrcAudioLevelListener);
+                }
+                if (streamAudioLevelListener != null)
+                {
+                    audioStream.setStreamAudioLevelListener(
+                        streamAudioLevelListener);
+                }
+            }
+        }
+        catch (Throwable t)
+        {
+            if (t instanceof InterruptedException)
+                Thread.currentThread().interrupt();
+            else if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+        }
+    }
+
+    /**
+     * Notifies this instance that the <tt>RTPTranslator</tt> that it uses will
+     * write a specific packet/<tt>buffer</tt> from a specific <tt>Channel</tt>.
+     * Allows this instance to apply the logic of <tt>lastN</tt> and disallow
+     * the translation of the specified packet from the specified source
+     * <tt>Channel</tt> into this destination <tt>Channel</tt>.
+     *
+     * @param data
+     * @param buffer
+     * @param offset
+     * @param length
+     * @param source
+     * @return <tt>true</tt> to allow the <tt>RTPTranslator</tt> to write the
+     * specified packet/<tt>buffer</tt> into this <tt>Channel</tt>; otherwise,
+     * <tt>false</tt>
+     */
+    boolean rtpTranslatorWillWrite(
+        boolean data,
+        byte[] buffer, int offset, int length,
+        Channel source)
+    {
+        boolean accept = true;
+
+        if (data
+            && (source != null)
+            && MediaType.VIDEO.equals(getContent().getMediaType()))
+        {
+            accept = isInLastN(source);
+        }
+        return accept;
     }
 
     /**
@@ -1133,10 +1496,19 @@ public class RtpChannel
 
             if (receiveSSRCs.length != 0)
             {
+                /*
+                 * The SSRCs are at the even indices, their audio levels at the
+                 * immediately subsequent odd indices.
+                 */
                 for (int i = 0, count = levels.length / 2; i < count; i++)
                 {
                     int i2 = i * 2;
                     long ssrc = levels[i2];
+                    /*
+                     * The contributing SSRCs may not all be from sources
+                     * associated with this Channel and we're only interested in
+                     * the latter here.
+                     */
                     boolean isReceiveSSRC = false;
 
                     for (int receiveSSRC : receiveSSRCs)
@@ -1149,14 +1521,17 @@ public class RtpChannel
                     }
                     if (isReceiveSSRC)
                     {
-                        ActiveSpeakerDetector activeSpeakerDetector
-                            = getContent().getActiveSpeakerDetector();
+                        ConferenceSpeechActivity conferenceSpeechActivity
+                            = this.conferenceSpeechActivity;
 
-                        if (activeSpeakerDetector != null)
+                        if (conferenceSpeechActivity != null)
                         {
                             int level = (int) levels[i2 + 1];
 
-                            activeSpeakerDetector.levelChanged(ssrc, level);
+                            conferenceSpeechActivity.levelChanged(
+                                    this,
+                                    ssrc,
+                                    level);
                         }
                     }
                 }

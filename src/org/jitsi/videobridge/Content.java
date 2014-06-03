@@ -6,10 +6,12 @@
  */
 package org.jitsi.videobridge;
 
+import java.lang.ref.*;
 import java.util.*;
 
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
@@ -23,6 +25,7 @@ import org.osgi.framework.*;
  * @author Boris Grozev
  */
 public class Content
+    implements RTPTranslator.WriteFilter
 {
     /**
      * The <tt>Logger</tt> used by the <tt>Content</tt> class and its instances
@@ -94,6 +97,8 @@ public class Content
      */
     private final String name;
 
+    private RTCPFeedbackMessageSender rtcpFeedbackMessageSender;
+
     /**
      * The <tt>Object</tt> which synchronizes the access to the RTP-level relays
      * (i.e. {@link #mixer} and {@link #rtpTranslator}) provided by this
@@ -129,6 +134,43 @@ public class Content
         mediaType = MediaType.parseString(this.name);
 
         touch();
+    }
+
+    @Override
+    public boolean accept(
+            MediaStream source,
+            byte[] buffer, int offset, int length,
+            MediaStream destination,
+            boolean data)
+    {
+        boolean accept = true;
+
+        if (destination != null)
+        {
+            RtpChannel dst = RtpChannel.getChannel(destination);
+
+            if (dst != null)
+            {
+                RtpChannel src
+                    = (source == null) ? null : RtpChannel.getChannel(source);
+
+                accept
+                    = dst.rtpTranslatorWillWrite(
+                            data,
+                            buffer, offset, length,
+                            src);
+            }
+        }
+        return accept;
+    }
+
+    void askForKeyframes(Set<Endpoint> endpoints)
+    {
+        for (Endpoint endpoint : endpoints)
+        {
+            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
+                channel.askForKeyframes();
+        }
     }
 
     /**
@@ -269,6 +311,7 @@ public class Content
             {
                 if (rtpTranslator != null)
                     rtpTranslator.dispose();
+                rtcpFeedbackMessageSender = null;
             }
 
             Videobridge videobridge = conference.getVideobridge();
@@ -348,18 +391,6 @@ public class Content
             }
         }
         return null;
-    }
-
-    /**
-     * Gets the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in this <tt>Content</tt>.
-     *
-     * @return the <tt>ActiveSpeakerDetector</tt> which detects/identifies the
-     * active/dominant speaker in this <tt>Content</tt>
-     */
-    ActiveSpeakerDetector getActiveSpeakerDetector()
-    {
-        return getConference().getActiveSpeakerDetector();
     }
 
     /**
@@ -530,6 +561,11 @@ public class Content
         return name;
     }
 
+    RTCPFeedbackMessageSender getRTCPFeedbackMessageSender()
+    {
+        return rtcpFeedbackMessageSender;
+    }
+
     /**
      * Gets the <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
      * between the <tt>Channel</tt>s of this <tt>Content</tt> which use a
@@ -544,7 +580,19 @@ public class Content
         synchronized (rtpLevelRelaySyncRoot)
         {
             if (rtpTranslator == null)
+            {
                 rtpTranslator = getMediaService().createRTPTranslator();
+                if (rtpTranslator != null)
+                {
+                    new RTPTranslatorWriteFilter(rtpTranslator, this);
+                    if (rtpTranslator instanceof RTPTranslatorImpl)
+                    {
+                        rtcpFeedbackMessageSender
+                            = new RTCPFeedbackMessageSender(
+                                    (RTPTranslatorImpl) rtpTranslator);
+                    }
+                }
+            }
             return rtpTranslator;
         }
     }
@@ -561,6 +609,55 @@ public class Content
         {
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
+        }
+    }
+
+    private static class RTPTranslatorWriteFilter
+        implements RTPTranslator.WriteFilter
+    {
+        private final WeakReference<RTPTranslator> rtpTranslator;
+
+        private final WeakReference<RTPTranslator.WriteFilter> writeFilter;
+
+        public RTPTranslatorWriteFilter(
+                RTPTranslator rtpTranslator,
+                RTPTranslator.WriteFilter writeFilter)
+        {
+            this.rtpTranslator
+                = new WeakReference<RTPTranslator>(rtpTranslator);
+            this.writeFilter
+                = new WeakReference<RTPTranslator.WriteFilter>(writeFilter);
+
+            rtpTranslator.addWriteFilter(this);
+        }
+
+        @Override
+        public boolean accept(
+                MediaStream source,
+                byte[] buffer, int offset, int length,
+                MediaStream destination,
+                boolean data)
+        {
+            RTPTranslator.WriteFilter writeFilter = this.writeFilter.get();
+            boolean accept = true;
+
+            if (writeFilter == null)
+            {
+                RTPTranslator rtpTranslator = this.rtpTranslator.get();
+
+                if (rtpTranslator != null)
+                    rtpTranslator.removeWriteFilter(this);
+            }
+            else
+            {
+                accept
+                    = writeFilter.accept(
+                            source,
+                            buffer, offset, length,
+                            destination,
+                            data);
+            }
+            return accept;
         }
     }
 }
