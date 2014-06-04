@@ -383,6 +383,10 @@
         <copy file="resources/install/linux-64/jvb.sh" todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${system-arch}-${label}" overwrite="true"/>
         <chmod file="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${system-arch}-${label}/jvb.sh" perm="755"/>
 
+        <!-- correct version in include-binaries paths -->
+        <replaceregexp file="${debian.dir}/source/include-binaries" match="linux-x\d\d-\d+" replace="${system-arch}-${label}" flags="g"/>
+        <replaceregexp file="${debian.dir}/source/include-binaries" match="linux-x\d\d-build\.SVN" replace="${system-arch}-${label}" flags="g"/>
+
         <!-- creating a debian archive file -->
         <tar destfile="resources/jitsi-videobridge_${label}-1.debian.tar.gz" basedir="resources/install" includes="debian/" defaultexcludes="No" compression="gzip"/>
 
