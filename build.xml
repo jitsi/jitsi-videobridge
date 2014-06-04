@@ -407,7 +407,7 @@
             <arg value="-a${arch}"/>
         </exec>
 
-        <!-- clean a bit (leaving the package to get picked later) -->
+        <!-- clean a bit (leaving .deb and .changes to get picked up later) -->
         <delete dir="${debian.dir}/opt/"/>
         <delete file="resources/jitsi-videobridge_${label}-1.debian.tar.gz"/>
         <delete file="resources/jitsi-videobridge_${label}-1.orig.tar.gz"/>
@@ -415,3 +415,4 @@
     </target>
 
 </project>
+

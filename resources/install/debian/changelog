@@ -1,6 +1,6 @@
-jitsi-videobridge (104.1-1) unstable; urgency=low
+jitsi-videobridge (104-1) unstable; urgency=low
 
-  * version 104
+  * Upstream version 104
 
  -- Yasen Pramatarov <yasen@bluejimp.com>  Mon, 26 May 2014 23:39:10 +0100
 
