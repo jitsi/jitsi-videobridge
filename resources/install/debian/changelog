@@ -1,3 +1,9 @@
+jitsi-videobridge (104.1-1) unstable; urgency=low
+
+  * version 104
+
+ -- Yasen Pramatarov <yasen@bluejimp.com>  Mon, 26 May 2014 23:39:10 +0100
+
 jitsi-videobridge (89+20140313-1) unstable; urgency=low
 
   * Initial release

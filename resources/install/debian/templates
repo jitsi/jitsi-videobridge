@@ -9,6 +9,6 @@ Type: boolean
 Default: false
 Description: Advanced Install
  Do you want to select installation parameters instead of the defaults?
- The default installation should give you a working Jitsi Videobridge
- instance right away, while the advanced one may help you troubleshoot
+ The default installation should give you a working Jitsi Videobridge 
+ instance right away, while the advanced one may help you troubleshoot 
  or keep the install minimal..
