@@ -14,7 +14,6 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.RTPTranslator.WriteFilter;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.util.Logger;
 import org.osgi.framework.*;
@@ -54,6 +53,13 @@ public class Content
      */
     private final Map<String, Channel> channels
         = new HashMap<String, Channel>();
+
+    /**
+     * The <tt>SctpConnection</tt>s of this <tt>Content</tt> mapped by their
+     * <tt>Endpoint</tt>s.
+     */
+    private Map<Endpoint, SctpConnection> sctpConnections
+        = new HashMap<Endpoint, SctpConnection>();
 
     /**
      * The <tt>Conference</tt> which has initialized this <tt>Content</tt>.
@@ -141,12 +147,12 @@ public class Content
 
         if (destination != null)
         {
-            Channel dst = Channel.getChannel(destination);
+            RtpChannel dst = RtpChannel.getChannel(destination);
 
             if (dst != null)
             {
-                Channel src
-                    = (source == null) ? null : Channel.getChannel(source);
+                RtpChannel src
+                    = (source == null) ? null : RtpChannel.getChannel(source);
 
                 accept
                     = dst.rtpTranslatorWillWrite(
@@ -162,24 +168,24 @@ public class Content
     {
         for (Endpoint endpoint : endpoints)
         {
-            for (Channel channel : endpoint.getChannels(MediaType.VIDEO))
+            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
                 channel.askForKeyframes();
         }
     }
 
     /**
-     * Initializes a new <tt>Channel</tt> instance and adds it to the list of
-     * <tt>Channel</tt>s of this <tt>Content</tt>. The new <tt>Channel</tt>
-     * instance has an ID which is unique within the list of <tt>Channel</tt>s
-     * of this <tt>Content</tt>.
+     * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
+     * <tt>RtpChannel</tt>s of this <tt>Content</tt>. The new
+     * <tt>RtpChannel</tt> instance has an ID which is unique within the list of
+     * <tt>RtpChannel</tt>s of this <tt>Content</tt>.
      *
      * @return
      * @throws Exception
      */
-    public Channel createChannel()
+    public RtpChannel createChannel()
         throws Exception
     {
-        Channel channel = null;
+        RtpChannel channel = null;
 
         do
         {
@@ -189,7 +195,7 @@ public class Content
             {
                 if (!channels.containsKey(id))
                 {
-                    channel = new Channel(this, id);
+                    channel = new RtpChannel(this, id);
                     channels.put(id, channel);
                 }
             }
@@ -212,6 +218,51 @@ public class Content
                     + videobridge.getChannelCount() + ".");
 
         return channel;
+    }
+
+    /**
+     * Creates new <tt>SctpConnection</tt> with given <tt>Endpoint</tt> on given
+     * <tt>sctpPort</tt>.
+     * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt>
+     * @param sctpPort remote SCTP port that will be used by new
+     *                 <tt>SctpConnection</tt>.
+     * @return new <tt>SctpConnection</tt> with given <tt>Endpoint</tt>
+     * @throws Exception if an error occurs while initializing the new instance
+     * @throws IllegalArgumentException if <tt>SctpConnection</tt> already
+     *         exists for given <tt>Endpoint</tt>.
+     */
+    public SctpConnection createSctpConnection(Endpoint endpoint, int sctpPort)
+        throws Exception
+    {
+        if(this.sctpConnections.containsKey(endpoint))
+        {
+            throw new IllegalArgumentException(
+                "SctpConnection for " + endpoint.getID() + " already exists");
+        }
+
+        SctpConnection sctpConnection
+            = new SctpConnection(this, endpoint, sctpPort);
+
+        sctpConnections.put(endpoint, sctpConnection);
+
+        synchronized (channels)
+        {
+            channels.put(sctpConnection.getID(), sctpConnection);
+        }
+
+        return sctpConnection;
+    }
+
+    /**
+     * Returns <tt>SctpConnection</tt> for given <tt>Endpoint</tt>.
+     * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt> that
+     *                 we're looking for.
+     * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any
+     *         or <tt>null</tt> otherwise.
+     */
+    public SctpConnection getSctpConnection(Endpoint endpoint)
+    {
+        return sctpConnections.get(endpoint);
     }
 
     /**
@@ -327,7 +378,13 @@ public class Content
     {
         for (Channel channel : getChannels())
         {
-            for (int channelReceiveSSRC : channel.getReceiveSSRCs())
+            //FIXME: fix instanceof
+            if(!(channel instanceof RtpChannel))
+                continue;
+
+            RtpChannel rtpChannel = (RtpChannel) channel;
+
+            for (int channelReceiveSSRC : rtpChannel.getReceiveSSRCs())
             {
                 if (receiveSSRC == (0xFFFFFFFFL & channelReceiveSSRC))
                     return channel;
@@ -581,7 +638,7 @@ public class Content
                 MediaStream destination,
                 boolean data)
         {
-            WriteFilter writeFilter = this.writeFilter.get();
+            RTPTranslator.WriteFilter writeFilter = this.writeFilter.get();
             boolean accept = true;
 
             if (writeFilter == null)

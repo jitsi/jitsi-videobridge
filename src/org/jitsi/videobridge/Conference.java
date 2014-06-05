@@ -7,6 +7,7 @@
 package org.jitsi.videobridge;
 
 import java.beans.*;
+import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
@@ -203,6 +204,11 @@ public class Conference
                         ? "(null)"
                         : dominantSpeaker.getID())
                     + ".");
+
+        if (dominantSpeaker != null)
+        {
+            broadcastMessage("activeSpeaker:" + dominantSpeaker.getID());
+        }
     }
 
     /**
@@ -599,8 +605,16 @@ public class Conference
                 endpoints = speechActivity.getEndpoints();
                 for (Channel channel : content.getChannels())
                 {
+                    //FIXME: remove instance of
+                    if (!(channel instanceof RtpChannel))
+                    {
+                        continue;
+                    }
+
+                    RtpChannel rtpChannel = (RtpChannel) channel;
+
                     List<Endpoint> channelEndpointsToAskForKeyframes
-                        = channel.lastNEndpointsChanged(endpoints);
+                        = rtpChannel.lastNEndpointsChanged(endpoints);
 
                     if ((channelEndpointsToAskForKeyframes != null)
                             && !channelEndpointsToAskForKeyframes.isEmpty())
@@ -636,6 +650,82 @@ public class Conference
         {
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
+        }
+    }
+
+    /**
+     * Broadcasts string message to al participants over default data channel.
+     *
+     * @param msg the message to be advertised across conference peers.
+     */
+    private void broadcastMessage(String msg)
+    {
+        ArrayList<WeakReference<Endpoint>> endpointsCopy;
+
+        synchronized (endpoints)
+        {
+            endpointsCopy
+                = new ArrayList<WeakReference<Endpoint>>(endpoints);
+        }
+
+        int endpointsCount = endpointsCopy.size();
+
+        if(endpointsCount == 0)
+            return;
+
+        for(WeakReference<Endpoint> endpoint : endpoints)
+        {
+            Endpoint toNotify = endpoint.get();
+            if(toNotify == null)
+                continue;
+
+            sendMessageOnDataChannel(toNotify, msg);
+        }
+    }
+
+    /**
+     * Sends given <tt>String</tt> <tt>msg</tt> to given <tt>endpoint</tt>
+     * over default data channel.
+     *
+     * @param endpoint message recipient.
+     * @param msg message text to be sent.
+     */
+    private void sendMessageOnDataChannel(Endpoint endpoint, String msg)
+    {
+        String endpointId = endpoint.getID();
+
+        SctpConnection sctpConnection = endpoint.getSctpConnection();
+
+        if(sctpConnection == null)
+        {
+            logger.warn("No SCTP connection with " + endpointId);
+            return;
+        }
+
+        if(!sctpConnection.isReady())
+        {
+            logger.warn(
+                "SCTP connection with " + endpointId + " not ready yet");
+            return;
+        }
+
+        try
+        {
+            WebRtcDataStream dataStream
+                = sctpConnection.getDefaultDataStream();
+
+            if(dataStream == null)
+            {
+                logger.warn(
+                    "WebRtc data channel not opened yet " + endpointId);
+                return;
+            }
+
+            dataStream.sendString(msg);
+        }
+        catch (IOException e)
+        {
+            logger.error("SCTP error, endpoint: " + endpointId, e);
         }
     }
 }

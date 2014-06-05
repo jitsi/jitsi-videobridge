@@ -17,6 +17,7 @@ import org.jitsi.util.event.*;
  *
  * @author Lyubomir Marinov
  * @author Boris Grozev
+ * @author Pawel Domas
  */
 public class Endpoint
     extends PropertyChangeNotifier
@@ -31,8 +32,14 @@ public class Endpoint
     /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
-    private final List<WeakReference<Channel>> channels
-        = new LinkedList<WeakReference<Channel>>();
+    private final List<WeakReference<RtpChannel>> channels
+        = new LinkedList<WeakReference<RtpChannel>>();
+
+    /**
+     * SCTP connection bound to this endpoint.
+     */
+    private WeakReference<SctpConnection> sctpConnection
+        = new WeakReference<SctpConnection>(null);
 
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -65,7 +72,7 @@ public class Endpoint
      * this <tt>Endpoint</tt> changed as a result of the method invocation;
      * otherwise, <tt>false</tt>
      */
-    public boolean addChannel(Channel channel)
+    public boolean addChannel(RtpChannel channel)
     {
         if (channel == null)
             throw new NullPointerException("channel");
@@ -83,10 +90,10 @@ public class Endpoint
         {
             boolean add = true;
 
-            for (Iterator<WeakReference<Channel>> i = channels.iterator();
+            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
                     i.hasNext();)
             {
-                Channel c = i.next().get();
+                RtpChannel c = i.next().get();
 
                 if (c == null)
                 {
@@ -105,7 +112,7 @@ public class Endpoint
             }
             if (add)
             {
-                channels.add(new WeakReference<Channel>(channel));
+                channels.add(new WeakReference<RtpChannel>(channel));
                 added = true;
             }
         }
@@ -142,23 +149,22 @@ public class Endpoint
      * @return a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
      * a particular <tt>MediaType</tt>.
      */
-    public List<Channel> getChannels(MediaType mediaType)
+    public List<RtpChannel> getChannels(MediaType mediaType)
     {
-        List<Channel> channels = new LinkedList<Channel>();
+        List<RtpChannel> channels = new LinkedList<RtpChannel>();
 
-        synchronized (channels)
+        synchronized (this.channels)
         {
-            for (Iterator<WeakReference<Channel>> i = this.channels.iterator();
-                    i.hasNext();)
+            for (WeakReference<RtpChannel> channel1 : this.channels)
             {
-                Channel channel = i.next().get();
+                RtpChannel channel = channel1.get();
 
                 if (channel == null)
                     continue;
 
                 if ((mediaType == null)
-                        || (mediaType.equals(
-                                channel.getContent().getMediaType())))
+                    || (mediaType.equals(
+                    channel.getContent().getMediaType())))
                 {
                     channels.add(channel);
                 }
@@ -187,7 +193,7 @@ public class Endpoint
      * this <tt>Endpoint</tt> changed as a result of the method invocation;
      * otherwise, <tt>false</tt>
      */
-    public boolean removeChannel(Channel channel)
+    public boolean removeChannel(RtpChannel channel)
     {
         if (channel == null)
             return false;
@@ -196,7 +202,7 @@ public class Endpoint
 
         synchronized (channels)
         {
-            for (Iterator<WeakReference<Channel>> i = channels.iterator();
+            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
                     i.hasNext();)
             {
                 Channel c = i.next().get();
@@ -214,4 +220,26 @@ public class Endpoint
 
         return removed;
     }
+
+    /**
+     * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
+     * @param sctpConnection the <tt>SctpConnection</tt> that will be bound to
+     *                       this <tt>Endpoint</tt>.
+     */
+    public void setSctpConnection(SctpConnection sctpConnection)
+    {
+        this.sctpConnection
+            = new WeakReference<SctpConnection>(sctpConnection);
+    }
+
+    /**
+     * Returns an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>.
+     * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>
+     *         or <tt>null</tt> otherwise.
+     */
+    public SctpConnection getSctpConnection()
+    {
+        return this.sctpConnection.get();
+    }
+
 }

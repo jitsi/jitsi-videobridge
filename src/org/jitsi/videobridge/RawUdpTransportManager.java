@@ -187,7 +187,7 @@ public class RawUdpTransportManager
     @Override
     @SuppressWarnings("deprecation") // Compatibility with legacy Jitsi and
                                      // Jitsi Videobridge
-    public void describe(ColibriConferenceIQ.Channel iq)
+    public void describe(ColibriConferenceIQ.ChannelCommon iq)
     {
         super.describe(iq);
 
@@ -218,9 +218,15 @@ public class RawUdpTransportManager
                     host = candidate.getIP();
             }
 
-            iq.setHost(host);
-            iq.setRTCPPort(rtcpPort);
-            iq.setRTPPort(rtpPort);
+            if(iq instanceof ColibriConferenceIQ.Channel)
+            {
+                ColibriConferenceIQ.Channel channelIq
+                    = (ColibriConferenceIQ.Channel) iq;
+
+                channelIq.setHost(host);
+                channelIq.setRTCPPort(rtcpPort);
+                channelIq.setRTPPort(rtpPort);
+            }
         }
     }
 

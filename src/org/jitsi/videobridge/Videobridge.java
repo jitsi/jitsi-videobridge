@@ -493,7 +493,7 @@ public class Videobridge
                     {
                         String channelID = channelIQ.getID();
                         int channelExpire = channelIQ.getExpire();
-                        Channel channel;
+                        RtpChannel channel;
 
                         /*
                          * The presence of the id attribute in the channel
@@ -516,7 +516,8 @@ public class Videobridge
                         }
                         else
                         {
-                            channel = content.getChannel(channelID);
+                            channel
+                                = (RtpChannel) content.getChannel(channelID);
                         }
 
                         if (channel == null)
@@ -609,6 +610,63 @@ public class Videobridge
 
                         if (responseConferenceIQ == null)
                             break;
+                    }
+
+                    for(ColibriConferenceIQ.SctpConnection sctpConnIq
+                        : contentIQ.getSctpConnections())
+                    {
+                        Endpoint endpoint
+                            = conference.getOrCreateEndpoint(
+                                    sctpConnIq.getEndpoint());
+
+                        int sctpPort = sctpConnIq.getPort();
+
+                        SctpConnection sctpConn
+                            = content.getSctpConnection(endpoint);
+
+                        int sctpExpire = sctpConnIq.getExpire();
+
+                        if(sctpConn == null && sctpExpire == 0)
+                        {
+                            // Expire request for already expired/non-existing
+                            // SCTP connection
+                            continue;
+                        }
+
+                        if(sctpConn == null)
+                        {
+                            sctpConn
+                                = content.createSctpConnection(
+                                        endpoint, sctpPort);
+                        }
+
+                        // Expire
+                        if (sctpExpire
+                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                        {
+                            sctpConn.setExpire(sctpExpire);
+                        }
+
+                        // Check if SCTP connection has expired
+                        if(sctpConn.isExpired())
+                            continue;
+
+                        // Initiator
+                        Boolean initiator = sctpConnIq.isInitiator();
+
+                        if (initiator != null)
+                            sctpConn.setInitiator(initiator);
+
+                        // Transport
+                        sctpConn.setTransport(sctpConnIq.getTransport());
+
+                        // Response
+                        ColibriConferenceIQ.SctpConnection responseSctpIq
+                            = new ColibriConferenceIQ.SctpConnection();
+
+                        sctpConn.describe(responseSctpIq);
+
+                        responseContentIQ.addSctpConnection(responseSctpIq);
                     }
                 }
 
