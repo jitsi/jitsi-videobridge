@@ -29,4 +29,4 @@ FOR %%F IN (lib/*.jar) DO (
   SET cp=!cp!;lib/%%F%
 )
 
-java -Djava.library.path=lib/native/windows-64 -cp %cp% %mainClass% %*
+java -Djava.library.path=lib/native/windows-64 -Djava.util.logging.config.file=lib/logging.properties -cp %cp% %mainClass% %*

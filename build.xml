@@ -128,6 +128,7 @@
 	            failonerror="true"
 	            fork="true" >
             <jvmarg line="${run.java.library.path} ${run.jvmarg.line}" />
+            <jvmarg value="-Djava.util.logging.config.file=${basedir}/lib/logging.properties"/>
             <arg line="${run.arg.line}" />
         </java>
     </target>
