@@ -97,6 +97,27 @@ public class Videobridge
         = "org.jitsi.videobridge." + XMPP_API;
 
     /**
+     * The name of the property which controls whether media recording is
+     * enabled.
+     */
+    static final String MEDIA_RECORDING_PATH_PNAME
+        = "org.jitsi.videobridge.MEDIA_RECORDING_PATH";
+
+    /**
+    * The name of the property which specifies the path to the directory in
+    * which media recordings will be stored.
+    */
+    static final String ENABLE_MEDIA_RECORDING_PNAME
+        = "org.jitsi.videobridge.ENABLE_MEDIA_RECORDING";
+
+    /**
+     * The name of the property which specifies the token used to authenticate
+     * requests to enable media recording.
+     */
+    static final String MEDIA_RECORDING_TOKEN_PNAME
+        = "org.jitsi.videobridge.MEDIA_RECORDING_TOKEN";
+
+    /**
      * Logs a specific <tt>String</tt> at debug level.
      *
      * @param s the <tt>String</tt> to log at debug level 
@@ -425,7 +446,7 @@ public class Videobridge
 
         if((options & OPTION_ALLOW_ANY_FOCUS) > 0)
         {
-            // Ack like the focus was not provided at all
+            // Act like the focus was not provided at all
             options |= OPTION_ALLOW_NO_FOCUS;
             focus = null;
         }
@@ -443,10 +464,12 @@ public class Videobridge
              */
             String id = conferenceIQ.getID();
 
-            conference
-                = (id == null)
-                    ? createConference(focus)
-                    : getConference(id, focus);
+            if (id == null)
+                conference = createConference(focus);
+            else
+            {
+                conference = getConference(id, focus);
+            }
         }
 
         ColibriConferenceIQ responseConferenceIQ;
@@ -465,6 +488,30 @@ public class Videobridge
         {
             responseConferenceIQ = new ColibriConferenceIQ();
             conference.describeShallow(responseConferenceIQ);
+
+            ColibriConferenceIQ.Recording recordingIQ
+                = conferenceIQ.getRecording();
+            if (recordingIQ != null)
+            {
+                String tokenConfig
+                    = getConfigurationService()
+                    .getString(Videobridge.MEDIA_RECORDING_TOKEN_PNAME);
+
+                String tokenIQ = recordingIQ.getToken();
+
+                if (tokenIQ != null
+                        && tokenIQ.equals(tokenConfig))
+                {
+                    boolean recording
+                        = conference.setRecording(recordingIQ.getState());
+
+                    ColibriConferenceIQ.Recording responseRecordingIq
+                            = new ColibriConferenceIQ.Recording(recording);
+                    if (recording)
+                        responseRecordingIq.setPath(conference.getRecordingPath());
+                    responseConferenceIQ.setRecording(responseRecordingIq);
+                }
+            }
 
             for (ColibriConferenceIQ.Content contentIQ
                     : conferenceIQ.getContents())
@@ -799,5 +846,25 @@ public class Videobridge
         throws Exception
     {
         this.bundleContext = null;
+    }
+
+    /**
+     * Returns the <tt>ConfigurationService</tt> used by this
+     * <tt>Videobridge</tt>.
+     *
+     * @return the <tt>ConfigurationService</tt> used by this
+     * <tt>Videobridge</tt>.
+     */
+    ConfigurationService getConfigurationService()
+    {
+        BundleContext bundleContext = getBundleContext();
+
+        if (bundleContext != null)
+        {
+            return ServiceUtils.getService(bundleContext,
+                                           ConfigurationService.class);
+        }
+
+        return null;
     }
 }

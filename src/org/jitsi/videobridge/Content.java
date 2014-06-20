@@ -6,15 +6,18 @@
  */
 package org.jitsi.videobridge;
 
+import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
+import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.osgi.framework.*;
 
@@ -112,6 +115,31 @@ public class Content
      * relay.
      */
     private RTPTranslator rtpTranslator;
+
+    /**
+     * Path to the directory into which files relating to media recording for
+     * this <tt>Content</tt> will be stored.
+     */
+    private String recordingPath = null;
+
+    /**
+     * Whether media recording is currently enabled for this <tt>Content</tt>.
+     */
+    private boolean recording = false;
+
+    /**
+     * The <tt>Recorder</tt> instance used to record video.
+     */
+    private Recorder recorder = null;
+
+    /**
+     * The local synchronization source identifier (SSRC) associated with this
+     * <tt>Content</tt>, which is to to be pre-announced by the
+     * <tt>Channel</tt>s of this <tt>Content</tt>.
+     *
+     * Currently, the value is taken into account in the case of RTP translation.
+     */
+    private long initialLocalSSRC = -1;
 
     /**
      * Initializes a new <tt>Content</tt> instance which is to be a part of a
@@ -280,6 +308,7 @@ public class Content
                 expired = true;
         }
 
+        setRecording(false, null);
         Conference conference = getConference();
 
         try
@@ -486,27 +515,6 @@ public class Content
     }
 
     /**
-     * Returns a <tt>MediaService</tt> implementation (if any).
-     *
-     * @return a <tt>MediaService</tt> implementation (if any)
-     */
-    MediaService getMediaService()
-    {
-        MediaService mediaService
-            = ServiceUtils.getService(getBundleContext(), MediaService.class);
-
-        /*
-         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
-         * the MediaService implementation. In the form of a temporary
-         * workaround, get it through LibJitsi.
-         */
-        if (mediaService == null)
-            mediaService = LibJitsi.getMediaService();
-
-        return mediaService;
-    }
-
-    /**
      * Gets the <tt>MediaType</tt> of this <tt>Content</tt>. The implementation
      * detects the <tt>MediaType</tt> by looking at the <tt>name</tt> of this
      * instance.
@@ -587,9 +595,18 @@ public class Content
                     new RTPTranslatorWriteFilter(rtpTranslator, this);
                     if (rtpTranslator instanceof RTPTranslatorImpl)
                     {
+                        RTPTranslatorImpl rtpTranslatorImpl
+                                = (RTPTranslatorImpl) rtpTranslator;
+
+                        initialLocalSSRC = new Random().nextInt();
+
+                        rtpTranslatorImpl.setSSRCFactory(
+                                new SSRCFactoryImpl(initialLocalSSRC));
+
                         rtcpFeedbackMessageSender
                             = new RTCPFeedbackMessageSender(
                                     (RTPTranslatorImpl) rtpTranslator);
+                        //    = rtpTranslatorImpl.getRtcpFeedbackMessageSender();
                     }
                 }
             }
@@ -610,6 +627,166 @@ public class Content
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
         }
+    }
+
+    /**
+     * Gets the <tt>Recorder</tt> instance used to record media for this
+     * <tt>Content</tt>. Creates it, if necessary.
+     *
+     * TODO: For the moment it is assumed that only RTP translation is used.
+     *
+     * @return the <tt>Recorder</tt> instance used to record media for this
+     * <tt>Content</tt>.
+     */
+    public Recorder getRecorder()
+    {
+        if (recorder == null)
+        {
+            recorder = getMediaService()
+                    .createRecorder(getRTPTranslator());
+            recorder.setEventHandler(getConference().getRecorderEventHandler());
+        }
+        return recorder;
+    }
+
+
+    /**
+     * Attempts to enable or disable media recording for this <tt>Content</tt>
+     * and updates the recording path.
+     *
+     * @param recording whether to enable or disable media recording.
+     * @param path the path to the directory into which to store files related
+     * to media recording for this <tt>Content</tt>.
+     *
+     * @return the state of the media recording for this <tt>Content</tt>
+     * after the attempt to enable (or disable).
+     */
+    public boolean setRecording(boolean recording, String path)
+    {
+        this.recordingPath = path;
+
+        if (this.recording != recording)
+        {
+            Recorder recorder = getRecorder();
+            if (recording)
+            {
+                if (recorder != null)
+                {
+                    recording = startRecorder(recorder);
+                }
+                else
+                {
+                    recording = false;
+                }
+            }
+            else //disable recording
+            {
+                if (recorder != null)
+                {
+                    recorder.stop();
+                    this.recorder = null;
+                }
+                recording = false;
+            }
+        }
+
+        this.recording = recording;
+        return this.recording;
+    }
+
+    /**
+     * Returns <tt>true</tt> if media recording for this <tt>Content</tt> is
+     * currently enabled, and <tt>false</tt> otherwise.
+     *
+     * @return <tt>true</tt> if media recording for this <tt>Content</tt> is
+     * currently enabled, and <tt>false</tt> otherwise.
+     */
+    public boolean isRecording()
+    {
+        return recording;
+    }
+
+    /**
+     * Returns the local synchronization source identifier (SSRC) associated
+     * with this <tt>Content</tt>,
+     *
+     * @return the local synchronization source identifier (SSRC) associated
+     * with this <tt>Content</tt>,
+     */
+    long getInitialLocalSSRC()
+    {
+        return initialLocalSSRC;
+    }
+
+    /**
+     * Tries to start a specific <tt>Recorder</tt>.
+     * @param recorder the <tt>Recorder</tt> to start.
+     * @return <tt>true</tt> if <tt>recorder</tt> was started, <tt>false</tt>
+     * otherwise.
+     */
+    private boolean startRecorder(Recorder recorder)
+    {
+        boolean started = false;
+        MediaType mediaType = getMediaType();
+        String format = null;
+        if (MediaType.AUDIO.equals(mediaType))
+            format = "mp3";
+
+        try
+        {
+            recorder.start(format, recordingPath);
+            started = true;
+        }
+        catch (IOException ioe)
+        {
+            logd("Failed to start recorder: " + ioe);
+            started = false;
+        }
+        catch (MediaException me)
+        {
+            logd("Failed to start recorder: " + me);
+            started = false;
+        }
+
+        return started;
+    }
+
+    /**
+     * Returns a <tt>MediaService</tt> implementation (if any).
+     *
+     * @return a <tt>MediaService</tt> implementation (if any).
+     */
+    MediaService getMediaService()
+    {
+        return getConference().getMediaService();
+    }
+
+    /**
+     * XXX REMOVE
+     * Returns a <tt>Channel</tt> of this <tt>Content</tt>, which has
+     * <tt>ssrc</tt> in its list of received SSRCs, or <tt>null</tt> in case no
+     * such <tt>Channel</tt> exists.
+     * @param ssrc the ssrc to search for.
+     * @return a <tt>Channel</tt> of this <tt>Content</tt>, which has
+     * <tt>ssrc</tt> in its list of received SSRCs, or <tt>null</tt> in case no
+     * such <tt>Channel</tt> exists.
+     */
+    Channel findChannel(long ssrc)
+    {
+        for (Channel channel : getChannels())
+        {
+            if (channel instanceof RtpChannel)
+            {
+                RtpChannel rtpChannel = (RtpChannel) channel;
+                for (int channelSsrc : rtpChannel.getReceiveSSRCs())
+                {
+                    if (ssrc == (0xffffffffL & channelSsrc))
+                        return channel;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static class RTPTranslatorWriteFilter
@@ -658,6 +835,34 @@ public class Content
                             data);
             }
             return accept;
+        }
+    }
+
+    /**
+     * If media recording is started, finds all SSRCs received on all channels,
+     * and sets their endpoints to the <tt>Recorder</tt>'s <tt>Synchronizer</tt>
+     * instance.
+     */
+    void feedKnownSsrcsToSynchronizer()
+    {
+        Recorder recorder;
+        if (isRecording() && (recorder = getRecorder()) != null)
+        {
+            Synchronizer synchronizer = recorder.getSynchronizer();
+            for (Channel channel : getChannels())
+            {
+                if (!(channel instanceof RtpChannel))
+                    continue;
+                Endpoint endpoint = channel.getEndpoint();
+                if(endpoint == null)
+                    continue;
+
+                for(int s : ((RtpChannel) channel).getReceiveSSRCs())
+                {
+                    long ssrc = s & 0xffffffffl;
+                    synchronizer.setEndpoint(ssrc, endpoint.getID());
+                }
+            }
         }
     }
 }

@@ -7,14 +7,21 @@
 package org.jitsi.videobridge;
 
 import java.beans.*;
+import java.beans.beancontext.*;
 import java.io.*;
 import java.lang.ref.*;
+import java.text.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
+import net.java.sip.communicator.util.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.osgi.framework.*;
 
@@ -22,6 +29,7 @@ import org.osgi.framework.*;
  * Represents a conference in the terms of Jitsi Videobridge.
  *
  * @author Lyubomir Marinov
+ * @author Boris Grozev
  */
 public class Conference
      extends PropertyChangeNotifier
@@ -107,6 +115,23 @@ public class Conference
     private final Videobridge videobridge;
 
     /**
+     * Whether media recording is currently enabled for this <tt>Conference</tt>.
+     */
+    private boolean recording = false;
+
+    /**
+     * The <tt>RecorderEventHandler</tt> which is used to handle recording
+     * events for this <tt>Conference</tt>.
+     */
+    private RecorderEventHandler recorderEventHandler = null;
+
+    /**
+     * The path to the directory into which files associated with media
+     * recordings for this <tt>Conference</tt> will be stored.
+     */
+    private String recordingPath = null;
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -119,7 +144,9 @@ public class Conference
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
      */
-    public Conference(Videobridge videobridge, String id, String focus)
+    public Conference(Videobridge videobridge,
+                      String id,
+                      String focus)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -153,6 +180,13 @@ public class Conference
     {
         describeShallow(iq);
 
+        if (isRecording())
+        {
+            ColibriConferenceIQ.Recording recordingIQ
+                    = new ColibriConferenceIQ.Recording(true);
+            recordingIQ.setPath(getRecordingPath());
+            iq.setRecording(recordingIQ);
+        }
         for (Content content : getContents())
         {
             ColibriConferenceIQ.Content contentIQ
@@ -225,6 +259,14 @@ public class Conference
                 return;
             else
                 expired = true;
+        }
+
+
+        setRecording(false);
+        if (recorderEventHandler != null)
+        {
+            recorderEventHandler.close();
+            recorderEventHandler = null;
         }
 
         Videobridge videobridge = getVideobridge();
@@ -464,6 +506,8 @@ public class Conference
             }
 
             content = new Content(this, name);
+            if (isRecording())
+                content.setRecording(true, getRecordingPath());
             contents.add(content);
         }
 
@@ -726,6 +770,317 @@ public class Conference
         catch (IOException e)
         {
             logger.error("SCTP error, endpoint: " + endpointId, e);
+        }
+    }
+
+    /**
+     * Checks whether media recording is currently enabled for this
+     * <tt>Conference</tt>.
+     * @return <tt>true</tt> if media recording is currently enabled for this
+     * <tt>Conference</tt>, false otherwise.
+     */
+    public boolean isRecording()
+    {
+        boolean recording = this.recording;
+
+        //if one of the contents is not recording, stop all recording
+        if (recording)
+        {
+            synchronized (contents)
+            {
+                for (Content content : contents)
+                    if (!content.isRecording())
+                        recording = false;
+            }
+        }
+        if (this.recording != recording)
+            setRecording(recording);
+
+        return this.recording;
+    }
+
+    /**
+     * Attempts to enable or disable media recording for this
+     * <tt>Conference</tt>.
+     *
+     * @param recording whether to enable or disable recording.
+     * @return the state of the media recording for this <tt>Conference</tt>
+     * after the attempt to enable (or disable).
+     */
+    public boolean setRecording(boolean recording)
+    {
+        if (recording != this.recording)
+        {
+            if (recording)
+            {
+                //try enable recording
+                logd("Starting recording for conference with id=" + getID());
+                boolean failedToStart;
+
+                String path = getRecordingPath();
+                failedToStart = !checkRecordingDirectory(path);
+
+                if (!failedToStart)
+                {
+                    RecorderEventHandler handler = getRecorderEventHandler();
+                    if (handler == null)
+                        failedToStart = true;
+                }
+
+                /*
+                 * The Recorders of the Contents need to share a single
+                 * Synchronizer, we take it from the first Recorder.
+                 */
+                boolean first = true;
+                Synchronizer synchronizer = null;
+                for (Content content : contents)
+                {
+                    if (!failedToStart)
+                        failedToStart |= !content.setRecording(true, path);
+                    if (failedToStart)
+                        break;
+
+                    if (first)
+                    {
+                        first = false;
+                        synchronizer = content.getRecorder().getSynchronizer();
+                    }
+                    else
+                        content.getRecorder().setSynchronizer(synchronizer);
+
+                    content.feedKnownSsrcsToSynchronizer();
+                }
+
+
+                if (failedToStart)
+                {
+                    recording = false;
+                    logger.warn("Failed to start media recording for conference "
+                                        + getID());
+                }
+            }
+
+            // either we were asked to disable recording, or we failed to
+            // enable it
+            if (!recording)
+            {
+                logd("Stopping recording for conference with id=" + getID());
+
+                for (Content content : contents)
+                {
+                    content.setRecording(false, null);
+                }
+
+                if (recorderEventHandler != null)
+                    recorderEventHandler.close();
+                recorderEventHandler = null;
+                recordingPath = null;
+            }
+
+            this.recording = recording;
+        }
+
+        return this.recording;
+    }
+
+    /**
+     * Returns the path to the directory where the media recording related
+     * files should be saved, or <tt>null</tt> if recording is not enabled
+     * in the configuration, or a recording path has not been configured.
+     *
+     * @return the path to the directory where the media recording related
+     * files should be saved, or <tt>null</tt> if recording is not enabled
+     * in the configuration, or a recording path has not been configured.
+     */
+    String getRecordingPath()
+    {
+        if (recordingPath == null)
+        {
+            ConfigurationService cfg
+                    = getVideobridge().getConfigurationService();
+            if (cfg == null)
+                return null;
+            boolean recordingEnabled
+                    = cfg.getBoolean(Videobridge.ENABLE_MEDIA_RECORDING_PNAME,
+                                     false);
+            if (!recordingEnabled)
+                return null;
+            String path
+                    = cfg.getString(Videobridge.MEDIA_RECORDING_PATH_PNAME, null);
+            if (path == null)
+                return null;
+
+            this.recordingPath = path + "/" + getID()
+                    + (new SimpleDateFormat("-yyMMdd-HHmmss")
+                            .format(new Date()));
+        }
+
+        return recordingPath;
+    }
+
+    /**
+     * Checks whether <tt>path</tt> is a valid directory for recording (creates
+     * it if necessary).
+     * @param path the path to the directory to check.
+     * @return <tt>true</tt> if the directory <tt>path</tt> can be used for
+     * media recording, <tt>false</tt> otherwise.
+     */
+    private boolean checkRecordingDirectory(String path)
+    {
+        if (path == null || "".equals(path))
+            return false;
+
+        File dir = new File(path);
+        if (!dir.exists())
+            dir.mkdir();
+        if (!dir.exists())
+            return false;
+
+        if (!dir.isDirectory() || !dir.canWrite())
+            return false;
+
+        return true;
+    }
+
+    RecorderEventHandler getRecorderEventHandler()
+    {
+        if (recorderEventHandler == null)
+        {
+
+            try
+            {
+                recorderEventHandler
+                        = new RecorderEventHandlerImpl(
+                        getMediaService()
+                                .createRecorderEventHandlerJson(
+                                        getRecordingPath() + "/metadata.json"));
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Could not create RecorderEventHandler. " + ioe);
+            }
+            catch (IllegalArgumentException iae)
+            {
+                logger.warn("Could not create RecorderEventHandlerImpl. " + iae);
+            }
+        }
+
+        return recorderEventHandler;
+    }
+
+    /**
+     * Returns a <tt>MediaService</tt> implementation (if any).
+     *
+     * @return a <tt>MediaService</tt> implementation (if any)
+     */
+    MediaService getMediaService()
+    {
+        MediaService mediaService
+                = ServiceUtils.getService(getBundleContext(), MediaService.class);
+
+    /*
+     * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
+     * the MediaService implementation. In the form of a temporary
+     * workaround, get it through LibJitsi.
+     */
+        if (mediaService == null)
+            mediaService = LibJitsi.getMediaService();
+
+        return mediaService;
+    }
+
+
+    /**
+     * XXX REMOVE
+     * Finds all the SSRCs received on all video <tt>Channel</tt> in this
+     * <tt>Conference</tt>, which are associated in an
+     * <tt>Endpoint</tt> with an audio <tt>Channel</tt> on which
+     * <tt>audioSsrc</tt> is received. If none is found, returns <tt>-1</tt>.
+     *
+     * Assumes that <tt>audioSsrc</tt> can be received on no more than a single
+     * <tt>Channel</tt>.
+     *
+     * @param audioSsrc the audio SSRC.
+     * @return a <tt>List</tt> of received video SSRCs associated with
+     * <tt>audioSsrc</tt>
+     */
+    private List<Long> getVideoSsrcs(long audioSsrc)
+    {
+        List<Long> videoSsrcs = new LinkedList<Long>();
+        Channel audioChannel = null;
+
+        for(Content c : getContents())
+        {
+            if (MediaType.AUDIO.equals(c.getMediaType())
+                    && (audioChannel = c.findChannel(audioSsrc)) != null)
+                break;
+        }
+
+        if (audioChannel != null)
+        {
+            Endpoint endpoint = audioChannel.getEndpoint();
+            if (endpoint != null)
+            {
+                for (Channel channel : endpoint.getChannels(MediaType.VIDEO))
+                {
+                    if (channel instanceof RtpChannel)
+                        for (int ssrc : ((RtpChannel) channel).getReceiveSSRCs())
+                            videoSsrcs.add(0xffffffffL & ssrc);
+                }
+            }
+        }
+
+        return videoSsrcs;
+    }
+
+    /**
+     * An implementation of <tt>RecorderEventHandler</tt> which intercepts
+     * <tt>SPEAKER_CHANGED</tt> events and updates their 'ssrc' fields
+     * (which contain the SSRC of a video stream) before delegating to
+     * another underlying <tt>RecorderEventHandler</tt>.
+     * The value to use for an event's 'ssrc' field is a value found to be
+     * associated with the audio SSRC of the event (the 'audioSsrc' field).
+     */
+    private class RecorderEventHandlerImpl
+            implements RecorderEventHandler
+    {
+        private RecorderEventHandler handler;
+
+        RecorderEventHandlerImpl(RecorderEventHandler handler)
+                throws IllegalArgumentException
+        {
+            if (handler == null)
+                throw new IllegalArgumentException("handler is null");
+            this.handler = handler;
+        }
+
+        @Override
+        public boolean handleEvent(RecorderEvent event)
+        {
+            if (RecorderEvent.Type.SPEAKER_CHANGED
+                    .equals(event.getType()))
+            {
+                long audioSsrc = event.getAudioSsrc();
+                List<Long> videoSsrcs = getVideoSsrcs(audioSsrc);
+                if (videoSsrcs.isEmpty())
+                {
+                    logd("Could not find video SSRC associated with audioSsrc="
+                                 + audioSsrc);
+
+                    //don't write events without proper 'ssrc' values
+                    return false;
+                }
+
+                //for the moment just use the first SSRC
+                event.setSsrc(videoSsrcs.get(0));
+            }
+            return handler.handleEvent(event);
+        }
+
+        @Override
+        public void close()
+        {
+            handler.close();
         }
     }
 }

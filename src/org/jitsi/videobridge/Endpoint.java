@@ -241,5 +241,4 @@ public class Endpoint
     {
         return this.sctpConnection.get();
     }
-
 }

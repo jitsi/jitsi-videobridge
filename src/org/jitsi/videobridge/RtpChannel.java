@@ -30,6 +30,7 @@ import org.jitsi.service.neomedia.codec.Constants; //Disanbiguation
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -87,7 +88,7 @@ public class RtpChannel
      * Currently, the value is taken into account in the case of content mixing
      * and not in the case of RTP translation.
      */
-    private final long initialLocalSSRC;
+    private long initialLocalSSRC = -1;
 
     /**
      * The maximum number of video RTP stream to be sent from Jitsi Videobridge
@@ -124,12 +125,6 @@ public class RtpChannel
      * <tt>Channel</tt>.
      */
     private RTPLevelRelayType rtpLevelRelayType;
-
-    /**
-     * The <tt>SSRCFactory</tt> which is utilized by {@link #stream} to generate
-     * new synchronization source (SSRC) identifiers. 
-     */
-    private final SSRCFactoryImpl ssrcFactory = new SSRCFactoryImpl();
 
     /**
      * THe <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to the terms
@@ -206,16 +201,17 @@ public class RtpChannel
         stream.addPropertyChangeListener(streamPropertyChangeListener);
         stream.setName(this.id);
         stream.setProperty(RtpChannel.class.getName(), this);
-        stream.setSSRCFactory(ssrcFactory);
 
-        /*
-         * Jitsi Videobridge pre-announces the local synchronization source
-         * identifier (SSRC) in the case of content mixing and not in the case
-         * of RTP translation. Anyway, this distinction will be put in effect at
-         * the time the value is queried for the purposes of simplification
-         * here.
-         */
-        initialLocalSSRC = ssrcFactory.doGenerateSSRC() & 0xFFFFFFFFL;
+        if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
+        {
+            /*
+            * In the case of content mixing, each Channel has its own local^M
+            * synchronization source identifier (SSRC), which Jitsi Videobridge^M
+            * pre-announces.^M
+            */
+            initialLocalSSRC = new Random().nextInt();
+            stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
+        }
 
         conferenceSpeechActivity
             = getContent().getConference().getSpeechActivity();
@@ -239,7 +235,7 @@ public class RtpChannel
      * rejected/dropped. When the first <tt>DatagramPacket</tt> arrives, makes
      * its source the only acceptable one for the control
      * <tt>DatagramSocket</tt> and uses it as the control target of
-     * {@link #rtpConnector}.
+     * {@link #stream}.
      *
      * @param p the <tt>DatagramPacket</tt> received on the control
      * <tt>DatagramSocket</tt> of this <tt>Channel</tt>
@@ -330,7 +326,7 @@ public class RtpChannel
      * for further processing within Jitsi Videobridge or is to be
      * rejected/dropped. When the first <tt>DatagramPacket</tt> arrives, makes
      * its source the only acceptable one for the data <tt>DatagramSocket</tt>
-     * and uses it as the data target of {@link #rtpConnector}.
+     * and uses it as the data target of {@link #stream}.
      *
      * @param p the <tt>DatagramPacket</tt> received on the data
      * <tt>DatagramSocket</tt> of this <tt>Channel</tt>
@@ -428,6 +424,24 @@ public class RtpChannel
                      */
                     int ssrc = RTPTranslatorImpl.readInt(data, off + 8);
                     boolean notify = addReceiveSSRC(ssrc);
+
+                    /*
+                     * If a new SSRC has been detected on this channel, and a
+                     * Recorder is running, it needs to be notified, so that it
+                     * can map the new SSRC to an endpoint.
+                     */
+                    if (notify && getContent().isRecording())
+                    {
+                        Recorder recorder = getContent().getRecorder();
+                        Endpoint endpoint = getEndpoint();
+                        if (recorder != null && endpoint != null)
+                        {
+                            Synchronizer synchronizer = recorder.getSynchronizer();
+                            if (synchronizer != null)
+                                synchronizer.setEndpoint(ssrc & 0xffffffffl,
+                                                         endpoint.getID());
+                        }
+                    }
 
                     /*
                      * When performing content mixing (rather than RTP
@@ -572,7 +586,7 @@ public class RtpChannel
 
         long initialLocalSSRC = getInitialLocalSSRC();
 
-        if (initialLocalSSRC != -1)
+        if (initialLocalSSRC != -1 && announceLocalSSRC())
         {
             SourcePacketExtension source = new SourcePacketExtension();
 
@@ -681,10 +695,15 @@ public class RtpChannel
      */
     private long getInitialLocalSSRC()
     {
-        return
-            RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType())
-                ? initialLocalSSRC
-                : -1;
+        switch (getRTPLevelRelayType())
+        {
+            case MIXER:
+                return initialLocalSSRC;
+            case TRANSLATOR:
+                return getContent().getInitialLocalSSRC();
+            default:
+                return -1;
+        }
     }
 
     /**
@@ -1445,29 +1464,6 @@ public class RtpChannel
     }
 
     /**
-     * Generates a new synchronization source (SSRC) identifier.
-     *
-     * @param cause
-     * @param i the number of times that the method has been executed prior to
-     * the current invocation
-     * @return a randomly chosen <tt>int</tt> value which is to be utilized as a
-     * new synchronization source (SSRC) identifier should it be found to be
-     * globally unique within the associated RTP session or
-     * <tt>Long.MAX_VALUE</tt> to cancel the operation
-     */
-    private long ssrcFactoryGenerateSSRC(String cause, int i)
-    {
-        if (initialLocalSSRC != -1)
-        {
-            if (i == 0)
-                return (int) initialLocalSSRC;
-            else if (cause.equals(GenerateSSRCCause.REMOVE_SEND_STREAM.name()))
-                return Long.MAX_VALUE;
-        }
-        return ssrcFactory.doGenerateSSRC();
-    }
-
-    /**
      * Notifies this instance about a change in the audio level of the (remote)
      * endpoint/conference participant associated with this <tt>Channel</tt>.
      *
@@ -1611,30 +1607,16 @@ public class RtpChannel
         }
     }
 
-    private class SSRCFactoryImpl
-        implements SSRCFactory
+    /**
+     * Whether this <tt>Channel</tt> should announce a local SSRC in its XML
+     * description.
+     *
+     * @return <tt>true</tt> if this <tt>Channel</tt> should announce a local
+     * SSRC in its XML
+     * description.
+     */
+    private boolean announceLocalSSRC()
     {
-        private int i = 0;
-
-        /**
-         * The <tt>Random</tt> instance used by this <tt>SSRCFactory</tt> to
-         * generate new synchronization source (SSRC) identifiers.
-         */
-        private final Random random = new Random();
-
-        public int doGenerateSSRC()
-        {
-            return random.nextInt();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public long generateSSRC(String cause)
-        {
-            return ssrcFactoryGenerateSSRC(cause, i++);
-        }
+        return MediaType.VIDEO.equals(getContent().getMediaType());
     }
-
 }
