@@ -25,6 +25,8 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
+import org.jitsi.service.neomedia.codec.Constants; //Disanbiguation
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
@@ -1303,14 +1305,20 @@ public class RtpChannel
                                 mediaService,
                                 null);
 
+                    String name = payloadType.getName();
                     if (mediaFormat == null)
                     {
                         if (!googleChrome
-                                && "iSAC".equalsIgnoreCase(
-                                        payloadType.getName()))
+                                && "iSAC".equalsIgnoreCase(name))
                         {
                             googleChrome = true;
                         }
+                    }
+                    else if (Constants.RED.equalsIgnoreCase(name)
+                                || Constants.ULPFEC.equalsIgnoreCase(name))
+                    {
+                        // do not add RED or ULPFEC to the MediaStream, because
+                        // they shouldn't be handled.
                     }
                     else
                     {
