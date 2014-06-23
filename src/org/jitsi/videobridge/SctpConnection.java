@@ -214,55 +214,58 @@ public class SctpConnection
     /**
      * {@inheritDoc}
      */
-    protected synchronized void maybeStartStream()
+    protected void maybeStartStream()
         throws IOException
     {
-        if(started)
-            return;
-
         // connector
         final StreamConnector connector = createStreamConnector();
 
         if (connector == null)
             return;
 
-        dtlsControl.setSetup(
-            isInitiator()
-                ? DtlsControl.Setup.PASSIVE
-                : DtlsControl.Setup.ACTIVE);
-
-        dtlsControl.start(MediaType.DATA);
-
-        new Thread(new Runnable()
+        synchronized (this)
         {
-            @Override
-            public void run()
-            {
-                try
-                {
-                    Sctp.init();
+            if (started)
+                return;
 
-                    runOnDtlsTransport(connector);
-                }
-                catch (IOException e)
-                {
-                    logger.error(e, e);
-                }
-                finally
+            dtlsControl.setSetup(
+                isInitiator()
+                    ? DtlsControl.Setup.PASSIVE
+                    : DtlsControl.Setup.ACTIVE);
+
+            dtlsControl.start(MediaType.DATA);
+
+            new Thread(new Runnable()
+            {
+                @Override
+                public void run()
                 {
                     try
                     {
-                        Sctp.finish();
+                        Sctp.init();
+
+                        runOnDtlsTransport(connector);
                     }
                     catch (IOException e)
                     {
-                        logger.error("Failed to shutdown SCTP stack", e);
+                        logger.error(e, e);
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            Sctp.finish();
+                        }
+                        catch (IOException e)
+                        {
+                            logger.error("Failed to shutdown SCTP stack", e);
+                        }
                     }
                 }
-            }
-        }, "SctpConnectionReceiveThread").start();
+            }, "SctpConnectionReceiveThread").start();
 
-        started = true;
+            started = true;
+        }
     }
 
     private void runOnDtlsTransport(StreamConnector connector)
