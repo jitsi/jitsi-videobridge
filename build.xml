@@ -11,6 +11,7 @@
     <property name="dist" value="dist" />
     <property name="doc" value="doc"/>
     <property name="java.doc" value="${doc}/api"/>
+    <property name="jitsi.path" value="../jitsi"/>
     <property name="junit.reports" value="junit-reports"/>
 
     <condition property="label" value="build.SVN">
@@ -60,6 +61,17 @@
             <fileset dir="${doc}" />
             <fileset dir="${junit.reports}" />
         </delete>
+    </target>
+
+    <target name="copy-jitsi-bundles" if="jitsi.path">
+        <copy todir="lib" verbose="true" overwrite="true">
+            <fileset dir="./${jitsi.path}/sc-bundles">
+                <include name="*.jar"/>
+                <not>
+                    <present present="srconly" targetdir="lib"/>
+                </not>
+            </fileset>
+        </copy>
     </target>
 
     <target name="compile">
