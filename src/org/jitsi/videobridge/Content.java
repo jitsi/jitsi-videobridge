@@ -600,8 +600,7 @@ public class Content
 
                         initialLocalSSRC = new Random().nextInt();
 
-                        rtpTranslatorImpl.setSSRCFactory(
-                                new SSRCFactoryImpl(initialLocalSSRC));
+                        rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
 
                         rtcpFeedbackMessageSender
                             = new RTCPFeedbackMessageSender(
