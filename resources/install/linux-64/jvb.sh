@@ -21,4 +21,4 @@ cp=$(JARS=($SCRIPT_DIR/jitsi-videobridge.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo
 libs="$SCRIPT_DIR/lib/native/linux-64"
 logging_config="$SCRIPT_DIR/lib/logging.properties"
 
-java -Xmx3072m -XX:-HeapDumpOnOutOfMemoryError -Djava.library.path=$libs -Djava.util.logging.config.file=$logging_config -cp $cp $mainClass $@
+LD_LIBRARY_PATH=$libs java -Xmx3072m -XX:-HeapDumpOnOutOfMemoryError -Djava.library.path=$libs -Djava.util.logging.config.file=$logging_config -cp $cp $mainClass $@
