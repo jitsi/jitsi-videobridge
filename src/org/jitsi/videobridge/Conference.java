@@ -910,9 +910,9 @@ public class Conference
             if (path == null)
                 return null;
 
-            this.recordingPath = path + "/" + getID()
-                    + (new SimpleDateFormat("-yyMMdd-HHmmss")
-                            .format(new Date()));
+            this.recordingPath = path + "/"
+                    + (new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.")
+                            .format(new Date()) + getID());
         }
 
         return recordingPath;
