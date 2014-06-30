@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Yasen Pramatarov <yasen@bluejimp.com>
 Build-Depends: debhelper (>= 8.0.0)
 Standards-Version: 3.9.3
-Homepage: https://jitsi.org/Projects/JitsiVideobridge
+Homepage: https://jitsi.org/videobridge
 
 Package: jitsi-videobridge
 Architecture: any
