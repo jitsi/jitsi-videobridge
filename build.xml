@@ -332,7 +332,6 @@
 
     <!-- Debian related targets -->
 
-<!--    <property name="debian.dir" value="resources/install/debian"/> -->
     <property name="debian.dir" value="release/debian"/>
     <property name="debian.binary.dir" value="${debian.dir}/binary"/>
     <property name="debian.tmp.dir" value="${debian.dir}/tmp" />
