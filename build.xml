@@ -332,7 +332,10 @@
 
     <!-- Debian related targets -->
 
-    <property name="debian.dir" value="resources/install/debian"/>
+<!--    <property name="debian.dir" value="resources/install/debian"/> -->
+    <property name="debian.dir" value="release/debian"/>
+    <property name="debian.binary.dir" value="${debian.dir}/binary"/>
+    <property name="debian.tmp.dir" value="${debian.dir}/tmp" />
     <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
     <property name="dpkg-buildpackage" value="/usr/bin/dpkg-buildpackage"/>
     <property name="dh_testdir" value="/usr/bin/dh_testdir"/>
@@ -370,32 +373,35 @@
 
     <!-- Builds the debian package. -->
     <target name="make-deb" depends="make,dpkg-build-warning">
-        <mkdir dir="${debian.dir}/opt/jitsi-videobridge"/>
-        <copy todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${system-arch}-${label}/lib" overwrite="true" includeEmptyDirs="No">
+        <!-- cleaning the release folder -->
+        <delete dir="${debian.dir}"/>
+        <mkdir dir="${debian.dir}"/>
+
+        <copy todir="${debian.dir}" includeEmptyDirs="Yes">
+            <fileset dir="resources/install/debian"/>
+        </copy>
+
+        <mkdir dir="${debian.dir}/usr/share/jitsi-videobridge"/>
+        <copy todir="${debian.dir}/usr/share/jitsi-videobridge/lib" overwrite="true" includeEmptyDirs="No">
             <fileset dir="lib/">
                 <exclude name="native/macos*/*"/>
                 <exclude name="native/windows*/*"/>
                 <exclude name="native/linux/*"/>
             </fileset>
         </copy>
-        <symlink resource="jitsi-videobridge-${system-arch}-${label}" overwrite="true" link="${debian.dir}/opt/jitsi-videobridge/current"/>
-        <copy file="jitsi-videobridge.jar" todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${system-arch}-${label}" overwrite="true"/>
-        <copy file="resources/install/linux-64/jvb.sh" todir="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${system-arch}-${label}" overwrite="true"/>
-        <chmod file="${debian.dir}/opt/jitsi-videobridge/jitsi-videobridge-${system-arch}-${label}/jvb.sh" perm="755"/>
-
-        <!-- correct version in include-binaries paths -->
-        <replaceregexp file="${debian.dir}/source/include-binaries" match="linux-x\d\d-\d+" replace="${system-arch}-${label}" flags="g"/>
-        <replaceregexp file="${debian.dir}/source/include-binaries" match="linux-x\d\d-build\.SVN" replace="${system-arch}-${label}" flags="g"/>
+        <copy file="jitsi-videobridge.jar" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
+        <copy file="resources/install/linux-64/jvb.sh" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
+        <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh" perm="755"/>
 
         <!-- creating a debian archive file -->
-        <tar destfile="resources/jitsi-videobridge_${label}-1.debian.tar.gz" basedir="resources/install" includes="debian/" defaultexcludes="No" compression="gzip"/>
+        <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz" basedir="release" includes="debian/" defaultexcludes="No" compression="gzip"/>
 
         <!-- creating empty orig file -->
-        <touch file="resources/jitsi-videobridge"/>
-        <tar destfile="resources/jitsi-videobridge_${label}-1.orig.tar.gz" compression="gzip">
-            <tarfileset file="resources/jitsi-videobridge"/>
+        <touch file="jitsi-videobridge"/>
+        <tar destfile="jitsi-videobridge_${label}-1.orig.tar.gz" compression="gzip">
+            <tarfileset file="jitsi-videobridge"/>
         </tar>
-        <delete file="resources/jitsi-videobridge"/>
+        <delete file="jitsi-videobridge"/>
 
         <!-- and build it -->
         <exec executable="${dpkg-buildpackage}" dir="${debian.dir}/../">
@@ -408,7 +414,6 @@
         </exec>
 
         <!-- clean a bit (leaving .deb and .changes to get picked up later) -->
-        <delete dir="${debian.dir}/opt/"/>
         <delete file="resources/jitsi-videobridge_${label}-1.debian.tar.gz"/>
         <delete file="resources/jitsi-videobridge_${label}-1.orig.tar.gz"/>
 
