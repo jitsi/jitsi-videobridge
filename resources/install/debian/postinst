@@ -36,21 +36,21 @@ case "$1" in
         # we don't want to start the daemon as root
         if ! getent passwd jvb > /dev/null ; then
             adduser --system --group --shell /bin/bash --disabled-password \
-                --home /opt/jitsi-videobridge jvb
+                --home /usr/share/jitsi-videobridge jvb
         else
-            mkdir -p /opt/jitsi-videobridge
+            mkdir -p /usr/share/jitsi-videobridge
         fi
 
-        if [ ! -d /opt/jitsi-videobridge/.sip-communicator ]; then
-            mkdir /opt/jitsi-videobridge/.sip-communicator
+        if [ ! -d /usr/share/jitsi-videobridge/.sip-communicator ]; then
+            mkdir /usr/share/jitsi-videobridge/.sip-communicator
         fi
-        cp /usr/share/doc/jitsi-videobridge/sip-communicator.properties /opt/jitsi-videobridge/.sip-communicator/
+        cp /usr/share/doc/jitsi-videobridge/sip-communicator.properties /usr/share/jitsi-videobridge/.sip-communicator/
 
         # we clain the home folder of jvb in case it is owned by someone else
-        OWNER=$(stat -c '%U' /opt/jitsi-videobridge)
-        GROUP=$(stat -c '%G' /opt/jitsi-videobridge)
-        if ! dpkg-statoverride --list /opt/jitsi-videobridge/* >/dev/null && [ "$OWNER:$GROUP" != "jvb:jvb" ]; then
-            chown -R jvb:jvb /opt/jitsi-videobridge
+        OWNER=$(stat -c '%U' /usr/share/jitsi-videobridge)
+        GROUP=$(stat -c '%G' /usr/share/jitsi-videobridge)
+        if ! dpkg-statoverride --list /usr/share/jitsi-videobridge/* >/dev/null && [ "$OWNER:$GROUP" != "jvb:jvb" ]; then
+            chown -R jvb:jvb /usr/share/jitsi-videobridge
             OWNER=jvb
             GROUP=jvb
         fi

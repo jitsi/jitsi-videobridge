@@ -1,2 +1,2 @@
-debian/opt/jitsi-videobridge/*		/opt/jitsi-videobridge/
+debian/usr/share/jitsi-videobridge/*	/usr/share/jitsi-videobridge/
 debian/usr/share/doc/*			/usr/share/doc/

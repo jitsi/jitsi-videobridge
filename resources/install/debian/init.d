@@ -19,7 +19,7 @@ if [ -f /etc/default/jitsi-videobridge ]; then
 fi
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/opt/jitsi-videobridge/current/jvb.sh
+DAEMON=/usr/share/jitsi-videobridge/jvb.sh
 NAME=jvb
 USER=jvb
 PIDFILE=/var/run/jitsi-videobridge.pid
