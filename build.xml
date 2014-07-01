@@ -60,6 +60,8 @@
             <fileset dir="${dist}" />
             <fileset dir="${doc}" />
             <fileset dir="${junit.reports}" />
+	        <fileset dir="release" />
+	        <fileset file="jitsi-videobridge.jar" />
         </delete>
     </target>
 
@@ -345,7 +347,8 @@
 
     <!-- Debian related targets -->
 
-    <property name="debian.dir" value="release/debian"/>
+    <property name="debian.release" value="release/jvb"/>
+    <property name="debian.dir" value="${debian.release}/debian"/>
     <property name="debian.binary.dir" value="${debian.dir}/binary"/>
     <property name="debian.tmp.dir" value="${debian.dir}/tmp" />
     <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
@@ -406,11 +409,11 @@
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh" perm="755"/>
 
         <!-- creating a debian archive file -->
-        <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz" basedir="release" includes="debian/" defaultexcludes="No" compression="gzip"/>
+        <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz" basedir="${debian.release}" includes="debian/" defaultexcludes="No" compression="gzip"/>
 
         <!-- creating empty orig file -->
         <touch file="jitsi-videobridge"/>
-        <tar destfile="jitsi-videobridge_${label}-1.orig.tar.gz" compression="gzip">
+        <tar destfile="release/jitsi-videobridge_${label}-1.orig.tar.gz" compression="gzip">
             <tarfileset file="jitsi-videobridge"/>
         </tar>
         <delete file="jitsi-videobridge"/>
@@ -425,9 +428,7 @@
             <arg value="-a${arch}"/>
         </exec>
 
-        <!-- clean a bit (leaving .deb and .changes to get picked up later) -->
-        <delete file="resources/jitsi-videobridge_${label}-1.debian.tar.gz"/>
-        <delete file="resources/jitsi-videobridge_${label}-1.orig.tar.gz"/>
+	    <delete dir="${debian.release}"/>
 
     </target>
 
