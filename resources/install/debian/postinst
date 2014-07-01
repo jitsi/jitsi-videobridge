@@ -1,0 +1,145 @@
+#!/bin/sh
+# postinst script for jitsi-videobridge
+
+set -e
+
+case "$1" in
+    configure)
+
+        # debconf hostname question
+        . /usr/share/debconf/confmodule
+
+        LOCALNAME="$(hostname)"
+        LOCALIP="$(hostname -I)"
+        NAMEBYIP="$(host $LOCALNAME | cut -f4 -d ' ')"
+        NAMEVALID=false
+        for IP in $LOCALIP; do
+            if [ "$NAMEBYIP" = "$IP" ]; then
+                NAMEVALID=true
+            fi
+        done
+
+#        if $NAMEVALID
+#        then
+# add default hostname in debconf template here
+#        fi
+
+        # the default vars
+        db_get jitsi-videobridge/jvb-hostname
+        JVB_HOSTNAME="$RET"
+#        db_get jitsi-videobridge/advanced
+#        ADVANCED=$RET
+        # 8-chars random secret, alternative to pwgen 8
+        JVB_SECRET=`head -c 8 /dev/urandom | tr '\0-\377' 'a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9@@@@####'`
+        JVB_PORT=5347
+
+        # we don't want to start the daemon as root
+        if ! getent passwd jvb > /dev/null ; then
+            adduser --system --group --shell /bin/bash --disabled-password \
+                --home /usr/share/jitsi-videobridge jvb
+        else
+            mkdir -p /usr/share/jitsi-videobridge
+        fi
+
+        if [ ! -d /usr/share/jitsi-videobridge/.sip-communicator ]; then
+            mkdir /usr/share/jitsi-videobridge/.sip-communicator
+        fi
+        cp /usr/share/doc/jitsi-videobridge/sip-communicator.properties /usr/share/jitsi-videobridge/.sip-communicator/
+
+        # we clain the home folder of jvb in case it is owned by someone else
+        OWNER=$(stat -c '%U' /usr/share/jitsi-videobridge)
+        GROUP=$(stat -c '%G' /usr/share/jitsi-videobridge)
+        if ! dpkg-statoverride --list /usr/share/jitsi-videobridge/* >/dev/null && [ "$OWNER:$GROUP" != "jvb:jvb" ]; then
+            chown -R jvb:jvb /usr/share/jitsi-videobridge
+            OWNER=jvb
+            GROUP=jvb
+        fi
+
+        # firewall conf
+        ufw allow 80
+        ufw allow 5222
+
+        # Prosody conf
+        if [ -x /etc/prosody/prosody.cfg.lua ]; then
+            mv /etc/prosody/prosody.cfg.lua /etc/prosody/prosody.cfg.lua.orig
+        fi
+        gunzip -c /usr/share/doc/jitsi-videobridge/prosody.cfg.lua-jvb.example.gz > /etc/prosody/prosody.cfg.lua
+        sed -i "s/jitmeet.example.com/$JVB_HOSTNAME/g" /etc/prosody/prosody.cfg.lua
+        sed -i "s/jitmeetSecret/$JVB_SECRET/g" /etc/prosody/prosody.cfg.lua
+        if [ ! -f /var/lib/prosody/$JVB_HOSTNAME.crt ]; then
+            HOST="$( (hostname -s; echo localhost) | head -n 1)"
+            DOMAIN="$( (hostname -d; echo localdomain) | head -n 1)"
+            openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj "/O=$DOMAIN/OU=$HOST/CN=$JVB_HOSTNAME/emailAddress=webmaster@$HOST.$DOMAIN" -keyout /var/lib/prosody/$JVB_HOSTNAME.key -out /var/lib
+        fi
+        ln -sf /var/lib/prosody/$JVB_HOSTNAME.key /etc/prosody/certs/$JVB_HOSTNAME.key
+        ln -sf /var/lib/prosody/$JVB_HOSTNAME.crt /etc/prosody/certs/$JVB_HOSTNAME.crt
+        invoke-rc.d prosody restart
+
+        # die logz
+        if [ ! -d /var/log/jitsi ]; then
+            mkdir -p /var/log/jitsi
+        fi
+        chown jvb:jvb /var/log/jitsi
+
+        # storing default for later use by Jitsi Meet and other packages
+        echo '# Jitsi Videobridge settings' > /etc/default/jitsi-videobridge
+        echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> /etc/default/jitsi-videobridge
+        echo "JVB_PORT=$JVB_PORT" >> /etc/default/jitsi-videobridge
+        echo "JVB_SECRET=$JVB_SECRET" >> /etc/default/jitsi-videobridge
+
+        # restund conf
+        if [ -f /etc/default/restund ]; then
+            . /etc/default/restund
+        fi
+        if [ -z "$TURN_SECRET" ]; then
+            TURN_SECRET=`head -c 8 /dev/urandom | tr '\0-\377' 'a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9@@@@####'`
+        fi
+        IP=`hostname -I | cut -f1 -d ' '`
+        sed -i "s/jitmeet.example.com/$JVB_HOSTNAME/g" /etc/restund.conf
+        sed -i "s/yoursecretthing/$TURN_SECRET/g" /etc/restund.conf
+        sed -i "s/1.2.3.4/$IP/g" /etc/restund.conf
+        if [ "$(pidof restund)" ]; then
+            invoke-rc.d restund restart || exit $?
+        else
+            invoke-rc.d restund start || exit $?
+        fi
+
+        # FIXME use ucf instead
+        if grep "$TURN_SECRET" /etc/prosody/prosody.cfg.lua > /dev/null; then
+            sed -i "s/turncredentials_secret.*/turincredentials_secret = \"$TURN_SECRET\";/" /etc/prosody/prosody.cfg.lua
+        else
+            TURN_PROSODY="    turncredentials_secret = \"$TURN_SECRET\";\n    turncredentials = {\n        { type = \"turn\", host = \"$IP\", port = 3478, transport = \"tcp\" }\n    }\n"
+            sed -i "s/------ Components ------/$TURN_PROSODY------ Components ------/" /etc/prosody/prosody.cfg.lua
+        fi
+        invoke-rc.d prosody restart
+        echo "TURN_SECRET=$TURN_SECRET" > /etc/default/restund
+
+        # run the videobridge
+        if [ "$(pidof java)" ]; then
+            invoke-rc.d jitsi-videobridge stop || true
+        fi
+        if [ -x "/etc/init.d/jitsi-videobridge" ]; then
+            update-rc.d jitsi-videobridge defaults >/dev/null
+            invoke-rc.d jitsi-videobridge start || exit $?
+        fi
+
+        # and we're done
+        db_stop
+
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+# dh_installdeb will replace this with shell code automatically
+# generated by other debhelper scripts.
+
+#DEBHELPER#
+
+exit 0

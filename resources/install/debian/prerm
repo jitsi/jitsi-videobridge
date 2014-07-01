@@ -1,0 +1,25 @@
+#!/bin/sh
+# prerm script for jitsi-videobridge
+
+set -e
+
+case "$1" in
+    remove|purge)
+        if [ -x "/etc/init.d/jitsi-videobridge" && "$(pidof java)" ]; then
+            invoke-rc.d jitsi-videobridge stop || true
+        fi
+    ;;
+
+    upgrade|deconfigure)
+    ;;
+
+    failed-upgrade)
+    ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+exit 0

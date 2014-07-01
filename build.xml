@@ -342,4 +342,94 @@
         </jar>
     </target>
 
+
+    <!-- Debian related targets -->
+
+    <property name="debian.dir" value="release/debian"/>
+    <property name="debian.binary.dir" value="${debian.dir}/binary"/>
+    <property name="debian.tmp.dir" value="${debian.dir}/tmp" />
+    <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
+    <property name="dpkg-buildpackage" value="/usr/bin/dpkg-buildpackage"/>
+    <property name="dh_testdir" value="/usr/bin/dh_testdir"/>
+    <!-- Can we build debian packages? -->
+    <condition property="dpkg.build.present">
+      <and>
+        <available file="${dpkg-buildpackage}"/>
+        <available file="${dh_testdir}"/>
+      </and>
+    </condition>
+    <!-- Can we deploy debian packages? -->
+    <condition property="dpkg.scan.present">
+      <available file="${dpkg-scanpackages}"/>
+    </condition>
+
+    <target name="deb" depends="deb-32,deb-64"/>
+    <target name="deb-32">
+        <antcall target="make-deb">
+            <param name="arch" value="i386"/>
+            <param name="system-arch" value="linux-x86"/>
+        </antcall>
+    </target>
+    <target name="deb-64">
+        <antcall target="make-deb">
+            <param name="arch" value="amd64"/>
+            <param name="system-arch" value="linux-x64"/>
+        </antcall>
+    </target>
+
+    <!-- Outputs a warning notifying the user that a dpkg tool is missing. -->
+    <target name="dpkg-build-warning" unless="dpkg.build.present">
+      <echo message="Either the ${dpkg-buildpackage} tool or the debhelper tools was not found on your system."/>
+      <echo message="Try installing the 'dpkg-dev' and 'debhelper' packages"/>
+    </target>
+
+    <!-- Builds the debian package. -->
+    <target name="make-deb" depends="make,dpkg-build-warning">
+        <!-- cleaning the release folder -->
+        <delete dir="${debian.dir}"/>
+        <mkdir dir="${debian.dir}"/>
+
+        <copy todir="${debian.dir}" includeEmptyDirs="Yes">
+            <fileset dir="resources/install/debian"/>
+        </copy>
+
+        <mkdir dir="${debian.dir}/usr/share/jitsi-videobridge"/>
+        <copy todir="${debian.dir}/usr/share/jitsi-videobridge/lib" overwrite="true" includeEmptyDirs="No">
+            <fileset dir="lib/">
+                <exclude name="native/macos*/*"/>
+                <exclude name="native/windows*/*"/>
+                <exclude name="native/linux/*"/>
+            </fileset>
+        </copy>
+        <copy file="jitsi-videobridge.jar" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
+        <copy file="resources/install/linux-64/jvb.sh" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
+        <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh" perm="755"/>
+
+        <!-- creating a debian archive file -->
+        <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz" basedir="release" includes="debian/" defaultexcludes="No" compression="gzip"/>
+
+        <!-- creating empty orig file -->
+        <touch file="jitsi-videobridge"/>
+        <tar destfile="jitsi-videobridge_${label}-1.orig.tar.gz" compression="gzip">
+            <tarfileset file="jitsi-videobridge"/>
+        </tar>
+        <delete file="jitsi-videobridge"/>
+
+        <!-- and build it -->
+        <exec executable="${dpkg-buildpackage}" dir="${debian.dir}/../">
+            <arg value="-tc"/>
+            <arg value="-us"/>
+            <arg value="-uc"/>
+            <arg value="-b"/>
+            <arg value="-d"/>
+            <arg value="-a${arch}"/>
+        </exec>
+
+        <!-- clean a bit (leaving .deb and .changes to get picked up later) -->
+        <delete file="resources/jitsi-videobridge_${label}-1.debian.tar.gz"/>
+        <delete file="resources/jitsi-videobridge_${label}-1.orig.tar.gz"/>
+
+    </target>
+
 </project>
+
