@@ -386,11 +386,33 @@
       <echo message="Try installing the 'dpkg-dev' and 'debhelper' packages"/>
     </target>
 
-    <!-- Builds the debian package. -->
-    <target name="make-deb" depends="make,dpkg-build-warning">
-        <!-- cleaning the release folder -->
+    <!-- if label is "build.SVN" we don't have version to update the changelog with -->
+    <target name="check-version">
+        <condition property="version.not.numeric">
+            <matches pattern="build.SVN" string="${label}"/>
+        </condition>
+    </target>
+
+    <!-- Updates changelog and version. Called only when "label" is a number. -->
+    <target name="deb-bump-version" unless="version.not.numeric">
+        <!-- preparing the release folder for new build -->
         <delete dir="${debian.dir}"/>
         <mkdir dir="${debian.dir}"/>
+
+        <!-- create new changelog and fill up the new version and date -->
+        <concat destfile="${debian.dir}/changelog" overwrite="true">
+            <fileset file="resources/install/debian/changelog.tmpl"/>
+            <fileset file="release/changelog"/>
+        </concat>
+        <tstamp>
+            <format property="date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en,US"/>
+        </tstamp>
+        <replace file="${debian.dir}/changelog" token="Mon, 01 Jan 1970 00:00:00 +0000" value="${date}"/>
+        <replace file="${debian.dir}/changelog" token="1-build.SVN" value="${label}"/>
+    </target>
+
+    <!-- Builds the debian package. -->
+    <target name="make-deb" depends="make,dpkg-build-warning,check-version,deb-bump-version">
 
         <copy todir="${debian.dir}" includeEmptyDirs="Yes">
             <fileset dir="resources/install/debian"/>
@@ -418,6 +440,10 @@
         </tar>
         <delete file="jitsi-videobridge"/>
 
+        <!-- if we didn't bump the version, there is no changelog, so we copy it (and prefer one from release folder) -->
+        <copy file="${debian.dir}/changelog.tmpl" tofile="${debian.dir}/changelog" overwrite="false" failonerror="false"/>
+        <copy file="release/changelog" todir="${debian.dir}" overwrite="true" failonerror="false"/>
+
         <!-- and build it -->
         <exec executable="${dpkg-buildpackage}" dir="${debian.dir}/../">
             <arg value="-tc"/>
@@ -428,7 +454,11 @@
             <arg value="-a${arch}"/>
         </exec>
 
-	    <delete dir="${debian.release}"/>
+        <!-- keep the new changelog for later builds -->
+        <copy file="${debian.dir}/changelog" todir="release" overwrite="true"/>
+
+        <!-- clean up the build folder -->
+        <delete dir="${debian.release}"/>
 
     </target>
 
