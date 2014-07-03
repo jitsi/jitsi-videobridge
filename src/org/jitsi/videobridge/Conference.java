@@ -7,20 +7,18 @@
 package org.jitsi.videobridge;
 
 import java.beans.*;
-import java.beans.beancontext.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.text.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-
 import net.java.sip.communicator.util.*;
+
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.osgi.framework.*;

@@ -26,7 +26,6 @@ import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.codec.Constants; //Disanbiguation
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
@@ -150,6 +149,7 @@ public class RtpChannel
     private final PropertyChangeListener streamPropertyChangeListener
         = new PropertyChangeListener()
                 {
+                    @Override
                     public void propertyChange(PropertyChangeEvent ev)
                     {
                         streamPropertyChange(ev);
@@ -205,10 +205,10 @@ public class RtpChannel
         if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
         {
             /*
-            * In the case of content mixing, each Channel has its own local^M
-            * synchronization source identifier (SSRC), which Jitsi Videobridge^M
-            * pre-announces.^M
-            */
+             * In the case of content mixing, each Channel has its own local
+             * synchronization source identifier (SSRC), which Jitsi Videobridge
+             * pre-announces.
+             */
             initialLocalSSRC = new Random().nextInt();
             stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
         }
