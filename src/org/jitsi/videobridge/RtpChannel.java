@@ -87,7 +87,7 @@ public class RtpChannel
      * Currently, the value is taken into account in the case of content mixing
      * and not in the case of RTP translation.
      */
-    private long initialLocalSSRC = -1;
+    private final long initialLocalSSRC;
 
     /**
      * The maximum number of video RTP stream to be sent from Jitsi Videobridge
@@ -180,6 +180,7 @@ public class RtpChannel
         throws Exception
     {
         super(content);
+
         if (id == null)
             throw new NullPointerException("id");
 
@@ -202,16 +203,12 @@ public class RtpChannel
         stream.setName(this.id);
         stream.setProperty(RtpChannel.class.getName(), this);
 
-        if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
-        {
-            /*
-             * In the case of content mixing, each Channel has its own local
-             * synchronization source identifier (SSRC), which Jitsi Videobridge
-             * pre-announces.
-             */
-            initialLocalSSRC = new Random().nextInt();
-            stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
-        }
+        /*
+         * In the case of content mixing, each Channel has its own local
+         * synchronization source identifier (SSRC), which Jitsi Videobridge
+         * pre-announces.
+         */
+        initialLocalSSRC = new Random().nextInt();
 
         conferenceSpeechActivity
             = getContent().getConference().getSpeechActivity();
@@ -560,10 +557,9 @@ public class RtpChannel
      * @param commonIq the <tt>ColibriConferenceIQ.ChannelCommon</tt> on which
      *                 to set the values of the properties of this instance.
      */
+    @Override
     public void describe(ColibriConferenceIQ.ChannelCommon commonIq)
     {
-        super.describe(commonIq);
-
         ColibriConferenceIQ.Channel iq
             = (ColibriConferenceIQ.Channel) commonIq;
 
@@ -578,6 +574,8 @@ public class RtpChannel
          * consumption.
          */
         iq.setRTPLevelRelayType(getRTPLevelRelayType());
+
+        super.describe(commonIq);
 
         iq.setDirection(stream.getDirection());
 
@@ -594,7 +592,6 @@ public class RtpChannel
             iq.addSource(source);
         }
         iq.setSSRCs(getReceiveSSRCs());
-
     }
 
     /**
@@ -697,12 +694,12 @@ public class RtpChannel
     {
         switch (getRTPLevelRelayType())
         {
-            case MIXER:
-                return initialLocalSSRC;
-            case TRANSLATOR:
-                return getContent().getInitialLocalSSRC();
-            default:
-                return -1;
+        case MIXER:
+            return initialLocalSSRC;
+        case TRANSLATOR:
+            return getContent().getInitialLocalSSRC();
+        default:
+            return -1;
         }
     }
 
@@ -1000,6 +997,16 @@ public class RtpChannel
 
         if (!stream.isStarted())
         {
+            /*
+             * We've postponed the invocation of the method
+             * getRTPLevelRelayType() in order to make sure that the conference
+             * focus has had a chance to set the RTP-level relay type. We have
+             * to invoke the method MediaStream#setSSRCFactory(SSRCFactory)
+             * before starting the stream.
+             */
+            if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
+                stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
+
             /*
              * Start the SrtpControl of the MediaStream. As far as our
              * experience with Jitsi goes, the SrtpControl is started prior to
