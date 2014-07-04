@@ -584,7 +584,7 @@ public class RtpChannel
 
         long initialLocalSSRC = getInitialLocalSSRC();
 
-        if (initialLocalSSRC != -1 && announceLocalSSRC())
+        if (initialLocalSSRC != -1)
         {
             SourcePacketExtension source = new SourcePacketExtension();
 
@@ -1612,18 +1612,5 @@ public class RtpChannel
                 }
             }
         }
-    }
-
-    /**
-     * Whether this <tt>Channel</tt> should announce a local SSRC in its XML
-     * description.
-     *
-     * @return <tt>true</tt> if this <tt>Channel</tt> should announce a local
-     * SSRC in its XML
-     * description.
-     */
-    private boolean announceLocalSSRC()
-    {
-        return MediaType.VIDEO.equals(getContent().getMediaType());
     }
 }
