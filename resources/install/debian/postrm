@@ -20,6 +20,7 @@ case "$1" in
 
         # clear user and group
         if getent passwd jvb > /dev/null ; then
+            `ps -u jvb -o pid | xargs kill`
             deluser jvb
         fi
 
