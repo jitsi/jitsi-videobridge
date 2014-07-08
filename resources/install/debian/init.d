@@ -44,7 +44,7 @@ case "$1" in
     ;;
   stop)
     echo -n "Stopping $DESC: "
-    `ps -u $USER -o pid | xards kill`
+    `ps -u $USER -o pid h | xargs kill`
     rm $PIDFILE
     echo "$NAME."
     ;;
