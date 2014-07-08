@@ -118,6 +118,9 @@ case "$1" in
         if [ "$(pidof java)" ]; then
             invoke-rc.d jitsi-videobridge stop || true
         fi
+        if [ -x "/etc/init.d/jitsi-videobridge" ]; then
+            update-rc.d jitsi-videobridge defaults >/dev/null
+        fi
 
         # and we're done
         db_stop
