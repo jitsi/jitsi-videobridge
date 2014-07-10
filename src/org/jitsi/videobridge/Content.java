@@ -11,6 +11,7 @@ import java.lang.ref.*;
 import java.util.*;
 
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -663,6 +664,53 @@ public class Content
     }
 
     /**
+     * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
+     * one specified in the configuration.
+     *
+     */
+    private void setRTCPTerminationStrategyFromConfiguration()
+    {
+        RTPTranslator translator = rtpTranslator;
+        if (translator == null
+                || !(translator instanceof RTPTranslatorImpl)
+                || !MediaType.VIDEO.equals(mediaType))
+        {
+            return;
+        }
+
+        ConfigurationService cfg = getConference().getVideobridge()
+                .getConfigurationService();
+
+        if (cfg != null)
+        {
+            String strategyFQN = cfg.getString(
+                    Videobridge.RTCP_TERMINATION_STRATEGY_PNAME, "");
+
+            RTCPTerminationStrategy strategy;
+            if (strategyFQN != null && strategyFQN.trim().length() != 0)
+            {
+                try
+                {
+                    Class<?> clazz = Class.forName(strategyFQN);
+                    strategy = (RTCPTerminationStrategy) clazz.newInstance();
+                }
+                catch (Exception e)
+                {
+                    logger.error("Could not instantiate the configured RTCP " +
+                                    "termination strategy", e);
+                    return;
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            translator.setRTCPTerminationStrategy(strategy);
+        }
+    }
+
+    /**
      * Gets the <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
      * between the <tt>Channel</tt>s of this <tt>Content</tt> which use a
      * translator as their RTP-level relay.
@@ -689,6 +737,10 @@ public class Content
                         initialLocalSSRC = new Random().nextInt();
 
                         rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
+
+                        MediaType mediaType = getMediaType();
+                        if (MediaType.VIDEO.equals(mediaType))
+                            setRTCPTerminationStrategyFromConfiguration();
 
                         rtcpFeedbackMessageSender
                             = new RTCPFeedbackMessageSender(

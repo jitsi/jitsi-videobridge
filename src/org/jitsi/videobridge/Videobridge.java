@@ -183,6 +183,13 @@ public class Videobridge implements StatsGenerator
     private static final int DEFAULT_STAT_INTERVAL = 1000;
 
     /**
+     * The name of the property which specifies the FQN name of the RTCP
+     * strategy to use by default.
+     */
+    static final String RTCP_TERMINATION_STRATEGY_PNAME
+            = "org.jitsi.videobridge.rtcp.strategy";
+
+    /**
      * Logs a specific <tt>String</tt> at debug level.
      *
      * @param s the <tt>String</tt> to log at debug level
