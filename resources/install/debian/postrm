@@ -19,6 +19,11 @@ case "$1" in
         fi
 
         # clear user and group
+        # ensure nothing is running as jvb user
+        if ps -u jvb h; then
+            `ps -u jvb -o pid h | xargs kill`
+        fi
+        # and then remove the user
         if getent passwd jvb > /dev/null ; then
             deluser jvb
         fi

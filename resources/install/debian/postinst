@@ -69,7 +69,10 @@ case "$1" in
         if [ ! -f /var/lib/prosody/$JVB_HOSTNAME.crt ]; then
             HOST="$( (hostname -s; echo localhost) | head -n 1)"
             DOMAIN="$( (hostname -d; echo localdomain) | head -n 1)"
-            openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj "/O=$DOMAIN/OU=$HOST/CN=$JVB_HOSTNAME/emailAddress=webmaster@$HOST.$DOMAIN" -keyout /var/lib/prosody/$JVB_HOSTNAME.key -out /var/lib
+            openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 \
+                -subj "/O=$DOMAIN/OU=$HOST/CN=$JVB_HOSTNAME/emailAddress=webmaster@$HOST.$DOMAIN" \
+                -keyout /var/lib/prosody/$JVB_HOSTNAME.key \
+                -out /var/lib/prosody/$JVB_HOSTNAME.crt
         fi
         ln -sf /var/lib/prosody/$JVB_HOSTNAME.key /etc/prosody/certs/$JVB_HOSTNAME.key
         ln -sf /var/lib/prosody/$JVB_HOSTNAME.crt /etc/prosody/certs/$JVB_HOSTNAME.crt
@@ -114,13 +117,12 @@ case "$1" in
         invoke-rc.d prosody restart
         echo "TURN_SECRET=$TURN_SECRET" > /etc/default/restund
 
-        # run the videobridge
+        # ensure videobridge is not running - it will be started at the end
         if [ "$(pidof java)" ]; then
             invoke-rc.d jitsi-videobridge stop || true
         fi
         if [ -x "/etc/init.d/jitsi-videobridge" ]; then
             update-rc.d jitsi-videobridge defaults >/dev/null
-            invoke-rc.d jitsi-videobridge start || exit $?
         fi
 
         # and we're done

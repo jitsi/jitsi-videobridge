@@ -43,10 +43,8 @@ case "$1" in
     echo "$NAME."
     ;;
   stop)
-#    start-stop-daemon --stop --quiet --exec $DAEMON
     echo -n "Stopping $DESC: "
-#    killall java
-    `ps ax | grep jitsi-videobridge | grep -v grep | cut -d " " -f1 | xargs kill`
+    `ps -u $USER -o pid h | xargs kill`
     rm $PIDFILE
     echo "$NAME."
     ;;

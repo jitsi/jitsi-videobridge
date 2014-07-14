@@ -371,12 +371,16 @@
         <antcall target="make-deb">
             <param name="arch" value="i386"/>
             <param name="system-arch" value="linux-x86"/>
+            <param name="include-dir" value="linux"/>
+            <param name="exclude-dir" value="linux-64"/>
         </antcall>
     </target>
     <target name="deb-64">
         <antcall target="make-deb">
             <param name="arch" value="amd64"/>
             <param name="system-arch" value="linux-x64"/>
+            <param name="include-dir" value="linux-64"/>
+            <param name="exclude-dir" value="linux"/>
         </antcall>
     </target>
 
@@ -423,11 +427,11 @@
             <fileset dir="lib/">
                 <exclude name="native/macos*/*"/>
                 <exclude name="native/windows*/*"/>
-                <exclude name="native/linux/*"/>
+                <exclude name="native/${exclude-dir}/*"/>
             </fileset>
         </copy>
         <copy file="jitsi-videobridge.jar" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
-        <copy file="resources/install/linux-64/jvb.sh" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
+        <copy file="resources/install/${include-dir}/jvb.sh" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh" perm="755"/>
 
         <!-- creating a debian archive file -->
