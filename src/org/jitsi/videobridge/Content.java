@@ -645,6 +645,11 @@ public class Content
     {
         if (recorder == null)
         {
+            MediaType mediaType = getMediaType();
+            if (!MediaType.VIDEO.equals(mediaType)
+                    && !MediaType.AUDIO.equals(mediaType))
+                return null;
+
             recorder = getMediaService()
                     .createRecorder(getRTPTranslator());
             recorder.setEventHandler(getConference().getRecorderEventHandler());

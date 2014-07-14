@@ -825,8 +825,14 @@ public class Conference
             synchronized (contents)
             {
                 for (Content content : contents)
+                {
+                    MediaType mediaType = content.getMediaType();
+                    if (!MediaType.VIDEO.equals(mediaType)
+                            && !MediaType.AUDIO.equals(mediaType))
+                        continue;
                     if (!content.isRecording())
                         recording = false;
+                }
             }
         }
         if (this.recording != recording)
@@ -871,6 +877,13 @@ public class Conference
                 Synchronizer synchronizer = null;
                 for (Content content : contents)
                 {
+                    MediaType mediaType = content.getMediaType();
+                    if (!MediaType.VIDEO.equals(mediaType)
+                            && !MediaType.AUDIO.equals(mediaType))
+                    {
+                        continue;
+                    }
+
                     if (!failedToStart)
                         failedToStart |= !content.setRecording(true, path);
                     if (failedToStart)
@@ -882,7 +895,11 @@ public class Conference
                         synchronizer = content.getRecorder().getSynchronizer();
                     }
                     else
-                        content.getRecorder().setSynchronizer(synchronizer);
+                    {
+                        Recorder recorder = content.getRecorder();
+                        if (recorder != null)
+                            recorder.setSynchronizer(synchronizer);
+                    }
 
                     content.feedKnownSsrcsToSynchronizer();
                 }
@@ -904,6 +921,12 @@ public class Conference
 
                 for (Content content : contents)
                 {
+                    MediaType mediaType = content.getMediaType();
+                    if (!MediaType.VIDEO.equals(mediaType)
+                            && !MediaType.AUDIO.equals(mediaType))
+                    {
+                        continue;
+                    }
                     content.setRecording(false, null);
                 }
 
