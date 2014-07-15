@@ -7,6 +7,7 @@
 package org.jitsi.videobridge;
 
 import java.lang.management.*;
+import java.text.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
@@ -1041,6 +1042,7 @@ public class Videobridge implements StatsGenerator
     public void generateStatistics(Statistics stats)
     {
         int audioChannels = 0, videoChannels = 0, conferences = 0, endpoints = 0;
+        long packets = 0, packetsLost = 0;
 
         for(Conference conference : getConferences())
         {
@@ -1054,10 +1056,27 @@ public class Videobridge implements StatsGenerator
                 {
                     videoChannels += content.getChannelCount();
                 }
+                for(Channel channel : content.getChannels())
+                {
+                    if(!(channel instanceof RtpChannel))
+                        continue;
+                    RtpChannel rtpChannel = (RtpChannel) channel;
+                    packets += rtpChannel.getLastPacketsNB();
+                    packetsLost += rtpChannel.getLastPacketsLostNB();
+                }
             }
             conferences++;
             endpoints += conference.getEndpointsCount();
         }
+
+        double packetLostPercent = 0;
+        if(packets > 0)
+        {
+            packetLostPercent = ((double)packetsLost)/packets;
+        }
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_RTP_LOSS,
+            new DecimalFormat("#.#####").format(packetLostPercent));
 
         stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_NUMBEROFTHREADS,
             ManagementFactory.getThreadMXBean().getThreadCount());
@@ -1113,6 +1132,11 @@ public class Videobridge implements StatsGenerator
             = "participants";
 
         /**
+         * The name of the RTP loss statistic.
+         */
+        public static final String VIDEOBRIDGESTATS_RTP_LOSS = "rtp_loss";
+
+        /**
          * The instance of <tt>VideobridgeStatistics</tt>.
          */
         private static VideobridgeStatistics instance;
@@ -1146,6 +1170,7 @@ public class Videobridge implements StatsGenerator
             this.stats.put(VIDEOBRIDGESTATS_VIDEOCHANNELS, 0);
             this.stats.put(VIDEOBRIDGESTATS_NUMBEROFTHREADS, 0);
             this.stats.put(VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS, 0);
+            this.stats.put(VIDEOBRIDGESTATS_RTP_LOSS, 0);
         }
     }
 

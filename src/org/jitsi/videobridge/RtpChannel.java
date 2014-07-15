@@ -165,6 +165,17 @@ public class RtpChannel
     private final SessionAddress streamTarget = new SessionAddress();
 
     /**
+     * The last known number of packets that are received or sent for this
+     * channel.
+     */
+    private long lastKnownPacketsNB = 0;
+
+    /**
+     * The last known number of lost packets for this channel.
+     */
+    private long lastKnownPacketsLostNB = 0;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -392,7 +403,7 @@ public class RtpChannel
                  * the SrtpControl of the MediaStream of this Channel was set to
                  * a ZrtpControl. Consequently, the RTP PacketTransformer of
                  * ZrtpControlImpl used to swallow the ZRTP messages. For the
-                 * purposes of compatibility, do not accept the ZRTP messages.  
+                 * purposes of compatibility, do not accept the ZRTP messages.
                  */
                 if (v == 0)
                 {
@@ -701,6 +712,33 @@ public class RtpChannel
         default:
             return -1;
         }
+    }
+
+    /**
+     * Returns the number of packets that are sent or received for this channel
+     * since last time the method is called.
+     * @return  the number of packets that are sent or received since last time
+     * the method is called.
+     */
+    public long getLastPacketsNB()
+    {
+        long newPackets = stream.getMediaStreamStats().getNbPackets();
+        long lastPacketsNB = newPackets - lastKnownPacketsNB;
+        lastKnownPacketsNB = newPackets;
+        return lastPacketsNB;
+    }
+
+    /**
+     * Returns the number of lost packets for this channel since last time the
+     * method is called.
+     * @return  the number of lost packets since last time the method is called.
+     */
+    public long getLastPacketsLostNB()
+    {
+        long newPacketsLost = stream.getMediaStreamStats().getNbPacketsLost();
+        long lastPacketsNB = newPacketsLost - lastKnownPacketsLostNB;
+        lastKnownPacketsLostNB = newPacketsLost;
+        return lastPacketsNB;
     }
 
     /**
