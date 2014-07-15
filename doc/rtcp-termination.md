@@ -129,22 +129,22 @@ calculate a reverse map map (not a typo) like this:
 For example, suppose we have a conference of 4 endpoints like in the
 figure bellow :
 
-   +---+      +-------------+      +---+
-   | A |<---->|             |<---->| B |
-   +---+      |    Jitsi    |      +---+
-              | Videobridge |
-   +---+      |             |      +---+
-   | C |<---->|             |<---->| D |
-   +---+      +-------------+      +---+
+       +---+      +-------------+      +---+
+       | A |<---->|             |<---->| B |
+       +---+      |    Jitsi    |      +---+
+                  | Videobridge |
+       +---+      |             |      +---+
+       | C |<---->|             |<---->| D |
+       +---+      +-------------+      +---+
 
 The reverse map map would have the following form :
 
     <A, <B, feedback of B>>
-	<A, <C, feedback of C>>
-	...
-	<B, <A, feedback of A>>
-	<B, <C, feedback of C>>
-	...
+    <A, <C, feedback of C>>
+    ...
+    <B, <A, feedback of A>>
+    <B, <C, feedback of C>>
+    ...
 
 This calculation is not instantaneous, so it takes place ONLY when we
 the bridge decides to send RTCP feedback, and not, for example, when
