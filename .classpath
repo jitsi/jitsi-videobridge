@@ -29,6 +29,7 @@
 	<classpathentry kind="lib" path="lib/servlet-api-3.1.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api.jar"/>
 	<classpathentry kind="lib" path="lib/smack.jar"/>
+	<classpathentry kind="lib" path="lib/smackx.jar"/>
 	<classpathentry kind="lib" path="lib/tinder.jar"/>
 	<classpathentry kind="lib" path="lib/ui-service.jar"/>
 	<classpathentry kind="lib" path="lib/util.jar"/>

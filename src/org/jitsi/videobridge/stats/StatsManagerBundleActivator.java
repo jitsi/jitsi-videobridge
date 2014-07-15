@@ -6,7 +6,6 @@
  */
 package org.jitsi.videobridge.stats;
 
-import org.jitsi.util.*;
 import org.osgi.framework.*;
 
 /**
