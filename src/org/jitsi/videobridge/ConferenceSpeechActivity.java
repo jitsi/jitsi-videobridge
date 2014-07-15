@@ -53,6 +53,13 @@ class ConferenceSpeechActivity
         = ExecutorUtils.newCachedThreadPool(true, "ConferenceSpeechActivity");
 
     /**
+     * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
+     * and its instances to print debug information.
+     */
+    private static final Logger logger
+        = Logger.getLogger(ConferenceSpeechActivity.class);
+
+    /**
      * The <tt>ActiveSpeakerChangedListener</tt> which listens to
      * {@link #activeSpeakerDetector} about changes in the active/dominant
      * speaker in this multipoint conference.
@@ -146,6 +153,14 @@ class ConferenceSpeechActivity
 
         if (conference != null)
         {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                        "The dominant speaker in conference "
+                            + conference.getID() + " is now the SSRC " + ssrc
+                            + ".");
+            }
+
             Endpoint endpoint
                 = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
             boolean maybeStartEventDispatcher = false;
@@ -399,6 +414,7 @@ class ConferenceSpeechActivity
      * interest, the name of the property and the old and new values of that
      * property
      */
+    @Override
     public void propertyChange(PropertyChangeEvent ev)
     {
         Conference conference = getConference();

@@ -55,12 +55,7 @@ public class Conference
      */
     private static void logd(String s)
     {
-        /*
-         * FIXME Jitsi Videobridge uses the defaults of java.util.logging at the
-         * time of this writing but wants to log at debug level at all times for
-         * the time being in order to facilitate early development.
-         */
-        logger.info(s);
+        logger.debug(s);
     }
 
     /**
@@ -247,7 +242,8 @@ public class Conference
 
         if (dominantSpeaker != null)
         {
-            broadcastMessage("activeSpeaker:" + dominantSpeaker.getID());
+            broadcastMessageOnDataChannels(
+                    "activeSpeaker:" + dominantSpeaker.getID());
         }
     }
 
@@ -447,14 +443,12 @@ public class Conference
 
     /**
      * Returns the number of endpoints in the conference.
+     *
      * @return the number of endpoints in the conference.
      */
     public int getEndpointsCount()
     {
-        int endpoints = 0;
-        for(Endpoint e : getEndpoints())
-            endpoints++;
-        return endpoints;
+        return getEndpoints().size();
     }
 
     /**
@@ -642,6 +636,7 @@ public class Conference
      * interest, the name of the property and the old and new values of that
      * property
      */
+    @Override
     public void propertyChange(PropertyChangeEvent ev)
     {
         Object source = ev.getSource();
@@ -676,12 +671,6 @@ public class Conference
                 endpoints = speechActivity.getEndpoints();
                 for (Channel channel : content.getChannels())
                 {
-                    //FIXME: remove instance of
-                    if (!(channel instanceof RtpChannel))
-                    {
-                        continue;
-                    }
-
                     RtpChannel rtpChannel = (RtpChannel) channel;
 
                     List<Endpoint> channelEndpointsToAskForKeyframes
@@ -729,29 +718,10 @@ public class Conference
      *
      * @param msg the message to be advertised across conference peers.
      */
-    private void broadcastMessage(String msg)
+    private void broadcastMessageOnDataChannels(String msg)
     {
-        ArrayList<WeakReference<Endpoint>> endpointsCopy;
-
-        synchronized (endpoints)
-        {
-            endpointsCopy
-                = new ArrayList<WeakReference<Endpoint>>(endpoints);
-        }
-
-        int endpointsCount = endpointsCopy.size();
-
-        if(endpointsCount == 0)
-            return;
-
-        for(WeakReference<Endpoint> endpoint : endpoints)
-        {
-            Endpoint toNotify = endpoint.get();
-            if(toNotify == null)
-                continue;
-
-            sendMessageOnDataChannel(toNotify, msg);
-        }
+        for (Endpoint endpoint : getEndpoints())
+            endpoint.sendMessageOnDataChannel(msg);
     }
 
     /**
@@ -761,52 +731,6 @@ public class Conference
     public void setLastKnownFocus(String jid)
     {
         lastKnownFocus = jid;
-    }
-
-    /**
-     * Sends given <tt>String</tt> <tt>msg</tt> to given <tt>endpoint</tt>
-     * over default data channel.
-     *
-     * @param endpoint message recipient.
-     * @param msg message text to be sent.
-     */
-    private void sendMessageOnDataChannel(Endpoint endpoint, String msg)
-    {
-        String endpointId = endpoint.getID();
-
-        SctpConnection sctpConnection = endpoint.getSctpConnection();
-
-        if(sctpConnection == null)
-        {
-            logger.warn("No SCTP connection with " + endpointId);
-            return;
-        }
-
-        if(!sctpConnection.isReady())
-        {
-            logger.warn(
-                "SCTP connection with " + endpointId + " not ready yet");
-            return;
-        }
-
-        try
-        {
-            WebRtcDataStream dataStream
-                = sctpConnection.getDefaultDataStream();
-
-            if(dataStream == null)
-            {
-                logger.warn(
-                    "WebRtc data channel not opened yet " + endpointId);
-                return;
-            }
-
-            dataStream.sendString(msg);
-        }
-        catch (IOException e)
-        {
-            logger.error("SCTP error, endpoint: " + endpointId, e);
-        }
     }
 
     /**
@@ -1035,19 +959,18 @@ public class Conference
     MediaService getMediaService()
     {
         MediaService mediaService
-                = ServiceUtils.getService(getBundleContext(), MediaService.class);
+            = ServiceUtils.getService(getBundleContext(), MediaService.class);
 
-    /*
-     * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
-     * the MediaService implementation. In the form of a temporary
-     * workaround, get it through LibJitsi.
-     */
+        /*
+         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
+         * the MediaService implementation. In the form of a temporary
+         * workaround, get it through LibJitsi.
+         */
         if (mediaService == null)
             mediaService = LibJitsi.getMediaService();
 
         return mediaService;
     }
-
 
     /**
      * XXX REMOVE

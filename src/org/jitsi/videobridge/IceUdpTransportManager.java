@@ -98,12 +98,7 @@ public class IceUdpTransportManager
      */
     private static void logd(String s)
     {
-        /*
-         * FIXME Jitsi Videobridge uses the defaults of java.util.logging at the
-         * time of this writing but wants to log at debug level at all times for
-         * the time being in order to facilitate early development.
-         */
-        logger.info(s);
+        logger.debug(s);
     }
 
     /**

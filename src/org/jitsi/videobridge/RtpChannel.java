@@ -974,7 +974,7 @@ public class RtpChannel
 
         // Handle the Endpoints entering the list of lastN.
         if ((endpointsEnteringLastN != null)
-            && !endpointsEnteringLastN.isEmpty())
+                && !endpointsEnteringLastN.isEmpty())
         {
             endpointsEnteringLastN(endpointsEnteringLastN);
         }
@@ -1152,17 +1152,18 @@ public class RtpChannel
      * interest, the name of the property and the old and new values of that
      * property
      */
+    @Override
     public void propertyChange(PropertyChangeEvent ev)
     {
         Object source = ev.getSource();
 
         if ((conferenceSpeechActivity == source)
-            && (conferenceSpeechActivity != null))
+                && (conferenceSpeechActivity != null))
         {
             String propertyName = ev.getPropertyName();
 
             if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
-                propertyName))
+                    propertyName))
             {
                 dominantSpeakerChanged();
             }

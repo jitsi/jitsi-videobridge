@@ -6,10 +6,12 @@
  */
 package org.jitsi.videobridge;
 
+import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 
 /**
@@ -28,6 +30,12 @@ public class Endpoint
      */
     public static final String CHANNELS_PROPERTY_NAME
         = Endpoint.class.getName() + ".channels";
+
+    /**
+     * The <tt>Logger</tt> used by the <tt>Endpoint</tt> class and its instances
+     * to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Endpoint.class);
 
     /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
@@ -219,6 +227,50 @@ public class Endpoint
             firePropertyChange(CHANNELS_PROPERTY_NAME, null, null);
 
         return removed;
+    }
+
+    /**
+     * Sends a specific <tt>String</tt> <tt>msg</tt> over the data channel of
+     * this <tt>Endpoint</tt>.
+     *
+     * @param msg message text to send.
+     */
+    public void sendMessageOnDataChannel(String msg)
+    {
+        SctpConnection sctpConnection = getSctpConnection();
+        String endpointId = getID();
+
+        if(sctpConnection == null)
+        {
+            logger.warn("No SCTP connection with " + endpointId);
+        }
+        else if(sctpConnection.isReady())
+        {
+            try
+            {
+                WebRtcDataStream dataStream
+                    = sctpConnection.getDefaultDataStream();
+
+                if(dataStream == null)
+                {
+                    logger.warn(
+                            "WebRtc data channel not opened yet " + endpointId);
+                }
+                else
+                {
+                    dataStream.sendString(msg);
+                }
+            }
+            catch (IOException e)
+            {
+                logger.error("SCTP error, endpoint: " + endpointId, e);
+            }
+        }
+        else
+        {
+            logger.warn(
+                    "SCTP connection with " + endpointId + " not ready yet");
+        }
     }
 
     /**
