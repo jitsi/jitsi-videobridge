@@ -182,11 +182,11 @@ be used by the bridge:
 
        org.jitsi.videobridge.rtcp.strategy=STRATEGY_FULLY_QUALIFIED_NAME
 
-Strategies can be swapped-in/out dynamically through COLIBRI which
-can be useful both for testing (i.e. we change on the fly the active
-strategy to observe the impact of the change)
-
-To enable the strategy, the focus of a colibri conference can execute:
+Strategies can be swapped-in/out dynamically through COLIBRI which can
+be useful both for testing (i.e. we change on the fly the active
+strategy to observe the impact of the change). To enable, for example,
+the highest quality RTCP termination strategy, the focus of a colibri
+conference can execute:
 
     focus.setRTCPTerminationStrategy('org.jitsi.impl.neomedia.rtcp.' +
 	      'termination.strategies.HighestQualityRTCPTerminationStrategy')
