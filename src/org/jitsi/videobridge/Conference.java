@@ -28,6 +28,7 @@ import org.osgi.framework.*;
  *
  * @author Lyubomir Marinov
  * @author Boris Grozev
+ * @author Hristo Terezov
  */
 public class Conference
      extends PropertyChangeNotifier
@@ -50,7 +51,7 @@ public class Conference
     /**
      * Logs a specific <tt>String</tt> at debug level.
      *
-     * @param s the <tt>String</tt> to log at debug level 
+     * @param s the <tt>String</tt> to log at debug level
      */
     private static void logd(String s)
     {
@@ -86,6 +87,12 @@ public class Conference
      * the conference.
      */
     private final String focus;
+
+    /**
+     * If {@link #focus} is <tt>null</tt> the value of the last known focus is
+     * stored in this member.
+     */
+    private String lastKnownFocus;
 
     /**
      * The (unique) identifier/ID of this instance.
@@ -154,6 +161,7 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
+        this.lastKnownFocus = focus;
 
         propertyChangeListener = new WeakReferencePropertyChangeListener(this);
         speechActivity = new ConferenceSpeechActivity(this);
@@ -438,6 +446,18 @@ public class Conference
     }
 
     /**
+     * Returns the number of endpoints in the conference.
+     * @return the number of endpoints in the conference.
+     */
+    public int getEndpointsCount()
+    {
+        int endpoints = 0;
+        for(Endpoint e : getEndpoints())
+            endpoints++;
+        return endpoints;
+    }
+
+    /**
      * Gets the JID of the conference focus who has initialized this instance
      * and from whom requests to manage this instance must come or they will be
      * ignored.
@@ -474,6 +494,15 @@ public class Conference
         {
             return lastActivityTime;
         }
+    }
+
+    /**
+     * Returns the JID of the last known focus.
+     * @return the JID of the last known focus.
+     */
+    public String getLastKnowFocus()
+    {
+        return lastKnownFocus;
     }
 
     /**
@@ -723,6 +752,15 @@ public class Conference
 
             sendMessageOnDataChannel(toNotify, msg);
         }
+    }
+
+    /**
+     * Sets the JID of the last known focus.
+     * @param jid the JID of the last known focus.
+     */
+    public void setLastKnownFocus(String jid)
+    {
+        lastKnownFocus = jid;
     }
 
     /**

@@ -71,6 +71,9 @@ public class OSGi
                 "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
             },
             {
+                "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
+            },
+            {
                 "org/jitsi/videobridge/VideobridgeBundleActivator"
             },
             {
@@ -115,7 +118,7 @@ public class OSGi
      * libraries that it utilizes. Because <tt>ConfigurationServiceImpl</tt>
      * will override <tt>System</tt> property values, the set default
      * <tt>System</tt> property values will not prevent the user from overriding
-     * them. 
+     * them.
      */
     private static void setSystemPropertyDefaults()
     {

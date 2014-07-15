@@ -6,6 +6,7 @@
  */
 package org.jitsi.videobridge;
 
+import java.lang.management.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
@@ -16,9 +17,14 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.stats.*;
+import org.jitsi.videobridge.stats.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.provider.*;
+import org.jivesoftware.smackx.pubsub.*;
+import org.jivesoftware.smackx.pubsub.provider.*;
 import org.osgi.framework.*;
 
 /**
@@ -26,8 +32,9 @@ import org.osgi.framework.*;
  * {@link Conference} instances.
  *
  * @author Lyubomir Marinov
+ * @author Hristo Terezov
  */
-public class Videobridge
+public class Videobridge implements StatsGenerator
 {
     /**
      * The XML namespace of the <tt>TransportManager</tt> type to be initialized
@@ -118,9 +125,66 @@ public class Videobridge
         = "org.jitsi.videobridge.MEDIA_RECORDING_TOKEN";
 
     /**
+     * The name of the property which enables generating and sending statistics
+     * about the videobridge.
+     */
+    private static final String ENABLE_STATISTICS
+        = "org.jitsi.videobridge.ENABLE_STATISTICS";
+
+    /**
+     * The name of the property which specifies the transport for
+     * sending statistics about the videobridge.
+     */
+    private static final String STATISTICS_TRANSPORT
+        = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
+
+    /**
+     * The name of the property which specifies the interval in milliseconds for
+     * sending statistics about the videobridge.
+     */
+    private static final String STATISTICS_INTERVAL
+        = "org.jitsi.videobridge.STATISTICS_INTERVAL";
+
+    /**
+     * The name of the property which specifies the name of the service that
+     * will receive the statistics about the videobridge if PubSub transport is
+     * used to send statistics.
+     */
+    private static final String PUBSUB_SERVICE
+        = "org.jitsi.videobridge.PUBSUB_SERVICE";
+
+    /**
+     * The name of the property which specifies the name of the PubSub node that
+     * will receive the statistics about the videobridge if PubSub transport is
+     * used to send statistics.
+     */
+    private static final String PUBSUB_NODE
+        = "org.jitsi.videobridge.PUBSUB_NODE";
+
+    /**
+     * The default value for statistics transport.
+     */
+    private static final String DEFAULT_STAT_TRANSPORT = "pubsub";
+
+    /**
+     * The value for PubSub statistics transport.
+     */
+    private static final String STAT_TRANSPORT_PUBSUB = "pubsub";
+
+    /**
+     * The value for COLIBRI statistics transport.
+     */
+    private static final String STAT_TRANSPORT_COLIBRI = "colibri";
+
+    /**
+     * The default value for statistics interval.
+     */
+    private static final int DEFAULT_STAT_INTERVAL = 1000;
+
+    /**
      * Logs a specific <tt>String</tt> at debug level.
      *
-     * @param s the <tt>String</tt> to log at debug level 
+     * @param s the <tt>String</tt> to log at debug level
      */
     private static void logd(String s)
     {
@@ -150,6 +214,24 @@ public class Videobridge
      * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)}
      */
     private int defaultProcessingOptions;
+
+    /**
+     * Listener for <tt>ComponentImpl</tt>
+     */
+    private ServiceListener serviceListener = new ServiceListener()
+    {
+
+        @Override
+        public void serviceChanged(ServiceEvent event)
+        {
+            if(!getComponents().isEmpty())
+            {
+                startStatistics();
+                bundleContext.removeServiceListener(this);
+            }
+
+        }
+    };
 
     /**
      * Initializes a new <tt>Videobridge</tt> instance.
@@ -470,6 +552,9 @@ public class Videobridge
             {
                 conference = getConference(id, focus);
             }
+
+            if(conference != null)
+                conference.setLastKnownFocus(conferenceIQ.getFrom());
         }
 
         ColibriConferenceIQ responseConferenceIQ;
@@ -480,7 +565,7 @@ public class Videobridge
              * Possible reasons for having no Conference instance include
              * failure to produce an ID which identifies an existing Conference
              * instance or the JID of a conference focus which owns an existing
-             * Conference instance with a valid ID. 
+             * Conference instance with a valid ID.
              */
             responseConferenceIQ = null;
         }
@@ -596,7 +681,7 @@ public class Videobridge
                              * an RTP-level relay. Consequently, it is
                              * intuitively a sign of common sense to take the
                              * value into account as possible.
-                             * 
+                             *
                              * The attribute rtp-level-relay-type is optional.
                              * If a value is not specified, then the Channel
                              * rtpLevelRelayType is to not be changed.
@@ -731,12 +816,67 @@ public class Videobridge
     }
 
     /**
+     * Start to send statistics.
+     */
+    private void startStatistics()
+    {
+        StatsManager statsManager
+            = ServiceUtils.getService(bundleContext,
+                StatsManager.class);
+        if(statsManager != null)
+        {
+            ConfigurationService config
+                = ServiceUtils.getService(bundleContext,
+                                          ConfigurationService.class);
+
+            String transport
+                = config.getString(STATISTICS_TRANSPORT, DEFAULT_STAT_TRANSPORT);
+
+            int interval
+                = config.getInt(STATISTICS_INTERVAL, DEFAULT_STAT_INTERVAL);
+
+            statsManager.addStat(this, VideobridgeStatistics.getStatistics());
+
+            if(STAT_TRANSPORT_COLIBRI.equals(transport))
+            {
+                statsManager.start(new ColibriStatsTransport(this), this,
+                    interval);
+            }
+            else if(STAT_TRANSPORT_PUBSUB.equals(transport))
+            {
+                String service = config.getString(PUBSUB_SERVICE);
+                String node = config.getString(PUBSUB_NODE);
+                if(service != null && node != null)
+                {
+                    statsManager.start(
+                        new PubsubStatsTransport(this, service, node),
+                        this, interval);
+                }
+                else
+                {
+                    logger.error("No configuration options for "
+                        + "PubSub service and node are found.");
+                }
+            }
+            else
+            {
+                logger.error("Unknown statistics transport is specified.");
+            }
+        }
+        else
+        {
+            logger.error("Stat manager is not started.");
+        }
+
+    }
+
+    /**
      * Starts this <tt>Videobridge</tt> in a specific <tt>BundleContext</tt>.
      *
      * @param bundleContext the <tt>BundleContext</tt> in which this
      * <tt>Videobridge</tt> is to start
      */
-    void start(BundleContext bundleContext)
+    void start(final BundleContext bundleContext)
         throws Exception
     {
         ConfigurationService config
@@ -795,6 +935,12 @@ public class Videobridge
                     <DtlsFingerprintPacketExtension>(
                         DtlsFingerprintPacketExtension.class));
 
+        // PubSub
+        providerManager.addIQProvider(
+            PubSubElementType.PUBLISH.getElementName(),
+            PubSubElementType.PUBLISH.getNamespace().getXmlns(),
+            new PubSubProvider());
+
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
 
@@ -834,6 +980,19 @@ public class Videobridge
         }
 
         this.bundleContext = bundleContext;
+
+        boolean isStatsEnabled = config.getBoolean(ENABLE_STATISTICS, false);
+        if(isStatsEnabled)
+        {
+            if(getComponents().isEmpty())
+            {
+                bundleContext.addServiceListener(serviceListener);
+            }
+            else
+            {
+                startStatistics();
+            }
+        }
     }
 
     /**
@@ -845,7 +1004,17 @@ public class Videobridge
     void stop(BundleContext bundleContext)
         throws Exception
     {
+        this.bundleContext.removeServiceListener(serviceListener);
         this.bundleContext = null;
+
+        StatsManager statsManager
+            = ServiceUtils.getService(bundleContext,
+                StatsManager.class);
+
+        if(statsManager != null)
+        {
+            statsManager.removeStat(this);
+        }
     }
 
     /**
@@ -867,4 +1036,117 @@ public class Videobridge
 
         return null;
     }
+
+    @Override
+    public void generateStatistics(Statistics stats)
+    {
+        int audioChannels = 0, videoChannels = 0, conferences = 0, endpoints = 0;
+
+        for(Conference conference : getConferences())
+        {
+            for(Content content : conference.getContents())
+            {
+                if(MediaType.AUDIO.equals(content.getMediaType()))
+                {
+                     audioChannels += content.getChannelCount();
+                }
+                else if(MediaType.VIDEO.equals(content.getMediaType()))
+                {
+                    videoChannels += content.getChannelCount();
+                }
+            }
+            conferences++;
+            endpoints += conference.getEndpointsCount();
+        }
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_NUMBEROFTHREADS,
+            ManagementFactory.getThreadMXBean().getThreadCount());
+
+        stats.setStat(
+            VideobridgeStatistics.VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS,
+            endpoints);
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_AUDIOCHANNELS,
+            audioChannels);
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_VIDEOCHANNELS,
+            videoChannels);
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_CONFERENCES,
+            conferences);
+
+    }
+
+    /**
+     * Implements statistics that are collected by the videobridge.
+     */
+    public static class VideobridgeStatistics extends Statistics
+    {
+        /**
+         * The name of the number of conferences statistic.
+         */
+        public static String VIDEOBRIDGESTATS_CONFERENCES
+            = "conferences";
+
+        /**
+         * The name of the number of conferences statistic.
+         */
+        public static String VIDEOBRIDGESTATS_AUDIOCHANNELS
+            = "audiochannels";
+
+        /**
+         * The name of the number of conferences statistic.
+         */
+        public static String VIDEOBRIDGESTATS_VIDEOCHANNELS
+            = "videochannels";
+
+        /**
+         * The name of the number of conferences statistic.
+         */
+        public static String VIDEOBRIDGESTATS_NUMBEROFTHREADS
+            = "threads";
+
+        /**
+         * The name of the number of conferences statistic.
+         */
+        public static String VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS
+            = "participants";
+
+        /**
+         * The instance of <tt>VideobridgeStatistics</tt>.
+         */
+        private static VideobridgeStatistics instance;
+
+        /**
+         * Creates instance of <tt>VideobridgeStatistics</tt>.
+         */
+        private VideobridgeStatistics() {
+            initStats();
+        }
+
+        /**
+         * Returns the instance of <tt>VideobridgeStatistics</tt>.
+         * @return the instance of <tt>VideobridgeStatistics</tt>.
+         */
+        public static Statistics getStatistics()
+        {
+            if(instance == null)
+                instance = new VideobridgeStatistics();
+            return instance;
+        }
+
+        /**
+         * Inits the statistics object.
+         */
+        private void initStats()
+        {
+            stats = new HashMap<String, Object>();
+            this.stats.put(VIDEOBRIDGESTATS_CONFERENCES, 0);
+            this.stats.put(VIDEOBRIDGESTATS_AUDIOCHANNELS, 0);
+            this.stats.put(VIDEOBRIDGESTATS_VIDEOCHANNELS, 0);
+            this.stats.put(VIDEOBRIDGESTATS_NUMBEROFTHREADS, 0);
+            this.stats.put(VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS, 0);
+        }
+    }
+
 }

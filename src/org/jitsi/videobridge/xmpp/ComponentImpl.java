@@ -14,6 +14,8 @@ import net.java.sip.communicator.util.*;
 
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.videobridge.pubsub.*;
+import org.jivesoftware.smackx.pubsub.packet.*;
 import org.osgi.framework.*;
 import org.xmpp.component.*;
 import org.xmpp.packet.*;
@@ -125,7 +127,7 @@ public class ComponentImpl
      * {@inheritDoc}
      *
      * Gets the namespaces of features that this <tt>Component</tt>
-     * offers/supports i.e. {@link ColibriConferenceIQ#NAMESPACE}. 
+     * offers/supports i.e. {@link ColibriConferenceIQ#NAMESPACE}.
      */
     @Override
     protected String[] discoInfoFeatureNamespaces()
@@ -256,7 +258,7 @@ public class ComponentImpl
 
                 logd("SENT: " + resultIQ.toXML());
             }
-                
+
             return resultIQ;
         }
         catch (Exception e)
@@ -293,6 +295,15 @@ public class ComponentImpl
                 resultIQ.setPacketID(iq.getPacketID());
                 resultIQ.setTo(iq.getFrom());
             }
+        }
+        else if(iq.getType().equals(
+            org.jivesoftware.smack.packet.IQ.Type.RESULT)
+            || iq.getType().equals(
+                org.jivesoftware.smack.packet.IQ.Type.ERROR)
+            || iq instanceof PubSub)
+        {
+            PubsubManager.handleIQResponse(iq);
+            resultIQ = null;
         }
         else
             resultIQ = null;
@@ -343,10 +354,39 @@ public class ComponentImpl
         return (resultIQ == null) ? super.handleIQSet(iq) : resultIQ;
     }
 
+    @Override
+    protected void handleIQError(IQ iq)
+    {
+        super.handleIQError(iq);
+        try
+        {
+            handleIQ(iq);
+        }
+        catch (Exception e)
+        {
+            logd("An error occured when trying to handle IQ error packet");
+            loge(e);
+        }
+    }
+
+    @Override
+    protected void handleIQResult(IQ iq)
+    {
+        super.handleIQResult(iq);
+        try
+        {
+            handleIQ(iq);
+        }
+        catch (Exception e)
+        {
+            logd("An error occured when trying to handle IQ result packet");
+            loge(e);
+        }
+    }
     /**
      * Logs a specific <tt>String</tt> at debug level.
      *
-     * @param s the <tt>String</tt> to log at debug level 
+     * @param s the <tt>String</tt> to log at debug level
      */
     private static void logd(String s)
     {
