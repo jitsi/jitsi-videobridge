@@ -946,9 +946,10 @@ public class RtpChannel
             }
         }
 
-        // type
+        // colibriClass
         StringBuilder msg
-            = new StringBuilder("{\"type\":\"LastNEndpointsChangeEvent\"");
+            = new StringBuilder(
+                    "{\"colibriClass\":\"LastNEndpointsChangeEvent\"");
 
         // lastNEndpoints
         msg.append(",\"lastNEndpoints\":[");

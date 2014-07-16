@@ -243,7 +243,9 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessageOnDataChannels(
-                    "activeSpeaker:" + dominantSpeaker.getID());
+                    "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
+                        + "\"dominantSpeakerEndpoint\":\""
+                        + dominantSpeaker.getID() + "\"}");
         }
     }
 
