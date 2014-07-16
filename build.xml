@@ -138,12 +138,12 @@
                 property="run.java.library.path"
                 value="-Djava.library.path=${basedir}/lib/native/${run.lib.native}">
             <isset property="run.lib.native"/>
-	    </condition>
+        </condition>
         <java
-	            classname="org.jitsi.videobridge.Main"
-	            classpathref="run.classpath"
-	            failonerror="true"
-	            fork="true" >
+                classname="org.jitsi.videobridge.Main"
+                classpathref="run.classpath"
+                failonerror="true"
+                fork="true" >
             <jvmarg line="${run.java.library.path} ${run.jvmarg.line}" />
             <jvmarg value="-Djava.util.logging.config.file=${basedir}/lib/logging.properties"/>
             <arg line="${run.arg.line}" />
