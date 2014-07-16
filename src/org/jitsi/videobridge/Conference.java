@@ -674,7 +674,7 @@ public class Conference
                     RtpChannel rtpChannel = (RtpChannel) channel;
 
                     List<Endpoint> channelEndpointsToAskForKeyframes
-                        = rtpChannel.lastNEndpointsChanged(endpoints);
+                        = rtpChannel.speechActivityEndpointsChanged(endpoints);
 
                     if ((channelEndpointsToAskForKeyframes != null)
                             && !channelEndpointsToAskForKeyframes.isEmpty())

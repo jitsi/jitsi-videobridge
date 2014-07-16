@@ -32,6 +32,7 @@ import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.json.simple.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -44,21 +45,6 @@ public class RtpChannel
     implements PropertyChangeListener
 {
     private static final long[] NO_RECEIVE_SSRCS = new long[0];
-
-    /**
-     * The speech activity of the <tt>Endpoint</tt>s in the multipoint
-     * conference in which this <tt>Channel</tt> is participating.
-     */
-    private ConferenceSpeechActivity conferenceSpeechActivity;
-
-    /**
-     * The <tt>CsrcAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setCsrcAudioLevelListener(
-     * CsrcAudioLevelListener)} in order to receive the audio levels of the
-     * contributing sources.
-     */
-    private CsrcAudioLevelListener csrcAudioLevelListener;
 
     /**
      * Gets the <tt>Channel</tt> which uses a specific <tt>MediaStream</tt>.
@@ -76,6 +62,21 @@ public class RtpChannel
     }
 
     /**
+     * The speech activity of the <tt>Endpoint</tt>s in the multipoint
+     * conference in which this <tt>Channel</tt> is participating.
+     */
+    private ConferenceSpeechActivity conferenceSpeechActivity;
+
+    /**
+     * The <tt>CsrcAudioLevelListener</tt> instance which is set on
+     * <tt>AudioMediaStream</tt> via
+     * {@link AudioMediaStream#setCsrcAudioLevelListener(
+     * CsrcAudioLevelListener)} in order to receive the audio levels of the
+     * contributing sources.
+     */
+    private CsrcAudioLevelListener csrcAudioLevelListener;
+
+    /**
      * The ID of this <tt>Channel</tt> (which is unique within the list of
      * <tt>Channel</tt>s listed in {@link #content} while this instance is
      * listed there as well).
@@ -88,6 +89,17 @@ public class RtpChannel
      * and not in the case of RTP translation.
      */
     private final long initialLocalSSRC;
+
+    /**
+     * The last known number of lost packets for this channel.
+     */
+    private long lastKnownPacketsLostNB = 0;
+
+    /**
+     * The last known number of packets that are received or sent for this
+     * channel.
+     */
+    private long lastKnownPacketsNB = 0;
 
     /**
      * The maximum number of video RTP stream to be sent from Jitsi Videobridge
@@ -163,17 +175,6 @@ public class RtpChannel
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
      */
     private final SessionAddress streamTarget = new SessionAddress();
-
-    /**
-     * The last known number of packets that are received or sent for this
-     * channel.
-     */
-    private long lastKnownPacketsNB = 0;
-
-    /**
-     * The last known number of lost packets for this channel.
-     */
-    private long lastKnownPacketsLostNB = 0;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -620,22 +621,6 @@ public class RtpChannel
     }
 
     /**
-     * Notifies this instance that certain <tt>Endpoint</tt>s are entering the
-     * list of <tt>Endpoint</tt>s defined by {@link #lastN}.
-     *
-     * @param endpoints the <tt>Endpoint</tt>s which are entering the list of
-     * <tt>Endpoint</tt>s defined by <tt>lastN</tt>
-     */
-    private void endpointsEnteringLastN(List<Endpoint> endpoints)
-    {
-        /*
-         * TODO For example, notify the Jitsi Videobridge client that Jitsi
-         * Videobridge will start sending RTP video streams with the SSRCs of
-         * the specified endpoints.
-         */
-    }
-
-    /**
      * Gets the <tt>CsrcAudioLevelListener</tt> instance which is set on
      * <tt>AudioMediaStream</tt> via
      * {@link AudioMediaStream#setCsrcAudioLevelListener(
@@ -715,6 +700,19 @@ public class RtpChannel
     }
 
     /**
+     * Returns the number of lost packets for this channel since last time the
+     * method is called.
+     * @return  the number of lost packets since last time the method is called.
+     */
+    public long getLastPacketsLostNB()
+    {
+        long newPacketsLost = stream.getMediaStreamStats().getNbPacketsLost();
+        long lastPacketsNB = newPacketsLost - lastKnownPacketsLostNB;
+        lastKnownPacketsLostNB = newPacketsLost;
+        return lastPacketsNB;
+    }
+
+    /**
      * Returns the number of packets that are sent or received for this channel
      * since last time the method is called.
      * @return  the number of packets that are sent or received since last time
@@ -725,19 +723,6 @@ public class RtpChannel
         long newPackets = stream.getMediaStreamStats().getNbPackets();
         long lastPacketsNB = newPackets - lastKnownPacketsNB;
         lastKnownPacketsNB = newPackets;
-        return lastPacketsNB;
-    }
-
-    /**
-     * Returns the number of lost packets for this channel since last time the
-     * method is called.
-     * @return  the number of lost packets since last time the method is called.
-     */
-    public long getLastPacketsLostNB()
-    {
-        long newPacketsLost = stream.getMediaStreamStats().getNbPacketsLost();
-        long lastPacketsNB = newPacketsLost - lastKnownPacketsLostNB;
-        lastKnownPacketsLostNB = newPacketsLost;
         return lastPacketsNB;
     }
 
@@ -901,86 +886,136 @@ public class RtpChannel
     }
 
     /**
-     * Notifies this instance that {@link #conferenceSpeechActivity} has ordered
-     * the <tt>Endpoint</tt>s in the multipoint conference in which this
-     * <tt>Channel</tt> is participating and the new order may affect the set of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s translated to the remote endpoint of
-     * this <tt>Channel</tt>.
+     * Notifies this instance that the list of <tt>Endpoint</tt>s defined by
+     * {@link #lastN} has changed.
      *
-     * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
-     * <tt>conferenceSpeechActivity</tt>
-     * @return a list of the <tt>Endpoint</tt>s which should be asked for
-     * (video) keyframes because, for example, they are entering the set of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s of this <tt>Channel</tt>
+     * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
+     * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
      */
-    List<Endpoint> lastNEndpointsChanged(List<Endpoint> endpoints)
+    private void lastNEndpointsChanged(List<Endpoint> endpointsEnteringLastN)
     {
-        List<Endpoint> endpointsEnteringLastN = null;
-        Endpoint thisEndpoint = getEndpoint();
+        Integer lastNInteger = this.lastN;
+
+        if (lastNInteger == null)
+            return;
+
+        int lastNInt = lastNInteger.intValue();
+
+        if (lastNInt < 0)
+            return;
+
+        Endpoint endpoint = getEndpoint();
+
+        if (endpoint == null)
+            return;
+
+        // Represent the list of Endpoints defined by lastN in JSON format.
+        StringBuilder lastNEndpointsStr = new StringBuilder();
 
         synchronized (lastNSyncRoot)
         {
-            // Determine which Endpoints are entering the list of lastN.
-            Integer lastNInteger = this.lastN;
-            int lastNInt
-                = (lastNInteger == null) ? -1 : lastNInteger.intValue();
-
-            if (lastNInt > 0)
+            if ((lastNEndpoints != null) && !lastNEndpoints.isEmpty())
             {
-                endpointsEnteringLastN = new ArrayList<Endpoint>(lastNInt);
-                // At most the first lastN are entering the list of lastN.
-                for (Endpoint e : endpoints)
-                {
-                    if (!e.equals(thisEndpoint))
-                    {
-                        endpointsEnteringLastN.add(e);
-                        if (endpointsEnteringLastN.size() >= lastNInt)
-                            break;
-                    }
-                }
-                if (lastNEndpoints != null)
-                {
-                    /*
-                     * Some of these first lastN are already in the list of
-                     * lastN.
-                     */
-                    int n = 0;
+                int n = 0;
 
-                    for (WeakReference<Endpoint> wr : lastNEndpoints)
-                    {
-                        Endpoint e = wr.get();
+                for (WeakReference<Endpoint> wr : lastNEndpoints)
+                {
+                    Endpoint e = wr.get();
 
-                        if (e != null)
+                    if (e != null)
+                    {
+                        if (e.equals(endpoint))
                         {
-                            if (e.equals(thisEndpoint))
-                                continue;
-                            else
-                                endpointsEnteringLastN.remove(e);
+                            continue;
                         }
-
-                        ++n;
-                        if (n >= lastNInt)
-                            break;
+                        else
+                        {
+                            if (lastNEndpointsStr.length() != 0)
+                                lastNEndpointsStr.append(',');
+                            lastNEndpointsStr.append('"');
+                            lastNEndpointsStr.append(
+                                    JSONValue.escape(e.getID()));
+                            lastNEndpointsStr.append('"');
+                        }
                     }
+
+                    ++n;
+                    if (n >= lastNInt)
+                        break;
                 }
             }
-
-            // Remember the Endpoints for the purposes of lastN.
-            lastNEndpoints
-                = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
-            for (Endpoint endpoint : endpoints)
-                lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
         }
 
-        // Handle the Endpoints entering the list of lastN.
+        // type
+        StringBuilder msg
+            = new StringBuilder("{\"type\":\"LastNEndpointsChangeEvent\"");
+
+        // lastNEndpoints
+        msg.append(",\"lastNEndpoints\":[");
+        msg.append(lastNEndpointsStr);
+        msg.append(']');
+
+        // endpointsEnteringLastN
         if ((endpointsEnteringLastN != null)
                 && !endpointsEnteringLastN.isEmpty())
         {
-            endpointsEnteringLastN(endpointsEnteringLastN);
+            StringBuilder endpointEnteringLastNStr = new StringBuilder();
+
+            for (Endpoint e : endpointsEnteringLastN)
+            {
+                if (endpointEnteringLastNStr.length() != 0)
+                    endpointEnteringLastNStr.append(',');
+                endpointEnteringLastNStr.append('"');
+                endpointEnteringLastNStr.append(
+                        JSONValue.escape(e.getID()));
+                endpointEnteringLastNStr.append('"');
+            }
+            if (endpointEnteringLastNStr.length() != 0)
+            {
+                msg.append(",\"endpointsEnteringLastN\":[");
+                msg.append(endpointEnteringLastNStr);
+                msg.append(']');
+            }
         }
 
-        // Request keyframes from the Enpoints entering the list of lastN.
-        return endpointsEnteringLastN;
+        msg.append('}');
+        endpoint.sendMessageOnDataChannel(msg.toString());
+    }
+
+    /**
+     * Gets the index of a specific <tt>Endpoint</tt> in a specific list of
+     * <tt>lastN</tt> <tt>Endpoint</tt>s.
+     *
+     * @param endpoints the list of <tt>Endpoint</tt>s into which to look for
+     * <tt>endpoint</tt>
+     * @param lastN the number of <tt>Endpoint</tt>s in <tt>endpoint</tt>s to
+     * look through
+     * @param endpoint the <tt>Endpoint</tt> to find within <tt>lastN</tt>
+     * elements of <tt>endpoints</tt>
+     * @return the <tt>lastN</tt> index of <tt>endpoint</tt> in
+     * <tt>endpoints</tt> or <tt>-1</tt> if <tt>endpoint</tt> is not within the
+     * <tt>lastN</tt> elements of <tt>endpoints</tt>
+     */
+    private int lastNIndexOf(
+            List<Endpoint> endpoints,
+            int lastN,
+            Endpoint endpoint)
+    {
+        Endpoint thisEndpoint = getEndpoint();
+        int n = 0;
+
+        for (Endpoint e : endpoints)
+        {
+            if (e.equals(thisEndpoint))
+                continue;
+            else if (e.equals(endpoint))
+                return n;
+
+            ++n;
+            if (n >= lastN)
+                break;
+        }
+        return -1;
     }
 
     /**
@@ -1507,6 +1542,98 @@ public class RtpChannel
         }
 
         touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Notifies this instance that {@link #conferenceSpeechActivity} has ordered
+     * the <tt>Endpoint</tt>s in the multipoint conference in which this
+     * <tt>Channel</tt> is participating and the new order may affect the set of
+     * <tt>lastN</tt> <tt>Endpoint</tt>s translated to the remote endpoint of
+     * this <tt>Channel</tt>.
+     *
+     * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
+     * <tt>conferenceSpeechActivity</tt>
+     * @return a list of the <tt>Endpoint</tt>s which should be asked for
+     * (video) keyframes because, for example, they are entering the set of
+     * <tt>lastN</tt> <tt>Endpoint</tt>s of this <tt>Channel</tt>
+     */
+    List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
+    {
+        List<Endpoint> endpointsEnteringLastN = null;
+        Endpoint thisEndpoint = getEndpoint();
+        boolean lastNEndpointsChanged = false;
+
+        synchronized (lastNSyncRoot)
+        {
+            // Determine which Endpoints are entering the list of lastN.
+            Integer lastNInteger = this.lastN;
+            int lastNInt
+                = (lastNInteger == null) ? -1 : lastNInteger.intValue();
+
+            if (lastNInt > 0)
+            {
+                endpointsEnteringLastN = new ArrayList<Endpoint>(lastNInt);
+                // At most the first lastN are entering the list of lastN.
+                for (Endpoint e : endpoints)
+                {
+                    if (!e.equals(thisEndpoint))
+                    {
+                        endpointsEnteringLastN.add(e);
+                        if (endpointsEnteringLastN.size() >= lastNInt)
+                            break;
+                    }
+                }
+                if ((lastNEndpoints == null) || lastNEndpoints.isEmpty())
+                {
+                    if (!endpointsEnteringLastN.isEmpty())
+                        lastNEndpointsChanged = true;
+                }
+                else
+                {
+                    /*
+                     * Some of these first lastN are already in the list of
+                     * lastN.
+                     */
+                    int n = 0;
+
+                    for (WeakReference<Endpoint> wr : lastNEndpoints)
+                    {
+                        Endpoint e = wr.get();
+
+                        if (e != null)
+                        {
+                            if (e.equals(thisEndpoint))
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                endpointsEnteringLastN.remove(e);
+                                if (lastNIndexOf(endpoints, lastNInt, e) < 0)
+                                    lastNEndpointsChanged = true;
+                            }
+                        }
+
+                        ++n;
+                        if (n >= lastNInt)
+                            break;
+                    }
+                }
+            }
+
+            // Remember the Endpoints for the purposes of lastN.
+            lastNEndpoints
+                = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
+            for (Endpoint endpoint : endpoints)
+                lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
+        }
+
+        // Notify about changes in the list of lastN.
+        if (lastNEndpointsChanged)
+            lastNEndpointsChanged(endpointsEnteringLastN);
+
+        // Request keyframes from the Enpoints entering the list of lastN.
+        return endpointsEnteringLastN;
     }
 
     /**
