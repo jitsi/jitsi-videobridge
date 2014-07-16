@@ -25,15 +25,15 @@
         value="${ant.project.name}-windows-x86-${label}"/>
     <property
         name="packname.win64"
-    	value="${ant.project.name}-windows-x64-${label}"/>
+        value="${ant.project.name}-windows-x64-${label}"/>
     <property
         name="packname.lin"
         value="${ant.project.name}-linux-x86-${label}"/>
     <property
         name="packname.lin64"
-    	value="${ant.project.name}-linux-x64-${label}"/>
+        value="${ant.project.name}-linux-x64-${label}"/>
     <property
-    	name="packname.macosx"
+        name="packname.macosx"
         value="${ant.project.name}-macosx-${label}"/>
     <property name="packname.src" value="${ant.project.name}-src-${label}"/>
 
@@ -53,6 +53,9 @@
         <pathelement location="${output.test}" />
     </path>
 
+    <!-- Import debian build xml -->
+    <import file="resources/install/build-debian.xml"/>
+
     <target name="clean">
         <delete failonerror="false" includeemptydirs="true">
             <fileset dir="${output}" />
@@ -60,8 +63,8 @@
             <fileset dir="${dist}" />
             <fileset dir="${doc}" />
             <fileset dir="${junit.reports}" />
-	        <fileset dir="release" />
-	        <fileset file="jitsi-videobridge.jar" />
+            <fileset dir="release" />
+            <fileset file="jitsi-videobridge.jar" />
         </delete>
     </target>
 
@@ -214,66 +217,76 @@
 
     <target name="dist.win" depends="make">
         <zip destfile="${dist}/windows/${packname.win}.zip">
-            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.win}" />
+            <zipfileset file="jitsi-videobridge.jar"
+                        prefix="${packname.win}" />
             <zipfileset dir="lib" prefix="${packname.win}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/linux-64/**"/>
                 <exclude name="native/macosx/**"/>
             </zipfileset>
-            <zipfileset file="resources/install/windows/jvb.bat" prefix="${packname.win}" />
+            <zipfileset file="resources/install/windows/jvb.bat"
+                        prefix="${packname.win}" />
         </zip>
     </target>
 
     <target name="dist.win64" depends="make">
         <zip destfile="${dist}/windows/${packname.win64}.zip">
-            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.win64}" />
+            <zipfileset file="jitsi-videobridge.jar"
+                        prefix="${packname.win64}" />
             <zipfileset dir="lib" prefix="${packname.win64}/lib">
                 <exclude name="native/windows/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/linux-64/**"/>
                 <exclude name="native/macosx/**"/>
             </zipfileset>
-            <zipfileset file="resources/install/windows-64/jvb.bat" prefix="${packname.win64}" />
+            <zipfileset file="resources/install/windows-64/jvb.bat"
+                        prefix="${packname.win64}" />
         </zip>
     </target>
 
     <target name="dist.lin" depends="make">
         <zip destfile="${dist}/linux/${packname.lin}.zip">
-            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.lin}" />
+            <zipfileset file="jitsi-videobridge.jar"
+                        prefix="${packname.lin}" />
             <zipfileset dir="lib" prefix="${packname.lin}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux-64/**"/>
                 <exclude name="native/windows/**"/>
                 <exclude name="native/macosx/**"/>
             </zipfileset>
-            <zipfileset file="resources/install/linux/jvb.sh" prefix="${packname.lin}" filemode="755"/>
+            <zipfileset file="resources/install/linux/jvb.sh"
+                        prefix="${packname.lin}" filemode="755"/>
         </zip>
     </target>
 
     <target name="dist.lin64" depends="make">
         <zip destfile="${dist}/linux/${packname.lin64}.zip">
-            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.lin64}" />
+            <zipfileset file="jitsi-videobridge.jar"
+                        prefix="${packname.lin64}" />
             <zipfileset dir="lib" prefix="${packname.lin64}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/windows/**"/>
                 <exclude name="native/macosx/**"/>
             </zipfileset>
-            <zipfileset file="resources/install/linux-64/jvb.sh" prefix="${packname.lin64}" filemode="755"/>
+            <zipfileset file="resources/install/linux-64/jvb.sh"
+                        prefix="${packname.lin64}" filemode="755"/>
         </zip>
     </target>
 
     <target name="dist.macosx" depends="make">
         <zip destfile="${dist}/macosx/${packname.macosx}.zip">
-            <zipfileset file="jitsi-videobridge.jar" prefix="${packname.macosx}" />
+            <zipfileset file="jitsi-videobridge.jar"
+                        prefix="${packname.macosx}" />
             <zipfileset dir="lib" prefix="${packname.macosx}/lib">
                 <exclude name="native/windows-64/**"/>
                 <exclude name="native/linux/**"/>
                 <exclude name="native/linux-64/**"/>
                 <exclude name="native/windows/**"/>
             </zipfileset>
-            <zipfileset file="resources/install/macosx/jvb.sh" prefix="${packname.macosx}" filemode="755"/>
+            <zipfileset file="resources/install/macosx/jvb.sh"
+                        prefix="${packname.macosx}" filemode="755"/>
         </zip>
     </target>
 
@@ -288,8 +301,10 @@
         </zip>
     </target>
 
-    <!-- build all binaries and the jitsi-videobridge.jar for all supported platforms -->
-    <target name="dist" depends="dist.win, dist.win64, dist.lin, dist.lin64, dist.macosx, dist.src" />
+    <!-- build all binaries and the jitsi-videobridge.jar
+        for all supported platforms -->
+    <target name="dist"
+            depends="dist.win,dist.win64,dist.lin,dist.lin64,dist.macosx,dist.src" />
 
     <!--
         The easiest way to build the plugin is:
@@ -342,128 +357,6 @@
                 <include name="*" />
             </fileset>
         </jar>
-    </target>
-
-
-    <!-- Debian related targets -->
-
-    <property name="debian.release" value="release/jvb"/>
-    <property name="debian.dir" value="${debian.release}/debian"/>
-    <property name="debian.binary.dir" value="${debian.dir}/binary"/>
-    <property name="debian.tmp.dir" value="${debian.dir}/tmp" />
-    <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
-    <property name="dpkg-buildpackage" value="/usr/bin/dpkg-buildpackage"/>
-    <property name="dh_testdir" value="/usr/bin/dh_testdir"/>
-    <!-- Can we build debian packages? -->
-    <condition property="dpkg.build.present">
-      <and>
-        <available file="${dpkg-buildpackage}"/>
-        <available file="${dh_testdir}"/>
-      </and>
-    </condition>
-    <!-- Can we deploy debian packages? -->
-    <condition property="dpkg.scan.present">
-      <available file="${dpkg-scanpackages}"/>
-    </condition>
-
-    <target name="deb" depends="deb-32,deb-64"/>
-    <target name="deb-32">
-        <antcall target="make-deb">
-            <param name="arch" value="i386"/>
-            <param name="system-arch" value="linux-x86"/>
-            <param name="include-dir" value="linux"/>
-            <param name="exclude-dir" value="linux-64"/>
-        </antcall>
-    </target>
-    <target name="deb-64">
-        <antcall target="make-deb">
-            <param name="arch" value="amd64"/>
-            <param name="system-arch" value="linux-x64"/>
-            <param name="include-dir" value="linux-64"/>
-            <param name="exclude-dir" value="linux"/>
-        </antcall>
-    </target>
-
-    <!-- Outputs a warning notifying the user that a dpkg tool is missing. -->
-    <target name="dpkg-build-warning" unless="dpkg.build.present">
-      <echo message="Either the ${dpkg-buildpackage} tool or the debhelper tools was not found on your system."/>
-      <echo message="Try installing the 'dpkg-dev' and 'debhelper' packages"/>
-    </target>
-
-    <!-- if label is "build.SVN" we don't have version to update the changelog with -->
-    <target name="check-version">
-        <condition property="version.not.numeric">
-            <matches pattern="build.SVN" string="${label}"/>
-        </condition>
-    </target>
-
-    <!-- Updates changelog and version. Called only when "label" is a number. -->
-    <target name="deb-bump-version" unless="version.not.numeric">
-        <!-- preparing the release folder for new build -->
-        <delete dir="${debian.dir}"/>
-        <mkdir dir="${debian.dir}"/>
-
-        <!-- create new changelog and fill up the new version and date -->
-        <concat destfile="${debian.dir}/changelog" overwrite="true">
-            <fileset file="resources/install/debian/changelog.tmpl"/>
-            <fileset file="release/changelog"/>
-        </concat>
-        <tstamp>
-            <format property="date" pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en,US"/>
-        </tstamp>
-        <replace file="${debian.dir}/changelog" token="Mon, 01 Jan 1970 00:00:00 +0000" value="${date}"/>
-        <replace file="${debian.dir}/changelog" token="1-build.SVN" value="${label}"/>
-    </target>
-
-    <!-- Builds the debian package. -->
-    <target name="make-deb" depends="make,dpkg-build-warning,check-version,deb-bump-version">
-
-        <copy todir="${debian.dir}" includeEmptyDirs="Yes">
-            <fileset dir="resources/install/debian"/>
-        </copy>
-
-        <mkdir dir="${debian.dir}/usr/share/jitsi-videobridge"/>
-        <copy todir="${debian.dir}/usr/share/jitsi-videobridge/lib" overwrite="true" includeEmptyDirs="No">
-            <fileset dir="lib/">
-                <exclude name="native/macos*/*"/>
-                <exclude name="native/windows*/*"/>
-                <exclude name="native/${exclude-dir}/*"/>
-            </fileset>
-        </copy>
-        <copy file="jitsi-videobridge.jar" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
-        <copy file="resources/install/${include-dir}/jvb.sh" todir="${debian.dir}/usr/share/jitsi-videobridge" overwrite="true"/>
-        <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh" perm="755"/>
-
-        <!-- creating a debian archive file -->
-        <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz" basedir="${debian.release}" includes="debian/" defaultexcludes="No" compression="gzip"/>
-
-        <!-- creating empty orig file -->
-        <touch file="jitsi-videobridge"/>
-        <tar destfile="release/jitsi-videobridge_${label}-1.orig.tar.gz" compression="gzip">
-            <tarfileset file="jitsi-videobridge"/>
-        </tar>
-        <delete file="jitsi-videobridge"/>
-
-        <!-- if we didn't bump the version, there is no changelog, so we copy it (and prefer one from release folder) -->
-        <copy file="${debian.dir}/changelog.tmpl" tofile="${debian.dir}/changelog" overwrite="false" failonerror="false"/>
-        <copy file="release/changelog" todir="${debian.dir}" overwrite="true" failonerror="false"/>
-
-        <!-- and build it -->
-        <exec executable="${dpkg-buildpackage}" dir="${debian.dir}/../">
-            <arg value="-tc"/>
-            <arg value="-us"/>
-            <arg value="-uc"/>
-            <arg value="-b"/>
-            <arg value="-d"/>
-            <arg value="-a${arch}"/>
-        </exec>
-
-        <!-- keep the new changelog for later builds -->
-        <copy file="${debian.dir}/changelog" todir="release" overwrite="true"/>
-
-        <!-- clean up the build folder -->
-        <delete dir="${debian.release}"/>
-
     </target>
 
 </project>

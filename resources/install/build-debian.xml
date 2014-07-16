@@ -1,0 +1,146 @@
+<project name="jvb-debian" basedir=".">
+
+    <!-- Debian related targets -->
+
+    <property name="debian.release" value="release/jvb"/>
+    <property name="debian.dir" value="${debian.release}/debian"/>
+    <property name="debian.binary.dir" value="${debian.dir}/binary"/>
+    <property name="debian.tmp.dir" value="${debian.dir}/tmp" />
+    <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
+    <property name="dpkg-buildpackage" value="/usr/bin/dpkg-buildpackage"/>
+    <property name="dh_testdir" value="/usr/bin/dh_testdir"/>
+    <!-- Can we build debian packages? -->
+    <condition property="dpkg.build.present">
+        <and>
+            <available file="${dpkg-buildpackage}"/>
+            <available file="${dh_testdir}"/>
+        </and>
+    </condition>
+    <!-- Can we deploy debian packages? -->
+    <condition property="dpkg.scan.present">
+        <available file="${dpkg-scanpackages}"/>
+    </condition>
+
+    <target name="deb" depends="deb-32,deb-64"/>
+    <target name="deb-32">
+        <antcall target="make-deb">
+            <param name="arch" value="i386"/>
+            <param name="system-arch" value="linux-x86"/>
+            <param name="include-dir" value="linux"/>
+            <param name="exclude-dir" value="linux-64"/>
+        </antcall>
+    </target>
+    <target name="deb-64">
+        <antcall target="make-deb">
+            <param name="arch" value="amd64"/>
+            <param name="system-arch" value="linux-x64"/>
+            <param name="include-dir" value="linux-64"/>
+            <param name="exclude-dir" value="linux"/>
+        </antcall>
+    </target>
+
+    <!-- Outputs a warning notifying the user that a dpkg tool is missing. -->
+    <target name="dpkg-build-warning" unless="dpkg.build.present">
+        <echo message="Either the ${dpkg-buildpackage} tool or the debhelper tools was not found on your system."/>
+        <echo message="Try installing the 'dpkg-dev' and 'debhelper' packages"/>
+    </target>
+
+    <!--
+        if label is "build.SVN" we don't have version to update
+        the changelog with -->
+    <target name="check-version">
+        <condition property="version.not.numeric">
+            <matches pattern="build.SVN" string="${label}"/>
+        </condition>
+    </target>
+
+    <!--
+        Updates changelog and version. Called only when "label" is a number.
+    -->
+    <target name="deb-bump-version" unless="version.not.numeric">
+        <!-- preparing the release folder for new build -->
+        <delete dir="${debian.dir}"/>
+        <mkdir dir="${debian.dir}"/>
+
+        <!-- create new changelog and fill up the new version and date -->
+        <concat destfile="${debian.dir}/changelog" overwrite="true">
+            <fileset file="resources/install/debian/changelog.tmpl"/>
+            <fileset file="release/changelog"/>
+        </concat>
+        <tstamp>
+            <format property="date"
+                    pattern="EEE, d MMM yyyy HH:mm:ss Z" locale="en,US"/>
+        </tstamp>
+        <replace file="${debian.dir}/changelog"
+                 token="Mon, 01 Jan 1970 00:00:00 +0000" value="${date}"/>
+        <replace file="${debian.dir}/changelog"
+                 token="1-build.SVN" value="${label}"/>
+    </target>
+
+    <!-- Builds the debian package. -->
+    <target name="make-deb"
+            depends="make,dpkg-build-warning,check-version,deb-bump-version">
+
+        <copy todir="${debian.dir}" includeEmptyDirs="Yes">
+            <fileset dir="resources/install/debian"/>
+        </copy>
+
+        <mkdir dir="${debian.dir}/usr/share/jitsi-videobridge"/>
+        <copy todir="${debian.dir}/usr/share/jitsi-videobridge/lib"
+              overwrite="true" includeEmptyDirs="No">
+            <fileset dir="lib/">
+                <exclude name="native/macos*/*"/>
+                <exclude name="native/windows*/*"/>
+                <exclude name="native/${exclude-dir}/*"/>
+            </fileset>
+        </copy>
+        <copy file="jitsi-videobridge.jar"
+              todir="${debian.dir}/usr/share/jitsi-videobridge"
+              overwrite="true"/>
+        <copy file="resources/install/${include-dir}/jvb.sh"
+              todir="${debian.dir}/usr/share/jitsi-videobridge"
+              overwrite="true"/>
+        <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
+               perm="755"/>
+
+        <!-- creating a debian archive file -->
+        <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz"
+             basedir="${debian.release}" includes="debian/"
+             defaultexcludes="No" compression="gzip"/>
+
+        <!-- creating empty orig file -->
+        <touch file="jitsi-videobridge"/>
+        <tar destfile="release/jitsi-videobridge_${label}-1.orig.tar.gz"
+             compression="gzip">
+            <tarfileset file="jitsi-videobridge"/>
+        </tar>
+        <delete file="jitsi-videobridge"/>
+
+        <!-- if we didn't bump the version, there is no changelog,
+            so we copy it (and prefer one from release folder) -->
+        <copy file="${debian.dir}/changelog.tmpl"
+              tofile="${debian.dir}/changelog"
+              overwrite="false" failonerror="false"/>
+        <copy file="release/changelog"
+              todir="${debian.dir}" overwrite="true" failonerror="false"/>
+
+        <!-- and build it -->
+        <exec executable="${dpkg-buildpackage}" dir="${debian.dir}/../">
+            <arg value="-tc"/>
+            <arg value="-us"/>
+            <arg value="-uc"/>
+            <arg value="-b"/>
+            <arg value="-d"/>
+            <arg value="-a${arch}"/>
+        </exec>
+
+        <!-- keep the new changelog for later builds -->
+        <copy file="${debian.dir}/changelog" todir="release" overwrite="true"/>
+
+        <!-- clean up the build folder -->
+        <delete dir="${debian.release}"/>
+
+    </target>
+
+
+</project>
