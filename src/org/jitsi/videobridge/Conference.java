@@ -975,49 +975,6 @@ public class Conference
     }
 
     /**
-     * XXX REMOVE
-     * Finds all the SSRCs received on all video <tt>Channel</tt> in this
-     * <tt>Conference</tt>, which are associated in an
-     * <tt>Endpoint</tt> with an audio <tt>Channel</tt> on which
-     * <tt>audioSsrc</tt> is received. If none is found, returns <tt>-1</tt>.
-     *
-     * Assumes that <tt>audioSsrc</tt> can be received on no more than a single
-     * <tt>Channel</tt>.
-     *
-     * @param audioSsrc the audio SSRC.
-     * @return a <tt>List</tt> of received video SSRCs associated with
-     * <tt>audioSsrc</tt>
-     */
-    private List<Long> getVideoSsrcs(long audioSsrc)
-    {
-        List<Long> videoSsrcs = new LinkedList<Long>();
-        Channel audioChannel = null;
-
-        for(Content c : getContents())
-        {
-            if (MediaType.AUDIO.equals(c.getMediaType())
-                    && (audioChannel = c.findChannel(audioSsrc)) != null)
-                break;
-        }
-
-        if (audioChannel != null)
-        {
-            Endpoint endpoint = audioChannel.getEndpoint();
-            if (endpoint != null)
-            {
-                for (Channel channel : endpoint.getChannels(MediaType.VIDEO))
-                {
-                    if (channel instanceof RtpChannel)
-                        for (int ssrc : ((RtpChannel) channel).getReceiveSSRCs())
-                            videoSsrcs.add(0xffffffffL & ssrc);
-                }
-            }
-        }
-
-        return videoSsrcs;
-    }
-
-    /**
      * An implementation of <tt>RecorderEventHandler</tt> which intercepts
      * <tt>SPEAKER_CHANGED</tt> events and updates their 'ssrc' fields
      * (which contain the SSRC of a video stream) before delegating to
@@ -1045,8 +1002,24 @@ public class Conference
                     .equals(event.getType()))
             {
                 long audioSsrc = event.getAudioSsrc();
-                List<Long> videoSsrcs = getVideoSsrcs(audioSsrc);
-                if (videoSsrcs.isEmpty())
+                Endpoint endpoint = findEndpointByReceiveSSRC(audioSsrc,
+                                                              MediaType.AUDIO);
+                long videoSsrc = -1;
+                if (endpoint != null)
+                {
+                    // use the first SSRC found
+                    for (Channel c : endpoint.getChannels(MediaType.VIDEO))
+                    {
+                        int[] ssrcs = ((RtpChannel) c).getReceiveSSRCs();
+                        if (ssrcs != null && ssrcs.length > 0)
+                        {
+                            videoSsrc = ssrcs[0] & 0xffffffffL;
+                            break;
+                        }
+                    }
+                }
+
+                if (videoSsrc == -1)
                 {
                     logd("Could not find video SSRC associated with audioSsrc="
                                  + audioSsrc);
@@ -1055,8 +1028,7 @@ public class Conference
                     return false;
                 }
 
-                //for the moment just use the first SSRC
-                event.setSsrc(videoSsrcs.get(0));
+                event.setSsrc(videoSsrc);
             }
             return handler.handleEvent(event);
         }
