@@ -1,0 +1,5 @@
+/classes
+*.swp
+dist
+*.class
+/jitsi-videobridge.jar
