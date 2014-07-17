@@ -6,21 +6,21 @@
  */
 package org.jitsi.videobridge;
 
+import java.io.*;
+import java.net.*;
+import java.nio.*;
+import java.util.*;
+
+import javax.media.rtp.*;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
-
 import org.jitsi.sctp4j.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
-
-import javax.media.rtp.*;
-import java.io.*;
-import java.net.*;
-import java.nio.*;
-import java.util.*;
 
 /**
  * Class is a transport layer for WebRTC data channels. It consists of SCTP
@@ -62,6 +62,13 @@ public class SctpConnection
      * Payload protocol id that identifies binary data in WebRTC data channel.
      */
     static final int WEB_RTC_PPID_BIN = 53;
+
+    /**
+     * The <tt>String</tt> value of the <tt>Protocol</tt> field of the
+     * <tt>DATA_CHANNEL_OPEN</tt> message.
+     */
+    private static final String WEBRTC_DATA_CHANNEL_PROTOCOL
+        = "http://jitsi.org/protocols/colibri";
 
     /**
      * Message with this type sent over control PPID in order to open new WebRTC
@@ -448,7 +455,21 @@ public class SctpConnection
             if(ppid == WEB_RTC_PPID_STRING)
             {
                 // WebRTC String
-                channel.onStringMsg(new String(data));
+                String str;
+                String charsetName = "UTF-8";
+
+                try
+                {
+                    str = new String(data, charsetName);
+                }
+                catch (UnsupportedEncodingException uee)
+                {
+                    logger.error(
+                            "Unsupported charset encoding/name " + charsetName,
+                            uee);
+                    str = null;
+                }
+                channel.onStringMsg(str);
             }
             else
             {
@@ -470,9 +491,9 @@ public class SctpConnection
     private synchronized void onCtrlPacket(byte[] data, int sid)
         throws IOException
     {
-        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(data);
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+        int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
 
-        int messageType = buffer.get();
         if(messageType == MSG_CHANNEL_ACK)
         {
             logger.info(getEndpoint().getID() + " ACK received SID: " + sid);
@@ -499,29 +520,48 @@ public class SctpConnection
         }
         else if(messageType == MSG_OPEN_CHANNEL)
         {
-            int channelType = buffer.get();
-            int priority = buffer.getShort();
-            long reliability = buffer.getInt();
+            int channelType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
+            int priority
+                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+            long reliability
+                = /* 4 bytes unsigned integer */ 0xFFFFFFFFL & buffer.getInt();
+            int labelLength
+                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+            int protocolLength
+                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+            String label;
+            String protocol;
 
-            int labelLength = buffer.getShort();
-            int protocolLength = buffer.getShort();
+            if (labelLength == 0)
+            {
+                label = "";
+            }
+            else
+            {
+                byte[] labelBytes = new byte[labelLength];
 
-            byte[] labelRaw = new byte[labelLength];
-            buffer.get(labelRaw);
-            String label = new String(labelRaw);
+                buffer.get(labelBytes);
+                label = new String(labelBytes, "UTF-8");
+            }
+            if (protocolLength == 0)
+            {
+                protocol = "";
+            }
+            else
+            {
+                byte[] protocolBytes = new byte[protocolLength];
 
-            byte[] protocolRaw = new byte[protocolLength];
-            buffer.get(protocolRaw);
-            String protocol = new String(protocolRaw);
+                buffer.get(protocolBytes);
+                protocol = new String(protocolBytes, "UTF-8");
+            }
 
-            logger.info("!!! " + getEndpoint().getID() +
-                " data channel open request"
-                            + " on SID: " + sid
-                            + " type: " + channelType
-                            + " prio: " + priority
-                            + " reliab: " + reliability
-                            + " label: " + label
-                            + " proto: " + protocol);
+            if (logger.isInfoEnabled())
+            {
+                logger.info(
+                        "!!! " + getEndpoint().getID() + " data channel open request on SID: " + sid
+                            + " type: " + channelType + " prio: " + priority + " reliab: " + reliability
+                            + " label: " + label + " proto: " + protocol);
+            }
 
             if(channels.containsKey(sid))
             {
@@ -597,31 +637,69 @@ public class SctpConnection
     {
         if(channels.containsKey(sid))
         {
-            throw new IOException(
-                "Channel on sid: " + sid + " already exists");
+            throw new IOException("Channel on sid: " + sid + " already exists");
         }
 
-        ByteBuffer packet = ByteBuffer.allocate(14 + label.length());
+        // Label Length & Label
+        byte[] labelBytes;
+        int labelByteLength;
+
+        if (label == null)
+        {
+            labelBytes = null;
+            labelByteLength = 0;
+        }
+        else
+        {
+            labelBytes = label.getBytes("UTF-8");
+            labelByteLength = labelBytes.length;
+            if (labelByteLength > 0xFFFF)
+                labelByteLength = 0xFFFF;
+        }
+
+        // Protocol Length & Protocol
+        String protocol = WEBRTC_DATA_CHANNEL_PROTOCOL;
+        byte[] protocolBytes;
+        int protocolByteLength;
+
+        if (protocol == null)
+        {
+            protocolBytes = null;
+            protocolByteLength = 0;
+        }
+        else
+        {
+            protocolBytes = protocol.getBytes("UTF-8");
+            protocolByteLength = protocolBytes.length;
+            if (protocolByteLength > 0xFFFF)
+                protocolByteLength = 0xFFFF;
+        }
+
+        ByteBuffer packet = ByteBuffer.allocate(12 + labelByteLength + protocolByteLength);
 
         // Message open new channel on current sid
-        packet.put((byte)MSG_OPEN_CHANNEL);
-        // Channel type
-        packet.put((byte)type);
-        // Channel priority
+        // Message Type
+        packet.put((byte) MSG_OPEN_CHANNEL);
+        // Channel Type
+        packet.put((byte) type);
+        // Priority
         packet.putShort((short) prio);
-        // Channel reliability
+        // Reliability Parameter
         packet.putInt((int) reliab);
-        // Label length
-        packet.putShort((short) label.length());
-        // Protocol length
-        packet.putShort((short) 0);
-        // Label content
-        if(label.length() > 0)
+        // Label Length
+        packet.putShort((short) labelByteLength);
+        // Protocol Length
+        packet.putShort((short) protocolByteLength);
+        // Label
+        if(labelByteLength != 0)
         {
-            packet.put(label.getBytes("UTF8"));
+            packet.put(labelBytes, 0, labelByteLength);
         }
-        // Protocol is not used for the time being
-        // TODO: eventually write protocol content here
+        // Protocol
+        if (protocolByteLength != 0)
+        {
+            packet.put(protocolBytes, 0, protocolByteLength);
+        }
 
         int sentCount
             = sctpSocket.send(packet.array(), true, sid, WEB_RTC_PPID_CTRL);

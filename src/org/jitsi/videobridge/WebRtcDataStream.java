@@ -124,14 +124,15 @@ public class WebRtcDataStream
     {
         try
         {
-            byte[] raw = strMsg.getBytes("UTF8");
-
+            byte[] bytes = strMsg.getBytes("UTF-8");
             int res
                 = socket.send(
-                    raw, true, sid,
-                    SctpConnection.WEB_RTC_PPID_STRING);
+                        bytes,
+                        true,
+                        sid,
+                        SctpConnection.WEB_RTC_PPID_STRING);
 
-            if(res != raw.length)
+            if(res != bytes.length)
             {
                 throw new IOException("Failed to send the data");
             }
