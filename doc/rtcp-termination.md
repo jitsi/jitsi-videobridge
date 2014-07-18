@@ -56,29 +56,29 @@ Implementation
 We implemented that in the following way :
 
 - Abstracted away the RTCP report generation functionality from
-  RTCPTransmitter. We introduced a new interface called
-  RTCPReportBuilder whose implementations are plugged into the
-  RTCPTransmitter (in FMJ). The default implementation is called
-  DefaultRTCPReportBuilderImpl. It lives in FMJ and implements the
+  `RTCPTransmitter`. We introduced a new interface called
+  `RTCPReportBuilder` whose implementations are plugged into the
+  `RTCPTransmitter` (in FMJ). The default implementation is called
+  `DefaultRTCPReportBuilderImpl`. It lives in FMJ and implements the
   current report generation behavior of FMJ.
   
 - libjitsi and/or other parts of the video bridge can override the
   default RTCP report generation behavior by parametrizing the RTP
   session manager (in FMJ) with an implementation of the
-  RTCPReportBuilder interface.
+  `RTCPReportBuilder` interface.
   
-- Created an interface called RTCPPacketTransformer whose purpose is
+- Created an interface called `RTCPPacketTransformer` whose purpose is
   to inspect and/or modify and/or eliminate incoming RTCP packets. It
-  can be thought of as a PacketTransformer for incoming RTCP packets.
+  can be thought of as a `PacketTransformer` for incoming RTCP packets.
   
-- Created an interface called RTCPTerminationStrategy containing two
-  methods 1. getRTCPReportBuilder() and 2. getRTCPPacketTransformer().
+- Created an interface called `RTCPTerminationStrategy` containing two
+  methods 1. `getRTCPReportBuilder()` and 2. `getRTCPPacketTransformer()`.
   
-  RTCPTerminationStrategy implementations are the "chefs d'orchestre"
+  `RTCPTerminationStrategy` implementations are the "chefs d'orchestre"
   of RTCP termination. They are meant to 1. optionally generate
   arbitrary RTCP packets, and 2. inspect and/or modify and/or
-  eliminate incoming RTCP packets, through the RTCPReportBuilder and
-  the RTCPPacketTransformer instances returned by their respective
+  eliminate incoming RTCP packets, through the `RTCPReportBuilder` and
+  the `RTCPPacketTransformer` instances returned by their respective
   methods.
   
 - Created an RTCP packet parser/assembler with support for the RTCP
@@ -86,29 +86,29 @@ We implemented that in the following way :
   NACKs and PLIs.
   
 - Created an RTCP transformer engine that's plugged into each
-  MediaStream transform engine chain and that feeds incoming RTCP
-  packets to the RTCPPacketTransformer of the currently active
-  RTCPTerminationStrategy class for inspection and/or modification
+  `MediaStream` transform engine chain and that feeds incoming RTCP
+  packets to the `RTCPPacketTransformer` of the currently active
+  `RTCPTerminationStrategy` class for inspection and/or modification
   and/or elimination.
 
-We've also implemented 4 simple strategies (RTCPTerminationStrategy
+We've also implemented 4 simple strategies (`RTCPTerminationStrategy`
 implementations) :
 
-- MaxThroughputRTCPTerminationStrategy which maximizes endpoint
+- `MaxThroughputRTCPTerminationStrategy` which maximizes endpoint
   throughput. It does that by sending REMB messages with the largest
   possible exp and mantissa values. This strategy is only meant to be
   used in tests.
 
-- MinThroughputRTCPTerminationStrategy which minimizes endpoint
+- `MinThroughputRTCPTerminationStrategy` which minimizes endpoint
   throughput. It does that by sending REMB messages with the smallest
   possible exp and mantissa values. This strategy is only meant to be
   used in tests.
 
-- SilentBridgeRTCPTerminationStrategy which forwards whatever it
+- `SilentBridgeRTCPTerminationStrategy` which forwards whatever it
   receives from the network but it doesn't generate anything. This
   strategy will be useful for conferences for up to 2 participants.
 
-- PassthroughRTCPTerminationStrategy which forwards whatever it
+- `PassthroughRTCPTerminationStrategy` which forwards whatever it
   receives from the network and it also generates RTCP receiver
   reports using the FMJ built-in algorithm. This is the default
   behavior, at least for now.
@@ -116,7 +116,7 @@ implementations) :
 Highest quality RTCP termination strategy
 -----------------------------------------
 
-We've also a strategy called HighestQualityRTCPTerminationStrategy,
+We've also a strategy called `HighestQualityRTCPTerminationStrategy`,
 that is to be used in production environments and that works in the
 following way :
 
@@ -171,7 +171,7 @@ the bridge decides to send RTCP feedback, and not, for example, when
 we inspect/modify incoming RTCP packets.
 
 We do that by keeping a feedback cache that holds the most recent
-RTCPReportBlock[] and RTCPREMBPackets grouped by media receiver
+`RTCPReportBlock[]` and `RTCPREMBPackets` grouped by media receiver
 SSRC. So, at any given moment we have the last reported feedback for
 all the media receivers in the conference, and from that we can
 calculate the above reverse map map.
