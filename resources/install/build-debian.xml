@@ -160,6 +160,7 @@
             <patternset>
                 <exclude name="**/test/**"/>
                 <exclude name="**/*.jar"/>
+                <exclude name="**/.cvsignore"/>
             </patternset>
         </unzip>
 
@@ -188,6 +189,14 @@
                 <exclude name="**/windows/**"/>
             </fileset>
         </copy>
+        <replace file="${debian.release}/resources/install/linux/jvb.sh"
+                 token="$SCRIPT_DIR/lib/native/linux">
+            <replacevalue>/usr/lib/jni</replacevalue>
+        </replace>
+        <replace file="${debian.release}/resources/install/linux-64/jvb.sh"
+                 token="$SCRIPT_DIR/lib/native/linux">
+            <replacevalue>/usr/lib/jni</replacevalue>
+        </replace>
         <copy todir="${debian.release}">
             <fileset dir="resources/install/">
                 <include name="debian/**"/>
