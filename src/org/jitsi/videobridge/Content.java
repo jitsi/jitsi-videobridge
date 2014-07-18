@@ -738,9 +738,7 @@ public class Content
                             setRTCPTerminationStrategyFromConfiguration();
 
                         rtcpFeedbackMessageSender
-                            = new RTCPFeedbackMessageSender(
-                                    (RTPTranslatorImpl) rtpTranslator);
-                        //    = rtpTranslatorImpl.getRtcpFeedbackMessageSender();
+                            = rtpTranslatorImpl.getRtcpFeedbackMessageSender();
                     }
                 }
             }
