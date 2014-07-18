@@ -146,6 +146,21 @@ The reverse map map would have the following form :
     <B, <C, feedback of C>>
     ...
 
+In other words, for each endpoint that sends video, the bridge
+calculates the following picture :
+
+                   +-------------+-data->+---+
+                   |             |       | B | RANK#3
+                   |             |<-feed-+---+
+                   |             |
+       +---+-data->|    Jitsi    |-data->+---+
+       | A |       | Videobridge |       | D | RANK#1
+       +---+<-feed-|             |<-feed-+---+
+                   |             |
+                   |             |-data->+---+
+                   |             |       | C | RANK#2
+                   +-------------+<-feed-+---+
+
 This calculation is not instantaneous, so it takes place ONLY when we
 the bridge decides to send RTCP feedback, and not, for example, when
 we inspect/modify incoming RTCP packets.
@@ -196,4 +211,3 @@ mentioned in the previous update can be enabled/disabled similarly :
 
     focus.setRTCPTerminationStrategy('org.jitsi.impl.neomedia.rtcp.' +
 	      'termination.strategies.STRATEGY_NAME')
-
