@@ -5,7 +5,6 @@
     <property name="debian.release" value="release/jvb"/>
     <property name="debian.dir" value="${debian.release}/debian"/>
     <property name="debian.binary.dir" value="${debian.dir}/binary"/>
-    <property name="debian.tmp.dir" value="${debian.dir}/tmp" />
     <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
     <property name="dpkg-buildpackage" value="/usr/bin/dpkg-buildpackage"/>
     <property name="dh_testdir" value="/usr/bin/dh_testdir"/>
@@ -82,7 +81,10 @@
             depends="make,dpkg-build-warning,check-version,deb-bump-version">
 
         <copy todir="${debian.dir}" includeEmptyDirs="Yes">
-            <fileset dir="resources/install/debian"/>
+            <fileset dir="resources/install/debian">
+                <include name="**"/>
+                <exclude name="*.src"/>
+            </fileset>
         </copy>
 
         <mkdir dir="${debian.dir}/usr/share/jitsi-videobridge"/>
@@ -142,5 +144,232 @@
 
     </target>
 
+    <target name="deb-src" depends="deb-copy-jitsi-videobridge">
+
+        <unzip src="../libsrc/jitsi-android-osgi.zip"
+               dest="${debian.release}/lib/src/"/>
+        <unzip src="../libsrc/tinder_src_1_2_2.zip"
+               dest="${debian.release}/lib/src/">
+            <patternset>
+                <exclude name="**/test/**"/>
+                <exclude name="**/*.jar"/>
+            </patternset>
+        </unzip>
+        <unzip src="../libsrc/whack-trunk.zip"
+               dest="${debian.release}/lib/src/">
+            <patternset>
+                <exclude name="**/test/**"/>
+                <exclude name="**/*.jar"/>
+            </patternset>
+        </unzip>
+
+        <!-- pack as original sources -->
+        <tar destfile="release/jitsi-videobridge_${label}.orig.tar.gz"
+             compression="gzip"
+             basedir="release"/>
+        <delete failonerror="false" includeemptydirs="true">
+            <fileset dir="${debian.release}"/>
+        </delete>
+    </target>
+
+    <target name="deb-copy-jitsi-videobridge">
+        <mkdir dir="${debian.release}/lib/src"/>
+
+        <antcall target="deb-bump-version" />
+
+        <copy todir="${debian.release}">
+            <fileset dir=".">
+                <include name="src/**"/>
+                <include name="build.xml"/>
+                <include name="resources/install/build-debian.xml"/>
+                <include name="resources/install/linux-64/jvb.sh"/>
+                <include name="resources/install/linux/jvb.sh"/>
+                <exclude name="**/macosx/**"/>
+                <exclude name="**/windows/**"/>
+            </fileset>
+        </copy>
+        <copy todir="${debian.release}">
+            <fileset dir="resources/install/">
+                <include name="debian/**"/>
+                <exclude name="debian/changelog.tmpl"/>
+                <exclude name="debian/control"/>
+                <exclude name="debian/install"/>
+                <exclude name="debian/source/include-binaries"/>
+            </fileset>
+        </copy>
+        <move file="${debian.release}/debian/control.src"
+              tofile="${debian.release}/debian/control"/>
+        <move file="${debian.release}/debian/install.src"
+              tofile="${debian.release}/debian/install"/>
+
+        <!-- adds the stuff that will build the needed libs -->
+        <echo file="${debian.release}/debian/rules"
+              append="true">
+override_dh_auto_build:
+&#009;dh_auto_build -- deb-src-rebuild
+
+override_dh_install-arch:
+ifeq ($(DEB_HOST_ARCH),amd64)
+&#009;dh_install resources/install/linux-64/jvb.sh usr/share/jitsi-videobridge
+else
+&#009;dh_install resources/install/linux/jvb.sh usr/share/jitsi-videobridge
+endif
+</echo>
+
+    </target>
+
+    <target name="deb-src-rebuild">
+
+        <symlink resource="/usr/share/libjitsi/lib/bccontrib.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/bcprov.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/concurrentlinkedhashmap-lru.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/configuration.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/dns.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/dnsservice.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/dom4j.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/fileaccess.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/jetty8-http.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/jetty8-io.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/jetty8-server.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/jetty8-util.jar"
+                 link="lib"/>
+
+        <mkdir dir="lib/src/jitsi-android-osgi/classes"/>
+        <javac debug="true"
+               deprecation="true" destdir="lib/src/jitsi-android-osgi/classes"
+               nowarn="false"
+               source="1.6" target="1.6" fork="true">
+            <src path="lib/src/jitsi-android-osgi/src"/>
+            <include name="**/*.java" />
+            <classpath>
+                <fileset dir="/usr/share/java">
+                    <include name="org.apache.felix.framework.jar"/>
+                </fileset>
+            </classpath>
+        </javac>
+        <jar compress="true" destfile="lib/jitsi-android-osgi.jar">
+            <zipfileset dir="lib/src/jitsi-android-osgi/classes"/>
+        </jar>
+
+        <symlink resource="/usr/share/java/jna.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/json-simple.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/libidn.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/bcpkix.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/libjitsi/lib/fmj.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/libjitsi.jar/libjitsi-impl.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/libjitsi/libjitsi.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/netaddr.jar/netaddr.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/libjitsi/lib/ice4j.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/weupnp.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/org.apache.felix.framework.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/packetlogging.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/protocol.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/protocol-jabber.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/protocol-media.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/resourcemanager.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/servlet-api-3.1.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/slf4j-api.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/smacklib.jar/smacklib.jar"
+                 link="lib"/>
+
+        <property name="tinder.folder" value="lib/src/tinder-1.2.2"/>
+        <mkdir dir="${tinder.folder}/classes"/>
+        <javac debug="true"
+               deprecation="true" destdir="${tinder.folder}/classes"
+               nowarn="false"
+               source="1.6" target="1.6" fork="true">
+            <src path="${tinder.folder}/src/main/java"/>
+            <include name="**/*.java" />
+            <classpath>
+                <fileset dir="/usr/share/java">
+                    <include name="dom4j.jar"/>
+                    <include name="slf4j-api.jar"/>
+                    <include name="jcip-annotations.jar"/>
+                    <include name="libidn.jar"/>
+                    <include name="concurrentlinkedhashmap-lru.jar"/>
+                </fileset>
+            </classpath>
+        </javac>
+        <jar compress="true" destfile="lib/tinder.jar">
+            <zipfileset dir="${tinder.folder}/classes"/>
+        </jar>
+
+        <!-- tinder -->
+        <symlink resource="/usr/share/jitsi-common/ui-service.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/dnsjava.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/util.jar/launchutils.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/jitsi-common/util.jar/util.jar"
+                 link="lib"/>
+
+        <symlink resource="/usr/share/java/dom4j.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/jetty8-http.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/jetty8-server.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/jetty8-servlet.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/jetty8-util.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/jetty8-webapp.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/servlet-api-3.1.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/slf4j-api.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="/usr/share/java/xpp3.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <symlink resource="../../../../../tinder.jar"
+                 link="lib/src/whack/build/lib/merge"/>
+        <ant dir="lib/src/whack/build"
+             useNativeBasedir="true"
+             inheritAll="false"
+             target="jar">
+        </ant>
+        <copy file="lib/src/whack/target/whack.jar" todir="lib"/>
+
+        <!-- whack -->
+        <symlink resource="/usr/share/java/xpp3.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/libjitsi/lib/zrtp4j-light.jar"
+                 link="lib"/>
+
+        <ant inheritAll="false"
+             target="jar">
+        </ant>
+
+    </target>
 
 </project>

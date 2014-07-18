@@ -1,0 +1,4 @@
+lib/*.jar usr/share/jitsi-videobridge/lib
+jitsi-videobridge.jar usr/share/jitsi-videobridge
+debian/usr/share/doc/* /usr/share/doc/
+
