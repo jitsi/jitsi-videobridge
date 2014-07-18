@@ -136,6 +136,8 @@ figure bellow :
        +---+      |             |      +---+
        | C |<---->|             |<---->| D |
        +---+      +-------------+      +---+
+       
+    Figure 1: Sample video conference
 
 The reverse map map would have the following form :
 
@@ -160,6 +162,9 @@ calculates the following picture :
                    |             |-data->+---+
                    |             |       | C | RANK#2
                    +-------------+<-feed-+---+
+
+    Figure 2: Partial view of the conference. A sends media and receives 
+              feedback. B, D, C receive media and send feedback.
 
 This calculation is not instantaneous, so it takes place ONLY when we
 the bridge decides to send RTCP feedback, and not, for example, when
