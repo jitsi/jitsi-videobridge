@@ -707,6 +707,10 @@ public class RtpChannel
     public long getLastPacketsLostNB()
     {
         long newPacketsLost = stream.getMediaStreamStats().getNbPacketsLost();
+        if(newPacketsLost < lastKnownPacketsLostNB)
+        {
+            return 0;
+        }
         long lastPacketsNB = newPacketsLost - lastKnownPacketsLostNB;
         lastKnownPacketsLostNB = newPacketsLost;
         return lastPacketsNB;
@@ -721,6 +725,11 @@ public class RtpChannel
     public long getLastPacketsNB()
     {
         long newPackets = stream.getMediaStreamStats().getNbPackets();
+        if(newPackets < lastKnownPacketsNB)
+        {
+            return 0;
+        }
+
         long lastPacketsNB = newPackets - lastKnownPacketsNB;
         lastKnownPacketsNB = newPackets;
         return lastPacketsNB;
@@ -1414,12 +1423,6 @@ public class RtpChannel
                         {
                             googleChrome = true;
                         }
-                    }
-                    else if (Constants.RED.equalsIgnoreCase(name)
-                                || Constants.ULPFEC.equalsIgnoreCase(name))
-                    {
-                        // do not add RED or ULPFEC to the MediaStream, because
-                        // they shouldn't be handled.
                     }
                     else
                     {
