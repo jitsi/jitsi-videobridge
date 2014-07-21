@@ -61,7 +61,6 @@
             <fileset dir="${output}" />
             <fileset dir="${output.test}" />
             <fileset dir="${dist}" />
-            <fileset dir="${doc}" />
             <fileset dir="${junit.reports}" />
             <fileset dir="release" />
             <fileset file="jitsi-videobridge.jar" />
