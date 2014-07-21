@@ -31,8 +31,14 @@ test -x $DAEMON || exit 0
 
 set -e
 
-case "$1" in
-  start)
+stop() {
+    echo -n "Stopping $DESC: "
+    `ps -u $USER -o pid h | xargs kill`
+    rm $PIDFILE
+    echo "$NAME."
+}
+
+start() {
     if [ -x $PIDFILE ]; then
         echo "Pidfile $PIDFILE exists. Either Jitsi Videobridge is already running or there was some problem. Investgate before starting."
         exit 1
@@ -41,22 +47,36 @@ case "$1" in
     start-stop-daemon --start --quiet --background --chuid $USER --make-pidfile --pidfile $PIDFILE \
         --exec /bin/bash -- -c "exec $DAEMON $DAEMON_OPTS < /dev/null >> $LOGFILE 2>&1"
     echo "$NAME."
+}
+
+reload() {
+    echo 'Not yet implemented.'
+}
+
+status() {
+    echo 'Not yet implemented.'
+}
+
+case "$1" in
+  start)
+    start
     ;;
   stop)
-    echo -n "Stopping $DESC: "
-    `ps -u $USER -o pid h | xargs kill`
-    rm $PIDFILE
-    echo "$NAME."
+    stop
+    ;;
+  restart)
+    stop
+    start
     ;;
   reload)
-    echo 'Not yet implemented.'
+    reload
     ;;
   status)
-    echo 'Not yet implemented.'
+    status
     ;;
   *)
     N=/etc/init.d/$NAME
-    echo "Usage: $N {start|stop|reload|status}" >&2
+    echo "Usage: $N {start|stop|restart|reload|status}" >&2
     exit 1
     ;;
 esac

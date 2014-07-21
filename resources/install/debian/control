@@ -9,8 +9,8 @@ Homepage: https://jitsi.org/videobridge
 
 Package: jitsi-videobridge
 Architecture: any
-Pre-Depends: adduser, openssl, prosody-trunk
-Depends: ${shlibs:Depends}, ${misc:Depends}, default-jre-headless, lua-zlib, lua-sec-prosody, lua-dbi-sqlite3, liblua5.1-bitop-dev, liblua5.1-bitop0, restund, libre, prosody-modules-otalk
+Pre-Depends: adduser
+Depends: ${shlibs:Depends}, ${misc:Depends}, default-jre-headless
 Description: WebRTC compatible Selective Forwarding Unit (SFU)
  Jitsi Videobridge is a WebRTC compatible Selective Forwarding Unit
  (SFU) for multiuser video communication. It is an essential part
