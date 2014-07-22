@@ -8,6 +8,9 @@
     <property name="dpkg-scanpackages" value="/usr/bin/dpkg-scanpackages"/>
     <property name="dpkg-buildpackage" value="/usr/bin/dpkg-buildpackage"/>
     <property name="dh_testdir" value="/usr/bin/dh_testdir"/>
+
+    <property name="tinder.folder" value="lib/src/tinder-1.2.2"/>
+
     <!-- Can we build debian packages? -->
     <condition property="dpkg.build.present">
         <and>
@@ -217,6 +220,9 @@
 override_dh_auto_build:
 &#009;dh_auto_build -- deb-src-rebuild
 
+override_dh_auto_clean:
+&#009;dh_auto_clean -- clean-debuild
+
 override_dh_install-arch:
 ifeq ($(DEB_HOST_ARCH),amd64)
 &#009;dh_install resources/install/linux-64/jvb.sh usr/share/jitsi-videobridge
@@ -310,7 +316,6 @@ endif
         <symlink resource="/usr/share/jitsi-common/smacklib.jar/smacklib.jar"
                  link="lib"/>
 
-        <property name="tinder.folder" value="lib/src/tinder-1.2.2"/>
         <mkdir dir="${tinder.folder}/classes"/>
         <javac debug="true"
                deprecation="true" destdir="${tinder.folder}/classes"
@@ -378,6 +383,22 @@ endif
         <ant inheritAll="false"
              target="jar">
         </ant>
+
+    </target>
+
+    <target name="clean-debuild">
+
+        <delete failonerror="false">
+            <fileset dir="lib/src/whack/build/lib/merge">
+                <include name="*.jar"/>
+            </fileset>
+            <fileset dir="lib">
+                <include name="*.jar"/>
+            </fileset>
+        </delete>
+        <delete dir="lib/src/jitsi-android-osgi/classes" failonerror="false"/>
+        <delete dir="${tinder.folder}/classes" failonerror="false"/>
+        <delete dir="lib/src/whack/target" failonerror="false"/>
 
     </target>
 
