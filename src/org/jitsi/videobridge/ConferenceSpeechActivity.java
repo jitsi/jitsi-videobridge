@@ -96,6 +96,10 @@ class ConferenceSpeechActivity
      */
     private final WeakReference<Conference> conference;
 
+    /**
+     * The <tt>Endpoint</tt> which is the dominant speaker in
+     * {@link #conference}.
+     */
     private WeakReference<Endpoint> dominantEndpoint;
 
     /**
@@ -105,6 +109,11 @@ class ConferenceSpeechActivity
      */
     private boolean dominantEndpointChanged = false;
 
+    /**
+     * The ordered list of <tt>Endpoint</tt>s participating in
+     * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
+     * beginning of the list i.e. the dominant speaker history.
+     */
     private List<WeakReference<Endpoint>> endpoints;
 
     /**
@@ -114,10 +123,24 @@ class ConferenceSpeechActivity
      */
     private boolean endpointsChanged = false;
 
+    /**
+     * The background/daemon thread which fires <tt>PropertyChangeEvent</tt>s to
+     * notify registered <tt>PropertyChangeListener</tt>s about changes of the
+     * values of the <tt>dominantEndpoint</tt> and <tt>endpoints</tt> properties
+     * of this instance.
+     */
     private EventDispatcher eventDispatcher;
 
+    /**
+     * The time in milliseconds of the last execution of
+     * {@link #eventDispatcher}.
+     */
     private long eventDispatcherTime;
 
+    /**
+     * The <tt>Object</tt> used to synchronize the access to the state of this
+     * instance.
+     */
     private final Object syncRoot = new Object();
 
     /**
@@ -153,9 +176,9 @@ class ConferenceSpeechActivity
 
         if (conference != null)
         {
-            if (logger.isDebugEnabled())
+            if (logger.isTraceEnabled())
             {
-                logger.debug(
+                logger.trace(
                         "The dominant speaker in conference "
                             + conference.getID() + " is now the SSRC " + ssrc
                             + ".");
@@ -195,6 +218,15 @@ class ConferenceSpeechActivity
         }
     }
 
+    /**
+     * Notifies this <tt>ConferenceSpeechActivity</tt> that an
+     * <tt>EventDispatcher</tt> has permanently stopped executing in its
+     * associated background thread. If the specified <tt>EventDispatcher</tt>
+     * is {@link #eventDispatcher}, this instance will note that it no longer
+     * has an associated (executing) <tt>EventDispatcher</tt>.
+     *
+     * @param eventDispatcher the <tt>EventDispatcher</tt> which has exited
+     */
     private void eventDispatcherExited(EventDispatcher eventDispatcher)
     {
         synchronized (syncRoot)
@@ -276,6 +308,13 @@ class ConferenceSpeechActivity
         return conference;
     }
 
+    /**
+     * Gets the <tt>Endpoint</tt> which is the dominant speaker in the
+     * multipoint conference represented by this instance.
+     *
+     * @return the <tt>Endpoint</tt> which is the dominant speaker in the
+     * multipoint conference represented by this instance or <tt>null</tt>
+     */
     public Endpoint getDominantEndpoint()
     {
         Endpoint dominantEndpoint;
@@ -296,6 +335,16 @@ class ConferenceSpeechActivity
         return dominantEndpoint;
     }
 
+    /**
+     * Gets the ordered list of <tt>Endpoint</tt>s participating in the
+     * multipoint conference represented by this instance with the dominant
+     * (speaker) <tt>Endpoint</tt> at the beginning of the list i.e. the
+     * dominant speaker history.
+     *
+     * @return the ordered list of <tt>Endpoint</tt>s participating in the
+     * multipoint conference represented by this instance with the dominant
+     * (speaker) <tt>Endpoint</tt> at the beginning of the list
+     */
     public List<Endpoint> getEndpoints()
     {
         List<Endpoint> ret;
@@ -374,6 +423,12 @@ class ConferenceSpeechActivity
             endpoint.audioLevelChanged(channel, ssrc, level);
     }
 
+    /**
+     * Starts a new <tt>EventDispatcher</tt> or notifies an existing one to fire
+     * events to registered listeners about changes of the values of the
+     * <tt>dominantEndpoint</tt> and <tt>endpoints</tt> properties of this
+     * instance.
+     */
     private void maybeStartEventDispatcher()
     {
         synchronized (syncRoot)
@@ -585,16 +640,44 @@ class ConferenceSpeechActivity
         return true;
     }
 
+    /**
+     * Represents a background/daemon thread which fires events to registered
+     * listeners notifying about changes in the values of the
+     * <tt>dominantEndpoint</tt> and <tt>endpoints</tt> properties of a specific
+     * <tt>ConferenceSpeechActivity</tt>. Because <tt>EventDispatcher</tt> runs
+     * in a background/daemon <tt>Thread</tt> which is a garbage collection
+     * root, it keeps a <tt>WeakReference</tt> to the specified
+     * <tt>ConferenceSpeechActivity</tt> in order to not accidentally prevent
+     * its garbage collection.
+     */
     private static class EventDispatcher
         implements Runnable
     {
+        /**
+         * The <tt>ConferenceSpeechActivity</tt> which has initialized this
+         * instance and on behalf of which this instance is to fire events to
+         * registered listeners in the background.
+         */
         private final WeakReference<ConferenceSpeechActivity> owner;
 
+        /**
+         * Initializes a new <tt>EventDispatcher</tt> instance which is to fire
+         * events in the background to registered listeners on behalf of a
+         * specific <tt>ConferenceSpeechActivity</tt>.
+         *
+         * @param owner the <tt>ConferenceSpeechActivity</tt> which is
+         * initializing the new instance
+         */
         public EventDispatcher(ConferenceSpeechActivity owner)
         {
             this.owner = new WeakReference<ConferenceSpeechActivity>(owner);
         }
 
+        /**
+         * Runs in a background/daemon thread and notifies registered listeners
+         * about changes in the values of the <tt>dominantEndpoint</tt> and
+         * <tt>endpoints</tt> properties of {@link #owner}.
+         */
         @Override
         public void run()
         {
@@ -611,6 +694,11 @@ class ConferenceSpeechActivity
             }
             finally
             {
+                /*
+                 * Notify the ConferenceSpeechActivity that this EventDispatcher
+                 * has exited in order to allow the former to forget about the
+                 * latter.
+                 */
                 ConferenceSpeechActivity owner = this.owner.get();
 
                 if (owner != null)
