@@ -25,7 +25,6 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
@@ -442,13 +441,23 @@ public class RtpChannel
                     if (notify && getContent().isRecording())
                     {
                         Recorder recorder = getContent().getRecorder();
-                        Endpoint endpoint = getEndpoint();
-                        if (recorder != null && endpoint != null)
+
+                        if (recorder != null)
                         {
-                            Synchronizer synchronizer = recorder.getSynchronizer();
-                            if (synchronizer != null)
-                                synchronizer.setEndpoint(ssrc & 0xffffffffl,
-                                                         endpoint.getID());
+                            Endpoint endpoint = getEndpoint();
+
+                            if (endpoint != null)
+                            {
+                                Synchronizer synchronizer
+                                    = recorder.getSynchronizer();
+
+                                if (synchronizer != null)
+                                {
+                                    synchronizer.setEndpoint(
+                                            ssrc & 0xffffffffl,
+                                            endpoint.getID());
+                                }
+                            }
                         }
                     }
 
@@ -635,13 +644,13 @@ public class RtpChannel
         {
             csrcAudioLevelListener
                 = new CsrcAudioLevelListener()
-            {
-                @Override
-                public void audioLevelsReceived(long[] levels)
                 {
-                    streamAudioLevelsReceived(levels);
-                }
-            };
+                    @Override
+                    public void audioLevelsReceived(long[] levels)
+                    {
+                        streamAudioLevelsReceived(levels);
+                    }
+                };
         }
         return csrcAudioLevelListener;
     }
@@ -654,14 +663,10 @@ public class RtpChannel
     {
         SrtpControl srtpControl = stream.getSrtpControl();
 
-        if(srtpControl instanceof DtlsControl)
-        {
-            return (DtlsControl) srtpControl;
-        }
-        else
-        {
-            return null;
-        }
+        return
+            (srtpControl instanceof DtlsControl)
+                ? (DtlsControl) srtpControl
+                : null;
     }
 
     /**
@@ -673,6 +678,7 @@ public class RtpChannel
      * of <tt>Channel</tt> listed in {@link #content} while this instance is
      * listed there as well)
      */
+    @Override
     public final String getID()
     {
         return id;
@@ -702,18 +708,23 @@ public class RtpChannel
     /**
      * Returns the number of lost packets for this channel since last time the
      * method is called.
-     * @return  the number of lost packets since last time the method is called.
+     *
+     * @return the number of lost packets since last time the method is called.
      */
     public long getLastPacketsLostNB()
     {
         long newPacketsLost = stream.getMediaStreamStats().getNbPacketsLost();
-        if(newPacketsLost < lastKnownPacketsLostNB)
+        long lastPacketsNB = newPacketsLost - lastKnownPacketsLostNB;
+
+        if (lastPacketsNB < 0)
         {
             return 0;
         }
-        long lastPacketsNB = newPacketsLost - lastKnownPacketsLostNB;
-        lastKnownPacketsLostNB = newPacketsLost;
-        return lastPacketsNB;
+        else
+        {
+            lastKnownPacketsLostNB = newPacketsLost;
+            return lastPacketsNB;
+        }
     }
 
     /**
@@ -725,14 +736,17 @@ public class RtpChannel
     public long getLastPacketsNB()
     {
         long newPackets = stream.getMediaStreamStats().getNbPackets();
-        if(newPackets < lastKnownPacketsNB)
+        long lastPacketsNB = newPackets - lastKnownPacketsNB;
+
+        if (lastPacketsNB < 0)
         {
             return 0;
         }
-
-        long lastPacketsNB = newPackets - lastKnownPacketsNB;
-        lastKnownPacketsNB = newPackets;
-        return lastPacketsNB;
+        else
+        {
+            lastKnownPacketsNB = newPackets;
+            return lastPacketsNB;
+        }
     }
 
     /**
@@ -805,12 +819,13 @@ public class RtpChannel
         {
             streamAudioLevelListener
                 = new SimpleAudioLevelListener()
-                        {
-                            public void audioLevelChanged(int level)
-                            {
-                                streamAudioLevelChanged(level);
-                            }
-                        };
+                {
+                    @Override
+                    public void audioLevelChanged(int level)
+                    {
+                        streamAudioLevelChanged(level);
+                    }
+                };
         }
         return streamAudioLevelListener;
     }
@@ -1184,7 +1199,6 @@ public class RtpChannel
     {
         if (oldValue != null)
             oldValue.removeChannel(this);
-
         if (newValue != null)
             newValue.addChannel(this);
     }
@@ -1207,8 +1221,8 @@ public class RtpChannel
         {
             String propertyName = ev.getPropertyName();
 
-            if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
-                    propertyName))
+            if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME
+                    .equals(propertyName))
             {
                 dominantSpeakerChanged();
             }
@@ -1330,15 +1344,15 @@ public class RtpChannel
      * <tt>false</tt>
      */
     boolean rtpTranslatorWillWrite(
-        boolean data,
-        byte[] buffer, int offset, int length,
-        Channel source)
+            boolean data,
+            byte[] buffer, int offset, int length,
+            Channel source)
     {
         boolean accept = true;
 
         if (data
-            && (source != null)
-            && MediaType.VIDEO.equals(getContent().getMediaType()))
+                && (source != null)
+                && MediaType.VIDEO.equals(getContent().getMediaType()))
         {
             accept = isInLastN(source);
         }
@@ -1754,6 +1768,7 @@ public class RtpChannel
                     datagramPacketFilter
                         = new DatagramPacketFilter()
                         {
+                            @Override
                             public boolean accept(DatagramPacket p)
                             {
                                 return
@@ -1766,6 +1781,7 @@ public class RtpChannel
                     datagramPacketFilter
                         = new DatagramPacketFilter()
                         {
+                            @Override
                             public boolean accept(DatagramPacket p)
                             {
                                 return acceptDataInputStreamDatagramPacket(p);
@@ -1773,8 +1789,9 @@ public class RtpChannel
                         };
                 }
                 else
+                {
                     datagramPacketFilter = null;
-
+                }
                 if (datagramPacketFilter != null)
                 {
                     ((RTPConnectorInputStream) newValue)
