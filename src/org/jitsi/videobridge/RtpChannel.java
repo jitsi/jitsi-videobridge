@@ -867,6 +867,18 @@ public class RtpChannel
     }
 
     /**
+     * Returns the <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to
+     * the terms of Jitsi Videobridge and which adapts this <tt>Channel</tt>
+     * to the terms of <tt>neomedia</tt>.
+     *
+     * @return the <tt>MediaStream</tt> instance
+     */
+    public MediaStream getStream()
+    {
+        return stream;
+    }
+
+    /**
      * Determines whether a specific <tt>Channel</tt> is within the set of
      * <tt>Channel</tt>s limitted by {@link #lastN} i.e. whether the RTP video
      * streams of the specified channel are to be sent to the remote endpoint of
@@ -875,7 +887,7 @@ public class RtpChannel
      * @param channel
      * @return
      */
-    private boolean isInLastN(Channel channel)
+    public boolean isInLastN(Channel channel)
     {
         Integer lastNInteger = this.lastN;
 

@@ -345,7 +345,7 @@ public class Conference
      * the specified <tt>ssrc</tt> and is with the specified <tt>mediaType</tt>;
      * otherwise, <tt>null</tt>
      */
-    Channel findChannelByReceiveSSRC(long receiveSSRC, MediaType mediaType)
+    public Channel findChannelByReceiveSSRC(long receiveSSRC, MediaType mediaType)
     {
         for (Content content : getContents())
         {

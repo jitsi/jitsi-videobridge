@@ -610,21 +610,6 @@ public class Videobridge implements StatsGenerator
             ColibriConferenceIQ.RTCPTerminationStrategy
                     strategyIQ = conferenceIQ.getRTCPTerminationStrategy();
 
-            RTCPTerminationStrategy strategy = null;
-            if (strategyIQ != null)
-            {
-                try
-                {
-                    Class<?> clazz = Class.forName(strategyIQ.getName());
-                    strategy = (RTCPTerminationStrategy) clazz.newInstance();
-                }
-                catch (Exception e)
-                {
-                    logger.warn("Could not get or instanciate the " +
-                            "RTCP termination strategy class.", e);
-                }
-            }
-
             for (ColibriConferenceIQ.Content contentIQ
                     : conferenceIQ.getContents())
             {
@@ -643,13 +628,12 @@ public class Videobridge implements StatsGenerator
                 else
                 {
                     // Set the RTCP termination strategy.
-                    if (strategy != null)
+                    if (strategyIQ != null
+                            && strategyIQ.getName() != null
+                            && strategyIQ.getName().trim().length() != 0)
                     {
-                        RTPTranslator rtpTranslator = content
-                                .getRTPTranslator();
-
-                        if (rtpTranslator != null)
-                            rtpTranslator.setRTCPTerminationStrategy(strategy);
+                        content.setRTCPTerminationStrategyFromFQN(
+                                strategyIQ.getName().trim());
                     }
 
                     ColibriConferenceIQ.Content responseContentIQ

@@ -16,6 +16,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.rtcp.*;
 import org.osgi.framework.*;
 
 /**
@@ -660,15 +661,50 @@ public class Content
 
     /**
      * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
-     * one specified in the configuration.
+     * one specified in the strategyFQN parameter.
      *
      */
-    private void setRTCPTerminationStrategyFromConfiguration()
+    public void setRTCPTerminationStrategyFromFQN(String strategyFQN)
     {
         RTPTranslator translator = rtpTranslator;
         if (translator == null
-                || !(translator instanceof RTPTranslatorImpl)
                 || !MediaType.VIDEO.equals(mediaType))
+        {
+            return;
+        }
+
+        RTCPTerminationStrategy strategy;
+        if (strategyFQN != null && strategyFQN.trim().length() != 0)
+        {
+            try
+            {
+                Class<?> clazz = Class.forName(strategyFQN);
+                strategy = (RTCPTerminationStrategy) clazz.newInstance();
+
+                if (strategy instanceof BasicBridgeRTCPTerminationStrategy)
+                {
+                    ((BasicBridgeRTCPTerminationStrategy) strategy)
+                            .setConference(this.conference);
+                }
+
+                translator.setRTCPTerminationStrategy(strategy);
+            }
+            catch (Exception e)
+            {
+                logger.error("Failed to configure the RTCP termination " +
+                        "strategy", e);
+            }
+        }
+    }
+
+    /**
+     * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
+     * one specified in the configuration.
+     *
+     */
+    public void setRTCPTerminationStrategyFromConfiguration()
+    {
+        if (!MediaType.VIDEO.equals(mediaType))
         {
             return;
         }
@@ -681,27 +717,7 @@ public class Content
             String strategyFQN = cfg.getString(
                     Videobridge.RTCP_TERMINATION_STRATEGY_PNAME, "");
 
-            RTCPTerminationStrategy strategy;
-            if (strategyFQN != null && strategyFQN.trim().length() != 0)
-            {
-                try
-                {
-                    Class<?> clazz = Class.forName(strategyFQN);
-                    strategy = (RTCPTerminationStrategy) clazz.newInstance();
-                }
-                catch (Exception e)
-                {
-                    logger.error("Could not instantiate the configured RTCP " +
-                                    "termination strategy", e);
-                    return;
-                }
-            }
-            else
-            {
-                return;
-            }
-
-            translator.setRTCPTerminationStrategy(strategy);
+            setRTCPTerminationStrategyFromFQN(strategyFQN);
         }
     }
 
