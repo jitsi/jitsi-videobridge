@@ -219,6 +219,11 @@ public class Videobridge implements StatsGenerator
     private int defaultProcessingOptions;
 
     /**
+     * Interval in milliseconds for stats generation.
+     */
+    private int statsInterval = -1;
+
+    /**
      * Listener for <tt>ComponentImpl</tt>
      */
     private ServiceListener serviceListener = new ServiceListener()
@@ -864,7 +869,7 @@ public class Videobridge implements StatsGenerator
             String transport
                 = config.getString(STATISTICS_TRANSPORT, DEFAULT_STAT_TRANSPORT);
 
-            int interval
+            statsInterval
                 = config.getInt(STATISTICS_INTERVAL, DEFAULT_STAT_INTERVAL);
 
             statsManager.addStat(this, VideobridgeStatistics.getStatistics());
@@ -872,7 +877,7 @@ public class Videobridge implements StatsGenerator
             if(STAT_TRANSPORT_COLIBRI.equals(transport))
             {
                 statsManager.start(new ColibriStatsTransport(this), this,
-                    interval);
+                    statsInterval);
             }
             else if(STAT_TRANSPORT_PUBSUB.equals(transport))
             {
@@ -882,7 +887,7 @@ public class Videobridge implements StatsGenerator
                 {
                     statsManager.start(
                         new PubsubStatsTransport(this, service, node),
-                        this, interval);
+                        this, statsInterval);
                 }
                 else
                 {
@@ -918,7 +923,7 @@ public class Videobridge implements StatsGenerator
         this.defaultProcessingOptions
             = config.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
 
-        logger.info("Default videobridge processing options: 0x"
+        logd("Default videobridge processing options: 0x"
                         + Integer.toHexString(defaultProcessingOptions));
 
         ProviderManager providerManager = ProviderManager.getInstance();
@@ -1073,7 +1078,7 @@ public class Videobridge implements StatsGenerator
     public void generateStatistics(Statistics stats)
     {
         int audioChannels = 0, videoChannels = 0, conferences = 0, endpoints = 0;
-        long packets = 0, packetsLost = 0;
+        long packets = 0, packetsLost = 0, bytes = 0;
 
         for(Conference conference : getConferences())
         {
@@ -1094,6 +1099,7 @@ public class Videobridge implements StatsGenerator
                     RtpChannel rtpChannel = (RtpChannel) channel;
                     packets += rtpChannel.getLastPacketsNB();
                     packetsLost += rtpChannel.getLastPacketsLostNB();
+                    bytes += rtpChannel.getNBBytes();
                 }
             }
             conferences++;
@@ -1108,6 +1114,9 @@ public class Videobridge implements StatsGenerator
 
         stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_RTP_LOSS,
             new DecimalFormat("#.#####").format(packetLostPercent));
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_BITRATE,
+            (bytes*8.0/1000.0)/(statsInterval / 1000.0));
 
         stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_NUMBEROFTHREADS,
             ManagementFactory.getThreadMXBean().getThreadCount());
@@ -1168,6 +1177,11 @@ public class Videobridge implements StatsGenerator
         public static final String VIDEOBRIDGESTATS_RTP_LOSS = "rtp_loss";
 
         /**
+         * The name of the bit rate statistic.
+         */
+        public static final String VIDEOBRIDGESTATS_BITRATE = "bit_rate";
+
+        /**
          * The instance of <tt>VideobridgeStatistics</tt>.
          */
         private static VideobridgeStatistics instance;
@@ -1202,6 +1216,7 @@ public class Videobridge implements StatsGenerator
             this.stats.put(VIDEOBRIDGESTATS_NUMBEROFTHREADS, 0);
             this.stats.put(VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS, 0);
             this.stats.put(VIDEOBRIDGESTATS_RTP_LOSS, 0);
+            this.stats.put(VIDEOBRIDGESTATS_BITRATE, 0);
         }
     }
 
