@@ -1,0 +1,3 @@
+version=3
+https://github.com/jitsi/jitsi-videobridge/tags \
+  .*/archive/([\d\.]+)\.tar\.gz
