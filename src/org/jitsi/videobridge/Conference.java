@@ -126,6 +126,12 @@ public class Conference
     private RecorderEventHandler recorderEventHandler = null;
 
     /**
+     * An instance used to save information about the endpoints of this
+     * <tt>Conference</tt>, when media recording is enabled.
+     */
+    private EndpointRecorder endpointRecorder = null;
+
+    /**
      * The path to the directory into which files associated with media
      * recordings for this <tt>Conference</tt> will be stored.
      */
@@ -795,6 +801,22 @@ public class Conference
                         failedToStart = true;
                 }
 
+                if (!failedToStart)
+                {
+                    EndpointRecorder endpointRecorder = getEndpointRecorder();
+                    if (endpointRecorder == null)
+                    {
+                        failedToStart = true;
+                    }
+                    else
+                    {
+                        for (Endpoint endpoint : getEndpoints())
+                        {
+                            endpointRecorder.updateEndpoint(endpoint);
+                        }
+                    }
+                }
+
                 /*
                  * The Recorders of the Contents need to share a single
                  * Synchronizer, we take it from the first Recorder.
@@ -860,6 +882,10 @@ public class Conference
                     recorderEventHandler.close();
                 recorderEventHandler = null;
                 recordingPath = null;
+
+                if (endpointRecorder != null)
+                    endpointRecorder.close();
+                endpointRecorder = null;
             }
 
             this.recording = recording;
@@ -954,6 +980,32 @@ public class Conference
     }
 
     /**
+     * Returns the <tt>EndpointRecorder</tt> instance used to save the
+     * endpoints information for this <tt>Conference</tt>. Creates an instance
+     * if none exists.
+     * @return the <tt>EndpointRecorder</tt> instance used to save the
+     * endpoints information for this <tt>Conference</tt>.
+     */
+    private EndpointRecorder getEndpointRecorder()
+    {
+        if (endpointRecorder == null)
+        {
+            try
+            {
+                endpointRecorder
+                        = new EndpointRecorder(
+                                        getRecordingPath() + "/endpoints.json");
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Could not create EndpointRecorder. " + ioe);
+            }
+        }
+
+        return endpointRecorder;
+    }
+
+    /**
      * Returns a <tt>MediaService</tt> implementation (if any).
      *
      * @return a <tt>MediaService</tt> implementation (if any)
@@ -972,6 +1024,42 @@ public class Conference
             mediaService = LibJitsi.getMediaService();
 
         return mediaService;
+    }
+
+    /**
+     * Updates an <tt>Endpoint</tt> of this <tt>Conference</tt> with the
+     * information contained in <tt>colibriEndpoint</tt>.
+     * The ID of <tt>colibriEndpoint</tt> is used to select the <tt>Endpoint</tt>
+     * to update.
+     * @param colibriEndpoint a <tt>ColibriConferenceIQ.Endpoint</tt> instance
+     * that contains information to be set on an <tt>Endpoint</tt> instance
+     * of this <tt>Conference</tt>.
+     */
+    void updateEndpoint(ColibriConferenceIQ.Endpoint colibriEndpoint)
+    {
+        Endpoint endpoint = null;
+        String id = colibriEndpoint.getId();
+        if (id == null)
+            return;
+
+        for (Endpoint e : getEndpoints())
+        {
+            if (id.equals(e.getID()))
+            {
+                endpoint = e;
+                break;
+            }
+        }
+
+        if (endpoint != null)
+        {
+            endpoint.setDisplayName(colibriEndpoint.getDisplayName());
+
+            if (isRecording() && endpointRecorder != null)
+            {
+                endpointRecorder.updateEndpoint(endpoint);
+            }
+        }
     }
 
     /**
@@ -1029,6 +1117,21 @@ public class Conference
                 }
 
                 event.setSsrc(videoSsrc);
+            }
+
+            if (event.getEndpointId() == null)
+            {
+                long ssrc = event.getSsrc();
+                Endpoint endpoint
+                        = findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+                if (endpoint == null)
+                    endpoint = findEndpointByReceiveSSRC(ssrc, MediaType.VIDEO);
+
+                if (endpoint != null)
+                {
+                    event.setEndpointId(endpoint.getID());
+                }
+
             }
             return handler.handleEvent(event);
         }

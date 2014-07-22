@@ -566,7 +566,6 @@ public class Videobridge implements StatsGenerator
         }
 
         ColibriConferenceIQ responseConferenceIQ;
-
         if (conference == null)
         {
             /*
@@ -827,6 +826,17 @@ public class Videobridge implements StatsGenerator
                     break;
             }
         }
+
+        // Update the endpoint information.
+        if (conference != null)
+        {
+            for (ColibriConferenceIQ.Endpoint colibriEndpoint
+                    : conferenceIQ.getEndpoints())
+            {
+                conference.updateEndpoint(colibriEndpoint);
+            }
+        }
+
 
         if (responseConferenceIQ != null)
         {

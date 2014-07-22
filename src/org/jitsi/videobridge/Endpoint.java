@@ -56,6 +56,11 @@ public class Endpoint
     private final String id;
 
     /**
+     * The (human readable) display name of this <tt>Endpoint</tt>.
+     */
+    private String displayName;
+
+    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -292,5 +297,23 @@ public class Endpoint
     public SctpConnection getSctpConnection()
     {
         return this.sctpConnection.get();
+    }
+
+    /**
+     * Returns the display name of this <tt>Endpoint</tt>.
+     * @return the display name of this <tt>Endpoint</tt>.
+     */
+    public String getDisplayName()
+    {
+        return displayName;
+    }
+
+    /**
+     * Sets the display name of this <tt>Endpoint</tt>.
+     * @param displayName the display name to set.
+     */
+    public void setDisplayName(String displayName)
+    {
+        this.displayName = displayName;
     }
 }
