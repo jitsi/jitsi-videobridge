@@ -203,6 +203,7 @@
         <copy todir="${debian.release}">
             <fileset dir="resources/install/">
                 <include name="debian/**"/>
+                <exclude name="**/changelog.Debian.gz"/>
                 <exclude name="debian/changelog.tmpl"/>
                 <exclude name="debian/control"/>
                 <exclude name="debian/install"/>
