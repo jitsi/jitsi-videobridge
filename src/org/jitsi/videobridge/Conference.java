@@ -123,7 +123,7 @@ public class Conference
      * The <tt>RecorderEventHandler</tt> which is used to handle recording
      * events for this <tt>Conference</tt>.
      */
-    private RecorderEventHandler recorderEventHandler = null;
+    private RecorderEventHandlerImpl recorderEventHandler = null;
 
     /**
      * An instance used to save information about the endpoints of this
@@ -252,6 +252,11 @@ public class Conference
                     "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
                         + "\"dominantSpeakerEndpoint\":\""
                         + dominantSpeaker.getID() + "\"}");
+
+            if (isRecording() && recorderEventHandler != null)
+            {
+                recorderEventHandler.dominantSpeakerChanged(dominantSpeaker);
+            }
         }
     }
 
@@ -1086,39 +1091,6 @@ public class Conference
         @Override
         public boolean handleEvent(RecorderEvent event)
         {
-            if (RecorderEvent.Type.SPEAKER_CHANGED
-                    .equals(event.getType()))
-            {
-                long audioSsrc = event.getAudioSsrc();
-                Endpoint endpoint = findEndpointByReceiveSSRC(audioSsrc,
-                                                              MediaType.AUDIO);
-                long videoSsrc = -1;
-                if (endpoint != null)
-                {
-                    // use the first SSRC found
-                    for (Channel c : endpoint.getChannels(MediaType.VIDEO))
-                    {
-                        int[] ssrcs = ((RtpChannel) c).getReceiveSSRCs();
-                        if (ssrcs != null && ssrcs.length > 0)
-                        {
-                            videoSsrc = ssrcs[0] & 0xffffffffL;
-                            break;
-                        }
-                    }
-                }
-
-                if (videoSsrc == -1)
-                {
-                    logd("Could not find video SSRC associated with audioSsrc="
-                                 + audioSsrc);
-
-                    //don't write events without proper 'ssrc' values
-                    return false;
-                }
-
-                event.setSsrc(videoSsrc);
-            }
-
             if (event.getEndpointId() == null)
             {
                 long ssrc = event.getSsrc();
@@ -1140,6 +1112,40 @@ public class Conference
         public void close()
         {
             handler.close();
+        }
+
+        /**
+         * Notifies this instance that the dominant speaker in the conference
+         * has changed.
+         * @param endpoint the <tt>Endpoint</tt> corresponding to the new
+         * dominant speaker.
+         */
+        private void dominantSpeakerChanged(Endpoint endpoint)
+        {
+            long ssrc = -1;
+
+            // find the first "video" SSRC for the new dominant endpoint
+            for (Channel c : endpoint.getChannels(MediaType.VIDEO))
+            {
+                int[] ssrcs = ((RtpChannel) c).getReceiveSSRCs();
+                if (ssrcs != null && ssrcs.length > 0)
+                {
+                    ssrc = ssrcs[0] & 0xffffffffL;
+                    break;
+                }
+            }
+
+            if (ssrc != -1)
+            {
+                RecorderEvent event = new RecorderEvent();
+                event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
+                event.setMediaType(MediaType.VIDEO);
+                event.setSsrc(ssrc);
+                event.setEndpointId(endpoint.getID());
+                event.setInstant(System.currentTimeMillis());
+
+                handleEvent(event);
+            }
         }
     }
 }
