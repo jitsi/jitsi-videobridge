@@ -1072,7 +1072,7 @@ public class Videobridge implements StatsGenerator
     public void generateStatistics(Statistics stats)
     {
         int audioChannels = 0, videoChannels = 0, conferences = 0, endpoints = 0;
-        long packets = 0, packetsLost = 0, bytes = 0;
+        long packets = 0, packetsLost = 0, bytesRecived = 0, bytesSent = 0;
 
         for(Conference conference : getConferences())
         {
@@ -1093,7 +1093,8 @@ public class Videobridge implements StatsGenerator
                     RtpChannel rtpChannel = (RtpChannel) channel;
                     packets += rtpChannel.getLastPacketsNB();
                     packetsLost += rtpChannel.getLastPacketsLostNB();
-                    bytes += rtpChannel.getNBBytes();
+                    bytesRecived += rtpChannel.getNBReceivedBytes();
+                    bytesSent += rtpChannel.getNBSentBytes();
                 }
             }
             conferences++;
@@ -1106,11 +1107,18 @@ public class Videobridge implements StatsGenerator
             packetLostPercent = ((double)packetsLost)/packets;
         }
 
-        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_RTP_LOSS,
-            new DecimalFormat("#.#####").format(packetLostPercent));
+        DecimalFormat formater = new DecimalFormat("#.#####");
 
-        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_BITRATE,
-            (bytes*8.0/1000.0)/(statsInterval / 1000.0));
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_RTP_LOSS,
+            formater.format(packetLostPercent));
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_BITRATE_DOWNLOAD,
+            formater.format(VideobridgeStatistics.calculateBitRate(
+                bytesRecived, statsInterval)));
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_BITRATE_UPLOAD,
+            formater.format(VideobridgeStatistics.calculateBitRate(
+                bytesSent, statsInterval)));
 
         stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_NUMBEROFTHREADS,
             ManagementFactory.getThreadMXBean().getThreadCount());
@@ -1171,9 +1179,16 @@ public class Videobridge implements StatsGenerator
         public static final String VIDEOBRIDGESTATS_RTP_LOSS = "rtp_loss";
 
         /**
-         * The name of the bit rate statistic.
+         * The name of the bit rate statistic for download.
          */
-        public static final String VIDEOBRIDGESTATS_BITRATE = "bit_rate";
+        public static final String VIDEOBRIDGESTATS_BITRATE_DOWNLOAD
+            = "bit_rate_download";
+
+        /**
+         * The name of the bit rate statistic for upload.
+         */
+        public static final String VIDEOBRIDGESTATS_BITRATE_UPLOAD
+            = "bit_rate_upload";
 
         /**
          * The instance of <tt>VideobridgeStatistics</tt>.
@@ -1210,7 +1225,19 @@ public class Videobridge implements StatsGenerator
             this.stats.put(VIDEOBRIDGESTATS_NUMBEROFTHREADS, 0);
             this.stats.put(VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS, 0);
             this.stats.put(VIDEOBRIDGESTATS_RTP_LOSS, 0);
-            this.stats.put(VIDEOBRIDGESTATS_BITRATE, 0);
+            this.stats.put(VIDEOBRIDGESTATS_BITRATE_DOWNLOAD, 0);
+            this.stats.put(VIDEOBRIDGESTATS_BITRATE_UPLOAD, 0);
+        }
+
+        /**
+         * Returns bit rate value in Kb/s
+         * @param bytes number of bytes
+         * @param period the period of time in milliseconds
+         * @return the bit rate
+         */
+        public static double calculateBitRate(long bytes, int period)
+        {
+            return (bytes * 8.0) / period;
         }
     }
 

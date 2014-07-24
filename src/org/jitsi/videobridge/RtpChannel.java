@@ -760,11 +760,11 @@ public class RtpChannel
     }
 
     /**
-     * Returns the received and sent number of bytes since the last time the
+     * Returns the number of received bytes since the last time the
      * method was called.
-     * @return the received and sent number of bytes.
+     * @return the number of received bytes.
      */
-	public long getNBBytes()
+	public long getNBReceivedBytes()
     {
         long bytes = 0;
         long newBytes = stream.getMediaStreamStats().getNbReceivedBytes();
@@ -774,7 +774,19 @@ public class RtpChannel
             lastKnownReceivedBytes = newBytes;
         }
 
-        newBytes = stream.getMediaStreamStats().getNbSentBytes();
+        return bytes;
+    }
+
+	/**
+     * Returns the number of sent bytes since the last time the
+     * method was called.
+     * @return the number of sent bytes.
+     */
+    public long getNBSentBytes()
+    {
+        long bytes = 0;
+
+        long newBytes = stream.getMediaStreamStats().getNbSentBytes();
 
         if(newBytes > lastKnownSentBytes)
         {
