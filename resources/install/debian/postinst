@@ -43,6 +43,9 @@ case "$1" in
             echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> /etc/default/jitsi-videobridge
             echo "JVB_PORT=$JVB_PORT" >> /etc/default/jitsi-videobridge
             echo "JVB_SECRET=$JVB_SECRET" >> /etc/default/jitsi-videobridge
+
+            # and we're done with debconf
+            db_stop
         fi
 
         # we create home folder only if it doesn't exist
@@ -85,10 +88,6 @@ case "$1" in
         if [ -x "/etc/init.d/jitsi-videobridge" ]; then
             update-rc.d jitsi-videobridge defaults >/dev/null
         fi
-
-        # and we're done
-        db_stop
-
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
