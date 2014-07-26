@@ -534,7 +534,7 @@ public class Videobridge implements StatsGenerator
         String focus = conferenceIQ.getFrom();
         Conference conference;
 
-        if((options & OPTION_ALLOW_ANY_FOCUS) > 0)
+        if ((options & OPTION_ALLOW_ANY_FOCUS) > 0)
         {
             // Act like the focus was not provided at all
             options |= OPTION_ALLOW_NO_FOCUS;
@@ -557,15 +557,14 @@ public class Videobridge implements StatsGenerator
             if (id == null)
                 conference = createConference(focus);
             else
-            {
                 conference = getConference(id, focus);
-            }
 
-            if(conference != null)
+            if (conference != null)
                 conference.setLastKnownFocus(conferenceIQ.getFrom());
         }
 
         ColibriConferenceIQ responseConferenceIQ;
+
         if (conference == null)
         {
             /*
@@ -583,39 +582,61 @@ public class Videobridge implements StatsGenerator
 
             ColibriConferenceIQ.Recording recordingIQ
                 = conferenceIQ.getRecording();
+
             if (recordingIQ != null)
             {
-                String tokenConfig
-                    = getConfigurationService()
-                    .getString(Videobridge.MEDIA_RECORDING_TOKEN_PNAME);
-
                 String tokenIQ = recordingIQ.getToken();
 
-                if (tokenIQ != null
-                        && tokenIQ.equals(tokenConfig))
+                if (tokenIQ != null)
                 {
-                    boolean recording
-                        = conference.setRecording(recordingIQ.getState());
+                    String tokenConfig
+                        = getConfigurationService().getString(
+                                Videobridge.MEDIA_RECORDING_TOKEN_PNAME);
 
-                    ColibriConferenceIQ.Recording responseRecordingIq
-                            = new ColibriConferenceIQ.Recording(recording);
-                    if (recording)
-                        responseRecordingIq.setPath(conference.getRecordingPath());
-                    responseConferenceIQ.setRecording(responseRecordingIq);
+                    if (tokenIQ.equals(tokenConfig))
+                    {
+                        boolean recording
+                            = conference.setRecording(recordingIQ.getState());
+                        ColibriConferenceIQ.Recording responseRecordingIq
+                                = new ColibriConferenceIQ.Recording(recording);
+
+                        if (recording)
+                        {
+                            responseRecordingIq.setPath(
+                                    conference.getRecordingPath());
+                        }
+                        responseConferenceIQ.setRecording(responseRecordingIq);
+                    }
                 }
             }
 
             // Get the RTCP termination strategy.
-            ColibriConferenceIQ.RTCPTerminationStrategy
-                    strategyIQ = conferenceIQ.getRTCPTerminationStrategy();
+            ColibriConferenceIQ.RTCPTerminationStrategy strategyIQ
+                = conferenceIQ.getRTCPTerminationStrategy();
+            String strategyFQN;
+
+            if (strategyIQ == null)
+            {
+                strategyFQN = null;
+            }
+            else
+            {
+                strategyFQN = strategyIQ.getName();
+                if (strategyFQN != null)
+                {
+                    strategyFQN = strategyFQN.trim();
+                    if (strategyFQN.length() == 0)
+                        strategyFQN = null;
+                }
+            }
 
             for (ColibriConferenceIQ.Content contentIQ
                     : conferenceIQ.getContents())
             {
                 /*
-                 * The content element springs into existence whenever it
-                 * gets mentioned, it does not need explicit creation (in
-                 * contrast to the conference and channel elements).
+                 * The content element springs into existence whenever it gets
+                 * mentioned, it does not need explicit creation (in contrast to
+                 * the conference and channel elements).
                  */
                 Content content
                     = conference.getOrCreateContent(contentIQ.getName());
@@ -627,13 +648,8 @@ public class Videobridge implements StatsGenerator
                 else
                 {
                     // Set the RTCP termination strategy.
-                    if (strategyIQ != null
-                            && strategyIQ.getName() != null
-                            && strategyIQ.getName().trim().length() != 0)
-                    {
-                        content.setRTCPTerminationStrategyFromFQN(
-                                strategyIQ.getName().trim());
-                    }
+                    if (strategyFQN != null)
+                        content.setRTCPTerminationStrategyFromFQN(strategyFQN);
 
                     ColibriConferenceIQ.Content responseContentIQ
                         = new ColibriConferenceIQ.Content(content.getName());
@@ -1135,110 +1151,5 @@ public class Videobridge implements StatsGenerator
 
         stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_CONFERENCES,
             conferences);
-
     }
-
-    /**
-     * Implements statistics that are collected by the videobridge.
-     */
-    public static class VideobridgeStatistics extends Statistics
-    {
-        /**
-         * The name of the number of conferences statistic.
-         */
-        public static String VIDEOBRIDGESTATS_CONFERENCES
-            = "conferences";
-
-        /**
-         * The name of the number of conferences statistic.
-         */
-        public static String VIDEOBRIDGESTATS_AUDIOCHANNELS
-            = "audiochannels";
-
-        /**
-         * The name of the number of conferences statistic.
-         */
-        public static String VIDEOBRIDGESTATS_VIDEOCHANNELS
-            = "videochannels";
-
-        /**
-         * The name of the number of conferences statistic.
-         */
-        public static String VIDEOBRIDGESTATS_NUMBEROFTHREADS
-            = "threads";
-
-        /**
-         * The name of the number of conferences statistic.
-         */
-        public static String VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS
-            = "participants";
-
-        /**
-         * The name of the RTP loss statistic.
-         */
-        public static final String VIDEOBRIDGESTATS_RTP_LOSS = "rtp_loss";
-
-        /**
-         * The name of the bit rate statistic for download.
-         */
-        public static final String VIDEOBRIDGESTATS_BITRATE_DOWNLOAD
-            = "bit_rate_download";
-
-        /**
-         * The name of the bit rate statistic for upload.
-         */
-        public static final String VIDEOBRIDGESTATS_BITRATE_UPLOAD
-            = "bit_rate_upload";
-
-        /**
-         * The instance of <tt>VideobridgeStatistics</tt>.
-         */
-        private static VideobridgeStatistics instance;
-
-        /**
-         * Creates instance of <tt>VideobridgeStatistics</tt>.
-         */
-        private VideobridgeStatistics() {
-            initStats();
-        }
-
-        /**
-         * Returns the instance of <tt>VideobridgeStatistics</tt>.
-         * @return the instance of <tt>VideobridgeStatistics</tt>.
-         */
-        public static Statistics getStatistics()
-        {
-            if(instance == null)
-                instance = new VideobridgeStatistics();
-            return instance;
-        }
-
-        /**
-         * Inits the statistics object.
-         */
-        private void initStats()
-        {
-            stats = new HashMap<String, Object>();
-            this.stats.put(VIDEOBRIDGESTATS_CONFERENCES, 0);
-            this.stats.put(VIDEOBRIDGESTATS_AUDIOCHANNELS, 0);
-            this.stats.put(VIDEOBRIDGESTATS_VIDEOCHANNELS, 0);
-            this.stats.put(VIDEOBRIDGESTATS_NUMBEROFTHREADS, 0);
-            this.stats.put(VIDEOBRIDGESTATS_NUMBEROFPARTICIPANTS, 0);
-            this.stats.put(VIDEOBRIDGESTATS_RTP_LOSS, 0);
-            this.stats.put(VIDEOBRIDGESTATS_BITRATE_DOWNLOAD, 0);
-            this.stats.put(VIDEOBRIDGESTATS_BITRATE_UPLOAD, 0);
-        }
-
-        /**
-         * Returns bit rate value in Kb/s
-         * @param bytes number of bytes
-         * @param period the period of time in milliseconds
-         * @return the bit rate
-         */
-        public static double calculateBitRate(long bytes, int period)
-        {
-            return (bytes * 8.0) / period;
-        }
-    }
-
 }

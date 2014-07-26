@@ -6,10 +6,11 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.util.*;
-
 import java.io.*;
 import java.util.*;
+
+import org.jitsi.util.*;
+import org.json.simple.*;
 
 /**
  * A class responsible for saving to disk information about <tt>Endpoint</tt>s.
@@ -23,12 +24,12 @@ public class EndpointRecorder
      * instances to print debug information.
      */
     private static final Logger logger
-            = Logger.getLogger(EndpointRecorder.class);
+        = Logger.getLogger(EndpointRecorder.class);
 
     /**
      * The <tt>File</tt> to which this <tt>EndpointRecorder</tt> will write.
      */
-    private File file;
+    private final File file;
 
     /**
      * Whether this <tt>EndpointRecorder</tt> is closed.
@@ -40,7 +41,7 @@ public class EndpointRecorder
      * containing information about it.
      */
     private final Map<String, EndpointInfo> endpoints
-            = new HashMap<String, EndpointInfo>();
+        = new HashMap<String, EndpointInfo>();
 
     /**
      * Tries to initialize an <tt>EndpointRecorder</tt> which is to write
@@ -54,7 +55,6 @@ public class EndpointRecorder
         file = new File(filename);
         if (!file.createNewFile())
             throw new IOException("File exists or cannot be created: " + file);
-
         if (!file.canWrite())
             throw new IOException("Cannot write to file: " + file);
 
@@ -74,13 +74,12 @@ public class EndpointRecorder
         if (endpointInfo == null)
         {
             endpointInfo = new EndpointInfo(endpoint);
+            endpoints.put(id, endpointInfo);
         }
         else
         {
             endpointInfo.displayName = endpoint.getDisplayName();
         }
-
-        endpoints.put(id, endpointInfo);
 
         writeEndpoints();
     }
@@ -112,10 +111,11 @@ public class EndpointRecorder
             int idx = 0;
             for (EndpointInfo endpointInfo : endpoints.values())
             {
-                if (++idx == size)
-                    writer.write("    " + endpointInfo.getJSON() + "\n");
-                else
-                    writer.write("    " + endpointInfo.getJSON() + ",\n");
+                writer.write("    ");
+                writer.write(endpointInfo.getJSON());
+                if (++idx != size)
+                    writer.write(",");
+                writer.write("\n");
             }
 
             writer.write("]\n");
@@ -135,12 +135,12 @@ public class EndpointRecorder
         /**
          * ID.
          */
-        private String id;
+        private final String id;
 
         /**
          * Display name.
          */
-        private String displayName;
+        String displayName;
 
         /**
          * Initializes a new <tt>EndpointInfo</tt> instance with information
@@ -150,8 +150,8 @@ public class EndpointRecorder
          */
         private EndpointInfo(Endpoint endpoint)
         {
-            this.id = endpoint.getID();
-            this.displayName = endpoint.getDisplayName();
+            id = endpoint.getID();
+            displayName = endpoint.getDisplayName();
         }
 
         /**
@@ -162,8 +162,9 @@ public class EndpointRecorder
          */
         private String getJSON()
         {
-            return "{\"id\" : \"" + id + "\", \"displayName\" : \""
-                    + displayName + "\" }";
+            return
+                "{\"id\":\"" + JSONValue.escape(id) + "\",\"displayName\":\""
+                    + JSONValue.escape(displayName) + "\"}";
         }
     }
 }
