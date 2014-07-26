@@ -6,47 +6,67 @@ set -e
 case "$1" in
     configure)
 
-        # debconf hostname question
-        . /usr/share/debconf/confmodule
-
-        LOCALNAME="$(hostname)"
-        LOCALIP="$(hostname -I)"
-        NAMEBYIP="$(host $LOCALNAME | cut -f4 -d ' ')"
-        NAMEVALID=false
-        for IP in $LOCALIP; do
-            if [ "$NAMEBYIP" = "$IP" ]; then
-                NAMEVALID=true
+        # we don't want to regenerate config on upgrade
+        if [ -x "/etc/default/jitsi-videobridge" ]; then
+            . /etc/default/jitsi-videobridge
+            if [[ "$JVB_HOSTNAME" && "$JVB_PORT" && "$JVB_SECRET" ]]; then
+                OLDCONFIG=true
             fi
-        done
-
-#        if $NAMEVALID
-#        then
-# add default hostname in debconf template here
-#        fi
-
-        # the default vars
-        db_get jitsi-videobridge/jvb-hostname
-        JVB_HOSTNAME="$RET"
-#        db_get jitsi-videobridge/advanced
-#        ADVANCED=$RET
-        # 8-chars random secret, alternative to pwgen 8
-        JVB_SECRET=`head -c 8 /dev/urandom | tr '\0-\377' 'a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9@@@@####'`
-        JVB_PORT=5347
-
-        # we don't want to start the daemon as root
-        if ! getent passwd jvb > /dev/null ; then
-            adduser --system --group --shell /bin/bash --disabled-password \
-                --home /usr/share/jitsi-videobridge jvb
-        else
-            mkdir -p /usr/share/jitsi-videobridge
         fi
 
-        if [ ! -d /usr/share/jitsi-videobridge/.sip-communicator ]; then
-            mkdir /usr/share/jitsi-videobridge/.sip-communicator
-        fi
-        cp /usr/share/doc/jitsi-videobridge/sip-communicator.properties /usr/share/jitsi-videobridge/.sip-communicator/
+        # generate config on new install
+        if ! $OLDCONFIG; then
 
-        # we clain the home folder of jvb in case it is owned by someone else
+            # debconf hostname question
+            . /usr/share/debconf/confmodule
+            LOCALNAME="$(hostname)"
+            LOCALIP="$(hostname -I)"
+            NAMEBYIP="$(host $LOCALNAME | cut -f4 -d ' ')"
+
+            # FIXME -- we have to check FQDN
+            NAMEVALID=false
+            for IP in $LOCALIP; do
+                if [ "$NAMEBYIP" = "$IP" ]; then
+                    NAMEVALID=true
+                fi
+            done
+
+            # the default vars
+            db_get jitsi-videobridge/jvb-hostname
+            JVB_HOSTNAME="$RET"
+            # 8-chars random secret, alternative to pwgen 8
+            JVB_SECRET=`head -c 8 /dev/urandom | tr '\0-\377' 'a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9@@@@####'`
+            JVB_PORT=5347
+
+            # storing default for later use by Jitsi Meet and other packages
+            echo '# Jitsi Videobridge settings' > /etc/default/jitsi-videobridge
+            echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> /etc/default/jitsi-videobridge
+            echo "JVB_PORT=$JVB_PORT" >> /etc/default/jitsi-videobridge
+            echo "JVB_SECRET=$JVB_SECRET" >> /etc/default/jitsi-videobridge
+
+            # and we're done with debconf
+            db_stop
+        fi
+
+        # we create home folder only if it doesn't exist
+        if [ ! -d /usr/share/jitsi-videobridge ]; then
+
+            # we don't want to start the daemon as root
+            if ! getent passwd jvb > /dev/null ; then
+                adduser --system --group --shell /bin/bash --disabled-password \
+                    --home /usr/share/jitsi-videobridge jvb
+            else
+                mkdir -p /usr/share/jitsi-videobridge
+            fi
+
+            # ensure we don't overwrite previously existing .properties
+            if [ ! -d /usr/share/jitsi-videobridge/.sip-communicator ]; then
+                mkdir /usr/share/jitsi-videobridge/.sip-communicator
+                cp /usr/share/doc/jitsi-videobridge/sip-communicator.properties /usr/share/jitsi-videobridge/.sip-communicator/
+            fi
+        fi
+
+        # we claim the home folder of jvb in case it is owned by someone else
         OWNER=$(stat -c '%U' /usr/share/jitsi-videobridge)
         GROUP=$(stat -c '%G' /usr/share/jitsi-videobridge)
         if ! dpkg-statoverride --list /usr/share/jitsi-videobridge/* >/dev/null && [ "$OWNER:$GROUP" != "jvb:jvb" ]; then
@@ -59,13 +79,7 @@ case "$1" in
         if [ ! -d /var/log/jitsi ]; then
             mkdir -p /var/log/jitsi
         fi
-        chown jvb:jvb /var/log/jitsi
-
-        # storing default for later use by Jitsi Meet and other packages
-        echo '# Jitsi Videobridge settings' > /etc/default/jitsi-videobridge
-        echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> /etc/default/jitsi-videobridge
-        echo "JVB_PORT=$JVB_PORT" >> /etc/default/jitsi-videobridge
-        echo "JVB_SECRET=$JVB_SECRET" >> /etc/default/jitsi-videobridge
+        chown -R jvb:jvb /var/log/jitsi
 
         # ensure videobridge is not running - it will be started at the end
         if [ "$(pidof java)" ]; then
@@ -74,10 +88,6 @@ case "$1" in
         if [ -x "/etc/init.d/jitsi-videobridge" ]; then
             update-rc.d jitsi-videobridge defaults >/dev/null
         fi
-
-        # and we're done
-        db_stop
-
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
