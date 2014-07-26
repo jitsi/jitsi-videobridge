@@ -747,6 +747,23 @@ public class Conference
     }
 
     /**
+     * Gets the indicator which determines whether this <tt>Conference</tt> has
+     * expired.
+     *
+     * @return <tt>true</tt> if this <tt>Conference</tt> has expired; otherwise,
+     * <tt>false</tt>
+     */
+    public boolean isExpired()
+    {
+        /*
+         * Conference starts with expired equal to false and the only assignment
+         * to expired is to set it to true so there is no need to synchronize
+         * the reading of expired.
+         */
+        return expired;
+    }
+
+    /**
      * Checks whether media recording is currently enabled for this
      * <tt>Conference</tt>.
      * @return <tt>true</tt> if media recording is currently enabled for this

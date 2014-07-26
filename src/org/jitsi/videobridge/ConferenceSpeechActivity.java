@@ -174,7 +174,7 @@ class ConferenceSpeechActivity
     {
         Conference conference = getConference();
 
-        if (conference != null)
+        if ((conference != null) && !conference.isExpired())
         {
             if (logger.isTraceEnabled())
             {
@@ -267,10 +267,15 @@ class ConferenceSpeechActivity
          * Listen to the activeSpeakerDetector about speaker switches in order
          * to track the dominant speaker in the multipoint conference. 
          */
-        if (addActiveSpeakerChangedListener && (getConference() != null))
+        if (addActiveSpeakerChangedListener)
         {
-            activeSpeakerDetector.addActiveSpeakerChangedListener(
-                    activeSpeakerChangedListener);
+            Conference conference = getConference();
+
+            if ((conference != null) && !conference.isExpired())
+            {
+                activeSpeakerDetector.addActiveSpeakerChangedListener(
+                        activeSpeakerChangedListener);
+            }
         }
 
         return activeSpeakerDetector;
@@ -287,7 +292,7 @@ class ConferenceSpeechActivity
     {
         Conference conference = this.conference.get();
 
-        if (conference == null)
+        if ((conference == null) || conference.isExpired())
         {
             /*
              * The Conference has expired so there is no point to listen to
@@ -475,6 +480,7 @@ class ConferenceSpeechActivity
         Conference conference = getConference();
 
         if ((conference != null)
+                && !conference.isExpired()
                 && conference.equals(ev.getSource())
                 && Conference.ENDPOINTS_PROPERTY_NAME.equals(
                         ev.getPropertyName()))
@@ -505,7 +511,20 @@ class ConferenceSpeechActivity
 
         synchronized (syncRoot)
         {
+            /*
+             * Most obviously, an EventDispatcher should cease to execute as
+             * soon as this ConferenceSpeechActivity stops employing it.
+             */
             if (this.eventDispatcher != eventDispatcher)
+                return false;
+
+            /*
+             * As soon as the Conference associated with this instance expires,
+             * kill all background threads.
+             */
+            Conference conference = getConference();
+
+            if ((conference == null) || conference.isExpired())
                 return false;
 
             long now = System.currentTimeMillis();
@@ -533,11 +552,6 @@ class ConferenceSpeechActivity
              * Synchronize the set of Endpoints of this instance with the set of
              * Endpoints of the conference.
              */
-            Conference conference = getConference();
-
-            if (conference == null)
-                return false;
-
             List<Endpoint> conferenceEndpoints = conference.getEndpoints();
 
             if (endpoints == null)
