@@ -110,6 +110,12 @@ class ConferenceSpeechActivity
     private boolean dominantEndpointChanged = false;
 
     /**
+     * The <tt>DominantSpeakerIdentification</tt> instance, if any, employed by
+     * {@link #activeSpeakerDetector}.
+     */
+    private DominantSpeakerIdentification dominantSpeakerIdentification;
+
+    /**
      * The ordered list of <tt>Endpoint</tt>s participating in
      * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
      * beginning of the list i.e. the dominant speaker history.
@@ -138,6 +144,18 @@ class ConferenceSpeechActivity
     private long eventDispatcherTime;
 
     /**
+     * The <tt>PropertyChangeListener</tt> implementation employed by this
+     * instance to listen to changes in the values of properties of interest to
+     * this instance. For example, listens to {@link #conference} in order to
+     * notify about changes in the list of <tt>Endpoint</tt>s participating in
+     * the multipoint conference. The implementation keeps a
+     * <tt>WeakReference</tt> to this instance and automatically removes itself
+     * from <tt>PropertyChangeNotifier</tt>s. 
+     */
+    private final PropertyChangeListener propertyChangeListener
+        = new WeakReferencePropertyChangeListener(this);
+
+    /**
      * The <tt>Object</tt> used to synchronize the access to the state of this
      * instance.
      */
@@ -158,8 +176,7 @@ class ConferenceSpeechActivity
          * The PropertyChangeListener will weakly reference this instance and
          * will unregister itself from the conference sooner or later.
          */
-        conference.addPropertyChangeListener(
-                new WeakReferencePropertyChangeListener(this));
+        conference.addPropertyChangeListener(propertyChangeListener);
     }
 
     /**
@@ -256,10 +273,28 @@ class ConferenceSpeechActivity
             activeSpeakerDetector = this.activeSpeakerDetector;
             if (activeSpeakerDetector == null)
             {
-                this.activeSpeakerDetector
-                    = activeSpeakerDetector
-                        = new ActiveSpeakerDetectorImpl();
+                ActiveSpeakerDetectorImpl asdi
+                    = new ActiveSpeakerDetectorImpl();
+
+                this.activeSpeakerDetector = activeSpeakerDetector = asdi;
                 addActiveSpeakerChangedListener = true;
+
+                /*
+                 * Find the DominantSpeakerIdentification instance employed by
+                 * activeSpeakerDetector, if possible, in order to enable
+                 * additional (debug-related) functionality.
+                 */
+                ActiveSpeakerDetector impl = asdi.getImpl();
+
+                if (impl instanceof DominantSpeakerIdentification)
+                {
+                    dominantSpeakerIdentification
+                        = (DominantSpeakerIdentification) impl;
+                }
+                else
+                {
+                    dominantSpeakerIdentification = null;
+                }
             }
         }
 
@@ -275,6 +310,15 @@ class ConferenceSpeechActivity
             {
                 activeSpeakerDetector.addActiveSpeakerChangedListener(
                         activeSpeakerChangedListener);
+
+                DominantSpeakerIdentification dominantSpeakerIdentification
+                    = this.dominantSpeakerIdentification;
+
+                if (dominantSpeakerIdentification != null)
+                {
+                    dominantSpeakerIdentification.addPropertyChangeListener(
+                            propertyChangeListener);
+                }
             }
         }
 
@@ -307,6 +351,15 @@ class ConferenceSpeechActivity
             {
                 activeSpeakerDetector.removeActiveSpeakerChangedListener(
                         activeSpeakerChangedListener);
+            }
+
+            DominantSpeakerIdentification dominantSpeakerIdentification
+                = this.dominantSpeakerIdentification;
+
+            if (dominantSpeakerIdentification != null)
+            {
+                dominantSpeakerIdentification.removePropertyChangeListener(
+                        propertyChangeListener);
             }
         }
 
@@ -477,18 +530,35 @@ class ConferenceSpeechActivity
     @Override
     public void propertyChange(PropertyChangeEvent ev)
     {
+        // Cease to execute as soon as the Conference expires.
         Conference conference = getConference();
 
-        if ((conference != null)
-                && !conference.isExpired()
-                && conference.equals(ev.getSource())
-                && Conference.ENDPOINTS_PROPERTY_NAME.equals(
-                        ev.getPropertyName()))
+        if ((conference == null) || conference.isExpired())
+            return;
+
+        String propertyName = ev.getPropertyName();
+
+        if (Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            synchronized (syncRoot)
+            if (conference.equals(ev.getSource()))
             {
-                endpointsChanged = true;
-                maybeStartEventDispatcher();
+                synchronized (syncRoot)
+                {
+                    endpointsChanged = true;
+                    maybeStartEventDispatcher();
+                }
+            }
+        }
+        else if (DominantSpeakerIdentification.INTERNALS_PROPERTY_NAME.equals(
+                propertyName))
+        {
+            DominantSpeakerIdentification dominantSpeakerIdentification
+                = this.dominantSpeakerIdentification;
+
+            if ((dominantSpeakerIdentification != null)
+                    && dominantSpeakerIdentification.equals(ev.getSource()))
+            {
+                // TODO Auto-generated method stub
             }
         }
     }
