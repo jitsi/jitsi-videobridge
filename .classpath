@@ -27,6 +27,7 @@
 	<classpathentry kind="lib" path="lib/protocol-media.jar"/>
 	<classpathentry kind="lib" path="lib/resourcemanager.jar"/>
 	<classpathentry kind="lib" path="lib/servlet-api-3.1.jar"/>
+	<classpathentry kind="lib" path="lib/sigar.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api.jar"/>
 	<classpathentry kind="lib" path="lib/smack.jar"/>
 	<classpathentry kind="lib" path="lib/smackx.jar"/>
