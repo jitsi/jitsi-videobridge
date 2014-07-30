@@ -1151,5 +1151,21 @@ public class Videobridge implements StatsGenerator
 
         stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_CONFERENCES,
             conferences);
+
+        if(stats.isSupported(
+            VideobridgeStatistics.VIDEOBRIDGESTATS_TOTAL_MEMORY))
+            stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_TOTAL_MEMORY,
+                OsStatistics.getOsStatistics().getTotalMemory());
+
+        if(stats.isSupported(
+            VideobridgeStatistics.VIDEOBRIDGESTATS_USED_MEMORY))
+            stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_USED_MEMORY,
+                OsStatistics.getOsStatistics().getUsedMemory());
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_CPU_USAGE,
+            formater.format(OsStatistics.getOsStatistics().getCPUUsage()));
+
+        stats.setStat(VideobridgeStatistics.VIDEOBRIDGESTATS_TIMESTAMP,
+            VideobridgeStatistics.getCurrentTimestampValue());
     }
 }

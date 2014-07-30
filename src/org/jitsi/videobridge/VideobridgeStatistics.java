@@ -6,6 +6,7 @@
  */
 package org.jitsi.videobridge;
 
+import java.text.*;
 import java.util.*;
 
 import org.jitsi.videobridge.stats.*;
@@ -23,6 +24,11 @@ public class VideobridgeStatistics extends Statistics
     private static VideobridgeStatistics instance;
 
     /**
+     * Date formatter.
+     */
+    private static DateFormat dateFormat = null;
+
+    /**
      * The name of the number of conferences statistic.
      */
     public static String VIDEOBRIDGESTATS_AUDIOCHANNELS = "audiochannels";
@@ -38,6 +44,11 @@ public class VideobridgeStatistics extends Statistics
      */
     public static final String VIDEOBRIDGESTATS_BITRATE_UPLOAD
         = "bit_rate_upload";
+
+    /**
+     * The name of the CPU usage statistic.
+     */
+    public static String VIDEOBRIDGESTATS_CPU_USAGE = "cpu_usage";
 
     /**
      * The name of the number of conferences statistic.
@@ -62,6 +73,21 @@ public class VideobridgeStatistics extends Statistics
     /**
      * The name of the number of conferences statistic.
      */
+    public static String VIDEOBRIDGESTATS_TIMESTAMP = "current_timestamp";
+
+    /**
+     * The name of total memory statistic.
+     */
+    public static String VIDEOBRIDGESTATS_TOTAL_MEMORY = "total_memory";
+
+    /**
+     * The name of used memory statistic.
+     */
+    public static String VIDEOBRIDGESTATS_USED_MEMORY = "used_memory";
+
+    /**
+     * The name of the number of conferences statistic.
+     */
     public static String VIDEOBRIDGESTATS_VIDEOCHANNELS = "videochannels";
 
     /**
@@ -76,14 +102,77 @@ public class VideobridgeStatistics extends Statistics
     }
 
     /**
+     * Returns current time stamp as  formatted<tt>String</tt>.
+     * @return current time stamp as  formatted<tt>String</tt>.
+     */
+    public static String getCurrentTimestampValue()
+    {
+        if(dateFormat == null)
+        {
+            dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        }
+        return dateFormat.format(new Date());
+    }
+
+    /**
      * Returns the instance of <tt>VideobridgeStatistics</tt>.
      * @return the instance of <tt>VideobridgeStatistics</tt>.
      */
-    public static Statistics getStatistics()
+    public static VideobridgeStatistics getStatistics()
     {
         if (instance == null)
             instance = new VideobridgeStatistics();
         return instance;
+    }
+
+    /**
+     * Disables statistic.
+     * @param stat the statistic to be disabled.
+     */
+    private void disableStat(String stat)
+    {
+        stats.remove(stat);
+    }
+
+    /**
+     * Enables statistic.
+     * @param stat the statistic to be enabled.
+     */
+    private void enableStat(String stat)
+    {
+        if(!stats.containsKey(stat))
+            stats.put(stat, new Object());
+    }
+
+    @Override
+    public void setStat(String stat, Object value)
+    {
+        if(stat == null)
+            return;
+
+        if(VideobridgeStatistics.VIDEOBRIDGESTATS_TOTAL_MEMORY.equals(stat)
+            || VideobridgeStatistics.VIDEOBRIDGESTATS_USED_MEMORY.equals(stat))
+        {
+            if((Integer) value == -1)
+            {
+                disableStat(stat);
+                return;
+            }
+        }
+
+        if(VideobridgeStatistics.VIDEOBRIDGESTATS_CPU_USAGE.equals(stat))
+        {
+            if("-1".equals(value))
+            {
+                disableStat(stat);
+                return;
+            }
+
+            enableStat(stat);
+        }
+
+        super.setStat(stat, value);
     }
 
     /**
@@ -100,5 +189,9 @@ public class VideobridgeStatistics extends Statistics
         stats.put(VIDEOBRIDGESTATS_RTP_LOSS, 0);
         stats.put(VIDEOBRIDGESTATS_BITRATE_DOWNLOAD, 0);
         stats.put(VIDEOBRIDGESTATS_BITRATE_UPLOAD, 0);
+        stats.put(VIDEOBRIDGESTATS_CPU_USAGE, 0);
+        stats.put(VIDEOBRIDGESTATS_TIMESTAMP, getCurrentTimestampValue());
+        stats.put(VIDEOBRIDGESTATS_TOTAL_MEMORY, 0);
+        stats.put(VIDEOBRIDGESTATS_USED_MEMORY, 0);
     }
 }
