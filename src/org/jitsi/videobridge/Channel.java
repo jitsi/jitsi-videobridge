@@ -134,16 +134,6 @@ public abstract class Channel
     }
 
     /**
-     * Logs a specific <tt>String</tt> at debug level.
-     *
-     * @param s the <tt>String</tt> to log at debug level
-     */
-    protected static void logd(String s)
-    {
-        logger.debug(s);
-    }
-
-    /**
      * Initializes the pair of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
      * {@link #rtpConnector} is to use.
      *
@@ -370,9 +360,8 @@ public abstract class Channel
             // endpoint
             try
             {
-                Endpoint endpoint = getEndpoint();
                 // Handle new null Endpoint == remove from Endpoint
-                onEndpointChanged(endpoint, null);
+                onEndpointChanged(getEndpoint(), null);
             }
             catch (Throwable t)
             {
@@ -380,15 +369,18 @@ public abstract class Channel
                     throw (ThreadDeath) t;
             }
 
-            Videobridge videobridge = conference.getVideobridge();
+            if (logger.isInfoEnabled())
+            {
+                Videobridge videobridge = conference.getVideobridge();
 
-            logd(
-                    "Expired channel " + getID() + " of content "
-                        + content.getName() + " of conference "
-                        + conference.getID()
-                        + ". The total number of conferences is now "
-                        + videobridge.getConferenceCount() + ", channels "
-                        + videobridge.getChannelCount() + ".");
+                logger.info(
+                        "Expired channel " + getID() + " of content "
+                            + content.getName() + " of conference "
+                            + conference.getID()
+                            + ". The total number of conferences is now "
+                            + videobridge.getConferenceCount() + ", channels "
+                            + videobridge.getChannelCount() + ".");
+            }
         }
     }
 
@@ -843,15 +835,19 @@ public abstract class Channel
                 wrapupConnectivityEstablishmentCommand = null;
                 transportManager = createTransportManager(xmlNamespace);
 
-                Content content = getContent();
+                if (logger.isTraceEnabled())
+                {
+                    Content content = getContent();
 
-                logd(
-                        "Set " + transportManager.getClass().getSimpleName()
-                            + " #"
-                            + Integer.toHexString(transportManager.hashCode())
-                            + " on channel " + getID() + " of content "
-                            + content.getName() + " of conference "
-                            + content.getConference().getID() + ".");
+                    logger.trace(
+                            "Set " + transportManager.getClass().getSimpleName()
+                                + " #"
+                                + Integer.toHexString(
+                                        transportManager.hashCode())
+                                + " on channel " + getID() + " of content "
+                                + content.getName() + " of conference "
+                                + content.getConference().getID() + ".");
+                }
             }
         }
 

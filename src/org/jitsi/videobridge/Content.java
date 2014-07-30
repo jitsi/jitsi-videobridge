@@ -35,16 +35,6 @@ public class Content
     private static final Logger logger = Logger.getLogger(Content.class);
 
     /**
-     * Logs a specific <tt>String</tt> at debug level.
-     *
-     * @param s the <tt>String</tt> to log at debug level 
-     */
-    private static void logd(String s)
-    {
-        logger.debug(s);
-    }
-
-    /**
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
      */
     private final Map<String, Channel> channels
@@ -223,20 +213,23 @@ public class Content
         }
         while (channel == null);
 
-        /*
-         * The method Videobridge.getChannelCount() should better be executed
-         * outside synchronized blocks in order to reduce the risks of causing
-         * deadlocks.
-         */
-        Conference conference = getConference();
-        Videobridge videobridge = conference.getVideobridge();
+        if (logger.isInfoEnabled())
+        {
+            /*
+             * The method Videobridge.getChannelCount() should better be
+             * executed outside synchronized blocks in order to reduce the risks
+             * of causing deadlocks.
+             */
+            Conference conference = getConference();
+            Videobridge videobridge = conference.getVideobridge();
 
-        logd(
-                "Created channel " + channel.getID() + " of content "
-                    + getName() + " of conference " + conference.getID()
-                    + ". The total number of conferences is now "
-                    + videobridge.getConferenceCount() + ", channels "
-                    + videobridge.getChannelCount() + ".");
+            logger.info(
+                    "Created channel " + channel.getID() + " of content "
+                        + getName() + " of conference " + conference.getID()
+                        + ". The total number of conferences is now "
+                        + videobridge.getConferenceCount() + ", channels "
+                        + videobridge.getChannelCount() + ".");
+        }
 
         return channel;
     }
@@ -324,14 +317,17 @@ public class Content
                 rtcpFeedbackMessageSender = null;
             }
 
-            Videobridge videobridge = conference.getVideobridge();
+            if (logger.isInfoEnabled())
+            {
+                Videobridge videobridge = conference.getVideobridge();
 
-            logd(
-                    "Expired content " + getName() + " of conference "
-                        + conference.getID()
-                        + ". The total number of conferences is now "
-                        + videobridge.getConferenceCount() + ", channels "
-                        + videobridge.getChannelCount() + ".");
+                logger.info(
+                        "Expired content " + getName() + " of conference "
+                            + conference.getID()
+                            + ". The total number of conferences is now "
+                            + videobridge.getConferenceCount() + ", channels "
+                            + videobridge.getChannelCount() + ".");
+            }
         }
     }
 
@@ -666,20 +662,20 @@ public class Content
      */
     public void setRTCPTerminationStrategyFromFQN(String strategyFQN)
     {
-        RTPTranslator translator = rtpTranslator;
-        if (translator == null
-                || !MediaType.VIDEO.equals(mediaType))
+        if (MediaType.VIDEO.equals(mediaType)
+                && (strategyFQN != null)
+                && ((strategyFQN = strategyFQN.trim()).length() != 0))
         {
-            return;
-        }
+            RTPTranslator rtpTranslator = this.rtpTranslator;
 
-        RTCPTerminationStrategy strategy;
-        if (strategyFQN != null && strategyFQN.trim().length() != 0)
-        {
+            if (rtpTranslator == null)
+                return;
+
             try
             {
                 Class<?> clazz = Class.forName(strategyFQN);
-                strategy = (RTCPTerminationStrategy) clazz.newInstance();
+                RTCPTerminationStrategy strategy
+                    = (RTCPTerminationStrategy) clazz.newInstance();
 
                 if (strategy instanceof BasicBridgeRTCPTerminationStrategy)
                 {
@@ -687,12 +683,13 @@ public class Content
                             .setConference(this.conference);
                 }
 
-                translator.setRTCPTerminationStrategy(strategy);
+                rtpTranslator.setRTCPTerminationStrategy(strategy);
             }
             catch (Exception e)
             {
-                logger.error("Failed to configure the RTCP termination " +
-                        "strategy", e);
+                logger.error(
+                        "Failed to configure the RTCP termination strategy",
+                        e);
             }
         }
     }
@@ -734,7 +731,15 @@ public class Content
     {
         synchronized (rtpLevelRelaySyncRoot)
         {
-            if (rtpTranslator == null)
+            /*
+             * The expired field of Content is initially assigned true and the
+             * only possible change of the value is from true to false, never
+             * from false to true. Moreover, an existing rtpTranslator will be
+             * disposed after the change of expired from true to false.
+             * Consequently, no synchronization with respect to the access of
+             * expired is required.
+             */
+            if ((rtpTranslator == null) && !expired)
             {
                 rtpTranslator = getMediaService().createRTPTranslator();
                 if (rtpTranslator != null)
@@ -851,12 +856,12 @@ public class Content
         }
         catch (IOException ioe)
         {
-            logd("Failed to start recorder: " + ioe);
+            logger.error("Failed to start recorder: " + ioe);
             started = false;
         }
         catch (MediaException me)
         {
-            logd("Failed to start recorder: " + me);
+            logger.error("Failed to start recorder: " + me);
             started = false;
         }
 

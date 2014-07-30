@@ -190,16 +190,6 @@ public class Videobridge implements StatsGenerator
             = "org.jitsi.videobridge.rtcp.strategy";
 
     /**
-     * Logs a specific <tt>String</tt> at debug level.
-     *
-     * @param s the <tt>String</tt> to log at debug level
-     */
-    private static void logd(String s)
-    {
-        logger.debug(s);
-    }
-
-    /**
      * The (OSGi) <tt>BundleContext</tt> in which this <tt>Videobridge</tt> has
      * been started.
      */
@@ -289,11 +279,14 @@ public class Videobridge implements StatsGenerator
          * outside synchronized blocks in order to reduce the risks of causing
          * deadlocks.
          */
-        logd(
-                "Created conference " + conference.getID()
-                    + ". The total number of conferences is now "
-                    + getConferenceCount() + ", channels " + getChannelCount()
-                    + ".");
+        if (logger.isInfoEnabled())
+        {
+            logger.info(
+                    "Created conference " + conference.getID()
+                        + ". The total number of conferences is now "
+                        + getConferenceCount() + ", channels "
+                        + getChannelCount() + ".");
+        }
 
         return conference;
     }
@@ -868,41 +861,44 @@ public class Videobridge implements StatsGenerator
     private void startStatistics()
     {
         StatsManager statsManager
-            = ServiceUtils.getService(bundleContext,
-                StatsManager.class);
+            = ServiceUtils.getService(bundleContext, StatsManager.class);
+
         if(statsManager != null)
         {
-            ConfigurationService config
-                = ServiceUtils.getService(bundleContext,
-                                          ConfigurationService.class);
-
+            ConfigurationService cfg
+                = ServiceUtils.getService(
+                        bundleContext,
+                        ConfigurationService.class);
             String transport
-                = config.getString(STATISTICS_TRANSPORT, DEFAULT_STAT_TRANSPORT);
+                = cfg.getString(STATISTICS_TRANSPORT, DEFAULT_STAT_TRANSPORT);
 
             statsInterval
-                = config.getInt(STATISTICS_INTERVAL, DEFAULT_STAT_INTERVAL);
+                = cfg.getInt(STATISTICS_INTERVAL, DEFAULT_STAT_INTERVAL);
 
             statsManager.addStat(this, VideobridgeStatistics.getStatistics());
 
             if(STAT_TRANSPORT_COLIBRI.equals(transport))
             {
-                statsManager.start(new ColibriStatsTransport(this), this,
-                    statsInterval);
+                statsManager.start(
+                        new ColibriStatsTransport(this), this, statsInterval);
             }
             else if(STAT_TRANSPORT_PUBSUB.equals(transport))
             {
-                String service = config.getString(PUBSUB_SERVICE);
-                String node = config.getString(PUBSUB_NODE);
+                String service = cfg.getString(PUBSUB_SERVICE);
+                String node = cfg.getString(PUBSUB_NODE);
+
                 if(service != null && node != null)
                 {
                     statsManager.start(
-                        new PubsubStatsTransport(this, service, node),
-                        this, statsInterval);
+                            new PubsubStatsTransport(this, service, node),
+                            this,
+                            statsInterval);
                 }
                 else
                 {
-                    logger.error("No configuration options for "
-                        + "PubSub service and node are found.");
+                    logger.error(
+                            "No configuration options for PubSub service and"
+                                + " node are found.");
                 }
             }
             else
@@ -926,15 +922,20 @@ public class Videobridge implements StatsGenerator
     void start(final BundleContext bundleContext)
         throws Exception
     {
-        ConfigurationService config
-            = ServiceUtils.getService(bundleContext,
-                                      ConfigurationService.class);
+        ConfigurationService cfg
+            = ServiceUtils.getService(
+                    bundleContext,
+                    ConfigurationService.class);
 
         this.defaultProcessingOptions
-            = config.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
+            = cfg.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
 
-        logd("Default videobridge processing options: 0x"
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(
+                    "Default videobridge processing options: 0x"
                         + Integer.toHexString(defaultProcessingOptions));
+        }
 
         ProviderManager providerManager = ProviderManager.getInstance();
 
@@ -984,33 +985,30 @@ public class Videobridge implements StatsGenerator
 
         // PubSub
         providerManager.addIQProvider(
-            PubSubElementType.PUBLISH.getElementName(),
-            PubSubElementType.PUBLISH.getNamespace().getXmlns(),
-            new PubSubProvider());
+                PubSubElementType.PUBLISH.getElementName(),
+                PubSubElementType.PUBLISH.getNamespace().getXmlns(),
+                new PubSubProvider());
 
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
 
         // Make all ice4j properties system properties.
 
-        if (config != null)
+        if (cfg != null)
         {
-            List<String> ice4jPropertyNames =
-                    config.getPropertyNamesByPrefix("org.ice4j.", false);
+            List<String> ice4jPropertyNames
+                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
 
-            if (ice4jPropertyNames != null && ice4jPropertyNames.size() != 0)
+            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {
                 for (String propertyName : ice4jPropertyNames)
                 {
-                    String propertyValue = config.getString(propertyName);
+                    String propertyValue = cfg.getString(propertyName);
 
                     // we expect the getString to return either null or a
                     // non-empty String object.
-                    if (propertyValue == null)
-                        continue;
-
-                    System.setProperty(propertyName,
-                            propertyValue);
+                    if (propertyValue != null)
+                        System.setProperty(propertyName, propertyValue);
                 }
             }
         }
@@ -1021,15 +1019,17 @@ public class Videobridge implements StatsGenerator
         {
             HostCandidateHarvester.initializeInterfaceFilters();
         }
-        catch (Exception e){
-            logger.warn("There were errors during host " +
-                    "candidate interface filters initialization.", e);
+        catch (Exception e)
+        {
+            logger.warn(
+                    "There were errors during host candidate interface filters"
+                        + " initialization.",
+                    e);
         }
 
         this.bundleContext = bundleContext;
 
-        boolean isStatsEnabled = config.getBoolean(ENABLE_STATISTICS, false);
-        if(isStatsEnabled)
+        if(cfg.getBoolean(ENABLE_STATISTICS, false))
         {
             if(getComponents().isEmpty())
             {
@@ -1055,8 +1055,7 @@ public class Videobridge implements StatsGenerator
         this.bundleContext = null;
 
         StatsManager statsManager
-            = ServiceUtils.getService(bundleContext,
-                StatsManager.class);
+            = ServiceUtils.getService(bundleContext, StatsManager.class);
 
         if(statsManager != null)
         {

@@ -29,6 +29,7 @@ import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
+import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.json.simple.*;
@@ -43,6 +44,17 @@ public class RtpChannel
     extends Channel
     implements PropertyChangeListener
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>RtpChannel</tt> class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(RtpChannel.class);
+
+    /**
+     * An empty array of received synchronization source identifiers (SSRCs).
+     * Explicitly defined to reduce allocations and, consequently, the effects
+     * of garbage collection.
+     */
     private static final long[] NO_RECEIVE_SSRCS = new long[0];
 
     /**
@@ -1189,11 +1201,14 @@ public class RtpChannel
             stream.start();
         }
 
-        logd(
-                "Direction of channel " + getID() + " of content "
-                    + content.getName() + " of conference "
-                    + content.getConference().getID() + " is "
-                    + stream.getDirection() + ".");
+        if (logger.isTraceEnabled())
+        {
+            logger.trace(
+                    "Direction of channel " + getID() + " of content "
+                        + content.getName() + " of conference "
+                        + content.getConference().getID() + " is "
+                        + stream.getDirection() + ".");
+        }
 
         touch(); // It seems this Channel is still active.
     }

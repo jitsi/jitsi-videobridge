@@ -49,16 +49,6 @@ public class Conference
     private static final Logger logger = Logger.getLogger(Conference.class);
 
     /**
-     * Logs a specific <tt>String</tt> at debug level.
-     *
-     * @param s the <tt>String</tt> to log at debug level
-     */
-    private static void logd(String s)
-    {
-        logger.debug(s);
-    }
-
-    /**
      * The <tt>Content</tt>s of this <tt>Conference</tt>.
      */
     private final List<Content> contents = new LinkedList<Content>();
@@ -238,13 +228,16 @@ public class Conference
     {
         Endpoint dominantSpeaker = speechActivity.getDominantEndpoint();
 
-        logd(
-                "The dominant speaker in conference " + getID()
-                    + " is now the endpoint "
-                    + ((dominantSpeaker == null)
-                        ? "(null)"
-                        : dominantSpeaker.getID())
-                    + ".");
+        if (logger.isTraceEnabled())
+        {
+            logger.trace(
+                    "The dominant speaker in conference " + getID()
+                        + " is now the endpoint "
+                        + ((dominantSpeaker == null)
+                            ? "(null)"
+                            : dominantSpeaker.getID())
+                        + ".");
+        }
 
         if (dominantSpeaker != null)
         {
@@ -310,11 +303,14 @@ public class Conference
                 }
             }
 
-            logd(
-                    "Expired conference " + getID() + ". The total number of"
-                        + " conferences is now "
-                        + videobridge.getConferenceCount() + ", channels "
-                        + videobridge.getChannelCount() + ".");
+            if (logger.isInfoEnabled())
+            {
+                logger.info(
+                        "Expired conference " + getID()
+                            + ". The total number of conferences is now "
+                            + videobridge.getConferenceCount() + ", channels "
+                            + videobridge.getChannelCount() + ".");
+            }
         }
     }
 
@@ -541,22 +537,27 @@ public class Conference
 
             content = new Content(this, name);
             if (isRecording())
+            {
                 content.setRecording(true, getRecordingPath());
+            }
             contents.add(content);
         }
 
-        /*
-         * The method Videobridge.getChannelCount() should better be executed
-         * outside synchronized blocks in order to reduce the risks of causing
-         * deadlocks.
-         */
-        Videobridge videobridge = getVideobridge();
+        if (logger.isInfoEnabled())
+        {
+            /*
+             * The method Videobridge.getChannelCount() should better be
+             * executed outside synchronized blocks in order to reduce the risks
+             * of causing deadlocks.
+             */
+            Videobridge videobridge = getVideobridge();
 
-        logd(
-                "Created content " + name + " of conference " + getID()
-                    + ". The total number of conferences is now "
-                    + videobridge.getConferenceCount() + ", channels "
-                    + videobridge.getChannelCount() + ".");
+            logger.info(
+                    "Created content " + name + " of conference " + getID()
+                        + ". The total number of conferences is now "
+                        + videobridge.getConferenceCount() + ", channels "
+                        + videobridge.getChannelCount() + ".");
+        }
 
         return content;
     }
@@ -810,7 +811,13 @@ public class Conference
             if (recording)
             {
                 //try enable recording
-                logd("Starting recording for conference with id=" + getID());
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(
+                            "Starting recording for conference with id="
+                                + getID());
+                }
+
                 boolean failedToStart;
 
                 String path = getRecordingPath();
@@ -878,8 +885,9 @@ public class Conference
                 if (failedToStart)
                 {
                     recording = false;
-                    logger.warn("Failed to start media recording for conference "
-                                        + getID());
+                    logger.warn(
+                            "Failed to start media recording for conference "
+                                + getID());
                 }
             }
 
@@ -887,7 +895,12 @@ public class Conference
             // enable it
             if (!recording)
             {
-                logd("Stopping recording for conference with id=" + getID());
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(
+                            "Stopping recording for conference with id="
+                                + getID());
+                }
 
                 for (Content content : contents)
                 {
