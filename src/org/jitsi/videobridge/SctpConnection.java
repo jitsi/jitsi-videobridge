@@ -124,6 +124,20 @@ public class SctpConnection
     }
 
     /**
+     * Gets the (unique) identifier of the <tt>SctpConnection</tt> of a specific
+     * <tt>Endpoint</tt>.
+     *
+     * @param endpoint the <tt>Endpoint</tt> for which the (unique) identifier
+     * of the <tt>SctpConnection</tt> is to be returned
+     * @return the (unique) identifier of the <tt>SctpConnection</tt> of the
+     * specific <tt>endpoint</tt>
+     */
+    static String getID(Endpoint endpoint)
+    {
+        return "SCTP_with_" + endpoint.getID();
+    }
+
+    /**
      * Data channels mapped by SCTP stream identified(sid).
      */
     private final Map<Integer,WebRtcDataStream> channels
@@ -322,13 +336,11 @@ public class SctpConnection
 
     /**
      * {@inheritDoc}
-     *
-     * Implemented for logging purposes.
      */
     @Override
     public String getID()
     {
-        return "SCTP_with_" + getEndpoint().getID();
+        return getID(getEndpoint());
     }
 
     /**

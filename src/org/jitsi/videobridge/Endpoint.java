@@ -44,10 +44,9 @@ public class Endpoint
         = new LinkedList<WeakReference<RtpChannel>>();
 
     /**
-     * SCTP connection bound to this endpoint.
+     * The (human readable) display name of this <tt>Endpoint</tt>.
      */
-    private WeakReference<SctpConnection> sctpConnection
-        = new WeakReference<SctpConnection>(null);
+    private String displayName;
 
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -56,9 +55,10 @@ public class Endpoint
     private final String id;
 
     /**
-     * The (human readable) display name of this <tt>Endpoint</tt>.
+     * SCTP connection bound to this endpoint.
      */
-    private String displayName;
+    private WeakReference<SctpConnection> sctpConnection
+        = new WeakReference<SctpConnection>(null);
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -187,6 +187,15 @@ public class Endpoint
     }
 
     /**
+     * Returns the display name of this <tt>Endpoint</tt>.
+     * @return the display name of this <tt>Endpoint</tt>.
+     */
+    public String getDisplayName()
+    {
+        return displayName;
+    }
+
+    /**
      * Gets the (unique) identifier/ID of this instance.
      *
      * @return the (unique) identifier/ID of this instance
@@ -194,6 +203,16 @@ public class Endpoint
     public final String getID()
     {
         return id;
+    }
+
+    /**
+     * Returns an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>.
+     * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>
+     *         or <tt>null</tt> otherwise.
+     */
+    public SctpConnection getSctpConnection()
+    {
+        return sctpConnection.get();
     }
 
     /**
@@ -279,41 +298,21 @@ public class Endpoint
     }
 
     /**
-     * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
-     * @param sctpConnection the <tt>SctpConnection</tt> that will be bound to
-     *                       this <tt>Endpoint</tt>.
-     */
-    public void setSctpConnection(SctpConnection sctpConnection)
-    {
-        this.sctpConnection
-            = new WeakReference<SctpConnection>(sctpConnection);
-    }
-
-    /**
-     * Returns an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>.
-     * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>
-     *         or <tt>null</tt> otherwise.
-     */
-    public SctpConnection getSctpConnection()
-    {
-        return this.sctpConnection.get();
-    }
-
-    /**
-     * Returns the display name of this <tt>Endpoint</tt>.
-     * @return the display name of this <tt>Endpoint</tt>.
-     */
-    public String getDisplayName()
-    {
-        return displayName;
-    }
-
-    /**
      * Sets the display name of this <tt>Endpoint</tt>.
      * @param displayName the display name to set.
      */
     public void setDisplayName(String displayName)
     {
         this.displayName = displayName;
+    }
+
+    /**
+     * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
+     * @param sctpConnection the <tt>SctpConnection</tt> that will be bound to
+     *                       this <tt>Endpoint</tt>.
+     */
+    public void setSctpConnection(SctpConnection sctpConnection)
+    {
+        this.sctpConnection = new WeakReference<SctpConnection>(sctpConnection);
     }
 }

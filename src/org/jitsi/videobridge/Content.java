@@ -37,8 +37,7 @@ public class Content
     /**
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
      */
-    private final Map<String, Channel> channels
-        = new HashMap<String, Channel>();
+    private final Map<String,Channel> channels = new HashMap<String,Channel>();
 
     /**
      * The <tt>Conference</tt> which has initialized this <tt>Content</tt>.
@@ -118,13 +117,6 @@ public class Content
     private RTPTranslator rtpTranslator;
 
     /**
-     * The <tt>SctpConnection</tt>s of this <tt>Content</tt> mapped by their
-     * <tt>Endpoint</tt>s.
-     */
-    private Map<Endpoint, SctpConnection> sctpConnections
-        = new HashMap<Endpoint, SctpConnection>();
-
-    /**
      * Initializes a new <tt>Content</tt> instance which is to be a part of a
      * specific <tt>Conference</tt> and which is to have a specific name.
      *
@@ -193,7 +185,7 @@ public class Content
      * @return
      * @throws Exception
      */
-    public RtpChannel createChannel()
+    public RtpChannel createRtpChannel()
         throws Exception
     {
         RtpChannel channel = null;
@@ -237,33 +229,35 @@ public class Content
     /**
      * Creates new <tt>SctpConnection</tt> with given <tt>Endpoint</tt> on given
      * <tt>sctpPort</tt>.
+     *
      * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt>
      * @param sctpPort remote SCTP port that will be used by new
-     *                 <tt>SctpConnection</tt>.
+     * <tt>SctpConnection</tt>.
      * @return new <tt>SctpConnection</tt> with given <tt>Endpoint</tt>
      * @throws Exception if an error occurs while initializing the new instance
-     * @throws IllegalArgumentException if <tt>SctpConnection</tt> already
-     *         exists for given <tt>Endpoint</tt>.
+     * @throws IllegalArgumentException if <tt>SctpConnection</tt> exists
+     * already for given <tt>Endpoint</tt>.
      */
     public SctpConnection createSctpConnection(Endpoint endpoint, int sctpPort)
         throws Exception
     {
-        if(this.sctpConnections.containsKey(endpoint))
-        {
-            throw new IllegalArgumentException(
-                "SctpConnection for " + endpoint.getID() + " already exists");
-        }
-
-        SctpConnection sctpConnection
-            = new SctpConnection(this, endpoint, sctpPort);
-
-        sctpConnections.put(endpoint, sctpConnection);
+        SctpConnection sctpConnection;
 
         synchronized (channels)
         {
-            channels.put(sctpConnection.getID(), sctpConnection);
+            sctpConnection = getSctpConnection(endpoint);
+            if(sctpConnection == null)
+            {
+                sctpConnection = new SctpConnection(this, endpoint, sctpPort);
+                channels.put(sctpConnection.getID(), sctpConnection);
+            }
+            else
+            {
+                throw new IllegalArgumentException(
+                        "An SctpConnection for " + endpoint.getID()
+                            + " exists already.");
+            }
         }
-
         return sctpConnection;
     }
 
@@ -769,14 +763,21 @@ public class Content
 
     /**
      * Returns <tt>SctpConnection</tt> for given <tt>Endpoint</tt>.
+     *
      * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt> that
-     *                 we're looking for.
-     * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any
-     *         or <tt>null</tt> otherwise.
+     * we're looking for.
+     * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any or
+     * <tt>null</tt> otherwise.
      */
     public SctpConnection getSctpConnection(Endpoint endpoint)
     {
-        return sctpConnections.get(endpoint);
+        /*
+         * FIXME The ID of SctpConnection is based on the ID of Endpoint but is
+         * put in the same Map as the ID of RtpChannel. Technically, it is
+         * possible for the ID of SctpConnection to clash with the ID of
+         * RtpChannel.
+         */
+        return (SctpConnection) getChannel(SctpConnection.getID(endpoint));
     }
 
     /**

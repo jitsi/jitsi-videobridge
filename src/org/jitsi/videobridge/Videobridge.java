@@ -673,7 +673,7 @@ public class Videobridge implements StatsGenerator
                             channel
                                 = (channelExpire == 0)
                                     ? null
-                                    : content.createChannel();
+                                    : content.createRtpChannel();
                         }
                         else
                         {
@@ -774,54 +774,51 @@ public class Videobridge implements StatsGenerator
                     }
 
                     for(ColibriConferenceIQ.SctpConnection sctpConnIq
-                        : contentIQ.getSctpConnections())
+                            : contentIQ.getSctpConnections())
                     {
                         Endpoint endpoint
                             = conference.getOrCreateEndpoint(
                                     sctpConnIq.getEndpoint());
-
-                        int sctpPort = sctpConnIq.getPort();
-
                         SctpConnection sctpConn
                             = content.getSctpConnection(endpoint);
-
-                        int sctpExpire = sctpConnIq.getExpire();
-
-                        if(sctpConn == null && sctpExpire == 0)
-                        {
-                            // Expire request for already expired/non-existing
-                            // SCTP connection
-                            continue;
-                        }
+                        int expire = sctpConnIq.getExpire();
 
                         if(sctpConn == null)
                         {
+                            // Expire an expired/non-existing SCTP connection.
+                            if(expire == 0)
+                                continue;
+
+                            int sctpPort = sctpConnIq.getPort();
+
                             sctpConn
                                 = content.createSctpConnection(
-                                        endpoint, sctpPort);
+                                        endpoint,
+                                        sctpPort);
                         }
 
-                        // Expire
-                        if (sctpExpire
-                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                        // expire
+                        if (expire
+                                != ColibriConferenceIQ.Channel
+                                        .EXPIRE_NOT_SPECIFIED)
                         {
-                            sctpConn.setExpire(sctpExpire);
+                            sctpConn.setExpire(expire);
                         }
 
-                        // Check if SCTP connection has expired
+                        // Check if SCTP connection has expired.
                         if(sctpConn.isExpired())
                             continue;
 
-                        // Initiator
+                        // initiator
                         Boolean initiator = sctpConnIq.isInitiator();
 
                         if (initiator != null)
                             sctpConn.setInitiator(initiator);
 
-                        // Transport
+                        // transport
                         sctpConn.setTransport(sctpConnIq.getTransport());
 
-                        // Response
+                        // response
                         ColibriConferenceIQ.SctpConnection responseSctpIq
                             = new ColibriConferenceIQ.SctpConnection();
 
@@ -836,7 +833,8 @@ public class Videobridge implements StatsGenerator
             }
         }
 
-        // Update the endpoint information.
+        // Update the endpoint information of Videobridge with the endpoint
+        // information of the IQ.
         if (conference != null)
         {
             for (ColibriConferenceIQ.Endpoint colibriEndpoint
@@ -845,7 +843,6 @@ public class Videobridge implements StatsGenerator
                 conference.updateEndpoint(colibriEndpoint);
             }
         }
-
 
         if (responseConferenceIQ != null)
         {
