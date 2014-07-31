@@ -38,11 +38,11 @@ stop() {
     echo -n "Stopping $DESC: "
     if [ $PID ]; then
         kill $(ps -o pid --no-headers --ppid $PID)
-        rm $PIDFILE
+        rm $PIDFILE || true
         echo "$NAME stopped."
-    elif [ $(ps -C jvb.sh h) ]; then
-        kill $(ps -o pid --no-headers --ppid $(pgrep -o jvb.sh))
-        rm $PIDFILE
+    elif [ $(ps -C jvb.sh --no-headers -o pid) ]; then
+        kill $(ps -o pid --no-headers --ppid $(ps -C jvb.sh --no-headers -o pid))
+        rm $PIDFILE || true
         echo "$NAME stopped."
     else
         echo "$NAME doesn't seem to be running."
