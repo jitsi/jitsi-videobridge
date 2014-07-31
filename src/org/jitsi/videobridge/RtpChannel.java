@@ -8,7 +8,6 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
-import java.lang.ref.*;
 import java.net.*;
 import java.util.*;
 
@@ -32,7 +31,6 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.json.simple.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -76,7 +74,7 @@ public class RtpChannel
      * The speech activity of the <tt>Endpoint</tt>s in the multipoint
      * conference in which this <tt>Channel</tt> is participating.
      */
-    private ConferenceSpeechActivity conferenceSpeechActivity;
+    protected final ConferenceSpeechActivity conferenceSpeechActivity;
 
     /**
      * The <tt>CsrcAudioLevelListener</tt> instance which is set on
@@ -123,24 +121,11 @@ public class RtpChannel
     private long lastKnownSentBytes = 0;
 
     /**
-     * The maximum number of video RTP stream to be sent from Jitsi Videobridge
-     * to the endpoint associated with this video <tt>Channel</tt>.
+     * The <tt>PropertyChangeListener</tt> which listens to
+     * <tt>PropertyChangeEvent</tt>s.
      */
-    private Integer lastN;
-
-    /**
-     * The <tt>Endpoint</tt>s in the multipoint conference in which this
-     * <tt>Channel</tt> is participating ordered by
-     * {@link #conferenceSpeechActivity} and used by this <tt>Channel</tt> for
-     * the support of {@link #lastN}.
-     */
-    private List<WeakReference<Endpoint>> lastNEndpoints;
-
-    /**
-     * The <tt>Object</tt> which synchronizes the access to
-     * {@link #lastNEndpoints}.
-     */
-    private final Object lastNSyncRoot = new Object();
+    private final PropertyChangeListener propertyChangeListener
+        = new WeakReferencePropertyChangeListener(this);
 
     /**
      * The list of RTP SSRCs received on this <tt>Channel</tt>. An element at
@@ -252,7 +237,7 @@ public class RtpChannel
              * and will unregister itself from the conference sooner or later.
              */
              conferenceSpeechActivity.addPropertyChangeListener(
-                    new WeakReferencePropertyChangeListener(this));
+                     propertyChangeListener);
         }
 
         touch();
@@ -603,8 +588,7 @@ public class RtpChannel
     @Override
     public void describe(ColibriConferenceIQ.ChannelCommon commonIq)
     {
-        ColibriConferenceIQ.Channel iq
-            = (ColibriConferenceIQ.Channel) commonIq;
+        ColibriConferenceIQ.Channel iq = (ColibriConferenceIQ.Channel) commonIq;
 
         /*
          * FIXME The attribute rtp-level-relay-type/Channel property
@@ -618,12 +602,12 @@ public class RtpChannel
          */
         iq.setRTPLevelRelayType(getRTPLevelRelayType());
 
-        super.describe(commonIq);
+        super.describe(iq);
 
         iq.setDirection(stream.getDirection());
 
         iq.setID(getID());
-        iq.setLastN(lastN);
+        iq.setLastN(null);
 
         long initialLocalSSRC = getInitialLocalSSRC();
 
@@ -772,6 +756,16 @@ public class RtpChannel
     }
 
     /**
+     * Returns a <tt>MediaService</tt> implementation (if any).
+     *
+     * @return a <tt>MediaService</tt> implementation (if any)
+     */
+    private MediaService getMediaService()
+    {
+        return getContent().getMediaService();
+    }
+
+	/**
      * Returns the number of received bytes since the last time the
      * method was called.
      * @return the number of received bytes.
@@ -789,7 +783,7 @@ public class RtpChannel
         return bytes;
     }
 
-	/**
+    /**
      * Returns the number of sent bytes since the last time the
      * method was called.
      * @return the number of sent bytes.
@@ -807,16 +801,6 @@ public class RtpChannel
         }
 
         return bytes;
-    }
-
-    /**
-     * Returns a <tt>MediaService</tt> implementation (if any).
-     *
-     * @return a <tt>MediaService</tt> implementation (if any)
-     */
-    private MediaService getMediaService()
-    {
-        return getContent().getMediaService();
     }
 
     /**
@@ -864,6 +848,18 @@ public class RtpChannel
     }
 
     /**
+     * Returns the <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to
+     * the terms of Jitsi Videobridge and which adapts this <tt>Channel</tt>
+     * to the terms of <tt>neomedia</tt>.
+     *
+     * @return the <tt>MediaStream</tt> instance
+     */
+    public MediaStream getStream()
+    {
+        return stream;
+    }
+
+    /**
      * Gets the <tt>SimpleAudioLevelListener</tt> instance which is set on
      * <tt>AudioMediaStream</tt> via
      * {@link AudioMediaStream#setStreamAudioLevelListener(
@@ -891,20 +887,8 @@ public class RtpChannel
     }
 
     /**
-     * Returns the <tt>MediaStream</tt> which this <tt>Channel</tt> adapts to
-     * the terms of Jitsi Videobridge and which adapts this <tt>Channel</tt>
-     * to the terms of <tt>neomedia</tt>.
-     *
-     * @return the <tt>MediaStream</tt> instance
-     */
-    public MediaStream getStream()
-    {
-        return stream;
-    }
-
-    /**
      * Determines whether a specific <tt>Channel</tt> is within the set of
-     * <tt>Channel</tt>s limitted by {@link #lastN} i.e. whether the RTP video
+     * <tt>Channel</tt>s limited by {@link #lastN} i.e. whether the RTP video
      * streams of the specified channel are to be sent to the remote endpoint of
      * this <tt>Channel</tt>.
      *
@@ -913,206 +897,7 @@ public class RtpChannel
      */
     public boolean isInLastN(Channel channel)
     {
-        Integer lastNInteger = this.lastN;
-
-        if (lastNInteger == null)
-            return true;
-
-        int lastNInt = lastNInteger.intValue();
-
-        if (lastNInt < 0)
-            return true;
-
-        Endpoint channelEndpoint = channel.getEndpoint();
-
-        if (channelEndpoint == null)
-            return true;
-
-        ConferenceSpeechActivity conferenceSpeechActivity
-            = this.conferenceSpeechActivity;
-
-        if (conferenceSpeechActivity == null)
-            return true;
-        if (lastNInt == 0)
-            return false;
-
-        Endpoint thisEndpoint = getEndpoint();
-        boolean inLastN = false;
-
-        synchronized (lastNSyncRoot)
-        {
-            if (lastNEndpoints == null)
-            {
-                List<Endpoint> endpoints
-                    = conferenceSpeechActivity.getEndpoints();
-
-                lastNEndpoints
-                    = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
-                for (Endpoint endpoint : endpoints)
-                    lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
-            }
-            if (lastNEndpoints != null)
-            {
-                int n = 0;
-
-                for (WeakReference<Endpoint> wr : lastNEndpoints)
-                {
-                    Endpoint e = wr.get();
-
-                    if (e != null)
-                    {
-                        if (e.equals(thisEndpoint))
-                        {
-                            continue;
-                        }
-                        else if (e.equals(channelEndpoint))
-                        {
-                            inLastN = true;
-                            break;
-                        }
-                    }
-
-                    ++n;
-                    if (n >= lastNInt)
-                        break;
-                }
-            }
-        }
-        return inLastN;
-    }
-
-    /**
-     * Notifies this instance that the list of <tt>Endpoint</tt>s defined by
-     * {@link #lastN} has changed.
-     *
-     * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
-     * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
-     */
-    private void lastNEndpointsChanged(List<Endpoint> endpointsEnteringLastN)
-    {
-        Integer lastNInteger = this.lastN;
-
-        if (lastNInteger == null)
-            return;
-
-        int lastNInt = lastNInteger.intValue();
-
-        if (lastNInt < 0)
-            return;
-
-        Endpoint endpoint = getEndpoint();
-
-        if (endpoint == null)
-            return;
-
-        // Represent the list of Endpoints defined by lastN in JSON format.
-        StringBuilder lastNEndpointsStr = new StringBuilder();
-
-        synchronized (lastNSyncRoot)
-        {
-            if ((lastNEndpoints != null) && !lastNEndpoints.isEmpty())
-            {
-                int n = 0;
-
-                for (WeakReference<Endpoint> wr : lastNEndpoints)
-                {
-                    Endpoint e = wr.get();
-
-                    if (e != null)
-                    {
-                        if (e.equals(endpoint))
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            if (lastNEndpointsStr.length() != 0)
-                                lastNEndpointsStr.append(',');
-                            lastNEndpointsStr.append('"');
-                            lastNEndpointsStr.append(
-                                    JSONValue.escape(e.getID()));
-                            lastNEndpointsStr.append('"');
-                        }
-                    }
-
-                    ++n;
-                    if (n >= lastNInt)
-                        break;
-                }
-            }
-        }
-
-        // colibriClass
-        StringBuilder msg
-            = new StringBuilder(
-                    "{\"colibriClass\":\"LastNEndpointsChangeEvent\"");
-
-        // lastNEndpoints
-        msg.append(",\"lastNEndpoints\":[");
-        msg.append(lastNEndpointsStr);
-        msg.append(']');
-
-        // endpointsEnteringLastN
-        if ((endpointsEnteringLastN != null)
-                && !endpointsEnteringLastN.isEmpty())
-        {
-            StringBuilder endpointEnteringLastNStr = new StringBuilder();
-
-            for (Endpoint e : endpointsEnteringLastN)
-            {
-                if (endpointEnteringLastNStr.length() != 0)
-                    endpointEnteringLastNStr.append(',');
-                endpointEnteringLastNStr.append('"');
-                endpointEnteringLastNStr.append(
-                        JSONValue.escape(e.getID()));
-                endpointEnteringLastNStr.append('"');
-            }
-            if (endpointEnteringLastNStr.length() != 0)
-            {
-                msg.append(",\"endpointsEnteringLastN\":[");
-                msg.append(endpointEnteringLastNStr);
-                msg.append(']');
-            }
-        }
-
-        msg.append('}');
-        endpoint.sendMessageOnDataChannel(msg.toString());
-    }
-
-    /**
-     * Gets the index of a specific <tt>Endpoint</tt> in a specific list of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s.
-     *
-     * @param endpoints the list of <tt>Endpoint</tt>s into which to look for
-     * <tt>endpoint</tt>
-     * @param lastN the number of <tt>Endpoint</tt>s in <tt>endpoint</tt>s to
-     * look through
-     * @param endpoint the <tt>Endpoint</tt> to find within <tt>lastN</tt>
-     * elements of <tt>endpoints</tt>
-     * @return the <tt>lastN</tt> index of <tt>endpoint</tt> in
-     * <tt>endpoints</tt> or <tt>-1</tt> if <tt>endpoint</tt> is not within the
-     * <tt>lastN</tt> elements of <tt>endpoints</tt>
-     */
-    private int lastNIndexOf(
-            List<Endpoint> endpoints,
-            int lastN,
-            Endpoint endpoint)
-    {
-        Endpoint thisEndpoint = getEndpoint();
-        int n = 0;
-
-        for (Endpoint e : endpoints)
-        {
-            if (e.equals(thisEndpoint))
-                continue;
-            else if (e.equals(endpoint))
-                return n;
-
-            ++n;
-            if (n >= lastN)
-                break;
-        }
-        return -1;
+        return true;
     }
 
     /**
@@ -1423,15 +1208,7 @@ public class RtpChannel
             byte[] buffer, int offset, int length,
             Channel source)
     {
-        boolean accept = true;
-
-        if (data
-                && (source != null)
-                && MediaType.VIDEO.equals(getContent().getMediaType()))
-        {
-            accept = isInLastN(source);
-        }
-        return accept;
+        return true;
     }
 
     /**
@@ -1462,9 +1239,8 @@ public class RtpChannel
      */
     public void setLastN(Integer lastN)
     {
-        this.lastN = lastN;
-
-        touch(); // It seems this Channel is still active.
+        // The attribute/functionality last-n is defined/effective for video
+        // channels only.
     }
 
     /**
@@ -1652,81 +1428,9 @@ public class RtpChannel
      */
     List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
-        List<Endpoint> endpointsEnteringLastN = null;
-        Endpoint thisEndpoint = getEndpoint();
-        boolean lastNEndpointsChanged = false;
-
-        synchronized (lastNSyncRoot)
-        {
-            // Determine which Endpoints are entering the list of lastN.
-            Integer lastNInteger = this.lastN;
-            int lastNInt
-                = (lastNInteger == null) ? -1 : lastNInteger.intValue();
-
-            if (lastNInt > 0)
-            {
-                endpointsEnteringLastN = new ArrayList<Endpoint>(lastNInt);
-                // At most the first lastN are entering the list of lastN.
-                for (Endpoint e : endpoints)
-                {
-                    if (!e.equals(thisEndpoint))
-                    {
-                        endpointsEnteringLastN.add(e);
-                        if (endpointsEnteringLastN.size() >= lastNInt)
-                            break;
-                    }
-                }
-                if ((lastNEndpoints == null) || lastNEndpoints.isEmpty())
-                {
-                    if (!endpointsEnteringLastN.isEmpty())
-                        lastNEndpointsChanged = true;
-                }
-                else
-                {
-                    /*
-                     * Some of these first lastN are already in the list of
-                     * lastN.
-                     */
-                    int n = 0;
-
-                    for (WeakReference<Endpoint> wr : lastNEndpoints)
-                    {
-                        Endpoint e = wr.get();
-
-                        if (e != null)
-                        {
-                            if (e.equals(thisEndpoint))
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                endpointsEnteringLastN.remove(e);
-                                if (lastNIndexOf(endpoints, lastNInt, e) < 0)
-                                    lastNEndpointsChanged = true;
-                            }
-                        }
-
-                        ++n;
-                        if (n >= lastNInt)
-                            break;
-                    }
-                }
-            }
-
-            // Remember the Endpoints for the purposes of lastN.
-            lastNEndpoints
-                = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
-            for (Endpoint endpoint : endpoints)
-                lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
-        }
-
-        // Notify about changes in the list of lastN.
-        if (lastNEndpointsChanged)
-            lastNEndpointsChanged(endpointsEnteringLastN);
-
-        // Request keyframes from the Enpoints entering the list of lastN.
-        return endpointsEnteringLastN;
+        // The attribute/functionality last-n is defined/effective for video
+        // channels only.
+        return null;
     }
 
     /**

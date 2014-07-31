@@ -198,7 +198,24 @@ public class Content
             {
                 if (!channels.containsKey(id))
                 {
-                    channel = new RtpChannel(this, id);
+                    switch (getMediaType())
+                    {
+                    case AUDIO:
+                        channel = new AudioChannel(this, id);
+                        break;
+                    case DATA:
+                        /*
+                         * MediaType.DATA signals an SctpConnection, not an
+                         * RtpChannel.
+                         */
+                        throw new IllegalStateException("mediaType");
+                    case VIDEO:
+                        channel = new VideoChannel(this, id);
+                        break;
+                    default:
+                        channel = new RtpChannel(this, id);
+                        break;
+                    }
                     channels.put(id, channel);
                 }
             }

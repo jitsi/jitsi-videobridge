@@ -26,10 +26,18 @@ public class Endpoint
 {
     /**
      * The name of the <tt>Endpoint</tt> property <tt>channels</tt> which lists
-     * the <tt>Channel</tt>s associated with the <tt>Endpoint</tt>.
+     * the <tt>RtpChannel</tt>s associated with the <tt>Endpoint</tt>.
      */
     public static final String CHANNELS_PROPERTY_NAME
         = Endpoint.class.getName() + ".channels";
+
+    /**
+     * The name of the <tt>Endpoint</tt> property <tt>sctpConnection</tt> which
+     * specifies the <tt>SctpConnection</tt> associated with the
+     * <tt>Endpoint</tt>.
+     */
+    public static final String SCTP_CONNECTION_PROPERTY_NAME
+        = Endpoint.class.getName() + ".sctpConnection";
 
     /**
      * The <tt>Logger</tt> used by the <tt>Endpoint</tt> class and its instances
@@ -308,11 +316,24 @@ public class Endpoint
 
     /**
      * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
-     * @param sctpConnection the <tt>SctpConnection</tt> that will be bound to
-     *                       this <tt>Endpoint</tt>.
+     *
+     * @param sctpConnection the <tt>SctpConnection</tt> to be bound to this
+     * <tt>Endpoint</tt>.
      */
     public void setSctpConnection(SctpConnection sctpConnection)
     {
-        this.sctpConnection = new WeakReference<SctpConnection>(sctpConnection);
+        Object oldValue = getSctpConnection();
+
+        if ((sctpConnection == null)
+                ? (oldValue != null)
+                : !sctpConnection.equals(oldValue))
+        {
+            this.sctpConnection
+                = new WeakReference<SctpConnection>(sctpConnection);
+
+            firePropertyChange(
+                    SCTP_CONNECTION_PROPERTY_NAME,
+                    oldValue, getSctpConnection());
+        }
     }
 }

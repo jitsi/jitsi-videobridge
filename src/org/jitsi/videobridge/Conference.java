@@ -672,6 +672,16 @@ public class Conference
         }
     }
 
+    /**
+     * Notifies this <tt>Conference</tt> that the ordered list of
+     * <tt>Endpoint</tt>s of {@link #speechActivity} i.e. the dominant speaker
+     * history has changed.
+     * <p>
+     * This instance notifies the video <tt>Channel</tt>s about the change so
+     * that they may update their last-n lists and report to this instance which
+     * <tt>Endpoint</tt>s are to be asked for video keyframes.
+     * </p>
+     */
     private void speechActivityEndpointsChanged()
     {
         List<Endpoint> endpoints = null;
@@ -992,25 +1002,27 @@ public class Conference
     {
         if (recorderEventHandler == null)
         {
+            Throwable t;
 
             try
             {
                 recorderEventHandler
-                        = new RecorderEventHandlerImpl(
-                        getMediaService()
-                                .createRecorderEventHandlerJson(
-                                        getRecordingPath() + "/metadata.json"));
+                    = new RecorderEventHandlerImpl(
+                            getMediaService().createRecorderEventHandlerJson(
+                                    getRecordingPath() + "/metadata.json"));
+                t = null;
             }
             catch (IOException ioe)
             {
-                logger.warn("Could not create RecorderEventHandler. " + ioe);
+                t = ioe;
             }
             catch (IllegalArgumentException iae)
             {
-                logger.warn("Could not create RecorderEventHandlerImpl. " + iae);
+                t = iae;
             }
+            if (t !=  null)
+                logger.warn("Could not create RecorderEventHandler. " + t);
         }
-
         return recorderEventHandler;
     }
 
@@ -1028,15 +1040,14 @@ public class Conference
             try
             {
                 endpointRecorder
-                        = new EndpointRecorder(
-                                        getRecordingPath() + "/endpoints.json");
+                    = new EndpointRecorder(
+                            getRecordingPath() + "/endpoints.json");
             }
             catch (IOException ioe)
             {
                 logger.warn("Could not create EndpointRecorder. " + ioe);
             }
         }
-
         return endpointRecorder;
     }
 
@@ -1106,12 +1117,12 @@ public class Conference
      * associated with the audio SSRC of the event (the 'audioSsrc' field).
      */
     private class RecorderEventHandlerImpl
-            implements RecorderEventHandler
+        implements RecorderEventHandler
     {
-        private RecorderEventHandler handler;
+        private final RecorderEventHandler handler;
 
         RecorderEventHandlerImpl(RecorderEventHandler handler)
-                throws IllegalArgumentException
+            throws IllegalArgumentException
         {
             if (handler == null)
                 throw new IllegalArgumentException("handler is null");
@@ -1125,15 +1136,12 @@ public class Conference
             {
                 long ssrc = event.getSsrc();
                 Endpoint endpoint
-                        = findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+                    = findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
+
                 if (endpoint == null)
                     endpoint = findEndpointByReceiveSSRC(ssrc, MediaType.VIDEO);
-
                 if (endpoint != null)
-                {
                     event.setEndpointId(endpoint.getID());
-                }
-
             }
             return handler.handleEvent(event);
         }
@@ -1150,7 +1158,7 @@ public class Conference
          * @param endpoint the <tt>Endpoint</tt> corresponding to the new
          * dominant speaker.
          */
-        private void dominantSpeakerChanged(Endpoint endpoint)
+        void dominantSpeakerChanged(Endpoint endpoint)
         {
             long ssrc = -1;
 
@@ -1168,12 +1176,12 @@ public class Conference
             if (ssrc != -1)
             {
                 RecorderEvent event = new RecorderEvent();
+
                 event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
                 event.setMediaType(MediaType.VIDEO);
                 event.setSsrc(ssrc);
                 event.setEndpointId(endpoint.getID());
                 event.setInstant(System.currentTimeMillis());
-
                 handleEvent(event);
             }
         }
