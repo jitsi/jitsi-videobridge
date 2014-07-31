@@ -54,6 +54,12 @@ public class Conference
     private final List<Content> contents = new LinkedList<Content>();
 
     /**
+     * An instance used to save information about the endpoints of this
+     * <tt>Conference</tt>, when media recording is enabled.
+     */
+    private EndpointRecorder endpointRecorder = null;
+
+    /**
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
     private final List<WeakReference<Endpoint>> endpoints
@@ -74,12 +80,6 @@ public class Conference
     private final String focus;
 
     /**
-     * If {@link #focus} is <tt>null</tt> the value of the last known focus is
-     * stored in this member.
-     */
-    private String lastKnownFocus;
-
-    /**
      * The (unique) identifier/ID of this instance.
      */
     private final String id;
@@ -91,7 +91,35 @@ public class Conference
      */
     private long lastActivityTime;
 
+    /**
+     * If {@link #focus} is <tt>null</tt> the value of the last known focus is
+     * stored in this member.
+     */
+    private String lastKnownFocus;
+
+    /**
+     * The <tt>PropertyChangeListener</tt> which listens to
+     * <tt>PropertyChangeEvent</tt>s on behalf of this instance while
+     * referencing it by a <tt>WeakReference</tt>.
+     */
     private final PropertyChangeListener propertyChangeListener;
+
+    /**
+     * The <tt>RecorderEventHandler</tt> which is used to handle recording
+     * events for this <tt>Conference</tt>.
+     */
+    private RecorderEventHandlerImpl recorderEventHandler = null;
+
+    /**
+     * Whether media recording is currently enabled for this <tt>Conference</tt>.
+     */
+    private boolean recording = false;
+
+    /**
+     * The path to the directory into which files associated with media
+     * recordings for this <tt>Conference</tt> will be stored.
+     */
+    private String recordingPath = null;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -103,29 +131,6 @@ public class Conference
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
     private final Videobridge videobridge;
-
-    /**
-     * Whether media recording is currently enabled for this <tt>Conference</tt>.
-     */
-    private boolean recording = false;
-
-    /**
-     * The <tt>RecorderEventHandler</tt> which is used to handle recording
-     * events for this <tt>Conference</tt>.
-     */
-    private RecorderEventHandlerImpl recorderEventHandler = null;
-
-    /**
-     * An instance used to save information about the endpoints of this
-     * <tt>Conference</tt>, when media recording is enabled.
-     */
-    private EndpointRecorder endpointRecorder = null;
-
-    /**
-     * The path to the directory into which files associated with media
-     * recordings for this <tt>Conference</tt> will be stored.
-     */
-    private String recordingPath = null;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -157,6 +162,41 @@ public class Conference
         propertyChangeListener = new WeakReferencePropertyChangeListener(this);
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
+    }
+
+    /**
+     * Broadcasts string message to al participants over default data channel.
+     *
+     * @param msg the message to be advertised across conference peers.
+     */
+    private void broadcastMessageOnDataChannels(String msg)
+    {
+        for (Endpoint endpoint : getEndpoints())
+            endpoint.sendMessageOnDataChannel(msg);
+    }
+
+    /**
+     * Checks whether <tt>path</tt> is a valid directory for recording (creates
+     * it if necessary).
+     * @param path the path to the directory to check.
+     * @return <tt>true</tt> if the directory <tt>path</tt> can be used for
+     * media recording, <tt>false</tt> otherwise.
+     */
+    private boolean checkRecordingDirectory(String path)
+    {
+        if (path == null || "".equals(path))
+            return false;
+
+        File dir = new File(path);
+        if (!dir.exists())
+            dir.mkdir();
+        if (!dir.exists())
+            return false;
+
+        if (!dir.isDirectory() || !dir.canWrite())
+            return false;
+
+        return true;
     }
 
     /**
@@ -246,7 +286,7 @@ public class Conference
                         + "\"dominantSpeakerEndpoint\":\""
                         + dominantSpeaker.getID() + "\"}");
 
-            if (isRecording() && recorderEventHandler != null)
+            if (isRecording() && (recorderEventHandler != null))
             {
                 recorderEventHandler.dominantSpeakerChanged(dominantSpeaker);
             }
@@ -268,7 +308,6 @@ public class Conference
             else
                 expired = true;
         }
-
 
         setRecording(false);
         if (recorderEventHandler != null)
@@ -411,6 +450,31 @@ public class Conference
     }
 
     /**
+     * Returns the <tt>EndpointRecorder</tt> instance used to save the
+     * endpoints information for this <tt>Conference</tt>. Creates an instance
+     * if none exists.
+     * @return the <tt>EndpointRecorder</tt> instance used to save the
+     * endpoints information for this <tt>Conference</tt>.
+     */
+    private EndpointRecorder getEndpointRecorder()
+    {
+        if (endpointRecorder == null)
+        {
+            try
+            {
+                endpointRecorder
+                    = new EndpointRecorder(
+                            getRecordingPath() + "/endpoints.json");
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Could not create EndpointRecorder. " + ioe);
+            }
+        }
+        return endpointRecorder;
+    }
+
+    /**
      * Gets the <tt>Endpoint</tt>s participating in/contributing to this
      * <tt>Conference</tt>.
      *
@@ -506,6 +570,27 @@ public class Conference
     public String getLastKnowFocus()
     {
         return lastKnownFocus;
+    }
+
+    /**
+     * Returns a <tt>MediaService</tt> implementation (if any).
+     *
+     * @return a <tt>MediaService</tt> implementation (if any)
+     */
+    MediaService getMediaService()
+    {
+        MediaService mediaService
+            = ServiceUtils.getService(getBundleContext(), MediaService.class);
+
+        /*
+         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
+         * the MediaService implementation. In the form of a temporary
+         * workaround, get it through LibJitsi.
+         */
+        if (mediaService == null)
+            mediaService = LibJitsi.getMediaService();
+
+        return mediaService;
     }
 
     /**
@@ -618,6 +703,70 @@ public class Conference
         return endpoint;
     }
 
+    RecorderEventHandler getRecorderEventHandler()
+    {
+        if (recorderEventHandler == null)
+        {
+            Throwable t;
+
+            try
+            {
+                recorderEventHandler
+                    = new RecorderEventHandlerImpl(
+                            this,
+                            getMediaService().createRecorderEventHandlerJson(
+                                    getRecordingPath() + "/metadata.json"));
+                t = null;
+            }
+            catch (IOException ioe)
+            {
+                t = ioe;
+            }
+            catch (IllegalArgumentException iae)
+            {
+                t = iae;
+            }
+            if (t !=  null)
+                logger.warn("Could not create RecorderEventHandler. " + t);
+        }
+        return recorderEventHandler;
+    }
+
+    /**
+     * Returns the path to the directory where the media recording related
+     * files should be saved, or <tt>null</tt> if recording is not enabled
+     * in the configuration, or a recording path has not been configured.
+     *
+     * @return the path to the directory where the media recording related
+     * files should be saved, or <tt>null</tt> if recording is not enabled
+     * in the configuration, or a recording path has not been configured.
+     */
+    String getRecordingPath()
+    {
+        if (recordingPath == null)
+        {
+            ConfigurationService cfg
+                    = getVideobridge().getConfigurationService();
+            if (cfg == null)
+                return null;
+            boolean recordingEnabled
+                    = cfg.getBoolean(Videobridge.ENABLE_MEDIA_RECORDING_PNAME,
+                                     false);
+            if (!recordingEnabled)
+                return null;
+            String path
+                    = cfg.getString(Videobridge.MEDIA_RECORDING_PATH_PNAME, null);
+            if (path == null)
+                return null;
+
+            this.recordingPath = path + "/"
+                    + (new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.")
+                            .format(new Date()) + getID());
+        }
+
+        return recordingPath;
+    }
+
     /**
      * Gets the speech activity (representation) of the <tt>Endpoint</tt>s of
      * this <tt>Conference</tt>.
@@ -640,121 +789,6 @@ public class Conference
     public final Videobridge getVideobridge()
     {
         return videobridge;
-    }
-
-    /**
-     * Notifies this instance that there was a change in the value of a property
-     * of an object in which this instance is interested.
-     *
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the object of
-     * interest, the name of the property and the old and new values of that
-     * property
-     */
-    @Override
-    public void propertyChange(PropertyChangeEvent ev)
-    {
-        Object source = ev.getSource();
-
-        if (speechActivity == source)
-        {
-            String propertyName = ev.getPropertyName();
-
-            if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
-                    propertyName))
-            {
-                dominantSpeakerChanged();
-            }
-            else if (ConferenceSpeechActivity.ENDPOINTS_PROPERTY_NAME.equals(
-                    propertyName))
-            {
-                speechActivityEndpointsChanged();
-            }
-        }
-    }
-
-    /**
-     * Notifies this <tt>Conference</tt> that the ordered list of
-     * <tt>Endpoint</tt>s of {@link #speechActivity} i.e. the dominant speaker
-     * history has changed.
-     * <p>
-     * This instance notifies the video <tt>Channel</tt>s about the change so
-     * that they may update their last-n lists and report to this instance which
-     * <tt>Endpoint</tt>s are to be asked for video keyframes.
-     * </p>
-     */
-    private void speechActivityEndpointsChanged()
-    {
-        List<Endpoint> endpoints = null;
-
-        for (Content content : getContents())
-        {
-            if (MediaType.VIDEO.equals(content.getMediaType()))
-            {
-                Set<Endpoint> endpointsToAskForKeyframes = null;
-
-                endpoints = speechActivity.getEndpoints();
-                for (Channel channel : content.getChannels())
-                {
-                    RtpChannel rtpChannel = (RtpChannel) channel;
-
-                    List<Endpoint> channelEndpointsToAskForKeyframes
-                        = rtpChannel.speechActivityEndpointsChanged(endpoints);
-
-                    if ((channelEndpointsToAskForKeyframes != null)
-                            && !channelEndpointsToAskForKeyframes.isEmpty())
-                    {
-                        if (endpointsToAskForKeyframes == null)
-                        {
-                            endpointsToAskForKeyframes
-                                = new HashSet<Endpoint>();
-                        }
-                        endpointsToAskForKeyframes.addAll(
-                                channelEndpointsToAskForKeyframes);
-                    }
-                }
-
-                if ((endpointsToAskForKeyframes != null)
-                        && !endpointsToAskForKeyframes.isEmpty())
-                {
-                    content.askForKeyframes(endpointsToAskForKeyframes);
-                }
-            }
-        }
-    }
-
-    /**
-     * Sets the time in milliseconds of the last activity related to this
-     * <tt>Conference</tt> to the current system time.
-     */
-    public void touch()
-    {
-        long now = System.currentTimeMillis();
-
-        synchronized (this)
-        {
-            if (getLastActivityTime() < now)
-                lastActivityTime = now;
-        }
-    }
-
-    /**
-     * Broadcasts string message to al participants over default data channel.
-     *
-     * @param msg the message to be advertised across conference peers.
-     */
-    private void broadcastMessageOnDataChannels(String msg)
-    {
-        for (Endpoint endpoint : getEndpoints())
-            endpoint.sendMessageOnDataChannel(msg);
-    }
-
-    /**
-     * Sets the JID of the last known focus.
-     * @param jid the JID of the last known focus.
-     */
-    public void setLastKnownFocus(String jid)
-    {
-        lastKnownFocus = jid;
     }
 
     /**
@@ -804,6 +838,59 @@ public class Conference
             setRecording(recording);
 
         return this.recording;
+    }
+
+    /**
+     * Notifies this instance that there was a change in the value of a property
+     * of an object in which this instance is interested.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the object of
+     * interest, the name of the property and the old and new values of that
+     * property
+     */
+    @Override
+    public void propertyChange(PropertyChangeEvent ev)
+    {
+        Object source = ev.getSource();
+
+        if (isExpired())
+        {
+            /*
+             * An expired Conference is to be treated like a null Conference
+             * i.e. it does not handle any PropertyChangeEvents. If possible,
+             * make sure that no further PropertyChangeEvents will be delivered
+             * to this Conference.
+             */
+            if (source instanceof PropertyChangeNotifier)
+            {
+                ((PropertyChangeNotifier) source).removePropertyChangeListener(
+                        propertyChangeListener);
+            }
+        }
+        else if (source == speechActivity)
+        {
+            String propertyName = ev.getPropertyName();
+
+            if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
+                    propertyName))
+            {
+                dominantSpeakerChanged();
+            }
+            else if (ConferenceSpeechActivity.ENDPOINTS_PROPERTY_NAME.equals(
+                    propertyName))
+            {
+                speechActivityEndpointsChanged();
+            }
+        }
+    }
+
+    /**
+     * Sets the JID of the last known focus.
+     * @param jid the JID of the last known focus.
+     */
+    public void setLastKnownFocus(String jid)
+    {
+        lastKnownFocus = jid;
     }
 
     /**
@@ -940,136 +1027,68 @@ public class Conference
     }
 
     /**
-     * Returns the path to the directory where the media recording related
-     * files should be saved, or <tt>null</tt> if recording is not enabled
-     * in the configuration, or a recording path has not been configured.
-     *
-     * @return the path to the directory where the media recording related
-     * files should be saved, or <tt>null</tt> if recording is not enabled
-     * in the configuration, or a recording path has not been configured.
+     * Notifies this <tt>Conference</tt> that the ordered list of
+     * <tt>Endpoint</tt>s of {@link #speechActivity} i.e. the dominant speaker
+     * history has changed.
+     * <p>
+     * This instance notifies the video <tt>Channel</tt>s about the change so
+     * that they may update their last-n lists and report to this instance which
+     * <tt>Endpoint</tt>s are to be asked for video keyframes.
+     * </p>
      */
-    String getRecordingPath()
+    private void speechActivityEndpointsChanged()
     {
-        if (recordingPath == null)
+        List<Endpoint> endpoints = null;
+
+        for (Content content : getContents())
         {
-            ConfigurationService cfg
-                    = getVideobridge().getConfigurationService();
-            if (cfg == null)
-                return null;
-            boolean recordingEnabled
-                    = cfg.getBoolean(Videobridge.ENABLE_MEDIA_RECORDING_PNAME,
-                                     false);
-            if (!recordingEnabled)
-                return null;
-            String path
-                    = cfg.getString(Videobridge.MEDIA_RECORDING_PATH_PNAME, null);
-            if (path == null)
-                return null;
+            if (MediaType.VIDEO.equals(content.getMediaType()))
+            {
+                Set<Endpoint> endpointsToAskForKeyframes = null;
 
-            this.recordingPath = path + "/"
-                    + (new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.")
-                            .format(new Date()) + getID());
+                endpoints = speechActivity.getEndpoints();
+                for (Channel channel : content.getChannels())
+                {
+                    RtpChannel rtpChannel = (RtpChannel) channel;
+
+                    List<Endpoint> channelEndpointsToAskForKeyframes
+                        = rtpChannel.speechActivityEndpointsChanged(endpoints);
+
+                    if ((channelEndpointsToAskForKeyframes != null)
+                            && !channelEndpointsToAskForKeyframes.isEmpty())
+                    {
+                        if (endpointsToAskForKeyframes == null)
+                        {
+                            endpointsToAskForKeyframes
+                                = new HashSet<Endpoint>();
+                        }
+                        endpointsToAskForKeyframes.addAll(
+                                channelEndpointsToAskForKeyframes);
+                    }
+                }
+
+                if ((endpointsToAskForKeyframes != null)
+                        && !endpointsToAskForKeyframes.isEmpty())
+                {
+                    content.askForKeyframes(endpointsToAskForKeyframes);
+                }
+            }
         }
-
-        return recordingPath;
     }
 
     /**
-     * Checks whether <tt>path</tt> is a valid directory for recording (creates
-     * it if necessary).
-     * @param path the path to the directory to check.
-     * @return <tt>true</tt> if the directory <tt>path</tt> can be used for
-     * media recording, <tt>false</tt> otherwise.
+     * Sets the time in milliseconds of the last activity related to this
+     * <tt>Conference</tt> to the current system time.
      */
-    private boolean checkRecordingDirectory(String path)
+    public void touch()
     {
-        if (path == null || "".equals(path))
-            return false;
+        long now = System.currentTimeMillis();
 
-        File dir = new File(path);
-        if (!dir.exists())
-            dir.mkdir();
-        if (!dir.exists())
-            return false;
-
-        if (!dir.isDirectory() || !dir.canWrite())
-            return false;
-
-        return true;
-    }
-
-    RecorderEventHandler getRecorderEventHandler()
-    {
-        if (recorderEventHandler == null)
+        synchronized (this)
         {
-            Throwable t;
-
-            try
-            {
-                recorderEventHandler
-                    = new RecorderEventHandlerImpl(
-                            getMediaService().createRecorderEventHandlerJson(
-                                    getRecordingPath() + "/metadata.json"));
-                t = null;
-            }
-            catch (IOException ioe)
-            {
-                t = ioe;
-            }
-            catch (IllegalArgumentException iae)
-            {
-                t = iae;
-            }
-            if (t !=  null)
-                logger.warn("Could not create RecorderEventHandler. " + t);
+            if (getLastActivityTime() < now)
+                lastActivityTime = now;
         }
-        return recorderEventHandler;
-    }
-
-    /**
-     * Returns the <tt>EndpointRecorder</tt> instance used to save the
-     * endpoints information for this <tt>Conference</tt>. Creates an instance
-     * if none exists.
-     * @return the <tt>EndpointRecorder</tt> instance used to save the
-     * endpoints information for this <tt>Conference</tt>.
-     */
-    private EndpointRecorder getEndpointRecorder()
-    {
-        if (endpointRecorder == null)
-        {
-            try
-            {
-                endpointRecorder
-                    = new EndpointRecorder(
-                            getRecordingPath() + "/endpoints.json");
-            }
-            catch (IOException ioe)
-            {
-                logger.warn("Could not create EndpointRecorder. " + ioe);
-            }
-        }
-        return endpointRecorder;
-    }
-
-    /**
-     * Returns a <tt>MediaService</tt> implementation (if any).
-     *
-     * @return a <tt>MediaService</tt> implementation (if any)
-     */
-    MediaService getMediaService()
-    {
-        MediaService mediaService
-            = ServiceUtils.getService(getBundleContext(), MediaService.class);
-
-        /*
-         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
-         * the MediaService implementation. In the form of a temporary
-         * workaround, get it through LibJitsi.
-         */
-        if (mediaService == null)
-            mediaService = LibJitsi.getMediaService();
-
-        return mediaService;
     }
 
     /**
@@ -1104,85 +1123,6 @@ public class Conference
             if (isRecording() && endpointRecorder != null)
             {
                 endpointRecorder.updateEndpoint(endpoint);
-            }
-        }
-    }
-
-    /**
-     * An implementation of <tt>RecorderEventHandler</tt> which intercepts
-     * <tt>SPEAKER_CHANGED</tt> events and updates their 'ssrc' fields
-     * (which contain the SSRC of a video stream) before delegating to
-     * another underlying <tt>RecorderEventHandler</tt>.
-     * The value to use for an event's 'ssrc' field is a value found to be
-     * associated with the audio SSRC of the event (the 'audioSsrc' field).
-     */
-    private class RecorderEventHandlerImpl
-        implements RecorderEventHandler
-    {
-        private final RecorderEventHandler handler;
-
-        RecorderEventHandlerImpl(RecorderEventHandler handler)
-            throws IllegalArgumentException
-        {
-            if (handler == null)
-                throw new IllegalArgumentException("handler is null");
-            this.handler = handler;
-        }
-
-        @Override
-        public boolean handleEvent(RecorderEvent event)
-        {
-            if (event.getEndpointId() == null)
-            {
-                long ssrc = event.getSsrc();
-                Endpoint endpoint
-                    = findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
-
-                if (endpoint == null)
-                    endpoint = findEndpointByReceiveSSRC(ssrc, MediaType.VIDEO);
-                if (endpoint != null)
-                    event.setEndpointId(endpoint.getID());
-            }
-            return handler.handleEvent(event);
-        }
-
-        @Override
-        public void close()
-        {
-            handler.close();
-        }
-
-        /**
-         * Notifies this instance that the dominant speaker in the conference
-         * has changed.
-         * @param endpoint the <tt>Endpoint</tt> corresponding to the new
-         * dominant speaker.
-         */
-        void dominantSpeakerChanged(Endpoint endpoint)
-        {
-            long ssrc = -1;
-
-            // find the first "video" SSRC for the new dominant endpoint
-            for (Channel c : endpoint.getChannels(MediaType.VIDEO))
-            {
-                int[] ssrcs = ((RtpChannel) c).getReceiveSSRCs();
-                if (ssrcs != null && ssrcs.length > 0)
-                {
-                    ssrc = ssrcs[0] & 0xffffffffL;
-                    break;
-                }
-            }
-
-            if (ssrc != -1)
-            {
-                RecorderEvent event = new RecorderEvent();
-
-                event.setType(RecorderEvent.Type.SPEAKER_CHANGED);
-                event.setMediaType(MediaType.VIDEO);
-                event.setSsrc(ssrc);
-                event.setEndpointId(endpoint.getID());
-                event.setInstant(System.currentTimeMillis());
-                handleEvent(event);
             }
         }
     }
