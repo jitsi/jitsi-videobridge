@@ -11,21 +11,29 @@ package org.jitsi.videobridge;
  * remote peer.
  *
  * @author Pawel Domas
+ * @author Lyubomir Marinov
  */
 public interface WebRtcDataStreamListener
 {
     /**
+     * Fired when new WebRTC data channel is opened.
+     *
+     * @param source the <tt>SctpConnection</tt> which is the source of the
+     * event
+     * @param channel the <tt>WebRtcDataStream</tt> that represents opened
+     * WebRTC data channel.
+     */
+    public void onChannelOpened(
+            SctpConnection source,
+            WebRtcDataStream channel);
+
+    /**
      * Indicates that a <tt>SctpConnection</tt> has established SCTP connection.
      * After that it can be used to either open WebRTC data channel or listen
      * for channels opened by remote peer.
-     */
-    public void onSctpConnectionReady();
-
-    /**
-     * Fired when new WebRTC data channel is opened.
      *
-     * @param newStream the <tt>WebRtcDataStream</tt> that represents opened
-     * WebRTC data channel.
+     * @param source the <tt>SctpConnection</tt> which is the source of the
+     * event i.e. which has established an SCTP connection
      */
-    public void onChannelOpened(WebRtcDataStream newStream);
+    public void onSctpConnectionReady(SctpConnection source);
 }

@@ -102,7 +102,8 @@ public class Conference
      * <tt>PropertyChangeEvent</tt>s on behalf of this instance while
      * referencing it by a <tt>WeakReference</tt>.
      */
-    private final PropertyChangeListener propertyChangeListener;
+    private final PropertyChangeListener propertyChangeListener
+        = new WeakReferencePropertyChangeListener(this);
 
     /**
      * The <tt>RecorderEventHandler</tt> which is used to handle recording
@@ -133,6 +134,26 @@ public class Conference
     private final Videobridge videobridge;
 
     /**
+     * The <tt>WebRtcpDataStreamListener</tt> which listens to the
+     * <tt>SctpConnection</tt>s of the <tt>Endpoint</tt>s participating in this
+     * multipoint conference in order to detect when they are ready (to fire
+     * initial events such as the current dominant speaker in this multipoint
+     * conference).
+     */
+    private final WebRtcDataStreamListener webRtcDataStreamListener
+        = new WebRtcDataStreamAdapter()
+                {
+                    /**
+                     * {@inheritDoc}
+                     */
+                    @Override
+                    public void onSctpConnectionReady(SctpConnection source)
+                    {
+                        Conference.this.sctpConnectionReady(source);
+                    }
+                };
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -159,7 +180,6 @@ public class Conference
         this.focus = focus;
         this.lastKnownFocus = focus;
 
-        propertyChangeListener = new WeakReferencePropertyChangeListener(this);
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
     }
@@ -197,6 +217,26 @@ public class Conference
             return false;
 
         return true;
+    }
+
+    /**
+     * Initializes a new <tt>String</tt> to be sent over an
+     * <tt>SctpConnection</tt> in order to notify an <tt>Endpoint</tt> that the
+     * dominant speaker in this multipoint conference has changed to a specific
+     * <tt>Endpoint</tt>.
+     *
+     * @param dominantSpeaker the dominant speaker in this multipoint conference
+     * @return a new <tt>String</tt> to be sent over an <tt>SctpConnection</tt>
+     * in order to notify an <tt>Endpoint</tt> that the dominant speaker in this
+     * multipoint conference has changed to <tt>dominantSpeaker</tt>
+     */
+    private String createDominantSpeakerEndpointChangeEvent(
+            Endpoint dominantSpeaker)
+    {
+        return
+            "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
+                + "\"dominantSpeakerEndpoint\":\"" + dominantSpeaker.getID()
+                + "\"}";
     }
 
     /**
@@ -282,13 +322,46 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessageOnDataChannels(
-                    "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
-                        + "\"dominantSpeakerEndpoint\":\""
-                        + dominantSpeaker.getID() + "\"}");
+                    createDominantSpeakerEndpointChangeEvent(dominantSpeaker));
 
             if (isRecording() && (recorderEventHandler != null))
             {
                 recorderEventHandler.dominantSpeakerChanged(dominantSpeaker);
+            }
+        }
+    }
+
+    /**
+     * Notifies this instance that the <tt>SctpConnection</tt> of/associated
+     * with a specific <tt>Endpoint</tt> participating in this
+     * <tt>Conference</tt> has changed.
+     *
+     * @param endpoint the <tt>Endpoint</tt> participating in this
+     * <tt>Conference</tt> which has had its (associated)
+     * <tt>SctpConnection</tt> changed
+     */
+    private void endpointSctpConnectionChanged(
+            Endpoint endpoint,
+            SctpConnection oldValue, SctpConnection newValue)
+    {
+        /*
+         * We want to fire initial events (e.g. dominant speaker) over the
+         * SctpConnection as soon as it is ready.
+         */
+        if (oldValue != null)
+        {
+            oldValue.removeChannelListener(webRtcDataStreamListener);
+        }
+        if (newValue != null)
+        {
+            newValue.addChannelListener(webRtcDataStreamListener);
+            /*
+             * The SctpConnection may itself be ready already. If this is the
+             * case, then it has now become ready for this Conference.
+             */
+            if (newValue.isReady())
+            {
+                sctpConnectionReady(newValue);
             }
         }
     }
@@ -447,6 +520,44 @@ public class Conference
         {
             return contents.toArray(new Content[contents.size()]);
         }
+    }
+
+    /**
+     * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
+     * has a specific identifier/ID.
+     *
+     * @param id the identifier/ID of the <tt>Endpoint</tt> which is to be
+     * returned
+     * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
+     * which has the specified <tt>id</tt> or <tt>null</tt>
+     */
+    public Endpoint getEndpoint(String id)
+    {
+        Endpoint endpoint = null;
+        boolean changed = false;
+
+        synchronized (endpoints)
+        {
+            for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
+                    i.hasNext();)
+            {
+                Endpoint e = i.next().get();
+                if (e == null)
+                {
+                    i.remove();
+                    changed = true;
+                }
+                else if (e.getID().equals(id))
+                {
+                    endpoint = e;
+                }
+            }
+        }
+
+        if (changed)
+            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+
+        return endpoint;
     }
 
     /**
@@ -746,24 +857,33 @@ public class Conference
         if (recordingPath == null)
         {
             ConfigurationService cfg
-                    = getVideobridge().getConfigurationService();
-            if (cfg == null)
-                return null;
-            boolean recordingEnabled
-                    = cfg.getBoolean(Videobridge.ENABLE_MEDIA_RECORDING_PNAME,
-                                     false);
-            if (!recordingEnabled)
-                return null;
-            String path
-                    = cfg.getString(Videobridge.MEDIA_RECORDING_PATH_PNAME, null);
-            if (path == null)
-                return null;
+                = getVideobridge().getConfigurationService();
 
-            this.recordingPath = path + "/"
-                    + (new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.")
-                            .format(new Date()) + getID());
+            if (cfg != null)
+            {
+                boolean recordingIsEnabled
+                        = cfg.getBoolean(
+                                Videobridge.ENABLE_MEDIA_RECORDING_PNAME,
+                                false);
+
+                if (recordingIsEnabled)
+                {
+                    String path
+                        = cfg.getString(
+                                Videobridge.MEDIA_RECORDING_PATH_PNAME,
+                                null);
+
+                    if (path != null)
+                    {
+                        this.recordingPath
+                            = path + "/"
+                                + new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.")
+                                        .format(new Date())
+                                + getID();
+                    }
+                }
+            }
         }
-
         return recordingPath;
     }
 
@@ -874,12 +994,85 @@ public class Conference
             if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
                     propertyName))
             {
+                /*
+                 * The dominant speaker in this Conference has changed. We will
+                 * likely want to notify the Endpoints participating in this
+                 * Conference.
+                 */
                 dominantSpeakerChanged();
             }
             else if (ConferenceSpeechActivity.ENDPOINTS_PROPERTY_NAME.equals(
                     propertyName))
             {
                 speechActivityEndpointsChanged();
+            }
+        }
+        else if (source instanceof Endpoint)
+        {
+            /*
+             * We care about PropertyChangeEvents from Endpoint but only if the
+             * Endpoint in question is still participating in this Conference.
+             */
+            Endpoint endpoint = getEndpoint(((Endpoint) source).getID());
+
+            if (endpoint != null)
+            {
+                String propertyName = ev.getPropertyName();
+
+                if (Endpoint.SCTP_CONNECTION_PROPERTY_NAME.equals(propertyName))
+                {
+                    /*
+                     * The SctpConnection of/associated with an Endpoint has
+                     * changed. We may want to fire initial events over that
+                     * SctpConnection (as soon as it is ready).
+                     */
+                    SctpConnection oldValue = (SctpConnection) ev.getOldValue();
+                    SctpConnection newValue = (SctpConnection) ev.getNewValue();
+
+                    endpointSctpConnectionChanged(endpoint, oldValue, newValue);
+                }
+            }
+        }
+    }
+
+    /**
+     * Notifies this instance that a specific <tt>SctpConnection</tt> is ready
+     * i.e. connected to a/the remote peer and operational.
+     *
+     * @param sctpConnection
+     */
+    private void sctpConnectionReady(SctpConnection sctpConnection)
+    {
+        /*
+         * We want to fire initial events over the SctpConnection as soon as it
+         * is ready, we do not want to fire them multiple times i.e. every time
+         * the SctpConnection becomes ready.
+         */
+        sctpConnection.removeChannelListener(webRtcDataStreamListener);
+
+        if (!isExpired()
+                && !sctpConnection.isExpired()
+                && sctpConnection.isReady())
+        {
+            Endpoint endpoint = sctpConnection.getEndpoint();
+
+            if (endpoint != null)
+                endpoint = getEndpoint(endpoint.getID());
+            if (endpoint != null)
+            {
+                /*
+                 * It appears that this Conference, the SctpConnection and the
+                 * Endpoint are in states which allow them to fire the initial
+                 * events. 
+                 */
+                Endpoint dominantSpeaker = speechActivity.getDominantEndpoint();
+
+                if (dominantSpeaker != null)
+                {
+                    endpoint.sendMessageOnDataChannel(
+                            createDominantSpeakerEndpointChangeEvent(
+                                    dominantSpeaker));
+                }
             }
         }
     }
@@ -1102,19 +1295,12 @@ public class Conference
      */
     void updateEndpoint(ColibriConferenceIQ.Endpoint colibriEndpoint)
     {
-        Endpoint endpoint = null;
         String id = colibriEndpoint.getId();
+
         if (id == null)
             return;
 
-        for (Endpoint e : getEndpoints())
-        {
-            if (id.equals(e.getID()))
-            {
-                endpoint = e;
-                break;
-            }
-        }
+        Endpoint endpoint = getEndpoint(id);
 
         if (endpoint != null)
         {

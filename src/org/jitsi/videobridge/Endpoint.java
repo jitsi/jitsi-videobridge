@@ -336,4 +336,13 @@ public class Endpoint
                     oldValue, getSctpConnection());
         }
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString()
+    {
+        return getClass().getName() + " " + getID();
+    }
 }

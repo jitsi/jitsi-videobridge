@@ -138,6 +138,12 @@ public class SctpConnection
     }
 
     /**
+     * Indicates whether the STCP association is ready and has not been ended by
+     * a subsequent state change.
+     */
+    private boolean assocIsUp;
+
+    /**
      * Data channels mapped by SCTP stream identified(sid).
      */
     private final Map<Integer,WebRtcDataStream> channels
@@ -166,10 +172,10 @@ public class SctpConnection
         = new ArrayList<WebRtcDataStreamListener>();
 
     /**
-     * Indicates whether this <tt>SctpConnection</tt> is connected to other
-     * peer.
+     * The indicator which determines whether an SCTP peer address has been
+     * confirmed.
      */
-    private boolean ready;
+    private boolean peerAddrIsConfirmed;
 
     /**
      * Remote SCTP port.
@@ -246,6 +252,8 @@ public class SctpConnection
         {
             synchronized (this)
             {
+                assocIsUp = false;
+                peerAddrIsConfirmed = false;
                 if (sctpSocket != null)
                 {
                     sctpSocket.close();
@@ -255,7 +263,7 @@ public class SctpConnection
         }
         finally
         {
-            if(iceUdpSocket != null)
+            if (iceUdpSocket != null)
             {
                 iceUdpSocket.close();
             }
@@ -313,13 +321,32 @@ public class SctpConnection
                 def = channels.get(0);
                 if (def == null)
                 {
+                    /*
+                     * FIXME Lyubomir Marinov: If usrsctp_send is invoked
+                     * immediately after SCTP_ASSOC_CHANGE SCTP_COMM_UP or
+                     * SCTP_PEER_ADDR_CHANGE SCTP_ADDR_CONFIRMED, it returns
+                     * "Transport endpoint is not connected".
+                     */
+                    try
+                    {
+                        Thread.sleep(1000);
+                    }
+                    catch (InterruptedException ex)
+                    {
+                    }
+
                     def = openChannel(0, 0, 0, 0, "default");
                 }
-                // Must be acknowledged before use
-                if (!def.isAcknowledged())
-                {
-                    def = null;
-                }
+                // Pawel Domas: Must be acknowledged before use
+                /*
+                 * XXX Lyubomir Marinov: We're always sending ordered. According
+                 * to "WebRTC Data Channel Establishment Protocol", we can start
+                 * sending messages containing user data after the
+                 * DATA_CHANNEL_OPEN message has been sent without waiting for
+                 * the reception of the corresponding DATA_CHANNEL_ACK message.
+                 */
+//                if (!def.isAcknowledged())
+//                    def = null;
             }
         }
         return def;
@@ -352,7 +379,7 @@ public class SctpConnection
      */
     public boolean isReady()
     {
-        return ready;
+        return assocIsUp && peerAddrIsConfirmed;
     }
 
     /**
@@ -424,7 +451,7 @@ public class SctpConnection
         {
             for (WebRtcDataStreamListener l : ls)
             {
-                l.onChannelOpened(dataChannel);
+                l.onChannelOpened(this, dataChannel);
             }
         }
     }
@@ -437,7 +464,7 @@ public class SctpConnection
         {
             for(WebRtcDataStreamListener l : ls)
             {
-                l.onSctpConnectionReady();
+                l.onSctpConnectionReady(this);
             }
         }
     }
@@ -455,9 +482,9 @@ public class SctpConnection
 
         if(messageType == MSG_CHANNEL_ACK)
         {
-            if (logger.isInfoEnabled())
+            if (logger.isDebugEnabled())
             {
-                logger.info(
+                logger.debug(
                         getEndpoint().getID() + " ACK received SID: " + sid);
             }
             // Open channel ACK
@@ -465,7 +492,7 @@ public class SctpConnection
             if(channel != null)
             {
                 // Ack check prevents from firing multiple notifications
-                // if we get more than one ACKs(by mistake/bug)
+                // if we get more than one ACKs (by mistake/bug).
                 if(!channel.isAcknowledged())
                 {
                     channel.ackReceived();
@@ -518,9 +545,9 @@ public class SctpConnection
                 protocol = new String(protocolBytes, "UTF-8");
             }
 
-            if (logger.isInfoEnabled())
+            if (logger.isDebugEnabled())
             {
-                logger.info(
+                logger.debug(
                         "!!! " + getEndpoint().getID()
                             + " data channel open request on SID: " + sid
                             + " type: " + channelType + " prio: " + priority
@@ -566,36 +593,63 @@ public class SctpConnection
     public synchronized void onSctpNotification(SctpSocket socket,
                                    SctpNotification notification)
     {
-        if (logger.isInfoEnabled())
+        if (logger.isDebugEnabled())
         {
-            logger.info("Socket(" + socket + ") " + notification);
+            logger.debug("socket=" + socket + "; notification=" + notification);
         }
-        if(notification.sn_type == SctpNotification.SCTP_ASSOC_CHANGE)
+        switch (notification.sn_type)
         {
+        case SctpNotification.SCTP_ASSOC_CHANGE:
             SctpNotification.AssociationChange assocChange
                 = (SctpNotification.AssociationChange) notification;
 
             switch (assocChange.state)
             {
             case SctpNotification.AssociationChange.SCTP_COMM_UP:
-                ready = true;
-                notifySctpConnectionReady();
+                if (!assocIsUp)
+                {
+                    boolean wasReady = isReady();
+
+                    assocIsUp = true;
+                    if (isReady() && !wasReady)
+                        notifySctpConnectionReady();
+                }
                 break;
 
             case SctpNotification.AssociationChange.SCTP_COMM_LOST:
             case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
             case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
-                ready = false;
                 try
                 {
                     closeStream();
                 }
                 catch (IOException e)
                 {
-                    logger.error("Error closing sctp socket", e);
+                    logger.error("Error closing SCTP socket", e);
                 }
                 break;
             }
+            break;
+
+        case SctpNotification.SCTP_PEER_ADDR_CHANGE:
+            SctpNotification.PeerAddressChange peerAddrChange
+                = (SctpNotification.PeerAddressChange) notification;
+
+            switch (peerAddrChange.state)
+            {
+            case SctpNotification.PeerAddressChange.SCTP_ADDR_AVAILABLE:
+            case SctpNotification.PeerAddressChange.SCTP_ADDR_CONFIRMED:
+                if (!peerAddrIsConfirmed)
+                {
+                    boolean wasReady = isReady();
+
+                    peerAddrIsConfirmed = true;
+                    if (isReady() && !wasReady)
+                        notifySctpConnectionReady();
+                }
+                break;
+            }
+            break;
         }
     }
 
@@ -606,12 +660,7 @@ public class SctpConnection
      */
     @Override
     public void onSctpPacket(
-            byte[] data,
-            int sid,
-            int ssn,
-            int tsn,
-            long ppid,
-            int context,
+            byte[] data, int sid, int ssn, int tsn, long ppid, int context,
             int flags)
     {
         if(ppid == WEB_RTC_PPID_CTRL)
@@ -829,18 +878,20 @@ public class SctpConnection
         if(LOG_SCTP_PACKETS)
         {
             System.setProperty(
-                ConfigurationService.PNAME_SC_HOME_DIR_LOCATION,
-                "E:/temp/");
+                    ConfigurationService.PNAME_SC_HOME_DIR_LOCATION,
+                    System.getProperty("java.io.tmpdir"));
             System.setProperty(
-                ConfigurationService.PNAME_SC_HOME_DIR_NAME,
-                "videobridgeSctp");
+                    ConfigurationService.PNAME_SC_HOME_DIR_NAME,
+                    SctpConnection.class.getName());
         }
 
         synchronized (this)
         {
             // FIXME local SCTP port is hardcoded in bridge offer SDP (Jitsi
             // Meet)
-            this.sctpSocket = Sctp.createSocket(5000);
+            sctpSocket = Sctp.createSocket(5000);
+            assocIsUp = false;
+            peerAddrIsConfirmed = false;
         }
 
         // Implement output network link for SCTP stack on DTLS transport
@@ -849,7 +900,7 @@ public class SctpConnection
             private final RawPacket rawPacket = new RawPacket();
 
             @Override
-            public void onConnOut(org.jitsi.sctp4j.SctpSocket s, byte[] packet)
+            public void onConnOut(SctpSocket s, byte[] packet)
                 throws IOException
             {
                 if (LOG_SCTP_PACKETS)
@@ -873,9 +924,9 @@ public class SctpConnection
             }
         });
 
-        if (logger.isInfoEnabled())
+        if (logger.isDebugEnabled())
         {
-            logger.info(
+            logger.debug(
                     "Connecting SCTP to port: " + remoteSctpPort + " to "
                         + getEndpoint().getID());
         }
@@ -951,10 +1002,18 @@ public class SctpConnection
         }
         finally
         {
-            // Eventually close the socket, although it should happen from
-            // expire()
-            if(sctpSocket != null)
-                sctpSocket.close();
+            // Eventually, close the socket although it should happen from
+            // expire().
+            synchronized (this)
+            {
+                assocIsUp = false;
+                peerAddrIsConfirmed = false;
+                if(sctpSocket != null)
+                {
+                    sctpSocket.close();
+                    sctpSocket = null;
+                }
+            }
         }
     }
 

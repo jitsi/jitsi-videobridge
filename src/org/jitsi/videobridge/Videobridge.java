@@ -503,8 +503,8 @@ public class Videobridge implements StatsGenerator
             ColibriConferenceIQ conferenceIQ)
         throws Exception
     {
-        return handleColibriConferenceIQ(conferenceIQ,
-                                         defaultProcessingOptions);
+        return
+            handleColibriConferenceIQ(conferenceIQ, defaultProcessingOptions);
     }
 
     /**
