@@ -32,21 +32,32 @@ test -x $DAEMON || exit 0
 set -e
 
 stop() {
+    if [ -f $PIDFILE ]; then
+        PID=$(cat $PIDFILE)
+    fi
     echo -n "Stopping $DESC: "
-    `ps -u $USER -o pid h | xargs kill`
-    rm $PIDFILE
-    echo "$NAME."
+    if [ $PID ]; then
+        kill $(ps -o pid --no-headers --ppid $PID)
+        rm $PIDFILE || true
+        echo "$NAME stopped."
+    elif [ $(ps -C jvb.sh --no-headers -o pid) ]; then
+        kill $(ps -o pid --no-headers --ppid $(ps -C jvb.sh --no-headers -o pid))
+        rm $PIDFILE || true
+        echo "$NAME stopped."
+    else
+        echo "$NAME doesn't seem to be running."
+    fi
 }
 
 start() {
-    if [ -x $PIDFILE ]; then
-        echo "Pidfile $PIDFILE exists. Either Jitsi Videobridge is already running or there was some problem. Investgate before starting."
+    if [ -f $PIDFILE ]; then
+        echo "$DESC seems to be already running, we found pidfile $PIDFILE."
         exit 1
     fi
     echo -n "Starting $DESC: "
     start-stop-daemon --start --quiet --background --chuid $USER --make-pidfile --pidfile $PIDFILE \
         --exec /bin/bash -- -c "exec $DAEMON $DAEMON_OPTS < /dev/null >> $LOGFILE 2>&1"
-    echo "$NAME."
+    echo "$NAME started."
 }
 
 reload() {
