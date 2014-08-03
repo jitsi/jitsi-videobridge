@@ -14,6 +14,8 @@ import java.util.concurrent.*;
 
 import javax.media.rtp.*;
 
+import net.java.sip.communicator.impl.osgi.framework.*;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.sctp4j.*;
@@ -160,6 +162,16 @@ public class SctpConnection
     private final DtlsControlImpl dtlsControl;
 
     /**
+     * The <tt>AsyncExecutor</tt> which is to asynchronously dispatch the events
+     * fired by this instance in order to prevent possible listeners from
+     * blocking this <tt>SctpConnection</tt> in general and {@link #sctpSocket}
+     * in particular for too long. The timeout of <tt>15</tt> is chosen to be in
+     * accord with the time it takes to expire a <tt>Channel</tt>.
+     */
+    private final AsyncExecutor<Runnable> eventDispatcher
+        = new AsyncExecutor<Runnable>(15, TimeUnit.MILLISECONDS);
+
+    /**
      * Datagram socket for ICE/UDP layer.
      */
     private DatagramSocket iceUdpSocket;
@@ -271,6 +283,22 @@ public class SctpConnection
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void expire()
+    {
+        try
+        {
+            eventDispatcher.shutdown();
+        }
+        finally
+        {
+            super.expire();
+        }
+    }
+
+    /**
      * Gets the <tt>WebRtcDataStreamListener</tt>s added to this instance.
      *
      * @return the <tt>WebRtcDataStreamListener</tt>s added to this instance or
@@ -329,7 +357,7 @@ public class SctpConnection
                      */
                     try
                     {
-                        Thread.sleep(1000);
+                        Thread.sleep(42);
                     }
                     catch (InterruptedException ex)
                     {
@@ -443,28 +471,85 @@ public class SctpConnection
         }
     }
 
-    private void notifyChannelOpened(WebRtcDataStream dataChannel)
+    /**
+     * Submits {@link #notifyChannelOpenedInEventDispatcher(WebRtcDataStream)}
+     * to {@link #eventDispatcher} for asynchronous execution.
+     *
+     * @param dataChannel
+     */
+    private void notifyChannelOpened(final WebRtcDataStream dataChannel)
     {
-        WebRtcDataStreamListener[] ls = getChannelListeners();
-
-        if (ls != null)
+        if (!isExpired())
         {
-            for (WebRtcDataStreamListener l : ls)
+            eventDispatcher.execute(
+                    new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            notifyChannelOpenedInEventDispatcher(dataChannel);
+                        }
+                    });
+        }
+    }
+
+    private void notifyChannelOpenedInEventDispatcher(
+            WebRtcDataStream dataChannel)
+    {
+        /*
+         * When executing asynchronously in eventDispatcher, it is technically
+         * possible that this SctpConnection may have expired by now.
+         */
+        if (!isExpired())
+        {
+            WebRtcDataStreamListener[] ls = getChannelListeners();
+
+            if (ls != null)
             {
-                l.onChannelOpened(this, dataChannel);
+                for (WebRtcDataStreamListener l : ls)
+                {
+                    l.onChannelOpened(this, dataChannel);
+                }
             }
         }
     }
 
+    /**
+     * Submits {@link #notifySctpConnectionReadyInEventDispatcher()} to
+     * {@link #eventDispatcher} for asynchronous execution.
+     */
     private void notifySctpConnectionReady()
     {
-        WebRtcDataStreamListener[] ls = getChannelListeners();
-
-        if (ls != null)
+        if (!isExpired())
         {
-            for(WebRtcDataStreamListener l : ls)
+            eventDispatcher.execute(
+                    new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            notifySctpConnectionReadyInEventDispatcher();
+                        }
+                    });
+        }
+    }
+
+    private void notifySctpConnectionReadyInEventDispatcher()
+    {
+        /*
+         * When executing asynchronously in eventDispatcher, it is technically
+         * possible that this SctpConnection may have expired by now.
+         */
+        if (!isExpired())
+        {
+            WebRtcDataStreamListener[] ls = getChannelListeners();
+
+            if (ls != null)
             {
-                l.onSctpConnectionReady(this);
+                for(WebRtcDataStreamListener l : ls)
+                {
+                    l.onSctpConnectionReady(this);
+                }
             }
         }
     }
