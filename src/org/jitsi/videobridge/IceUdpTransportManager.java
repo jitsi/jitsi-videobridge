@@ -21,6 +21,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
+import org.ice4j.socket.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
@@ -70,7 +71,7 @@ public class IceUdpTransportManager
 
     /**
      * Contains the name of the property flag that may indicate that AWS address
-     * harvesting should be forced without first trying to auto dectect it.
+     * harvesting should be forced without first trying to auto detect it.
      */
     private static final String FORCE_AWS_HARVESTER
                                 = "org.jitsi.videobridge.FORCE_AWS_HARVESTER";
@@ -90,6 +91,14 @@ public class IceUdpTransportManager
      */
     private static final String NAT_HARVESTER_PUBLIC_ADDRESS
                         = "org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS";
+
+    /**
+     * The <tt>RtcpDemuxPacketFilter</tt> instance which we use to demultiplex
+     * RTCP packet from RTP. It is safe use a static field, because
+     * <tt>RtcpDemuxPacketFilter</tt> does not use any context.
+     */
+    private static final RtcpDemuxPacketFilter rtcpDemuxPacketFilter
+            = new RtcpDemuxPacketFilter();
 
     /**
      * Logs a specific <tt>String</tt> at debug level.
@@ -141,11 +150,17 @@ public class IceUdpTransportManager
                         iceStreamPairChange(ev);
                     }
                 };
+
     /**
      * The <tt>StreamConnector</tt> that represents the datagram sockets
      * allocated by this instance for the purposes of RTP and RTCP transmission.
      */
     private StreamConnector streamConnector;
+
+    /**
+     * Whether we're using rtcp-mux or not.
+     */
+    private boolean rtcpmux = false;
 
     /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
@@ -386,6 +401,8 @@ public class IceUdpTransportManager
 
         try
         {
+            // It appears that the port number values ("9") are unused (and
+            // presumably it would be too much of a cliché to use "42")
             localAddress
                     = new TransportAddress(localAddressStr, 9, Transport.UDP);
             publicAddress
@@ -445,7 +462,8 @@ public class IceUdpTransportManager
                         streamConnectorSockets[0 /* RTP */],
                         /* RTCP(null for DATA media type) */
                         streamConnectorSockets.length > 1
-                            ? streamConnectorSockets[1] : null);
+                            ? streamConnectorSockets[1] : null,
+                        rtcpmux);
     }
 
     /**
@@ -556,12 +574,46 @@ public class IceUdpTransportManager
             DatagramSocket[] streamConnectorSockets
                 = getStreamConnectorSockets();
 
-            if ((streamConnectorSockets != null)
-                    && ((streamConnector.getDataSocket()
-                                    != streamConnectorSockets[0 /* RTP */])
-                    || (streamConnectorSockets.length == 2 /* RTCP */
+            boolean close = false;
+
+            if (streamConnectorSockets != null)
+            {
+                if (streamConnector.getDataSocket()
+                        != streamConnectorSockets[0])
+                    close = true;
+                else if (streamConnectorSockets.length == 2 /* not data */
                             && streamConnector.getControlSocket()
-                                    != streamConnectorSockets[1 ])))
+                                    != streamConnectorSockets[1])
+                {
+                    if (rtcpmux && streamConnectorSockets[0]
+                            instanceof MultiplexingDatagramSocket)
+                    {
+                        MultiplexingDatagramSocket rtpSocket
+                            = (MultiplexingDatagramSocket)
+                                streamConnectorSockets[0];
+
+                        try
+                        {
+                            DatagramSocket multiplexed
+                                    = rtpSocket
+                                        .getSocket(rtcpDemuxPacketFilter,
+                                                   false);
+                            if (multiplexed == null
+                                    || multiplexed != streamConnectorSockets[1])
+                                close = true;
+                        }
+                        catch (SocketException se)
+                        {
+                            //never thrown when create=false for getSocket()
+                        }
+                    }
+                    else
+                        close = true;
+
+                }
+            }
+
+            if (close)
             {
                 // Recreate the streamConnector.
                 closeStreamConnector();
@@ -585,8 +637,11 @@ public class IceUdpTransportManager
      */
     private DatagramSocket[] getStreamConnectorSockets()
     {
+        Content content = getChannel().getContent();
         IceMediaStream stream
-            = iceAgent.getStream(getChannel().getContent().getName());
+            = iceAgent.getStream(content.getName());
+
+        boolean data = MediaType.DATA.equals(content.getMediaType());
 
         if (stream != null)
         {
@@ -618,8 +673,30 @@ public class IceUdpTransportManager
                     }
                 }
             }
-            if (streamConnectorSocketCount > 0)
-                return streamConnectorSockets;
+
+            if (rtcpmux && !data)
+            {
+                try
+                {
+                    DatagramSocket rtpSocket
+                        = streamConnectorSockets[0];
+                    if (rtpSocket instanceof MultiplexingDatagramSocket)
+                    {
+                        DatagramSocket rtcpSocket
+                            = ((MultiplexingDatagramSocket)rtpSocket)
+                                .getSocket(rtcpDemuxPacketFilter);
+                        streamConnectorSockets[1] = rtcpSocket;
+                    }
+                }
+                catch (SocketException se)
+                {
+
+                }
+            }
+
+            for (DatagramSocket socket : streamConnectorSockets)
+                if (socket != null)
+                    return streamConnectorSockets;
         }
         return null;
     }
@@ -665,6 +742,8 @@ public class IceUdpTransportManager
                     }
                 }
             }
+            if (rtcpmux && componentIds.length == 2)
+                streamTargetAddresses[1] = streamTargetAddresses[0];
             if (streamTargetAddressCount > 0)
             {
                 if(componentIds.length == 2)
@@ -763,6 +842,9 @@ public class IceUdpTransportManager
     public synchronized boolean startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport)
     {
+        if (transport.isRtcpMux())
+            rtcpmux = true;
+
         /*
          * If ICE is running already, we try to update the checklists with the
          * candidates. Note that this is a best effort.
@@ -774,6 +856,13 @@ public class IceUdpTransportManager
         {
             String media = getChannel().getContent().getName();
             IceMediaStream stream = iceAgent.getStream(media);
+
+            if (rtcpmux)
+            {
+                Component rtcpComponent = stream.getComponent(Component.RTCP);
+                if (rtcpComponent != null)
+                    stream.removeComponent(rtcpComponent);
+            }
 
             // Different stream may have different ufrag/password
             String ufrag = transport.getUfrag();
@@ -809,6 +898,13 @@ public class IceUdpTransportManager
                  */
                 if (candidate.getGeneration() != generation)
                     continue;
+
+                if (rtcpmux && Component.RTCP == candidate.getComponent())
+                {
+                    logger.warn("Received an RTCP candidate, but we're using"
+                                + " rtcp-mux. Ignoring.");
+                    continue;
+                }
 
                 Component component
                     = stream.getComponent(candidate.getComponent());

@@ -918,6 +918,7 @@ public class RtpChannel
         // connector
         StreamConnector connector = createStreamConnector();
 
+
         if (connector == null)
             return;
         else
@@ -979,6 +980,7 @@ public class RtpChannel
                             isInitiator()
                                 ? DtlsControl.Setup.PASSIVE
                                 : DtlsControl.Setup.ACTIVE);
+                    dtlsControl.setRtcpmux(connector.isRtcpmux());
                 }
                 srtpControl.start(content.getMediaType());
             }

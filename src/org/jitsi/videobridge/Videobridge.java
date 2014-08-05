@@ -971,6 +971,11 @@ public class Videobridge implements StatsGenerator
                 CandidatePacketExtension.ELEMENT_NAME,
                 RawUdpTransportPacketExtension.NAMESPACE,
                 candidatePacketExtensionProvider);
+        providerManager.addExtensionProvider(
+                RtcpmuxPacketExtension.ELEMENT_NAME,
+                IceUdpTransportPacketExtension.NAMESPACE,
+                new DefaultPacketExtensionProvider<RtcpmuxPacketExtension>(
+                        RtcpmuxPacketExtension.class));
 
         // DTLS-SRTP <fingerprint>
         providerManager.addExtensionProvider(
