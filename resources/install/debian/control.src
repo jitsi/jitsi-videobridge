@@ -18,7 +18,8 @@ Build-Depends: debhelper (>= 9),
                libconcurrentlinkedhashmap-java,
                libidn11-java,
                libslf4j-java,
-               libjcip-annotations-java
+               libjcip-annotations-java,
+               libhyperic-sigar-java
 Standards-Version: 3.9.5
 Homepage: https://jitsi.org/videobridge
 
@@ -38,7 +39,8 @@ Depends: ${misc:Depends},
          libconcurrentlinkedhashmap-java,
          libidn11-java,
          libslf4j-java,
-         libjcip-annotations-java
+         libjcip-annotations-java,
+         libhyperic-sigar-java
 Description: WebRTC compatible Selective Forwarding Unit (SFU)
  Jitsi Videobridge is a WebRTC compatible Selective Forwarding Unit
  (SFU) for multiuser video communication. It is an essential part
