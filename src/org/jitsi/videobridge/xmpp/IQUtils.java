@@ -94,9 +94,11 @@ final class IQUtils
         throws Exception
     {
         Element element = iq.getChildElement();
+        IQ.Type type = iq.getType();
         org.jivesoftware.smack.packet.IQ smackIQ = null;
-
+        org.jivesoftware.smack.packet.XMPPError smackError = null;
         IQProvider iqProvider = null;
+
         if(element != null)
         {
             iqProvider = (IQProvider)
@@ -104,16 +106,6 @@ final class IQUtils
                         element.getName(),
                         element.getNamespaceURI());
         }
-        else
-            smackIQ = new org.jivesoftware.smack.packet.IQ()
-            {
-
-                @Override
-                public String getChildElementXML()
-                {
-                    return "";
-                }
-            };
 
         if (iqProvider != null || iq.getError() != null)
         {
@@ -141,50 +133,43 @@ final class IQUtils
                 String name = parser.getName();
                 if ("iq".equals(name))
                 {
-                    eventType = parser.next();
-                    if (XmlPullParser.START_TAG == eventType)
+                    while (true)
                     {
-                        if("error".equals(parser.getName()))
+                        eventType = parser.next();
+                        name = parser.getName();
+                        if (XmlPullParser.START_TAG == eventType)
                         {
-                            org.jivesoftware.smack.packet.XMPPError error
-                                = PacketParserUtils.parseError(parser);
-                            if(smackIQ == null)
+                            if ("error".equals(name))
+                                smackError = PacketParserUtils.parseError(parser);
+                            else if (smackIQ == null) //not already parsed
                             {
-                                smackIQ
-                                    = new org.jivesoftware.smack.packet.IQ()
-                                    {
+                                smackIQ = iqProvider.parseIQ(parser);
 
-                                        @Override
-                                        public String getChildElementXML()
-                                        {
-                                            return "";
-                                        }
-                                    };
-                            }
-                            smackIQ.setError(error);
-                        }
-                        else
-                        {
-                            smackIQ = iqProvider.parseIQ(parser);
-
-                            if (smackIQ != null)
-                            {
-                                eventType = parser.getEventType();
-                                if (XmlPullParser.END_TAG != eventType)
+                                if (smackIQ != null)
                                 {
-                                    throw new IllegalStateException(
+                                    if (XmlPullParser.END_TAG
+                                            != parser.getEventType())
+                                    {
+                                        throw new IllegalStateException(
                                             Integer.toString(eventType)
                                                 + " != XmlPullParser.END_TAG");
+                                    }
                                 }
                             }
                         }
+                        else if ((XmlPullParser.END_TAG == eventType
+                                    && "iq".equals(name))
+                                  || (smackError != null && smackIQ != null))
+                        {
+                            break;
+                        }
                     }
-                    else
-                    {
+
+                    eventType = parser.getEventType();
+                    if (XmlPullParser.END_TAG != eventType)
                         throw new IllegalStateException(
                                 Integer.toString(eventType)
-                                    + " != XmlPullParser.START_TAG");
-                    }
+                                    + " != XmlPullParser.END_TAG");
                 }
                 else
                     throw new IllegalStateException(name + " != iq");
@@ -195,6 +180,23 @@ final class IQUtils
                         Integer.toString(eventType)
                             + " != XmlPullParser.START_TAG");
             }
+        }
+
+        if (smackError != null && IQ.Type.error.equals(type))
+        {
+            if (smackIQ == null)
+            {
+                smackIQ = new org.jivesoftware.smack.packet.IQ()
+                {
+                    @Override
+                    public String getChildElementXML()
+                    {
+                        return "";
+                    }
+                };
+            }
+
+            smackIQ.setError(smackError);
         }
 
         if (smackIQ != null)
@@ -209,7 +211,7 @@ final class IQUtils
 
             if (toJID != null)
                 smackIQ.setTo(toJID.toString());
-            smackIQ.setType(convert(iq.getType()));
+            smackIQ.setType(convert(type));
         }
 
         return smackIQ;
