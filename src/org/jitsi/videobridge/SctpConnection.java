@@ -540,7 +540,7 @@ public class SctpConnection
          * When executing asynchronously in eventDispatcher, it is technically
          * possible that this SctpConnection may have expired by now.
          */
-        if (!isExpired())
+        if (!isExpired() && isReady())
         {
             WebRtcDataStreamListener[] ls = getChannelListeners();
 

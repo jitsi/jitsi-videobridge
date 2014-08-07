@@ -88,8 +88,6 @@ public class VideoChannel
         return (lastNInteger == null) ? -1 : lastNInteger.intValue();
     }
 
-
-
     /**
      * {@inheritDoc}
      */

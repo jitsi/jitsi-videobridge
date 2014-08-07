@@ -460,9 +460,10 @@ public class IceUdpTransportManager
                 ? null
                 : new DefaultStreamConnector(
                         streamConnectorSockets[0 /* RTP */],
-                        /* RTCP(null for DATA media type) */
-                        streamConnectorSockets.length > 1
-                            ? streamConnectorSockets[1] : null,
+                        /* RTCP. null for MediaType.DATA. */
+                        (streamConnectorSockets.length > 1)
+                            ? streamConnectorSockets[1]
+                            : null,
                         rtcpmux);
     }
 
@@ -641,14 +642,11 @@ public class IceUdpTransportManager
         IceMediaStream stream
             = iceAgent.getStream(content.getName());
 
-        boolean data = MediaType.DATA.equals(content.getMediaType());
-
         if (stream != null)
         {
-            int [] componentIds = getComponentIDs();
+            int[] componentIds = getComponentIDs();
             DatagramSocket[] streamConnectorSockets
                 = new DatagramSocket[componentIds.length];
-            int streamConnectorSocketCount = 0;
 
             for (int i = 0; i < componentIds.length; i++)
             {
@@ -666,31 +664,28 @@ public class IceUdpTransportManager
                                     .getDatagramSocket();
 
                         if (streamConnectorSocket != null)
-                        {
                             streamConnectorSockets[i] = streamConnectorSocket;
-                            streamConnectorSocketCount++;
-                        }
                     }
                 }
             }
 
-            if (rtcpmux && !data)
+            if (rtcpmux && !MediaType.DATA.equals(content.getMediaType()))
             {
                 try
                 {
-                    DatagramSocket rtpSocket
-                        = streamConnectorSockets[0];
+                    DatagramSocket rtpSocket = streamConnectorSockets[0];
+
                     if (rtpSocket instanceof MultiplexingDatagramSocket)
                     {
                         DatagramSocket rtcpSocket
-                            = ((MultiplexingDatagramSocket)rtpSocket)
+                            = ((MultiplexingDatagramSocket) rtpSocket)
                                 .getSocket(rtcpDemuxPacketFilter);
+
                         streamConnectorSockets[1] = rtcpSocket;
                     }
                 }
                 catch (SocketException se)
                 {
-
                 }
             }
 
