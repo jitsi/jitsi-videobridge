@@ -38,7 +38,8 @@ public class PubsubManager
         = new ArrayList<IQResponseHandler>();
 
     /**
-     * A map with the PubSub instances and their service names.
+     * Maps a service name (e.g. "pubsub.example.com") to the PubsubManager
+     * instance responsible for it.
      */
     private static Map<String, PubsubManager> instances
         = new HashMap<String, PubsubManager>();
@@ -280,25 +281,26 @@ public class PubsubManager
      */
     private void handleCreateNodeResponse(IQ response)
     {
-        String nodeName = pendingCreateRequests.get(response.getPacketID());
-        if(nodeName == null)
+        String packetID = response.getPacketID();
+        String nodeName = pendingCreateRequests.get(packetID);
+        if (nodeName == null)
             return;
         nodes.add(nodeName);
-        pendingCreateRequests.remove(response.getPacketID());
+        pendingCreateRequests.remove(packetID);
         configureNode(nodeName);
     }
 
     /**
-     * Handles all error responses
+     * Handles all error responses.
      * @param error the error object.
      * @param packetID the id of the received packet.
      */
     private void handleErrorResponses(XMPPError error, String packetID)
     {
         if(error != null
-            && error.getType().equals(XMPPError.Type.CANCEL)
-            && error.getCondition().equals(
-                XMPPError.Condition.conflict.toString()))
+            && XMPPError.Type.CANCEL.equals(error.getType())
+            && XMPPError.Condition.conflict.toString()
+                .equals(error.getCondition()))
         {
             String nodeName = pendingCreateRequests.get(packetID);
             if(nodeName != null)
@@ -353,7 +355,7 @@ public class PubsubManager
      */
     private void handlePublishResponse(Packet response)
     {
-        if(pendingPublishRequests.containsKey(response.getPacketID()))
+        if (pendingPublishRequests.containsKey(response.getPacketID()))
         {
             pendingPublishRequests.remove(response.getPacketID());
             fireResponsePublishEvent(Response.SUCCESS);
@@ -464,23 +466,24 @@ public class PubsubManager
     /**
      * Response handler for IQ error packets.
      */
-    private static class ErrorIQResponseHandler implements IQResponseHandler
+    private static class ErrorIQResponseHandler
+        implements IQResponseHandler
     {
-
         @Override
         public boolean canProcess(IQ response)
         {
-            return response.getType() == IQ.Type.ERROR;
+            return response != null && Type.ERROR.equals(response.getType());
         }
 
         @Override
         public void process(IQ response)
         {
             PubsubManager mgr = instances.get(response.getFrom());
-            if(mgr == null)
+            if (mgr == null)
                 return;
 
-            mgr.handleErrorResponses(response.getError(),
+            mgr.handleErrorResponses(
+                response.getError(),
                 response.getPacketID());
         }
 
@@ -489,24 +492,26 @@ public class PubsubManager
     /**
      * Response handler for IQ packets of type "result".
      */
-    private static class ResultIQResponseHandler implements IQResponseHandler
+    private static class ResultIQResponseHandler
+        implements IQResponseHandler
     {
 
         @Override
         public boolean canProcess(IQ response)
         {
-            return response.getType() == IQ.Type.RESULT;
+            return response != null && Type.RESULT.equals(response.getType());
         }
 
         @Override
         public void process(IQ response)
         {
             PubsubManager mgr = instances.get(response.getFrom());
-            if(mgr == null)
+            if (mgr == null)
                 return;
 
             mgr.handleCreateNodeResponse(response);
             mgr.handleConfigurationResponse(response);
+            mgr.handlePublishResponse(response);
         }
 
     }
@@ -514,20 +519,29 @@ public class PubsubManager
     /**
      * Response handler for PubSub packets.
      */
-    private static class PubSubIQResponseHandler implements IQResponseHandler
+    private static class PubSubIQResponseHandler
+        implements IQResponseHandler
     {
 
         @Override
         public boolean canProcess(IQ response)
         {
-            return response instanceof PubSub;
+            if (response == null)
+                return false;
+
+            // "result"s and "error"s are already handled in their respective
+            // handlers
+            Type type = response.getType();
+            return response instanceof PubSub
+                    && !Type.RESULT.equals(type)
+                    && !Type.ERROR.equals(type);
         }
 
         @Override
         public void process(IQ response)
         {
             PubsubManager mgr = instances.get(response.getFrom());
-            if(mgr == null)
+            if (mgr == null)
                 return;
 
             mgr.handlePublishResponse(response);

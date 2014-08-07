@@ -286,7 +286,11 @@ public class ComponentImpl
     {
         org.jivesoftware.smack.packet.IQ resultIQ;
 
-        if (iq instanceof ColibriConferenceIQ)
+        if (iq == null)
+        {
+            resultIQ = null;
+        }
+        else if (iq instanceof ColibriConferenceIQ)
         {
             resultIQ = handleColibriConferenceIQ((ColibriConferenceIQ) iq);
             if (resultIQ != null)
@@ -296,17 +300,21 @@ public class ComponentImpl
                 resultIQ.setTo(iq.getFrom());
             }
         }
-        else if(iq.getType().equals(
-            org.jivesoftware.smack.packet.IQ.Type.RESULT)
-            || iq.getType().equals(
-                org.jivesoftware.smack.packet.IQ.Type.ERROR)
-            || iq instanceof PubSub)
-        {
-            PubsubManager.handleIQResponse(iq);
-            resultIQ = null;
-        }
         else
-            resultIQ = null;
+        {
+            org.jivesoftware.smack.packet.IQ.Type type = iq.getType();
+            if (org.jivesoftware.smack.packet.IQ.Type.RESULT.equals(type)
+                    || org.jivesoftware.smack.packet.IQ.Type.ERROR.equals(type)
+                    || iq instanceof PubSub)
+            {
+                PubsubManager.handleIQResponse(iq);
+                resultIQ = null;
+            }
+            else
+            {
+                resultIQ = null;
+            }
+        }
         return resultIQ;
     }
 
@@ -364,7 +372,7 @@ public class ComponentImpl
         }
         catch (Exception e)
         {
-            logd("An error occured when trying to handle IQ error packet");
+            logd("An error occurred while trying to handle IQ error packet");
             loge(e);
         }
     }
@@ -379,7 +387,7 @@ public class ComponentImpl
         }
         catch (Exception e)
         {
-            logd("An error occured when trying to handle IQ result packet");
+            logd("An error occurred while trying to handle IQ result packet");
             loge(e);
         }
     }
