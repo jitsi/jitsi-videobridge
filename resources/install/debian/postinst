@@ -10,7 +10,7 @@ case "$1" in
         OLDCONFIG=false
         if [ -x "/etc/default/jitsi-videobridge" ]; then
             . /etc/default/jitsi-videobridge
-            if [[ "$JVB_HOSTNAME" && "$JVB_PORT" && "$JVB_SECRET" ]]; then
+            if [ "$JVB_HOSTNAME" && "$JVB_PORT" && "$JVB_SECRET" ]; then
                 OLDCONFIG=true
             fi
         fi
@@ -84,9 +84,6 @@ case "$1" in
         # ensure videobridge is not running - it will be started at the end
         if [ "$(pidof java)" ]; then
             invoke-rc.d jitsi-videobridge stop || true
-        fi
-        if [ -x "/etc/init.d/jitsi-videobridge" ]; then
-            update-rc.d jitsi-videobridge defaults >/dev/null
         fi
     ;;
 

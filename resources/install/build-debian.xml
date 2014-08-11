@@ -230,6 +230,8 @@ ifeq ($(DEB_HOST_ARCH),amd64)
 else
 &#009;dh_install resources/install/linux/jvb.sh usr/share/jitsi-videobridge
 endif
+&#009;chmod +x debian/jitsi-videobridge/usr/share/jitsi-videobridge/jvb.sh
+
 </echo>
 
     </target>

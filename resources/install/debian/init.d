@@ -5,13 +5,15 @@
 #
 ### BEGIN INIT INFO
 # Provides:          jitsi-videobridge
-# Required-Start:    $local_fs
-# Required-Stop:     $local_fs
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Jitsi Videobridge
 # Description:       WebRTC compatible Selective Forwarding Unit (SFU)
 ### END INIT INFO
+
+. /lib/lsb/init-functions
 
 # Include videobridge defaults if available
 if [ -f /etc/default/jitsi-videobridge ]; then
@@ -80,6 +82,9 @@ case "$1" in
     start
     ;;
   reload)
+    reload
+    ;;
+  force-reload)
     reload
     ;;
   status)

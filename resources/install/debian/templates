@@ -1,14 +1,14 @@
 Template: jitsi-videobridge/jvb-hostname
 Type: string
 Default: localhost
-Description: Hostname
+_Description: Hostname:
  The jisti-videobridge package needs the DNS hostname of your instance.
 
 Template: jitsi-videobridge/advanced
 Type: boolean
 Default: false
-Description: Advanced Install
- Do you want to select installation parameters instead of the defaults?
+_Description: Proceed with advanced install?
  The default installation should give you a working Jitsi Videobridge 
- instance right away, while the advanced one may help you troubleshoot 
- or keep the install minimal..
+ instance right away, while the advanced one may help you troubleshoot or
+ select installation parameters instead of the defaults and keep the 
+ install minimal..
