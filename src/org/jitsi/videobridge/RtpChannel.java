@@ -133,7 +133,7 @@ public class RtpChannel
      * index specifies the time in milliseconds when the SSRC was last seen (in
      * order to enable timing out SSRCs).
      */
-    private long[] receiveSSRCs = NO_RECEIVE_SSRCS;
+    long[] receiveSSRCs = NO_RECEIVE_SSRCS;
 
     /**
      * The type of RTP-level relay (in the terms specified by RFC 3550
@@ -181,6 +181,19 @@ public class RtpChannel
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
      */
     private final SessionAddress streamTarget = new SessionAddress();
+
+    /**
+     * Contains the payload type numbers configured for this channel.
+     */
+    int[] receivePTs = new int[0];
+
+    /**
+     * Holds the <tt>RtpChannelDatagramFilter</tt> instances (if any) used by
+     * this channel. The filter for RTP is at index 0, the filter for RTCP at
+     * index 1.
+     */
+    private final RtpChannelDatagramFilter[] datagramFilters
+            = new RtpChannelDatagramFilter[2];
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -1274,8 +1287,14 @@ public class RtpChannel
                  */
                 boolean googleChrome = false;
 
-                for (PayloadTypePacketExtension payloadType : payloadTypes)
+                int payloadTypesCount = payloadTypes.size();
+                receivePTs = new int[payloadTypesCount];
+                for (int i = 0; i < payloadTypesCount; i++)
                 {
+                    PayloadTypePacketExtension payloadType
+                        = payloadTypes.get(i);
+                    receivePTs[i] = payloadType.getID();
+
                     MediaFormat mediaFormat
                         = JingleUtils.payloadTypeToMediaFormat(
                                 payloadType,
@@ -1579,6 +1598,26 @@ public class RtpChannel
                         .addDatagramPacketFilter(datagramPacketFilter);
                 }
             }
+        }
+    }
+
+    /**
+     * Gets the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
+     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
+     * this <tt>RtpChannel</tt>.
+     * @param rtcp whether to return the filter for RTP or RTCP packets.
+     * @return the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
+     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
+     * this <tt>RtpChannel</tt>.
+     */
+    RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
+    {
+        int index = rtcp ? 1 : 0;
+        synchronized (datagramFilters)
+        {
+            if (datagramFilters[index] == null)
+                datagramFilters[index] = new RtpChannelDatagramFilter(this, rtcp);
+            return datagramFilters[index];
         }
     }
 }
