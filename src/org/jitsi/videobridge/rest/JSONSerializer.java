@@ -49,6 +49,8 @@ final class JSONSerializer
 
     static final String XMLNS = "xmlns";
 
+    static final String RTCPMUX = "rtcp-mux";
+
     public static void serializeAbstractPacketExtensionAttributes(
             AbstractPacketExtension abstractPacketExtension,
             JSONObject jsonObject)

@@ -512,6 +512,7 @@ final class JSONDeserializer
             Object candidateList = transport.get(JSONSerializer.CANDIDATE_LIST);
             Object remoteCandidate
                 = transport.get(RemoteCandidatePacketExtension.ELEMENT_NAME);
+            Object rtcpmux = transport.get(JSONSerializer.RTCPMUX);
 
             if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlns))
                 transportIQ = new IceUdpTransportPacketExtension();
@@ -547,6 +548,9 @@ final class JSONDeserializer
                             RemoteCandidatePacketExtension.class,
                             transportIQ);
                 }
+
+                if (rtcpmux != null)
+                    transportIQ.addChildExtension(new RtcpmuxPacketExtension());
 
                 channelIQ.setTransport(transportIQ);
             }
