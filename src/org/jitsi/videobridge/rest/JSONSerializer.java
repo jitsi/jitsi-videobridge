@@ -13,6 +13,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.service.neomedia.*;
+import org.jitsi.videobridge.stats.*;
 import org.json.simple.*;
 
 /**
@@ -489,6 +490,17 @@ final class JSONSerializer
                 ssrcsJSONArray.add(Long.valueOf(ssrcs[i] & 0xFFFFFFFFL));
         }
         return ssrcsJSONArray;
+    }
+
+    public static JSONObject serializeStatistics(Statistics statistics)
+    {
+        JSONObject statisticsJSONObject;
+
+        if (statistics == null)
+            statisticsJSONObject = null;
+        else
+            statisticsJSONObject = new JSONObject(statistics.getStats());
+        return statisticsJSONObject;
     }
 
     public static JSONObject serializeTransport(

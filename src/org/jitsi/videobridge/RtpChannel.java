@@ -892,8 +892,14 @@ public class RtpChannel
      * streams of the specified channel are to be sent to the remote endpoint of
      * this <tt>Channel</tt>.
      *
-     * @param channel
-     * @return
+     * @param channel the <tt>Channel</tt> to be checked whether it is within
+     * the set of <tt>Channel<tt>s limited by <tt>lastN</tt> i.e. whether its
+     * RTP streams are to be sent to the remote endpoint of this
+     * <tt>Channel</tt>
+     * @return <tt>true</tt> if the RTP streams of <tt>channel</tt> are to be
+     * sent to the remote endpoint of this <tt>Channel</tt>; otherwise,
+     * <tt>false</tt>. The implementation of the <tt>RtpChannel</tt> class
+     * always returns <tt>true</tt>.
      */
     public boolean isInLastN(Channel channel)
     {

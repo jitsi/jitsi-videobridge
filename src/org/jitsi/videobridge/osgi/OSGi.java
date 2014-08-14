@@ -71,15 +71,34 @@ public class OSGi
                 "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
             },
             {
-                "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
-            },
-            {
                 "org/jitsi/videobridge/VideobridgeBundleActivator"
             },
             {
-                "org/jitsi/videobridge/rest/RESTBundleActivator"
+                /*
+                 * The HTTP/JSON API of Videobridge is started after and in a
+                 * start level separate from Videobridge because the HTTP/JSON
+                 * API is useless if Videobridge fails to start.
+                 */
+                "org/jitsi/videobridge/rest/RESTBundleActivator",
+                /*
+                 * The statistics/health reports are a non-vital, optional,
+                 * additional piece of functionality of the Videobridge.
+                 * Consequently, they do not have to be started before the
+                 * Videobridge. Besides, they employ OSGi and, hence, they
+                 * should be capable of acting as a plug-in. They do not have to
+                 * be started before the HTTP/JSON API because the HTTP/JSON API
+                 * (1) exposes the vital, non-optional, non-additional pieces of
+                 * functionality of the Videobridge and (2) it pulls, does not
+                 * push.
+                 */
+                "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
             },
             {
+                /*
+                 * Started last and in its own start level because its purpose
+                 * is to let the application know that everything OSGi-related
+                 * has been started.
+                 */
                 "org/jitsi/videobridge/osgi/OSGiBundleActivator"
             }
         };

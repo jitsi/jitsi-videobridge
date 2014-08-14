@@ -8,6 +8,7 @@ package org.jitsi.videobridge;
 
 import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.locks.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
@@ -39,7 +40,7 @@ public class VideoChannel
      * The <tt>Object</tt> which synchronizes the access to
      * {@link #lastNEndpoints}.
      */
-    private final Object lastNSyncRoot = new Object();
+    private final ReadWriteLock lastNSyncRoot = new ReentrantReadWriteLock();
 
     /**
      * Initializes a new <tt>VideoChannel</tt> instance which is to have a
@@ -112,23 +113,34 @@ public class VideoChannel
         if (lastN == 0)
             return false;
 
-        Endpoint thisEndpoint = getEndpoint();
+        Lock writeLock = lastNSyncRoot.writeLock();
+        Lock readLock = lastNSyncRoot.readLock();
         boolean inLastN = false;
 
-        synchronized (lastNSyncRoot)
+        writeLock.lock();
+        try
         {
             if (lastNEndpoints == null)
             {
-                List<Endpoint> endpoints
-                    = conferenceSpeechActivity.getEndpoints();
-
-                lastNEndpoints
-                    = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
-                for (Endpoint endpoint : endpoints)
-                    lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
+                /*
+                 * Pretend that the ordered list of Endpoints maintained by
+                 * conferenceSpeechActivity has changed in order to populate
+                 * lastNEndpoints.
+                 */
+                speechActivityEndpointsChanged(
+                        conferenceSpeechActivity.getEndpoints());
             }
+            readLock.lock();
+        }
+        finally
+        {
+            writeLock.unlock();
+        }
+        try
+        {
             if (lastNEndpoints != null)
             {
+                Endpoint thisEndpoint = getEndpoint();
                 int n = 0;
 
                 for (WeakReference<Endpoint> wr : lastNEndpoints)
@@ -154,6 +166,10 @@ public class VideoChannel
                 }
             }
         }
+        finally
+        {
+            readLock.unlock();
+        }
         return inLastN;
     }
 
@@ -177,9 +193,11 @@ public class VideoChannel
             return;
 
         // Represent the list of Endpoints defined by lastN in JSON format.
+        Lock readLock = lastNSyncRoot.readLock();
         StringBuilder lastNEndpointsStr = new StringBuilder();
 
-        synchronized (lastNSyncRoot)
+        readLock.lock();
+        try
         {
             if ((lastNEndpoints != null) && !lastNEndpoints.isEmpty())
             {
@@ -211,6 +229,10 @@ public class VideoChannel
                         break;
                 }
             }
+        }
+        finally
+        {
+            readLock.unlock();
         }
 
         // colibriClass
@@ -321,17 +343,20 @@ public class VideoChannel
     @Override
     List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
+        Lock writeLock = lastNSyncRoot.writeLock();
         List<Endpoint> endpointsEnteringLastN = null;
-        Endpoint thisEndpoint = getEndpoint();
         boolean lastNEndpointsChanged = false;
 
-        synchronized (lastNSyncRoot)
+        writeLock.lock();
+        try
         {
             // Determine which Endpoints are entering the list of lastN.
             int lastN = getLastN();
 
             if (lastN > 0)
             {
+                Endpoint thisEndpoint = getEndpoint();
+
                 endpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
                 // At most the first lastN are entering the list of lastN.
                 for (Endpoint e : endpoints)
@@ -386,6 +411,10 @@ public class VideoChannel
                 = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
             for (Endpoint endpoint : endpoints)
                 lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
+        }
+        finally
+        {
+            writeLock.unlock();
         }
 
         // Notify about changes in the list of lastN.

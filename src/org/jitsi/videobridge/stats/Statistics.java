@@ -8,24 +8,46 @@ package org.jitsi.videobridge.stats;
 
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+
 /**
  * Abstract class that defines common interface for a collection of statistics.
  *
  * @author Hristo Terezov
+ * @author Lyubomir Marinov
  */
 public abstract class Statistics
 {
     /**
+     * Formats statistics in <tt>ColibriStatsExtension</tt> object
+     * @param statistics the statistics instance
+     * @return the <tt>ColibriStatsExtension</tt> instance.
+     */
+    public static ColibriStatsExtension toXMPP(Statistics statistics)
+    {
+        ColibriStatsExtension ext = new ColibriStatsExtension();
+
+        for (Map.Entry<String,Object> e : statistics.getStats().entrySet())
+        {
+            ext.addStat(
+                    new ColibriStatsExtension.Stat(e.getKey(), e.getValue()));
+        }
+        return ext;
+    }
+
+    /**
      * Map of the names of the statistics and their values.
      */
-    protected Map<String, Object> stats;
+    private final Map<String,Object> stats = new HashMap<String,Object>();
+
+    public abstract void generate();
 
     /**
      * Returns the value of the statistic.
      * @param stat the name of the statistic.
      * @return the value.
      */
-    public Object getStat(String stat)
+    public synchronized Object getStat(String stat)
     {
         return stats.get(stat);
     }
@@ -34,28 +56,9 @@ public abstract class Statistics
      * Returns the map with the names of the statistics and their values.
      * @return the map with the names of the statistics and their values.
      */
-    public Map<String, Object> getStats()
+    public synchronized Map<String,Object> getStats()
     {
-        return Collections.unmodifiableMap(stats);
-    }
-
-    /**
-     * Returns the supported statistics.
-     * @return the supported statistics
-     */
-    public Set<String> getSupportedStats()
-    {
-        return stats.keySet();
-    }
-
-    /**
-     * Checks whether a statistics is supported or not.
-     * @param stat the statistic
-     * @return <tt>true</tt> if the statistic is supported.
-     */
-    public boolean isSupported(String stat)
-    {
-        return stats.containsKey(stat);
+        return new HashMap<String,Object>(stats);
     }
 
     /**
@@ -63,14 +66,12 @@ public abstract class Statistics
      * @param stat the name of the statistic
      * @param value the value of the statistic
      */
-    public void setStat(String stat, Object value)
+    public synchronized void setStat(String stat, Object value)
     {
-        if(!isSupported(stat))
-        {
-            throw new IllegalArgumentException(
-                    "The statistic is not supported");
-        }
-        stats.put(stat, value);
+        if (value == null)
+            stats.remove(stat);
+        else
+            stats.put(stat, value);
     }
 
     @Override
@@ -78,9 +79,10 @@ public abstract class Statistics
     {
         StringBuilder s = new StringBuilder();
 
-        for(String key : stats.keySet())
-            s.append(key).append(" : ").append(stats.get(key)).append("\n");
-
+        for(Map.Entry<String,Object> e : getStats().entrySet())
+        {
+            s.append(e.getKey()).append(":").append(e.getValue()).append("\n");
+        }
         return s.toString();
     }
 }

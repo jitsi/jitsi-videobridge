@@ -11,7 +11,7 @@ package org.jitsi.videobridge.pubsub;
  *
  * @author Hristo Terezov
  */
-public interface PubsubResponseListener
+public interface PubSubResponseListener
 {
     /**
      * Enum for responses.

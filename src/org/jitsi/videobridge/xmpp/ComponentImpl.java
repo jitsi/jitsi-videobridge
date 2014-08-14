@@ -10,12 +10,9 @@ import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.util.*;
 
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.osgi.*;
-import org.jitsi.videobridge.pubsub.*;
-import org.jivesoftware.smackx.pubsub.packet.*;
 import org.osgi.framework.*;
 import org.xmpp.component.*;
 import org.xmpp.packet.*;
@@ -60,54 +57,27 @@ public class ComponentImpl
     public static Collection<ComponentImpl> getComponents(
             BundleContext bundleContext)
     {
-        List<ComponentImpl> components = new LinkedList<ComponentImpl>();
+        return ServiceUtils2.getServices(bundleContext, ComponentImpl.class);
+    }
 
-        if (bundleContext != null)
-        {
-            Collection<ServiceReference<ComponentImpl>> serviceReferences
-                = null;
+    /**
+     * Logs a specific <tt>String</tt> at debug level.
+     *
+     * @param s the <tt>String</tt> to log at debug level
+     */
+    private static void logd(String s)
+    {
+        System.err.println(s);
+    }
 
-            try
-            {
-                serviceReferences
-                    = bundleContext.getServiceReferences(
-                            ComponentImpl.class,
-                            null);
-            }
-            catch (IllegalStateException e)
-            {
-            }
-            catch (InvalidSyntaxException e)
-            {
-            }
-            if (serviceReferences != null)
-            {
-                for (ServiceReference<ComponentImpl> serviceReference
-                        : serviceReferences)
-                {
-                    ComponentImpl component = null;
-
-                    try
-                    {
-                        component = bundleContext.getService(serviceReference);
-                    }
-                    catch (IllegalArgumentException e)
-                    {
-                    }
-                    catch (IllegalStateException e)
-                    {
-                        // The bundleContext is no longer valid.
-                        break;
-                    }
-                    catch (SecurityException e)
-                    {
-                    }
-                    if ((component != null) && !components.contains(component))
-                        components.add(component);
-                }
-            }
-        }
-        return components;
+    /**
+     * Logs a specific <tt>Throwable</tt> at error level.
+     *
+     * @param t the <tt>Throwable</tt> to log at error level
+     */
+    private static void loge(Throwable t)
+    {
+        t.printStackTrace(System.err);
     }
 
     /**
@@ -193,6 +163,23 @@ public class ComponentImpl
         return NAME;
     }
 
+    private Videobridge getVideobridge()
+    {
+        BundleContext bundleContext = getBundleContext();
+        Videobridge videobridge;
+
+        if (bundleContext == null)
+        {
+            videobridge = null;
+        }
+        else
+        {
+            videobridge
+                = ServiceUtils2.getService(bundleContext, Videobridge.class);
+        }
+        return videobridge;
+    }
+
     /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
@@ -208,17 +195,13 @@ public class ComponentImpl
             ColibriConferenceIQ conferenceIQ)
         throws Exception
     {
-        BundleContext bundleContext = getBundleContext();
-        org.jivesoftware.smack.packet.IQ iq = null;
+        Videobridge videobridge = getVideobridge();
+        org.jivesoftware.smack.packet.IQ iq;
 
-        if (bundleContext != null)
-        {
-            Videobridge videobridge
-                = ServiceUtils.getService(bundleContext, Videobridge.class);
-
-            if (videobridge != null)
-                iq = videobridge.handleColibriConferenceIQ(conferenceIQ);
-        }
+        if (videobridge == null)
+            iq = null;
+        else
+            iq = videobridge.handleColibriConferenceIQ(conferenceIQ);
         return iq;
     }
 
@@ -251,7 +234,9 @@ public class ComponentImpl
             IQ resultIQ;
 
             if (resultSmackIQ == null)
+            {
                 resultIQ = null;
+            }
             else
             {
                 resultIQ = IQUtils.convert(resultSmackIQ);
@@ -284,38 +269,47 @@ public class ComponentImpl
             org.jivesoftware.smack.packet.IQ iq)
         throws Exception
     {
-        org.jivesoftware.smack.packet.IQ resultIQ;
+        org.jivesoftware.smack.packet.IQ responseIQ = null;
 
-        if (iq == null)
-        {
-            resultIQ = null;
-        }
-        else if (iq instanceof ColibriConferenceIQ)
-        {
-            resultIQ = handleColibriConferenceIQ((ColibriConferenceIQ) iq);
-            if (resultIQ != null)
-            {
-                resultIQ.setFrom(iq.getTo());
-                resultIQ.setPacketID(iq.getPacketID());
-                resultIQ.setTo(iq.getFrom());
-            }
-        }
-        else
+        if (iq != null)
         {
             org.jivesoftware.smack.packet.IQ.Type type = iq.getType();
-            if (org.jivesoftware.smack.packet.IQ.Type.RESULT.equals(type)
-                    || org.jivesoftware.smack.packet.IQ.Type.ERROR.equals(type)
-                    || iq instanceof PubSub)
+
+            if (org.jivesoftware.smack.packet.IQ.Type.GET.equals(type)
+                    || org.jivesoftware.smack.packet.IQ.Type.SET.equals(type))
             {
-                PubsubManager.handleIQResponse(iq);
-                resultIQ = null;
+                responseIQ = handleIQRequest(iq);
+                if (responseIQ != null)
+                {
+                    responseIQ.setFrom(iq.getTo());
+                    responseIQ.setPacketID(iq.getPacketID());
+                    responseIQ.setTo(iq.getFrom());
+                }
             }
-            else
+            else if (org.jivesoftware.smack.packet.IQ.Type.ERROR.equals(type)
+                    || org.jivesoftware.smack.packet.IQ.Type.RESULT.equals(
+                            type))
             {
-                resultIQ = null;
+                handleIQResponse(iq);
             }
         }
-        return resultIQ;
+        return responseIQ;
+    }
+
+    @Override
+    protected void handleIQError(IQ iq)
+    {
+        super.handleIQError(iq);
+
+        try
+        {
+            handleIQ(iq);
+        }
+        catch (Exception e)
+        {
+            logd("An error occurred while trying to handle error IQ.");
+            loge(e);
+        }
     }
 
     /**
@@ -340,6 +334,57 @@ public class ComponentImpl
         return (resultIQ == null) ? super.handleIQGet(iq) : resultIQ;
     }
 
+    private org.jivesoftware.smack.packet.IQ handleIQRequest(
+            org.jivesoftware.smack.packet.IQ request)
+        throws Exception
+    {
+        /*
+         * Requests can be categorized in pieces of Videobridge functionality
+         * based on the org.jivesoftware.smack.packet.IQ runtime type (of their
+         * child element) and forwarded to specialized Videobridge methods for
+         * convenience.
+         */
+        org.jivesoftware.smack.packet.IQ response;
+
+        if (request instanceof ColibriConferenceIQ)
+            response = handleColibriConferenceIQ((ColibriConferenceIQ) request);
+        else
+            response = null;
+        return response;
+    }
+
+    private void handleIQResponse(org.jivesoftware.smack.packet.IQ response)
+        throws Exception
+    {
+        /*
+         * Requests can be categorized in pieces of Videobridge functionality
+         * based on the org.jivesoftware.smack.packet.IQ runtime type (of their
+         * child element) and forwarded to specialized Videobridge methods for
+         * convenience. However, responses cannot be categorized because they
+         * care the id of their respective requests only.
+         */
+        Videobridge videobridge = getVideobridge();
+
+        if (videobridge != null)
+            videobridge.handleIQResponse(response);
+    }
+
+    @Override
+    protected void handleIQResult(IQ iq)
+    {
+        super.handleIQResult(iq);
+
+        try
+        {
+            handleIQ(iq);
+        }
+        catch (Exception e)
+        {
+            logd("An error occurred while trying to handle result IQ.");
+            loge(e);
+        }
+    }
+
     /**
      * Handles an <tt>org.xmpp.packet.IQ</tt> stanza of type <tt>set</tt> which
      * represents a request.
@@ -360,55 +405,6 @@ public class ComponentImpl
         IQ resultIQ = handleIQ(iq);
 
         return (resultIQ == null) ? super.handleIQSet(iq) : resultIQ;
-    }
-
-    @Override
-    protected void handleIQError(IQ iq)
-    {
-        super.handleIQError(iq);
-        try
-        {
-            handleIQ(iq);
-        }
-        catch (Exception e)
-        {
-            logd("An error occurred while trying to handle IQ error packet");
-            loge(e);
-        }
-    }
-
-    @Override
-    protected void handleIQResult(IQ iq)
-    {
-        super.handleIQResult(iq);
-        try
-        {
-            handleIQ(iq);
-        }
-        catch (Exception e)
-        {
-            logd("An error occurred while trying to handle IQ result packet");
-            loge(e);
-        }
-    }
-    /**
-     * Logs a specific <tt>String</tt> at debug level.
-     *
-     * @param s the <tt>String</tt> to log at debug level
-     */
-    private static void logd(String s)
-    {
-        System.err.println(s);
-    }
-
-    /**
-     * Logs a specific <tt>Throwable</tt> at error level.
-     *
-     * @param t the <tt>Throwable</tt> to log at error level
-     */
-    private static void loge(Throwable t)
-    {
-        t.printStackTrace(System.err);
     }
 
     /**

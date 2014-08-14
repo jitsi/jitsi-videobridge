@@ -6,10 +6,8 @@
  */
 package org.jitsi.videobridge.osgi;
 
-import net.java.sip.communicator.util.*;
-
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.Logger;
+import org.jitsi.util.*;
 import org.osgi.framework.*;
 
 /**
@@ -51,7 +49,7 @@ public class OSGiBundleActivator
             if (bundleContext != null)
             {
                 ConfigurationService cfg
-                    = ServiceUtils.getService(
+                    = ServiceUtils2.getService(
                             bundleContext,
                             ConfigurationService.class);
 

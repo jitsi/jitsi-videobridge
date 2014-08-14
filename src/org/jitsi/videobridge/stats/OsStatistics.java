@@ -14,8 +14,8 @@ import org.hyperic.sigar.cmd.*;
 import org.jitsi.util.*;
 
 /**
- * Implements retrieving statistics from OS( total physical memory size,
- * CPU usage and etc.)
+ * Implements retrieving statistics from OS such as total physical memory size
+ * and CPU usage.
  *
  * @author Hristo Terezov
  */
@@ -27,40 +27,18 @@ public class OsStatistics
     private static OsStatistics instance = null;
 
     /**
-     * Total physical memory size in MB.
-     */
-    private Integer totalMemory = null;
-
-    /**
-     * The <tt>OperatingSystemMXBean</tt> instance that is used to retrieve
-     * memory statistics.
-     */
-    private OperatingSystemMXBean operatingSystemMXBean = null;
-
-    /**
-     * The method that will return the size of the free memory.
-     */
-    private Method freeMemoryMethod = null;
-
-    /**
      * Logger.
      */
-    private static Logger logger = Logger.getLogger(OsStatistics.class);
-    /**
-     * The <tt>CPUInfo</tt> instance which is used to call the Sigar API and
-     * retrieve the CPU usage.
-     */
-    private CPUInfo cpuInfo = null;
+    private static final Logger logger = Logger.getLogger(OsStatistics.class);
 
     /**
-     * Constructs <tt>OsStatistics</tt> object.
+     * Converts bytes to MB.
+     * @param bytes the number of bytes
+     * @return the number of MB
      */
-    private OsStatistics()
+    private static int convertBytesToMB(long bytes)
     {
-        operatingSystemMXBean
-            = ManagementFactory.getOperatingSystemMXBean();
-
-        cpuInfo = new CPUInfo();
+        return  (int) (bytes / 1000000L);
     }
 
     /**
@@ -69,9 +47,63 @@ public class OsStatistics
      */
     public static OsStatistics getOsStatistics()
     {
-        if(instance == null)
+        if (instance == null)
             instance = new OsStatistics();
         return instance;
+    }
+
+    /**
+     * The <tt>CPUInfo</tt> instance which is used to call the Sigar API and
+     * retrieve the CPU usage.
+     */
+    private CPUInfo cpuInfo;
+
+    /**
+     * The method that will return the size of the free memory.
+     */
+    private Method freeMemoryMethod = null;
+
+    /**
+     * The <tt>OperatingSystemMXBean</tt> instance that is used to retrieve
+     * memory statistics.
+     */
+    private final OperatingSystemMXBean operatingSystemMXBean;
+
+    /**
+     * Total physical memory size in MB.
+     */
+    private Integer totalMemory = null;
+
+    /**
+     * Constructs <tt>OsStatistics</tt> object.
+     */
+    private OsStatistics()
+    {
+        operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
+        cpuInfo = new CPUInfo();
+    }
+
+    /**
+     * Returns the CPU usage as double between 0 and 1
+     * @return the CPU usage
+     */
+    public double getCPUUsage()
+    {
+        if(cpuInfo == null)
+            return -1.0;
+
+        try
+        {
+            return cpuInfo.getCPUUsage();
+        }
+        catch(Throwable e)
+        {
+            if(e instanceof UnsatisfiedLinkError)
+                cpuInfo = null;
+            logger.error("Failed to retrieve the cpu usage.", e);
+        }
+
+        return -1.0;
     }
 
     /**
@@ -109,16 +141,6 @@ public class OsStatistics
             totalMemory = convertBytesToMB(totalMemoryBytes);
         }
         return totalMemory;
-    }
-
-    /**
-     * Converts bytes to MB.
-     * @param bytes the number of bytes
-     * @return the number of MB
-     */
-    private static int convertBytesToMB(long bytes)
-    {
-        return  (int) (bytes/1000000L);
     }
 
     /**
@@ -162,41 +184,11 @@ public class OsStatistics
     }
 
     /**
-     * Returns the CPU usage as double between 0 and 1
-     * @return the CPU usage
-     */
-    public double getCPUUsage()
-    {
-        if(cpuInfo == null)
-            return -1.0;
-
-        try
-        {
-            return cpuInfo.getCPUUsage();
-        }
-        catch(Throwable e)
-        {
-            if(e instanceof UnsatisfiedLinkError)
-                cpuInfo = null;
-            logger.error("Failed to retrieve the cpu usage.", e);
-        }
-
-        return -1.0;
-    }
-
-    /**
      * Implements the <tt>SigarCommandBase</tt> abstract class which is used for
      * retrieving CPU usage information.
      */
     private class CPUInfo extends SigarCommandBase
     {
-
-        @Override
-        public void output(String[] arg0) throws SigarException
-        {
-
-        }
-
         /**
          * Returns the CPU usage information.
          * @return the CPU usage information.
@@ -204,11 +196,12 @@ public class OsStatistics
          */
         public double getCPUUsage() throws SigarException
         {
-            CpuPerc cpus =
-                this.sigar.getCpuPerc();
-
-            return cpus.getCombined();
+            return sigar.getCpuPerc().getCombined();
         }
 
+        @Override
+        public void output(String[] arg0) throws SigarException
+        {
+        }
     }
 }

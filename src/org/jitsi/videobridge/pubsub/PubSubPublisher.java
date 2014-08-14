@@ -10,20 +10,21 @@ import java.util.*;
 
 import net.java.sip.communicator.util.*;
 
-import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.pubsub.PubsubResponseListener.*;
+import org.jitsi.videobridge.pubsub.PubSubResponseListener.Response;
+import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smack.packet.IQ.*;
+import org.jivesoftware.smack.packet.IQ.Type;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.packet.*;
+import org.osgi.framework.*;
 
 /**
  * A class that implements some parts of PubSub (XEP-0060).
  *
  * @author Hristo Terezov
  */
-public class PubsubManager
+public class PubSubPublisher
 {
     /**
      * The name of the PubSub service.
@@ -38,16 +39,11 @@ public class PubsubManager
         = new ArrayList<IQResponseHandler>();
 
     /**
-     * Maps a service name (e.g. "pubsub.example.com") to the PubsubManager
+     * Maps a service name (e.g. "pubsub.example.com") to the PubSubPublisher
      * instance responsible for it.
      */
-    private static Map<String, PubsubManager> instances
-        = new HashMap<String, PubsubManager>();
-
-    /**
-     * The videobridge instance.
-     */
-    private Videobridge videobridge;
+    private static Map<String, PubSubPublisher> instances
+        = new HashMap<String, PubSubPublisher>();
 
     /**
      * List of the accessible PubSub nodes.
@@ -75,7 +71,7 @@ public class PubsubManager
     /**
      * Timer for timeout of the requests that we are sending.
      */
-    private Timer timeoutTimer =  new Timer();
+    private Timer timeoutTimer = new Timer();
 
     /**
      * The default timeout of the packets in milliseconds.
@@ -85,69 +81,55 @@ public class PubsubManager
     /**
      * Logger instance.
      */
-    private static Logger logger = Logger.getLogger(PubsubManager.class);
+    private static Logger logger = Logger.getLogger(PubSubPublisher.class);
 
     /**
      * Listeners for response events.
      */
-    private List<PubsubResponseListener> listeners
-        = new LinkedList<PubsubResponseListener>();
+    private List<PubSubResponseListener> listeners
+        = new LinkedList<PubSubResponseListener>();
 
     static
     {
         handlers.add(new ErrorIQResponseHandler());
         handlers.add(new ResultIQResponseHandler());
         handlers.add(new PubSubIQResponseHandler());
-
     }
 
     /**
-     * Creates and returns <tt>PubsubManager</tt> instance for the given service
+     * Creates and returns <tt>PubSubPublisher</tt> instance for the given service
+     *
      * @param serviceName the name of the service
-     * @return <tt>PubsubManager</tt> instance.
+     * @return <tt>PubSubPublisher</tt> instance.
      */
-    public static PubsubManager getPubsubManager(String serviceName,
-        Videobridge videobridge)
+    public static PubSubPublisher getPubsubManager(String serviceName)
     {
         if(!instances.containsKey(serviceName))
         {
-            instances.put(serviceName, new PubsubManager(serviceName,
-                videobridge));
+            instances.put(serviceName, new PubSubPublisher(serviceName));
         }
         return instances.get(serviceName);
     }
 
     /**
-     * Returns <tt>PubsubManager</tt> instance for the given service
-     * @param serviceName the name of the service
-     * @return <tt>PubsubManager</tt> instance or <tt>null</tt> if the instance
-     * haven't been created yet.
-     */
-    public static PubsubManager getPubsubManager(String serviceName)
-    {
-        return instances.get(serviceName);
-    }
-
-    /**
-     * Releases the resources for the <tt>PubsubManager</tt> and removes it from
+     * Releases the resources for the <tt>PubSubPublisher</tt> and removes it from
      * the list of available instances.
-     * @param mgr the <tt>PubsubManager</tt> that will be released.
+     * @param mgr the <tt>PubSubPublisher</tt> that will be released.
      */
-    public static void releasePubsubManager(PubsubManager mgr)
+    public static void releasePubsubManager(PubSubPublisher mgr)
     {
         instances.remove(mgr);
         mgr.dispose();
     }
 
     /**
-     * Creates new <tt>PubsubManager</tt> for the given service.
+     * Initializes a new <tt>PubSubPublisher</tt> instance for a specific service.
+     *
      * @param serviceName the name of the service.
-     * @param videobridge the <tt>Videobridge</tt> instance.
      */
-    private PubsubManager(String serviceName, Videobridge videobridge)
+    private PubSubPublisher(String serviceName)
     {
         this.serviceName = serviceName;
-        this.videobridge = videobridge;
     }
 
     /**
@@ -165,21 +147,21 @@ public class PubsubManager
         request.setPacketID(packetID);
 
         pendingCreateRequests.put(packetID, nodeName);
-        timeoutTimer.schedule(new TimerTask()
-        {
-            @Override
-            public void run()
-            {
-                pendingCreateRequests.remove(packetID);
-            }
-        }, PACKET_TIMEOUT);
+        timeoutTimer.schedule(
+                new TimerTask()
+                {
+                    @Override
+                    public void run()
+                    {
+                        pendingCreateRequests.remove(packetID);
+                    }
+                },
+                PACKET_TIMEOUT);
 
         request.addExtension(
-            new NodeExtension(PubSubElementType.CREATE, nodeName));
+                new NodeExtension(PubSubElementType.CREATE, nodeName));
 
         send(request);
-
-
     }
 
     /**
@@ -246,18 +228,20 @@ public class PubsubManager
         packet.addExtension(
             new PublishItem<PayloadItem<PacketExtension>>(nodeName, item));
         pendingPublishRequests.put(packetID, nodeName);
-        timeoutTimer.schedule(new TimerTask()
-        {
-            @Override
-            public void run()
-            {
-                if(pendingPublishRequests.containsKey(packetID))
+        timeoutTimer.schedule(
+                new TimerTask()
                 {
-                    pendingPublishRequests.remove(packetID);
-                    logger.error("Publish request timeout.");
-                }
-            }
-        }, PACKET_TIMEOUT);
+                    @Override
+                    public void run()
+                    {
+                        if(pendingPublishRequests.containsKey(packetID))
+                        {
+                            pendingPublishRequests.remove(packetID);
+                            logger.error("Publish request timeout.");
+                        }
+                    }
+                },
+                PACKET_TIMEOUT);
         send(packet);
     }
 
@@ -269,9 +253,8 @@ public class PubsubManager
     {
         for(IQResponseHandler handler : handlers)
         {
-            if(!handler.canProcess(response))
-                continue;
-            handler.process(response);
+            if(handler.canProcess(response))
+                handler.process(response);
         }
     }
 
@@ -363,10 +346,10 @@ public class PubsubManager
     }
 
     /**
-     * Adds <tt>PubsubResponseListener</tt> to the list of listeners.
+     * Adds <tt>PubSubResponseListener</tt> to the list of listeners.
      * @param l the listener to be added.
      */
-    public void addResponseListener(PubsubResponseListener l)
+    public void addResponseListener(PubSubResponseListener l)
     {
         if(!listeners.contains(l))
         {
@@ -375,10 +358,10 @@ public class PubsubManager
     }
 
     /**
-     * Removes <tt>PubsubResponseListener</tt> from the list of listeners.
+     * Removes <tt>PubSubResponseListener</tt> from the list of listeners.
      * @param l the listener to be removed
      */
-    public void removeResponseListener(PubsubResponseListener l)
+    public void removeResponseListener(PubSubResponseListener l)
     {
         listeners.remove(l);
     }
@@ -389,7 +372,7 @@ public class PubsubManager
      */
     private void fireResponseCreateEvent(Response type)
     {
-        for(PubsubResponseListener l : listeners)
+        for(PubSubResponseListener l : listeners)
         {
             l.onCreateNodeResponse(type);
         }
@@ -401,7 +384,7 @@ public class PubsubManager
      */
     private void fireResponsePublishEvent(Response type)
     {
-        for(PubsubResponseListener l : listeners)
+        for(PubSubResponseListener l : listeners)
         {
             l.onPublishResponse(type);
         }
@@ -415,19 +398,26 @@ public class PubsubManager
     private void send(IQ iq)
         throws Exception
     {
-        Collection<ComponentImpl> components = videobridge.getComponents();
-        for(ComponentImpl c : components)
+        BundleContext bundleContext
+            = StatsManagerBundleActivator.getBundleContext();
+
+        if (bundleContext != null)
         {
-            c.send(iq);
+            Collection<ComponentImpl> components
+                = ComponentImpl.getComponents(bundleContext);
+
+            for (ComponentImpl component : components)
+            {
+                component.send(iq);
+            }
         }
     }
 
     /**
-     * Releases the resources for the <tt>PubsubManager</tt>.
+     * Releases the resources for the <tt>PubSubPublisher</tt>.
      */
     private void dispose()
     {
-        videobridge = null;
         serviceName = null;
         nodes.clear();
         nodes = null;
@@ -478,15 +468,14 @@ public class PubsubManager
         @Override
         public void process(IQ response)
         {
-            PubsubManager mgr = instances.get(response.getFrom());
-            if (mgr == null)
-                return;
-
-            mgr.handleErrorResponses(
-                response.getError(),
-                response.getPacketID());
+            PubSubPublisher mgr = instances.get(response.getFrom());
+            if (mgr != null)
+            {
+                mgr.handleErrorResponses(
+                        response.getError(),
+                        response.getPacketID());
+            }
         }
-
     }
 
     /**
@@ -505,15 +494,14 @@ public class PubsubManager
         @Override
         public void process(IQ response)
         {
-            PubsubManager mgr = instances.get(response.getFrom());
-            if (mgr == null)
-                return;
-
-            mgr.handleCreateNodeResponse(response);
-            mgr.handleConfigurationResponse(response);
-            mgr.handlePublishResponse(response);
+            PubSubPublisher mgr = instances.get(response.getFrom());
+            if (mgr != null)
+            {
+                mgr.handleCreateNodeResponse(response);
+                mgr.handleConfigurationResponse(response);
+                mgr.handlePublishResponse(response);
+            }
         }
-
     }
 
     /**
@@ -540,13 +528,9 @@ public class PubsubManager
         @Override
         public void process(IQ response)
         {
-            PubsubManager mgr = instances.get(response.getFrom());
-            if (mgr == null)
-                return;
-
-            mgr.handlePublishResponse(response);
+            PubSubPublisher mgr = instances.get(response.getFrom());
+            if (mgr != null)
+                mgr.handlePublishResponse(response);
         }
-
     }
-
 }

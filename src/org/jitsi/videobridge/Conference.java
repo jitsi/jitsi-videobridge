@@ -694,7 +694,7 @@ public class Conference
             = ServiceUtils.getService(getBundleContext(), MediaService.class);
 
         /*
-         * TODO For an unknown reason, ServiceUtils.getService fails to retrieve
+         * TODO For an unknown reason, ServiceUtils2.getService fails to retrieve
          * the MediaService implementation. In the form of a temporary
          * workaround, get it through LibJitsi.
          */

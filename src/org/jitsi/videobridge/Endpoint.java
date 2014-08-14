@@ -32,18 +32,18 @@ public class Endpoint
         = Endpoint.class.getName() + ".channels";
 
     /**
+     * The <tt>Logger</tt> used by the <tt>Endpoint</tt> class and its instances
+     * to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Endpoint.class);
+
+    /**
      * The name of the <tt>Endpoint</tt> property <tt>sctpConnection</tt> which
      * specifies the <tt>SctpConnection</tt> associated with the
      * <tt>Endpoint</tt>.
      */
     public static final String SCTP_CONNECTION_PROPERTY_NAME
         = Endpoint.class.getName() + ".sctpConnection";
-
-    /**
-     * The <tt>Logger</tt> used by the <tt>Endpoint</tt> class and its instances
-     * to print debug information.
-     */
-    private static final Logger logger = Logger.getLogger(Endpoint.class);
 
     /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
@@ -184,8 +184,8 @@ public class Endpoint
                     continue;
 
                 if ((mediaType == null)
-                    || (mediaType.equals(
-                    channel.getContent().getMediaType())))
+                        || mediaType.equals(
+                                channel.getContent().getMediaType()))
                 {
                     channels.add(channel);
                 }

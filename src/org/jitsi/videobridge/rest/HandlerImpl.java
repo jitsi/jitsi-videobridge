@@ -18,6 +18,7 @@ import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.stats.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 import org.osgi.framework.*;
@@ -210,6 +211,8 @@ class HandlerImpl
      */
     private static final String POST_HTTP_METHOD = "POST";
 
+    private static final String STATISTICS = "stats";
+
     /**
      * The <tt>BundleContext</tt> within which this instance is initialized.
      */
@@ -348,6 +351,46 @@ class HandlerImpl
             response.setStatus(HttpServletResponse.SC_OK);
             conferencesJSONArray.writeJSONString(response.getWriter());
         }
+    }
+
+    private void doGetStatisticsJSON(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        BundleContext bundleContext = getBundleContext();
+
+        if (bundleContext != null)
+        {
+            StatsManager statsManager
+                = ServiceUtils.getService(bundleContext, StatsManager.class);
+
+            if (statsManager != null)
+            {
+                Iterator<Statistics> i
+                    = statsManager.getStatistics().iterator();
+                Statistics statistics = null;
+
+                if (i.hasNext())
+                    statistics = i.next();
+
+                JSONObject statisticsJSONObject
+                    = JSONSerializer.serializeStatistics(statistics);
+                Writer writer = response.getWriter();
+
+                response.setStatus(HttpServletResponse.SC_OK);
+                if (statisticsJSONObject == null)
+                    writer.write("null");
+                else
+                    statisticsJSONObject.writeJSONString(writer);
+
+                return;
+            }
+        }
+
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
     }
 
     /**
@@ -649,7 +692,11 @@ class HandlerImpl
         throws IOException,
                ServletException
     {
-        if ((target != null) && target.startsWith(CONFERENCES))
+        if (target == null)
+        {
+            // TODO Auto-generated method stub
+        }
+        else if (target.startsWith(CONFERENCES))
         {
             target = target.substring(CONFERENCES.length());
             if (target.startsWith("/"))
@@ -704,6 +751,19 @@ class HandlerImpl
                     response.setStatus(
                             HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                 }
+            }
+        }
+        else if (target.equals(STATISTICS))
+        {
+            String requestMethod = request.getMethod();
+
+            if (GET_HTTP_METHOD.equals(requestMethod))
+            {
+                doGetStatisticsJSON(baseRequest, request, response);
+            }
+            else
+            {
+                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             }
         }
     }
