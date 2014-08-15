@@ -246,67 +246,7 @@ public abstract class Channel
         else
         {
             describeTransportManager(iq);
-            describeSrtpControl(iq);
         }
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ.ChannelCommon</tt> to the values of the
-     * respective properties of the <tt>DtlsControl</tt> of this channel.
-     *
-     * @param iq the <tt>ColibriConferenceIQ.ChannelCommon</tt> on which to set
-     *           the values of the properties of <tt>transportManager</tt>
-     */
-    private void describeSrtpControl(ColibriConferenceIQ.ChannelCommon iq)
-    {
-        DtlsControl dtlsControl;
-        try
-        {
-            dtlsControl = getDtlsControl();
-        }
-        catch (IOException ioe)
-        {
-            throw new UndeclaredThrowableException(ioe);
-        }
-
-        IceUdpTransportPacketExtension transportPE = iq.getTransport();
-
-        if (transportPE == null)
-        {
-            transportPE = new RawUdpTransportPacketExtension();
-            iq.setTransport(transportPE);
-        }
-        describeSrtpControl(dtlsControl,
-                            transportPE);
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>IceUdpTransportPacketExtension</tt> to the values of the
-     * respective properties of <tt>transportPE</tt>.
-     *
-     * @param dtlsControl the <tt>DtlsControl</tt> to describe.
-     * @param transportPE the <tt>IceUdpTransportPacketExtension</tt> on which
-     * to set the values of the properties of <tt>dtlsControl</tt>
-     */
-    void describeSrtpControl(DtlsControl dtlsControl,
-                             IceUdpTransportPacketExtension transportPE)
-    {
-        String fingerprint = dtlsControl.getLocalFingerprint();
-        String hash = dtlsControl.getLocalFingerprintHashFunction();
-
-        DtlsFingerprintPacketExtension fingerprintPE
-                = transportPE.getFirstChildOfType(
-                DtlsFingerprintPacketExtension.class);
-
-        if (fingerprintPE == null)
-        {
-            fingerprintPE = new DtlsFingerprintPacketExtension();
-            transportPE.addChildExtension(fingerprintPE);
-        }
-        fingerprintPE.setFingerprint(fingerprint);
-        fingerprintPE.setHash(hash);
     }
 
     /**

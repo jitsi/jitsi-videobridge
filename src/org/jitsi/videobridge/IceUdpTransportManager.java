@@ -737,6 +737,34 @@ public class IceUdpTransportManager
                     describe(candidate, pe);
             }
         }
+
+        describeDtlsControl(pe);
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>IceUdpTransportPacketExtension</tt> to the values of the
+     * respective properties of {@link #dtlsControl}
+     *
+     * @param transportPE the <tt>IceUdpTransportPacketExtension</tt> on which
+     * to set the values of the properties of <tt>dtlsControl</tt>
+     */
+    private void describeDtlsControl(IceUdpTransportPacketExtension transportPE)
+    {
+        String fingerprint = dtlsControl.getLocalFingerprint();
+        String hash = dtlsControl.getLocalFingerprintHashFunction();
+
+        DtlsFingerprintPacketExtension fingerprintPE
+                = transportPE.getFirstChildOfType(
+                DtlsFingerprintPacketExtension.class);
+
+        if (fingerprintPE == null)
+        {
+            fingerprintPE = new DtlsFingerprintPacketExtension();
+            transportPE.addChildExtension(fingerprintPE);
+        }
+        fingerprintPE.setFingerprint(fingerprint);
+        fingerprintPE.setHash(hash);
     }
 
     /**
