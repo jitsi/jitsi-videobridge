@@ -133,7 +133,7 @@ public class RtpChannel
      * index specifies the time in milliseconds when the SSRC was last seen (in
      * order to enable timing out SSRCs).
      */
-    private long[] receiveSSRCs = NO_RECEIVE_SSRCS;
+    long[] receiveSSRCs = NO_RECEIVE_SSRCS;
 
     /**
      * The type of RTP-level relay (in the terms specified by RFC 3550
@@ -183,6 +183,24 @@ public class RtpChannel
     private final SessionAddress streamTarget = new SessionAddress();
 
     /**
+     * Contains the payload type numbers configured for this channel.
+     */
+    int[] receivePTs = new int[0];
+
+    /**
+     * Whether {@link #stream} has been closed.
+     */
+    private boolean streamClosed = false;
+
+    /**
+     * Holds the <tt>RtpChannelDatagramFilter</tt> instances (if any) used by
+     * this channel. The filter for RTP is at index 0, the filter for RTCP at
+     * index 1.
+     */
+    private final RtpChannelDatagramFilter[] datagramFilters
+            = new RtpChannelDatagramFilter[2];
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -192,12 +210,15 @@ public class RtpChannel
      * @param id the ID of the new instance. It is expected to be unique within
      * the list of <tt>Channel</tt>s listed in <tt>content</tt> while the new
      * instance is listed there as well.
+     * @param channelBundleId the ID of the channel-bundle this
+     * <tt>RtpChannel</tt> is to be a part of (or <tt>null</tt> if no it is
+     * not to be a part of a channel-bundle).
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public RtpChannel(Content content, String id)
+    public RtpChannel(Content content, String id, String channelBundleId)
         throws Exception
     {
-        super(content);
+        super(content, channelBundleId);
 
         if (id == null)
             throw new NullPointerException("id");
@@ -209,9 +230,9 @@ public class RtpChannel
 
         stream
             = mediaService.createMediaStream(
-                    null,
-                    mediaType,
-                    mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP));
+                null,
+                mediaType,
+                getDtlsControl());
         /*
          * Add the PropertyChangeListener to the MediaStream prior to performing
          * further initialization so that we do not miss changes to the values
@@ -571,9 +592,14 @@ public class RtpChannel
     @Override
     protected void closeStream()
     {
-        stream.setProperty(Channel.class.getName(), null);
-        removeStreamListeners();
-        stream.close();
+        if (!streamClosed)
+        {
+            stream.setProperty(Channel.class.getName(), null);
+            removeStreamListeners();
+            stream.close();
+
+            streamClosed = true;
+        }
     }
 
     /**
@@ -659,20 +685,6 @@ public class RtpChannel
                 };
         }
         return csrcAudioLevelListener;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected DtlsControl getDtlsControl()
-    {
-        SrtpControl srtpControl = stream.getSrtpControl();
-
-        return
-            (srtpControl instanceof DtlsControl)
-                ? (DtlsControl) srtpControl
-                : null;
     }
 
     /**
@@ -922,8 +934,7 @@ public class RtpChannel
         throws IOException
     {
         // connector
-        StreamConnector connector = createStreamConnector();
-
+        StreamConnector connector = getStreamConnector();
 
         if (connector == null)
             return;
@@ -968,28 +979,6 @@ public class RtpChannel
              */
             if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
                 stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
-
-            /*
-             * Start the SrtpControl of the MediaStream. As far as our
-             * experience with Jitsi goes, the SrtpControl is started prior to
-             * the MediaStream there.
-             */
-            SrtpControl srtpControl = stream.getSrtpControl();
-
-            if (srtpControl != null)
-            {
-                if (srtpControl instanceof DtlsControl)
-                {
-                    DtlsControl dtlsControl = (DtlsControl) srtpControl;
-
-                    dtlsControl.setSetup(
-                            isInitiator()
-                                ? DtlsControl.Setup.PASSIVE
-                                : DtlsControl.Setup.ACTIVE);
-                    dtlsControl.setRtcpmux(connector.isRtcpmux());
-                }
-                srtpControl.start(content.getMediaType());
-            }
 
             stream.start();
         }
@@ -1280,8 +1269,14 @@ public class RtpChannel
                  */
                 boolean googleChrome = false;
 
-                for (PayloadTypePacketExtension payloadType : payloadTypes)
+                int payloadTypesCount = payloadTypes.size();
+                receivePTs = new int[payloadTypesCount];
+                for (int i = 0; i < payloadTypesCount; i++)
                 {
+                    PayloadTypePacketExtension payloadType
+                        = payloadTypes.get(i);
+                    receivePTs[i] = payloadType.getID();
+
                     MediaFormat mediaFormat
                         = JingleUtils.payloadTypeToMediaFormat(
                                 payloadType,
@@ -1585,6 +1580,26 @@ public class RtpChannel
                         .addDatagramPacketFilter(datagramPacketFilter);
                 }
             }
+        }
+    }
+
+    /**
+     * Gets the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
+     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
+     * this <tt>RtpChannel</tt>.
+     * @param rtcp whether to return the filter for RTP or RTCP packets.
+     * @return the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
+     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
+     * this <tt>RtpChannel</tt>.
+     */
+    RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
+    {
+        int index = rtcp ? 1 : 0;
+        synchronized (datagramFilters)
+        {
+            if (datagramFilters[index] == null)
+                datagramFilters[index] = new RtpChannelDatagramFilter(this, rtcp);
+            return datagramFilters[index];
         }
     }
 }

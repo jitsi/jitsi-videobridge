@@ -9,6 +9,7 @@ package org.jitsi.videobridge;
 import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
+import java.lang.reflect.*;
 import java.text.*;
 import java.util.*;
 
@@ -132,6 +133,13 @@ public class Conference
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
      */
     private final Videobridge videobridge;
+
+    /**
+     * Maps an ID of a channel-bundle to the <tt>TransportManager</tt> instance
+     * responsible for its transport.
+     */
+    private final Map<String, IceUdpTransportManager> transportManagers
+        = new HashMap<String, IceUdpTransportManager>();
 
     /**
      * The <tt>WebRtcpDataStreamListener</tt> which listens to the
@@ -1311,5 +1319,81 @@ public class Conference
                 endpointRecorder.updateEndpoint(endpoint);
             }
         }
+    }
+
+    /**
+     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>. If no instance exists and
+     * <tt>create</tt> is <tt>true</tt>, one will be created.
+     *
+     * @param channelBundleId the ID of the channel-bundle for which to return
+     * the <tt>TransportManager</tt>.
+     * @param create whether to create a new instance, if one doesn't exist.
+     * @return the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>.
+     */
+    IceUdpTransportManager getTransportManager(
+            String channelBundleId,
+            boolean create)
+    {
+        IceUdpTransportManager transportManager;
+        synchronized (transportManagers)
+        {
+            transportManager = transportManagers.get(channelBundleId);
+
+            if (transportManager == null
+                    && create)
+            {
+                try
+                {
+                    //FIXME: the initiator is hard-coded
+                    transportManager = new IceUdpTransportManager(this, true);
+                }
+                catch (IOException ioe)
+                {
+                    throw new UndeclaredThrowableException(ioe);
+                }
+
+                transportManagers.put(channelBundleId, transportManager);
+            }
+
+            return transportManager;
+        }
+    }
+
+    /**
+     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
+     *
+     * @param channelBundleId the ID of the channel-bundle for which to return
+     * the <tt>TransportManager</tt>.
+     * @return the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
+     */
+    TransportManager getTransportManager(String channelBundleId)
+    {
+        return getTransportManager(channelBundleId, false);
+    }
+
+    /**
+     * Adds the channel-bundles of this <tt>Conference</tt> as
+     * <tt>ColibriConferenceIQ.ChannelBundle</tt> instances in <tt>iq</tt>.
+     * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
+     */
+    void describeChannelBundles(ColibriConferenceIQ iq)
+    {
+        synchronized (transportManagers)
+        {
+            for (Map.Entry<String, IceUdpTransportManager> entry :
+                    transportManagers.entrySet())
+            {
+                ColibriConferenceIQ.ChannelBundle responseBundleIQ
+                        = new ColibriConferenceIQ.ChannelBundle(entry.getKey());
+
+                entry.getValue().describe(responseBundleIQ);
+                iq.addChannelBundle(responseBundleIQ);
+            }
+        }
+
     }
 }

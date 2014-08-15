@@ -12,10 +12,9 @@ import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import javax.media.rtp.*;
-
 import net.java.sip.communicator.impl.osgi.framework.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.sctp4j.*;
@@ -39,6 +38,7 @@ import org.jitsi.util.*;
  *
  * @author Pawel Domas
  * @author Lyubomir Marinov
+ * @author Boris Grozev
  */
 public class SctpConnection
     extends Channel
@@ -157,11 +157,6 @@ public class SctpConnection
     private final int debugId;
 
     /**
-     * DTLS layer used by this <tt>SctpConnection</tt>.
-     */
-    private final DtlsControlImpl dtlsControl;
-
-    /**
      * The <tt>AsyncExecutor</tt> which is to asynchronously dispatch the events
      * fired by this instance in order to prevent possible listeners from
      * blocking this <tt>SctpConnection</tt> in general and {@link #sctpSocket}
@@ -212,20 +207,23 @@ public class SctpConnection
      * instance
      * @param endpoint the <tt>Endpoint</tt> of newly created instance
      * @param remoteSctpPort the SCTP port used by remote peer
+     * @param channelBundleId the ID of the channel-bundle this
+     * <tt>SctpConnection</tt> is to be a part of (or <tt>null</tt> if no it is
+     * not to be a part of a channel-bundle).
      * @throws Exception if an error occurs while initializing the new instance
      */
     public SctpConnection(
             Content content,
             Endpoint endpoint,
-            int remoteSctpPort)
+            int remoteSctpPort,
+            String channelBundleId)
         throws Exception
     {
-        super(content);
+        super(content, channelBundleId);
 
         setEndpoint(endpoint.getID());
 
         this.remoteSctpPort = remoteSctpPort;
-        this.dtlsControl = new DtlsControlImpl(true);
         this.debugId = generateDebugId();
     }
 
@@ -277,7 +275,9 @@ public class SctpConnection
         {
             if (iceUdpSocket != null)
             {
-                iceUdpSocket.close();
+                // It is now the responsibility of the transport manager to
+                // close the socket.
+                //iceUdpSocket.close();
             }
         }
     }
@@ -384,15 +384,6 @@ public class SctpConnection
      * {@inheritDoc}
      */
     @Override
-    protected DtlsControl getDtlsControl()
-    {
-        return dtlsControl;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public String getID()
     {
         return getID(getEndpoint());
@@ -418,7 +409,7 @@ public class SctpConnection
         throws IOException
     {
         // connector
-        final StreamConnector connector = createStreamConnector();
+        final StreamConnector connector = getStreamConnector();
 
         if (connector == null)
             return;
@@ -427,13 +418,6 @@ public class SctpConnection
         {
             if (started)
                 return;
-
-            dtlsControl.setSetup(
-                isInitiator()
-                    ? DtlsControl.Setup.PASSIVE
-                    : DtlsControl.Setup.ACTIVE);
-
-            dtlsControl.start(MediaType.DATA);
 
             threadPool.execute(
                     new Runnable()
@@ -928,7 +912,7 @@ public class SctpConnection
     /**
      * Removes <tt>WebRtcDataStreamListener</tt> from the list of listeners.
      *
-     * @param llistener the <tt>WebRtcDataStreamListener</tt> to be removed from
+     * @param listener the <tt>WebRtcDataStreamListener</tt> to be removed from
      * the listeners list.
      */
     public void removeChannelListener(WebRtcDataStreamListener listener)
@@ -945,18 +929,11 @@ public class SctpConnection
     private void runOnDtlsTransport(StreamConnector connector)
         throws IOException
     {
-        RTPConnectorUDPImpl rtpConnector = new RTPConnectorUDPImpl(connector);
-        MediaStreamTarget streamTarget = createStreamTarget();
-        InetSocketAddress dataAddr = streamTarget.getDataAddress();
-
-        rtpConnector.addTarget(
-                new SessionAddress(dataAddr.getAddress(), dataAddr.getPort()));
-
-        dtlsControl.setConnector(rtpConnector);
-
+        DtlsControlImpl dtlsControl
+                = (DtlsControlImpl) getTransportManager().getDtlsControl(this);
         DtlsTransformEngine engine = dtlsControl.getTransformEngine();
         final DtlsPacketTransformer transformer
-            = (DtlsPacketTransformer) engine.getRTPTransformer();
+                = (DtlsPacketTransformer) engine.getRTPTransformer();
 
         byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
 
@@ -1044,7 +1021,7 @@ public class SctpConnection
         sctpSocket.setDataCallback(this);
 
         // Receive loop, breaks when SCTP socket is closed
-        this.iceUdpSocket = rtpConnector.getDataSocket();
+        this.iceUdpSocket = connector.getDataSocket();
 
         DatagramPacket rcvPacket
             = new DatagramPacket(receiveBuffer, 0, receiveBuffer.length);
@@ -1116,6 +1093,37 @@ public class SctpConnection
         if(sendAck != ack.length)
         {
             logger.error("Failed to send open channel confirmation");
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Creates a <tt>TransportManager</tt> instance suitable for an
+     * <tt>SctpConnection</tt> (e.g. with 1 component only).
+     */
+    protected TransportManager createTransportManager(String xmlNamespace)
+            throws IOException
+    {
+        if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+        {
+            Content content = getContent();
+            return new IceUdpTransportManager(content.getConference(),
+                                                 isInitiator(),
+                                                 1 /* num components */,
+                                                 content.getName());
+        }
+        else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+        {
+            //TODO: support RawUdp once RawUdpTransportManager is updated
+            //return new RawUdpTransportManager(this);
+            throw new IllegalArgumentException(
+                    "Unsupported Jingle transport " + xmlNamespace);
+        }
+        else
+        {
+            throw new IllegalArgumentException(
+                    "Unsupported Jingle transport " + xmlNamespace);
         }
     }
 }
