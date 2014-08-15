@@ -40,6 +40,9 @@ public abstract class Statistics
      */
     private final Map<String,Object> stats = new HashMap<String,Object>();
 
+    /**
+     * Generates/updates the statistics represented by this instance.
+     */
     public abstract void generate();
 
     /**
@@ -74,6 +77,9 @@ public abstract class Statistics
             stats.put(stat, value);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString()
     {

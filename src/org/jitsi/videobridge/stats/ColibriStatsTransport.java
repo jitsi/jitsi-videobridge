@@ -24,6 +24,10 @@ import org.osgi.framework.*;
 public class ColibriStatsTransport
     extends StatsTransport
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>ColibriStatsTransport</tt> class and
+     * its instances to print debug information.
+     */
     private static final Logger logger
         = Logger.getLogger(ColibriStatsTransport.class);
 
@@ -49,6 +53,9 @@ public class ColibriStatsTransport
         return iq;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void publishStatistics(Statistics stats)
     {

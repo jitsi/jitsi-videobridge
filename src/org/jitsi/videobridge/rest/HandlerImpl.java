@@ -211,6 +211,10 @@ class HandlerImpl
      */
     private static final String POST_HTTP_METHOD = "POST";
 
+    /**
+     * The HTTP resource which list the JSON representation of the
+     * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
+     */
     private static final String STATISTICS = "stats";
 
     /**
@@ -353,6 +357,16 @@ class HandlerImpl
         }
     }
 
+    /**
+     * Gets a JSON representation of the <tt>VideobridgeStatistics</tt> of (the
+     * associated) <tt>Videobridge</tt>.
+     *
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
     private void doGetStatisticsJSON(
             Request baseRequest,
             HttpServletRequest request,
@@ -759,6 +773,7 @@ class HandlerImpl
 
             if (GET_HTTP_METHOD.equals(requestMethod))
             {
+                // Get the VideobridgeStatistics of Videobridge.
                 doGetStatisticsJSON(baseRequest, request, response);
             }
             else

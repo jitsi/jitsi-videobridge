@@ -27,18 +27,6 @@ import org.osgi.framework.*;
 public class PubSubPublisher
 {
     /**
-     * The name of the PubSub service.
-     */
-    private String serviceName;
-
-    /**
-     * Handlers for the response packets that are received from the PubSub
-     * service.
-     */
-    private static List<IQResponseHandler> handlers
-        = new ArrayList<IQResponseHandler>();
-
-    /**
      * Maps a service name (e.g. "pubsub.example.com") to the PubSubPublisher
      * instance responsible for it.
      */
@@ -46,55 +34,14 @@ public class PubSubPublisher
         = new HashMap<String, PubSubPublisher>();
 
     /**
-     * List of the accessible PubSub nodes.
-     */
-    private List<String> nodes = new LinkedList<String>();
-
-    /**
-     * Map with the requests for node creation.
-     */
-    private Map<String, String> pendingCreateRequests
-        =  new HashMap<String, String>();
-
-    /**
-     * Map with the requests for configuring a node.
-     */
-    private Map<String, String> pendingConfigureRequests
-        =  new HashMap<String, String>();
-
-    /**
-     * Map with the publish requests.
-     */
-    private Map<String, String> pendingPublishRequests
-        =  new HashMap<String, String>();
-
-    /**
-     * Timer for timeout of the requests that we are sending.
-     */
-    private Timer timeoutTimer = new Timer();
-
-    /**
-     * The default timeout of the packets in milliseconds.
-     */
-    private static int PACKET_TIMEOUT = 500;
-
-    /**
      * Logger instance.
      */
     private static Logger logger = Logger.getLogger(PubSubPublisher.class);
 
     /**
-     * Listeners for response events.
+     * The default timeout of the packets in milliseconds.
      */
-    private List<PubSubResponseListener> listeners
-        = new LinkedList<PubSubResponseListener>();
-
-    static
-    {
-        handlers.add(new ErrorIQResponseHandler());
-        handlers.add(new ResultIQResponseHandler());
-        handlers.add(new PubSubIQResponseHandler());
-    }
+    private static int PACKET_TIMEOUT = 500;
 
     /**
      * Creates and returns <tt>PubSubPublisher</tt> instance for the given service
@@ -112,6 +59,38 @@ public class PubSubPublisher
     }
 
     /**
+     * Handles received response IQ packet
+     * @param response the IQ packet.
+     */
+    public static void handleIQResponse(IQ response)
+    {
+        IQ.Type type = response.getType();
+
+        if (IQ.Type.ERROR.equals(type))
+        {
+            PubSubPublisher publisher = instances.get(response.getFrom());
+
+            if (publisher != null)
+            {
+                publisher.handleErrorResponse(
+                        response.getError(),
+                        response.getPacketID());
+            }
+        }
+        else if (IQ.Type.RESULT.equals(type))
+        {
+            PubSubPublisher publisher = instances.get(response.getFrom());
+
+            if (publisher != null)
+            {
+                publisher.handleCreateNodeResponse(response);
+                publisher.handleConfigurationResponse(response);
+                publisher.handlePublishResponse(response);
+            }
+        }
+    }
+
+    /**
      * Releases the resources for the <tt>PubSubPublisher</tt> and removes it from
      * the list of available instances.
      * @param mgr the <tt>PubSubPublisher</tt> that will be released.
@@ -121,6 +100,45 @@ public class PubSubPublisher
         instances.remove(mgr);
         mgr.dispose();
     }
+
+    /**
+     * Listeners for response events.
+     */
+    private List<PubSubResponseListener> listeners
+        = new LinkedList<PubSubResponseListener>();
+
+    /**
+     * List of the accessible PubSub nodes.
+     */
+    private List<String> nodes = new LinkedList<String>();
+
+    /**
+     * Map with the requests for configuring a node.
+     */
+    private Map<String, String> pendingConfigureRequests
+        =  new HashMap<String, String>();
+
+    /**
+     * Map with the requests for node creation.
+     */
+    private Map<String, String> pendingCreateRequests
+        =  new HashMap<String, String>();
+
+    /**
+     * Map with the publish requests.
+     */
+    private Map<String, String> pendingPublishRequests
+        =  new HashMap<String, String>();
+
+    /**
+     * The name of the PubSub service.
+     */
+    private String serviceName;
+
+    /**
+     * Timer for timeout of the requests that we are sending.
+     */
+    private Timer timeoutTimer = new Timer();
 
     /**
      * Initializes a new <tt>PubSubPublisher</tt> instance for a specific service.
@@ -133,35 +151,15 @@ public class PubSubPublisher
     }
 
     /**
-     * Creates a PubSub node.
-     * @param nodeName the name of the node.
-     * @throws Exception if sending the request fails.
+     * Adds <tt>PubSubResponseListener</tt> to the list of listeners.
+     * @param l the listener to be added.
      */
-    public void createNode(String nodeName)
-        throws Exception
+    public void addResponseListener(PubSubResponseListener l)
     {
-        PubSub request = new PubSub();
-        request.setTo(serviceName);
-        request.setType(Type.SET);
-        final String packetID = Packet.nextID();
-        request.setPacketID(packetID);
-
-        pendingCreateRequests.put(packetID, nodeName);
-        timeoutTimer.schedule(
-                new TimerTask()
-                {
-                    @Override
-                    public void run()
-                    {
-                        pendingCreateRequests.remove(packetID);
-                    }
-                },
-                PACKET_TIMEOUT);
-
-        request.addExtension(
-                new NodeExtension(PubSubElementType.CREATE, nodeName));
-
-        send(request);
+        if(!listeners.contains(l))
+        {
+            listeners.add(l);
+        }
     }
 
     /**
@@ -207,55 +205,90 @@ public class PubSubPublisher
     }
 
     /**
-     * Publishes items to a given PubSub node.
-     * @param nodeName the PubSub node.
-     * @param ext the item to be send.
-     * @throws Exception if fail to send the item or the node is not created.
+     * Creates a PubSub node.
+     * @param nodeName the name of the node.
+     * @throws Exception if sending the request fails.
      */
-    public void publish(String nodeName, PacketExtension ext)
+    public void createNode(String nodeName)
         throws Exception
     {
-        if(!nodes.contains(nodeName))
-            throw new IllegalArgumentException("The node doesn't exists");
-        PubSub packet = new PubSub();
-        packet.setTo(serviceName);
-        packet.setType(Type.SET);
-        final String packetID = IQ.nextID();
-        packet.setPacketID(packetID);
-        PayloadItem<PacketExtension> item
-            = new PayloadItem<PacketExtension>(ext);
+        PubSub request = new PubSub();
+        request.setTo(serviceName);
+        request.setType(Type.SET);
+        final String packetID = Packet.nextID();
+        request.setPacketID(packetID);
 
-        packet.addExtension(
-            new PublishItem<PayloadItem<PacketExtension>>(nodeName, item));
-        pendingPublishRequests.put(packetID, nodeName);
+        pendingCreateRequests.put(packetID, nodeName);
         timeoutTimer.schedule(
                 new TimerTask()
                 {
                     @Override
                     public void run()
                     {
-                        if(pendingPublishRequests.containsKey(packetID))
-                        {
-                            pendingPublishRequests.remove(packetID);
-                            logger.error("Publish request timeout.");
-                        }
+                        pendingCreateRequests.remove(packetID);
                     }
                 },
                 PACKET_TIMEOUT);
-        send(packet);
+
+        request.addExtension(
+                new NodeExtension(PubSubElementType.CREATE, nodeName));
+
+        send(request);
     }
 
     /**
-     * Handles received response IQ packet
-     * @param response the IQ packet.
+     * Releases the resources for the <tt>PubSubPublisher</tt>.
      */
-    public static void handleIQResponse(IQ response)
+    private void dispose()
     {
-        for(IQResponseHandler handler : handlers)
+        serviceName = null;
+        nodes.clear();
+        nodes = null;
+        pendingConfigureRequests.clear();
+        pendingConfigureRequests = null;
+        pendingCreateRequests.clear();
+        pendingCreateRequests = null;
+        pendingPublishRequests.clear();
+        pendingPublishRequests = null;
+        timeoutTimer.cancel();
+        timeoutTimer = null;
+        listeners.clear();
+        listeners = null;
+    }
+
+    /**
+     * Fires event about the response of creating a node.
+     * @param type the type of the response
+     */
+    private void fireResponseCreateEvent(Response type)
+    {
+        for(PubSubResponseListener l : listeners)
         {
-            if(handler.canProcess(response))
-                handler.process(response);
+            l.onCreateNodeResponse(type);
         }
+    }
+
+    /**
+     * Fires event about the response of publishing an item to a node.
+     * @param type the type of the response
+     */
+    private void fireResponsePublishEvent(Response type)
+    {
+        for(PubSubResponseListener l : listeners)
+        {
+            l.onPublishResponse(type);
+        }
+    }
+
+    /**
+     * Handles PubSub configuration responses.
+     * @param response the configuration response.
+     */
+    private void handleConfigurationResponse(IQ response)
+    {
+        if(pendingConfigureRequests.remove(response) != null)
+            fireResponseCreateEvent(Response.SUCCESS);
+
     }
 
     /**
@@ -278,7 +311,7 @@ public class PubSubPublisher
      * @param error the error object.
      * @param packetID the id of the received packet.
      */
-    private void handleErrorResponses(XMPPError error, String packetID)
+    private void handleErrorResponse(XMPPError error, String packetID)
     {
         if(error != null
             && XMPPError.Type.CANCEL.equals(error.getType())
@@ -322,17 +355,6 @@ public class PubSubPublisher
     }
 
     /**
-     * Handles PubSub configuration responses.
-     * @param response the configuration response.
-     */
-    private void handleConfigurationResponse(IQ response)
-    {
-        if(pendingConfigureRequests.remove(response) != null)
-            fireResponseCreateEvent(Response.SUCCESS);
-
-    }
-
-    /**
      * Handles PubSub publish responses.
      * @param response the response
      */
@@ -346,15 +368,42 @@ public class PubSubPublisher
     }
 
     /**
-     * Adds <tt>PubSubResponseListener</tt> to the list of listeners.
-     * @param l the listener to be added.
+     * Publishes items to a given PubSub node.
+     * @param nodeName the PubSub node.
+     * @param ext the item to be send.
+     * @throws Exception if fail to send the item or the node is not created.
      */
-    public void addResponseListener(PubSubResponseListener l)
+    public void publish(String nodeName, PacketExtension ext)
+        throws Exception
     {
-        if(!listeners.contains(l))
-        {
-            listeners.add(l);
-        }
+        if(!nodes.contains(nodeName))
+            throw new IllegalArgumentException("The node doesn't exists");
+        PubSub packet = new PubSub();
+        packet.setTo(serviceName);
+        packet.setType(Type.SET);
+        final String packetID = IQ.nextID();
+        packet.setPacketID(packetID);
+        PayloadItem<PacketExtension> item
+            = new PayloadItem<PacketExtension>(ext);
+
+        packet.addExtension(
+            new PublishItem<PayloadItem<PacketExtension>>(nodeName, item));
+        pendingPublishRequests.put(packetID, nodeName);
+        timeoutTimer.schedule(
+                new TimerTask()
+                {
+                    @Override
+                    public void run()
+                    {
+                        if(pendingPublishRequests.containsKey(packetID))
+                        {
+                            pendingPublishRequests.remove(packetID);
+                            logger.error("Publish request timeout.");
+                        }
+                    }
+                },
+                PACKET_TIMEOUT);
+        send(packet);
     }
 
     /**
@@ -364,30 +413,6 @@ public class PubSubPublisher
     public void removeResponseListener(PubSubResponseListener l)
     {
         listeners.remove(l);
-    }
-
-    /**
-     * Fires event about the response of creating a node.
-     * @param type the type of the response
-     */
-    private void fireResponseCreateEvent(Response type)
-    {
-        for(PubSubResponseListener l : listeners)
-        {
-            l.onCreateNodeResponse(type);
-        }
-    }
-
-    /**
-     * Fires event about the response of publishing an item to a node.
-     * @param type the type of the response
-     */
-    private void fireResponsePublishEvent(Response type)
-    {
-        for(PubSubResponseListener l : listeners)
-        {
-            l.onPublishResponse(type);
-        }
     }
 
     /**
@@ -410,127 +435,6 @@ public class PubSubPublisher
             {
                 component.send(iq);
             }
-        }
-    }
-
-    /**
-     * Releases the resources for the <tt>PubSubPublisher</tt>.
-     */
-    private void dispose()
-    {
-        serviceName = null;
-        nodes.clear();
-        nodes = null;
-        pendingConfigureRequests.clear();
-        pendingConfigureRequests = null;
-        pendingCreateRequests.clear();
-        pendingCreateRequests = null;
-        pendingPublishRequests.clear();
-        pendingPublishRequests = null;
-        timeoutTimer.cancel();
-        timeoutTimer = null;
-        listeners.clear();
-        listeners = null;
-    }
-
-    /**
-     * Interface for response handlers.
-     */
-    private static interface IQResponseHandler
-    {
-        /**
-         * Checks whether the handler can process this packet or not.
-         * @param response the response packet
-         * @return <tt>true</tt> if the handler can process the packet and
-         * <tt>false</tt> otherwise.
-         */
-        public boolean canProcess(IQ response);
-
-        /**
-         * Processes the response packet
-         * @param response the response packet.
-         */
-        public void process(IQ response);
-    }
-
-    /**
-     * Response handler for IQ error packets.
-     */
-    private static class ErrorIQResponseHandler
-        implements IQResponseHandler
-    {
-        @Override
-        public boolean canProcess(IQ response)
-        {
-            return response != null && Type.ERROR.equals(response.getType());
-        }
-
-        @Override
-        public void process(IQ response)
-        {
-            PubSubPublisher mgr = instances.get(response.getFrom());
-            if (mgr != null)
-            {
-                mgr.handleErrorResponses(
-                        response.getError(),
-                        response.getPacketID());
-            }
-        }
-    }
-
-    /**
-     * Response handler for IQ packets of type "result".
-     */
-    private static class ResultIQResponseHandler
-        implements IQResponseHandler
-    {
-
-        @Override
-        public boolean canProcess(IQ response)
-        {
-            return response != null && Type.RESULT.equals(response.getType());
-        }
-
-        @Override
-        public void process(IQ response)
-        {
-            PubSubPublisher mgr = instances.get(response.getFrom());
-            if (mgr != null)
-            {
-                mgr.handleCreateNodeResponse(response);
-                mgr.handleConfigurationResponse(response);
-                mgr.handlePublishResponse(response);
-            }
-        }
-    }
-
-    /**
-     * Response handler for PubSub packets.
-     */
-    private static class PubSubIQResponseHandler
-        implements IQResponseHandler
-    {
-
-        @Override
-        public boolean canProcess(IQ response)
-        {
-            if (response == null)
-                return false;
-
-            // "result"s and "error"s are already handled in their respective
-            // handlers
-            Type type = response.getType();
-            return response instanceof PubSub
-                    && !Type.RESULT.equals(type)
-                    && !Type.ERROR.equals(type);
-        }
-
-        @Override
-        public void process(IQ response)
-        {
-            PubSubPublisher mgr = instances.get(response.getFrom());
-            if (mgr != null)
-                mgr.handlePublishResponse(response);
         }
     }
 }

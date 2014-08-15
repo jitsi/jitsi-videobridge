@@ -26,6 +26,10 @@ import org.osgi.framework.*;
 public class StatsManagerBundleActivator
     implements BundleActivator
 {
+    /**
+     * The <tt>BundleContext</tt> in which a
+     * <tt>StatsManagerBundleActivator</tt> has been started.
+     */
     private static BundleContext bundleContext;
 
     /**
@@ -54,7 +58,7 @@ public class StatsManagerBundleActivator
 
     /**
      * The name of the property which specifies the name of the PubSub node that
-     * will receive the statistics about the videobridge if PubSub transport is
+     * will receive the statistics about the Videobridge if PubSub transport is
      * used to send statistics.
      */
     private static final String PUBSUB_NODE_PNAME
@@ -62,7 +66,7 @@ public class StatsManagerBundleActivator
 
     /**
      * The name of the property which specifies the name of the service that
-     * will receive the statistics about the videobridge if PubSub transport is
+     * will receive the statistics about the Videobridge if PubSub transport is
      * used to send statistics.
      */
     private static final String PUBSUB_SERVICE_PNAME
@@ -80,18 +84,25 @@ public class StatsManagerBundleActivator
 
     /**
      * The name of the property which specifies the interval in milliseconds for
-     * sending statistics about the videobridge.
+     * sending statistics about the Videobridge.
      */
     private static final String STATISTICS_INTERVAL_PNAME
         = "org.jitsi.videobridge.STATISTICS_INTERVAL";
 
     /**
      * The name of the property which specifies the transport for sending
-     * statistics about the videobridge.
+     * statistics about the Videobridge.
      */
     private static final String STATISTICS_TRANSPORT_PNAME
         = "org.jitsi.videobridge.STATISTICS_TRANSPORT";
 
+    /**
+     * Gets the <tt>BundleContext</tt> in which a
+     * <tt>StatsManagerBundleActivator</tt> has been started.
+     *
+     * @return the <tt>BundleContext</tt> in which a
+     * <tt>StatsManagerBundleActivator</tt> has been started
+     */
     public static BundleContext getBundleContext()
     {
         return bundleContext;
@@ -109,8 +120,8 @@ public class StatsManagerBundleActivator
      * Initializes and starts a new <tt>StatsManager</tt> instance and registers
      * it as an OSGi service in the specified <tt>bundleContext</tt>.
      *
-     * @param the <tt>BundleContext</tt> in which the <tt>StatsManager</tt> OSGi
-     * bundle is to start
+     * @param bundleContext the <tt>BundleContext</tt> in which the
+     * <tt>StatsManager</tt> OSGi bundle is to start
      */
     @Override
     public void start(BundleContext bundleContext)
@@ -147,6 +158,15 @@ public class StatsManagerBundleActivator
         }
     }
 
+    /**
+     * Starts the <tt>StatsManager</tt> OSGi bundle in a <tt>BundleContext</tt>.
+     * Initializes and starts a new <tt>StatsManager</tt> instance and registers
+     * it as an OSGi service in the specified <tt>bundleContext</tt>.
+     *
+     * @param cfg the <tt>ConfigurationService</tt> in the
+     * <tt>BundleContext</tt> in which the <tt>StatsManager</tt> OSGi is to
+     * start
+     */
     private void start(ConfigurationService cfg)
         throws Exception
     {

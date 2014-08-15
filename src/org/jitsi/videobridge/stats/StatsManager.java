@@ -21,14 +21,36 @@ import org.osgi.framework.*;
 public class StatsManager
     extends BundleContextHolder2
 {
+    /**
+     * The <tt>Statistics</tt> added to this <tt>StatsManager</tt>.
+     */
     private final List<TimeInfo<Statistics>> statistics
         = new LinkedList<TimeInfo<Statistics>>();
 
+    /**
+     * The backgroud/daemon <tt>Thread</tt> in which this <tt>StatsManager</tt>
+     * generates {@link #statistics} and sends them through {@link #transports}.
+     */
     private Thread thread;
 
+    /**
+     * The <tt>StatsTransport</tt>s added to this <tt>StatsManager</tt> to
+     * transport {@link #statistics}.
+     */
     private final List<TimeInfo<StatsTransport>> transports
         = new LinkedList<TimeInfo<StatsTransport>>();
 
+    /**
+     * Adds a specific (set of) <tt>Statistics</tt> to be periodically
+     * generated/updated by this <tt>StatsManager</tt>.
+     *
+     * @param statistics the (set of) <tt>Statistics</tT> to be repeatedly
+     * generated/updated by this <tt>StatsManager</tt> at the specified
+     * <tt>period</tt>
+     * @param period the internal/period in milliseconds at which the specified
+     * <tt>statistics</tt> is to be generated/updated by this
+     * <tt>StatsManager</tt>
+     */
     public void addStatistics(Statistics statistics, long period)
     {
         if (statistics == null)
@@ -43,6 +65,18 @@ public class StatsManager
         }
     }
 
+    /**
+     * Adds a specific <tt>StatsTransport</tt> through which this
+     * <tt>StatsManager</tt> is to periodically send the <tt>Statistics</tt>
+     * added to it.
+     *
+     * @param transport the <tt>StatsTransport</tt> to add to this
+     * <tt>StatsManager</tt> so that the latter periodically sends the
+     * <tt>Statistics</tt> added through the former
+     * @param period the internal/period in milliseconds at which this
+     * <tt>StatsManager</tt> is to repeatedly send the <tt>Statistics</tt> added
+     * to it through the specified <tt>transport</tt>
+     */
     public void addTransport(StatsTransport transport, long period)
     {
         if (transport == null)
@@ -56,6 +90,13 @@ public class StatsManager
         }
     }
 
+    /**
+     * Gets the (sets of) <tt>Statistics</tt> which this <tt>StatsManager</tt>
+     * periodically generates/updates.
+     *
+     * @return a <tt>Collection</tt> of the (sets of) <tt>Statistics</tt> which
+     * this <tt>StatsManager</tt> periodically generates/updates
+     */
     public Collection<Statistics> getStatistics()
     {
         Collection<Statistics> r;
@@ -78,6 +119,13 @@ public class StatsManager
         return r;
     }
 
+    /**
+     * Gets the number of (sets of) <tt>Statistics</tt> which this
+     * <tt>StatsManager</tt> periodically generates/updates.
+     *
+     * @return the number of (sets of) <tt>Statistics</tt> which this
+     * <tt>StatsManager</tt> periodically generates/updates
+     */
     public int getStatisticsCount()
     {
         synchronized (getSyncRoot())
@@ -86,11 +134,27 @@ public class StatsManager
         }
     }
 
+    /**
+     * Gets the <tt>Object</tt> used by this instance for the purposes of
+     * synchronization.
+     *
+     * @return the <tt>Object</tt> used by this instance for the purposes of
+     * synchronization
+     */
     private Object getSyncRoot()
     {
         return this;
     }
 
+    /**
+     * Gets the <tt>StatTransport</tt>s through which this <tt>StatsManager</tt>
+     * periodically sends the (sets of) <tt>Statistics</tt> that it
+     * generates/updates.
+     *
+     * @return a <tt>Collection</tt> of the <tt>StatTransport</tt>s through
+     * which this <tt>StatsManager</tt> periodically sends the (sets of)
+     * <tt>Statistics</tt> that it generates/updates
+     */
     public Collection<StatsTransport> getTransports()
     {
         Collection<StatsTransport> r;
@@ -114,7 +178,8 @@ public class StatsManager
     }
 
     /**
-     * Runs in {@link #thread}.
+     * Runs in {@link #thread} and periodically generates/updates
+     * {@link #statistics} and/or sends them through {@link #transports}.
      */
     private void runInThread()
     {
@@ -233,6 +298,10 @@ public class StatsManager
                     }
                 }
 
+                /*
+                 * Generate/update the (sets of) Statistics which are at or
+                 * after their respective period.
+                 */
                 if (!statistics.isEmpty())
                 {
                     for (TimeInfo<Statistics> timeInfo : statistics)
@@ -253,6 +322,10 @@ public class StatsManager
                     }
                     statistics.clear();
                 }
+                /*
+                 * Send the (sets of) Statistics through the StatTransports
+                 * which are at or after their respective periods.
+                 */
                 if (!transports.isEmpty())
                 {
                     Collection<Statistics> ss = getStatistics();
@@ -317,6 +390,12 @@ public class StatsManager
         startThread();
     }
 
+    /**
+     * Starts {@link #thread} if it has not been started yet, this
+     * <tt>StatsManager</tt> has been started in a <tt>BundleContext</tt> and
+     * (sets of) <tt>Statistics</tt> have been added to this
+     * <tt>StatsManager</tt>.
+     */
     private void startThread()
     {
         Object syncRoot = getSyncRoot();
@@ -384,13 +463,21 @@ public class StatsManager
             transport.stop(bundleContext);
     }
 
+    /**
+     * Stops {@link #thread} if it has been started already and this
+     * <tt>StatsManager</tt> has been stopped in the <tt>BundleContext</tt> in
+     * which it was previously started or this <tt>StatsManager</tt> does not
+     * have any (sets of) <tt>Statistics</tt> to periodically generate/update.
+     */
     private void stopThread()
     {
         Object syncRoot = getSyncRoot();
 
         synchronized (syncRoot)
         {
-            if ((getBundleContext() == null) || (getStatisticsCount() < 1))
+            if ((thread != null)
+                    && ((getBundleContext() == null)
+                            || (getStatisticsCount() < 1)))
             {
                 thread = null;
                 syncRoot.notify();
@@ -398,14 +485,47 @@ public class StatsManager
         }
     }
 
+    /**
+     * The internal information associated with <tt>Statistics</tt> or
+     * <tt>StatsTransport</tt> by <tt>StatsManager</tt> in order to enable its
+     * operational logic.
+     *
+     * @param <T> the class of <tt>Statistics</tt> or <tt>StatsTransport</tt>
+     * for which internal <tt>StatsManager</tt> information is maintained
+     *
+     * @author Lyubomir Marinov
+     */
     private static class TimeInfo<T>
     {
+        /**
+         * The last time in milliseconds at which {@link #o} was invoked.
+         */
         public long lastInvocationTime = System.currentTimeMillis();
 
+        /**
+         * The <tt>Statistics</tt> or <tt>StatsTransport</tt> which is being
+         * invoked by <tt>StatsManager</tt>.
+         */
         public T o;
 
+        /**
+         * The interval/period in milliseconds at which {@link #o} is to be
+         * invoked.
+         */
         public final long period;
 
+        /**
+         * Initializes a new <tt>TimeInfo</tt> instance which is to maintain
+         * internal information to enable <tt>StatsManager</tt> to repeatedly
+         * invoke a specific <tt>Statistics</tt> or <tt>StatsTransport</tt> at a
+         * specific internal/period in milliseconds.
+         *
+         * @param o the <tt>Statistics</tt> or <tt>StatsTransport</tt> to be
+         * repeatedly invoked by <tt>StatsManager</tt> at the specified
+         * <tt>period</tt>
+         * @param period the internal/period in milliseconds at which
+         * <tt>StatsManager</tt> is to invoke the specified <tt>o</tt>
+         */
         public TimeInfo(T o, long period)
         {
             this.o = o;

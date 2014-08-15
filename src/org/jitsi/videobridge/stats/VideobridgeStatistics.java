@@ -143,6 +143,9 @@ public class VideobridgeStatistics
         setStat(TIMESTAMP, currentTimeMillis());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized void generate()
     {

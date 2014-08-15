@@ -9,6 +9,7 @@ package org.jitsi.videobridge.stats;
 import org.osgi.framework.*;
 
 /**
+ * Represents an accessor to a <tt>BundleContext</tt> instance.
  *
  * @author Lyubomir Marinov
  */
@@ -20,6 +21,16 @@ class BundleContextHolder2
      */
     private BundleContext bundleContext;
 
+    /**
+     * Notifies this instance that the <tt>BundleContext</tt> it provides
+     * access to changed from a specific <tt>oldValue</tt> to a specific
+     * <tt>newValue</tt>.
+     *
+     * @param oldValue the <tt>BundleContext</tt> which this instance provided
+     * access to before the change
+     * @param newValue the <tt>BundleContext</tt> which this instance provides
+     * access to after the change
+     */
     protected void bundleContextChanged(
             BundleContext oldValue,
             BundleContext newValue)
@@ -38,6 +49,14 @@ class BundleContextHolder2
         return bundleContext;
     }
 
+    /**
+     * Starts this instance in a specific <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the <tt>BundleContext</tt> in which this instance is
+     * to start
+     * @throws Exception if this instance failed to start in the specified
+     * <tt>bundleContext</tt>
+     */
     void start(BundleContext bundleContext)
         throws Exception
     {
@@ -56,6 +75,14 @@ class BundleContextHolder2
             bundleContextChanged(oldValue, newValue);
     }
 
+    /**
+     * Stops this instance in a specific <tt>BundleContext</tt>.
+     *
+     * @param bundleContext the <tt>BundleContext</tt> in which this instance is
+     * to stop
+     * @throws Exception if this instance failed to stop in the specified
+     * <tt>bundleContext</tt>
+     */
     synchronized void stop(BundleContext bundleContext)
         throws Exception
     {

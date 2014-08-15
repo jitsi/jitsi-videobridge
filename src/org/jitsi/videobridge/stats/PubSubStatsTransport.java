@@ -39,6 +39,11 @@ public class PubSubStatsTransport
      */
     private PubSubPublisher publisher;
 
+    /**
+     * The <tt>ServiceListener</tt> which listens to the <tt>BundleContext</tt>
+     * in which this <tt>StatsTransport</tt> is started in order to track when
+     * <tt>ComponentImpl</tt>s are registered and unregistering.
+     */
     private final ServiceListener serviceListener
         = new ServiceListener()
         {
@@ -91,6 +96,7 @@ public class PubSubStatsTransport
     {
         if (publisher != null)
         {
+            publisher.removeResponseListener(this);
             PubSubPublisher.releasePubsubManager(publisher);
             publisher = null;
         }
@@ -114,6 +120,15 @@ public class PubSubStatsTransport
         }
     }
 
+    /**
+     * Invokes either {@link #init()} or {@link #dispose()} depending on the
+     * state of this instance and on whether the method invocation is the result
+     * of the unregistering of a specific <tt>ComponentImpl</tt>.
+     *
+     * @param unregistering the <tt>ComponentImpl</tt> which is unregistering
+     * and thus has caused the method invocation if any; otherwise,
+     * <tt>null</tt> 
+     */
     private void initOrDispose(ComponentImpl unregistering)
     {
         BundleContext bundleContext = getBundleContext();
@@ -185,6 +200,14 @@ public class PubSubStatsTransport
         }
     }
 
+    /**
+     * Notifies this instance that there was an OSGi service-related change in
+     * the <tt>BundleContext</tt> in which this <tt>StatsTransport</tt> is
+     * started.
+     *
+     * @param ev a <tt>ServiceEvent</tt> which details the specifics of the OSGi
+     * service-related change of which this instance is being notified
+     */
     private void serviceChanged(ServiceEvent ev)
     {
         int type = ev.getType();
