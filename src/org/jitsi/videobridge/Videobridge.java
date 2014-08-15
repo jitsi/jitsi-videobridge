@@ -796,6 +796,19 @@ public class Videobridge
                 if (responseConferenceIQ == null)
                     break;
             }
+            for(ColibriConferenceIQ.ChannelBundle channelBundleIq
+                : conferenceIQ.getChannelBundles())
+            {
+                TransportManager transportManager
+                    = conference.getTransportManager(channelBundleIq.getId());
+                IceUdpTransportPacketExtension transportIq
+                        = channelBundleIq.getTransport();
+                if (transportManager != null
+                        && transportIq != null)
+                {
+                    transportManager.startConnectivityEstablishment(transportIq);
+                }
+            }
         }
 
         // Update the endpoint information of Videobridge with the endpoint
