@@ -182,10 +182,13 @@ public class Content
      * <tt>RtpChannel</tt> instance has an ID which is unique within the list of
      * <tt>RtpChannel</tt>s of this <tt>Content</tt>.
      *
-     * @return
+     * @param channelBundleId the ID of the channel-bundle that the created
+     * <tt>RtpChannel</tt> is to be a part of (or <tt>null</tt> if it is not to
+     * be a part of a channel-bundle).
+     * @return the created <tt>RtpChannel</tt> instance.
      * @throws Exception
      */
-    public RtpChannel createRtpChannel()
+    public RtpChannel createRtpChannel(String channelBundleId)
         throws Exception
     {
         RtpChannel channel = null;
@@ -201,7 +204,7 @@ public class Content
                     switch (getMediaType())
                     {
                     case AUDIO:
-                        channel = new AudioChannel(this, id);
+                        channel = new AudioChannel(this, id, channelBundleId);
                         break;
                     case DATA:
                         /*
@@ -210,10 +213,10 @@ public class Content
                          */
                         throw new IllegalStateException("mediaType");
                     case VIDEO:
-                        channel = new VideoChannel(this, id);
+                        channel = new VideoChannel(this, id, channelBundleId);
                         break;
                     default:
-                        channel = new RtpChannel(this, id);
+                        channel = new RtpChannel(this, id, channelBundleId);
                         break;
                     }
                     channels.put(id, channel);
@@ -250,12 +253,17 @@ public class Content
      * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt>
      * @param sctpPort remote SCTP port that will be used by new
      * <tt>SctpConnection</tt>.
+     * @param channelBundleId the ID of the channel-bundle that the created
+     * <tt>SctpConnection</tt> is to be a part of (or <tt>null</tt> if it is not
+     * to be a part of a channel-bundle).
      * @return new <tt>SctpConnection</tt> with given <tt>Endpoint</tt>
      * @throws Exception if an error occurs while initializing the new instance
      * @throws IllegalArgumentException if <tt>SctpConnection</tt> exists
      * already for given <tt>Endpoint</tt>.
      */
-    public SctpConnection createSctpConnection(Endpoint endpoint, int sctpPort)
+    public SctpConnection createSctpConnection(Endpoint endpoint,
+                                               int sctpPort,
+                                               String channelBundleId)
         throws Exception
     {
         SctpConnection sctpConnection;
@@ -265,7 +273,9 @@ public class Content
             sctpConnection = getSctpConnection(endpoint);
             if(sctpConnection == null)
             {
-                sctpConnection = new SctpConnection(this, endpoint, sctpPort);
+                sctpConnection
+                    = new SctpConnection(
+                        this, endpoint, sctpPort, channelBundleId);
                 channels.put(sctpConnection.getID(), sctpConnection);
             }
             else

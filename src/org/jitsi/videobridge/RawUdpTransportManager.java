@@ -14,6 +14,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.xmpp.*;
@@ -56,6 +57,11 @@ public class RawUdpTransportManager
     private final StreamConnector streamConnector;
 
     /**
+     * The single <tt>Channel</tt> in this instance.
+     */
+    private final Channel channel;
+
+    /**
      * Initializes a new <tt>RawUdpTransportManager</tt> instance.
      *
      * @param channel the <tt>Channel</tt> which is initializing the new
@@ -64,7 +70,10 @@ public class RawUdpTransportManager
     public RawUdpTransportManager(Channel channel)
         throws IOException
     {
-        super(channel);
+        super();
+
+        this.channel = channel;
+        addChannel(channel);
 
         streamConnector = createStreamConnector();
         /*
@@ -74,6 +83,41 @@ public class RawUdpTransportManager
         generation = 0;
         rtpCandidateID = generateCandidateID();
         rtcpCandidateID = generateCandidateID();
+
+        // streamConnector is ready, let the channel start its stream (it
+        // will have to implement latching itself)
+        channel.transportConnected();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * RawUdpTransportManager only supports a single channel.
+     */
+    @Override
+    public boolean addChannel(Channel c)
+    {
+        if (getChannels().isEmpty())
+            return super.addChannel(c);
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     * Make sure that {@link #close()} is called.
+     */
+    @Override
+    public boolean close(Channel channel)
+    {
+        if (channel == this.channel)
+        {
+            super.close(channel);
+            channel.transportClosed();
+            close();
+
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -105,7 +149,6 @@ public class RawUdpTransportManager
          * Determine the local InetAddress the new StreamConnector is to attempt
          * to bind to.
          */
-        Channel channel = getChannel();
         BundleContext bundleContext = channel.getBundleContext();
         NetworkAddressManagerService nams
             = ServiceUtils.getService(
@@ -236,7 +279,7 @@ public class RawUdpTransportManager
     @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
-        StreamConnector streamConnector = getStreamConnector();
+        StreamConnector streamConnector = getStreamConnector(channel);
 
         // RTP
         {
@@ -274,7 +317,7 @@ public class RawUdpTransportManager
      * {@inheritDoc}
      */
     @Override
-    public StreamConnector getStreamConnector()
+    public StreamConnector getStreamConnector(Channel channel)
     {
         return streamConnector;
     }
@@ -287,7 +330,17 @@ public class RawUdpTransportManager
      * consequently, does not learn the remote addresses and requires latching.
      */
     @Override
-    public MediaStreamTarget getStreamTarget()
+    public MediaStreamTarget getStreamTarget(Channel channel)
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     * RawUdpTransportManager does not implement DTLS.
+     */
+    @Override
+    public DtlsControl getDtlsControl(Channel channel)
     {
         return null;
     }
@@ -308,20 +361,8 @@ public class RawUdpTransportManager
      * <tt>false</tt> because it does not establish connectivity.
      */
     @Override
-    public boolean startConnectivityEstablishment(
+    public void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport)
-    {
-         return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * The implementation of <tt>RawUdpTransportManager</tt> does nothing
-     * because it does not establish connectivity.
-     */
-    @Override
-    public void wrapupConnectivityEstablishment()
     {
     }
 }

@@ -188,6 +188,11 @@ public class RtpChannel
     int[] receivePTs = new int[0];
 
     /**
+     * Whether {@link #stream} has been closed.
+     */
+    private boolean streamClosed = false;
+
+    /**
      * Holds the <tt>RtpChannelDatagramFilter</tt> instances (if any) used by
      * this channel. The filter for RTP is at index 0, the filter for RTCP at
      * index 1.
@@ -205,12 +210,15 @@ public class RtpChannel
      * @param id the ID of the new instance. It is expected to be unique within
      * the list of <tt>Channel</tt>s listed in <tt>content</tt> while the new
      * instance is listed there as well.
+     * @param channelBundleId the ID of the channel-bundle this
+     * <tt>RtpChannel</tt> is to be a part of (or <tt>null</tt> if no it is
+     * not to be a part of a channel-bundle).
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public RtpChannel(Content content, String id)
+    public RtpChannel(Content content, String id, String channelBundleId)
         throws Exception
     {
-        super(content);
+        super(content, channelBundleId);
 
         if (id == null)
             throw new NullPointerException("id");
@@ -222,9 +230,9 @@ public class RtpChannel
 
         stream
             = mediaService.createMediaStream(
-                    null,
-                    mediaType,
-                    mediaService.createSrtpControl(SrtpControlType.DTLS_SRTP));
+                null,
+                mediaType,
+                getDtlsControl());
         /*
          * Add the PropertyChangeListener to the MediaStream prior to performing
          * further initialization so that we do not miss changes to the values
@@ -584,9 +592,14 @@ public class RtpChannel
     @Override
     protected void closeStream()
     {
-        stream.setProperty(Channel.class.getName(), null);
-        removeStreamListeners();
-        stream.close();
+        if (!streamClosed)
+        {
+            stream.setProperty(Channel.class.getName(), null);
+            removeStreamListeners();
+            stream.close();
+
+            streamClosed = true;
+        }
     }
 
     /**
@@ -672,20 +685,6 @@ public class RtpChannel
                 };
         }
         return csrcAudioLevelListener;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected DtlsControl getDtlsControl()
-    {
-        SrtpControl srtpControl = stream.getSrtpControl();
-
-        return
-            (srtpControl instanceof DtlsControl)
-                ? (DtlsControl) srtpControl
-                : null;
     }
 
     /**
@@ -929,8 +928,7 @@ public class RtpChannel
         throws IOException
     {
         // connector
-        StreamConnector connector = createStreamConnector();
-
+        StreamConnector connector = getStreamConnector();
 
         if (connector == null)
             return;
@@ -975,28 +973,6 @@ public class RtpChannel
              */
             if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
                 stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
-
-            /*
-             * Start the SrtpControl of the MediaStream. As far as our
-             * experience with Jitsi goes, the SrtpControl is started prior to
-             * the MediaStream there.
-             */
-            SrtpControl srtpControl = stream.getSrtpControl();
-
-            if (srtpControl != null)
-            {
-                if (srtpControl instanceof DtlsControl)
-                {
-                    DtlsControl dtlsControl = (DtlsControl) srtpControl;
-
-                    dtlsControl.setSetup(
-                            isInitiator()
-                                ? DtlsControl.Setup.PASSIVE
-                                : DtlsControl.Setup.ACTIVE);
-                    dtlsControl.setRtcpmux(connector.isRtcpmux());
-                }
-                srtpControl.start(content.getMediaType());
-            }
 
             stream.start();
         }

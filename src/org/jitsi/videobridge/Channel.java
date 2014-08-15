@@ -8,12 +8,9 @@ package org.jitsi.videobridge;
 
 import java.io.*;
 import java.lang.reflect.*;
-import java.util.*;
-import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.service.protocol.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -41,13 +38,6 @@ public abstract class Channel
      * expire.
      */
     public static final int DEFAULT_EXPIRE = 60;
-
-    /**
-     * The pool of threads utilized by <tt>Channel</tt> (e.g. to invoke
-     * {@link WrapupConnectivityEstablishmentCommand}).
-     */
-    private static final ExecutorService executorService
-        = ExecutorUtils.newCachedThreadPool(true, "Channel");
 
     /**
      * The name of the <tt>Channel</tt> property which indicates whether the
@@ -107,12 +97,15 @@ public abstract class Channel
     private final Object transportManagerSyncRoot = new Object();
 
     /**
-     * The <tt>WrapupConnectivityEstablishmentCommand</tt> submitted to
-     * {@link #executorService} and not completed yet.
+     * The ID of the channel-bundle that this <tt>Channel</tt> is part of, or
+     * <tt>null</tt> if it is not part of a channel-bundle.
      */
-    private
-        WrapupConnectivityEstablishmentCommand
-            wrapupConnectivityEstablishmentCommand;
+    private final String channelBundleId;
+
+    /**
+     * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
+     */
+    private StreamConnector streamConnector;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -121,21 +114,25 @@ public abstract class Channel
      *
      * @param content the <tt>Content</tt> which is initializing the new
      * instance
+     * @param channelBundleId the ID of the channel-bundle this
+     * <tt>AudioChannel</tt> is to be a part of (or <tt>null</tt> if no it is
+     * not to be a part of a channel-bundle).
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public Channel(Content content)
+    public Channel(Content content, String channelBundleId)
         throws Exception
     {
         if (content == null)
             throw new NullPointerException("content");
         this.content = content;
+        this.channelBundleId = channelBundleId;
 
         touch();
     }
 
     /**
-     * Initializes the pair of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
-     * {@link #rtpConnector} is to use.
+     * Initializes the pair of <tt>DatagramSocket</tt>s for RTP and RTCP
+     * traffic.
      *
      * @return a new <tt>StreamConnector</tt> instance which represents the pair
      * of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
@@ -147,15 +144,22 @@ public abstract class Channel
     protected StreamConnector createStreamConnector()
         throws IOException
     {
-        synchronized (transportManagerSyncRoot)
-        {
-            TransportManager transportManager = this.transportManager;
+        return getTransportManager().getStreamConnector(this);
+    }
 
-            return
-                (transportManager == null)
-                    ? null
-                    : transportManager.getStreamConnector();
+    /**
+     * Gets the <tt>StreamConnector</tt> currently used by this instance.
+     * @return the <tt>StreamConnector</tt> currently used by this instance.
+     * @throws IOException
+     */
+    StreamConnector getStreamConnector()
+            throws IOException
+    {
+        if (streamConnector == null)
+        {
+            streamConnector = createStreamConnector();
         }
+        return streamConnector;
     }
 
     /**
@@ -167,14 +171,13 @@ public abstract class Channel
      */
     protected MediaStreamTarget createStreamTarget()
     {
-        synchronized (transportManagerSyncRoot)
+        try
         {
-            TransportManager transportManager = this.transportManager;
-
-            return
-                (transportManager == null)
-                    ? null
-                    : transportManager.getStreamTarget();
+            return getTransportManager().getStreamTarget(this);
+        }
+        catch (IOException ioe)
+        {
+            return null;
         }
     }
 
@@ -190,16 +193,23 @@ public abstract class Channel
      * new <tt>TransportManager</tt> instance which has the specified
      * <tt>xmlNamespace</tt>
      */
-    private TransportManager createTransportManager(String xmlNamespace)
+    protected TransportManager createTransportManager(String xmlNamespace)
         throws IOException
     {
         if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
         {
-            return new IceUdpTransportManager(this);
+            Content content = getContent();
+            return new IceUdpTransportManager(content.getConference(),
+                                                 isInitiator(),
+                                                 2 /* num components */,
+                                                 content.getName());
         }
         else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
         {
-            return new RawUdpTransportManager(this);
+            //TODO: support RawUdp once RawUdpTransportManager is updated
+            //return new RawUdpTransportManager(this);
+            throw new IllegalArgumentException(
+                    "Unsupported Jingle transport " + xmlNamespace);
         }
         else
         {
@@ -227,47 +237,76 @@ public abstract class Channel
         iq.setExpire(getExpire());
         iq.setInitiator(isInitiator());
 
-        describeTransportManager(iq);
-        describeSrtpControl(iq);
+        // If a channel is part of a bundle, its transport will be described
+        // in the channel-bundle itself
+        if (channelBundleId != null)
+        {
+            iq.setChannelBundleId(channelBundleId);
+        }
+        else
+        {
+            describeTransportManager(iq);
+            describeSrtpControl(iq);
+        }
     }
 
     /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ.ChannelCommon</tt> to the values of the
-     * respective properties of {@link #transportManager}.
+     * respective properties of the <tt>DtlsControl</tt> of this channel.
      *
      * @param iq the <tt>ColibriConferenceIQ.ChannelCommon</tt> on which to set
      *           the values of the properties of <tt>transportManager</tt>
      */
     private void describeSrtpControl(ColibriConferenceIQ.ChannelCommon iq)
     {
-        DtlsControl dtlsControl = getDtlsControl();
-
-        if (dtlsControl != null)
+        DtlsControl dtlsControl;
+        try
         {
-            String fingerprint = dtlsControl.getLocalFingerprint();
-            String hash = dtlsControl.getLocalFingerprintHashFunction();
-
-            IceUdpTransportPacketExtension transportPE = iq.getTransport();
-
-            if (transportPE == null)
-            {
-                transportPE = new RawUdpTransportPacketExtension();
-                iq.setTransport(transportPE);
-            }
-
-            DtlsFingerprintPacketExtension fingerprintPE
-                = transportPE.getFirstChildOfType(
-                        DtlsFingerprintPacketExtension.class);
-
-            if (fingerprintPE == null)
-            {
-                fingerprintPE = new DtlsFingerprintPacketExtension();
-                transportPE.addChildExtension(fingerprintPE);
-            }
-            fingerprintPE.setFingerprint(fingerprint);
-            fingerprintPE.setHash(hash);
+            dtlsControl = getDtlsControl();
         }
+        catch (IOException ioe)
+        {
+            throw new UndeclaredThrowableException(ioe);
+        }
+
+        IceUdpTransportPacketExtension transportPE = iq.getTransport();
+
+        if (transportPE == null)
+        {
+            transportPE = new RawUdpTransportPacketExtension();
+            iq.setTransport(transportPE);
+        }
+        describeSrtpControl(dtlsControl,
+                            transportPE);
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>IceUdpTransportPacketExtension</tt> to the values of the
+     * respective properties of <tt>transportPE</tt>.
+     *
+     * @param dtlsControl the <tt>DtlsControl</tt> to describe.
+     * @param transportPE the <tt>IceUdpTransportPacketExtension</tt> on which
+     * to set the values of the properties of <tt>dtlsControl</tt>
+     */
+    void describeSrtpControl(DtlsControl dtlsControl,
+                             IceUdpTransportPacketExtension transportPE)
+    {
+        String fingerprint = dtlsControl.getLocalFingerprint();
+        String hash = dtlsControl.getLocalFingerprintHashFunction();
+
+        DtlsFingerprintPacketExtension fingerprintPE
+                = transportPE.getFirstChildOfType(
+                DtlsFingerprintPacketExtension.class);
+
+        if (fingerprintPE == null)
+        {
+            fingerprintPE = new DtlsFingerprintPacketExtension();
+            transportPE.addChildExtension(fingerprintPE);
+        }
+        fingerprintPE.setFingerprint(fingerprint);
+        fingerprintPE.setHash(hash);
     }
 
     /**
@@ -281,7 +320,6 @@ public abstract class Channel
     private void describeTransportManager(ColibriConferenceIQ.ChannelCommon iq)
     {
         TransportManager transportManager;
-
         try
         {
             transportManager = getTransportManager();
@@ -290,8 +328,8 @@ public abstract class Channel
         {
             throw new UndeclaredThrowableException(ioe);
         }
-        if (transportManager != null)
-            transportManager.describe(iq);
+
+        transportManager.describe(iq);
     }
 
     /**
@@ -340,9 +378,8 @@ public abstract class Channel
             {
                 synchronized (transportManagerSyncRoot)
                 {
-                    wrapupConnectivityEstablishmentCommand = null;
                     if (transportManager != null)
-                        transportManager.close();
+                        transportManager.close(this);
                 }
             }
             catch (Throwable t)
@@ -422,7 +459,11 @@ public abstract class Channel
      * @return <tt>DtlsControl</tt> if this instance supports DTLS transport or
      *         <tt>null</tt> otherwise.
      */
-    protected abstract DtlsControl getDtlsControl();
+    protected DtlsControl getDtlsControl()
+        throws IOException
+    {
+        return getTransportManager().getDtlsControl(this);
+    }
 
     /**
      * Gets the <tt>Endpoint</tt> of the conference participant associated with
@@ -489,13 +530,32 @@ public abstract class Channel
         {
             if (transportManager == null)
             {
-                wrapupConnectivityEstablishmentCommand = null;
-                transportManager
-                    = createTransportManager(
+                // If this channel is not part of a channel-bundle, it creates
+                // its own TransportManager
+                if (channelBundleId == null)
+                {
+                    transportManager
+                            = createTransportManager(
                             getContent()
-                                .getConference()
+                                    .getConference()
                                     .getVideobridge()
-                                        .getDefaultTransportManager());
+                                    .getDefaultTransportManager());
+                }
+                // Otherwise, it uses a TransportManager specific to the
+                // channel-bundle, which is maintained by the Conference object.
+                else
+                {
+                    transportManager
+                            = getContent().getConference()
+                                .getTransportManager(channelBundleId, true);
+                }
+
+                if (transportManager == null)
+                {
+                    throw new IOException("Failed to get transport manager.");
+                }
+
+                transportManager.addChannel(this);
 
                 /*
                  * The implementation of the Jingle Raw UDP transport does not
@@ -541,6 +601,7 @@ public abstract class Channel
     }
 
     /**
+     * TODO: update this javadoc
      * Starts {@link #stream} if it has not been started yet and if the state of
      * this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
@@ -561,99 +622,6 @@ public abstract class Channel
      */
     protected abstract void onEndpointChanged(Endpoint oldValue,
                                               Endpoint newValue);
-
-    /**
-     * Runs in a (pooled) thread associated with a specific
-     * <tt>WrapupConnectivityEstablishmentCommand</tt> to invoke
-     * {@link TransportManager#wrapupConnectivityEstablishment()} on a specific
-     * <tt>TransportManager</tt> and then {@link #maybeStartStream()} on this
-     * <tt>Channel</tt> if the <tt>TransportManager</tt> succeeds at producing a
-     * <tt>StreamConnector</tt>.
-     *
-     * @param wrapupConnectivityEstablishmentCommand the
-     * <tt>WrapupConnectivityEstablishmentCommand</tt> which is running in a
-     * (pooled) thread and which specifies the <tt>TransportManager</tt> on
-     * which <tt>TransportManager.wrapupConnectivityEstablishment</tt> is to be
-     * invoked.
-     */
-    private void runInWrapupConnectivityEstablishmentCommand(
-            WrapupConnectivityEstablishmentCommand
-                wrapupConnectivityEstablishmentCommand)
-    {
-        TransportManager transportManager
-            = wrapupConnectivityEstablishmentCommand.transportManager;
-
-        /*
-         * TransportManager.wrapupConnectivityEstablishment() may take a long
-         * time to complete. Do not even execute it if it will be of no use to
-         * the current state of this Channel.
-         */
-        synchronized (transportManagerSyncRoot)
-        {
-            if (transportManager != this.transportManager)
-                return;
-            if (wrapupConnectivityEstablishmentCommand
-                    != this.wrapupConnectivityEstablishmentCommand)
-            {
-                return;
-            }
-            if (isExpired())
-                return;
-        }
-
-        try
-        {
-            transportManager.wrapupConnectivityEstablishment();
-        }
-        catch (OperationFailedException ofe)
-        {
-            Content content = getContent();
-
-            logger.error(
-                    "Failed to wrapup the connectivity establishment of the"
-                        + " TransportManager/transportManager of channel "
-                        + getID() + " of content " + content.getName()
-                        + " of conference " + content.getConference().getID()
-                        + "!",
-                    ofe);
-            return;
-        }
-
-        synchronized (transportManagerSyncRoot)
-        {
-            /*
-             * TransportManager.wrapupConnectivityEstablishment() may have taken
-             * a long time to complete. Do not attempt to modify the stream of
-             * this Channel if it will be of no use to the current state of this
-             * Channel.
-             */
-            if (transportManager != this.transportManager)
-                return;
-            if (wrapupConnectivityEstablishmentCommand
-                    != this.wrapupConnectivityEstablishmentCommand)
-            {
-                return;
-            }
-            if (isExpired())
-                return;
-
-            try
-            {
-                maybeStartStream();
-            }
-            catch (IOException ioe)
-            {
-                Content content = getContent();
-
-                logger.error(
-                        "Failed to start the MediaStream/stream of channel "
-                            + getID() + " of content " + content.getName()
-                            + " of conference "
-                            + content.getConference().getID() + "!",
-                        ioe);
-            }
-        }
-    }
 
     /**
      * Sets the identifier of the endpoint of the conference participant
@@ -738,6 +706,9 @@ public abstract class Channel
 
         if (oldValue != newValue)
         {
+            /* TODO Handle the change of initiator? Or remove the functionality
+               on channel-level?
+
             DtlsControl dtlsControl = getDtlsControl();
 
             if(dtlsControl != null)
@@ -747,6 +718,7 @@ public abstract class Channel
                         ? DtlsControl.Setup.PASSIVE
                         : DtlsControl.Setup.ACTIVE);
             }
+            */
 
             firePropertyChange(INITIATOR_PROPERTY, oldValue, newValue);
         }
@@ -764,91 +736,7 @@ public abstract class Channel
     {
         if (transport != null)
         {
-            setTransportManager(transport.getNamespace());
-
-            // DTLS-SRTP
-            DtlsControl dtlsControl = getDtlsControl();
-
-            if (dtlsControl != null)
-            {
-                List<DtlsFingerprintPacketExtension> dfpes
-                    = transport.getChildExtensionsOfType(
-                            DtlsFingerprintPacketExtension.class);
-
-                if (!dfpes.isEmpty())
-                {
-                    Map<String,String> remoteFingerprints
-                        = new LinkedHashMap<String,String>();
-
-                    for (DtlsFingerprintPacketExtension dfpe : dfpes)
-                    {
-                        remoteFingerprints.put(
-                                dfpe.getHash(),
-                                dfpe.getFingerprint());
-                    }
-
-                    dtlsControl.setRemoteFingerprints(remoteFingerprints);
-                }
-            }
-
-            TransportManager transportManager = getTransportManager();
-
-            if (transportManager != null)
-            {
-                if (transportManager.startConnectivityEstablishment(transport))
-                    wrapupConnectivityEstablishment(transportManager);
-                else
-                    maybeStartStream();
-            }
-        }
-
-        touch(); // It seems this Channel is still active.
-    }
-
-    /**
-     * Sets the XML namespace of the Jingle transport of this <tt>Channel</tt>.
-     * If {@link #transportManager} is non-<tt>null</tt> and does not have the
-     * specified <tt>xmlNamespace</tt>, it is closed and replaced with a new
-     * <tt>TransportManager</tt> instance which has the specified
-     * <tt>xmlNamespace</tt>. If <tt>transportManager</tt> is non-<tt>null</tt>
-     * and has the specified <tt>xmlNamespace</tt>, the method does nothing.
-     *
-     * @param xmlNamespace the XML namespace of the Jingle transport to be set
-     * on this <tt>Channel</tt>
-     * @throws IOException
-     */
-    private void setTransportManager(String xmlNamespace)
-        throws IOException
-    {
-        synchronized (transportManagerSyncRoot)
-        {
-            if ((transportManager != null)
-                    && !transportManager.getXmlNamespace().equals(xmlNamespace))
-            {
-                wrapupConnectivityEstablishmentCommand = null;
-                transportManager.close();
-                transportManager = null;
-            }
-
-            if (transportManager == null)
-            {
-                wrapupConnectivityEstablishmentCommand = null;
-                transportManager = createTransportManager(xmlNamespace);
-
-                if (logger.isTraceEnabled())
-                {
-                    Content content = getContent();
-
-                    logger.trace(
-                            "Set " + transportManager.getClass().getSimpleName()
-                                + " #"
-                                + Integer.toHexString(
-                                        transportManager.hashCode())
-                                + " on channel " + getID() + " of content "
-                                + content.getName() + " of conference "
-                                + content.getConference().getID() + ".");
-                }
-            }
+            getTransportManager().startConnectivityEstablishment(transport);
         }
 
         touch(); // It seems this Channel is still active.
@@ -870,103 +758,32 @@ public abstract class Channel
     }
 
     /**
-     * Schedules the asynchronous execution of
-     * {@link TransportManager#wrapupConnectivityEstablishment()} on a specific
-     * <tt>TransportManager</tt> in a (pooled) thread in anticipation of a
-     * <tt>StreamConnector</tt> to be set on {@link #stream}.
-     *
-     * @param transportManager the <tt>TransportManager</tt> on which
-     * <tt>TransportManager.wrapupConnectivityEstablishment()</tt> is to be
-     * invoked in anticipation of a <tt>StreamConnector</tt> to be set on
-     * <tt>stream</tt>.
+     * Notifies this <tt>Channel</tt> that its <tt>TransportManager</tt> has
+     * established connectivity.
      */
-    private void wrapupConnectivityEstablishment(
-            TransportManager transportManager)
+    void transportConnected()
     {
-        synchronized (transportManagerSyncRoot)
+        logger.info("Transport connected for channel " + getID()
+                            + " of content " + getContent().getName() + " "
+                            + " of conference"
+                            + getContent().getConference().getID());
+        try
         {
-            if (transportManager != this.transportManager)
-                return;
-
-            if ((wrapupConnectivityEstablishmentCommand != null)
-                    && (wrapupConnectivityEstablishmentCommand.transportManager
-                            != transportManager))
-            {
-                wrapupConnectivityEstablishmentCommand = null;
-            }
-            if (wrapupConnectivityEstablishmentCommand == null)
-            {
-                wrapupConnectivityEstablishmentCommand
-                    = new WrapupConnectivityEstablishmentCommand(
-                            transportManager);
-
-                boolean execute = false;
-
-                try
-                {
-                    executorService.execute(
-                            wrapupConnectivityEstablishmentCommand);
-                    execute = true;
-                }
-                finally
-                {
-                    if (!execute)
-                        wrapupConnectivityEstablishmentCommand = null;
-                }
-            }
+            maybeStartStream();
+        }
+        catch (IOException ioe)
+        {
+            logger.warn("Failed to start stream for channel: " + getID()
+                                + ": " + ioe);
         }
     }
 
     /**
-     * Implements a <tt>Runnable</tt> to be executed in a (pooled) thread in
-     * order to invoke
-     * {@link TransportManager#wrapupConnectivityEstablishment()} on a specific
-     * <tt>TransportManager</tt> and possibly set a <tt>StreamConnector</tt> on
-     * and start {@link #stream}.
-     *
-     * @author Lyubomir Marinov
+     * Notifies this <tt>Channel</tt> that its <tt>TransportManager</tt> has
+     * been closed.
      */
-    private class WrapupConnectivityEstablishmentCommand
-        implements Runnable
+    void transportClosed()
     {
-        /**
-         * The <tt>TransportManager</tt> on which this instance is to invoke
-         * {@link TransportManager#wrapupConnectivityEstablishment()}.
-         */
-        public final TransportManager transportManager;
-
-        /**
-         * Initializes a new <tt>WrapupConnectivityEstablishmentCommand</tt>
-         * which is to invoke
-         * {@link TransportManager#wrapupConnectivityEstablishment()} on a
-         * specific <tt>TransportManager</tt> and possibly set a
-         * <tt>StreamConnector</tt> on and start {@link #stream}.
-         *
-         * @param transportManager the <tt>TransportManager</tt> on which the
-         * new instance is to invoke
-         * <tt>TransportManager.wrapupConnectivityEstablishment()</tt>
-         */
-        public WrapupConnectivityEstablishmentCommand(
-                TransportManager transportManager)
-        {
-            this.transportManager = transportManager;
-        }
-
-        @Override
-        public void run()
-        {
-            try
-            {
-                runInWrapupConnectivityEstablishmentCommand(this);
-            }
-            finally
-            {
-                synchronized (transportManagerSyncRoot)
-                {
-                    if (wrapupConnectivityEstablishmentCommand == this)
-                        wrapupConnectivityEstablishmentCommand = null;
-                }
-            }
-        }
+        expire();
     }
 }

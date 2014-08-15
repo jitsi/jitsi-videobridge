@@ -34,6 +34,7 @@ import org.osgi.framework.*;
  *
  * @author Lyubomir Marinov
  * @author Hristo Terezov
+ * @author Boris Grozev
  */
 public class Videobridge implements StatsGenerator
 {
@@ -654,6 +655,7 @@ public class Videobridge implements StatsGenerator
                     {
                         String channelID = channelIQ.getID();
                         int channelExpire = channelIQ.getExpire();
+                        String channelBundleId = channelIQ.getChannelBundleId();
                         RtpChannel channel;
 
                         /*
@@ -673,7 +675,7 @@ public class Videobridge implements StatsGenerator
                             channel
                                 = (channelExpire == 0)
                                     ? null
-                                    : content.createRtpChannel();
+                                    : content.createRtpChannel(channelBundleId);
                         }
                         else
                         {
@@ -720,6 +722,16 @@ public class Videobridge implements StatsGenerator
 
                             if (rtpLevelRelayType != null)
                                 channel.setRTPLevelRelayType(rtpLevelRelayType);
+
+                            if (channelBundleId != null)
+                            {
+                                TransportManager transportManager
+                                        = conference
+                                        .getTransportManager(
+                                                channelBundleId,
+                                                true);
+                                transportManager.addChannel(channel);
+                            }
 
                             /*
                              * The attribute endpoint is optional. If a value is
@@ -782,6 +794,7 @@ public class Videobridge implements StatsGenerator
                         SctpConnection sctpConn
                             = content.getSctpConnection(endpoint);
                         int expire = sctpConnIq.getExpire();
+                        String channelBundleId = sctpConnIq.getChannelBundleId();
 
                         if(sctpConn == null)
                         {
@@ -794,7 +807,8 @@ public class Videobridge implements StatsGenerator
                             sctpConn
                                 = content.createSctpConnection(
                                         endpoint,
-                                        sctpPort);
+                                        sctpPort,
+                                        channelBundleId);
                         }
 
                         // expire
@@ -817,6 +831,15 @@ public class Videobridge implements StatsGenerator
 
                         // transport
                         sctpConn.setTransport(sctpConnIq.getTransport());
+
+                        if (channelBundleId != null)
+                        {
+                            TransportManager transportManager
+                                = conference.getTransportManager(
+                                    channelBundleId,
+                                    true);
+                            transportManager.addChannel(sctpConn);
+                        }
 
                         // response
                         ColibriConferenceIQ.SctpConnection responseSctpIq
@@ -842,6 +865,9 @@ public class Videobridge implements StatsGenerator
             {
                 conference.updateEndpoint(colibriEndpoint);
             }
+
+            if (responseConferenceIQ != null)
+                conference.describeChannelBundles(responseConferenceIQ);
         }
 
         if (responseConferenceIQ != null)
