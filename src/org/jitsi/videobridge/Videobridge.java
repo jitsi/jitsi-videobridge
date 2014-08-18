@@ -712,6 +712,31 @@ public class Videobridge
 
                             channel.setDirection(channelIQ.getDirection());
 
+                            if (channel instanceof VideoChannel
+                                    && channelIQ.getSourceGroups() != null)
+                            {
+                                VideoChannel videoChannel
+                                        = (VideoChannel) channel;
+
+                                videoChannel.getSimulcastManager()
+                                        .updateSimulcastLayers(
+                                        channelIQ.getSourceGroups());
+                            }
+
+                            if (channel instanceof VideoChannel
+                                    && channelIQ.getReceivingSimulcastLayer() != null)
+                            {
+                                VideoChannel videoChannel
+                                        = (VideoChannel) channel;
+
+                                Integer receiveSimulcastLayer =
+                                        channelIQ.getReceivingSimulcastLayer();
+
+                                videoChannel.getSimulcastManager()
+                                        .setReceivingSimulcastLayer(
+                                        receiveSimulcastLayer);
+                            }
+
                             /*
                              * Provide (a description of) the current state of
                              * the channel as part of the response.

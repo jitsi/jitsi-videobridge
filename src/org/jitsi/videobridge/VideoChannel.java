@@ -23,6 +23,11 @@ public class VideoChannel
     extends RtpChannel
 {
     /**
+     * The <tt>SimulcastManager</tt> of this video <tt>Channel</tt>.
+     */
+    private final SimulcastManager simulcastManager;
+
+    /**
      * The maximum number of video RTP stream to be sent from Jitsi Videobridge
      * to the endpoint associated with this video <tt>Channel</tt>.
      */
@@ -61,6 +66,7 @@ public class VideoChannel
         throws Exception
     {
         super(content, id, channelBundleId);
+        this.simulcastManager = new SimulcastManager(this);
     }
 
     /**
@@ -79,6 +85,7 @@ public class VideoChannel
             throws Exception
     {
         super(content, id, null);
+        this.simulcastManager = new SimulcastManager(this);
     }
 
     /**
@@ -109,6 +116,15 @@ public class VideoChannel
 
         return (lastNInteger == null) ? -1 : lastNInteger.intValue();
     }
+
+    /**
+     * Gets the <tt>SimulcastManager</tt> of this video <tt>Channel</tt>.
+     * @return the simulcast manager of this video <tt>Channel</tt>.
+     */
+    public SimulcastManager getSimulcastManager() {
+        return this.simulcastManager;
+    }
+
 
     /**
      * {@inheritDoc}
@@ -344,7 +360,14 @@ public class VideoChannel
         if (data && (source != null))
         {
             accept = isInLastN(source);
+
+            if (accept && source instanceof VideoChannel)
+            {
+                VideoChannel videoChannel = (VideoChannel) source;
+                accept = simulcastManager.acceptSimulcastLayer(buffer, offset, length, videoChannel);
+            }
         }
+
         return accept;
     }
 
