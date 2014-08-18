@@ -1044,10 +1044,11 @@ public class Conference
     }
 
     /**
-     * Notifies this instance that a specific <tt>SctpConnection</tt> is ready
-     * i.e. connected to a/the remote peer and operational.
+     * Notifies this instance that a specific <tt>SctpConnection</tt> has become
+     * ready i.e. connected to a/the remote peer and operational.
      *
-     * @param sctpConnection
+     * @param sctpConnection the <tt>SctpConnection</tt> which has become ready
+     * and is the cause of the method invocation
      */
     private void sctpConnectionReady(SctpConnection sctpConnection)
     {
@@ -1081,6 +1082,15 @@ public class Conference
                             createDominantSpeakerEndpointChangeEvent(
                                     dominantSpeaker));
                 }
+
+                /*
+                 * Determining the instant at which an SctpConnection associated
+                 * with an Endpoint becomes ready (i.e. connected to the remote
+                 * peer and operational) is a multi-step ordeal. The Conference
+                 * class implements the procedure so do not make other classes
+                 * implement it as well.
+                 */
+                endpoint.sctpConnectionReady(sctpConnection);
             }
         }
     }

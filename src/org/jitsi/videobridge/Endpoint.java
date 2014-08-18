@@ -176,16 +176,15 @@ public class Endpoint
 
         synchronized (this.channels)
         {
-            for (WeakReference<RtpChannel> channel1 : this.channels)
+            for (WeakReference<RtpChannel> wr : this.channels)
             {
-                RtpChannel channel = channel1.get();
+                RtpChannel channel = wr.get();
 
-                if (channel == null)
-                    continue;
-
-                if ((mediaType == null)
-                        || mediaType.equals(
-                                channel.getContent().getMediaType()))
+                if ((channel != null)
+                        && !channel.isExpired()
+                        && ((mediaType == null)
+                                || mediaType.equals(
+                                        channel.getContent().getMediaType())))
                 {
                     channels.add(channel);
                 }
@@ -259,6 +258,25 @@ public class Endpoint
             firePropertyChange(CHANNELS_PROPERTY_NAME, null, null);
 
         return removed;
+    }
+
+    /**
+     * Notifies this <tt>Endpoint</tt> that its associated
+     * <tt>SctpConnection</tt> has become ready i.e. connected to the remote
+     * peer and operational.
+     *
+     * @param sctpConnection the <tt>SctpConnection</tt> which has become ready
+     * and is the cause of the method invocation
+     */
+    void sctpConnectionReady(SctpConnection sctpConnection)
+    {
+        if (sctpConnection.equals(getSctpConnection())
+                && !sctpConnection.isExpired()
+                && sctpConnection.isReady())
+        {
+            for (RtpChannel channel : getChannels(null))
+                channel.sctpConnectionReady(this);
+        }
     }
 
     /**

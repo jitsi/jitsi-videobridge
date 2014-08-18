@@ -1209,6 +1209,19 @@ public class RtpChannel
     }
 
     /**
+     * Notifies this <tt>RtpChannel</tt> that its associated
+     * <tt>SctpConnection</tt> has become ready i.e. connected to the remote
+     * peer and operational.
+     *
+     * @param endpoint the <tt>Endpoint</tt> which is the source of the
+     * notification and through which an <tt>SctpConnection</tt> is associated
+     * with this <tt>RtpChannel</tt>
+     */
+    void sctpConnectionReady(Endpoint endpoint)
+    {
+    }
+
+    /**
      * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
      * <p>
      * <b>Warning</b>: The method does nothing if latching has not finished.

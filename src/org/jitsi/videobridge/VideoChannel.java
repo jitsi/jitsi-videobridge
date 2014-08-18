@@ -134,29 +134,30 @@ public class VideoChannel
         if (lastN == 0)
             return false;
 
-        Lock writeLock = lastNSyncRoot.writeLock();
+        /*
+         * We do not hold any lock on lastNSyncRoot here because it should be
+         * alright for multiple threads to check whether lastNEndpoints is null
+         * and invoke the method to populate it because (1) the method to
+         * populate lastNEndpoints will acquire the necessary locks to ensure
+         * preserving the correctness of the state of this instance under the
+         * conditions of concurrent access and (2) we do not want to hold a
+         * write lock on lastNSyncRoot while invoking the method to populate
+         * lastNEndpoints because the latter might fire an event.
+         */
+        if (lastNEndpoints == null)
+        {
+            /*
+             * Pretend that the ordered list of Endpoints maintained by
+             * conferenceSpeechActivity has changed in order to populate
+             * lastNEndpoints.
+             */
+            speechActivityEndpointsChanged(null);
+        }
+
         Lock readLock = lastNSyncRoot.readLock();
         boolean inLastN = false;
 
-        writeLock.lock();
-        try
-        {
-            if (lastNEndpoints == null)
-            {
-                /*
-                 * Pretend that the ordered list of Endpoints maintained by
-                 * conferenceSpeechActivity has changed in order to populate
-                 * lastNEndpoints.
-                 */
-                speechActivityEndpointsChanged(
-                        conferenceSpeechActivity.getEndpoints());
-            }
-            readLock.lock();
-        }
-        finally
-        {
-            writeLock.unlock();
-        }
+        readLock.lock();
         try
         {
             if (lastNEndpoints != null)
@@ -349,6 +350,25 @@ public class VideoChannel
 
     /**
      * {@inheritDoc}
+     *
+     * Fires initial events over the WebRTC data channel of this
+     * <tt>VideoChannel</tt> such as the list of last-n <tt>Endpoint</tt>s whose
+     * video is sent/RTP translated by this <tt>RtpChannel</tt> to its
+     * <tt>Endpoint</tt>.
+     */
+    @Override
+    void sctpConnectionReady(Endpoint endpoint)
+    {
+        super.sctpConnectionReady(endpoint);
+
+        if (endpoint.equals(getEndpoint()))
+        {
+            lastNEndpointsChanged(null);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public void setLastN(Integer lastN)
@@ -374,6 +394,8 @@ public class VideoChannel
             // Determine which Endpoints are entering the list of lastN.
             int lastN = getLastN();
 
+            if (endpoints == null)
+                endpoints = conferenceSpeechActivity.getEndpoints();
             if (lastN > 0)
             {
                 Endpoint thisEndpoint = getEndpoint();

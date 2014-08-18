@@ -13,8 +13,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.osgi.framework.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.sctp4j.*;
@@ -349,20 +349,6 @@ public class SctpConnection
                 def = channels.get(0);
                 if (def == null)
                 {
-                    /*
-                     * FIXME Lyubomir Marinov: If usrsctp_send is invoked
-                     * immediately after SCTP_ASSOC_CHANGE SCTP_COMM_UP or
-                     * SCTP_PEER_ADDR_CHANGE SCTP_ADDR_CONFIRMED, it returns
-                     * "Transport endpoint is not connected".
-                     */
-                    try
-                    {
-                        Thread.sleep(42);
-                    }
-                    catch (InterruptedException ex)
-                    {
-                    }
-
                     def = openChannel(0, 0, 0, 0, "default");
                 }
                 // Pawel Domas: Must be acknowledged before use
@@ -390,11 +376,11 @@ public class SctpConnection
     }
 
     /**
-     * Returns <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
-     * other peer and operational.
+     * Returns <tt>true</tt> if this <tt>SctpConnection</tt> is connected to the
+     * remote peer and operational.
      *
-     * @return <tt>true</tt> if this <tt>SctpConnection</tt> is connected to
-     * other peer and operational.
+     * @return <tt>true</tt> if this <tt>SctpConnection</tt> is connected to the
+     * remote peer and operational
      */
     public boolean isReady()
     {
@@ -518,8 +504,27 @@ public class SctpConnection
         }
     }
 
+    /**
+     * Notifies the <tt>WebRtcDataStreamListener</tt>s added to this instance
+     * that this <tt>SctpConnection</tt> is ready i.e. it is connected to the
+     * remote peer and operational.
+     */
     private void notifySctpConnectionReadyInEventDispatcher()
     {
+        /*
+         * FIXME Lyubomir Marinov: If usrsctp_send is invoked immediately after
+         * SCTP_ASSOC_CHANGE SCTP_COMM_UP or SCTP_PEER_ADDR_CHANGE
+         * SCTP_ADDR_CONFIRMED, it returns "Transport endpoint is not
+         * connected".
+         */
+        try
+        {
+            Thread.sleep(1000);
+        }
+        catch (InterruptedException ex)
+        {
+        }
+
         /*
          * When executing asynchronously in eventDispatcher, it is technically
          * possible that this SctpConnection may have expired by now.
