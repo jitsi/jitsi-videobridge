@@ -128,12 +128,15 @@ final class JSONDeserializer
                 = channel.get(ColibriConferenceIQ.Channel.INITIATOR_ATTR_NAME);
             Object lastN
                 = channel.get(ColibriConferenceIQ.Channel.LAST_N_ATTR_NAME);
+            Object receivingSimulcastLayer = channel.get(
+                    ColibriConferenceIQ.Channel.RECEIVING_SIMULCAST_LAYER);
             Object payloadTypes = channel.get(JSONSerializer.PAYLOAD_TYPES);
             Object rtpLevelRelayType
                 = channel.get(
                         ColibriConferenceIQ.Channel
                             .RTP_LEVEL_RELAY_TYPE_ATTR_NAME);
             Object sources = channel.get(JSONSerializer.SOURCES);
+            Object sourceGroups = channel.get(JSONSerializer.SOURCE_GROUPS);
             Object ssrcs = channel.get(JSONSerializer.SSRCS);
             Object transport
                 = channel.get(IceUdpTransportPacketExtension.ELEMENT_NAME);
@@ -187,6 +190,20 @@ final class JSONDeserializer
                     i = Integer.valueOf(lastN.toString());
                 channelIQ.setLastN(i);
             }
+            // receiving simulcast layer
+            if (receivingSimulcastLayer != null)
+            {
+                Integer i;
+
+                if (receivingSimulcastLayer instanceof Integer)
+                    i = (Integer) receivingSimulcastLayer;
+                else if (receivingSimulcastLayer instanceof Number)
+                    i = Integer.valueOf(
+                            ((Number) receivingSimulcastLayer).intValue());
+                else
+                    i = Integer.valueOf(receivingSimulcastLayer.toString());
+                channelIQ.setReceivingSimulcastLayer(i);
+            }
             // payloadTypes
             if (payloadTypes != null)
                 deserializePayloadTypes((JSONArray) payloadTypes, channelIQ);
@@ -196,6 +213,9 @@ final class JSONDeserializer
             // sources
             if (sources != null)
                 deserializeSources((JSONArray) sources, channelIQ);
+            // source groups
+            if (sourceGroups != null)
+                deserializeSourceGroups((JSONArray) sourceGroups, channelIQ);
             // ssrcs
             if (ssrcs != null)
                 deserializeSSRCs((JSONArray) ssrcs, channelIQ);
@@ -403,6 +423,20 @@ final class JSONDeserializer
             Object source,
             ColibriConferenceIQ.Channel channelIQ)
     {
+        SourcePacketExtension sourcePacketExtension
+                = deserializeSource(source);
+
+        if (sourcePacketExtension != null)
+        {
+            channelIQ.addSource(sourcePacketExtension);
+        }
+
+        return sourcePacketExtension;
+    }
+
+    public static SourcePacketExtension deserializeSource(
+            Object source)
+    {
         SourcePacketExtension sourceIQ;
 
         if (source == null)
@@ -429,11 +463,70 @@ final class JSONDeserializer
             {
                 sourceIQ = new SourcePacketExtension();
                 sourceIQ.setSSRC(ssrc);
-
-                channelIQ.addSource(sourceIQ);
             }
         }
         return sourceIQ;
+    }
+
+    public static SourceGroupPacketExtension deserializeSourceGroup(
+            Object sourceGroup,
+            ColibriConferenceIQ.Channel channelIQ)
+    {
+        SourceGroupPacketExtension sourceGroupIQ;
+
+        if (sourceGroup == null || !(sourceGroup instanceof JSONObject))
+        {
+            sourceGroupIQ = null;
+        }
+        else
+        {
+            JSONObject sourceGroupJSONObject = (JSONObject) sourceGroup;
+
+            // semantics
+            Object semantics = sourceGroupJSONObject
+                    .get(SourceGroupPacketExtension.SEMANTICS_ATTR_NAME);
+
+            if (semantics != null
+                    && semantics instanceof String
+                    && ((String)semantics).length() != 0)
+            {
+                // ssrcs
+                Object sourcesObject = sourceGroupJSONObject
+                        .get(JSONSerializer.SOURCES);
+
+                if (sourcesObject != null
+                        && sourcesObject instanceof JSONArray
+                        && ((JSONArray)sourcesObject).size() != 0)
+                {
+                    JSONArray sourcesJSONArray = (JSONArray) sourcesObject;
+                    List<SourcePacketExtension> sourcePacketExtensions
+                            = new ArrayList<SourcePacketExtension>();
+
+                    for (Object source : sourcesJSONArray)
+                    {
+                        SourcePacketExtension sourcePacketExtension
+                                = deserializeSource(source);
+
+                        if (sourcePacketExtension != null)
+                            sourcePacketExtensions.add(sourcePacketExtension);
+                    }
+
+                    sourceGroupIQ = new SourceGroupPacketExtension();
+                    sourceGroupIQ.setSemantics((String)semantics);
+                    sourceGroupIQ.addSources(sourcePacketExtensions);
+                    channelIQ.addSourceGroup(sourceGroupIQ);
+                }
+                else
+                {
+                    sourceGroupIQ = null;
+                }
+            }
+            else
+            {
+                sourceGroupIQ = null;
+            }
+        }
+        return sourceGroupIQ;
     }
 
     public static void deserializeSources(
@@ -444,6 +537,17 @@ final class JSONDeserializer
         {
             for (Object source : sources)
                 deserializeSource(source, channelIQ);
+        }
+    }
+
+    public static void deserializeSourceGroups(
+            JSONArray sourceGroups,
+            ColibriConferenceIQ.Channel channelIQ)
+    {
+        if ((sourceGroups != null) && !sourceGroups.isEmpty())
+        {
+            for (Object sourceGroup : sourceGroups)
+                deserializeSourceGroup(sourceGroup, channelIQ);
         }
     }
 

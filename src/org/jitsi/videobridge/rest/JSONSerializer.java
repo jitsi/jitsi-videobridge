@@ -45,6 +45,8 @@ final class JSONSerializer
 
     static final String SOURCES = SourcePacketExtension.ELEMENT_NAME + "s";
 
+    static final String SOURCE_GROUPS = SourceGroupPacketExtension.ELEMENT_NAME + "s";
+
     static final String SSRCS
         = ColibriConferenceIQ.Channel.SSRC_ELEMENT_NAME + "s";
 
@@ -127,11 +129,14 @@ final class JSONSerializer
             String id = channel.getID();
             Boolean initiator = channel.isInitiator();
             Integer lastN = channel.getLastN();
+            Integer receivingSimulcastLayer
+                    = channel.getReceivingSimulcastLayer();
             List<PayloadTypePacketExtension> payloadTypes
                 = channel.getPayloadTypes();
             RTPLevelRelayType rtpLevelRelayType
                 = channel.getRTPLevelRelayType();
             List<SourcePacketExtension> sources = channel.getSources();
+            List<SourceGroupPacketExtension> sourceGroups = channel.getSourceGroups();
             int[] ssrcs = channel.getSSRCs();
             IceUdpTransportPacketExtension transport = channel.getTransport();
 
@@ -183,6 +188,13 @@ final class JSONSerializer
                         ColibriConferenceIQ.Channel.LAST_N_ATTR_NAME,
                         lastN);
             }
+            // receiving simulcast layer
+            if (lastN != null)
+            {
+                channelJSONObject.put(
+                        ColibriConferenceIQ.Channel.RECEIVING_SIMULCAST_LAYER,
+                        receivingSimulcastLayer);
+            }
             // payloadTypes
             if ((payloadTypes != null) && !payloadTypes.isEmpty())
             {
@@ -206,6 +218,9 @@ final class JSONSerializer
             // sources
             if ((sources != null) && !sources.isEmpty())
                 channelJSONObject.put(SOURCES, serializeSources(sources));
+            // source groups
+            if ((sourceGroups != null) && !sourceGroups.isEmpty())
+                channelJSONObject.put(SOURCE_GROUPS, serializeSourceGroups(sourceGroups));
             // ssrcs
             if ((ssrcs != null) && (ssrcs.length > 0))
                 channelJSONObject.put(SSRCS, serializeSSRCs(ssrcs));
@@ -473,6 +488,54 @@ final class JSONSerializer
                 sourcesJSONArray.add(serializeSource(source));
         }
         return sourcesJSONArray;
+    }
+
+    public static JSONArray serializeSourceGroups(
+            Collection<SourceGroupPacketExtension> sourceGroups)
+    {
+        JSONArray sourceGroupsJSONArray;
+
+        if (sourceGroups == null || sourceGroups.size() == 0)
+        {
+            sourceGroupsJSONArray = null;
+        }
+        else
+        {
+            sourceGroupsJSONArray = new JSONArray();
+            for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+                sourceGroupsJSONArray.add(serializeSourceGroup(sourceGroup));
+        }
+        return sourceGroupsJSONArray;
+    }
+
+    private static Object serializeSourceGroup(
+            SourceGroupPacketExtension sourceGroup)
+    {
+        if (sourceGroup.getSemantics() != null
+                && sourceGroup.getSemantics().length() != 0
+                && sourceGroup.getSources() != null
+                && sourceGroup.getSources().size() != 0)
+        {
+            JSONObject sourceGroupJSONObject = new JSONObject();
+
+            // Add semantics
+            sourceGroupJSONObject.put(
+                    SourceGroupPacketExtension.SEMANTICS_ATTR_NAME,
+                    JSONValue.escape(sourceGroup.getSemantics()));
+
+            // Add sources
+            JSONArray ssrcsJSONArray = new JSONArray();
+            for (SourcePacketExtension source : sourceGroup.getSources())
+                ssrcsJSONArray.add(Long.valueOf(source.getSSRC()));
+
+            sourceGroupJSONObject.put(SOURCES, ssrcsJSONArray);
+
+            return sourceGroupJSONObject;
+        }
+        else
+        {
+            return null;
+        }
     }
 
     public static JSONArray serializeSSRCs(int[] ssrcs)
