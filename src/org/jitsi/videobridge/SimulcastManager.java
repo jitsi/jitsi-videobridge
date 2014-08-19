@@ -417,10 +417,11 @@ public class SimulcastManager
                     "{\"colibriClass\":\"SimulcastLayersChangedEvent\"");
 
             b.append(",\"endpointSimulcastLayers\":[");
-            for (EndpointSimulcastLayer endpointSimulcastLayer
-                    : event.endpointSimulcastLayers)
+            for (int i = 0; i < event.endpointSimulcastLayers.length; i++)
             {
-                toJson(b, endpointSimulcastLayer);
+                toJson(b, event.endpointSimulcastLayers[i]);
+                if (i != event.endpointSimulcastLayers.length - 1)
+                    b.append(",");
             }
             b.append("]}");
 
