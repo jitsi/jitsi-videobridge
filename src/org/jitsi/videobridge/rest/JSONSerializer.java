@@ -25,35 +25,100 @@ import org.json.simple.*;
 @SuppressWarnings("unchecked")
 final class JSONSerializer
 {
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>candidateList</tt> property of
+     * <tt>IceUdpTransportPacketExtension</tt>.
+     */
     static final String CANDIDATE_LIST
         = CandidatePacketExtension.ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>channelBundles</tt> property of <tt>ColibriConferenceIQ</tt>.
+     */
+    static final String CHANNEL_BUNDLES
+        = ColibriConferenceIQ.ChannelBundle.ELEMENT_NAME + "s";
+
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>channels</tt> property of <tt>ColibriConferenceIQ.Content</tt>.
+     */
     static final String CHANNELS
         = ColibriConferenceIQ.Channel.ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>contents</tt> property of <tt>ColibriConferenceIQ</tt>.
+     */
     static final String CONTENTS
         = ColibriConferenceIQ.Content.ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the array of
+     * <tt>DtlsFingerprintPacketExtension</tt> child extensions of
+     * <tt>IceUdpTransportPacketExtension</tt>.
+     */
     static final String FINGERPRINTS
         = DtlsFingerprintPacketExtension.ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>parameters</tt> property of <tt>PayloadTypePacketExtension</tt>.
+     */
     static final String PARAMETERS
         = ParameterPacketExtension.ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>payloadTypes</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
+     */
     static final String PAYLOAD_TYPES
         = PayloadTypePacketExtension.ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>sctpConnections</tt> property of
+     * <tt>ColibriConferenceIQ.Content</tt>.
+     */
+    static final String SCTP_CONNECTIONS
+        = ColibriConferenceIQ.SctpConnection.ELEMENT_NAME + "s";
+
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>sourceGroups</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
+     */
+    static final String SOURCE_GROUPS
+        = SourceGroupPacketExtension.ELEMENT_NAME + "s";
+
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>sources</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
+     */
     static final String SOURCES = SourcePacketExtension.ELEMENT_NAME + "s";
 
-    static final String SOURCE_GROUPS = SourceGroupPacketExtension.ELEMENT_NAME + "s";
-
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>ssrcs</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
+     */
     static final String SSRCS
         = ColibriConferenceIQ.Channel.SSRC_ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>namespace</tt> property of <tt>IceUdpTransportPacketExtension</tt>.
+     */
     static final String XMLNS = "xmlns";
 
-    static final String RTCPMUX = "rtcp-mux";
-
+    /**
+     * Serializes the attribute values of an <tt>AbstractPacketExtension</tt>
+     * into values of a <tt>JSONObject</tt>.
+     *
+     * @param abstractPacketExtension the <tt>AbstractPacketExtension</tt> whose
+     * attribute values are to be serialized into values of <tt>jsonObject</tt>
+     * @param jsonObject the <tt>JSONObject</tt> into which the attribute values
+     * of <tt>abstractPacketExtension</tt> are to be serialized
+     */
     public static void serializeAbstractPacketExtensionAttributes(
             AbstractPacketExtension abstractPacketExtension,
             JSONObject jsonObject)
@@ -115,32 +180,29 @@ final class JSONSerializer
     public static JSONObject serializeChannel(
             ColibriConferenceIQ.Channel channel)
     {
-        JSONObject channelJSONObject;
+        JSONObject jsonObject;
 
         if (channel == null)
         {
-            channelJSONObject = null;
+            jsonObject = null;
         }
         else
         {
             MediaDirection direction = channel.getDirection();
-            String endpoint = channel.getEndpoint();
-            int expire = channel.getExpire();
             String id = channel.getID();
-            Boolean initiator = channel.isInitiator();
             Integer lastN = channel.getLastN();
-            Integer receivingSimulcastLayer
-                    = channel.getReceivingSimulcastLayer();
             List<PayloadTypePacketExtension> payloadTypes
                 = channel.getPayloadTypes();
+            Integer receivingSimulcastLayer
+                = channel.getReceivingSimulcastLayer();
             RTPLevelRelayType rtpLevelRelayType
                 = channel.getRTPLevelRelayType();
             List<SourcePacketExtension> sources = channel.getSources();
-            List<SourceGroupPacketExtension> sourceGroups = channel.getSourceGroups();
+            List<SourceGroupPacketExtension> sourceGroups
+                = channel.getSourceGroups();
             int[] ssrcs = channel.getSSRCs();
-            IceUdpTransportPacketExtension transport = channel.getTransport();
 
-            channelJSONObject = new JSONObject();
+            jsonObject = serializeChannelCommon(channel);
             // direction
             if (direction != null)
             {
@@ -149,56 +211,35 @@ final class JSONSerializer
                  * writing will fail to encode Enum values as JSON strings so
                  * convert the Enum value to a Java String. 
                  */
-                channelJSONObject.put(
+                jsonObject.put(
                         ColibriConferenceIQ.Channel.DIRECTION_ATTR_NAME,
                         direction.toString());
-            }
-            // endpoint
-            if (endpoint != null)
-            {
-                channelJSONObject.put(
-                        ColibriConferenceIQ.Channel.ENDPOINT_ATTR_NAME,
-                        endpoint);
-            }
-            // expire
-            if (expire >= 0)
-            {
-                channelJSONObject.put(
-                        ColibriConferenceIQ.Channel.EXPIRE_ATTR_NAME,
-                        expire);
             }
             // id
             if (id != null)
             {
-                channelJSONObject.put(
+                jsonObject.put(
                         ColibriConferenceIQ.Channel.ID_ATTR_NAME,
                         id);
-            }
-            // initiator
-            if (initiator != null)
-            {
-                channelJSONObject.put(
-                        ColibriConferenceIQ.Channel.INITIATOR_ATTR_NAME,
-                        initiator);
             }
             // lastN
             if (lastN != null)
             {
-                channelJSONObject.put(
+                jsonObject.put(
                         ColibriConferenceIQ.Channel.LAST_N_ATTR_NAME,
                         lastN);
             }
             // receiving simulcast layer
             if (lastN != null)
             {
-                channelJSONObject.put(
+                jsonObject.put(
                         ColibriConferenceIQ.Channel.RECEIVING_SIMULCAST_LAYER,
                         receivingSimulcastLayer);
             }
             // payloadTypes
             if ((payloadTypes != null) && !payloadTypes.isEmpty())
             {
-                channelJSONObject.put(
+                jsonObject.put(
                         PAYLOAD_TYPES,
                         serializePayloadTypes(payloadTypes));
             }
@@ -210,72 +251,192 @@ final class JSONSerializer
                  * writing will fail to encode Enum values as JSON strings so
                  * convert the Enum value to a Java String. 
                  */
-                channelJSONObject.put(
+                jsonObject.put(
                         ColibriConferenceIQ.Channel
                             .RTP_LEVEL_RELAY_TYPE_ATTR_NAME,
                         rtpLevelRelayType.toString());
             }
             // sources
             if ((sources != null) && !sources.isEmpty())
-                channelJSONObject.put(SOURCES, serializeSources(sources));
+                jsonObject.put(SOURCES, serializeSources(sources));
             // source groups
             if ((sourceGroups != null) && !sourceGroups.isEmpty())
-                channelJSONObject.put(SOURCE_GROUPS, serializeSourceGroups(sourceGroups));
+            {
+                jsonObject.put(
+                        SOURCE_GROUPS,
+                        serializeSourceGroups(sourceGroups));
+            }
             // ssrcs
             if ((ssrcs != null) && (ssrcs.length > 0))
-                channelJSONObject.put(SSRCS, serializeSSRCs(ssrcs));
+                jsonObject.put(SSRCS, serializeSSRCs(ssrcs));
+        }
+        return jsonObject;
+    }
+
+    public static JSONObject serializeChannelBundle(
+            ColibriConferenceIQ.ChannelBundle channelBundle)
+    {
+        JSONObject jsonObject;
+
+        if (channelBundle == null)
+        {
+            jsonObject = null;
+        }
+        else
+        {
+            String id = channelBundle.getId();
+            IceUdpTransportPacketExtension transport
+                = channelBundle.getTransport();
+
+            jsonObject = new JSONObject();
+            // id
+            if (id != null)
+            {
+                jsonObject.put(
+                        ColibriConferenceIQ.ChannelBundle.ID_ATTR_NAME,
+                        id);
+            }
             // transport
             if (transport != null)
             {
-                channelJSONObject.put(
+                jsonObject.put(
                         transport.getElementName(),
                         serializeTransport(transport));
             }
         }
-        return channelJSONObject;
+        return jsonObject;
     }
 
-    public static JSONArray serializeChannels(
-            Collection<ColibriConferenceIQ.Channel> channels)
+    public static JSONArray serializeChannelBundles(
+            Collection<ColibriConferenceIQ.ChannelBundle> channelBundles)
     {
-        JSONArray channelsJSONArray;
+        JSONArray jsonArray;
 
-        if (channels == null)
+        if (channelBundles == null)
         {
-            channelsJSONArray = null;
+            jsonArray = null;
         }
         else
         {
-            channelsJSONArray = new JSONArray();
-            for (ColibriConferenceIQ.Channel channel : channels)
-                channelsJSONArray.add(serializeChannel(channel));
+            jsonArray = new JSONArray();
+            for (ColibriConferenceIQ.ChannelBundle channelBundle
+                    : channelBundles)
+            {
+                jsonArray.add(serializeChannelBundle(channelBundle));
+            }
         }
-        return channelsJSONArray;
+        return jsonArray;
+    }
+
+    public static JSONObject serializeChannelCommon(
+            ColibriConferenceIQ.ChannelCommon channelCommon)
+    {
+        JSONObject jsonObject;
+
+        if (channelCommon == null)
+        {
+            jsonObject = null;
+        }
+        else
+        {
+            String channelBundleId = channelCommon.getChannelBundleId();
+            String endpoint = channelCommon.getEndpoint();
+            int expire = channelCommon.getExpire();
+            Boolean initiator = channelCommon.isInitiator();
+            IceUdpTransportPacketExtension transport
+                = channelCommon.getTransport();
+
+            jsonObject = new JSONObject();
+            // channelBundleId
+            if (channelBundleId != null)
+            {
+                jsonObject.put(
+                        ColibriConferenceIQ.ChannelCommon
+                                .CHANNEL_BUNDLE_ID_ATTR_NAME,
+                        channelBundleId);
+            }
+            // endpoint
+            if (endpoint != null)
+            {
+                jsonObject.put(
+                        ColibriConferenceIQ.ChannelCommon.ENDPOINT_ATTR_NAME,
+                        endpoint);
+            }
+            // expire
+            if (expire >= 0)
+            {
+                jsonObject.put(
+                        ColibriConferenceIQ.ChannelCommon.EXPIRE_ATTR_NAME,
+                        expire);
+            }
+            // initiator
+            if (initiator != null)
+            {
+                jsonObject.put(
+                        ColibriConferenceIQ.ChannelCommon.INITIATOR_ATTR_NAME,
+                        initiator);
+            }
+            // transport
+            if (transport != null)
+            {
+                jsonObject.put(
+                        transport.getElementName(),
+                        serializeTransport(transport));
+            }
+        }
+        return jsonObject;
+    }
+
+    public static JSONArray serializeChannels(
+            Collection<ColibriConferenceIQ.Channel> collection)
+    {
+        JSONArray jsonArray;
+
+        if (collection == null)
+        {
+            jsonArray = null;
+        }
+        else
+        {
+            jsonArray = new JSONArray();
+            for (ColibriConferenceIQ.Channel element : collection)
+                jsonArray.add(serializeChannel(element));
+        }
+        return jsonArray;
     }
 
     public static JSONObject serializeConference(ColibriConferenceIQ conference)
     {
-        JSONObject conferenceJSONObject;
+        JSONObject jsonObject;
 
         if (conference == null)
         {
-            conferenceJSONObject = null;
+            jsonObject = null;
         }
         else
         {
             String id = conference.getID();
             List<ColibriConferenceIQ.Content> contents
                 = conference.getContents();
+            List<ColibriConferenceIQ.ChannelBundle> channelBundles
+                = conference.getChannelBundles();
 
-            conferenceJSONObject = new JSONObject();
+            jsonObject = new JSONObject();
             // id
             if (id != null)
-                conferenceJSONObject.put(ColibriConferenceIQ.ID_ATTR_NAME, id);
+                jsonObject.put(ColibriConferenceIQ.ID_ATTR_NAME, id);
             // contents
             if ((contents != null) && !contents.isEmpty())
-                conferenceJSONObject.put(CONTENTS, serializeContents(contents));
+                jsonObject.put(CONTENTS, serializeContents(contents));
+            // channelBundles
+            if ((channelBundles != null) && !channelBundles.isEmpty())
+            {
+                jsonObject.put(
+                        CHANNEL_BUNDLES,
+                        serializeChannelBundles(channelBundles));
+            }
         }
-        return conferenceJSONObject;
+        return jsonObject;
     }
 
     public static JSONArray serializeConferences(
@@ -299,48 +460,57 @@ final class JSONSerializer
     public static JSONObject serializeContent(
             ColibriConferenceIQ.Content content)
     {
-        JSONObject contentJSONObject;
+        JSONObject jsonObject;
 
         if (content == null)
         {
-            contentJSONObject = null;
+            jsonObject = null;
         }
         else
         {
             String name = content.getName();
             List<ColibriConferenceIQ.Channel> channels = content.getChannels();
+            List<ColibriConferenceIQ.SctpConnection> sctpConnections
+                = content.getSctpConnections();
 
-            contentJSONObject = new JSONObject();
+            jsonObject = new JSONObject();
             // name
             if (name != null)
             {
-                contentJSONObject.put(
+                jsonObject.put(
                         ColibriConferenceIQ.Content.NAME_ATTR_NAME,
                         name);
             }
             // channels
             if ((channels != null) && !channels.isEmpty())
-                contentJSONObject.put(CHANNELS, serializeChannels(channels));
+                jsonObject.put(CHANNELS, serializeChannels(channels));
+            // sctpConnections
+            if ((sctpConnections != null) && !sctpConnections.isEmpty())
+            {
+                jsonObject.put(
+                        SCTP_CONNECTIONS,
+                        serializeSctpConnections(sctpConnections));
+            }
         }
-        return contentJSONObject;
+        return jsonObject;
     }
 
     public static JSONArray serializeContents(
             Collection<ColibriConferenceIQ.Content> contents)
     {
-        JSONArray contentsJSONArray;
+        JSONArray jsonArray;
 
         if (contents == null)
         {
-            contentsJSONArray = null;
+            jsonArray = null;
         }
         else
         {
-            contentsJSONArray = new JSONArray();
+            jsonArray = new JSONArray();
             for (ColibriConferenceIQ.Content content : contents)
-                contentsJSONArray.add(serializeContent(content));
+                jsonArray.add(serializeContent(content));
         }
-        return contentsJSONArray;
+        return jsonArray;
     }
 
     public static JSONObject serializeFingerprint(
@@ -467,45 +637,49 @@ final class JSONSerializer
         return payloadTypesJSONArray;
     }
 
+    public static JSONObject serializeSctpConnection(
+            ColibriConferenceIQ.SctpConnection sctpConnection)
+    {
+        JSONObject jsonObject;
+
+        if (sctpConnection == null)
+        {
+            jsonObject = null;
+        }
+        else
+        {
+            int port = sctpConnection.getPort();
+
+            jsonObject = serializeChannelCommon(sctpConnection);
+            // port
+            jsonObject.put(
+                    ColibriConferenceIQ.SctpConnection.PORT_ATTR_NAME,
+                    Integer.valueOf(port));
+        }
+        return jsonObject;
+    }
+
+    public static JSONArray serializeSctpConnections(
+            Collection<ColibriConferenceIQ.SctpConnection> collection)
+    {
+        JSONArray jsonArray;
+
+        if (collection == null)
+        {
+            jsonArray = null;
+        }
+        else
+        {
+            jsonArray = new JSONArray();
+            for (ColibriConferenceIQ.SctpConnection element : collection)
+                jsonArray.add(serializeSctpConnection(element));
+        }
+        return jsonArray;
+    }
+
     public static Long serializeSource(SourcePacketExtension source)
     {
         return (source == null) ? null : Long.valueOf(source.getSSRC());
-    }
-
-    public static JSONArray serializeSources(
-            Collection<SourcePacketExtension> sources)
-    {
-        JSONArray sourcesJSONArray;
-
-        if (sources == null)
-        {
-            sourcesJSONArray = null;
-        }
-        else
-        {
-            sourcesJSONArray = new JSONArray();
-            for (SourcePacketExtension source : sources)
-                sourcesJSONArray.add(serializeSource(source));
-        }
-        return sourcesJSONArray;
-    }
-
-    public static JSONArray serializeSourceGroups(
-            Collection<SourceGroupPacketExtension> sourceGroups)
-    {
-        JSONArray sourceGroupsJSONArray;
-
-        if (sourceGroups == null || sourceGroups.size() == 0)
-        {
-            sourceGroupsJSONArray = null;
-        }
-        else
-        {
-            sourceGroupsJSONArray = new JSONArray();
-            for (SourceGroupPacketExtension sourceGroup : sourceGroups)
-                sourceGroupsJSONArray.add(serializeSourceGroup(sourceGroup));
-        }
-        return sourceGroupsJSONArray;
     }
 
     private static Object serializeSourceGroup(
@@ -536,6 +710,42 @@ final class JSONSerializer
         {
             return null;
         }
+    }
+
+    public static JSONArray serializeSourceGroups(
+            Collection<SourceGroupPacketExtension> sourceGroups)
+    {
+        JSONArray sourceGroupsJSONArray;
+
+        if (sourceGroups == null || sourceGroups.size() == 0)
+        {
+            sourceGroupsJSONArray = null;
+        }
+        else
+        {
+            sourceGroupsJSONArray = new JSONArray();
+            for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+                sourceGroupsJSONArray.add(serializeSourceGroup(sourceGroup));
+        }
+        return sourceGroupsJSONArray;
+    }
+
+    public static JSONArray serializeSources(
+            Collection<SourcePacketExtension> sources)
+    {
+        JSONArray sourcesJSONArray;
+
+        if (sources == null)
+        {
+            sourcesJSONArray = null;
+        }
+        else
+        {
+            sourcesJSONArray = new JSONArray();
+            for (SourcePacketExtension source : sources)
+                sourcesJSONArray.add(serializeSource(source));
+        }
+        return sourcesJSONArray;
     }
 
     public static JSONArray serializeSSRCs(int[] ssrcs)
@@ -569,11 +779,11 @@ final class JSONSerializer
     public static JSONObject serializeTransport(
             IceUdpTransportPacketExtension transport)
     {
-        JSONObject transportJSONObject;
+        JSONObject jsonObject;
 
         if (transport == null)
         {
-            transportJSONObject = null;
+            jsonObject = null;
         }
         else
         {
@@ -585,38 +795,44 @@ final class JSONSerializer
                 = transport.getCandidateList();
             RemoteCandidatePacketExtension remoteCandidate
                 = transport.getRemoteCandidate();
+            boolean rtcpMux = transport.isRtcpMux();
 
-            transportJSONObject = new JSONObject();
+            jsonObject = new JSONObject();
             // xmlns
             if (xmlns != null)
-                transportJSONObject.put(XMLNS, xmlns);
+                jsonObject.put(XMLNS, xmlns);
             // attributes
-            serializeAbstractPacketExtensionAttributes(
-                    transport,
-                    transportJSONObject);
+            serializeAbstractPacketExtensionAttributes(transport, jsonObject);
             // fingerprints
             if ((fingerprints != null) && !fingerprints.isEmpty())
             {
-                transportJSONObject.put(
+                jsonObject.put(
                         FINGERPRINTS,
                         serializeFingerprints(fingerprints));
             }
             // candidateList
             if ((candidateList != null) && !candidateList.isEmpty())
             {
-                transportJSONObject.put(
+                jsonObject.put(
                         CANDIDATE_LIST,
                         serializeCandidates(candidateList));
             }
             // remoteCandidate
             if (remoteCandidate != null)
             {
-                transportJSONObject.put(
+                jsonObject.put(
                         remoteCandidate.getElementName(),
                         serializeCandidate(remoteCandidate));
             }
+            // rtcpMux
+            if (rtcpMux)
+            {
+                jsonObject.put(
+                        RtcpmuxPacketExtension.ELEMENT_NAME,
+                        Boolean.valueOf(rtcpMux));
+            }
         }
-        return transportJSONObject;
+        return jsonObject;
     }
 
     /** Prevents the initialization of new <tt>JSONSerializer</tt> instances. */
