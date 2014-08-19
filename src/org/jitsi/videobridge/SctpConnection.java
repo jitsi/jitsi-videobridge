@@ -1008,11 +1008,11 @@ public class SctpConnection
                     @Override
                     public void run()
                     {
+                        SctpSocket sctpSocket = null;
                         try
                         {
                             // sctpSocket is set to null on close
-                            SctpSocket sctpSocket
-                                    = SctpConnection.this.sctpSocket;
+                            sctpSocket = SctpConnection.this.sctpSocket;
                             while (sctpSocket != null &&
                                     !sctpSocket.accept())
                             {
@@ -1025,9 +1025,11 @@ public class SctpConnection
                             logger.error("Error accepting SCTP connection", e);
                         }
 
-                        if (logger.isInfoEnabled())
+                        if (sctpSocket == null && logger.isInfoEnabled())
+                        {
                             logger.info("SctpConnection " + getID() + " closed"
-                                        + "before SctpSocket accept()-ed.");
+                                        + " before SctpSocket accept()-ed.");
+                        }
                     }
                 });
 
