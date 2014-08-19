@@ -723,22 +723,25 @@ public class IceUdpTransportManager
     @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
-        pe.setPassword(iceAgent.getLocalPassword());
-        pe.setUfrag(iceAgent.getLocalUfrag());
-
-        for (Component component : iceStream.getComponents())
+        if (!closed)
         {
-            List<LocalCandidate> candidates
-                    = component.getLocalCandidates();
+            pe.setPassword(iceAgent.getLocalPassword());
+            pe.setUfrag(iceAgent.getLocalUfrag());
 
-            if ((candidates != null) && !candidates.isEmpty())
+            for (Component component : iceStream.getComponents())
             {
-                for (LocalCandidate candidate : candidates)
-                    describe(candidate, pe);
-            }
-        }
+                List<LocalCandidate> candidates
+                        = component.getLocalCandidates();
 
-        describeDtlsControl(pe);
+                if ((candidates != null) && !candidates.isEmpty())
+                {
+                    for (LocalCandidate candidate : candidates)
+                        describe(candidate, pe);
+                }
+            }
+
+            describeDtlsControl(pe);
+        }
     }
 
     /**
