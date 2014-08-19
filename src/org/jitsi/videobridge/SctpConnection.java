@@ -1010,15 +1010,24 @@ public class SctpConnection
                     {
                         try
                         {
-                            while (!sctpSocket.accept())
+                            // sctpSocket is set to null on close
+                            SctpSocket sctpSocket
+                                    = SctpConnection.this.sctpSocket;
+                            while (sctpSocket != null &&
+                                    !sctpSocket.accept())
                             {
                                 Thread.sleep(100);
+                                sctpSocket = SctpConnection.this.sctpSocket;
                             }
                         }
                         catch (Exception e)
                         {
                             logger.error("Error accepting SCTP connection", e);
                         }
+
+                        if (logger.isInfoEnabled())
+                            logger.info("SctpConnection " + getID() + " closed"
+                                        + "before SctpSocket accept()-ed.");
                     }
                 });
 
