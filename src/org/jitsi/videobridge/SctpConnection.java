@@ -964,8 +964,6 @@ public class SctpConnection
         // Implement output network link for SCTP stack on DTLS transport
         sctpSocket.setLink(new NetworkLink()
         {
-            private final RawPacket rawPacket = new RawPacket();
-
             @Override
             public void onConnOut(SctpSocket s, byte[] packet)
                 throws IOException
@@ -984,10 +982,7 @@ public class SctpConnection
                 }
 
                 // Send through DTLS transport
-                rawPacket.setBuffer(packet);
-                rawPacket.setLength(packet.length);
-
-                transformer.transform(rawPacket);
+                transformer.sendApplicationData(packet, 0, packet.length);
             }
         });
 

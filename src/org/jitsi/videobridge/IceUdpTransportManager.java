@@ -273,6 +273,7 @@ public class IceUdpTransportManager
          * works.
          */
         this.dtlsControl = new DtlsControlImpl(numComponents == 1);
+        dtlsControl.registerUser(this);
 
         iceAgent = createIceAgent(isControlling, iceStreamName);
         iceAgent.addStateChangeListener(iceAgentStateChangeListener);
@@ -419,7 +420,7 @@ public class IceUdpTransportManager
 
             if (dtlsControl != null)
             {
-                dtlsControl.start(null);
+                dtlsControl.start(null); //stop
                 dtlsControl.cleanup(this);
             }
 
