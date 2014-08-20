@@ -266,7 +266,7 @@ public class SimulcastManager
         // Debug print signaling information.
         if (logger.isInfoEnabled())
         {
-            synchronized (simulcastLayers)
+            synchronized (simulcastLayersSyncRoot)
             {
                 logger.info("Endpoint " + videoChannel.getEndpoint().getID()
                         + " has signaled :" + MyJsonEncoder.toJson(simulcastLayers));
@@ -281,7 +281,11 @@ public class SimulcastManager
      */
     public SortedSet<SimulcastLayer> getSimulcastLayers()
     {
-        return new TreeSet<SimulcastLayer>(simulcastLayers);
+        synchronized (simulcastLayersSyncRoot)
+        {
+            return simulcastLayers == null
+                    ? null : new TreeSet<SimulcastLayer>(simulcastLayers);
+        }
     }
 
     /**
