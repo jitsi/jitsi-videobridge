@@ -33,13 +33,20 @@ test -x $DAEMON || exit 0
 
 set -e
 
+killParentPid() {
+    PPID=$(ps -o pid --no-headers --ppid $1 || true)
+    if [ $PPID ]; then
+        kill $PPID
+    fi
+}
+
 stop() {
     if [ -f $PIDFILE ]; then
         PID=$(cat $PIDFILE)
     fi
     echo -n "Stopping $DESC: "
     if [ $PID ]; then
-        kill $(ps -o pid --no-headers --ppid $PID)
+        killParentPid $PID
         rm $PIDFILE || true
         echo "$NAME stopped."
     elif [ $(ps -C jvb.sh --no-headers -o pid) ]; then
