@@ -16,7 +16,7 @@ case "$1" in
         fi
 
         # generate config on new install
-        if ! $OLDCONFIG; then
+        if [ ! $OLDCONFIG ]; then
 
             # debconf hostname question
             . /usr/share/debconf/confmodule
