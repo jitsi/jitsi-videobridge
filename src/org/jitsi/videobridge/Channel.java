@@ -206,10 +206,7 @@ public abstract class Channel
         }
         else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
         {
-            //TODO: support RawUdp once RawUdpTransportManager is updated
-            //return new RawUdpTransportManager(this);
-            throw new IllegalArgumentException(
-                    "Unsupported Jingle transport " + xmlNamespace);
+            return new RawUdpTransportManager(this);
         }
         else
         {
