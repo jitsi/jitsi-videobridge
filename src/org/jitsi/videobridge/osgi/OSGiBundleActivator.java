@@ -6,6 +6,8 @@
  */
 package org.jitsi.videobridge.osgi;
 
+import java.util.regex.*;
+
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.osgi.framework.*;
@@ -55,12 +57,25 @@ public class OSGiBundleActivator
 
                 if (cfg != null)
                 {
+                    /*
+                     * Do not print the values of properties with names which
+                     * mention the word password.
+                     */
+                    Pattern exclusion
+                        = Pattern.compile(
+                                "passw(or)?d",
+                                Pattern.CASE_INSENSITIVE);
+
                     for (String p : cfg.getAllPropertyNames())
                     {
                         Object v = cfg.getProperty(p);
 
                         if (v != null)
+                        {
+                            if (exclusion.matcher(p).find())
+                                v = "**********";
                             logger.info(p + "=" + v);
+                        }
                     }
                 }
             }

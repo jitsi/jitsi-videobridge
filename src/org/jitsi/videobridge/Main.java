@@ -137,7 +137,7 @@ public class Main
         int port = PORT_ARG_VALUE;
         String secret = "";
         String domain = null;
-        String componentSubdomain = null;
+        String subdomain = ComponentImpl.SUBDOMAIN;
 
         for (String arg : args)
         {
@@ -180,7 +180,7 @@ public class Main
             }
             else if (arg.startsWith(SUBDOMAIN_ARG_NAME))
             {
-                componentSubdomain = arg.substring(SUBDOMAIN_ARG_NAME.length());
+                subdomain = arg.substring(SUBDOMAIN_ARG_NAME.length());
             }
         }
 
@@ -253,12 +253,6 @@ public class Main
         {
             ExternalComponentManager componentManager
                 = new ExternalComponentManager(host, port);
-            String subdomain = ComponentImpl.SUBDOMAIN;
-            // Override subdomain with cmd argument value
-            if(componentSubdomain != null)
-            {
-                subdomain = componentSubdomain;
-            }
 
             componentManager.setMultipleAllowed(subdomain, true);
             componentManager.setSecretKey(subdomain, secret);

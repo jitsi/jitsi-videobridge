@@ -6,13 +6,14 @@
  */
 package org.jitsi.videobridge.rest;
 
+import java.io.*;
 import java.lang.reflect.*;
 
 import net.java.sip.communicator.util.*;
 
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.util.ssl.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.Logger;
 import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
@@ -21,7 +22,7 @@ import org.osgi.framework.*;
  * HTTP/JSON API for Jitsi Videobridge.
  * <p>
  * The REST API of Jitsi Videobridge is currently served over HTTP on port
- * <tt>8080</tt> by default. The default port value may be overriden by the
+ * <tt>8080</tt> by default. The default port value may be overridden by the
  * <tt>System</tt> and/or <tt>ConfigurationService</tt> property with name
  * <tt>org.jitsi.videobridge.rest.jetty.port</tt>.
  * </p>
@@ -39,6 +40,25 @@ public class RESTBundleActivator
     private static final String JETTY_PORT_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.port";
 
+    private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD
+        = Videobridge.REST_API_PNAME
+            + ".jetty.sslContextFactory.keyStorePassword";
+
+    private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH
+        = Videobridge.REST_API_PNAME + ".jetty.sslContextFactory.keyStorePath";
+
+    private static final String JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH
+        = Videobridge.REST_API_PNAME
+            + ".jetty.sslContextFactory.needClientAuth";
+
+    /**
+     * The name of the <tt>System</tt> and/or <tt>ConfigurationService</tt>
+     * property which specifies the port on which the HTTPS/JSON API of Jitsi
+     * Videobridge is to be served. The default value is <tt>8443</tt>.
+     */
+    private static final String JETTY_TLS_PORT_PNAME
+        = Videobridge.REST_API_PNAME + ".jetty.tls.port";
+
     /**
      * The <tt>Logger</tt> used by the <tt>RESTBundleActivator</tt> class and
      * its instances to print debug information.
@@ -51,6 +71,43 @@ public class RESTBundleActivator
      * API of Jitsi Videobridge.
      */
     private Server server;
+
+    private File getAbsoluteFile(String path, ConfigurationService cfg)
+    {
+        File file = new File(path);
+
+        if (!file.isAbsolute())
+        {
+            String scHomeDirLocation, scHomeDirName;
+
+            if (cfg == null)
+            {
+                scHomeDirLocation
+                    = System.getProperty(
+                            ConfigurationService.PNAME_SC_HOME_DIR_LOCATION);
+                scHomeDirName
+                    = System.getProperty(
+                            ConfigurationService.PNAME_SC_HOME_DIR_NAME);
+            }
+            else
+            {
+                scHomeDirLocation = cfg.getScHomeDirLocation();
+                scHomeDirName = cfg.getScHomeDirName();
+            }
+            if (scHomeDirLocation == null)
+            {
+                scHomeDirLocation = System.getProperty("user.home");
+                if (scHomeDirLocation == null)
+                    scHomeDirLocation = ".";
+            }
+            if (scHomeDirName == null)
+                scHomeDirName = ".";
+            file
+                = new File(new File(scHomeDirLocation, scHomeDirName), path)
+                    .getAbsoluteFile();
+        }
+        return file;
+    }
 
     /**
      * Starts the OSGi bundle which implements an HTTP/JSON API for Jitsi
@@ -69,26 +126,105 @@ public class RESTBundleActivator
                     bundleContext,
                     ConfigurationService.class);
         boolean start;
-        int jettyPort = 8080;
+        int port = 8080, tlsPort = 8443;
+        String sslContextFactoryKeyStorePassword, sslContextFactoryKeyStorePath;
+        boolean sslContextFactoryNeedClientAuth = false;
 
         if (cfg == null)
         {
+            port = Integer.getInteger(JETTY_PORT_PNAME, port);
+            sslContextFactoryKeyStorePassword
+                = System.getProperty(JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD);
+            sslContextFactoryKeyStorePath
+                = System.getProperty(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH);
+            sslContextFactoryNeedClientAuth
+                = Boolean.getBoolean(JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH);
             start = Boolean.getBoolean(Videobridge.REST_API_PNAME);
-            jettyPort = Integer.getInteger(JETTY_PORT_PNAME, jettyPort);
+            tlsPort = Integer.getInteger(JETTY_TLS_PORT_PNAME, tlsPort);
         }
         else
         {
+            port = cfg.getInt(JETTY_PORT_PNAME, port);
+            sslContextFactoryKeyStorePassword
+                = cfg.getString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD);
+            sslContextFactoryKeyStorePath
+                = cfg.getString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH);
+            sslContextFactoryNeedClientAuth
+                = cfg.getBoolean(
+                        JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH,
+                        sslContextFactoryNeedClientAuth);
             start = cfg.getBoolean(Videobridge.REST_API_PNAME, false);
-            jettyPort = cfg.getInt(JETTY_PORT_PNAME, jettyPort);
+            tlsPort = cfg.getInt(JETTY_TLS_PORT_PNAME, tlsPort);
         }
         if (!start)
             return;
 
         try
         {
-            Server server = new Server(jettyPort);
+            Server server = new Server();
+            HttpConfiguration httpCfg = new HttpConfiguration();
+
+            httpCfg.setSecurePort(tlsPort);
+            httpCfg.setSecureScheme("https");
+
+            /*
+             * If HTTPS is not enabled, serve the REST API of Jitsi Videobridge
+             * over HTTP.
+             */
+            if (sslContextFactoryKeyStorePath == null)
+            {
+                // HTTP
+                ServerConnector httpConnector
+                    = new ServerConnector(
+                            server,
+                            new HttpConnectionFactory(httpCfg));
+
+                httpConnector.setPort(port);
+                server.addConnector(httpConnector);
+            }
+            else
+            {
+                // HTTPS
+                File sslContextFactoryKeyStoreFile
+                    = getAbsoluteFile(sslContextFactoryKeyStorePath, cfg);
+                SslContextFactory sslContextFactory = new SslContextFactory();
+
+                sslContextFactory.setExcludeCipherSuites(
+                        "SSL_RSA_WITH_DES_CBC_SHA",
+                        "SSL_DHE_RSA_WITH_DES_CBC_SHA",
+                        "SSL_DHE_DSS_WITH_DES_CBC_SHA",
+                        "SSL_RSA_EXPORT_WITH_RC4_40_MD5",
+                        "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                        "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                        "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");
+                sslContextFactory.setIncludeCipherSuites(".*RC4.*");
+                if (sslContextFactoryKeyStorePassword != null)
+                {
+                    sslContextFactory.setKeyStorePassword(
+                            sslContextFactoryKeyStorePassword);
+                }
+                sslContextFactory.setKeyStorePath(
+                        sslContextFactoryKeyStoreFile.getPath());
+                sslContextFactory.setNeedClientAuth(
+                        sslContextFactoryNeedClientAuth);
+
+                HttpConfiguration httpsCfg = new HttpConfiguration(httpCfg);
+
+                httpsCfg.addCustomizer(new SecureRequestCustomizer());
+
+                ServerConnector sslConnector
+                    = new ServerConnector(
+                            server,
+                            new SslConnectionFactory(
+                                    sslContextFactory,
+                                    "http/1.1"),
+                            new HttpConnectionFactory(httpsCfg));
+                sslConnector.setPort(tlsPort);
+                server.addConnector(sslConnector);
+            }
 
             server.setHandler(new HandlerImpl(bundleContext));
+
             /*
              * The server will start a non-daemon background Thread which will
              * keep the application running on success. 
