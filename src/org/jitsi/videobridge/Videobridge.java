@@ -755,27 +755,42 @@ public class Videobridge
                     for(ColibriConferenceIQ.SctpConnection sctpConnIq
                             : contentIQ.getSctpConnections())
                     {
+                        String id = sctpConnIq.getID();
+
                         Endpoint endpoint
                             = conference.getOrCreateEndpoint(
                                     sctpConnIq.getEndpoint());
-                        SctpConnection sctpConn
-                            = content.getSctpConnection(endpoint);
+
+                        SctpConnection sctpConn = null;
+
                         int expire = sctpConnIq.getExpire();
                         String channelBundleId = sctpConnIq.getChannelBundleId();
 
-                        if(sctpConn == null)
+                        // No ID means SCTP connection is to be created
+                        // or focus uses endpoint identity
+                        if (id == null)
                         {
+                            // FIXME: depreciated and to be removed
+                            sctpConn = content.getSctpConnection(endpoint);
+
                             // Expire an expired/non-existing SCTP connection.
                             if(expire == 0)
                                 continue;
 
                             int sctpPort = sctpConnIq.getPort();
 
-                            sctpConn
-                                = content.createSctpConnection(
-                                        endpoint,
-                                        sctpPort,
-                                        channelBundleId);
+                            if (sctpConn == null)
+                            {
+                                sctpConn
+                                    = content.createSctpConnection(
+                                            endpoint,
+                                            sctpPort,
+                                            channelBundleId);
+                            }
+                        }
+                        else
+                        {
+                            sctpConn = content.getSctpConnection(id);
                         }
 
                         // expire

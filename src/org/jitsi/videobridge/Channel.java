@@ -71,6 +71,13 @@ public abstract class Channel
     private boolean expired = false;
 
     /**
+     * The ID of this <tt>Channel</tt> (which is unique within the list of
+     * <tt>Channel</tt>s listed in {@link #content} while this instance is
+     * listed there as well).
+     */
+    private final String id;
+
+    /**
      * The indicator which determines whether the conference focus is the
      * initiator/offerer (as opposed to the responder/answerer) of the media
      * negotiation associated with this instance.
@@ -114,16 +121,21 @@ public abstract class Channel
      *
      * @param content the <tt>Content</tt> which is initializing the new
      * instance
+     * @param id unique string identifier of this instance
      * @param channelBundleId the ID of the channel-bundle this
      * <tt>AudioChannel</tt> is to be a part of (or <tt>null</tt> if no it is
      * not to be a part of a channel-bundle).
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public Channel(Content content, String channelBundleId)
+    public Channel(Content content, String id, String channelBundleId)
         throws Exception
     {
         if (content == null)
             throw new NullPointerException("content");
+        if (StringUtils.isNullOrEmpty(id))
+            throw new NullPointerException("id");
+
+        this.id = id;
         this.content = content;
         this.channelBundleId = channelBundleId;
 
@@ -231,6 +243,7 @@ public abstract class Channel
         if (endpoint != null)
             iq.setEndpoint(endpoint.getID());
 
+        iq.setID(id);
         iq.setExpire(getExpire());
         iq.setInitiator(isInitiator());
 
@@ -435,7 +448,10 @@ public abstract class Channel
      * of <tt>Channel</tt> listed in {@link #content} while this instance is
      * listed there as well)
      */
-    public abstract String getID();
+    public final String getID()
+    {
+        return id;
+    }
 
     /**
      * Gets the time in milliseconds of the last activity related to this

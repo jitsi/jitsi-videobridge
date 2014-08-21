@@ -86,13 +86,6 @@ public class RtpChannel
     private CsrcAudioLevelListener csrcAudioLevelListener;
 
     /**
-     * The ID of this <tt>Channel</tt> (which is unique within the list of
-     * <tt>Channel</tt>s listed in {@link #content} while this instance is
-     * listed there as well).
-     */
-    private final String id;
-
-    /**
      * The local synchronization source identifier (SSRC) to be pre-announced.
      * Currently, the value is taken into account in the case of content mixing
      * and not in the case of RTP translation.
@@ -218,12 +211,7 @@ public class RtpChannel
     public RtpChannel(Content content, String id, String channelBundleId)
         throws Exception
     {
-        super(content, channelBundleId);
-
-        if (id == null)
-            throw new NullPointerException("id");
-
-        this.id = id;
+        super(content, id, channelBundleId);
 
         MediaService mediaService = getMediaService();
         MediaType mediaType = getContent().getMediaType();
@@ -239,7 +227,7 @@ public class RtpChannel
          * of properties we may be interested in.
          */
         stream.addPropertyChangeListener(streamPropertyChangeListener);
-        stream.setName(this.id);
+        stream.setName(getID());
         stream.setProperty(RtpChannel.class.getName(), this);
 
         /*
@@ -632,7 +620,6 @@ public class RtpChannel
 
         iq.setDirection(stream.getDirection());
 
-        iq.setID(getID());
         iq.setLastN(null);
 
         long initialLocalSSRC = getInitialLocalSSRC();
@@ -685,21 +672,6 @@ public class RtpChannel
                 };
         }
         return csrcAudioLevelListener;
-    }
-
-    /**
-     * Gets the ID of this <tt>Channel</tt> (which is unique within the list of
-     * <tt>Channel</tt> listed in {@link #content} while this instance is listed
-     * there as well).
-     *
-     * @return the ID of this <tt>Channel</tt> (which is unique within the list
-     * of <tt>Channel</tt> listed in {@link #content} while this instance is
-     * listed there as well)
-     */
-    @Override
-    public final String getID()
-    {
-        return id;
     }
 
     /**

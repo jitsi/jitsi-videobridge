@@ -126,20 +126,6 @@ public class SctpConnection
     }
 
     /**
-     * Gets the (unique) identifier of the <tt>SctpConnection</tt> of a specific
-     * <tt>Endpoint</tt>.
-     *
-     * @param endpoint the <tt>Endpoint</tt> for which the (unique) identifier
-     * of the <tt>SctpConnection</tt> is to be returned
-     * @return the (unique) identifier of the <tt>SctpConnection</tt> of the
-     * specific <tt>endpoint</tt>
-     */
-    static String getID(Endpoint endpoint)
-    {
-        return "SCTP_with_" + endpoint.getID();
-    }
-
-    /**
      * Indicates whether the STCP association is ready and has not been ended by
      * a subsequent state change.
      */
@@ -203,6 +189,7 @@ public class SctpConnection
     /**
      * Initializes a new <tt>SctpConnection</tt> instance.
      *
+     * @param id the string identifier of this connection instance
      * @param content the <tt>Content</tt> which is initializing the new
      * instance
      * @param endpoint the <tt>Endpoint</tt> of newly created instance
@@ -213,13 +200,14 @@ public class SctpConnection
      * @throws Exception if an error occurs while initializing the new instance
      */
     public SctpConnection(
+            String id,
             Content content,
             Endpoint endpoint,
             int remoteSctpPort,
             String channelBundleId)
         throws Exception
     {
-        super(content, channelBundleId);
+        super(content, id, channelBundleId);
 
         setEndpoint(endpoint.getID());
 
@@ -364,15 +352,6 @@ public class SctpConnection
             }
         }
         return def;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getID()
-    {
-        return getID(getEndpoint());
     }
 
     /**

@@ -270,21 +270,15 @@ public class Content
 
         synchronized (channels)
         {
-            sctpConnection = getSctpConnection(endpoint);
-            if(sctpConnection == null)
-            {
-                sctpConnection
-                    = new SctpConnection(
-                        this, endpoint, sctpPort, channelBundleId);
-                channels.put(sctpConnection.getID(), sctpConnection);
-            }
-            else
-            {
-                throw new IllegalArgumentException(
-                        "An SctpConnection for " + endpoint.getID()
-                            + " exists already.");
-            }
+            String id = generateChannelID();
+
+            sctpConnection
+                = new SctpConnection(
+                        id, this, endpoint, sctpPort, channelBundleId);
+
+            channels.put(sctpConnection.getID(), sctpConnection);
         }
+
         return sctpConnection;
     }
 
@@ -796,15 +790,28 @@ public class Content
      * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any or
      * <tt>null</tt> otherwise.
      */
+    @Deprecated
     public SctpConnection getSctpConnection(Endpoint endpoint)
     {
-        /*
-         * FIXME The ID of SctpConnection is based on the ID of Endpoint but is
-         * put in the same Map as the ID of RtpChannel. Technically, it is
-         * possible for the ID of SctpConnection to clash with the ID of
-         * RtpChannel.
-         */
-        return (SctpConnection) getChannel(SctpConnection.getID(endpoint));
+        if (endpoint == null)
+            return null;
+
+        // SCTP connection is bound to an Endpoint just after gets created
+        // (in the constructor), so expect to find it there
+        return endpoint.getSctpConnection();
+    }
+
+    /**
+     * Returns <tt>SctpConnection</tt> for given <tt>Endpoint</tt>.
+     *
+     * @param id the <tt>id</tt> of <tt>SctpConnection</tt> that we're looking
+     *           for.
+     * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any or
+     *         <tt>null</tt> otherwise.
+     */
+    public SctpConnection getSctpConnection(String id)
+    {
+        return (SctpConnection) getChannel(id);
     }
 
     /**
