@@ -27,6 +27,9 @@ public class ComponentImpl
     extends AbstractComponent
     implements BundleActivator
 {
+    private static final org.jitsi.util.Logger logger
+            =  org.jitsi.util.Logger.getLogger(ComponentImpl.class);
+
     /**
      * The (default) description of <tt>ComponentImpl</tt> instances.
      */
@@ -67,7 +70,7 @@ public class ComponentImpl
      */
     private static void logd(String s)
     {
-        System.err.println(s);
+        logger.info(s);
     }
 
     /**

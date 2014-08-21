@@ -15,7 +15,7 @@ import org.jitsi.service.neomedia.*;
  * Created by gp on 22/07/14.
  */
 public class HighestQualityBridgeRTCPTerminationStrategy
-        extends BasicRTCPTerminationStrategy
+        extends BasicBridgeRTCPTerminationStrategy
 {
     /**
      * The cache processor that will be making the RTCP reports coming from

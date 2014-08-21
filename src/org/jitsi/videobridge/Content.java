@@ -692,9 +692,9 @@ public class Content
                 RTCPTerminationStrategy strategy
                     = (RTCPTerminationStrategy) clazz.newInstance();
 
-                if (strategy instanceof BasicBridgeRTCPTerminationStrategy)
+                if (strategy instanceof BridgeRTCPTerminationStrategy)
                 {
-                    ((BasicBridgeRTCPTerminationStrategy) strategy)
+                    ((BridgeRTCPTerminationStrategy) strategy)
                             .setConference(this.conference);
                 }
 

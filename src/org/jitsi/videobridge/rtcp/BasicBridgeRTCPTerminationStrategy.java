@@ -17,15 +17,18 @@ import org.jitsi.videobridge.*;
 
 /**
  * This class extends the <tt>BasicRTCPTerminationStrategy</tt> to make it work
- * with features found exclusively in the video bridge like, for example, lastN.
+ * with features found exclusively in the video bridge like, for example, lastN
+ * and simulcast.
  *
  * Created by gp on 17/07/14.
  */
 public class BasicBridgeRTCPTerminationStrategy
     extends BasicRTCPTerminationStrategy
+    implements BridgeRTCPTerminationStrategy
 {
     private Conference conference;
 
+    @Override
     public void setConference(Conference conference)
     {
         this.conference = conference;
@@ -127,7 +130,30 @@ public class BasicBridgeRTCPTerminationStrategy
                     Integer receiverSSRC = Integer.valueOf(
                             (int) stream.getLocalSourceID());
 
-                    if (srcRtpChannel.isInLastN(destChannel))
+                    boolean destIsReceiving
+                            = srcRtpChannel.isInLastN(destChannel);
+
+                    if (destIsReceiving && srcChannel instanceof VideoChannel)
+                    {
+                        VideoChannel srcVideoChannel
+                                = (VideoChannel) srcChannel;
+
+                        if (!(destChannel instanceof VideoChannel))
+                        {
+                            destIsReceiving = false;
+                        }
+                        else
+                        {
+                            VideoChannel dstVideoChannel
+                                    = (VideoChannel) destChannel;
+
+                            destIsReceiving = dstVideoChannel.getSimulcastManager()
+                                    .acceptSimulcastLayer(ssrc,
+                                            srcVideoChannel);
+                        }
+                    }
+
+                    if (destIsReceiving)
                     {
                         // The sender is in the LastN set for this receiver:
                         // Cache the sender information.
@@ -142,7 +168,7 @@ public class BasicBridgeRTCPTerminationStrategy
                     }
                     else
                     {
-                        // The sender is NOT in the LastN set for this receiver:
+                        // The sender is NOT being received by te this receiver:
                         // We keep the packet counqt/octet count stable.
                         SenderInformation si;
                         synchronized (receiverSenderInformationMap)
