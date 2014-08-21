@@ -18,12 +18,12 @@ import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
 /**
- * Implements <tt>BundleActivator</tt> for the OSGi bundle which implements an
- * HTTP/JSON API for Jitsi Videobridge.
+ * Implements <tt>BundleActivator</tt> for the OSGi bundle which implements a
+ * REST API for Videobridge.
  * <p>
- * The REST API of Jitsi Videobridge is currently served over HTTP on port
+ * The REST API of Videobridge is currently served over HTTP on port
  * <tt>8080</tt> by default. The default port value may be overridden by the
- * <tt>System</tt> and/or <tt>ConfigurationService</tt> property with name
+ * <tt>System</tt> and <tt>ConfigurationService</tt> property with name
  * <tt>org.jitsi.videobridge.rest.jetty.port</tt>.
  * </p>
  *
@@ -33,28 +33,46 @@ public class RESTBundleActivator
     implements BundleActivator
 {
     /**
-     * The name of the <tt>System</tt> and/or <tt>ConfigurationService</tt>
-     * property which specifies the port on which the HTTP/JSON API of Jitsi
-     * Videobridge is to be served. The default value is <tt>8080</tt>.
+     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
+     * property which specifies the port on which the REST API of Videobridge is
+     * to be served over HTTP. The default value is <tt>8080</tt>.
      */
     private static final String JETTY_PORT_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.port";
 
+    /**
+     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
+     * property which specifies the keystore password to be utilized by
+     * <tt>SslContextFactory</tt> when the REST API of Videobridge is served
+     * over HTTPS.
+     */
     private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD
         = Videobridge.REST_API_PNAME
             + ".jetty.sslContextFactory.keyStorePassword";
 
+    /**
+     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
+     * property which specifies the keystore path to be utilized by
+     * <tt>SslContextFactory</tt> when the REST API of Videobridge is served
+     * over HTTPS.
+     */
     private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH
         = Videobridge.REST_API_PNAME + ".jetty.sslContextFactory.keyStorePath";
 
+    /**
+     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
+     * property which specifies whether client certificate authentication is to
+     * be required by <tt>SslContextFactory</tt> when the REST API of
+     * Videobridge is served over HTTPS.
+     */
     private static final String JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH
         = Videobridge.REST_API_PNAME
             + ".jetty.sslContextFactory.needClientAuth";
 
     /**
      * The name of the <tt>System</tt> and/or <tt>ConfigurationService</tt>
-     * property which specifies the port on which the HTTPS/JSON API of Jitsi
-     * Videobridge is to be served. The default value is <tt>8443</tt>.
+     * property which specifies the port on which the REST API of Videobridge is
+     * to be served over HTTPS. The default value is <tt>8443</tt>.
      */
     private static final String JETTY_TLS_PORT_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.tls.port";
@@ -67,11 +85,27 @@ public class RESTBundleActivator
         = Logger.getLogger(RESTBundleActivator.class);
 
     /**
-     * The Jetty <tt>Server</tt> which provides the HTTP interface to the JSON
-     * API of Jitsi Videobridge.
+     * The Jetty <tt>Server</tt> which provides the HTTP(S) interface to the
+     * REST API of Videobridge.
      */
     private Server server;
 
+    /**
+     * Gets an absolute path in the form of <tt>File</tt> from an absolute or
+     * relative <tt>path</tt> specified in the form of a <tt>String</tt>. If
+     * <tt>path</tt> is relative, it is resolved against
+     * <tt>ConfigurationService.PNAME_SC_HOME_DIR_LOCATION</tt> and
+     * <tt>ConfigurationService.PNAME_SC_HOME_DIR_NAME</tt>, <tt>user.home</tt>,
+     * or the current working directory.
+     *
+     * @param path the absolute or relative path in the form of <tt>String</tt>
+     * for/from which an absolute path in the form of <tt>File</tt> is to be
+     * returned
+     * @param cfg the <tt>ConfigurationService</tt> to be employed by the method
+     * (invocation) if necessary
+     * @return an absolute path in the form of <tt>File</tt> for/from the
+     * specified <tt>path</tt>
+     */
     private File getAbsoluteFile(String path, ConfigurationService cfg)
     {
         File file = new File(path);
@@ -110,17 +144,17 @@ public class RESTBundleActivator
     }
 
     /**
-     * Starts the OSGi bundle which implements an HTTP/JSON API for Jitsi
-     * Videobridge in a specific <tt>BundleContext</tt>.
+     * Starts the OSGi bundle which implements a REST API for Videobridge in a
+     * specific <tt>BundleContext</tt>.
      *
-     * @param bundleContext the <tt>BundleContext</tt> in which the OSG bundle
-     * which implements an HTTP/JSON API for Jitsi Videobridge is to start
+     * @param bundleContext the <tt>BundleContext</tt> in which the OSGi bundle
+     * which implements a REST API for Videobridge is to start
      */
     @Override
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        // The HTTP/JSON API starts if explicitly instructed to do so.
+        // The REST API of Videobridge does not start by default.
         ConfigurationService cfg
             = ServiceUtils.getService(
                     bundleContext,
@@ -249,11 +283,11 @@ public class RESTBundleActivator
     }
 
     /**
-     * Stops the OSGi bundle which implements an HTTP/JSON API for Jitsi
-     * Videobridge in a specific <tt>BundleContext</tt>.
+     * Stops the OSGi bundle which implements a REST API for Videobridge in a
+     * specific <tt>BundleContext</tt>.
      *
-     * @param bundleContext the <tt>BundleContext</tt> in which the OSG bundle
-     * which implements an HTTP/JSON API for Jitsi Videobridge is to stop
+     * @param bundleContext the <tt>BundleContext</tt> in which the OSGi bundle
+     * which implements a REST API for Videobridge is to stop
      */
     @Override
     public void stop(BundleContext bundleContext)
