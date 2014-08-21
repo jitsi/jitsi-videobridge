@@ -76,7 +76,7 @@
         <replace file="${debian.dir}/changelog"
                  token="_DATE_" value="${date}"/>
         <replace file="${debian.dir}/changelog"
-                 token="_VERSION_" value="${label}"/>
+                 token="_VERSION_" value="${label}-1"/>
     </target>
 
     <!-- Builds the debian package. -->
