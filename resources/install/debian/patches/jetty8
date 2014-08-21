@@ -1,0 +1,67 @@
+Index: jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
+===================================================================
+--- jvb.orig/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
++++ jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
+@@ -12,6 +12,8 @@ import java.lang.reflect.*;
+ import net.java.sip.communicator.util.*;
+ 
+ import org.eclipse.jetty.server.*;
++import org.eclipse.jetty.server.nio.*;
++import org.eclipse.jetty.server.ssl.*;
+ import org.eclipse.jetty.util.ssl.*;
+ import org.jitsi.service.configuration.*;
+ import org.jitsi.videobridge.*;
+@@ -162,10 +164,6 @@ public class RESTBundleActivator
+         try
+         {
+             Server server = new Server();
+-            HttpConfiguration httpCfg = new HttpConfiguration();
+-
+-            httpCfg.setSecurePort(tlsPort);
+-            httpCfg.setSecureScheme("https");
+ 
+             /*
+              * If HTTPS is not enabled, serve the REST API of Jitsi Videobridge
+@@ -174,10 +172,8 @@ public class RESTBundleActivator
+             if (sslContextFactoryKeyStorePath == null)
+             {
+                 // HTTP
+-                ServerConnector httpConnector
+-                    = new ServerConnector(
+-                            server,
+-                            new HttpConnectionFactory(httpCfg));
++                SelectChannelConnector httpConnector
++                    = new SelectChannelConnector();
+ 
+                 httpConnector.setPort(port);
+                 server.addConnector(httpConnector);
+@@ -187,7 +183,10 @@ public class RESTBundleActivator
+                 // HTTPS
+                 File sslContextFactoryKeyStoreFile
+                     = getAbsoluteFile(sslContextFactoryKeyStorePath, cfg);
+-                SslContextFactory sslContextFactory = new SslContextFactory();
++                SslSelectChannelConnector sslConnector
++                    = new SslSelectChannelConnector();
++                SslContextFactory sslContextFactory
++                    = sslConnector.getSslContextFactory();
+ 
+                 sslContextFactory.setExcludeCipherSuites(
+                         "SSL_RSA_WITH_DES_CBC_SHA",
+@@ -208,17 +207,6 @@ public class RESTBundleActivator
+                 sslContextFactory.setNeedClientAuth(
+                         sslContextFactoryNeedClientAuth);
+ 
+-                HttpConfiguration httpsCfg = new HttpConfiguration(httpCfg);
+-
+-                httpsCfg.addCustomizer(new SecureRequestCustomizer());
+-
+-                ServerConnector sslConnector
+-                    = new ServerConnector(
+-                            server,
+-                            new SslConnectionFactory(
+-                                    sslContextFactory,
+-                                    "http/1.1"),
+-                            new HttpConnectionFactory(httpsCfg));
+                 sslConnector.setPort(tlsPort);
+                 server.addConnector(sslConnector);
+             }
