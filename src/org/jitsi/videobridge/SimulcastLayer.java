@@ -20,6 +20,12 @@ public class SimulcastLayer implements Comparable<SimulcastLayer>
 
     private final long primarySSRC;
     private final Set<Long> associatedSSRCs = new HashSet<Long>();
+
+    public int getOrder()
+    {
+        return order;
+    }
+
     private final int order;
 
     public SimulcastLayer(long primarySSRC, int order)

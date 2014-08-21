@@ -144,7 +144,7 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
 
                 RTCPPacket[] packets = new RTCPPacket[2];
                 // Adds RTCP RR.
-                RTCPReportBlock receiverReport = null;
+                Vector<RTCPReportBlock> receiverReports = new Vector<RTCPReportBlock>();
 
                 for (SimulcastLayer layer : layers)
                 {
@@ -167,15 +167,15 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                             frac = 0.0D;
 
                         int fractionlost = (int) (frac * 256D);
-                        receiverReport = new RTCPReportBlock(
+                        receiverReports.add(new RTCPReportBlock(
                                 ssrc,
-                                fractionlost,
-                                packetslost,
+                                layer.getOrder() > 0 ? fractionlost : 0,
+                                layer.getOrder() > 0 ? packetslost : 0,
                                 lastseq,
                                 jitter,
                                 lsr,
                                 dlsr
-                        );
+                        ));
 
                         info.prevmaxseq = (int) lastseq;
                         info.prevlost = packetslost;
@@ -185,13 +185,6 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                             logger.info("FMJ reports " + packetslost
                                     + " lost packets (" + fractionlost + ") for sync source " + (ssrc & 0xffffffffl) + " (" + ssrc + ")");
                         }
-
-                        // stop the loop and report only for the base stream.
-                        // TODO(gp) reporting for higher quality streams seems
-                        // to be a little trickier. We need to at least make
-                        // sure we are actually receiving a high quality stream
-                        // in order to report some feedback.
-                        break;
                     }
                     else
                     {
@@ -205,8 +198,8 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                     }
                 }
 
-                RTCPReportBlock[] reportBlocksArray = new RTCPReportBlock[] { receiverReport };
-
+                RTCPReportBlock[] reportBlocksArray
+                        = receiverReports.toArray(new RTCPReportBlock[receiverReports.size()]);
                 packets[0] = new RTCPRRPacket(localSSRC, reportBlocksArray);
 
                 // Add REMB.
@@ -217,6 +210,7 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                 long[] dest = new long[reportBlocksArray.length];
                 for (int i = 0; i < dest.length; i++)
                 {
+                    // TODO(gp) NPE check.
                     dest[i] = reportBlocksArray[i].getSSRC();
                 }
 
