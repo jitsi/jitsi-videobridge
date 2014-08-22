@@ -233,6 +233,15 @@ public class VideoChannel
         // Represent the list of Endpoints defined by lastN in JSON format.
         Lock readLock = lastNSyncRoot.readLock();
         StringBuilder lastNEndpointsStr = new StringBuilder();
+        /*
+         * We want endpointsEnteringLastN to always to reported. Consequently,
+         * we will pretend that all lastNEndpoints are entering if no explicit
+         * endpointsEnteringLastN is specified.
+         */
+        List<Endpoint> effectiveEndpointsEnteringLastN = endpointsEnteringLastN;
+
+        if (effectiveEndpointsEnteringLastN == null)
+            effectiveEndpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
 
         readLock.lock();
         try
@@ -259,6 +268,12 @@ public class VideoChannel
                             lastNEndpointsStr.append(
                                     JSONValue.escape(e.getID()));
                             lastNEndpointsStr.append('"');
+
+                            if (effectiveEndpointsEnteringLastN
+                                    != endpointsEnteringLastN)
+                            {
+                                effectiveEndpointsEnteringLastN.add(e);
+                            }
                         }
                     }
 
@@ -284,24 +299,30 @@ public class VideoChannel
         msg.append(']');
 
         // endpointsEnteringLastN
+        /*
+         * We want endpointsEnteringLastN to always to reported. Consequently,
+         * we will pretend that all lastNEndpoints are entering if no explicit
+         * endpointsEnteringLastN is specified.
+         */
+        endpointsEnteringLastN = effectiveEndpointsEnteringLastN;
         if ((endpointsEnteringLastN != null)
                 && !endpointsEnteringLastN.isEmpty())
         {
-            StringBuilder endpointEnteringLastNStr = new StringBuilder();
+            StringBuilder endpointsEnteringLastNStr = new StringBuilder();
 
             for (Endpoint e : endpointsEnteringLastN)
             {
-                if (endpointEnteringLastNStr.length() != 0)
-                    endpointEnteringLastNStr.append(',');
-                endpointEnteringLastNStr.append('"');
-                endpointEnteringLastNStr.append(
+                if (endpointsEnteringLastNStr.length() != 0)
+                    endpointsEnteringLastNStr.append(',');
+                endpointsEnteringLastNStr.append('"');
+                endpointsEnteringLastNStr.append(
                         JSONValue.escape(e.getID()));
-                endpointEnteringLastNStr.append('"');
+                endpointsEnteringLastNStr.append('"');
             }
-            if (endpointEnteringLastNStr.length() != 0)
+            if (endpointsEnteringLastNStr.length() != 0)
             {
                 msg.append(",\"endpointsEnteringLastN\":[");
-                msg.append(endpointEnteringLastNStr);
+                msg.append(endpointsEnteringLastNStr);
                 msg.append(']');
             }
         }
@@ -418,13 +439,15 @@ public class VideoChannel
             int lastN = getLastN();
 
             if (endpoints == null)
+            {
                 endpoints = conferenceSpeechActivity.getEndpoints();
+            }
             if (lastN > 0)
             {
                 Endpoint thisEndpoint = getEndpoint();
 
-                endpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
                 // At most the first lastN are entering the list of lastN.
+                endpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
                 for (Endpoint e : endpoints)
                 {
                     if (!e.equals(thisEndpoint))
