@@ -47,9 +47,6 @@ public class OSGi
                 "net/java/sip/communicator/impl/resources/ResourceManagementActivator"
             },
             {
-                "net/java/sip/communicator/util/dns/DnsUtilActivator"
-            },
-            {
                 "net/java/sip/communicator/impl/netaddr/NetaddrActivator"
             },
             {
