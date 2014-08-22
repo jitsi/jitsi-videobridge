@@ -13,15 +13,13 @@ import org.jitsi.util.*;
 import org.osgi.framework.*;
 
 /**
- * Implements a <tt>BundleActivator</tt> for <tt>OSGi</tt> which starts and
- * stops it in a <tt>BundleContext</tt>.
- * <p>
- * <b>Warning</b>: The class <tt>OSGiBundleActivator</tt> is to be considered
- * internal, its access modifier is public in order to allow the OSGi framework
- * to find it by name and instantiate it.
+ * FIXME: add some logging to ConfigurationServiceImpl instead of:
+ * Implements a <tt>BundleActivator</tt> for <tt>OSGi</tt> which prints out
+ * configuration properties.
  * </p>
  *
  * @author Lyubomir Marinov
+ * @author Pawel Domas
  */
 public class OSGiBundleActivator
     implements BundleActivator
@@ -105,8 +103,6 @@ public class OSGiBundleActivator
         throws Exception
     {
         logConfigurationServiceProperties(bundleContext);
-
-        OSGi.start(bundleContext);
     }
 
     /**
@@ -119,6 +115,6 @@ public class OSGiBundleActivator
     public void stop(BundleContext bundleContext)
         throws Exception
     {
-        OSGi.stop(bundleContext);
+
     }
 }

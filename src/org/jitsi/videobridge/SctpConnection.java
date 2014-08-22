@@ -12,11 +12,11 @@ import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import net.java.sip.communicator.impl.osgi.framework.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
+import org.jitsi.impl.osgi.framework.*;
 import org.jitsi.sctp4j.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
