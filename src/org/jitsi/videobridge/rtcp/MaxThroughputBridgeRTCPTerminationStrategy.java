@@ -86,16 +86,20 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
 
             if (info != null)
             {
-                long lastseq = info.maxseq + info.cycles;
-                int jitter = (int) info.jitter;
+                int baseseq = info.baseseq;
+                int cycles = info.cycles;
+                double jitter = info.jitter;
+                long lastSRntptimestamp = info.lastSRntptimestamp;
+                long lastSRreceiptTime = info.lastSRreceiptTime;
+                int maxseq = info.maxseq;
+                int received = info.received;
+
+                long lastseq = maxseq + cycles;
                 long lsr
-                    = (int)
-                        ((info.lastSRntptimestamp & 0x0000ffffffff0000L) >> 16);
+                    = (int) ((lastSRntptimestamp & 0x0000ffffffff0000L) >> 16);
                 long dlsr
-                    = (int)
-                        ((time - info.lastSRreceiptTime) * 65.536000000000001D);
-                int packetslost
-                    = (int) (lastseq - info.baseseq + 1L - info.received);
+                    = (int) ((time - lastSRreceiptTime) * 65.536000000000001D);
+                int packetslost = (int) (lastseq - baseseq + 1L - received);
 
                 if (packetslost < 0)
                     packetslost = 0;
@@ -115,7 +119,7 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                                 fractionlost,
                                 packetslost,
                                 lastseq,
-                                jitter,
+                                (int) jitter,
                                 lsr,
                                 dlsr));
 
