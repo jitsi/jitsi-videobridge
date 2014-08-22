@@ -1,3 +1,9 @@
+/*
+ * Jitsi Videobridge, OpenSource video conferencing.
+ *
+ * Distributable under LGPL license.
+ * See terms of license at gnu.org.
+ */
 package org.jitsi.videobridge.rtcp;
 
 import org.jitsi.service.neomedia.*;
