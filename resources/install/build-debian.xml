@@ -139,7 +139,15 @@
     <target name="deb-src" depends="deb-copy-jitsi-videobridge">
 
         <unzip src="../libsrc/jitsi-android-osgi.zip"
-               dest="${debian.release}/lib/src/"/>
+               dest="${debian.release}/lib/src/jitsi-android-osgi">
+            <patternset>
+                <exclude name="**/test/**"/>
+                <exclude name="**/test-lib/**"/>
+                <exclude name="**/*.iml"/>
+                <exclude name="**/*.jar"/>
+            </patternset>
+        </unzip>
+
         <unzip src="../libsrc/tinder_src_1_2_2.zip"
                dest="${debian.release}/lib/src/">
             <patternset>

@@ -1,3 +1,4 @@
+Description: Makes sources compile/compatible with jetty8, original is for jetty9
 Index: jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
 ===================================================================
 --- jvb.orig/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
