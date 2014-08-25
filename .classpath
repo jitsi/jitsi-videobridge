@@ -6,7 +6,6 @@
 	<classpathentry kind="lib" path="lib/bouncycastle.jar"/>
 	<classpathentry kind="lib" path="lib/concurrentlinkedhashmap-lru.jar"/>
 	<classpathentry kind="lib" path="lib/configuration.jar"/>
-	<classpathentry kind="lib" path="lib/dns.jar"/>
 	<classpathentry kind="lib" path="lib/dnsservice.jar"/>
 	<classpathentry kind="lib" path="lib/dom4j.jar"/>
 	<classpathentry kind="lib" path="lib/fileaccess.jar"/>
