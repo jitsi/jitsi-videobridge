@@ -283,11 +283,11 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
         {
             switch (p.type)
             {
-            case RTCPPacketType.RR:
+            case RTCPPacket.RR:
                 // Mute RRs from the peers. We send our own.
                 break;
 
-            case RTCPPacketType.SR:
+            case RTCPPacket.SR:
                 // Remove feedback information from the SR and forward.
                 RTCPSRPacket sr = (RTCPSRPacket) p;
 
@@ -295,12 +295,12 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                 outPackets.add(sr);
                 break;
 
-            case RTCPPacketType.PSFB:
+            case RTCPFBPacket.PSFB:
                 RTCPFBPacket psfb = (RTCPFBPacket) p;
 
                 switch (psfb.fmt)
                 {
-                case RTCPPSFBFormat.REMB:
+                case RTCPREMBPacket.FMT:
                     // Mute REMBs.
                     break;
                 default:
