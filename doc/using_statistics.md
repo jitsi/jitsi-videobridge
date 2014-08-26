@@ -36,6 +36,7 @@ If Jitsi Videobridge is using XMPP it sends the statistics reports by COLIBRI
 protocol or by PubSub (XEP-0060).
 
 This is an example COLIBRI packet of statistics report:
+```xml
 <iq type='result' to='38d17cb9-0d3a-498e-b3ea-05b377845c07@É/4533b58e-409f-4f6b-9268-f335b4430ba6' from='jitsi-videobridge.jitsi.net' id='u4Fc8-16' xmlns='jabber:client'>
 	<stats xmlns=' http://jitsi.org/protocol/colibri'>
 		<stat value='2014-07-30 10:13:11.595' name='current_timestamp'/>
@@ -52,11 +53,13 @@ This is an example COLIBRI packet of statistics report:
 		<stat value='4' name='participants'/>
 	</stats>
 </iq>
+```
 
 The reports will be received by all active focuses for the video bridge.
 
 The same report will be sent to already created Pubsub node with the following 
 packet:
+```xml
 <iq type="set" id="0z5p5-90" from="jitsi-videobridge.jitsi.net" to="pubsub.jitsi.net">
 	<pubsub xmlns=" http://jabber.org/protocol/pubsub">
 		<publish node="videobridge_stats">
@@ -79,9 +82,11 @@ packet:
 		</publish>
 	</pubsub>
 </iq>
+```
 
 When the Pubsub node receives the report it will resend it to all subscribers of
 the Pubsub node with the following packet:
+```xml
 <message from='pubsub.jitsi.net' to='subscriber@É' id='foo'>
 	<event xmlns=' http://jabber.org/protocol/pubsub#event'>
 		<items node='videobridge_stats'>
@@ -104,10 +109,12 @@ the Pubsub node with the following packet:
 		</items>
 	</event>
 </message>
+```
 
 If Jitsi Videobridge is using REST it will sent the statistics report 
 in response to a HTTP GET request for http://[hostname]:8080/colibri/stats 
 with the following JSON object: 
+```
 HTTP/1.1 200 OK
 Content-Type: application/json;charset=UTF-8
 Content-Length: 251
@@ -126,6 +133,7 @@ Server: Jetty(9.1.5.v20140505)
 "total_memory":4051,
 "videochannels":0
 }
+```
 
 
 Configuration
