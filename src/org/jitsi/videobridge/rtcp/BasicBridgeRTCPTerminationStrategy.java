@@ -6,14 +6,14 @@
  */
 package org.jitsi.videobridge.rtcp;
 
+import java.util.*;
+
 import net.sf.fmj.media.rtp.*;
-import org.jitsi.impl.neomedia.rtcp.*;
+
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
-
-import java.util.*;
 
 /**
  * This class extends the <tt>BasicRTCPTerminationStrategy</tt> to make it work
@@ -44,7 +44,7 @@ public class BasicBridgeRTCPTerminationStrategy
 
         if (outPacket.packets != null
             && outPacket.packets.length != 0
-            && outPacket.packets[0].type == RTCPPacketType.SR)
+            && outPacket.packets[0].type == RTCPPacket.SR)
         {
             if (explodeSenderReport(outPacket))
             {
@@ -65,7 +65,7 @@ public class BasicBridgeRTCPTerminationStrategy
     {
         if (outPacket.packets == null
                 || outPacket.packets.length == 0
-                || outPacket.packets[0].type != RTCPPacketType.SR)
+                || outPacket.packets[0].type != RTCPPacket.SR)
         {
             return false;
         }
