@@ -108,18 +108,18 @@
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
                perm="755"/>
 
-        <!-- creating a debian archive file -->
+        <!-- creating a debian archive file
         <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz"
              basedir="${debian.release}" includes="debian/"
-             defaultexcludes="No" compression="gzip"/>
+             defaultexcludes="No" compression="gzip"/>-->
 
-        <!-- creating empty orig file -->
+        <!-- creating empty orig file
         <touch file="jitsi-videobridge"/>
         <tar destfile="release/jitsi-videobridge_${label}-1.orig.tar.gz"
              compression="gzip">
             <tarfileset file="jitsi-videobridge"/>
         </tar>
-        <delete file="jitsi-videobridge"/>
+        <delete file="jitsi-videobridge"/>-->
 
         <!-- and build it -->
         <exec executable="${dpkg-buildpackage}" dir="${debian.dir}/../">

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # postinst script for jitsi-videobridge
 
 set -e
@@ -7,16 +7,16 @@ case "$1" in
     configure)
 
         # we don't want to regenerate config on upgrade
-        OLDCONFIG=false
-        if [ -x "/etc/default/jitsi-videobridge" ]; then
+        OLDCONFIG="false"
+        if [ -f "/etc/default/jitsi-videobridge" ]; then
             . /etc/default/jitsi-videobridge
-            if [ "$JVB_HOSTNAME" && "$JVB_PORT" && "$JVB_SECRET" ]; then
-                OLDCONFIG=true
+            if [ -n "$JVB_HOSTNAME" ] && [ -n "$JVB_PORT" ] && [ -n "$JVB_SECRET" ]; then
+                OLDCONFIG="true"
             fi
         fi
 
         # generate config on new install
-        if [ ! $OLDCONFIG ]; then
+        if [ "$OLDCONFIG" = "false" ]; then
 
             # debconf hostname question
             . /usr/share/debconf/confmodule
