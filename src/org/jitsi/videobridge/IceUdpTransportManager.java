@@ -373,10 +373,47 @@ public class IceUdpTransportManager
 
         }
 
+        updatePayloadTypeFilters();
+
         if (iceConnected)
             channel.transportConnected();
 
         return true;
+    }
+
+    /**
+     * Updates the states of the <tt>RtpChannelDatagramFilters</tt> for our
+     * RTP channels, according to whether we are (effectively) using bundle
+     * (that is, we have more than one <tt>RtpChannel</tt>). The filters are
+     * configured to check the RTP payload type and the RTCP Sender SSRC fields
+     * if and only if bundle is used.
+     *
+     * This allows non-bundled channels to work correctly without the need for
+     * the focus to explicitly specify via COLIBRI the payload types to be used
+     * by each channel.
+     */
+    private void updatePayloadTypeFilters()
+    {
+        List<RtpChannel> rtpChannels = new LinkedList<RtpChannel>();
+        for (Channel channel : getChannels())
+            if (channel instanceof RtpChannel)
+                rtpChannels.add((RtpChannel) channel);
+
+        int numRtpChannels = rtpChannels.size();
+        if (numRtpChannels > 0)
+        {
+            boolean bundleMode = numRtpChannels > 1;
+            for (RtpChannel channel : rtpChannels)
+            {
+                // Enable filtering by PT iff we are (effectively) using bundle
+                channel.getDatagramFilter(false)
+                        .setCheckRtpPayloadType(bundleMode);
+
+                // Enable RTCP filtering by SSRC iff we are bundle
+                channel.getDatagramFilter(true)
+                        .setCheckRtcpSsrc(bundleMode);
+            }
+        }
     }
 
     /**
@@ -536,6 +573,8 @@ public class IceUdpTransportManager
                                  ioe);
                 }
             }
+
+            updatePayloadTypeFilters();
 
             channel.transportClosed();
         }

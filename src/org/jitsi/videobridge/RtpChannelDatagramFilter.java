@@ -34,6 +34,22 @@ class RtpChannelDatagramFilter
     private boolean acceptNonRtp = false;
 
     /**
+     * Whether or not to check the value of RTP Payload-Type field against the
+     * known payload types for {@link #channel}. If set to <tt>false</tt>, this
+     * <tt>DatagramPacketFilter</tt> will accept all RTP packets, regardless
+     * of their payload type number.
+     */
+    private boolean checkRtpPayloadType = true;
+
+    /**
+     * Whether or not to check the value of the RTCP Sender SSRC field against
+     * the known SSRCs for {@link #channel}. If set to <tt>false</tt>, this
+     * <tt>DatagramPacketFilter</tt> will accept all RTCP packets, regardless
+     * of their Sender SSRC field.
+     */
+    private boolean checkRtcpSsrc = true;
+
+    /**
      * Initializes an <tt>RtpChannelDatagramFilter</tt>.
      * @param channel the channel for which to work.
      * @param rtcp whether to accept RTP or RTCP packets.
@@ -106,6 +122,9 @@ class RtpChannelDatagramFilter
      */
     private boolean acceptRTCP(byte[] data, int off, int len)
     {
+        if (!checkRtcpSsrc)
+            return true;
+
         if (len >= 8)
         {
             long packetSenderSSRC = readInt(data, off + 4) & 0xffffffffL;
@@ -130,6 +149,9 @@ class RtpChannelDatagramFilter
      */
     private boolean acceptRTP(int pt)
     {
+        if (!checkRtpPayloadType)
+            return true;
+
         int[] channelPTs = channel.receivePTs;
         for (int channelPT : channelPTs)
             if (channelPT == pt)
@@ -157,5 +179,23 @@ class RtpChannelDatagramFilter
     public void setAcceptNonRtp(boolean acceptNonRtp)
     {
         this.acceptNonRtp = acceptNonRtp;
+    }
+
+    /**
+     * Sets the value of the <tt>checkRtpPayloadType</tt> flag.
+     * @param checkRtpPayloadType the value to set.
+     */
+    public void setCheckRtpPayloadType(boolean checkRtpPayloadType)
+    {
+        this.checkRtpPayloadType = checkRtpPayloadType;
+    }
+
+    /**
+     * Sets the value of the <tt>checkRtcpSsrc</tt> flag.
+     * @param checkRtcpSsrc the value to set.
+     */
+    public void setCheckRtcpSsrc(boolean checkRtcpSsrc)
+    {
+        this.checkRtcpSsrc = checkRtcpSsrc;
     }
 }
