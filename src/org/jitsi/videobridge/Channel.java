@@ -717,8 +717,8 @@ public abstract class Channel
     void transportConnected()
     {
         logger.info("Transport connected for channel " + getID()
-                            + " of content " + getContent().getName() + " "
-                            + " of conference"
+                            + " of content " + getContent().getName()
+                            + " of conference "
                             + getContent().getConference().getID());
         try
         {
