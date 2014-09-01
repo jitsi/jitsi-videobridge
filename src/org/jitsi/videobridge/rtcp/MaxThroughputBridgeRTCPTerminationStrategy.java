@@ -11,9 +11,9 @@ import java.util.*;
 import net.sf.fmj.media.rtp.*;
 
 import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 
@@ -216,21 +216,8 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
         RTCPPacket rr = new RTCPRRPacket(localSSRC, receiverReports);
 
         // RTCP REMB
-        long mediaSSRC = 0l;
-        int exp = MaxThroughputRTCPTerminationStrategy.MAX_EXP;
-        int mantissa = MaxThroughputRTCPTerminationStrategy.MAX_MANTISSA;
-        long[] dest = new long[receiverReports.length];
-
-        for (int i = 0; i < dest.length; i++)
-            dest[i] = receiverReports[i].getSSRC();
-
-        RTCPPacket remb
-            = new RTCPREMBPacket(
-                    localSSRC,
-                    mediaSSRC,
-                    exp,
-                    mantissa,
-                    dest);
+        RTCPREMBPacket remb
+                = makeREMBPacket(videoChannel, localSSRC);
 
         // RTCP SDES
         List<RTCPSDES> sdesChunks
@@ -239,6 +226,12 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
 
         if (sdesChunk != null)
             sdesChunks.add(sdesChunk);
+
+        long[] dest = new long[receiverReports.length];
+
+        for (int i = 0; i < dest.length; i++)
+            dest[i] = receiverReports[i].getSSRC();
+
         for (long ssrc : dest)
         {
             sdesChunk = createRTCPSDES(rtcpTransmitter, (int) ssrc);
@@ -251,6 +244,36 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                     sdesChunks.toArray(new RTCPSDES[sdesChunks.size()]));
 
         return new RTCPPacket[] { rr, remb, sdes };
+    }
+
+    private RTCPREMBPacket makeREMBPacket(VideoChannel videoChannel, int localSSRC) {
+
+        if (videoChannel == null)
+            throw new IllegalArgumentException("videoChannel");
+
+        // Media SSRC (always 0)
+        final long mediaSSRC = 0l;
+
+        // Destination
+        RemoteBitrateEstimator remoteBitrateEstimator
+                = ((VideoMediaStream)videoChannel.getStream()).getRemoteBitrateEstimator();
+
+        Collection<Integer> tmp = remoteBitrateEstimator.getSsrcs();
+        List<Integer> ssrcs = new ArrayList<Integer>(tmp);
+
+        long[] dest = new long[ssrcs.size()];
+        for (int i = 0; i < ssrcs.size(); i++)
+            dest[i] = ssrcs.get(i) & 0xffffffffl;
+
+        // Exp & mantissa
+        long bitrate = remoteBitrateEstimator.getLatestEstimate();
+
+        // Create and return the packet.
+        return new RTCPREMBPacket(
+                localSSRC & 0xffffffffl,
+                mediaSSRC,
+                bitrate,
+                dest);
     }
 
     @Override
