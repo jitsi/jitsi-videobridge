@@ -219,6 +219,11 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
         RTCPREMBPacket remb
                 = makeREMBPacket(videoChannel, localSSRC);
 
+        if (remb != null) {
+            if (logger.isDebugEnabled())
+                logger.debug(remb);
+        }
+
         // RTCP SDES
         List<RTCPSDES> sdesChunks
             = new ArrayList<RTCPSDES>(1 + receiverReports.length);
@@ -243,7 +248,9 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
             = new RTCPSDESPacket(
                     sdesChunks.toArray(new RTCPSDES[sdesChunks.size()]));
 
-        return new RTCPPacket[] { rr, remb, sdes };
+        return (remb != null)
+                ? new RTCPPacket[] { rr, remb, sdes }
+                : new RTCPPacket[] { rr, sdes };
     }
 
     private RTCPREMBPacket makeREMBPacket(VideoChannel videoChannel, int localSSRC) {
@@ -261,12 +268,20 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
         Collection<Integer> tmp = remoteBitrateEstimator.getSsrcs();
         List<Integer> ssrcs = new ArrayList<Integer>(tmp);
 
+        // TODO(gp) intersect with SSRCs from signaled simulcast layers
         long[] dest = new long[ssrcs.size()];
         for (int i = 0; i < ssrcs.size(); i++)
             dest[i] = ssrcs.get(i) & 0xffffffffl;
 
         // Exp & mantissa
         long bitrate = remoteBitrateEstimator.getLatestEstimate();
+        if (bitrate == -1)
+        {
+            return null;
+        }
+
+        if (logger.isDebugEnabled())
+            logger.debug("Estimated bitrate: " + bitrate);
 
         // Create and return the packet.
         return new RTCPREMBPacket(
