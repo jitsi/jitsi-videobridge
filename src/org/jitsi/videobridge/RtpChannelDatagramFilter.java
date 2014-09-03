@@ -17,7 +17,14 @@ import org.jitsi.impl.neomedia.rtp.translator.*;
 class RtpChannelDatagramFilter
     implements DatagramPacketFilter
 {
-    /**
+
+    /*
+     * The <tt>DatagramPacketFilter</tt> which accepts DTLS
+     * <tt>DatagramPacket</tt>s when {@link #acceptNonRtp} equals <tt>true</tt>.
+     */
+    private static final DatagramPacketFilter DTLS_DATAGRAM_FILTER
+        = new DTLSDatagramFilter();
+     /**
      * Whether to accept non-RTP and non-RTCP packets (DTLS, STUN, ZRTP)
      */
     private boolean acceptNonRtp = false;
@@ -104,7 +111,7 @@ class RtpChannelDatagramFilter
             }
         }
 
-        return acceptNonRtp;
+        return acceptNonRtp && DTLS_DATAGRAM_FILTER.accept(p);
     }
 
     /**
