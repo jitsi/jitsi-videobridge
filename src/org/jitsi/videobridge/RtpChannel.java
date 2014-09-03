@@ -86,6 +86,14 @@ public class RtpChannel
     private CsrcAudioLevelListener csrcAudioLevelListener;
 
     /**
+     * Holds the <tt>RtpChannelDatagramFilter</tt> instances (if any) used by
+     * this channel. The filter for RTP is at index 0, the filter for RTCP at
+     * index 1.
+     */
+    private final RtpChannelDatagramFilter[] datagramFilters
+            = new RtpChannelDatagramFilter[2];
+
+    /**
      * The local synchronization source identifier (SSRC) to be pre-announced.
      * Currently, the value is taken into account in the case of content mixing
      * and not in the case of RTP translation.
@@ -121,6 +129,11 @@ public class RtpChannel
         = new WeakReferencePropertyChangeListener(this);
 
     /**
+     * Contains the payload type numbers configured for this channel.
+     */
+    int[] receivePTs = new int[0];
+
+    /**
      * The list of RTP SSRCs received on this <tt>Channel</tt>. An element at
      * an even index represents a SSRC and its consecutive element at an odd
      * index specifies the time in milliseconds when the SSRC was last seen (in
@@ -154,6 +167,11 @@ public class RtpChannel
     private SimpleAudioLevelListener streamAudioLevelListener;
 
     /**
+     * Whether {@link #stream} has been closed.
+     */
+    private boolean streamClosed = false;
+
+    /**
      * The <tt>PropertyChangeListener</tt> which listens to changes of the
      * values of {@link #stream}'s properties.
      */
@@ -174,24 +192,6 @@ public class RtpChannel
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
      */
     private final SessionAddress streamTarget = new SessionAddress();
-
-    /**
-     * Contains the payload type numbers configured for this channel.
-     */
-    int[] receivePTs = new int[0];
-
-    /**
-     * Whether {@link #stream} has been closed.
-     */
-    private boolean streamClosed = false;
-
-    /**
-     * Holds the <tt>RtpChannelDatagramFilter</tt> instances (if any) used by
-     * this channel. The filter for RTP is at index 0, the filter for RTCP at
-     * index 1.
-     */
-    private final RtpChannelDatagramFilter[] datagramFilters
-            = new RtpChannelDatagramFilter[2];
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -675,6 +675,33 @@ public class RtpChannel
     }
 
     /**
+     * Gets the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
+     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
+     * this <tt>RtpChannel</tt>.
+     * @param rtcp whether to return the filter for RTP or RTCP packets.
+     * @return the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
+     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
+     * this <tt>RtpChannel</tt>.
+     */
+    RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
+    {
+        RtpChannelDatagramFilter datagramFilter;
+        int index = rtcp ? 1 : 0;
+
+        synchronized (datagramFilters)
+        {
+            datagramFilter = datagramFilters[index];
+            if (datagramFilter == null)
+            {
+                datagramFilters[index]
+                    = datagramFilter
+                        = new RtpChannelDatagramFilter(this, rtcp);
+            }
+        }
+        return datagramFilter;
+    }
+
+    /**
      * Gets the local synchronization source identifier (SSRC) to be
      * pre-announced in the case of content mixing and not in the case of RTP
      * translation.
@@ -739,7 +766,7 @@ public class RtpChannel
         }
     }
 
-    /**
+	/**
      * Returns a <tt>MediaService</tt> implementation (if any).
      *
      * @return a <tt>MediaService</tt> implementation (if any)
@@ -749,7 +776,7 @@ public class RtpChannel
         return getContent().getMediaService();
     }
 
-	/**
+    /**
      * Returns the number of received bytes since the last time the
      * method was called.
      * @return the number of received bytes.
@@ -1561,30 +1588,10 @@ public class RtpChannel
                 }
                 if (datagramPacketFilter != null)
                 {
-                    ((RTPConnectorInputStream) newValue)
+                    ((RTPConnectorInputStream<?>) newValue)
                         .addDatagramPacketFilter(datagramPacketFilter);
                 }
             }
-        }
-    }
-
-    /**
-     * Gets the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
-     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
-     * this <tt>RtpChannel</tt>.
-     * @param rtcp whether to return the filter for RTP or RTCP packets.
-     * @return the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
-     * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
-     * this <tt>RtpChannel</tt>.
-     */
-    RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
-    {
-        int index = rtcp ? 1 : 0;
-        synchronized (datagramFilters)
-        {
-            if (datagramFilters[index] == null)
-                datagramFilters[index] = new RtpChannelDatagramFilter(this, rtcp);
-            return datagramFilters[index];
         }
     }
 }

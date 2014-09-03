@@ -6,9 +6,10 @@
  */
 package org.jitsi.videobridge;
 
-import org.ice4j.socket.*;
-
 import java.net.*;
+
+import org.ice4j.socket.*;
+import org.jitsi.impl.neomedia.rtp.translator.*;
 
 /**
  * Filters RTP or RTCP packet for a specific <tt>RtpChannel</tt>.
@@ -17,29 +18,15 @@ class RtpChannelDatagramFilter
     implements DatagramPacketFilter
 {
     /**
-     * The <tt>RtpChannel</tt> for which this <tt>RtpChannelDatagramFilter</tt>
-     * works.
-     */
-    private final RtpChannel channel;
-
-    /**
-     * Whether this <tt>DatagramFilter</tt> is to accept RTP packets (if
-     * <tt>false</tt>) or RTCP packets (if <tt>true</tt>).
-     */
-    private final boolean rtcp;
-
-    /**
      * Whether to accept non-RTP and non-RTCP packets (DTLS, STUN, ZRTP)
      */
     private boolean acceptNonRtp = false;
 
     /**
-     * Whether or not to check the value of RTP Payload-Type field against the
-     * known payload types for {@link #channel}. If set to <tt>false</tt>, this
-     * <tt>DatagramPacketFilter</tt> will accept all RTP packets, regardless
-     * of their payload type number.
+     * The <tt>RtpChannel</tt> for which this <tt>RtpChannelDatagramFilter</tt>
+     * works.
      */
-    private boolean checkRtpPayloadType = true;
+    private final RtpChannel channel;
 
     /**
      * Whether or not to check the value of the RTCP Sender SSRC field against
@@ -50,12 +37,25 @@ class RtpChannelDatagramFilter
     private boolean checkRtcpSsrc = true;
 
     /**
+     * Whether or not to check the value of RTP Payload-Type field against the
+     * known payload types for {@link #channel}. If set to <tt>false</tt>, this
+     * <tt>DatagramPacketFilter</tt> will accept all RTP packets, regardless
+     * of their payload type number.
+     */
+    private boolean checkRtpPayloadType = true;
+
+    /**
+     * Whether this <tt>DatagramFilter</tt> is to accept RTP packets (if
+     * <tt>false</tt>) or RTCP packets (if <tt>true</tt>).
+     */
+    private final boolean rtcp;
+
+    /**
      * Initializes an <tt>RtpChannelDatagramFilter</tt>.
      * @param channel the channel for which to work.
      * @param rtcp whether to accept RTP or RTCP packets.
      */
-    RtpChannelDatagramFilter(RtpChannel channel,
-                             boolean rtcp)
+    RtpChannelDatagramFilter(RtpChannel channel, boolean rtcp)
     {
         this(channel, rtcp, false);
     }
@@ -92,6 +92,7 @@ class RtpChannelDatagramFilter
             if (((data[off + 0] & 0xc0) >> 6) == 2) //RTP/RTCP version field
             {
                 int pt = data[off + 1] & 0xff;
+
                 if (200 <= pt && pt <= 211)
                 {
                     return rtcp && acceptRTCP(data, off, len);
@@ -101,8 +102,6 @@ class RtpChannelDatagramFilter
                     return !rtcp && acceptRTP(pt & 0x7f);
                 }
             }
-            else
-                return acceptNonRtp;
         }
 
         return acceptNonRtp;
@@ -122,18 +121,26 @@ class RtpChannelDatagramFilter
      */
     private boolean acceptRTCP(byte[] data, int off, int len)
     {
-        if (!checkRtcpSsrc)
-            return true;
-
-        if (len >= 8)
+        if (checkRtcpSsrc)
         {
-            long packetSenderSSRC = readInt(data, off + 4) & 0xffffffffL;
-            long[] channelSSRCs = channel.receiveSSRCs;
-            for (long channelSSRC : channelSSRCs)
-                if (channelSSRC == packetSenderSSRC)
-                    return true;
+            if (len >= 8)
+            {
+                long packetSenderSSRC
+                    = RTPTranslatorImpl.readInt(data, off + 4) & 0xFFFFFFFFL;
+                long[] channelSSRCs = channel.receiveSSRCs;
+
+                for (long channelSSRC : channelSSRCs)
+                {
+                    if (channelSSRC == packetSenderSSRC)
+                        return true;
+                }
+            }
+            return false;
         }
-        return false;
+        else
+        {
+            return true;
+        }
     }
 
     /**
@@ -149,27 +156,21 @@ class RtpChannelDatagramFilter
      */
     private boolean acceptRTP(int pt)
     {
-        if (!checkRtpPayloadType)
+        if (checkRtpPayloadType)
+        {
+            int[] channelPTs = channel.receivePTs;
+
+            for (int channelPT : channelPTs)
+            {
+                if (channelPT == pt)
+                    return true;
+            }
+            return false;
+        }
+        else
+        {
             return true;
-
-        int[] channelPTs = channel.receivePTs;
-        for (int channelPT : channelPTs)
-            if (channelPT == pt)
-                return true;
-        return false;
-    }
-
-    /**
-     * Reads a 32bit int from a specific byte array at a specific offset.
-     * @return the read int
-     */
-    private int readInt(byte[] data, int off)
-    {
-        return
-                ((data[off] & 0xFF) << 24)
-                        | ((data[off+1] & 0xFF) << 16)
-                        | ((data[off+2] & 0xFF) << 8)
-                        | (data[off+3] & 0xFF);
+        }
     }
 
     /**
@@ -182,20 +183,20 @@ class RtpChannelDatagramFilter
     }
 
     /**
-     * Sets the value of the <tt>checkRtpPayloadType</tt> flag.
-     * @param checkRtpPayloadType the value to set.
-     */
-    public void setCheckRtpPayloadType(boolean checkRtpPayloadType)
-    {
-        this.checkRtpPayloadType = checkRtpPayloadType;
-    }
-
-    /**
      * Sets the value of the <tt>checkRtcpSsrc</tt> flag.
      * @param checkRtcpSsrc the value to set.
      */
     public void setCheckRtcpSsrc(boolean checkRtcpSsrc)
     {
         this.checkRtcpSsrc = checkRtcpSsrc;
+    }
+
+    /**
+     * Sets the value of the <tt>checkRtpPayloadType</tt> flag.
+     * @param checkRtpPayloadType the value to set.
+     */
+    public void setCheckRtpPayloadType(boolean checkRtpPayloadType)
+    {
+        this.checkRtpPayloadType = checkRtpPayloadType;
     }
 }

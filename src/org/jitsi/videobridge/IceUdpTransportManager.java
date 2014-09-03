@@ -29,8 +29,6 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.osgi.framework.*;
 
-import javax.media.rtp.*;
-
 /**
  * Implements the Jingle ICE-UDP transport.
  *
@@ -39,14 +37,34 @@ import javax.media.rtp.*;
  * @author Boris Grozev
  */
 public class IceUdpTransportManager
-        extends TransportManager
+    extends TransportManager
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>IceUdpTransportManager</tt> class and
-     * its instances to print debug information.
+     * The name default of the single <tt>IceStream</tt> that this
+     * <tt>TransportManager</tt> will create/use.
      */
-    private static final Logger logger
-            = Logger.getLogger(IceUdpTransportManager.class);
+    private static final String DEFAULT_ICE_STREAM_NAME = "stream";
+
+    /**
+     * Contains the name of the property flag that may indicate that AWS address
+     * harvesting should be explicitly disabled.
+     */
+    private static final String DISABLE_AWS_HARVESTER
+        = "org.jitsi.videobridge.DISABLE_AWS_HARVESTER";
+
+    /**
+     * The name of the property which disables the use of a
+     * <tt>MultiplexingTcpHostHarvester</tt>.
+     */
+    private static final String DISABLE_TCP_HARVESTER
+        = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
+
+    /**
+     * Contains the name of the property flag that may indicate that AWS address
+     * harvesting should be forced without first trying to auto detect it.
+     */
+    private static final String FORCE_AWS_HARVESTER
+        = "org.jitsi.videobridge.FORCE_AWS_HARVESTER";
 
     /**
      * The indicator which determines whether the one-time method
@@ -55,18 +73,11 @@ public class IceUdpTransportManager
     private static boolean initializePortNumbers = true;
 
     /**
-     * Contains the name of the property flag that may indicate that AWS address
-     * harvesting should be explicitly disabled.
+     * The <tt>Logger</tt> used by the <tt>IceUdpTransportManager</tt> class and
+     * its instances to print debug information.
      */
-    private static final String DISABLE_AWS_HARVESTER
-            = "org.jitsi.videobridge.DISABLE_AWS_HARVESTER";
-
-    /**
-     * Contains the name of the property flag that may indicate that AWS address
-     * harvesting should be forced without first trying to auto detect it.
-     */
-    private static final String FORCE_AWS_HARVESTER
-            = "org.jitsi.videobridge.FORCE_AWS_HARVESTER";
+    private static final Logger logger
+        = Logger.getLogger(IceUdpTransportManager.class);
 
     /**
      * Contains the name of the property that would tell us if we should use
@@ -74,7 +85,7 @@ public class IceUdpTransportManager
      * address that we should be mapping.
      */
     private static final String NAT_HARVESTER_LOCAL_ADDRESS
-            = "org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS";
+        = "org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS";
 
     /**
      * Contains the name of the property that would tell us if we should use
@@ -82,21 +93,7 @@ public class IceUdpTransportManager
      * address that we should be using in addition to our local one.
      */
     private static final String NAT_HARVESTER_PUBLIC_ADDRESS
-            = "org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS";
-
-    /**
-     * The name of the property which disables the use of a
-     * <tt>MultiplexingTcpHostHarvester</tt>.
-     */
-    private static final String DISABLE_TCP_HARVESTER
-            = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
-
-    /**
-     * The name of the property which controls the port to which the
-     * <tt>MultiplexingTcpHostHarvester</tt> will bind.
-     */
-    private static final String TCP_HARVESTER_PORT
-            = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
+        = "org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS";
 
     /**
      * The default port that the <tt>MultiplexingTcpHostHarvester</tt> will
@@ -113,10 +110,23 @@ public class IceUdpTransportManager
     private static final int TCP_FALLBACK_PORT = 4443;
 
     /**
-     * The name default of the single <tt>IceStream</tt> that this
-     * <tt>TransportManager</tt> will create/use.
+     * The name of the property which controls the port to which the
+     * <tt>MultiplexingTcpHostHarvester</tt> will bind.
      */
-    private static final String DEFAULT_ICE_STREAM_NAME = "stream";
+    private static final String TCP_HARVESTER_PORT
+        = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
+
+    /**
+     * The single <tt>MultiplexingTcpHostHarvester</tt> instance for the
+     * application.
+     */
+    private static MultiplexingTcpHostHarvester tcpHostHarvester = null;
+
+    /**
+     * The flag which indicates whether {@link #tcpHostHarvester} has been
+     * initialized.
+     */
+    private static boolean tcpHostHarvesterInitialized = false;
 
     /**
      * Logs a specific <tt>String</tt> at debug level.
@@ -129,80 +139,21 @@ public class IceUdpTransportManager
     }
 
     /**
-     * The single <tt>MultiplexingTcpHostHarvester</tt> instance for the
-     * application.
+     * The single (if any) <tt>Channel</tt> instance, whose sockets are
+     * currently configured to accept DTLS packets.
      */
-    private static MultiplexingTcpHostHarvester tcpHostHarvester
-            = null;
+    private Channel channelForDtls = null;
 
     /**
-     * The flag which indicates whether {@link #tcpHostHarvester} has been
-     * initialized.
+     * Whether this <tt>TransportManager</tt> has been closed.
      */
-    private static boolean tcpHostHarvesterInitialized = false;
-
-    /**
-     * The <tt>Agent</tt> which implements the ICE protocol and which is used
-     * by this instance to implement the Jingle ICE-UDP transport.
-     */
-    private Agent iceAgent;
-
-    /**
-     * The <tt>PropertyChangeListener</tt> which is (to be) notified about
-     * changes in the <tt>state</tt> of {@link #iceAgent}.
-     */
-    private final PropertyChangeListener iceAgentStateChangeListener
-            = new PropertyChangeListener()
-    {
-        @Override
-        public void propertyChange(PropertyChangeEvent ev)
-        {
-            iceAgentStateChange(ev);
-        }
-    };
-
-    /**
-     * The <tt>IceMediaStream</tt> of {@link #iceAgent} associated with the
-     * <tt>Channel</tt> of this instance.
-     */
-    private final IceMediaStream iceStream;
-
-    /**
-     * The <tt>PropertyChangeListener</tt> which is (to be) notified about
-     * changes in the properties of the <tt>CandidatePair</tt>s of
-     * {@link #iceStream}.
-     */
-    private final PropertyChangeListener iceStreamPairChangeListener
-            = new PropertyChangeListener()
-    {
-        @Override
-        public void propertyChange(PropertyChangeEvent ev)
-        {
-            iceStreamPairChange(ev);
-        }
-    };
-
-    /**
-     * Whether we're using rtcp-mux or not.
-     */
-    private boolean rtcpmux = false;
-
-    /**
-     * The number of {@link org.ice4j.ice.Component}-s to create in
-     * {@link #iceStream}.
-     */
-    private int numComponents;
+    private boolean closed = false;
 
     /**
      * The <tt>Conference</tt> object that this <tt>TransportManager</tt> is
      * associated with.
      */
     private final Conference conference;
-
-    /**
-     * The <tt>DtlsControl</tt> that this <tt>TransportManager</tt> uses.
-     */
-    private final DtlsControlImpl dtlsControl;
 
     /**
      * The <tt>Thread</tt> used by this <tt>TransportManager</tt> to wait until
@@ -216,15 +167,72 @@ public class IceUdpTransportManager
     private final Object connectThreadSyncRoot = new Object();
 
     /**
+     * The <tt>DtlsControl</tt> that this <tt>TransportManager</tt> uses.
+     */
+    private final DtlsControlImpl dtlsControl;
+
+    /**
+     * The <tt>Agent</tt> which implements the ICE protocol and which is used
+     * by this instance to implement the Jingle ICE-UDP transport.
+     */
+    private Agent iceAgent;
+
+    /**
+     * The <tt>PropertyChangeListener</tt> which is (to be) notified about
+     * changes in the <tt>state</tt> of {@link #iceAgent}.
+     */
+    private final PropertyChangeListener iceAgentStateChangeListener
+        = new PropertyChangeListener()
+        {
+            @Override
+            public void propertyChange(PropertyChangeEvent ev)
+            {
+                iceAgentStateChange(ev);
+            }
+        };
+
+    /**
+     * Whether ICE connectivity has been established.
+     */
+    private boolean iceConnected = false;
+
+    /**
+     * The <tt>IceMediaStream</tt> of {@link #iceAgent} associated with the
+     * <tt>Channel</tt> of this instance.
+     */
+    private final IceMediaStream iceStream;
+
+    /**
+     * The <tt>PropertyChangeListener</tt> which is (to be) notified about
+     * changes in the properties of the <tt>CandidatePair</tt>s of
+     * {@link #iceStream}.
+     */
+    private final PropertyChangeListener iceStreamPairChangeListener
+        = new PropertyChangeListener()
+        {
+            @Override
+            public void propertyChange(PropertyChangeEvent ev)
+            {
+                iceStreamPairChange(ev);
+            }
+        };
+
+    /**
      * Whether this <tt>IceUdpTransportManager</tt> will serve as the the
      * controlling or controlled ICE agent.
      */
     private final boolean isControlling;
 
     /**
-     * Whether ICE connectivity has been established.
+     * The number of {@link org.ice4j.ice.Component}-s to create in
+     * {@link #iceStream}.
      */
-    private boolean iceConnected = false;
+    private int numComponents;
+
+    /**
+     * Whether we're using rtcp-mux or not.
+     */
+    private boolean rtcpmux = false;
 
     /**
      * The <tt>SctpConnection</tt> instance, if any, added as a <tt>Channel</tt>
@@ -235,17 +243,6 @@ public class IceUdpTransportManager
      * DTLS packets.
      */
     private SctpConnection sctpConnection = null;
-
-    /**
-     * The single (if any) <tt>Channel</tt> instance, whose sockets are
-     * currently configured to accept DTLS packets.
-     */
-    private Channel channelForDtls = null;
-
-    /**
-     * Whether this <tt>TransportManager</tt> has been closed.
-     */
-    private boolean closed = false;
 
     /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
@@ -261,25 +258,6 @@ public class IceUdpTransportManager
         throws IOException
     {
         this(conference, isControlling, 2, DEFAULT_ICE_STREAM_NAME);
-    }
-
-    /**
-     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
-     *
-     * @param conference the <tt>Conference</tt> which created this
-     * <tt>TransportManager</tt>.
-     * @param isControlling whether the new instance is to server as a
-     * controlling or controlled ICE agent.
-     * @param iceStreamName the name of the ICE stream to be created by this
-     * instance.
-     * @throws IOException
-     */
-    public IceUdpTransportManager(Conference conference,
-                                  boolean isControlling,
-                                  String iceStreamName)
-        throws IOException
-    {
-        this(conference, isControlling, 2, iceStreamName);
     }
 
     public IceUdpTransportManager(Conference conference,
@@ -326,88 +304,22 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Initializes {@link #tcpHostHarvester}.
-     */
-    private void initializeTcpHarvester()
-    {
-        synchronized (IceUdpTransportManager.class)
-        {
-            if (tcpHostHarvesterInitialized)
-                return;
-            tcpHostHarvesterInitialized = true;
-
-            ConfigurationService cfg =
-                    conference.getVideobridge().getConfigurationService();
-
-            boolean fallback = false;
-            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
-            {
-                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
-                if (port == -1)
-                {
-                    fallback = true;
-                    port = TCP_DEFAULT_PORT;
-                }
-
-                try
-                {
-                    tcpHostHarvester = new MultiplexingTcpHostHarvester(port);
-                }
-                catch (IOException ioe)
-                {
-                    logger.warn("Failed to initialize TCP harvester on port "
-                                + port + ": " + ioe
-                                + (fallback
-                                    ? ". Retrying on port " + TCP_FALLBACK_PORT
-                                    : "")
-                                + ".");
-                }
-
-                if (fallback)
-                {
-                    try
-                    {
-                        tcpHostHarvester
-                            = new MultiplexingTcpHostHarvester(
-                                TCP_FALLBACK_PORT);
-
-                    }
-                    catch (IOException e)
-                    {
-                        logger.warn("Failed to initialize TCP harvester on "
-                                    + "fallback port " + TCP_FALLBACK_PORT
-                                    + ": " + e);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Determines whether at least one <tt>LocalCandidate</tt> of a specific ICE
-     * <tt>Component</tt> can reach (in the terms of the ice4j library) a
-     * specific <tt>RemoteCandidate</tt>
+     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
      *
-     * @param component the ICE <tt>Component</tt> which contains the
-     * <tt>LocalCandidate</tt>s to check whether at least one of them can reach
-     * the specified <tt>remoteCandidate</tt>
-     * @param remoteCandidate the <tt>RemoteCandidate</tt> to check whether at
-     * least one of the <tt>LocalCandidate</tt>s of the specified
-     * <tt>component</tt> can reach it
-     * @return <tt>true</tt> if at least one <tt>LocalCandidate</tt> of the
-     * specified <tt>component</tt> can reach the specified
-     * <tt>remoteCandidate</tt>
+     * @param conference the <tt>Conference</tt> which created this
+     * <tt>TransportManager</tt>.
+     * @param isControlling whether the new instance is to server as a
+     * controlling or controlled ICE agent.
+     * @param iceStreamName the name of the ICE stream to be created by this
+     * instance.
+     * @throws IOException
      */
-    private boolean canReach(
-            Component component,
-            RemoteCandidate remoteCandidate)
+    public IceUdpTransportManager(Conference conference,
+                                  boolean isControlling,
+                                  String iceStreamName)
+        throws IOException
     {
-        for (LocalCandidate localCandidate : component.getLocalCandidates())
-        {
-            if (localCandidate.canReach(remoteCandidate))
-                return true;
-        }
-        return false;
+        this(conference, isControlling, 2, iceStreamName);
     }
 
     /**
@@ -484,38 +396,118 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Updates the states of the <tt>RtpChannelDatagramFilters</tt> for our
-     * RTP channels, according to whether we are (effectively) using bundle
-     * (that is, we have more than one <tt>RtpChannel</tt>). The filters are
-     * configured to check the RTP payload type and the RTCP Sender SSRC fields
-     * if and only if bundle is used.
+     * Adds to <tt>iceAgent</tt> videobridge specific candidate harvesters such
+     * as an Amazon AWS EC2 specific harvester.
      *
-     * This allows non-bundled channels to work correctly without the need for
-     * the focus to explicitly specify via COLIBRI the payload types to be used
-     * by each channel.
+     * @param iceAgent the {@link Agent} that we'd like to append new harvesters
+     * to.
      */
-    private void updatePayloadTypeFilters()
+    private void appendVideobridgeHarvesters(Agent iceAgent)
     {
-        List<RtpChannel> rtpChannels = new LinkedList<RtpChannel>();
-        for (Channel channel : getChannels())
-            if (channel instanceof RtpChannel)
-                rtpChannels.add((RtpChannel) channel);
+        initializeTcpHarvester();
+        if (tcpHostHarvester != null)
+            iceAgent.addCandidateHarvester(tcpHostHarvester);
 
-        int numRtpChannels = rtpChannels.size();
-        if (numRtpChannels > 0)
+        AwsCandidateHarvester awsHarvester = null;
+        //does this look like an Amazon AWS EC2 machine?
+        if(AwsCandidateHarvester.smellsLikeAnEC2())
+            awsHarvester = new AwsCandidateHarvester();
+
+        ConfigurationService cfg
+                = ServiceUtils.getService(
+                getBundleContext(),
+                ConfigurationService.class);
+
+        //if no configuration is found then we simply log and bail
+        if (cfg == null)
         {
-            boolean bundleMode = numRtpChannels > 1;
-            for (RtpChannel channel : rtpChannels)
-            {
-                // Enable filtering by PT iff we are (effectively) using bundle
-                channel.getDatagramFilter(false)
-                        .setCheckRtpPayloadType(bundleMode);
-
-                // Enable RTCP filtering by SSRC iff we are bundle
-                channel.getDatagramFilter(true)
-                        .setCheckRtcpSsrc(bundleMode);
-            }
+            logger.info("No configuration found. "
+                        + "Will continue without custom candidate harvesters");
+            return;
         }
+
+        //now that we have a conf service, check if AWS use is forced and
+        //comply if necessary.
+        if (awsHarvester == null
+                && cfg.getBoolean(FORCE_AWS_HARVESTER, false))
+        {
+            //ok. this doesn't look like an EC2 machine but since you
+            //insist ... we'll behave as if it is.
+            logger.info("Forcing use of AWS candidate harvesting.");
+            awsHarvester = new AwsCandidateHarvester();
+        }
+
+
+        //append the AWS harvester for AWS machines.
+        if( awsHarvester != null
+                && !cfg.getBoolean(DISABLE_AWS_HARVESTER, false))
+        {
+            logger.info("Appending an AWS harvester to the ICE agent.");
+            iceAgent.addCandidateHarvester(awsHarvester);
+        }
+
+        //if configured, append a mapping harvester.
+        String localAddressStr = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
+        String publicAddressStr = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
+
+        if (localAddressStr == null || publicAddressStr == null)
+            return;
+
+        TransportAddress localAddress;
+        TransportAddress publicAddress;
+
+        try
+        {
+            // It appears that the port number values ("9") are unused (and
+            // presumably it would be too much of a cliché to use "42")
+            localAddress
+                    = new TransportAddress(localAddressStr, 9, Transport.UDP);
+            publicAddress
+                    = new TransportAddress(publicAddressStr, 9, Transport.UDP);
+
+            logger.info("Will append a NAT harvester for " +
+                                localAddress + "=>" + publicAddress);
+
+        }
+        catch(Exception exc)
+        {
+            logger.info("Failed to create a NAT harvester for"
+                                + " local address=" + localAddressStr
+                                + " and public address=" + publicAddressStr);
+            return;
+        }
+
+        MappingCandidateHarvester natHarvester
+                = new MappingCandidateHarvester(publicAddress, localAddress);
+
+        iceAgent.addCandidateHarvester(natHarvester);
+    }
+
+    /**
+     * Determines whether at least one <tt>LocalCandidate</tt> of a specific ICE
+     * <tt>Component</tt> can reach (in the terms of the ice4j library) a
+     * specific <tt>RemoteCandidate</tt>
+     *
+     * @param component the ICE <tt>Component</tt> which contains the
+     * <tt>LocalCandidate</tt>s to check whether at least one of them can reach
+     * the specified <tt>remoteCandidate</tt>
+     * @param remoteCandidate the <tt>RemoteCandidate</tt> to check whether at
+     * least one of the <tt>LocalCandidate</tt>s of the specified
+     * <tt>component</tt> can reach it
+     * @return <tt>true</tt> if at least one <tt>LocalCandidate</tt> of the
+     * specified <tt>component</tt> can reach the specified
+     * <tt>remoteCandidate</tt>
+     */
+    private boolean canReach(
+            Component component,
+            RemoteCandidate remoteCandidate)
+    {
+        for (LocalCandidate localCandidate : component.getLocalCandidates())
+        {
+            if (localCandidate.canReach(remoteCandidate))
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -760,110 +752,6 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Adds to <tt>iceAgent</tt> videobridge specific candidate harvesters such
-     * as an Amazon AWS EC2 specific harvester.
-     *
-     * @param iceAgent the {@link Agent} that we'd like to append new harvesters
-     * to.
-     */
-    private void appendVideobridgeHarvesters(Agent iceAgent)
-    {
-        initializeTcpHarvester();
-        if (tcpHostHarvester != null)
-            iceAgent.addCandidateHarvester(tcpHostHarvester);
-
-        AwsCandidateHarvester awsHarvester = null;
-        //does this look like an Amazon AWS EC2 machine?
-        if(AwsCandidateHarvester.smellsLikeAnEC2())
-            awsHarvester = new AwsCandidateHarvester();
-
-        ConfigurationService cfg
-                = ServiceUtils.getService(
-                getBundleContext(),
-                ConfigurationService.class);
-
-        //if no configuration is found then we simply log and bail
-        if (cfg == null)
-        {
-            logger.info("No configuration found. "
-                        + "Will continue without custom candidate harvesters");
-            return;
-        }
-
-        //now that we have a conf service, check if AWS use is forced and
-        //comply if necessary.
-        if (awsHarvester == null
-                && cfg.getBoolean(FORCE_AWS_HARVESTER, false))
-        {
-            //ok. this doesn't look like an EC2 machine but since you
-            //insist ... we'll behave as if it is.
-            logger.info("Forcing use of AWS candidate harvesting.");
-            awsHarvester = new AwsCandidateHarvester();
-        }
-
-
-        //append the AWS harvester for AWS machines.
-        if( awsHarvester != null
-                && !cfg.getBoolean(DISABLE_AWS_HARVESTER, false))
-        {
-            logger.info("Appending an AWS harvester to the ICE agent.");
-            iceAgent.addCandidateHarvester(awsHarvester);
-        }
-
-        //if configured, append a mapping harvester.
-        String localAddressStr = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
-        String publicAddressStr = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
-
-        if (localAddressStr == null || publicAddressStr == null)
-            return;
-
-        TransportAddress localAddress;
-        TransportAddress publicAddress;
-
-        try
-        {
-            // It appears that the port number values ("9") are unused (and
-            // presumably it would be too much of a cliché to use "42")
-            localAddress
-                    = new TransportAddress(localAddressStr, 9, Transport.UDP);
-            publicAddress
-                    = new TransportAddress(publicAddressStr, 9, Transport.UDP);
-
-            logger.info("Will append a NAT harvester for " +
-                                localAddress + "=>" + publicAddress);
-
-        }
-        catch(Exception exc)
-        {
-            logger.info("Failed to create a NAT harvester for"
-                                + " local address=" + localAddressStr
-                                + " and public address=" + publicAddressStr);
-            return;
-        }
-
-        MappingCandidateHarvester natHarvester
-                = new MappingCandidateHarvester(publicAddress, localAddress);
-
-        iceAgent.addCandidateHarvester(natHarvester);
-    }
-
-    /**
-     * Gets the <tt>BundleContext</tt> associated with the <tt>Channel</tt>
-     * that this {@link net.java.sip.communicator.service.protocol.media
-     * .TransportManager} is servicing. The method is a
-     * convenience which gets the <tt>BundleContext</tt> associated with the
-     * XMPP component implementation in which the <tt>Videobridge</tt>
-     * associated with this instance is executing.
-     *
-     * @return the <tt>BundleContext</tt> associated with this
-     * <tt>IceUdpTransportManager</tt>
-     */
-    public BundleContext getBundleContext()
-    {
-        return conference != null ? conference.getBundleContext() : null;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -888,269 +776,6 @@ public class IceUdpTransportManager
 
             describeDtlsControl(pe);
         }
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>IceUdpTransportPacketExtension</tt> to the values of the
-     * respective properties of {@link #dtlsControl}
-     *
-     * @param transportPE the <tt>IceUdpTransportPacketExtension</tt> on which
-     * to set the values of the properties of <tt>dtlsControl</tt>
-     */
-    private void describeDtlsControl(IceUdpTransportPacketExtension transportPE)
-    {
-        String fingerprint = dtlsControl.getLocalFingerprint();
-        String hash = dtlsControl.getLocalFingerprintHashFunction();
-
-        DtlsFingerprintPacketExtension fingerprintPE
-                = transportPE.getFirstChildOfType(
-                DtlsFingerprintPacketExtension.class);
-
-        if (fingerprintPE == null)
-        {
-            fingerprintPE = new DtlsFingerprintPacketExtension();
-            transportPE.addChildExtension(fingerprintPE);
-        }
-        fingerprintPE.setFingerprint(fingerprint);
-        fingerprintPE.setHash(hash);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public StreamConnector getStreamConnector(Channel channel)
-    {
-        if (!getChannels().contains(channel))
-            return null;
-
-        IceSocketWrapper[] iceSockets = getStreamConnectorSockets();
-        if (iceSockets == null || iceSockets[0] == null)
-            return null;
-
-        if (channel instanceof SctpConnection)
-        {
-            DatagramSocket udpSocket = iceSockets[0].getUDPSocket();
-            if (udpSocket != null
-                    && udpSocket instanceof MultiplexingDatagramSocket)
-            {
-                MultiplexingDatagramSocket multiplexing
-                        = (MultiplexingDatagramSocket) udpSocket;
-                try
-                {
-                    DatagramSocket dtlsSocket
-                            = multiplexing.getSocket(new DTLSDatagramFilter());
-
-                    return new DefaultStreamConnector(dtlsSocket, null);
-                }
-                catch (IOException ioe)
-                {
-                    logger.warn("Failed to create DTLS socket: " + ioe);
-                    return null;
-                }
-            }
-            else
-            {
-                Socket tcpSocket = iceSockets[0].getTCPSocket();
-                if (tcpSocket != null
-                        && tcpSocket instanceof MultiplexingSocket)
-                {
-                    MultiplexingSocket multiplexing
-                            = (MultiplexingSocket) tcpSocket;
-                    try
-                    {
-                        Socket dtlsSocket
-                            = multiplexing.getSocket(new DTLSDatagramFilter());
-                        return new DefaultTCPStreamConnector(dtlsSocket, null);
-                    }
-                    catch(IOException ioe)
-                    {
-                        logger.warn("Failed to create DTLS socket: " + ioe);
-                        return null;
-                    }
-                }
-            }
-        }
-
-        if (! (channel instanceof RtpChannel))
-            return null;
-        RtpChannel rtpChannel = (RtpChannel) channel;
-
-        if (iceSockets[0].getUDPSocket() != null)
-        {
-            DatagramSocket[] datagramSockets = new DatagramSocket[2];
-            datagramSockets[0] = iceSockets[0].getUDPSocket();
-            datagramSockets[1] = iceSockets[1] == null
-                    ? null
-                    : iceSockets[1].getUDPSocket();
-            return getUDPStreamConnector(rtpChannel, datagramSockets);
-        }
-        else
-        {
-            Socket[] sockets = new Socket[2];
-            sockets[0] = iceSockets[0].getTCPSocket();
-            sockets[1] = iceSockets[1] == null
-                    ? null
-                    : iceSockets[1].getTCPSocket();
-            return getTCPStreamConnector(rtpChannel, sockets);
-        }
-    }
-
-    /**
-     * Creates and returns a UDP <tt>StreamConnector</tt> to be used by a
-     * specific <tt>RtpChannel</tt>, using <tt>iceSockets</tt> as the
-     * underlying <tt>DatagramSocket</tt>s.
-     *
-     * Does not use <tt>iceSockets</tt> directly, but creates
-     * <tt>MultiplexedDatagramSocket</tt> instances on top of them.
-     *
-     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
-     * <tt>StreamConnector</tt>.
-     * @param iceSockets the <tt>DatagramSocket</tt>s which are to be used by the
-     * created <tt>StreamConnector</tt>.
-     * @return a UDP <tt>StreamConnector</tt> with the <tt>DatagramSocket</tt>s
-     * given in <tt>iceSockets</tt> to be used by a specific
-     * <tt>RtpChannel</tt>.
-     */
-    private StreamConnector getUDPStreamConnector(RtpChannel rtpChannel,
-                                                  DatagramSocket[] iceSockets)
-    {
-        StreamConnector connector = null;
-        DatagramSocket[] channelSockets = new DatagramSocket[2];
-        if (iceSockets != null)
-        {
-            if (iceSockets[0] != null
-                    && iceSockets[0] instanceof MultiplexingDatagramSocket)
-            {
-                MultiplexingDatagramSocket multiplexing
-                    = (MultiplexingDatagramSocket) iceSockets[0];
-                try
-                {
-                    channelSockets[0]
-                            = multiplexing.getSocket(
-                            rtpChannel.getDatagramFilter(false /* RTP */));
-                }
-                catch (SocketException se) //never thrown
-                {}
-            }
-
-            DatagramSocket iceRtcpSocket = rtcpmux
-                    ? iceSockets[0]
-                    : iceSockets[1];
-            if (iceRtcpSocket != null
-                    && iceRtcpSocket instanceof MultiplexingDatagramSocket)
-            {
-                MultiplexingDatagramSocket multiplexing
-                        = (MultiplexingDatagramSocket) iceRtcpSocket;
-                try
-                {
-                    channelSockets[1]
-                            = multiplexing.getSocket(
-                            rtpChannel.getDatagramFilter(true /* RTCP */));
-                }
-                catch (SocketException se) //never thrown
-                {}
-            }
-
-            if (channelSockets[0] != null
-                    || channelSockets[1] != null)
-            {
-                connector
-                    = new DefaultStreamConnector(channelSockets[0],
-                                                 channelSockets[1],
-                                                 rtcpmux);
-            }
-        }
-
-        return connector;
-    }
-
-    /**
-     * Creates and returns a TCP <tt>StreamConnector</tt> to be used by a
-     * specific <tt>RtpChannel</tt>, using <tt>iceSockets</tt> as the
-     * underlying <tt>Socket</tt>s.
-     *
-     * Does not use <tt>iceSockets</tt> directly, but creates
-     * <tt>MultiplexedSocket</tt> instances on top of them.
-     *
-     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
-     * <tt>StreamConnector</tt>.
-     * @param iceSockets the <tt>Socket</tt>s which are to be used by the
-     * created <tt>StreamConnector</tt>.
-     * @return a TCP <tt>StreamConnector</tt> with the <tt>Socket</tt>s
-     * given in <tt>iceSockets</tt> to be used by a specific
-     * <tt>RtpChannel</tt>.
-     */
-    private StreamConnector getTCPStreamConnector(RtpChannel rtpChannel,
-                                                  Socket[] iceSockets)
-    {
-        StreamConnector connector = null;
-        Socket[] channelSockets = new Socket[2];
-        if (iceSockets != null)
-        {
-            if (iceSockets[0] != null
-                    && iceSockets[0] instanceof MultiplexingSocket)
-            {
-                MultiplexingSocket multiplexing
-                        = (MultiplexingSocket) iceSockets[0];
-                try
-                {
-                    channelSockets[0]
-                            = multiplexing.getSocket(
-                            rtpChannel.getDatagramFilter(false /* RTP */));
-                }
-                catch (SocketException se) //never thrown
-                {}
-            }
-
-            Socket iceRtcpSocket = rtcpmux
-                    ? iceSockets[0]
-                    : iceSockets[1];
-            if (iceRtcpSocket != null
-                    && iceRtcpSocket instanceof MultiplexingSocket)
-            {
-                MultiplexingSocket multiplexing
-                        = (MultiplexingSocket) iceRtcpSocket;
-                try
-                {
-                    channelSockets[1]
-                            = multiplexing.getSocket(
-                            rtpChannel.getDatagramFilter(true /* RTCP */));
-                }
-                catch (SocketException se) //never thrown
-                {}
-            }
-
-            if (channelSockets[0] != null
-                    || channelSockets[1] != null)
-            {
-                connector
-                        = new DefaultTCPStreamConnector(channelSockets[0],
-                                                        channelSockets[1],
-                                                        rtcpmux);
-            }
-        }
-
-        return connector;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public MediaStreamTarget getStreamTarget(Channel channel)
-    {
-        return getStreamTarget();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public DtlsControl getDtlsControl(Channel channel)
-    {
-        return dtlsControl;
     }
 
     /**
@@ -1198,216 +823,29 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Generates an ID to be set on a <tt>CandidatePacketExtension</tt> to
-     * represent a specific <tt>LocalCandidate</tt>.
+     * Sets the values of the properties of a specific
+     * <tt>IceUdpTransportPacketExtension</tt> to the values of the
+     * respective properties of {@link #dtlsControl}
      *
-     * @param candidate the <tt>LocalCandidate</tt> whose ID is to be generated
-     * @return an ID to be set on a <tt>CandidatePacketExtension</tt> to
-     * represent the specified <tt>candidate</tt>
+     * @param transportPE the <tt>IceUdpTransportPacketExtension</tt> on which
+     * to set the values of the properties of <tt>dtlsControl</tt>
      */
-    private String generateCandidateID(LocalCandidate candidate)
+    private void describeDtlsControl(IceUdpTransportPacketExtension transportPE)
     {
-        StringBuilder candidateID = new StringBuilder();
+        String fingerprint = dtlsControl.getLocalFingerprint();
+        String hash = dtlsControl.getLocalFingerprintHashFunction();
 
-        candidateID.append(conference.getID());
-        candidateID.append(Long.toHexString(hashCode()));
+        DtlsFingerprintPacketExtension fingerprintPE
+                = transportPE.getFirstChildOfType(
+                DtlsFingerprintPacketExtension.class);
 
-        Agent iceAgent
-            = candidate.getParentComponent().getParentStream().getParentAgent();
-
-        candidateID.append(Long.toHexString(iceAgent.hashCode()));
-        candidateID.append(Long.toHexString(iceAgent.getGeneration()));
-        candidateID.append(Long.toHexString(candidate.hashCode()));
-
-        return candidateID.toString();
-    }
-
-    /**
-     * Gets the <tt>IceSocketWrapper</tt>s from the selected
-     * <tt>CandidatePair</tt>(s) of the ICE agent.
-     * TODO cache them in this instance?
-     * @return the <tt>IceSocketWrapper</tt>s from the selected
-     * <tt>CandidatePair</tt>(s) of the ICE agent.
-     */
-    private IceSocketWrapper[] getStreamConnectorSockets()
-    {
-        IceSocketWrapper[] streamConnectorSockets
-                = new IceSocketWrapper[2];
-
-        Component rtpComponent = iceStream.getComponent(Component.RTP);
-        if (rtpComponent != null)
+        if (fingerprintPE == null)
         {
-            streamConnectorSockets[0 /* RTP */]
-                = getSocketForComponent(rtpComponent);
+            fingerprintPE = new DtlsFingerprintPacketExtension();
+            transportPE.addChildExtension(fingerprintPE);
         }
-
-        if (numComponents > 1 && !rtcpmux)
-        {
-            Component rtcpComponent = iceStream.getComponent(Component.RTCP);
-            if (rtcpComponent != null)
-            {
-                streamConnectorSockets[1 /* RTCP */]
-                   = getSocketForComponent(rtcpComponent);
-            }
-        }
-        return streamConnectorSockets;
-    }
-
-    /**
-     * Gets the <tt>IceSocketWrapper</tt> from the selected pair (if any)
-     * from a specific {@link org.ice4j.ice.Component}.
-     * @param component the <tt>Component</tt> from which to get a socket.
-     * @return the <tt>IceSocketWrapper</tt> from the selected pair (if any)
-     * from a specific {@link org.ice4j.ice.Component}.
-     */
-    private IceSocketWrapper getSocketForComponent(Component component)
-    {
-        CandidatePair selectedPair = component.getSelectedPair();
-
-        if (selectedPair != null)
-        {
-            return selectedPair.getIceSocketWrapper();
-        }
-        return null;
-    }
-
-    private MediaStreamTarget getStreamTarget()
-    {
-        MediaStreamTarget streamTarget = null;
-        InetSocketAddress[] streamTargetAddresses
-                = new InetSocketAddress[2];
-        int streamTargetAddressCount = 0;
-
-        Component rtpComponent = iceStream.getComponent(Component.RTP);
-        if (rtpComponent != null)
-        {
-            CandidatePair selectedPair = rtpComponent.getSelectedPair();
-
-            if (selectedPair != null)
-            {
-                InetSocketAddress streamTargetAddress
-                        = selectedPair
-                        .getRemoteCandidate()
-                        .getTransportAddress();
-
-                if (streamTargetAddress != null)
-                {
-                    streamTargetAddresses[0] = streamTargetAddress;
-                    streamTargetAddressCount++;
-                }
-            }
-        }
-
-        if (numComponents > 1 && !rtcpmux)
-        {
-            Component rtcpComponent = iceStream.getComponent(Component.RTCP);
-            if (rtcpComponent != null)
-            {
-                CandidatePair selectedPair = rtcpComponent.getSelectedPair();
-
-                if (selectedPair != null)
-                {
-                    InetSocketAddress streamTargetAddress
-                            = selectedPair
-                            .getRemoteCandidate()
-                            .getTransportAddress();
-
-                    if (streamTargetAddress != null)
-                    {
-                        streamTargetAddresses[1] = streamTargetAddress;
-                        streamTargetAddressCount++;
-                    }
-                }
-            }
-        }
-
-        if (rtcpmux)
-        {
-            streamTargetAddresses[1] = streamTargetAddresses[0];
-            streamTargetAddressCount++;
-        }
-
-        if (streamTargetAddressCount > 0)
-        {
-            streamTarget
-                    = new MediaStreamTarget(
-                        streamTargetAddresses[0 /* RTP */],
-                        streamTargetAddresses[1 /* RTCP */]);
-        }
-        return streamTarget;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getXmlNamespace()
-    {
-        return IceUdpTransportPacketExtension.NAMESPACE;
-    }
-
-    /**
-     * Notifies this instance about a change of the value of the <tt>state</tt>
-     * property of {@link #iceAgent}.
-     *
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the old and new
-     * values of the <tt>state</tt> property of {@link #iceAgent}.
-     */
-    private void iceAgentStateChange(PropertyChangeEvent ev)
-    {
-        /*
-         * Log the changes in the ICE processing state of this
-         * IceUdpTransportManager for the purposes of debugging.
-         */
-
-        boolean interrupted = false;
-
-        try
-        {
-            StringBuilder s = new StringBuilder("ICE processing state of ")
-                .append(getClass().getSimpleName()).append(" #")
-                .append(Integer.toHexString(hashCode()))
-                .append(" (for channels");
-            for (Channel channel : getChannels())
-                s.append(" ").append(channel.getID());
-            s.append(")  of conference ").append(conference.getID())
-                .append(" changed from ").append(ev.getOldValue())
-                 .append(" to ").append(ev.getNewValue()).append(".");
-
-            logd(s.toString());
-        }
-        catch (Throwable t)
-        {
-            if (t instanceof InterruptedException)
-                interrupted = true;
-            else if (t instanceof ThreadDeath)
-                throw (ThreadDeath) t;
-        }
-        finally
-        {
-            if (interrupted)
-                Thread.currentThread().interrupt();
-        }
-    }
-
-    /**
-     * Notifies this instance about a change of the value of a property of a
-     * <tt>CandidatePair</tt> of {@link #iceStream}.
-     *
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the
-     * <tt>CandidatePair</tt>, the name of the <tt>CandidatePair</tt> property,
-     * and its old and new values
-     */
-    private void iceStreamPairChange(PropertyChangeEvent ev)
-    {
-        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED.equals(
-                ev.getPropertyName()))
-        {
-            // TODO we might not necessarily want to keep all channels alive by
-            // the ICE connection.
-            for (Channel channel : getChannels())
-                channel.touch();
-        }
+        fingerprintPE.setFingerprint(fingerprint);
+        fingerprintPE.setHash(hash);
     }
 
     /**
@@ -1607,6 +1045,568 @@ public class IceUdpTransportManager
     }
 
     /**
+     * Generates an ID to be set on a <tt>CandidatePacketExtension</tt> to
+     * represent a specific <tt>LocalCandidate</tt>.
+     *
+     * @param candidate the <tt>LocalCandidate</tt> whose ID is to be generated
+     * @return an ID to be set on a <tt>CandidatePacketExtension</tt> to
+     * represent the specified <tt>candidate</tt>
+     */
+    private String generateCandidateID(LocalCandidate candidate)
+    {
+        StringBuilder candidateID = new StringBuilder();
+
+        candidateID.append(conference.getID());
+        candidateID.append(Long.toHexString(hashCode()));
+
+        Agent iceAgent
+            = candidate.getParentComponent().getParentStream().getParentAgent();
+
+        candidateID.append(Long.toHexString(iceAgent.hashCode()));
+        candidateID.append(Long.toHexString(iceAgent.getGeneration()));
+        candidateID.append(Long.toHexString(candidate.hashCode()));
+
+        return candidateID.toString();
+    }
+
+    /**
+     * Gets the <tt>BundleContext</tt> associated with the <tt>Channel</tt>
+     * that this {@link net.java.sip.communicator.service.protocol.media
+     * .TransportManager} is servicing. The method is a
+     * convenience which gets the <tt>BundleContext</tt> associated with the
+     * XMPP component implementation in which the <tt>Videobridge</tt>
+     * associated with this instance is executing.
+     *
+     * @return the <tt>BundleContext</tt> associated with this
+     * <tt>IceUdpTransportManager</tt>
+     */
+    public BundleContext getBundleContext()
+    {
+        return conference != null ? conference.getBundleContext() : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public DtlsControl getDtlsControl(Channel channel)
+    {
+        return dtlsControl;
+    }
+
+    /**
+     * Gets the <tt>IceSocketWrapper</tt> from the selected pair (if any)
+     * from a specific {@link org.ice4j.ice.Component}.
+     * @param component the <tt>Component</tt> from which to get a socket.
+     * @return the <tt>IceSocketWrapper</tt> from the selected pair (if any)
+     * from a specific {@link org.ice4j.ice.Component}.
+     */
+    private IceSocketWrapper getSocketForComponent(Component component)
+    {
+        CandidatePair selectedPair = component.getSelectedPair();
+
+        if (selectedPair != null)
+        {
+            return selectedPair.getIceSocketWrapper();
+        }
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public StreamConnector getStreamConnector(Channel channel)
+    {
+        if (!getChannels().contains(channel))
+            return null;
+
+        IceSocketWrapper[] iceSockets = getStreamConnectorSockets();
+        IceSocketWrapper iceSocket0;
+
+        if (iceSockets == null || (iceSocket0 = iceSockets[0]) == null)
+            return null;
+
+        if (channel instanceof SctpConnection)
+        {
+            DatagramSocket udpSocket = iceSocket0.getUDPSocket();
+
+            if (udpSocket != null)
+            {
+                if (udpSocket instanceof MultiplexingDatagramSocket)
+                {
+                    MultiplexingDatagramSocket multiplexing
+                        = (MultiplexingDatagramSocket) udpSocket;
+
+                    try
+                    {
+                        DatagramSocket dtlsSocket
+                            = multiplexing.getSocket(new DTLSDatagramFilter());
+
+                        return new DefaultStreamConnector(dtlsSocket, null);
+                    }
+                    catch (IOException ioe)
+                    {
+                        logger.warn("Failed to create DTLS socket: " + ioe);
+                    }
+                }
+            }
+            else
+            {
+                Socket tcpSocket = iceSocket0.getTCPSocket();
+
+                if (tcpSocket != null
+                        && tcpSocket instanceof MultiplexingSocket)
+                {
+                    MultiplexingSocket multiplexing
+                        = (MultiplexingSocket) tcpSocket;
+
+                    try
+                    {
+                        Socket dtlsSocket
+                            = multiplexing.getSocket(new DTLSDatagramFilter());
+
+                        return new DefaultTCPStreamConnector(dtlsSocket, null);
+                    }
+                    catch(IOException ioe)
+                    {
+                        logger.warn("Failed to create DTLS socket: " + ioe);
+                    }
+                }
+            }
+            return null;
+        }
+
+        if (! (channel instanceof RtpChannel))
+            return null;
+
+        DatagramSocket udpSocket0;
+        IceSocketWrapper iceSocket1 = iceSockets[1];
+        RtpChannel rtpChannel = (RtpChannel) channel;
+
+        if ((udpSocket0 = iceSocket0.getUDPSocket()) != null)
+        {
+            DatagramSocket udpSocket1
+                = (iceSocket1 == null) ? null : iceSocket1.getUDPSocket();
+
+            return
+                getUDPStreamConnector(
+                        rtpChannel,
+                        new DatagramSocket[] { udpSocket0, udpSocket1 });
+        }
+        else
+        {
+            Socket tcpSocket0 = iceSocket0.getTCPSocket();
+            Socket tcpSocket1
+                = (iceSocket1 == null) ? null : iceSocket1.getTCPSocket();
+
+            return
+                getTCPStreamConnector(
+                        rtpChannel,
+                        new Socket[] { tcpSocket0, tcpSocket1 });
+        }
+    }
+
+    /**
+     * Gets the <tt>IceSocketWrapper</tt>s from the selected
+     * <tt>CandidatePair</tt>(s) of the ICE agent.
+     * TODO cache them in this instance?
+     * @return the <tt>IceSocketWrapper</tt>s from the selected
+     * <tt>CandidatePair</tt>(s) of the ICE agent.
+     */
+    private IceSocketWrapper[] getStreamConnectorSockets()
+    {
+        IceSocketWrapper[] streamConnectorSockets
+                = new IceSocketWrapper[2];
+
+        Component rtpComponent = iceStream.getComponent(Component.RTP);
+        if (rtpComponent != null)
+        {
+            streamConnectorSockets[0 /* RTP */]
+                = getSocketForComponent(rtpComponent);
+        }
+
+        if (numComponents > 1 && !rtcpmux)
+        {
+            Component rtcpComponent = iceStream.getComponent(Component.RTCP);
+            if (rtcpComponent != null)
+            {
+                streamConnectorSockets[1 /* RTCP */]
+                   = getSocketForComponent(rtcpComponent);
+            }
+        }
+        return streamConnectorSockets;
+    }
+
+    private MediaStreamTarget getStreamTarget()
+    {
+        MediaStreamTarget streamTarget = null;
+        InetSocketAddress[] streamTargetAddresses
+                = new InetSocketAddress[2];
+        int streamTargetAddressCount = 0;
+
+        Component rtpComponent = iceStream.getComponent(Component.RTP);
+        if (rtpComponent != null)
+        {
+            CandidatePair selectedPair = rtpComponent.getSelectedPair();
+
+            if (selectedPair != null)
+            {
+                InetSocketAddress streamTargetAddress
+                        = selectedPair
+                        .getRemoteCandidate()
+                        .getTransportAddress();
+
+                if (streamTargetAddress != null)
+                {
+                    streamTargetAddresses[0] = streamTargetAddress;
+                    streamTargetAddressCount++;
+                }
+            }
+        }
+
+        if (numComponents > 1 && !rtcpmux)
+        {
+            Component rtcpComponent = iceStream.getComponent(Component.RTCP);
+            if (rtcpComponent != null)
+            {
+                CandidatePair selectedPair = rtcpComponent.getSelectedPair();
+
+                if (selectedPair != null)
+                {
+                    InetSocketAddress streamTargetAddress
+                            = selectedPair
+                            .getRemoteCandidate()
+                            .getTransportAddress();
+
+                    if (streamTargetAddress != null)
+                    {
+                        streamTargetAddresses[1] = streamTargetAddress;
+                        streamTargetAddressCount++;
+                    }
+                }
+            }
+        }
+
+        if (rtcpmux)
+        {
+            streamTargetAddresses[1] = streamTargetAddresses[0];
+            streamTargetAddressCount++;
+        }
+
+        if (streamTargetAddressCount > 0)
+        {
+            streamTarget
+                    = new MediaStreamTarget(
+                        streamTargetAddresses[0 /* RTP */],
+                        streamTargetAddresses[1 /* RTCP */]);
+        }
+        return streamTarget;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public MediaStreamTarget getStreamTarget(Channel channel)
+    {
+        return getStreamTarget();
+    }
+
+    /**
+     * Creates and returns a TCP <tt>StreamConnector</tt> to be used by a
+     * specific <tt>RtpChannel</tt>, using <tt>iceSockets</tt> as the
+     * underlying <tt>Socket</tt>s.
+     *
+     * Does not use <tt>iceSockets</tt> directly, but creates
+     * <tt>MultiplexedSocket</tt> instances on top of them.
+     *
+     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
+     * <tt>StreamConnector</tt>.
+     * @param iceSockets the <tt>Socket</tt>s which are to be used by the
+     * created <tt>StreamConnector</tt>.
+     * @return a TCP <tt>StreamConnector</tt> with the <tt>Socket</tt>s
+     * given in <tt>iceSockets</tt> to be used by a specific
+     * <tt>RtpChannel</tt>.
+     */
+    private StreamConnector getTCPStreamConnector(RtpChannel rtpChannel,
+                                                  Socket[] iceSockets)
+    {
+        StreamConnector connector = null;
+
+        if (iceSockets != null)
+        {
+            Socket iceSocket0 = iceSockets[0];
+            Socket channelSocket0 = null;
+
+            if (iceSocket0 != null && iceSocket0 instanceof MultiplexingSocket)
+            {
+                MultiplexingSocket multiplexing
+                    = (MultiplexingSocket) iceSocket0;
+
+                try
+                {
+                    channelSocket0
+                        = multiplexing.getSocket(
+                                rtpChannel.getDatagramFilter(false /* RTP */));
+                }
+                catch (SocketException se) // never thrown
+                {}
+            }
+
+            Socket iceSocket1 = rtcpmux ? iceSocket0 : iceSockets[1];
+            Socket channelSocket1 = null;
+
+            if (iceSocket1 != null && iceSocket1 instanceof MultiplexingSocket)
+            {
+                MultiplexingSocket multiplexing
+                    = (MultiplexingSocket) iceSocket1;
+
+                try
+                {
+                    channelSocket1
+                        = multiplexing.getSocket(
+                                rtpChannel.getDatagramFilter(true /* RTCP */));
+                }
+                catch (SocketException se) // never thrown
+                {}
+            }
+
+            if (channelSocket0 != null || channelSocket1 != null)
+            {
+                connector
+                    = new DefaultTCPStreamConnector(
+                            channelSocket0,
+                            channelSocket1,
+                            rtcpmux);
+            }
+        }
+
+        return connector;
+    }
+
+    /**
+     * Creates and returns a UDP <tt>StreamConnector</tt> to be used by a
+     * specific <tt>RtpChannel</tt>, using <tt>iceSockets</tt> as the
+     * underlying <tt>DatagramSocket</tt>s.
+     *
+     * Does not use <tt>iceSockets</tt> directly, but creates
+     * <tt>MultiplexedDatagramSocket</tt> instances on top of them.
+     *
+     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
+     * <tt>StreamConnector</tt>.
+     * @param iceSockets the <tt>DatagramSocket</tt>s which are to be used by the
+     * created <tt>StreamConnector</tt>.
+     * @return a UDP <tt>StreamConnector</tt> with the <tt>DatagramSocket</tt>s
+     * given in <tt>iceSockets</tt> to be used by a specific
+     * <tt>RtpChannel</tt>.
+     */
+    private StreamConnector getUDPStreamConnector(RtpChannel rtpChannel,
+                                                  DatagramSocket[] iceSockets)
+    {
+        StreamConnector connector = null;
+
+        if (iceSockets != null)
+        {
+            DatagramSocket iceSocket0 = iceSockets[0];
+            DatagramSocket channelSocket0 = null;
+
+            if (iceSocket0 != null
+                    && iceSocket0 instanceof MultiplexingDatagramSocket)
+            {
+                MultiplexingDatagramSocket multiplexing
+                    = (MultiplexingDatagramSocket) iceSocket0;
+
+                try
+                {
+                    channelSocket0
+                        = multiplexing.getSocket(
+                                rtpChannel.getDatagramFilter(false /* RTP */));
+                }
+                catch (SocketException se) // never thrown
+                {}
+            }
+
+            DatagramSocket iceSocket1 = rtcpmux ? iceSocket0 : iceSockets[1];
+            DatagramSocket channelSocket1 = null;
+
+            if (iceSocket1 != null
+                    && iceSocket1 instanceof MultiplexingDatagramSocket)
+            {
+                MultiplexingDatagramSocket multiplexing
+                    = (MultiplexingDatagramSocket) iceSocket1;
+
+                try
+                {
+                    channelSocket1
+                        = multiplexing.getSocket(
+                                rtpChannel.getDatagramFilter(true /* RTCP */));
+                }
+                catch (SocketException se) // never thrown
+                {}
+            }
+
+            if (channelSocket0 != null || channelSocket1 != null)
+            {
+                connector
+                    = new DefaultStreamConnector(
+                            channelSocket0,
+                            channelSocket1,
+                            rtcpmux);
+            }
+        }
+
+        return connector;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getXmlNamespace()
+    {
+        return IceUdpTransportPacketExtension.NAMESPACE;
+    }
+
+    /**
+     * Notifies this instance about a change of the value of the <tt>state</tt>
+     * property of {@link #iceAgent}.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the old and new
+     * values of the <tt>state</tt> property of {@link #iceAgent}.
+     */
+    private void iceAgentStateChange(PropertyChangeEvent ev)
+    {
+        /*
+         * Log the changes in the ICE processing state of this
+         * IceUdpTransportManager for the purposes of debugging.
+         */
+
+        boolean interrupted = false;
+
+        try
+        {
+            StringBuilder s = new StringBuilder("ICE processing state of ")
+                .append(getClass().getSimpleName()).append(" #")
+                .append(Integer.toHexString(hashCode()))
+                .append(" (for channels");
+            for (Channel channel : getChannels())
+                s.append(" ").append(channel.getID());
+            s.append(")  of conference ").append(conference.getID())
+                .append(" changed from ").append(ev.getOldValue())
+                 .append(" to ").append(ev.getNewValue()).append(".");
+
+            logd(s.toString());
+        }
+        catch (Throwable t)
+        {
+            if (t instanceof InterruptedException)
+                interrupted = true;
+            else if (t instanceof ThreadDeath)
+                throw (ThreadDeath) t;
+        }
+        finally
+        {
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Notifies this instance about a change of the value of a property of a
+     * <tt>CandidatePair</tt> of {@link #iceStream}.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the
+     * <tt>CandidatePair</tt>, the name of the <tt>CandidatePair</tt> property,
+     * and its old and new values
+     */
+    private void iceStreamPairChange(PropertyChangeEvent ev)
+    {
+        if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED.equals(
+                ev.getPropertyName()))
+        {
+            // TODO we might not necessarily want to keep all channels alive by
+            // the ICE connection.
+            for (Channel channel : getChannels())
+                channel.touch();
+        }
+    }
+
+    /**
+     * Initializes {@link #tcpHostHarvester}.
+     */
+    private void initializeTcpHarvester()
+    {
+        synchronized (IceUdpTransportManager.class)
+        {
+            if (tcpHostHarvesterInitialized)
+                return;
+            tcpHostHarvesterInitialized = true;
+
+            ConfigurationService cfg =
+                    conference.getVideobridge().getConfigurationService();
+
+            boolean fallback = false;
+            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
+            {
+                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
+                if (port == -1)
+                {
+                    fallback = true;
+                    port = TCP_DEFAULT_PORT;
+                }
+
+                try
+                {
+                    tcpHostHarvester = new MultiplexingTcpHostHarvester(port);
+                }
+                catch (IOException ioe)
+                {
+                    logger.warn("Failed to initialize TCP harvester on port "
+                                + port + ": " + ioe
+                                + (fallback
+                                    ? ". Retrying on port " + TCP_FALLBACK_PORT
+                                    : "")
+                                + ".");
+                }
+
+                if (fallback)
+                {
+                    try
+                    {
+                        tcpHostHarvester
+                            = new MultiplexingTcpHostHarvester(
+                                TCP_FALLBACK_PORT);
+
+                    }
+                    catch (IOException e)
+                    {
+                        logger.warn("Failed to initialize TCP harvester on "
+                                    + "fallback port " + TCP_FALLBACK_PORT
+                                    + ": " + e);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Notifies all channels of this <tt>TransportManager</tt> that connectivity
+     * has been established (and they can now obtain valid values through
+     * {@link #getStreamConnector(Channel)} and
+     * {@link #getStreamTarget(Channel)}.
+     */
+    private void onIceConnected()
+    {
+        iceConnected = true;
+
+        for (Channel channel : getChannels())
+        {
+            channel.transportConnected();
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -1717,18 +1717,37 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Notifies all channels of this <tt>TransportManager</tt> that connectivity
-     * has been established (and they can now obtain valid values through
-     * {@link #getStreamConnector(Channel)} and
-     * {@link #getStreamTarget(Channel)}.
+     * Updates the states of the <tt>RtpChannelDatagramFilters</tt> for our
+     * RTP channels, according to whether we are (effectively) using bundle
+     * (that is, we have more than one <tt>RtpChannel</tt>). The filters are
+     * configured to check the RTP payload type and the RTCP Sender SSRC fields
+     * if and only if bundle is used.
+     *
+     * This allows non-bundled channels to work correctly without the need for
+     * the focus to explicitly specify via COLIBRI the payload types to be used
+     * by each channel.
      */
-    private void onIceConnected()
+    private void updatePayloadTypeFilters()
     {
-        iceConnected = true;
-
+        List<RtpChannel> rtpChannels = new LinkedList<RtpChannel>();
         for (Channel channel : getChannels())
+            if (channel instanceof RtpChannel)
+                rtpChannels.add((RtpChannel) channel);
+
+        int numRtpChannels = rtpChannels.size();
+        if (numRtpChannels > 0)
         {
-            channel.transportConnected();
+            boolean bundleMode = numRtpChannels > 1;
+            for (RtpChannel channel : rtpChannels)
+            {
+                // Enable filtering by PT iff we are (effectively) using bundle
+                channel.getDatagramFilter(false)
+                        .setCheckRtpPayloadType(bundleMode);
+
+                // Enable RTCP filtering by SSRC iff we are bundle
+                channel.getDatagramFilter(true)
+                        .setCheckRtcpSsrc(bundleMode);
+            }
         }
     }
 
