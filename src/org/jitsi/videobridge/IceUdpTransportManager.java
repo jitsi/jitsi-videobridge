@@ -342,19 +342,15 @@ public class IceUdpTransportManager
             return false;
         }
 
-        boolean added = super.addChannel(channel);
-        if (!added)
+        if (!super.addChannel(channel))
             return false;
-
 
         if (channel instanceof SctpConnection)
         {
             // When an SctpConnection is added, it automatically replaces
             // channelForDtls, because it needs DTLS packets for the application
             // data inside them.
-
             sctpConnection = (SctpConnection) channel;
-
             if (channelForDtls != null)
             {
                 /*
@@ -362,29 +358,29 @@ public class IceUdpTransportManager
                  * add more than one SctpConnection. The SctpConnection socket
                  * will automatically accept DTLS.
                  */
-                RtpChannel rtpChannelForDtls
-                    = (RtpChannel) channelForDtls;
+                RtpChannel rtpChannelForDtls = (RtpChannel) channelForDtls;
 
-                rtpChannelForDtls.getDatagramFilter(false).setAcceptNonRtp(false);
-                rtpChannelForDtls.getDatagramFilter(true).setAcceptNonRtp(false);
+                rtpChannelForDtls.getDatagramFilter(false).setAcceptNonRtp(
+                        false);
+                rtpChannelForDtls.getDatagramFilter(true).setAcceptNonRtp(
+                        false);
             }
             channelForDtls = sctpConnection;
         }
         else if (channelForDtls == null)
         {
             channelForDtls = channel;
+
             RtpChannel rtpChannel = (RtpChannel) channel;
 
             // The new channelForDtls will always accept DTLS packets on its
             // RTP socket.
             rtpChannel.getDatagramFilter(false).setAcceptNonRtp(true);
-
             // If we use rtcpmux, we don't want to accept DTLS packets on the
             // RTCP socket, because they will be duplicated from the RTP socket,
             // because both sockets are actually filters on the same underlying
             // socket.
             rtpChannel.getDatagramFilter(true).setAcceptNonRtp(!rtcpmux);
-
         }
 
         updatePayloadTypeFilters();
@@ -547,8 +543,6 @@ public class IceUdpTransportManager
             for (Channel channel : getChannels())
                 close(channel);
 
-
-
             if (dtlsControl != null)
             {
                 dtlsControl.start(null); //stop
@@ -578,7 +572,6 @@ public class IceUdpTransportManager
                     datagramSockets[1].close();
             }
             */
-
 
             synchronized (connectThreadSyncRoot)
             {
@@ -867,14 +860,14 @@ public class IceUdpTransportManager
             }
         }
 
-
         List<DtlsFingerprintPacketExtension> dfpes
-                = transport.getChildExtensionsOfType(
-                DtlsFingerprintPacketExtension.class);
+            = transport.getChildExtensionsOfType(
+                    DtlsFingerprintPacketExtension.class);
+
         if (!dfpes.isEmpty())
         {
             Map<String, String> remoteFingerprints
-                    = new LinkedHashMap<String, String>();
+                = new LinkedHashMap<String, String>();
 
             for (DtlsFingerprintPacketExtension dfpe : dfpes)
             {
@@ -890,7 +883,7 @@ public class IceUdpTransportManager
          * candidates. Note that this is a best effort.
          */
         boolean iceAgentStateIsRunning
-                = IceProcessingState.RUNNING.equals(iceAgent.getState());
+            = IceProcessingState.RUNNING.equals(iceAgent.getState());
         int remoteCandidateCount = 0;
 
         if (rtcpmux)
@@ -1658,7 +1651,6 @@ public class IceUdpTransportManager
                 connectThread.setDaemon(true);
                 connectThread.setName("IceUdpTransportManager connect thread");
                 connectThread.start();
-
             }
         }
     }
@@ -1671,8 +1663,8 @@ public class IceUdpTransportManager
     {
         dtlsControl.setSetup(
                 isControlling
-                ? DtlsControl.Setup.PASSIVE
-                : DtlsControl.Setup.ACTIVE);
+                    ? DtlsControl.Setup.PASSIVE
+                    : DtlsControl.Setup.ACTIVE);
         dtlsControl.setRtcpmux(rtcpmux);
 
         // Setup the connector
@@ -1707,7 +1699,6 @@ public class IceUdpTransportManager
             rtpConnector = new RTPConnectorTCPImpl(streamConnector);
         }
 
-
         dtlsControl.setConnector(rtpConnector);
         dtlsControl.registerUser(this);
 
@@ -1737,16 +1728,13 @@ public class IceUdpTransportManager
         int numRtpChannels = rtpChannels.size();
         if (numRtpChannels > 0)
         {
-            boolean bundleMode = numRtpChannels > 1;
+            boolean bundle = numRtpChannels > 1;
             for (RtpChannel channel : rtpChannels)
             {
                 // Enable filtering by PT iff we are (effectively) using bundle
-                channel.getDatagramFilter(false)
-                        .setCheckRtpPayloadType(bundleMode);
-
+                channel.getDatagramFilter(false).setCheckRtpPayloadType(bundle);
                 // Enable RTCP filtering by SSRC iff we are bundle
-                channel.getDatagramFilter(true)
-                        .setCheckRtcpSsrc(bundleMode);
+                channel.getDatagramFilter(true).setCheckRtcpSsrc(bundle);
             }
         }
     }
@@ -1755,35 +1743,34 @@ public class IceUdpTransportManager
      * Waits until {@link #iceAgent} exits the RUNNING or WAITING state.
      */
     private void wrapupConnectivityEstablishment()
-            throws OperationFailedException
+        throws OperationFailedException
     {
         final Object syncRoot = new Object();
         PropertyChangeListener propertyChangeListener
-                = new PropertyChangeListener()
-        {
-            @Override
-            public void propertyChange(PropertyChangeEvent ev)
+            = new PropertyChangeListener()
             {
-                Object newValue = ev.getNewValue();
-
-                if (IceProcessingState.COMPLETED.equals(newValue)
-                        || IceProcessingState.FAILED.equals(newValue)
-                        || IceProcessingState.TERMINATED.equals(newValue))
+                @Override
+                public void propertyChange(PropertyChangeEvent ev)
                 {
-                    Agent iceAgent = (Agent) ev.getSource();
+                    Object newValue = ev.getNewValue();
 
-                    iceAgent.removeStateChangeListener(this);
-
-                    if (iceAgent == IceUdpTransportManager.this.iceAgent)
+                    if (IceProcessingState.COMPLETED.equals(newValue)
+                            || IceProcessingState.FAILED.equals(newValue)
+                            || IceProcessingState.TERMINATED.equals(newValue))
                     {
-                        synchronized (syncRoot)
+                        Agent iceAgent = (Agent) ev.getSource();
+
+                        iceAgent.removeStateChangeListener(this);
+                        if (iceAgent == IceUdpTransportManager.this.iceAgent)
                         {
-                            syncRoot.notify();
+                            synchronized (syncRoot)
+                            {
+                                syncRoot.notify();
+                            }
                         }
                     }
                 }
-            }
-        };
+            };
 
         iceAgent.addStateChangeListener(propertyChangeListener);
 
@@ -1956,4 +1943,3 @@ public class IceUdpTransportManager
         }
     }
 }
-
