@@ -1357,7 +1357,9 @@ public class Conference
                 try
                 {
                     //FIXME: the initiator is hard-coded
-                    transportManager = new IceUdpTransportManager(this, true);
+                    // We assume rtcp-mux when bundle is used, so we make only
+                    // one component.
+                    transportManager = new IceUdpTransportManager(this, true, 1);
                 }
                 catch (IOException ioe)
                 {

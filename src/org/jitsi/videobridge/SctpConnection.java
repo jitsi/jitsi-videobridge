@@ -14,6 +14,7 @@ import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.impl.osgi.framework.*;
@@ -155,7 +156,7 @@ public class SctpConnection
     /**
      * Datagram socket for ICE/UDP layer.
      */
-    private DatagramSocket iceUdpSocket;
+    private IceSocketWrapper iceSocket;
 
     /**
      * List of <tt>WebRtcDataStreamListener</tt>s that will be notified whenever
@@ -261,7 +262,7 @@ public class SctpConnection
         }
         finally
         {
-            if (iceUdpSocket != null)
+            if (iceSocket != null)
             {
                 // It is now the responsibility of the transport manager to
                 // close the socket.
@@ -1010,17 +1011,27 @@ public class SctpConnection
         // Notify that from now on SCTP connection is considered functional
         sctpSocket.setDataCallback(this);
 
-        // Receive loop, breaks when SCTP socket is closed
-        this.iceUdpSocket = connector.getDataSocket();
+        // Setup iceSocket
+        DatagramSocket datagramSocket = connector.getDataSocket();
+        if (datagramSocket != null)
+        {
+            this.iceSocket = new IceUdpSocketWrapper(datagramSocket);
+        }
+        else
+        {
+            this.iceSocket
+                    = new IceTcpSocketWrapper(connector.getDataTCPSocket());
+        }
 
         DatagramPacket rcvPacket
             = new DatagramPacket(receiveBuffer, 0, receiveBuffer.length);
 
+        // Receive loop, breaks when SCTP socket is closed
         try
         {
             do
             {
-                iceUdpSocket.receive(rcvPacket);
+                iceSocket.receive(rcvPacket);
 
                 RawPacket raw
                     = new RawPacket(
