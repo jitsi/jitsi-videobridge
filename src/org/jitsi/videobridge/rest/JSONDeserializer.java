@@ -331,6 +331,8 @@ final class JSONDeserializer
             Object contents = conference.get(JSONSerializer.CONTENTS);
             Object channelBundles
                 = conference.get(JSONSerializer.CHANNEL_BUNDLES);
+            Object recording
+                = conference.get(ColibriConferenceIQ.Recording.ELEMENT_NAME);
 
             conferenceIQ = new ColibriConferenceIQ();
             // id
@@ -346,6 +348,9 @@ final class JSONDeserializer
                         (JSONArray) channelBundles,
                         conferenceIQ);
             }
+            // recording
+            if (recording != null)
+                deserializeRecording((JSONObject) recording, conferenceIQ);
         }
         return conferenceIQ;
     }
@@ -512,6 +517,35 @@ final class JSONDeserializer
             for (Object payloadType : payloadTypes)
                 deserializePayloadType((JSONObject) payloadType, channelIQ);
         }
+    }
+
+    public static void deserializeRecording(JSONObject recording,
+                                            ColibriConferenceIQ conferenceIQ)
+    {
+        Object state
+            = recording.get(ColibriConferenceIQ.Recording.STATE_ATTR_NAME);
+        if (state == null)
+            return;
+
+        Boolean b
+                = (state instanceof Boolean)
+                ? (Boolean) state
+                : Boolean.valueOf(state.toString());
+
+        ColibriConferenceIQ.Recording recordingIQ
+                = new ColibriConferenceIQ.Recording(b);
+
+        Object token
+            = recording.get(ColibriConferenceIQ.Recording.TOKEN_ATTR_NAME);
+        if (token != null)
+            recordingIQ.setToken(token.toString());
+
+        Object path
+                = recording.get(ColibriConferenceIQ.Recording.PATH_ATTR_NAME);
+        if (path != null)
+            recordingIQ.setPath(path.toString());
+
+        conferenceIQ.setRecording(recordingIQ);
     }
 
     public static ColibriConferenceIQ.SctpConnection deserializeSctpConnection(

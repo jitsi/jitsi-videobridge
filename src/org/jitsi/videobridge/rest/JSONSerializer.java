@@ -420,6 +420,7 @@ final class JSONSerializer
                 = conference.getContents();
             List<ColibriConferenceIQ.ChannelBundle> channelBundles
                 = conference.getChannelBundles();
+            ColibriConferenceIQ.Recording recording = conference.getRecording();
 
             jsonObject = new JSONObject();
             // id
@@ -434,6 +435,12 @@ final class JSONSerializer
                 jsonObject.put(
                         CHANNEL_BUNDLES,
                         serializeChannelBundles(channelBundles));
+            }
+            // recording
+            if (recording != null)
+            {
+                jsonObject.put(ColibriConferenceIQ.Recording.ELEMENT_NAME,
+                               serializeRecording(recording));
             }
         }
         return jsonObject;
@@ -617,6 +624,30 @@ final class JSONSerializer
             }
         }
         return payloadTypeJSONObject;
+    }
+
+    public static JSONObject serializeRecording(
+            ColibriConferenceIQ.Recording recording)
+    {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put(ColibriConferenceIQ.Recording.STATE_ATTR_NAME,
+                       recording.getState());
+
+        String token = recording.getToken();
+        if (token != null)
+        {
+            jsonObject.put(ColibriConferenceIQ.Recording.TOKEN_ATTR_NAME,
+                           token);
+        }
+
+        String path = recording.getPath();
+        if (path != null)
+        {
+            jsonObject.put(ColibriConferenceIQ.Recording.PATH_ATTR_NAME,
+                           path);
+        }
+
+        return jsonObject;
     }
 
     public static JSONArray serializePayloadTypes(
