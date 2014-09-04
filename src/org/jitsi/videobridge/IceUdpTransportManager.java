@@ -117,6 +117,18 @@ public class IceUdpTransportManager
         = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
 
     /**
+     * The name of the property which controls the use of ssltcp candidates by
+     * <tt>MultiplexingTcpHostHarvester</tt>.
+     */
+    private static final String TCP_HARVESTER_SSLTCP
+            = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
+
+    /**
+     * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
+     */
+    private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
+
+    /**
      * The single <tt>MultiplexingTcpHostHarvester</tt> instance for the
      * application.
      */
@@ -795,7 +807,17 @@ public class IceUdpTransportManager
         candidatePE.setID(generateCandidateID(candidate));
         candidatePE.setNetwork(0);
         candidatePE.setPriority(candidate.getPriority());
-        candidatePE.setProtocol(candidate.getTransport().toString());
+
+        // Advertise 'tcp' candidates for which SSL is enabled as 'ssltcp'
+        // (although internally their transport protocol remains "tcp")
+        Transport transport = candidate.getTransport();
+        if (transport == Transport.TCP
+                && candidate.isSSL())
+        {
+            transport = Transport.SSLTCP;
+        }
+        candidatePE.setProtocol(transport.toString());
+
         candidatePE.setType(
                 CandidateType.valueOf(candidate.getType().toString()));
 
@@ -1542,6 +1564,9 @@ public class IceUdpTransportManager
             boolean fallback = false;
             if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
             {
+                boolean ssltcp = cfg.getBoolean(TCP_HARVESTER_SSLTCP,
+                                                TCP_HARVESTER_SSLTCP_DEFAULT);
+
                 int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
                 if (port == -1)
                 {
@@ -1551,7 +1576,8 @@ public class IceUdpTransportManager
 
                 try
                 {
-                    tcpHostHarvester = new MultiplexingTcpHostHarvester(port);
+                    tcpHostHarvester
+                            = new MultiplexingTcpHostHarvester(port, ssltcp);
                 }
                 catch (IOException ioe)
                 {
@@ -1565,19 +1591,27 @@ public class IceUdpTransportManager
 
                 if (fallback)
                 {
+                    port = TCP_FALLBACK_PORT;
                     try
                     {
                         tcpHostHarvester
                             = new MultiplexingTcpHostHarvester(
-                                TCP_FALLBACK_PORT);
+                                port,
+                                ssltcp);
 
                     }
                     catch (IOException e)
                     {
                         logger.warn("Failed to initialize TCP harvester on "
-                                    + "fallback port " + TCP_FALLBACK_PORT
-                                    + ": " + e);
+                                    + "fallback port " + port + ": " + e);
+                        return;
                     }
+                }
+
+                if (logger.isInfoEnabled())
+                {
+                    logger.info("Initialized TCP harvester on port " + port
+                                        + ", using SSLTCP:" + ssltcp);
                 }
             }
         }
