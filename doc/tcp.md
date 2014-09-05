@@ -1,7 +1,8 @@
 # General
-Jitsi-videobridge supports binding to a specific local TCP port,
-advertising the bound addresses as ICE candidates via COLIBRI,
-and accepting media connections on this port.
+Jitsi Videobridge can accept and route RTP traffic over TCP. 
+The feature is on by default and TCP addresses will 
+automatically be returned as ICE candidates via 
+COLIBRI.
 
 # Requirements
 The use of channel-bundle and rtcp-mux is required for TCP candidates
