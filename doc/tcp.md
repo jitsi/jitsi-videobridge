@@ -1,6 +1,6 @@
 # General
 Jitsi-videobridge supports binding to a specific local TCP port,
-advertising the bound address as ICE candidates via COLIBRI,
+advertising the bound addresses as ICE candidates via COLIBRI,
 and accepting media connections on this port.
 
 # Requirements
@@ -8,9 +8,9 @@ The use of channel-bundle and rtcp-mux is required for TCP candidates
 to be generated.
 
 #Configuration
-By default TCP support is enabled on port 443 with fallback on port 4443. The
+By default TCP support is enabled on port 443 with fallback to port 4443. The
 following properties can be set in $HOME/.sip-communicator/sip-communicator.properties
-in order to control the TCP-related functionality.
+to control the TCP-related functionality.
 
 
 ### *org.jitsi.videobridge.DISABLE_TCP_HARVESTER*
@@ -43,7 +43,7 @@ ClientHello message right after they connect, before any STUN messages. Chrome
 sends this message if a candidate in its SDP offer has the "ssltcp"
 protocol.
 
-If the option is not enabled (the property is set to false), jitsi-videobridge
+If the option is disabled (the property is set to false), jitsi-videobridge
 will generate regular "tcp" candidates and will expect to receive STUN messages
 right away.
 
