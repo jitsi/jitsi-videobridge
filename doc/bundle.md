@@ -31,7 +31,7 @@ The following examples illustrate how to setup a channel-bundle in COLIBRI.
 
 ## Request to create a conference with two channel-bundles (one for each endpoint):
 The channel-bundle to which a channel or sctpconnection should belong is
-specified by a channel-bundle-id attribute of "channel" or "sctpconnection".
+specified by a channel-bundle-id attribute of "channel" or "sctpconnection". Here we use the same ID as the ID of the endpoint.
 ```
 <conference xmlns=" http://jitsi.org/protocol/colibri">
    <content name="audio">
@@ -50,7 +50,7 @@ specified by a channel-bundle-id attribute of "channel" or "sctpconnection".
 ```
 
 ## Response from jitsi-videobridge:
-Transport elements are not included for bundled channels, but are instead placed in "channel-bundle" child elements of "confrence".
+Transport elements are not included for bundled channels, but are instead placed in "channel-bundle" child elements of "conference".
 
 ```
 <conference xmlns=" http://jitsi.org/protocol/colibri" id="16c43f4c4d3b658">
