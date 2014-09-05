@@ -5,13 +5,22 @@ automatically be returned as ICE candidates via
 COLIBRI.
 
 # Requirements
-The use of channel-bundle and rtcp-mux is required for TCP candidates
-to be generated.
+The use of channel-bundle and rtcp-mux is required for TCP 
+candidates to be generated.
 
 #Configuration
-By default TCP support is enabled on port 443 with fallback to port 4443. The
-following properties can be set in $HOME/.sip-communicator/sip-communicator.properties
-to control the TCP-related functionality.
+By default TCP support is enabled on port 443 with fallback 
+to port 4443. A fallback would occur in case something else, 
+like a web server is already listening on port 443. Note 
+however, that the very point of using TCP is to simulate http
+traffic in a number of environments where it is the only allowed 
+form of communication, so you may want to make sure that (a) 
+port 443 will be free on the machine where you are running the 
+bridge. 
+
+The following properties can be set in 
+$HOME/.sip-communicator/sip-communicator.properties to control 
+the TCP-related functionality.
 
 
 ### *org.jitsi.videobridge.DISABLE_TCP_HARVESTER*
