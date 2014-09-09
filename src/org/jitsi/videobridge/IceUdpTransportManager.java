@@ -29,6 +29,8 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.osgi.framework.*;
 
+import javax.media.rtp.*;
+
 /**
  * Implements the Jingle ICE-UDP transport.
  *
@@ -1777,6 +1779,22 @@ public class IceUdpTransportManager
                         iceSockets[1] == null ? null : iceSockets[1].getTCPSocket(),
                         rtcpmux);
             rtpConnector = new RTPConnectorTCPImpl(streamConnector);
+        }
+
+        MediaStreamTarget target = getStreamTarget();
+        if (target != null)
+        {
+            try
+            {
+                rtpConnector.addTarget(
+                    new SessionAddress(target.getDataAddress().getAddress(),
+                                       target.getDataAddress().getPort()));
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Failed to add target to DTLS connector: " + ioe);
+                // But do go on, because it is not necessary in all cases
+            }
         }
 
         dtlsControl.setConnector(rtpConnector);
