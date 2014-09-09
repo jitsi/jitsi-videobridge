@@ -14,9 +14,17 @@ to port 4443. A fallback would occur in case something else,
 like a web server is already listening on port 443. Note 
 however, that the very point of using TCP is to simulate http
 traffic in a number of environments where it is the only allowed 
-form of communication, so you may want to make sure that (a) 
+form of communication, so you may want to make sure that 
 port 443 will be free on the machine where you are running the 
 bridge. 
+
+In order to avoid binding to port 443 directly:
+* Redirect 443 to 4443 by external means
+* Use TCP_HARVESTER_PORT=4443
+* Use TCP_HARVESTER_MAPPED_PORT=443
+See below for details.
+
+
 
 The following properties can be set in 
 $HOME/.sip-communicator/sip-communicator.properties to control 
@@ -47,7 +55,7 @@ Type: boolean
 Default: true
 
 Configures the use of "ssltcp" candidates. If this option is enabled,
-jitsi-videobridge will generate candidates with protocol "ssltcp", and the TCP
+Jitsi Videobridge will generate candidates with protocol "ssltcp", and the TCP
 harvester will expect connecting clients to send a special pseudo-SSL
 ClientHello message right after they connect, before any STUN messages. Chrome
 sends this message if a candidate in its SDP offer has the "ssltcp"
@@ -70,3 +78,31 @@ Type: boolean
 Default: false
 
 This property can be used to disable binding on IPv6 addresses.
+
+
+### *org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT*
+Default: none
+Type: integer between 1 and 65535
+
+If this property is set, Jitsi Videobridge will announce additional
+TCP srflx candidates with the given port (one candidate for each host
+candidate).
+
+
+### *org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS*
+### *org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS*
+Default: none
+
+If these to properties are configured, Jitsi Videobridge will
+generate additional srflx candidates for each candidate with
+the local address configured.
+
+This is useful if Jitsi Videobridge is running behind a NAT with
+the necessary ports forwarded. For example, if Jitsi Videobridge
+is running on 10.0.0.1 behind a NAT, and the public address is 2.2.2.2,
+NAT_HARVESTER_LOCAL_ADDRESS=10.0.0.1 and
+NAT_HARVESTER_PUBLIC_ADDRESS=2.2.2.2
+should be configured.
+
+
+

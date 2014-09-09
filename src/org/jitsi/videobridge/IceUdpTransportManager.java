@@ -124,6 +124,13 @@ public class IceUdpTransportManager
             = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
 
     /**
+     * The name of the property which specifies an additional port to be
+     * advertised by the TCP harvester.
+     */
+    private static final String TCP_HARVESTER_MAPPED_PORT
+            = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
+
+    /**
      * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
      */
     private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
@@ -337,7 +344,7 @@ public class IceUdpTransportManager
     /**
      * {@inheritDoc}
      *
-     * Assures that no more than one <tt>SctpConnection</tt> is added.Keeps
+     * Assures that no more than one <tt>SctpConnection</tt> is added. Keeps
      * {@link #sctpConnection} and {@link #channelForDtls} up to date.
      */
     @Override
@@ -1612,6 +1619,45 @@ public class IceUdpTransportManager
                 {
                     logger.info("Initialized TCP harvester on port " + port
                                         + ", using SSLTCP:" + ssltcp);
+                }
+
+                String localAddressStr
+                        = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
+                String publicAddressStr
+                        = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
+                if (localAddressStr != null && publicAddressStr != null)
+                {
+                    try
+                    {
+                        tcpHostHarvester.addMappedAddress(
+                                InetAddress.getByName(publicAddressStr),
+                                InetAddress.getByName(localAddressStr));
+                    }
+                    catch (UnknownHostException uhe)
+                    {
+                        logger.warn("Failed to add mapped address for "
+                            + publicAddressStr + " -> " + localAddressStr
+                            + ": " + uhe);
+                    }
+                }
+
+                int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
+                if (mappedPort != -1)
+                    tcpHostHarvester.addMappedPort(mappedPort);
+
+                if (AwsCandidateHarvester.smellsLikeAnEC2())
+                {
+                    TransportAddress localAddress
+                            = AwsCandidateHarvester.getFace();
+                    TransportAddress publicAddress
+                            = AwsCandidateHarvester.getMask();
+
+                    if (localAddress != null && publicAddress != null)
+                    {
+                        tcpHostHarvester.addMappedAddress(
+                                publicAddress.getAddress(),
+                                localAddress.getAddress());
+                    }
                 }
             }
         }
