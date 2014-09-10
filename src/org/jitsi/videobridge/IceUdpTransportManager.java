@@ -788,6 +788,9 @@ public class IceUdpTransportManager
                 }
             }
 
+            if (rtcpmux)
+                pe.addChildExtension(new RtcpmuxPacketExtension());
+
             describeDtlsControl(pe);
         }
     }
