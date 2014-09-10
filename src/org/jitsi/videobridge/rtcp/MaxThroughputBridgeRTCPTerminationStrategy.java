@@ -22,6 +22,7 @@ import org.jitsi.videobridge.*;
  * @author George Politis
  * @author Lyubomir Marinov
  */
+@Deprecated
 public class MaxThroughputBridgeRTCPTerminationStrategy
     extends AbstractRTCPReportBuilder
     implements BridgeRTCPTerminationStrategy,
@@ -302,9 +303,21 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
     }
 
     @Override
+    public Conference getConference()
+    {
+        return this.conference;
+    }
+
+    @Override
     public void setRTPTranslator(RTPTranslator translator)
     {
         this.rtpTranslator = translator;
+    }
+
+    @Override
+    public RTPTranslator getRTPTranslator()
+    {
+        return this.rtpTranslator;
     }
 
     @Override

@@ -14,6 +14,7 @@ import org.jitsi.service.neomedia.*;
 /**
  * Created by gp on 22/07/14.
  */
+@Deprecated
 public class HighestQualityBridgeRTCPTerminationStrategy
         extends BasicBridgeRTCPTerminationStrategy
 {
@@ -28,7 +29,7 @@ public class HighestQualityBridgeRTCPTerminationStrategy
     {
         // Uses the cache processor to make the RTCP reports.
 
-        RTPTranslator t = this.translator;
+        RTPTranslator t = this.getRTPTranslator();
         if (t == null || !(t instanceof RTPTranslatorImpl))
             return new RTCPPacket[0];
 
@@ -37,7 +38,7 @@ public class HighestQualityBridgeRTCPTerminationStrategy
         if (this.feedbackCacheProcessor == null)
         {
             this.feedbackCacheProcessor
-                    = new FeedbackCacheProcessor(feedbackCache);
+                    = new FeedbackCacheProcessor(getFeedbackCache());
 
             // TODO(gp) make percentile configurable.
             this.feedbackCacheProcessor.setPercentile(70);

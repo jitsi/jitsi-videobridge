@@ -12,7 +12,7 @@ import org.jitsi.impl.neomedia.rtp.translator.*;
 import javax.media.rtp.*;
 
 /**
-* Created by gp on 21/07/14.
+* @author George Politis
 */
 class RTCPPacketPayload
     implements Payload

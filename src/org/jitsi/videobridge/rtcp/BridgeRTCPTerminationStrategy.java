@@ -10,9 +10,25 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
 
 /**
- * Created by gp on 20/08/14.
+ * @author George Politis
  */
 public interface BridgeRTCPTerminationStrategy extends RTCPTerminationStrategy
 {
+    /**
+     * Sets the <tt>Conference</tt> associated to this
+     * <tt>BridgeRTCPTerminationStrategy</tt>
+     *
+     * @param conference The <tt>Conference</tt> associated to this
+     * <tt>BridgeRTCPTerminationStrategy</tt>
+     */
     public void setConference(Conference conference);
+
+    /**
+     * Gets the <tt>Conference</tt> associated to this
+     * <tt>BridgeRTCPTerminationStrategy</tt>
+     *
+     * @return The <tt>Conference</tt> associated to this
+     * <tt>BridgeRTCPTerminationStrategy</tt>
+     */
+    public Conference getConference();
 }
