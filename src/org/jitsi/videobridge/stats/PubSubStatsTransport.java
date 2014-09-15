@@ -18,6 +18,7 @@ import org.osgi.framework.*;
  * Implements <tt>StatsTransport</tt> for PubSub.
  *
  * @author Hristo Terezov
+ * @author Lyubomir Marinov
  */
 public class PubSubStatsTransport
     extends StatsTransport
@@ -73,6 +74,9 @@ public class PubSubStatsTransport
 
     /**
      * {@inheritDoc}
+     *
+     * Initializes this <tt>StatsTransport</tt> if it has not been initialized
+     * yet.
      */
     @Override
     protected void bundleContextChanged(
@@ -90,7 +94,8 @@ public class PubSubStatsTransport
     }
 
     /**
-     * Releases the resources.
+     * Disposes of this instance by releasing the resources it has acquired by
+     * now and, effectively, preparing it for garbage collection.
      */
     private void dispose()
     {
@@ -102,6 +107,11 @@ public class PubSubStatsTransport
         }
     }
 
+    /**
+     * Initializes this <tt>StatsTransport</tt> by initializing a new PubSub
+     * publisher if this <tt>StatsTransport</tt> does not have an associated
+     * PubSub publisher yet; otherwise, does nothing.
+     */
     private void init()
     {
         if (publisher == null)
@@ -203,7 +213,11 @@ public class PubSubStatsTransport
     /**
      * Notifies this instance that there was an OSGi service-related change in
      * the <tt>BundleContext</tt> in which this <tt>StatsTransport</tt> is
-     * started.
+     * started. Initializes or disposes of this <tt>StatsTransport</tt>
+     * depending on whether there is a Jabber component
+     * (protocol implementation) registered in the <tt>BundleContext</tt>
+     * because this <tt>StatsTransport</tt> utilizes XMPP to transport
+     * statistics.
      *
      * @param ev a <tt>ServiceEvent</tt> which details the specifics of the OSGi
      * service-related change of which this instance is being notified
@@ -236,7 +250,12 @@ public class PubSubStatsTransport
                 {
                 }
                 if (service instanceof ComponentImpl)
-                    initOrDispose((ComponentImpl) service);
+                {
+                    initOrDispose(
+                            (type == ServiceEvent.UNREGISTERING)
+                                ? (ComponentImpl) service
+                                : null);
+                }
             }
         }
     }
