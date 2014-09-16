@@ -84,8 +84,7 @@ public class VideoChannel
     public VideoChannel(Content content, String id)
             throws Exception
     {
-        super(content, id, null);
-        this.simulcastManager = new SimulcastManager(this);
+        this(content, id, null);
     }
 
     /**
@@ -118,13 +117,13 @@ public class VideoChannel
     }
 
     /**
-     * Gets the <tt>SimulcastManager</tt> of this video <tt>Channel</tt>.
-     * @return the simulcast manager of this video <tt>Channel</tt>.
+     * Gets the <tt>SimulcastManager</tt> of this <tt>VideoChannel</tt>.
+     * @return the simulcast manager of this <tt>VideoChannel</tt>.
      */
-    public SimulcastManager getSimulcastManager() {
+    public SimulcastManager getSimulcastManager()
+    {
         return this.simulcastManager;
     }
-
 
     /**
      * {@inheritDoc}
@@ -385,7 +384,8 @@ public class VideoChannel
             if (accept && source instanceof VideoChannel)
             {
                 VideoChannel videoChannel = (VideoChannel) source;
-                accept = simulcastManager.acceptSimulcastLayer(buffer, offset, length, videoChannel);
+                accept = simulcastManager.acceptSimulcastLayer(
+                        buffer, offset, length, videoChannel);
             }
         }
 

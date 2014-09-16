@@ -18,7 +18,7 @@ import java.lang.ref.*;
 import java.util.*;
 
 /**
- * The simulcast manager of a video <t>channel</t>.
+ * The simulcast manager of a <tt>VideoChannel</tt>.
  *
  * Created by gp on 12/08/14.
  */
@@ -32,7 +32,7 @@ public class SimulcastManager
             = Logger.getLogger(SimulcastManager.class);
 
     /**
-     * The associated video <tt>channel</tt> of this simulcast manager.
+     * The associated <tt>VideoChannel</tt> of this simulcast manager.
      */
     private final VideoChannel videoChannel;
 
@@ -47,7 +47,7 @@ public class SimulcastManager
     private final Object simulcastLayersSyncRoot = new Object();
 
     /**
-     * The simulcast layers of this video <tt>channel</tt>.
+     * The simulcast layers of this <tt>VideoChannel</tt>.
      */
     private SortedSet<SimulcastLayer> simulcastLayers;
 

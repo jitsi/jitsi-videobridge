@@ -35,13 +35,13 @@ public class BasicBridgeRTCPTerminationStrategy
     private final BridgeSenderReporting bridgeSenderReporting;
 
     /**
-     * The <tt>BridgeSenderReporting</tt> responsible for receiver reporting in
+     * The <tt>BridgeReceiverReporting</tt> responsible for receiver reporting in
      * the bridge.
      */
     private final BridgeReceiverReporting bridgeReceiverReporting;
 
     /**
-     * Ctor
+     * Constructor.
      */
     public BasicBridgeRTCPTerminationStrategy()
     {
@@ -76,6 +76,9 @@ public class BasicBridgeRTCPTerminationStrategy
     }
 
     /**
+     * Implements
+     * {@link org.jitsi.service.neomedia.RTCPPacketTransformer#transformRTCPPacket(net.sf.fmj.media.rtp.RTCPCompoundPacket)}
+     *
      * 1. Removes receiver report blocks from RRs and SRs and kills REMBs.
      * 2. Updates the receiver feedback cache.
      * 3. "Explodes" sender reports.

@@ -26,6 +26,10 @@ public class BridgeSenderReporting
 
     public final BridgeRTCPTerminationStrategy strategy;
 
+    private final Map<Integer, Map<Integer, SenderInformation>>
+        lastSenderInformationMap
+            = new HashMap<Integer, Map<Integer, SenderInformation>>();
+
     /**
      * Explode the SRs to make them compliant with features from the translator.
      *
@@ -58,14 +62,14 @@ public class BridgeSenderReporting
         if (ssrc < 1)
             return false;
 
-        Integer senderSSRC = Integer.valueOf(senderReport.ssrc);
+        Integer senderSSRC = senderReport.ssrc;
         Map<Integer, SenderInformation> receiverSenderInformationMap
                 = getReceiverSenderInformationMap(senderSSRC);
 
         Channel srcChannel = conf
                 .findChannelByReceiveSSRC(ssrc, MediaType.VIDEO);
 
-        if (!(srcChannel instanceof RtpChannel))
+        if (srcChannel == null || !(srcChannel instanceof RtpChannel))
             return false;
 
         RtpChannel srcRtpChannel = (RtpChannel)srcChannel;
@@ -78,7 +82,7 @@ public class BridgeSenderReporting
                 for (Channel destChannel : content.getChannels())
                 {
                     if (!(destChannel instanceof RtpChannel)
-                            || srcChannel == destChannel)
+                            || srcRtpChannel == destChannel)
                         continue;
 
                     RtpChannel destRtpChannel = (RtpChannel) destChannel;
@@ -95,16 +99,15 @@ public class BridgeSenderReporting
                     sr.octetcount = senderReport.octetcount;
                     sr.packetcount = senderReport.packetcount;
 
-                    Integer receiverSSRC = Integer.valueOf(
-                            (int) stream.getLocalSourceID());
+                    Integer receiverSSRC = (int) stream.getLocalSourceID();
 
                     boolean destIsReceiving
                             = srcRtpChannel.isInLastN(destChannel);
 
-                    if (destIsReceiving && srcChannel instanceof VideoChannel)
+                    if (destIsReceiving && srcRtpChannel instanceof VideoChannel)
                     {
                         VideoChannel srcVideoChannel
-                                = (VideoChannel) srcChannel;
+                                = (VideoChannel) srcRtpChannel;
 
                         if (!(destChannel instanceof VideoChannel))
                         {
@@ -112,12 +115,13 @@ public class BridgeSenderReporting
                         }
                         else
                         {
-                            VideoChannel dstVideoChannel
+                            VideoChannel destVideoChannel
                                     = (VideoChannel) destChannel;
 
-                            destIsReceiving = dstVideoChannel.getSimulcastManager()
+                            destIsReceiving
+                                = destVideoChannel.getSimulcastManager()
                                     .acceptSimulcastLayer(ssrc,
-                                            srcVideoChannel);
+                                                          srcVideoChannel);
                         }
                     }
 
@@ -187,15 +191,6 @@ public class BridgeSenderReporting
         return true;
     }
 
-    class SenderInformation
-    {
-        long packetCount;
-        long octetCount;
-    }
-
-    Map<Integer, Map<Integer, SenderInformation>> lastSenderInformationMap
-            = new HashMap<Integer, Map<Integer, SenderInformation>>();
-
     private Map<Integer, SenderInformation> getReceiverSenderInformationMap(
             Integer senderSSRC)
     {
@@ -218,5 +213,11 @@ public class BridgeSenderReporting
         }
 
         return receiverSenderInformationMap;
+    }
+
+    class SenderInformation
+    {
+        long packetCount;
+        long octetCount;
     }
 }
