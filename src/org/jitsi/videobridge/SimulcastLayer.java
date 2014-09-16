@@ -9,7 +9,7 @@ package org.jitsi.videobridge;
 import java.util.*;
 
 /**
- * Created by gp on 06/08/14.
+ * @author George Politis
  */
 public class SimulcastLayer implements Comparable<SimulcastLayer>
 {

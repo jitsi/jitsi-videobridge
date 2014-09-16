@@ -14,13 +14,14 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.json.simple.*;
 
+import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
 /**
  * The simulcast manager of a <tt>VideoChannel</tt>.
  *
- * Created by gp on 12/08/14.
+ * @author George Politis
  */
 public class SimulcastManager
 {
@@ -75,8 +76,15 @@ public class SimulcastManager
      */
     static class EndpointSimulcastLayer
     {
-        String endpoint;
-        SimulcastLayer simulcastLayer;
+        public EndpointSimulcastLayer(String endpoint,
+                                      SimulcastLayer simulcastLayer)
+        {
+            this.endpoint = endpoint;
+            this.simulcastLayer = simulcastLayer;
+        }
+
+        final String endpoint;
+        final SimulcastLayer simulcastLayer;
     }
 
     public SimulcastManager(VideoChannel videoChannel)
@@ -103,7 +111,7 @@ public class SimulcastManager
         if (simulcastLayers == null || simulcastLayers.size() < 2)
             return accept;
 
-        // TODO(gp) longs or an ints.. everywhere
+        // FIXME(gp) inconsistent usage of longs and ints.
 
         // Get the SSRC of the packet.
         long ssrc = readSSRC(buffer, offset, length) & 0xffffffffl;
@@ -128,12 +136,30 @@ public class SimulcastManager
         boolean accept = true;
 
         // Iterate the simulcast layers of the endpoint.
-        SortedSet<SimulcastLayer> simulcastLayers
+        SortedSet<SimulcastLayer> srcSimulcastLayers
                 = srcVideoChannel.getSimulcastManager().getSimulcastLayers();
 
-        if (simulcastLayers == null || simulcastLayers.size() < 2)
+        if (srcSimulcastLayers == null || srcSimulcastLayers.size() < 2)
             return accept;
 
+        SimulcastLayer electedSimulcastLayer
+                = electSimulcastLayer(srcVideoChannel);
+
+        accept = electedSimulcastLayer.contains(ssrc);
+
+        return accept;
+    }
+
+    /**
+     * Determines which simulcast layer from the srcVideoChannel is currently
+     * being received by this video channel.
+     *
+     * @param srcVideoChannel
+     * @return
+     */
+    private SimulcastLayer electSimulcastLayer(VideoChannel srcVideoChannel)
+    {
+        Endpoint targetEndpoint = videoChannel.getEndpoint();
         Endpoint sourceEndpoint =  srcVideoChannel.getEndpoint();
         SimulcastLayer electedSimulcastLayer = null;
         // TODO(gp) should be Map<WeakReference<VideoChannel>, SimulcastLayer>
@@ -147,15 +173,20 @@ public class SimulcastManager
                     if (e.equals(sourceEndpoint))
                     {
                         electedSimulcastLayer = simLayersMap.get(wr);
+                        break;
                     }
                 }
             }
 
             if (electedSimulcastLayer == null)
             {
+                SortedSet<SimulcastLayer> srcSimulcastLayers
+                        = srcVideoChannel.getSimulcastManager()
+                                .getSimulcastLayers();
+
                 // start with some predefined initial quality layer.
                 Iterator<SimulcastLayer> layersIterator
-                        = simulcastLayers.iterator();
+                        = srcSimulcastLayers.iterator();
                 int currentLayer = 0;
                 while (layersIterator.hasNext()
                         && currentLayer++ <= initialSimulcastLayer)
@@ -171,9 +202,68 @@ public class SimulcastManager
             }
         }
 
-        accept = electedSimulcastLayer.contains(ssrc);
+        // Source is currently being watched at the target.
+        if (sourceEndpoint.getID().equals(
+                targetEndpoint.getSelectedEndpointID())
 
-        return accept;
+                // The elected simulcast layer is not the high quality one.
+                && electedSimulcastLayer != srcVideoChannel
+                        .getSimulcastManager().getSimulcastLayers().last()
+
+                // Data channel to target endpoint is open.
+                && videoChannel.getEndpoint().getSctpConnection().isReady()
+                && !videoChannel.getEndpoint().getSctpConnection().isExpired())
+        {
+            SimulcastLayer hqLayer = srcVideoChannel.getSimulcastManager()
+                    .getSimulcastLayers().last();
+
+            // Receiving simulcast layers changed, create and send an event
+            // through data channels to the receiving endpoint.
+            SimulcastLayersChangedEvent event
+                    = new SimulcastLayersChangedEvent();
+
+            event.endpointSimulcastLayers = new EndpointSimulcastLayer[1];
+            event.endpointSimulcastLayers[0] = new EndpointSimulcastLayer(
+                    srcVideoChannel.getEndpoint().getID(),
+                    hqLayer);
+
+            String json = MyJsonEncoder.toJson(event);
+            boolean sent = false;
+            try
+            {
+                videoChannel.getEndpoint().sendMessageOnDataChannel(json);
+                sent = true;
+
+                if (logger.isInfoEnabled())
+                {
+                    logger.info("Receiving simulcast layers for endpoint "
+                            + videoChannel.getEndpoint().getID() + " changed:" +
+                            json);
+                }
+            }
+            catch (IOException e)
+            {
+                logger.error("Failed to send message on data channel " +
+                        "(although it was reported to be ready!).", e);
+            }
+
+            if (sent)
+            {
+                // Only update the receiving simulcast layer if we managed to
+                // send a notification to the endpoint.
+
+                electedSimulcastLayer = hqLayer;
+                synchronized (simulcastLayersSyncRoot)
+                {
+                    WeakReference<Endpoint> wr
+                            = new WeakReference<Endpoint>(sourceEndpoint);
+
+                    simLayersMap.put(wr, electedSimulcastLayer);
+                }
+            }
+        }
+
+        return electedSimulcastLayer;
     }
 
     /**
@@ -360,11 +450,8 @@ public class SimulcastManager
                         {
                             map.put(wr, simulcastLayer);
                             EndpointSimulcastLayer endpointSimulcastLayer
-                                    = new EndpointSimulcastLayer();
-
-                            endpointSimulcastLayer.endpoint = peer.getID();
-                            endpointSimulcastLayer.simulcastLayer
-                                    = simulcastLayer;
+                                    = new EndpointSimulcastLayer(peer.getID(),
+                                    simulcastLayer);
 
                             endpointSimulcastLayers.add(endpointSimulcastLayer);
                         }
@@ -386,7 +473,14 @@ public class SimulcastManager
                     new EndpointSimulcastLayer[endpointSimulcastLayers.size()]);
 
             String json = MyJsonEncoder.toJson(event);
-            self.sendMessageOnDataChannel(json);
+            try
+            {
+                self.sendMessageOnDataChannel(json);
+            }
+            catch (IOException e)
+            {
+                logger.error("Failed to send message on data channel.", e);
+            }
 
             if (logger.isInfoEnabled())
             {
@@ -403,6 +497,17 @@ public class SimulcastManager
 
     static class MyJsonEncoder
     {
+        // NOTE(gp) custom JSON encoders/decoders are a maintenance burden and
+        // a source of bugs. We should consider using a specialized library that
+        // does that automatically, like Gson or Jackson. It would work like
+        // this;
+        //
+        // Gson gson = new Gson();
+        // String json = gson.toJson(event);
+        //
+        // So, basically it would work exactly like this custom encoder, but
+        // without having to write a single line of code.
+
         private static String toJson(SortedSet<SimulcastLayer> simulcastLayers)
         {
             StringBuilder b = new StringBuilder("[");

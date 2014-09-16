@@ -89,16 +89,14 @@ public class BridgeReceiverReporting
         RTCPTransmitter rtcpTransmitter
                 = strategy.getRTCPReportBuilder().getRTCPTransmitter();
 
-        SortedSet<SimulcastLayer> layers
-                = videoChannel.getSimulcastManager().getSimulcastLayers();
+        int[] ssrcs = videoChannel.getReceiveSSRCs();
         List<RTCPReportBlock> receiverReports
-                = new ArrayList<RTCPReportBlock>(layers.size());
+                = new ArrayList<RTCPReportBlock>(ssrcs.length);
 
-        for (SimulcastLayer layer : layers)
+        for (int ssrc : ssrcs)
         {
             // TODO(gp) we need a mutex here.
 
-            int ssrc = (int) layer.getPrimarySSRC();
             SSRCInfo info = rtcpTransmitter.cache.cache.get(ssrc);
 
             if (info != null)

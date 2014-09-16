@@ -12,7 +12,7 @@ import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
 
 /**
- * Created by gp on 22/07/14.
+ * @author George Politis
  */
 @Deprecated
 public class HighestQualityBridgeRTCPTerminationStrategy

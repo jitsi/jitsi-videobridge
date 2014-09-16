@@ -22,6 +22,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 /**
@@ -30,6 +31,7 @@ import org.osgi.framework.*;
  * @author Lyubomir Marinov
  * @author Boris Grozev
  * @author Hristo Terezov
+ * @author George Politis
  */
 public class Conference
      extends PropertyChangeNotifier
@@ -200,7 +202,16 @@ public class Conference
     private void broadcastMessageOnDataChannels(String msg)
     {
         for (Endpoint endpoint : getEndpoints())
-            endpoint.sendMessageOnDataChannel(msg);
+        {
+            try
+            {
+                endpoint.sendMessageOnDataChannel(msg);
+            }
+            catch (IOException e)
+            {
+                logger.error("Failed to send message on data channel.", e);
+            }
+        }
     }
 
     /**
@@ -315,6 +326,285 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
+    }
+
+    /**
+     * Notifies this instance that an endpoint has changed its video selection.
+     */
+    private void selectedEndpointChanged(Endpoint endpoint,
+                                         String oldValue,
+                                         String newValue)
+    {
+        // if the old endpoint is not being watched by any of the receivers,
+        // the bridge will tell it to stop streaming its hq stream.
+
+        Endpoint oldEndpoint = null;
+        if (oldValue != null && oldValue.length() != 0 &&
+                oldValue != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
+        {
+            oldEndpoint = getEndpoint(oldValue);
+        }
+
+        List<RtpChannel> oldVideoChannels = null;
+        if (oldEndpoint != null)
+        {
+            oldVideoChannels = oldEndpoint.getChannels(MediaType.VIDEO);
+        }
+
+        VideoChannel oldVideoChannel = null;
+        if (oldVideoChannels != null && oldVideoChannels.size() != 0)
+        {
+            oldVideoChannel = (VideoChannel) oldVideoChannels.get(0);
+        }
+
+        SortedSet<SimulcastLayer> oldSimulcastLayers = null;
+        if (oldVideoChannel != null)
+        {
+            oldSimulcastLayers = oldVideoChannel.getSimulcastManager()
+                    .getSimulcastLayers();
+        }
+
+        if (oldSimulcastLayers != null
+                && oldSimulcastLayers.size() > 1
+                /* oldEndpoint != null is implied*/
+                && oldEndpoint.getSctpConnection().isReady()
+                && !oldEndpoint.getSctpConnection().isExpired())
+        {
+            // we have an old endpoint and it has an SCTP connection that is
+            // ready and not expired. if nobody else is watching the old
+            // endpoint, stop its hq stream.
+
+            boolean stopHighQualityStream = true;
+            for (Endpoint e : getEndpoints())
+            {
+                // TODO(gp) need some synchronization here. What if the selected
+                // endpoint changes while we're in the loop?
+
+                if (oldEndpoint != e
+                       && (oldEndpoint.getID().equals(e.getSelectedEndpointID())
+                        || e.getSelectedEndpointID() == null
+                        || e.getSelectedEndpointID().length() == 0))
+                {
+                    // somebody is watching the old endpoint or somebody has not
+                    // yet signaled its selected endpoint to the bridge, don't
+                    // stop the hq stream.
+                    stopHighQualityStream = false;
+                    break;
+                }
+            }
+
+            if (stopHighQualityStream)
+            {
+                // TODO(gp) this assumes only a single hq stream.
+
+                logger.info("Stopping the HQ stream of " + oldEndpoint.getID()
+                        + ".");
+
+                SimulcastLayer hqLayer = oldSimulcastLayers.last();
+
+                StopSimulcastLayerEvent event
+                        = new StopSimulcastLayerEvent(hqLayer);
+
+                String json = MyJsonEncoder.toJSON(event);
+
+                try
+                {
+                    oldEndpoint.sendMessageOnDataChannel(json);
+                }
+                catch (IOException e1)
+                {
+                    logger.error("Failed to send message on data channel.", e1);
+                }
+
+                for (Endpoint e : getEndpoints())
+                {
+                    if (e != oldEndpoint)
+                    {
+                        for (RtpChannel c : e.getChannels(MediaType.VIDEO))
+                        {
+                            SimulcastManager simulcastManager =
+                                ((VideoChannel)c).getSimulcastManager();
+
+                            if (simulcastManager != null)
+                                simulcastManager.setReceivingSimulcastLayer(0);
+                        }
+                    }
+                }
+            }
+        }
+
+        // if the new endpoint is being watched by any of the receivers, the
+        // bridge will tell it to start streaming its hq stream.
+
+        Endpoint newEndpoint = null;
+        if (newValue != null && newValue.length() != 0 &&
+                newValue != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
+        {
+            newEndpoint = getEndpoint(newValue);
+        }
+
+        List<RtpChannel> newVideoChannels = null;
+        if (newEndpoint != null)
+        {
+            newVideoChannels = newEndpoint.getChannels(MediaType.VIDEO);
+        }
+
+        VideoChannel newVideoChannel = null;
+        if (newVideoChannels != null && newVideoChannels.size() != 0)
+        {
+            newVideoChannel = (VideoChannel) newVideoChannels.get(0);
+        }
+
+        SortedSet<SimulcastLayer> newSimulcastLayers = null;
+        if (newVideoChannel != null)
+        {
+            newSimulcastLayers = newVideoChannel.getSimulcastManager()
+                    .getSimulcastLayers();
+        }
+
+        if (newSimulcastLayers != null
+                && newSimulcastLayers.size() > 1
+                /* newEndpoint != null is implied*/
+                && newEndpoint.getSctpConnection().isReady()
+                && !newEndpoint.getSctpConnection().isExpired())
+        {
+            // we have a new endpoint and it has an SCTP connection that is
+            // ready and not expired. if somebody else is watching the new
+            // endpoint, start its hq stream.
+
+            boolean startHighQualityStream = false;
+            for (Endpoint e : getEndpoints())
+            {
+                // TODO(gp) need some synchronization here. What if the
+                // selected endpoint changes while we're in the loop?
+
+                if (newEndpoint != e
+                       && (newEndpoint.getID().equals(e.getSelectedEndpointID())
+                        || e.getSelectedEndpointID() == null
+                        || e.getSelectedEndpointID().length() == 0))
+                {
+                    // somebody is watching the new endpoint or somebody has not
+                    // yet signaled its selected endpoint to the bridge, start
+                    // the hq stream.
+
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug(e.getID() + " is (probably) watching "
+                                + newEndpoint.getID());
+                    }
+
+                    startHighQualityStream = true;
+                    break;
+                }
+            }
+
+            if (startHighQualityStream)
+            {
+                // TODO(gp) this assumes only a single hq stream.
+
+                logger.info("Starting the HQ stream of " + newEndpoint.getID()
+                        + ".");
+
+                SimulcastLayer hqLayer = newSimulcastLayers.last();
+
+                StartSimulcastLayerEvent event
+                        = new StartSimulcastLayerEvent(hqLayer);
+
+                String json = MyJsonEncoder.toJSON(event);
+                try
+                {
+                    newEndpoint.sendMessageOnDataChannel(json);
+                }
+                catch (IOException e1)
+                {
+                    logger.error("Failed to send message on data channel.", e1);
+                }
+            }
+        }
+    }
+
+    static class StartSimulcastLayerEvent
+    {
+        public StartSimulcastLayerEvent(SimulcastLayer simulcastLayer)
+        {
+            this.simulcastLayer = simulcastLayer;
+        }
+
+        final String colibriClass = "StartSimulcastLayerEvent";
+        final SimulcastLayer simulcastLayer;
+    }
+
+    static class StopSimulcastLayerEvent
+    {
+        public StopSimulcastLayerEvent(SimulcastLayer simulcastLayer)
+        {
+            this.simulcastLayer = simulcastLayer;
+        }
+
+        final String colibriClass = "StopSimulcastLayerEvent";
+        final SimulcastLayer simulcastLayer;
+    }
+
+    static class MyJsonEncoder
+    {
+        // NOTE(gp) custom JSON encoders/decoders are a maintenance burden and
+        // a source of bugs. We should consider using a specialized library that
+        // does that automatically, like Gson or Jackson. It would work like
+        // this;
+        //
+        // Gson gson = new Gson();
+        // String json = gson.toJson(event);
+        //
+        // So, basically it would work exactly like this custom encoder, but
+        // without having to write a single line of code.
+
+        public static String toJSON(StartSimulcastLayerEvent event)
+        {
+            StringBuilder b = new StringBuilder(
+                    "{\"colibriClass\":\"StartSimulcastLayerEvent\"");
+
+            b.append(",\"simulcastLayer\":[");
+            toJSON(b, event.simulcastLayer);
+            b.append("]}");
+
+            return b.toString();
+        }
+
+        public static String toJSON(StopSimulcastLayerEvent event)
+        {
+            StringBuilder b = new StringBuilder(
+                    "{\"colibriClass\":\"StopSimulcastLayerEvent\"");
+
+            b.append(",\"simulcastLayer\":[");
+            toJSON(b, event.simulcastLayer);
+            b.append("]}");
+
+            return b.toString();
+        }
+
+        private static void toJSON(StringBuilder b,
+                                   SimulcastLayer simulcastLayer)
+        {
+            b.append("{\"primarySSRC\":");
+            b.append(JSONValue.escape(
+                    Long.toString(simulcastLayer.getPrimarySSRC())));
+
+            List<Long> associatedSSRCs = simulcastLayer.getAssociatedSSRCs();
+            if (associatedSSRCs != null && associatedSSRCs.size() != 0)
+            {
+                b.append(",\"asociatedSSRCs\":[");
+                for (int i = 0; i < associatedSSRCs.size(); i++)
+                {
+                    b.append(JSONValue.escape(
+                            Long.toString(associatedSSRCs.get(i))));
+
+                    if (i != associatedSSRCs.size() - 1)
+                        b.append(",");
+                }
+                b.append("]");
+            }
+            b.append("}");
+        }
     }
 
     /**
@@ -1049,6 +1339,14 @@ public class Conference
 
                     endpointSctpConnectionChanged(endpoint, oldValue, newValue);
                 }
+                else if (Endpoint
+                        .SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
+                {
+                    String oldValue = (String) ev.getOldValue();
+                    String newValue = (String) ev.getNewValue();
+
+                    selectedEndpointChanged(endpoint, oldValue, newValue);
+                }
             }
         }
     }
@@ -1088,9 +1386,17 @@ public class Conference
 
                 if (dominantSpeaker != null)
                 {
-                    endpoint.sendMessageOnDataChannel(
-                            createDominantSpeakerEndpointChangeEvent(
-                                    dominantSpeaker));
+                    try
+                    {
+                        endpoint.sendMessageOnDataChannel(
+                                createDominantSpeakerEndpointChangeEvent(
+                                        dominantSpeaker));
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error("Failed to send message on data channel.",
+                                e);
+                    }
                 }
 
                 /*

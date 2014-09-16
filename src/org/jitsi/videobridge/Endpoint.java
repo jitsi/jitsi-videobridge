@@ -13,6 +13,7 @@ import java.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.json.simple.parser.*;
 
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
@@ -20,9 +21,11 @@ import org.jitsi.util.event.*;
  * @author Lyubomir Marinov
  * @author Boris Grozev
  * @author Pawel Domas
+ * @author George Politis
  */
 public class Endpoint
     extends PropertyChangeNotifier
+    implements WebRtcDataStream.DataCallback
 {
     /**
      * The name of the <tt>Endpoint</tt> property <tt>channels</tt> which lists
@@ -46,6 +49,14 @@ public class Endpoint
         = Endpoint.class.getName() + ".sctpConnection";
 
     /**
+     * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
+     * which specifies the JID of the currently selected <tt>Endpoint</tt> of
+     * this <tt>Endpoint</tt>.
+     */
+    public static final String SELECTED_ENDPOINT_PROPERTY_NAME
+            = Endpoint.class.getName() + ".selectedEndpoint";
+
+    /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
     private final List<WeakReference<RtpChannel>> channels
@@ -67,6 +78,36 @@ public class Endpoint
      */
     private WeakReference<SctpConnection> sctpConnection
         = new WeakReference<SctpConnection>(null);
+
+    /**
+     * the (unique) identifier/ID of the currently selected <tt>Endpoint</tt>
+     * at this <tt>Endpoint</tt>.
+     */
+    private String selectedEndpointID;
+
+    /**
+     * The <tt>selectedEndpointID</tt> SyncRoot.
+     */
+    private final Object selectedEndpointSyncRoot = new Object();
+
+    /**
+     * A constant that means that an endpoint is not watching video from any
+     * other endpoint.
+     */
+    public static final String SELECTED_ENDPOINT_NOT_WATCHING_VIDEO
+            = "SELECTED_ENDPOINT_NOT_WATCHING_VIDEO";
+
+    /**
+     * Gets the (unique) identifier/ID of the currently selected
+     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     *
+     * @return the (unique) identifier/ID of the currently selected
+     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     */
+    public String getSelectedEndpointID()
+    {
+        return selectedEndpointID;
+    }
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -276,6 +317,17 @@ public class Endpoint
         {
             for (RtpChannel channel : getChannels(null))
                 channel.sctpConnectionReady(this);
+
+            WebRtcDataStream dataStream;
+            try
+            {
+                dataStream = sctpConnection.getDefaultDataStream();
+                dataStream.setDataCallback(this);
+            }
+            catch (IOException e)
+            {
+                logger.error("Could not get the default data stream.", e);
+            }
         }
     }
 
@@ -286,6 +338,7 @@ public class Endpoint
      * @param msg message text to send.
      */
     public void sendMessageOnDataChannel(String msg)
+            throws IOException
     {
         SctpConnection sctpConnection = getSctpConnection();
         String endpointId = getID();
@@ -313,7 +366,10 @@ public class Endpoint
             }
             catch (IOException e)
             {
-                logger.error("SCTP error, endpoint: " + endpointId, e);
+                // We _don't_ want to silently fail to deliver a message because
+                // some functions of the bridge depends on being able to
+                // reliably deliver a message through data channels.
+                throw e;
             }
         }
         else
@@ -362,5 +418,91 @@ public class Endpoint
     public String toString()
     {
         return getClass().getName() + " " + getID();
+    }
+
+    @Override
+    public void onStringData(WebRtcDataStream src, String msg)
+    {
+        // JSONParser is NOT thread-safe.
+        final JSONParser parser = new JSONParser();
+
+        Map map;
+        try
+        {
+            map = (Map) parser.parse(msg);
+        }
+        catch (ParseException e)
+        {
+            logger.warn("Malformed JSON received from endpoint " + getID(),
+                    e);
+
+            return;
+        }
+
+        // handle different types of messages.
+        if (map.containsKey("colibriClass"))
+        {
+            if ("SelectedEndpointChangedEvent".equals(map.get(
+                    "colibriClass")))
+            {
+                String oldSelectedEndpoint, newSelectedEndpoint;
+                boolean changed;
+
+                synchronized (selectedEndpointSyncRoot)
+                {
+                    oldSelectedEndpoint = this.selectedEndpointID;
+                    newSelectedEndpoint
+                            = (String) map.get("selectedEndpoint");
+
+                    if (newSelectedEndpoint == null
+                            || newSelectedEndpoint.length() == 0)
+                    {
+                        newSelectedEndpoint
+                                = SELECTED_ENDPOINT_NOT_WATCHING_VIDEO;
+                    }
+
+                    changed = (oldSelectedEndpoint == null
+                            && newSelectedEndpoint != null)
+                            || (oldSelectedEndpoint != null
+                            && !oldSelectedEndpoint
+                            .equals(newSelectedEndpoint));
+
+                    if (changed)
+                    {
+                        this.selectedEndpointID = newSelectedEndpoint;
+                    }
+                }
+
+                // NOTE(gp) This won't guarantee that property change events are
+                // fired in the correct order. We should probably call the
+                // firePropertyChange() method from inside the synchronized
+                // _and_ the underlying PropertyChangeNotifier should have a
+                // dedicated events queue and a thread for firing
+                // PropertyChangeEvents from the queue.
+
+                if (changed)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Endpoint + " + getID() + " selected " +
+                                newSelectedEndpoint);
+                    }
+
+                    firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
+                            oldSelectedEndpoint, newSelectedEndpoint);
+                }
+            }
+        } else
+        {
+            logger.warn("Malformed JSON received from endpoint " + getID()
+                    + ". JSON object does not contain the colibriClass " +
+                    "field");
+        }
+    }
+
+    @Override
+    public void onBinaryData(WebRtcDataStream src, byte[] data)
+    {
+        // Nothing to do here for the time being.
     }
 }

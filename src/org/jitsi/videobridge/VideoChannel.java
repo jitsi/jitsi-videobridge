@@ -6,12 +6,14 @@
  */
 package org.jitsi.videobridge;
 
+import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 import java.util.concurrent.locks.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
+import org.jitsi.util.*;
 import org.json.simple.*;
 
 /**
@@ -22,6 +24,12 @@ import org.json.simple.*;
 public class VideoChannel
     extends RtpChannel
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>VideoChannel</tt> class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(VideoChannel.class);
+
     /**
      * The <tt>SimulcastManager</tt> of this video <tt>Channel</tt>.
      */
@@ -327,7 +335,14 @@ public class VideoChannel
         }
 
         msg.append('}');
-        endpoint.sendMessageOnDataChannel(msg.toString());
+        try
+        {
+            endpoint.sendMessageOnDataChannel(msg.toString());
+        }
+        catch (IOException e)
+        {
+            logger.error("Failed to send message on data channel.", e);
+        }
     }
 
     /**
