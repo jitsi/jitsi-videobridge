@@ -189,7 +189,6 @@ final class JSONSerializer
         else
         {
             MediaDirection direction = channel.getDirection();
-            String id = channel.getID();
             Integer lastN = channel.getLastN();
             List<PayloadTypePacketExtension> payloadTypes
                 = channel.getPayloadTypes();
@@ -214,13 +213,6 @@ final class JSONSerializer
                 jsonObject.put(
                         ColibriConferenceIQ.Channel.DIRECTION_ATTR_NAME,
                         direction.toString());
-            }
-            // id
-            if (id != null)
-            {
-                jsonObject.put(
-                        ColibriConferenceIQ.Channel.ID_ATTR_NAME,
-                        id);
             }
             // lastN
             if (lastN != null)
@@ -339,6 +331,7 @@ final class JSONSerializer
         }
         else
         {
+            String id = channelCommon.getID();
             String channelBundleId = channelCommon.getChannelBundleId();
             String endpoint = channelCommon.getEndpoint();
             int expire = channelCommon.getExpire();
@@ -347,6 +340,13 @@ final class JSONSerializer
                 = channelCommon.getTransport();
 
             jsonObject = new JSONObject();
+            // id
+            if (id != null)
+            {
+                jsonObject.put(
+                        ColibriConferenceIQ.Channel.ID_ATTR_NAME,
+                        id);
+            }
             // channelBundleId
             if (channelBundleId != null)
             {

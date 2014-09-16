@@ -279,11 +279,21 @@ public class Conference
 
             for (Channel channel : content.getChannels())
             {
-                ColibriConferenceIQ.Channel channelIQ
-                    = new ColibriConferenceIQ.Channel();
+                if (channel instanceof SctpConnection)
+                {
 
-                channel.describe(channelIQ);
-                contentIQ.addChannel(channelIQ);
+                    ColibriConferenceIQ.SctpConnection sctpConnectionIQ
+                        = new ColibriConferenceIQ.SctpConnection();
+                    channel.describe(sctpConnectionIQ);
+                    contentIQ.addSctpConnection(sctpConnectionIQ);
+                }
+                else
+                {
+                    ColibriConferenceIQ.Channel channelIQ
+                        = new ColibriConferenceIQ.Channel();
+                    channel.describe(channelIQ);
+                    contentIQ.addChannel(channelIQ);
+                }
             }
         }
     }
