@@ -779,10 +779,6 @@ public class Videobridge
                     {
                         String id = sctpConnIq.getID();
 
-                        Endpoint endpoint
-                            = conference.getOrCreateEndpoint(
-                                    sctpConnIq.getEndpoint());
-
                         SctpConnection sctpConn = null;
 
                         int expire = sctpConnIq.getExpire();
@@ -792,6 +788,10 @@ public class Videobridge
                         // uses endpoint identity
                         if (id == null)
                         {
+                            Endpoint endpoint
+                            = conference.getOrCreateEndpoint(
+                                    sctpConnIq.getEndpoint());
+                            
                             // FIXME: depreciated and to be removed
                             sctpConn = content.getSctpConnection(endpoint);
 

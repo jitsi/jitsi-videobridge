@@ -132,7 +132,6 @@ final class JSONDeserializer
         {
             Object direction
                 = channel.get(ColibriConferenceIQ.Channel.DIRECTION_ATTR_NAME);
-            Object id = channel.get(ColibriConferenceIQ.Channel.ID_ATTR_NAME);
             Object lastN
                 = channel.get(ColibriConferenceIQ.Channel.LAST_N_ATTR_NAME);
             Object receivingSimulcastLayer
@@ -156,9 +155,6 @@ final class JSONDeserializer
                 channelIQ.setDirection(
                         MediaDirection.parseString(direction.toString()));
             }
-            // id
-            if (id != null)
-                channelIQ.setID(id.toString());
             // lastN
             if (lastN != null)
             {
@@ -257,6 +253,7 @@ final class JSONDeserializer
             JSONObject channel,
             ColibriConferenceIQ.ChannelCommon channelIQ)
     {
+        Object id = channel.get(ColibriConferenceIQ.Channel.ID_ATTR_NAME);
         Object channelBundleId
             = channel.get(
                     ColibriConferenceIQ.ChannelCommon
@@ -271,6 +268,9 @@ final class JSONDeserializer
         Object transport
             = channel.get(IceUdpTransportPacketExtension.ELEMENT_NAME);
 
+        // id
+        if (id != null)
+            channelIQ.setID(id.toString());
         // channelBundleId
         if (channelBundleId != null)
             channelIQ.setChannelBundleId(channelBundleId.toString());
