@@ -894,7 +894,9 @@ public class Videobridge
                     ConfigurationService.class);
 
         this.defaultProcessingOptions
-            = cfg.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
+            = (cfg == null)
+                ? 0
+                : cfg.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
 
         if (logger.isDebugEnabled())
         {

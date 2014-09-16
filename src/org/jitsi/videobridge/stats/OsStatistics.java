@@ -187,7 +187,7 @@ public class OsStatistics
      * Implements the <tt>SigarCommandBase</tt> abstract class which is used for
      * retrieving CPU usage information.
      */
-    private class CPUInfo extends SigarCommandBase
+    private static class CPUInfo extends SigarCommandBase
     {
         /**
          * Returns the CPU usage information.

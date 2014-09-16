@@ -215,7 +215,7 @@ public class BridgeSenderReporting
         return receiverSenderInformationMap;
     }
 
-    class SenderInformation
+    private static class SenderInformation
     {
         long packetCount;
         long octetCount;

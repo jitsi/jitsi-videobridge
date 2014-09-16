@@ -763,9 +763,9 @@ public class Content
                     if (rtpTranslator instanceof RTPTranslatorImpl)
                     {
                         RTPTranslatorImpl rtpTranslatorImpl
-                                = (RTPTranslatorImpl) rtpTranslator;
+                            = (RTPTranslatorImpl) rtpTranslator;
 
-                        initialLocalSSRC = new Random().nextInt();
+                        initialLocalSSRC = Videobridge.RANDOM.nextInt();
 
                         rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
 

@@ -235,7 +235,7 @@ public class RtpChannel
          * synchronization source identifier (SSRC), which Jitsi Videobridge
          * pre-announces.
          */
-        initialLocalSSRC = new Random().nextInt();
+        initialLocalSSRC = Videobridge.RANDOM.nextInt();
 
         conferenceSpeechActivity
             = getContent().getConference().getSpeechActivity();

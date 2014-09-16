@@ -51,11 +51,18 @@ public class PubSubPublisher
      */
     public static PubSubPublisher getPubsubManager(String serviceName)
     {
-        if(!instances.containsKey(serviceName))
+        PubSubPublisher publisher;
+
+        if (instances.containsKey(serviceName))
         {
-            instances.put(serviceName, new PubSubPublisher(serviceName));
+            publisher = instances.get(serviceName);
         }
-        return instances.get(serviceName);
+        else
+        {
+            publisher = new PubSubPublisher(serviceName);
+            instances.put(serviceName, publisher);
+        }
+        return publisher;
     }
 
     /**
@@ -93,12 +100,12 @@ public class PubSubPublisher
     /**
      * Releases the resources for the <tt>PubSubPublisher</tt> and removes it from
      * the list of available instances.
-     * @param mgr the <tt>PubSubPublisher</tt> that will be released.
+     * @param publisher the <tt>PubSubPublisher</tt> that will be released.
      */
-    public static void releasePubsubManager(PubSubPublisher mgr)
+    public static void releasePubsubManager(PubSubPublisher publisher)
     {
-        instances.remove(mgr);
-        mgr.dispose();
+        instances.values().remove(publisher);
+        publisher.dispose();
     }
 
     /**
@@ -286,9 +293,8 @@ public class PubSubPublisher
      */
     private void handleConfigurationResponse(IQ response)
     {
-        if(pendingConfigureRequests.remove(response) != null)
+        if(pendingConfigureRequests.remove(response.getPacketID()) != null)
             fireResponseCreateEvent(Response.SUCCESS);
-
     }
 
     /**
