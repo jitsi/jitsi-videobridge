@@ -472,8 +472,6 @@ public class VideoChannel
                             break;
                     }
                 }
-                if (!endpointsEnteringLastN.isEmpty())
-                    lastNEndpointsChanged = true;
 
                 if (lastNEndpoints != null && !lastNEndpoints.isEmpty())
                 {
@@ -517,6 +515,12 @@ public class VideoChannel
         finally
         {
             writeLock.unlock();
+        }
+
+        if (endpointsEnteringLastN != null
+                && !endpointsEnteringLastN.isEmpty())
+        {
+            lastNEndpointsChanged = true;
         }
 
         // Notify about changes in the list of lastN.
