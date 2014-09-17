@@ -472,12 +472,10 @@ public class VideoChannel
                             break;
                     }
                 }
-                if ((lastNEndpoints == null) || lastNEndpoints.isEmpty())
-                {
-                    if (!endpointsEnteringLastN.isEmpty())
-                        lastNEndpointsChanged = true;
-                }
-                else
+                if (!endpointsEnteringLastN.isEmpty())
+                    lastNEndpointsChanged = true;
+
+                if (lastNEndpoints != null && !lastNEndpoints.isEmpty())
                 {
                     /*
                      * Some of these first lastN are already in the list of
@@ -525,7 +523,7 @@ public class VideoChannel
         if (lastNEndpointsChanged)
             lastNEndpointsChanged(endpointsEnteringLastN);
 
-        // Request keyframes from the Enpoints entering the list of lastN.
+        // Request keyframes from the Endpoints entering the list of lastN.
         return endpointsEnteringLastN;
     }
 }
