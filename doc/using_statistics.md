@@ -15,7 +15,7 @@ Introduction
 
 Implementation
 ==============
-** Jitsi Videobridge uses the following statistics names in the reports:**
+**Jitsi Videobridge uses the following statistics names in the reports:**
 
  * **current_timestamp** - The value is the date and time when the statistics are 
 generated.
@@ -39,7 +39,7 @@ protocol or by PubSub (XEP-0060).
 
 This is an example COLIBRI packet of statistics report:
 ```xml
-<iq type='result' to='38d17cb9-0d3a-498e-b3ea-05b377845c07@ƒ/4533b58e-409f-4f6b-9268-f335b4430ba6' from='jitsi-videobridge.jitsi.net' id='u4Fc8-16' xmlns='jabber:client'>
+<iq type='result' to='38d17cb9-0d3a-498e-b3ea-05b377845c07@Æ’/4533b58e-409f-4f6b-9268-f335b4430ba6' from='jitsi-videobridge.jitsi.net' id='u4Fc8-16' xmlns='jabber:client'>
 	<stats xmlns=' http://jitsi.org/protocol/colibri'>
 		<stat value='2014-07-30 10:13:11.595' name='current_timestamp'/>
 		<stat value='229' name='threads'/>
@@ -89,7 +89,7 @@ packet:
 When the Pubsub node receives the report it will resend it to all subscribers of
 the Pubsub node with the following packet:
 ```xml
-<message from='pubsub.jitsi.net' to='subscriber@É' id='foo'>
+<message from='pubsub.jitsi.net' to='subscriber@Ã‰' id='foo'>
 	<event xmlns=' http://jabber.org/protocol/pubsub#event'>
 		<items node='videobridge_stats'>
 			<item id='ae890ac52d0df67ed7cfdf51b644e901'>
