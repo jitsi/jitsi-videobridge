@@ -680,6 +680,10 @@ public class RtpChannel
      * Returns the number of lost packets for this channel since last time the
      * method is called.
      *
+     * Note: {@link org.jitsi.videobridge.stats.VideobridgeStatistics} uses this
+     * method and it relies on the fact that the method is not called from
+     * anywhere else. This should probably be refactored.
+     *
      * @return the number of lost packets since last time the method is called.
      */
     public long getLastPacketsLostNB()
@@ -701,6 +705,11 @@ public class RtpChannel
     /**
      * Returns the number of packets that are sent or received for this channel
      * since last time the method is called.
+     *
+     * Note: {@link org.jitsi.videobridge.stats.VideobridgeStatistics} uses this
+     * method and it relies on the fact that the method is not called from
+     * anywhere else. This should probably be refactored.
+     *
      * @return  the number of packets that are sent or received since last time
      * the method is called.
      */
@@ -720,10 +729,10 @@ public class RtpChannel
         }
     }
 
-	/**
+    /**
      * Returns a <tt>MediaService</tt> implementation (if any).
      *
-     * @return a <tt>MediaService</tt> implementation (if any)
+     * @return a <tt>MediaService</tt> implementation (if any).
      */
     private MediaService getMediaService()
     {
@@ -733,9 +742,14 @@ public class RtpChannel
     /**
      * Returns the number of received bytes since the last time the
      * method was called.
+     *
+     * Note: {@link org.jitsi.videobridge.stats.VideobridgeStatistics} uses this
+     * method and it relies on the fact that the method is not called from
+     * anywhere else. This should probably be refactored.
+     *
      * @return the number of received bytes.
      */
-	public long getNBReceivedBytes()
+    public long getNBReceivedBytes()
     {
         long bytes = 0;
         long newBytes = stream.getMediaStreamStats().getNbReceivedBytes();
@@ -751,6 +765,11 @@ public class RtpChannel
     /**
      * Returns the number of sent bytes since the last time the
      * method was called.
+     *
+     * Note: {@link org.jitsi.videobridge.stats.VideobridgeStatistics} uses this
+     * method and it relies on the fact that the method is not called from
+     * anywhere else. This should probably be refactored.
+     *
      * @return the number of sent bytes.
      */
     public long getNBSentBytes()
