@@ -34,6 +34,8 @@ import org.osgi.framework.*;
  */
 public class Videobridge
 {
+    public static final String COLIBRI_CLASS = "colibriClass";
+
     /**
      * The name of configuration property used to specify default processing
      * options passed as the second argument to
@@ -766,8 +768,8 @@ public class Videobridge
                         int expire = sctpConnIq.getExpire();
                         String channelBundleId = sctpConnIq.getChannelBundleId();
 
-                        // No ID means SCTP connection is to be created
-                        // or focus uses endpoint identity
+                        // No ID means SCTP connection is to be created or focus
+                        // uses endpoint identity
                         if (id == null)
                         {
                             // FIXME: depreciated and to be removed

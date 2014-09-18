@@ -13,6 +13,7 @@ import java.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.json.simple.*;
 import org.json.simple.parser.*;
 
 /**
@@ -95,7 +96,7 @@ public class Endpoint
      * other endpoint.
      */
     public static final String SELECTED_ENDPOINT_NOT_WATCHING_VIDEO
-            = "SELECTED_ENDPOINT_NOT_WATCHING_VIDEO";
+        = "SELECTED_ENDPOINT_NOT_WATCHING_VIDEO";
 
     /**
      * Gets the (unique) identifier/ID of the currently selected
@@ -424,26 +425,31 @@ public class Endpoint
     public void onStringData(WebRtcDataStream src, String msg)
     {
         // JSONParser is NOT thread-safe.
-        final JSONParser parser = new JSONParser();
+        JSONParser parser = new JSONParser();
+        JSONObject jsonObject;
 
-        Map map;
         try
         {
-            map = (Map) parser.parse(msg);
+            Object obj = parser.parse(msg);
+
+            // We utilize JSONObjects only.
+            if (obj instanceof JSONObject)
+                jsonObject = (JSONObject) obj;
+            else
+                return;
         }
         catch (ParseException e)
         {
-            logger.warn("Malformed JSON received from endpoint " + getID(),
-                    e);
-
+            logger.warn("Malformed JSON received from endpoint " + getID(), e);
             return;
         }
 
-        // handle different types of messages.
-        if (map.containsKey("colibriClass"))
+        // We utilize JSONObjects with colibriClass only.
+        Object colibriClass = jsonObject.get(Videobridge.COLIBRI_CLASS);
+
+        if (colibriClass != null)
         {
-            if ("SelectedEndpointChangedEvent".equals(map.get(
-                    "colibriClass")))
+            if ("SelectedEndpointChangedEvent".equals(colibriClass))
             {
                 String oldSelectedEndpoint, newSelectedEndpoint;
                 boolean changed;
@@ -452,8 +458,7 @@ public class Endpoint
                 {
                     oldSelectedEndpoint = this.selectedEndpointID;
                     newSelectedEndpoint
-                            = (String) map.get("selectedEndpoint");
-
+                        = (String) jsonObject.get("selectedEndpoint");
                     if (newSelectedEndpoint == null
                             || newSelectedEndpoint.length() == 0)
                     {
@@ -461,12 +466,7 @@ public class Endpoint
                                 = SELECTED_ENDPOINT_NOT_WATCHING_VIDEO;
                     }
 
-                    changed = (oldSelectedEndpoint == null
-                            && newSelectedEndpoint != null)
-                            || (oldSelectedEndpoint != null
-                            && !oldSelectedEndpoint
-                            .equals(newSelectedEndpoint));
-
+                    changed = !newSelectedEndpoint.equals(oldSelectedEndpoint);
                     if (changed)
                     {
                         this.selectedEndpointID = newSelectedEndpoint;
@@ -484,19 +484,22 @@ public class Endpoint
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug("Endpoint + " + getID() + " selected " +
-                                newSelectedEndpoint);
+                        logger.debug(
+                                "Endpoint + " + getID() + " selected "
+                                    + newSelectedEndpoint);
                     }
-
-                    firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
+                    firePropertyChange(
+                            SELECTED_ENDPOINT_PROPERTY_NAME,
                             oldSelectedEndpoint, newSelectedEndpoint);
                 }
             }
-        } else
+        }
+        else
         {
-            logger.warn("Malformed JSON received from endpoint " + getID()
-                    + ". JSON object does not contain the colibriClass " +
-                    "field");
+            logger.warn(
+                    "Malformed JSON received from endpoint " + getID()
+                        + ". JSON object does not contain the colibriClass"
+                        + " field.");
         }
     }
 

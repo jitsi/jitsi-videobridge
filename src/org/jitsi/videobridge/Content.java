@@ -275,10 +275,8 @@ public class Content
             sctpConnection
                 = new SctpConnection(
                         id, this, endpoint, sctpPort, channelBundleId);
-
             channels.put(sctpConnection.getID(), sctpConnection);
         }
-
         return sctpConnection;
     }
 
