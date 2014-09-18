@@ -24,8 +24,8 @@ Jingle/SDP signaling
 --------------------
 
 When a participant "joins" the conference, the focus invites that
-participant into a 1-to-1 call by sending a session-initiate [xep0166]
-stanza to request negotiation of a new Jingle session [xep0167] with
+participant into a 1-to-1 call by sending a [session-initiate] [xep0166]
+stanza to request negotiation of a new [Jingle session] [xep0167] with
 that participant. The session-initiate stanza translates to an SDP
 offer that includes the SIM groups of all the participants in the
 conference.
@@ -175,9 +175,9 @@ focus knows about the simulcast groups of every other participant.
 COLIBRI signaling
 -----------------
 
-When the focus receives the answer (in a session-accept stanza
+When the focus receives the answer (in a [session-accept stanza]
 [xep0166]) of a participant, it has to signal this information,
-including the simulcast group, to the bridge through COLIBRI
+including the simulcast group, to the bridge through [COLIBRI]
 [colibri].
 
 Signaling through COLIBRI has the advantage of enabling the bridge to
