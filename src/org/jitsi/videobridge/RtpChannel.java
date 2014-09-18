@@ -25,7 +25,6 @@ import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
-import org.jitsi.service.neomedia.event.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
@@ -75,15 +74,6 @@ public class RtpChannel
      * conference in which this <tt>Channel</tt> is participating.
      */
     protected final ConferenceSpeechActivity conferenceSpeechActivity;
-
-    /**
-     * The <tt>CsrcAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setCsrcAudioLevelListener(
-     * CsrcAudioLevelListener)} in order to receive the audio levels of the
-     * contributing sources.
-     */
-    private CsrcAudioLevelListener csrcAudioLevelListener;
 
     /**
      * Holds the <tt>RtpChannelDatagramFilter</tt> instances (if any) used by
@@ -155,16 +145,6 @@ public class RtpChannel
      * of <tt>neomedia</tt>.
      */
     private final MediaStream stream;
-
-    /**
-     * The <tt>SimpleAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setStreamAudioLevelListener(
-     * SimpleAudioLevelListener)} in order to have the audio levels of the
-     * contributing sources calculated and to end enable the functionality of
-     * {@link #lastN}.
-     */
-    private SimpleAudioLevelListener streamAudioLevelListener;
 
     /**
      * Whether {@link #stream} has been closed.
@@ -649,32 +629,6 @@ public class RtpChannel
     }
 
     /**
-     * Gets the <tt>CsrcAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setCsrcAudioLevelListener(
-     * CsrcAudioLevelListener)} in order to receive the audio levels of the
-     * contributing sources.
-     *
-     * @return the <tt>CsrcAudioLevelListener</tt> instance
-     */
-    private CsrcAudioLevelListener getCsrcAudioLevelListener()
-    {
-        if (csrcAudioLevelListener == null)
-        {
-            csrcAudioLevelListener
-                = new CsrcAudioLevelListener()
-                {
-                    @Override
-                    public void audioLevelsReceived(long[] levels)
-                    {
-                        streamAudioLevelsReceived(levels);
-                    }
-                };
-        }
-        return csrcAudioLevelListener;
-    }
-
-    /**
      * Gets the <tt>RtpChannelDatagramFilter</tt> that accepts RTP (if
      * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
      * this <tt>RtpChannel</tt>.
@@ -871,33 +825,6 @@ public class RtpChannel
     }
 
     /**
-     * Gets the <tt>SimpleAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setStreamAudioLevelListener(
-     * SimpleAudioLevelListener)} in order to have the audio levels of the
-     * contributing sources calculated and to enable the functionality of
-     * {@link #lastN}.
-     *
-     * @return the <tt>SimpleAudioLevelListener</tt> instance
-     */
-    private SimpleAudioLevelListener getStreamAudioLevelListener()
-    {
-        if (streamAudioLevelListener == null)
-        {
-            streamAudioLevelListener
-                = new SimpleAudioLevelListener()
-                {
-                    @Override
-                    public void audioLevelChanged(int level)
-                    {
-                        streamAudioLevelChanged(level);
-                    }
-                };
-        }
-        return streamAudioLevelListener;
-    }
-
-    /**
      * Determines whether a specific <tt>Channel</tt> is within the set of
      * <tt>Channel</tt>s limited by {@link #lastN} i.e. whether the RTP video
      * streams of the specified channel are to be sent to the remote endpoint of
@@ -1060,6 +987,22 @@ public class RtpChannel
     }
 
     /**
+     * Notifies this instance that a specific <tt>List</tt> of payload types was
+     * set on this instance. Allows extenders to override.
+     *
+     * @param payloadTypes the <tt>List</tt> of payload types which was set on
+     * this instance and which is the cause of the notification
+     * @param googleChrome <tt>true</tt> if it looks like Google Chrome (in
+     * distinction with Jitsi) is the remote endpoint based on
+     * <tt>payloadTypes</tt>; otherwise, <tt>false</tt> 
+     */
+    protected void payloadTypesSet(
+            List<PayloadTypePacketExtension> payloadTypes,
+            boolean googleChrome)
+    {
+    }
+
+    /**
      * Notifies this instance that there was a change in the value of a property
      * of an object in which this instance is interested.
      *
@@ -1147,32 +1090,12 @@ public class RtpChannel
      * exceptions; otherwise, the <tt>stream</tt> will not be closed.
      * </p>
      */
-    private void removeStreamListeners()
+    protected void removeStreamListeners()
     {
         try
         {
             stream.removePropertyChangeListener(
                 streamPropertyChangeListener);
-
-            if (stream instanceof AudioMediaStream)
-            {
-                AudioMediaStream audioStream = (AudioMediaStream) stream;
-                CsrcAudioLevelListener csrcAudioLevelListener
-                    = this.csrcAudioLevelListener;
-                SimpleAudioLevelListener streamAudioLevelListener
-                    = this.streamAudioLevelListener;
-
-                if (csrcAudioLevelListener != null)
-                {
-                    audioStream.setCsrcAudioLevelListener(
-                        csrcAudioLevelListener);
-                }
-                if (streamAudioLevelListener != null)
-                {
-                    audioStream.setStreamAudioLevelListener(
-                        streamAudioLevelListener);
-                }
-            }
         }
         catch (Throwable t)
         {
@@ -1181,6 +1104,20 @@ public class RtpChannel
             else if (t instanceof ThreadDeath)
                 throw (ThreadDeath) t;
         }
+    }
+
+    /**
+     * Notifies this instance that the value of the <tt>rtpLevelRelayType</tt>
+     * property of this instance changed from a specific old value to a specific
+     * new value. Allows extenders to override.
+     *
+     * @param oldValue the old value of the <tt>rtpLevelRelayType</tt> property
+     * @param newValue the new value of the <tt>rtpLevelRelayType</tt> property
+     */
+    protected void rtpLevelRelayTypeChanged(
+            RTPLevelRelayType oldValue,
+            RTPLevelRelayType newValue)
+    {
     }
 
     /**
@@ -1272,6 +1209,7 @@ public class RtpChannel
 
             if (mediaService != null)
             {
+                int payloadTypeCount = payloadTypes.size();
                 /*
                  * TODO We will try to recognize Google Chrome (in distinction
                  * with Jitsi) acting as the remote endpoint in order to use
@@ -1281,12 +1219,12 @@ public class RtpChannel
                  */
                 boolean googleChrome = false;
 
-                int payloadTypesCount = payloadTypes.size();
-                receivePTs = new int[payloadTypesCount];
-                for (int i = 0; i < payloadTypesCount; i++)
+                receivePTs = new int[payloadTypeCount];
+                for (int i = 0; i < payloadTypeCount; i++)
                 {
                     PayloadTypePacketExtension payloadType
                         = payloadTypes.get(i);
+
                     receivePTs[i] = payloadType.getID();
 
                     MediaFormat mediaFormat
@@ -1295,11 +1233,11 @@ public class RtpChannel
                                 mediaService,
                                 null);
 
-                    String name = payloadType.getName();
                     if (mediaFormat == null)
                     {
                         if (!googleChrome
-                                && "iSAC".equalsIgnoreCase(name))
+                                && "iSAC".equalsIgnoreCase(
+                                        payloadType.getName()))
                         {
                             googleChrome = true;
                         }
@@ -1312,35 +1250,7 @@ public class RtpChannel
                     }
                 }
 
-                if (googleChrome && (stream instanceof AudioMediaStream))
-                {
-                    /*
-                     * TODO Use RTPExtension.SSRC_AUDIO_LEVEL_URN instead of
-                     * RTPExtension.CSRC_AUDIO_LEVEL_URN while we do not support
-                     * the negotiation of RTP header extension IDs.
-                     */
-                    URI uri;
-
-                    try
-                    {
-                        uri = new URI(RTPExtension.SSRC_AUDIO_LEVEL_URN);
-                    }
-                    catch (URISyntaxException e)
-                    {
-                        uri = null;
-                    }
-                    if (uri != null)
-                    {
-                        stream.addRTPExtension((byte) 1, new RTPExtension(uri));
-                        /*
-                         * Feed the client-to-mixer audio levels into the
-                         * algorithm which detects/identifies the
-                         * active/dominant speaker.
-                         */
-                        ((AudioMediaStream) stream).setCsrcAudioLevelListener(
-                            getCsrcAudioLevelListener());
-                    }
-                }
+                payloadTypesSet(payloadTypes, googleChrome);
             }
         }
 
@@ -1364,7 +1274,11 @@ public class RtpChannel
 
         if (this.rtpLevelRelayType == null)
         {
+            RTPLevelRelayType oldValue = null;
+
             this.rtpLevelRelayType = rtpLevelRelayType;
+
+            RTPLevelRelayType newValue = getRTPLevelRelayType();
 
             /*
              * If the RTP-level relay to be used for this Channel is a mixer,
@@ -1373,30 +1287,12 @@ public class RtpChannel
              * is a translator, then the stream will not have a MediaDevice and
              * will have an RTPTranslator.
              */
-            switch (getRTPLevelRelayType())
+            switch (newValue)
             {
             case MIXER:
-                Content content = getContent();
-                MediaDevice device = content.getMixer();
+                MediaDevice device = getContent().getMixer();
 
                 stream.setDevice(device);
-
-                if (MediaType.AUDIO.equals(content.getMediaType()))
-                {
-                    /*
-                     * Allow the Jitsi Videobridge server to send the audio
-                     * levels of the contributing sources to the telephony
-                     * conference participants.
-                     */
-                    List<RTPExtension> rtpExtensions
-                        = device.getSupportedExtensions();
-
-                    if (rtpExtensions.size() == 1)
-                        stream.addRTPExtension((byte) 1, rtpExtensions.get(0));
-
-                    ((AudioMediaStream) stream).setStreamAudioLevelListener(
-                            getStreamAudioLevelListener());
-                }
 
                 /*
                  * It is necessary to start receiving media in order to
@@ -1415,6 +1311,7 @@ public class RtpChannel
                 throw new IllegalStateException("rtpLevelRelayType");
             }
 
+            rtpLevelRelayTypeChanged(oldValue, newValue);
         }
         else if (!this.rtpLevelRelayType.equals(rtpLevelRelayType))
         {
@@ -1446,86 +1343,6 @@ public class RtpChannel
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
         return null;
-    }
-
-    /**
-     * Notifies this instance about a change in the audio level of the (remote)
-     * endpoint/conference participant associated with this <tt>Channel</tt>.
-     *
-     * @param level the new/current audio level of the (remote)
-     * endpoint/conference participant associated with this <tt>Channel</tt>
-     */
-    private void streamAudioLevelChanged(int level)
-    {
-        /*
-         * Whatever, the Jitsi Videobridge is not interested in the audio
-         * levels. However, an existing/non-null streamAudioLevelListener has to
-         * be set on an AudioMediaStream in order to have the audio levels of
-         * the contributing sources calculated at all.
-         */
-    }
-
-    /**
-     * Notifies this instance that {@link #stream} has received the audio levels
-     * of the contributors to this <tt>Channel</tt>.
-     *
-     * @param levels a <tt>long</tt> array in which the elements at the even
-     * indices specify the CSRC IDs and the elements at the odd indices
-     * specify the respective audio levels
-     */
-    private void streamAudioLevelsReceived(long[] levels)
-    {
-        if (levels != null)
-        {
-            /*
-             * Forward the audio levels of the contributors to this Channel to
-             * the active/dominant speaker detection/identification algorithm.
-             */
-            int[] receiveSSRCs = getReceiveSSRCs();
-
-            if (receiveSSRCs.length != 0)
-            {
-                /*
-                 * The SSRCs are at the even indices, their audio levels at the
-                 * immediately subsequent odd indices.
-                 */
-                for (int i = 0, count = levels.length / 2; i < count; i++)
-                {
-                    int i2 = i * 2;
-                    long ssrc = levels[i2];
-                    /*
-                     * The contributing SSRCs may not all be from sources
-                     * associated with this Channel and we're only interested in
-                     * the latter here.
-                     */
-                    boolean isReceiveSSRC = false;
-
-                    for (int receiveSSRC : receiveSSRCs)
-                    {
-                        if (ssrc == (0xFFFFFFFFL & receiveSSRC))
-                        {
-                            isReceiveSSRC = true;
-                            break;
-                        }
-                    }
-                    if (isReceiveSSRC)
-                    {
-                        ConferenceSpeechActivity conferenceSpeechActivity
-                            = this.conferenceSpeechActivity;
-
-                        if (conferenceSpeechActivity != null)
-                        {
-                            int level = (int) levels[i2 + 1];
-
-                            conferenceSpeechActivity.levelChanged(
-                                    this,
-                                    ssrc,
-                                    level);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**
