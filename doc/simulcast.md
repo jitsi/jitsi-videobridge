@@ -14,7 +14,7 @@ It describes 4 streams. SSRCs 1 and 2 are different spatial layers
 (simulcast) of the same video stream. SSRC 3 is the FEC of SSRC 1, and
 4 is the FEC of SSRC 2.
 
-In the Jitsi videobridge, we use the ssrc-group:SIM attribute to
+In the Jitsi videobridge, we use the `ssrc-group:SIM` attribute to
 signal the simulcast.
 
 Initial signaling
@@ -170,7 +170,7 @@ a=sctpmap:5000 webrtc-datachannel 1024
 </pre>
 
 With this signaling, every participant in the conference **and** the
-focus knows about the simulcast groups of every other participant.
+focus know about the simulcast groups of every other participant.
 
 COLIBRI signaling
 -----------------
@@ -206,7 +206,7 @@ We signal the "complete" picture to the bridge like this:
 	  ...
 	</content>
 
-The order of the sources in the ssrc simulcast group is important and
+The order of the sources in the simulcast ssrc-group is important and
 must be from lowest to highest quality.
 
 Data Channel Notifications & Commands
@@ -298,7 +298,7 @@ So, the above COLIBRI message will result in a
 `SimulcastLayersChangedEvent` message to the peer notifying it that
 the streams it receives have changed.
 
-It possible to ignore `SimulcastLayersChangedEvent` messages from the
+It is possible for endpoints to ignore `SimulcastLayersChangedEvent` messages from the
 bridge and, instead, simply listen for data on the media
 tracks/streams. The bridge will only send one substream of the
 simulcast at any given time. So, if for example you start receiving
