@@ -259,6 +259,8 @@ public class VideoChannel
 
                 for (WeakReference<Endpoint> wr : lastNEndpoints)
                 {
+                    if (n >= lastN)
+                        break;
                     Endpoint e = wr.get();
 
                     if (e != null)
@@ -285,8 +287,6 @@ public class VideoChannel
                     }
 
                     ++n;
-                    if (n >= lastN)
-                        break;
                 }
             }
         }
@@ -369,14 +369,15 @@ public class VideoChannel
 
         for (Endpoint e : endpoints)
         {
+            if (n >= lastN)
+                break;
+
             if (e.equals(thisEndpoint))
                 continue;
             else if (e.equals(endpoint))
                 return n;
 
             ++n;
-            if (n >= lastN)
-                break;
         }
         return -1;
     }
@@ -457,7 +458,7 @@ public class VideoChannel
             {
                 endpoints = conferenceSpeechActivity.getEndpoints();
             }
-            if (lastN > 0)
+            if (lastN >= 0)
             {
                 Endpoint thisEndpoint = getEndpoint();
 
@@ -465,11 +466,11 @@ public class VideoChannel
                 endpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
                 for (Endpoint e : endpoints)
                 {
+                    if (endpointsEnteringLastN.size() >= lastN)
+                        break;
                     if (!e.equals(thisEndpoint))
                     {
                         endpointsEnteringLastN.add(e);
-                        if (endpointsEnteringLastN.size() >= lastN)
-                            break;
                     }
                 }
 
@@ -483,6 +484,9 @@ public class VideoChannel
 
                     for (WeakReference<Endpoint> wr : lastNEndpoints)
                     {
+                        if (n >= lastN)
+                            break;
+
                         Endpoint e = wr.get();
 
                         if (e != null)
@@ -500,8 +504,6 @@ public class VideoChannel
                         }
 
                         ++n;
-                        if (n >= lastN)
-                            break;
                     }
                 }
             }
