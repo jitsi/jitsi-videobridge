@@ -167,7 +167,7 @@ class HandlerImpl
     extends AbstractHandler
 {
     /**
-     * The HTTP resource which list the JSON representation of the
+     * The HTTP resource which lists the JSON representation of the
      * <tt>Conference</tt>s of <tt>Videobridge</tt>.
      */
     private static final String CONFERENCES = "conferences";
@@ -184,6 +184,14 @@ class HandlerImpl
      * <tt>Videobridge</tt>.
      */
     private static final String DEFAULT_JSON_TARGET = null;
+
+    /**
+     * The HTTP resource which retrieves a JSON representation of the
+     * <tt>DominantSpeakerIdentification</tt> of a <tt>Conference</tt> of
+     * <tt>Videobridge</tt>.
+     */
+    private static final String DOMINANT_SPEAKER_IDENTIFICATION
+        = "dominant-speaker-identification";
 
     /**
      * The HTTP GET method.
@@ -281,11 +289,36 @@ class HandlerImpl
         }
         else
         {
-            Conference conference = videobridge.getConference(target, null);
+            // We allow requests for certain sub-resources of a Conference
+            // though such as DominantSpeakerIdentification.
+            int conferenceIDEndIndex = target.indexOf('/');
+            String conferenceID = target;
+
+            if ((conferenceIDEndIndex > 0)
+                    && (conferenceIDEndIndex < target.length() - 1))
+            {
+                target = target.substring(conferenceIDEndIndex + 1);
+                if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target))
+                {
+                    conferenceID
+                        = conferenceID.substring(0, conferenceIDEndIndex);
+                }
+            }
+
+            Conference conference
+                = videobridge.getConference(conferenceID, null);
 
             if (conference == null)
             {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            }
+            else if (DOMINANT_SPEAKER_IDENTIFICATION.equals(target))
+            {
+                doGetDominantSpeakerIdentificationJSON(
+                        conference,
+                        baseRequest,
+                        request,
+                        response);
             }
             else
             {
@@ -354,6 +387,41 @@ class HandlerImpl
 
             response.setStatus(HttpServletResponse.SC_OK);
             conferencesJSONArray.writeJSONString(response.getWriter());
+        }
+    }
+
+    /**
+     * Retrieves a JSON representation of the
+     * <tt>DominantSpeakerIdentification</tt> of a specific <tt>Conference</tt>.
+     *
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
+    private void doGetDominantSpeakerIdentificationJSON(
+            Conference conference,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        ConferenceSpeechActivity conferenceSpeechActivity
+            = conference.getSpeechActivity();
+
+        if (conferenceSpeechActivity != null)
+        {
+            JSONObject jsonObject
+                = conferenceSpeechActivity
+                    .doGetDominantSpeakerIdentificationJSON();
+
+            if (jsonObject != null)
+            {
+                response.setStatus(HttpServletResponse.SC_OK);
+                jsonObject.writeJSONString(response.getWriter());
+            }
         }
     }
 
@@ -668,11 +736,12 @@ class HandlerImpl
             {
                 target
                     = target.substring(0, target.length() - jsonTargetLength);
-                /*
-                 * All responses to request for resources under the base
-                 * /colibri/ are in JSON format.
-                 */
+
+                // All responses to requests for resources under the base
+                // /colibri/ are in JSON format.
                 response.setContentType(JSON_CONTENT_TYPE_WITH_CHARSET);
+                // Cross-origin resource sharing (CORS)
+                response.setHeader("Access-Control-Allow-Origin", "*");
 
                 handleColibriJSON(target, baseRequest, request, response);
 
@@ -738,10 +807,8 @@ class HandlerImpl
             }
             else
             {
-                /*
-                 * The target at this point of the execution is reduced to a
-                 * Conference ID.
-                 */
+                // The target at this point of the execution is reduced to a
+                // String which starts with a Conference ID.
                 if (GET_HTTP_METHOD.equals(requestMethod))
                 {
                     // Retrieve a representation of a Conference of Videobridge.

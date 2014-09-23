@@ -1202,7 +1202,7 @@ public class Conference
      * @return the speech activity (representation) of the <tt>Endpoint</tt>s of
      * this <tt>Conference</tt>
      */
-    ConferenceSpeechActivity getSpeechActivity()
+    public ConferenceSpeechActivity getSpeechActivity()
     {
         return speechActivity;
     }
