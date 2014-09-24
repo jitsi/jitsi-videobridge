@@ -44,6 +44,7 @@ case "$1" in
             echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> /etc/default/jitsi-videobridge
             echo "JVB_PORT=$JVB_PORT" >> /etc/default/jitsi-videobridge
             echo "JVB_SECRET=$JVB_SECRET" >> /etc/default/jitsi-videobridge
+            echo "JVB_OPTS=\"\"" >> /etc/default/jitsi-videobridge
 
             # and we're done with debconf
             db_stop

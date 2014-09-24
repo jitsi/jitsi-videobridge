@@ -27,7 +27,7 @@ USER=jvb
 PIDFILE=/var/run/jitsi-videobridge.pid
 LOGFILE=/var/log/jitsi/jvb.log
 DESC=jitsi-videobridge
-DAEMON_OPTS=" --host=localhost --domain=$JVB_HOSTNAME --port=$JVB_PORT --secret=$JVB_SECRET"
+DAEMON_OPTS=" --host=localhost --domain=$JVB_HOSTNAME --port=$JVB_PORT --secret=$JVB_SECRET $JVB_OPTS"
 
 test -x $DAEMON || exit 0
 
