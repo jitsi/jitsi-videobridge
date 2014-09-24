@@ -881,7 +881,7 @@ public class IceUdpTransportManager
      * to {@link #iceAgent} and starts {@link #iceAgent} if it isn't already
      * started.
      */
-    private synchronized boolean doStartConnectivityEstablishment(
+    private synchronized void doStartConnectivityEstablishment(
             IceUdpTransportPacketExtension transport)
     {
         if (transport.isRtcpMux())
@@ -912,12 +912,21 @@ public class IceUdpTransportManager
             dtlsControl.setRemoteFingerprints(remoteFingerprints);
         }
 
+        IceProcessingState state = iceAgent.getState();
+        if (IceProcessingState.COMPLETED.equals(state)
+            || IceProcessingState.TERMINATED.equals(state))
+        {
+            // Adding candidates to a completed Agent is unnecessary and has
+            // been observed to cause problems.
+            return;
+        }
+
         /*
          * If ICE is running already, we try to update the checklists with the
          * candidates. Note that this is a best effort.
          */
         boolean iceAgentStateIsRunning
-            = IceProcessingState.RUNNING.equals(iceAgent.getState());
+            = IceProcessingState.RUNNING.equals(state);
         int remoteCandidateCount = 0;
 
         if (rtcpmux)
@@ -943,7 +952,7 @@ public class IceUdpTransportManager
                 CandidatePacketExtension.class);
 
         if (iceAgentStateIsRunning && (candidates.size() == 0))
-            return false;
+            return;
 
         // Sort the remote candidates (host < reflexive < relayed) in order
         // to create first the host, then the reflexive, the relayed
@@ -1029,7 +1038,7 @@ public class IceUdpTransportManager
                  * candidates were ignored: iceAgentStateIsRunning
                  * && (candidates.size() == 0).
                  */
-                return false;
+                return;
             }
             else
             {
@@ -1067,8 +1076,6 @@ public class IceUdpTransportManager
             if (remoteCandidateCount != 0)
                 iceAgent.startConnectivityEstablishment();
         }
-
-        return iceAgentStateIsRunning || (remoteCandidateCount != 0);
     }
 
     /**
