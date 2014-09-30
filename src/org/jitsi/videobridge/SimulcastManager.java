@@ -379,11 +379,15 @@ public class SimulcastManager
     }
 
     /**
-     * Sets the receiving simulcast substream for all peers.
+     * Sets the receiving simulcast substream for the peers in the endpoints
+     * parameter.
      *
+     * @param endpoints
      * @param receivingSimulcastLayer
      */
-    public void setReceivingSimulcastLayer(Integer receivingSimulcastLayer)
+    public void setReceivingSimulcastLayer(
+            Collection<Endpoint> endpoints,
+            Integer receivingSimulcastLayer)
     {
         Content content = videoChannel.getContent();
         if (content == null)
@@ -393,7 +397,6 @@ public class SimulcastManager
         if (conference == null)
             return;
 
-        List<Endpoint> endpoints = conference.getEndpoints();
         if (endpoints == null || endpoints.isEmpty())
             return;
 
@@ -462,6 +465,9 @@ public class SimulcastManager
             }
         }
 
+        // TODO(gp) remove the SimulcastLayersChangedEvent event receivers
+        // should listen for MediaStreamTrackActivity instead. It was a bad
+        // idea to begin with.
         if (!endpointSimulcastLayers.isEmpty())
         {
             // Receiving simulcast layers changed, create and send an event

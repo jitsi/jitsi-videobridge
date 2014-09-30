@@ -20,6 +20,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
+import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.json.simple.*;
@@ -329,20 +330,19 @@ public class Conference
     }
 
     /**
-     * Notifies this instance that an endpoint has changed its video selection.
+     * Sends a data channel command to a simulcast enabled video sender to make
+     * it stop streaming its hq stream, if it's not being watched by any
+     * receiver.
+     *
+     * @param id
      */
-    private void selectedEndpointChanged(Endpoint endpoint,
-                                         String oldValue,
-                                         String newValue)
+    private void maybeSendStopHighQualityStreamCommand(String id)
     {
-        // if the old endpoint is not being watched by any of the receivers,
-        // the bridge will tell it to stop streaming its hq stream.
-
         Endpoint oldEndpoint = null;
-        if (oldValue != null && oldValue.length() != 0 &&
-                oldValue != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
+        if (id != null && id.length() != 0 &&
+                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
         {
-            oldEndpoint = getEndpoint(oldValue);
+            oldEndpoint = getEndpoint(id);
         }
 
         List<RtpChannel> oldVideoChannels = null;
@@ -402,10 +402,10 @@ public class Conference
 
                 SimulcastLayer hqLayer = oldSimulcastLayers.last();
 
-                StopSimulcastLayerEvent event
-                        = new StopSimulcastLayerEvent(hqLayer);
+                StopSimulcastLayerCommand command
+                        = new StopSimulcastLayerCommand(hqLayer);
 
-                String json = MyJsonEncoder.toJSON(event);
+                String json = MyJsonEncoder.toJSON(command);
 
                 try
                 {
@@ -416,31 +416,54 @@ public class Conference
                     logger.error("Failed to send message on data channel.", e1);
                 }
 
-                for (Endpoint e : getEndpoints())
-                {
-                    if (e != oldEndpoint)
-                    {
-                        for (RtpChannel c : e.getChannels(MediaType.VIDEO))
-                        {
-                            SimulcastManager simulcastManager =
-                                ((VideoChannel)c).getSimulcastManager();
+                // Go through all the endpoints in the conference and configure
+                // them to receive the base quality stream for the oldSender
 
-                            if (simulcastManager != null)
-                                simulcastManager.setReceivingSimulcastLayer(0);
+                // NOTE(gp) since we have arrived at this line, this should
+                // already be the case.
+                Collection<Endpoint> endpoints = getEndpoints();
+                if (endpoints != null)
+                {
+                    endpoints.remove(oldEndpoint);
+                    if (!endpoints.isEmpty())
+                    {
+                        Collection<Endpoint> changedEndpoints =
+                                new ArrayList<Endpoint>(1);
+                        changedEndpoints.add(oldEndpoint);
+
+                        for (Endpoint e : endpoints)
+                        {
+                            for (RtpChannel c : e.getChannels(MediaType.VIDEO))
+                            {
+                                SimulcastManager simulcastManager =
+                                        ((VideoChannel)c).getSimulcastManager();
+
+                                if (simulcastManager != null)
+                                {
+                                    simulcastManager.setReceivingSimulcastLayer(
+                                            changedEndpoints, 0);
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
 
-        // if the new endpoint is being watched by any of the receivers, the
-        // bridge will tell it to start streaming its hq stream.
-
+    /**
+     * Sends a data channel command to a simulcast enabled video sender to make
+     * it start streaming its hq stream, if it's being watched by some receiver.
+     *
+     * @param id
+     */
+    private void maybeSendStartHighQualityStreamCommand(String id)
+    {
         Endpoint newEndpoint = null;
-        if (newValue != null && newValue.length() != 0 &&
-                newValue != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
+        if (id != null && id.length() != 0 &&
+                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
         {
-            newEndpoint = getEndpoint(newValue);
+            newEndpoint = getEndpoint(id);
         }
 
         List<RtpChannel> newVideoChannels = null;
@@ -507,10 +530,10 @@ public class Conference
 
                 SimulcastLayer hqLayer = newSimulcastLayers.last();
 
-                StartSimulcastLayerEvent event
-                        = new StartSimulcastLayerEvent(hqLayer);
+                StartSimulcastLayerCommand command
+                        = new StartSimulcastLayerCommand(hqLayer);
 
-                String json = MyJsonEncoder.toJSON(event);
+                String json = MyJsonEncoder.toJSON(command);
                 try
                 {
                     newEndpoint.sendMessageOnDataChannel(json);
@@ -523,24 +546,87 @@ public class Conference
         }
     }
 
-    static class StartSimulcastLayerEvent
+    /**
+     * Notifies this instance that an endpoint has changed its video selection.
+     */
+    private void selectedEndpointChanged(Endpoint endpoint,
+                                         String oldValue,
+                                         String newValue)
     {
-        public StartSimulcastLayerEvent(SimulcastLayer simulcastLayer)
+        // Rule 1: if the old endpoint is not being watched by any of the
+        // receivers, the bridge tells it to stop streaming its hq stream.
+        maybeSendStopHighQualityStreamCommand(oldValue);
+
+        // Rule 2: if the new endpoint is being watched by any of the receivers,
+        // the bridge tells it to start streaming its hq stream.
+        maybeSendStartHighQualityStreamCommand(newValue);
+
+        // Rule 3: send an hq stream only for the selected endpoint.
+        configureHighQualitySenderForReceiver(endpoint, newValue);
+    }
+
+    /**
+     * Configures the simulcast manager of the receiver to receive a high
+     * quality stream only from the designated sender.
+     *
+     * @param receiver
+     * @param highQualitySenderId
+     */
+    private void configureHighQualitySenderForReceiver(
+            Endpoint receiver,
+            String highQualitySenderId)
+    {
+        if (receiver == null)
+            return;
+
+        Collection<Endpoint> lqEndpoints = getEndpoints();
+        if (lqEndpoints == null || lqEndpoints.isEmpty())
+            return;
+
+        Endpoint hqEndpoint;
+        if (StringUtils.isNullOrEmpty(highQualitySenderId)
+                && (hqEndpoint = getEndpoint(highQualitySenderId)) != null)
+        {
+            lqEndpoints.remove(hqEndpoint);
+
+            List<Endpoint> hqEndpoints = new ArrayList<Endpoint>(1);
+            hqEndpoints.add(hqEndpoint);
+            ((VideoChannel) receiver.getChannels(MediaType.VIDEO))
+                    .getSimulcastManager().setReceivingSimulcastLayer(
+                    hqEndpoints, 10);
+
+            // NOTE(gp) 10 here is an arbitrary large value that, maybe, it
+            // should be a constant. I'm not sure if that's good enough though.
+        }
+
+        if (!lqEndpoints.isEmpty())
+        {
+            ((VideoChannel) receiver.getChannels(MediaType.VIDEO))
+                    .getSimulcastManager().setReceivingSimulcastLayer(
+                    lqEndpoints, 0);
+        }
+    }
+
+    static class StartSimulcastLayerCommand
+    {
+        public StartSimulcastLayerCommand(SimulcastLayer simulcastLayer)
         {
             this.simulcastLayer = simulcastLayer;
         }
 
+        // TODO(gp) rename this to StartSimulcastLayerCommand
         final String colibriClass = "StartSimulcastLayerEvent";
         final SimulcastLayer simulcastLayer;
     }
 
-    static class StopSimulcastLayerEvent
+    static class StopSimulcastLayerCommand
     {
-        public StopSimulcastLayerEvent(SimulcastLayer simulcastLayer)
+        public StopSimulcastLayerCommand(SimulcastLayer simulcastLayer)
         {
             this.simulcastLayer = simulcastLayer;
         }
 
+        // TODO(gp) rename this to StopSimulcastLayerCommand
         final String colibriClass = "StopSimulcastLayerEvent";
         final SimulcastLayer simulcastLayer;
     }
@@ -558,25 +644,25 @@ public class Conference
         // So, basically it would work exactly like this custom encoder, but
         // without having to write a single line of code.
 
-        public static String toJSON(StartSimulcastLayerEvent event)
+        public static String toJSON(StartSimulcastLayerCommand command)
         {
             StringBuilder b = new StringBuilder(
                     "{\"colibriClass\":\"StartSimulcastLayerEvent\"");
 
             b.append(",\"simulcastLayer\":[");
-            toJSON(b, event.simulcastLayer);
+            toJSON(b, command.simulcastLayer);
             b.append("]}");
 
             return b.toString();
         }
 
-        public static String toJSON(StopSimulcastLayerEvent event)
+        public static String toJSON(StopSimulcastLayerCommand command)
         {
             StringBuilder b = new StringBuilder(
                     "{\"colibriClass\":\"StopSimulcastLayerEvent\"");
 
             b.append(",\"simulcastLayer\":[");
-            toJSON(b, event.simulcastLayer);
+            toJSON(b, command.simulcastLayer);
             b.append("]}");
 
             return b.toString();

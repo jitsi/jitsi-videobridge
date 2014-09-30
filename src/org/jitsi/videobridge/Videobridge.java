@@ -734,9 +734,16 @@ public class Videobridge
                                 Integer receiveSimulcastLayer =
                                         channelIQ.getReceivingSimulcastLayer();
 
-                                videoChannel.getSimulcastManager()
-                                        .setReceivingSimulcastLayer(
-                                        receiveSimulcastLayer);
+                                Collection<Endpoint> endpoints =
+                                        conference.getEndpoints();
+
+                                if (endpoints != null && !endpoints.isEmpty())
+                                {
+                                    videoChannel.getSimulcastManager()
+                                            .setReceivingSimulcastLayer(
+                                                    endpoints,
+                                                    receiveSimulcastLayer);
+                                }
                             }
 
                             /*
