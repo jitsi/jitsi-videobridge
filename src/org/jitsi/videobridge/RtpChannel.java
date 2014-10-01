@@ -338,7 +338,7 @@ public class RtpChannel
      * accepted for further processing within Jitsi Videobridge or
      * <tt>false</tt> to reject/drop it
      */
-    private boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
+    protected boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
     {
         InetAddress dataAddr = streamTarget.getDataAddress();
         int dataPort = streamTarget.getDataPort();
@@ -845,7 +845,7 @@ public class RtpChannel
 
     /**
      * Determines whether a specific <tt>Channel</tt> is within the set of
-     * <tt>Channel</tt>s limited by {@link #lastN} i.e. whether the RTP video
+     * <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether the RTP video
      * streams of the specified channel are to be sent to the remote endpoint of
      * this <tt>Channel</tt>.
      *
@@ -869,8 +869,7 @@ public class RtpChannel
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
      * started only after a <tt>StreamConnector</tt> has been set on it and this
      * <tt>Channel</tt> may be able to provide a <tt>StreamConnector</tt> only
-     * after {@link #wrapupConnectivityEstablishment(TransportManager)} has
-     * completed on {@link #transportManager}.
+     * after the transport manager has completed the connectivity establishment.
      *
      * @throws IOException if anything goes wrong while starting <tt>stream</tt>
      */
@@ -1430,4 +1429,15 @@ public class RtpChannel
             }
         }
     }
+
+    /**
+     * Enables or disables the adaptive lastN functionality.
+     *
+     * Does nothing, allows extenders to implement.
+     *
+     * @param adaptiveLastN <tt>true</tt> to enabled and <tt>false</tt> to
+     * disable adaptive lastN.
+     */
+    public void setAdaptiveLastN(boolean adaptiveLastN)
+    {}
 }

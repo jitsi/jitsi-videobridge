@@ -8,12 +8,18 @@ package org.jitsi.videobridge;
 
 import java.io.*;
 import java.lang.ref.*;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.locks.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.util.*;
 
-import org.jitsi.util.*;
+import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.util.Logger;
+import org.jitsi.videobridge.rtcp.*;
 import org.json.simple.*;
 
 /**
@@ -29,6 +35,20 @@ public class VideoChannel
      * instances to print debug information.
      */
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
+
+    /**
+     * The property which controls whether Jitsi Videobridge will perform
+     * replacement of the timestamps in the abs-send-time RTP header extension.
+     */
+    private static final String DISABLE_ABS_SEND_TIME_PNAME =
+            "org.jitsi.videobridge.DISABLE_ABS_SEND_TIME";
+
+    /**
+     * The length in milliseconds of the interval for which the average incoming
+     * bitrate for this video channel will be computed and made available
+     * through {@link #getIncomingBitrate}.
+     */
+    private static final int INCOMING_BITRATE_INTERVAL_MS = 5000;
 
     /**
      * The <tt>SimulcastManager</tt> of this video <tt>Channel</tt>.
@@ -50,8 +70,27 @@ public class VideoChannel
     private List<WeakReference<Endpoint>> lastNEndpoints;
 
     /**
+     * The <tt>VideoChannelLastNAdaptor</tt> which will be controlling the
+     * value of <tt>lastN</tt> for this <tt>VideoChannel</tt>, if the adaptive
+     * lastN feature is enabled.
+     */
+    private VideoChannelLastNAdaptor lastNAdaptor;
+
+    /**
+     * The instance which will be computing the incoming bitrate for this
+     * <tt>VideoChannel</tt>.
+     */
+    private RateStatistics incomingBitrate
+            = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
+
+    /**
+     * Whether or not to use adaptive lastN.
+     */
+    private boolean adaptiveLastN = false;
+
+    /**
      * The <tt>Object</tt> which synchronizes the access to
-     * {@link #lastNEndpoints}.
+     * {@link #lastNEndpoints} and {@link #lastN}.
      */
     private final ReadWriteLock lastNSyncRoot = new ReentrantReadWriteLock();
 
@@ -117,7 +156,7 @@ public class VideoChannel
      * If no value or <tt>null</tt> has been explicitly set or this is not a
      * video <tt>Channel</tt>, returns <tt>-1</tt>.
      */
-    private int getLastN()
+    int getLastN()
     {
         Integer lastNInteger = this.lastN;
 
@@ -433,7 +472,58 @@ public class VideoChannel
     @Override
     public void setLastN(Integer lastN)
     {
-        this.lastN = lastN;
+        if (this.lastN == lastN)
+            return;
+
+        // If the old value was null, even though we may detect endpoints
+        // "entering" lastN, they are already being received and so
+        // no keyframes are necessary.
+        boolean askForKeyframes = this.lastN == null;
+
+        Lock writeLock = lastNSyncRoot.writeLock();
+        List<Endpoint> endpointsEnteringLastN = new LinkedList <Endpoint>();
+
+        writeLock.lock();
+        try
+        {
+            if (this.lastN != null && this.lastN >= 0)
+            {
+                if (lastN > this.lastN)
+                {
+                    Endpoint thisEndpoint = getEndpoint();
+                    int n = 0;
+                    for (WeakReference<Endpoint> wr : lastNEndpoints)
+                    {
+                        if (n >= lastN)
+                            break;
+
+                        Endpoint endpoint = wr.get();
+                        if (endpoint != null && endpoint.equals(thisEndpoint))
+                        {
+                            continue;
+                        }
+
+                        ++n;
+                        if (n > this.lastN && endpoint != null)
+                            endpointsEnteringLastN.add(endpoint);
+                    }
+                }
+            }
+
+            this.lastN = lastN;
+        }
+        finally
+        {
+            writeLock.unlock();
+        }
+
+        lastNEndpointsChanged(endpointsEnteringLastN);
+
+        if (askForKeyframes)
+        {
+            getContent().askForKeyframes(
+                    new HashSet<Endpoint>(endpointsEnteringLastN));
+        }
 
         touch(); // It seems this Channel is still active.
     }
@@ -531,5 +621,141 @@ public class VideoChannel
 
         // Request keyframes from the Endpoints entering the list of lastN.
         return endpointsEnteringLastN;
+    }
+
+    /**
+     * Notifies this <tt>VideoChannel</tt> that an RTCP REMB packet with a
+     * bitrate value of <tt>remb</tt> bits per second was received.
+     *
+     * @param remb the bitrate of the received REMB packet in bits per second.
+     */
+    public void receivedREMB(long remb)
+    {
+        if (adaptiveLastN)
+        {
+            VideoChannelLastNAdaptor lastNAdaptor = getLastNAdaptor();
+            if (lastNAdaptor != null)
+                lastNAdaptor.receivedREMB(remb);
+        }
+    }
+
+    /**
+     * Returns the <tt>VideoChannelLastNAdaptor</tt> for this
+     * <tt>VideoChannel</tt>, creating it if necessary.
+     * @return the <tt>VideoChannelLastNAdaptor</tt> for this
+     * <tt>VideoChannel</tt>, creating it if necessary.
+     */
+    private VideoChannelLastNAdaptor getLastNAdaptor()
+    {
+        if (lastNAdaptor == null)
+        {
+            lastNAdaptor = new VideoChannelLastNAdaptor(this);
+        }
+        return lastNAdaptor;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Enables the the abs-send-time extension after the stream has been
+     * started.
+     */
+    @Override
+    protected void maybeStartStream()
+        throws IOException
+    {
+        super.maybeStartStream();
+
+        MediaStream stream = getStream();
+        if (stream != null)
+        {
+            ConfigurationService cfg
+                    = ServiceUtils.getService(
+                    getBundleContext(),
+                    ConfigurationService.class);
+
+            boolean disableAbsSendTime
+                = cfg != null
+                    && cfg.getBoolean (DISABLE_ABS_SEND_TIME_PNAME, false);
+
+            if (!disableAbsSendTime)
+            {
+                // TODO: remove hard-coded value
+                stream.setAbsSendTimeExtensionID(3);
+            }
+        }
+
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
+    {
+        boolean accept = super.acceptDataInputStreamDatagramPacket(p);
+
+        if (accept)
+        {
+            // TODO: find a way to do this only in case it is actually needed
+            // (currently this means when there is another channel in the
+            // same content, with adaptive-last-n turned on), in order to not
+            // waste resources.
+            incomingBitrate.update(p.getLength(), System.currentTimeMillis());
+        }
+
+        return accept;
+    }
+
+    /**
+     * Returns the current incoming bitrate in bits per second for this
+     * <tt>VideoChannel</tt> (computed as the average bitrate over the last
+     * {@link #INCOMING_BITRATE_INTERVAL_MS} milliseconds).
+     * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
+     */
+    long getIncomingBitrate()
+    {
+        return incomingBitrate.getRate(System.currentTimeMillis());
+    }
+
+    /**
+     * Returns the list of endpoints for the purposes of lastN.
+     * @return the list of endpoints for the purposes of lastN.
+     */
+    List<WeakReference<Endpoint>> getLastNEndpoints()
+    {
+        List<WeakReference<Endpoint>> endpoints
+                = new LinkedList<WeakReference<Endpoint>>();
+
+        Lock readLock = lastNSyncRoot.readLock();
+
+        readLock.lock();
+        try
+        {
+            endpoints.addAll(lastNEndpoints);
+        }
+        finally
+        {
+            readLock.unlock();
+        }
+
+        return endpoints;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setAdaptiveLastN(boolean adaptiveLastN)
+    {
+        this.adaptiveLastN = adaptiveLastN;
+
+        if (adaptiveLastN)
+        {
+            // Ensure that we are using BasicBridgeRTCPTerminationStrategy,
+            // which is currently needed to notify us of incoming REMBs
+            getContent().setRTCPTerminationStrategyFromFQN(
+                    BasicBridgeRTCPTerminationStrategy.class.getCanonicalName());
+        }
     }
 }

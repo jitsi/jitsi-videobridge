@@ -8,7 +8,9 @@ package org.jitsi.videobridge.rtcp;
 
 import net.sf.fmj.media.rtp.*;
 
+import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
 
 /**
@@ -92,6 +94,19 @@ public class BasicBridgeRTCPTerminationStrategy
     public RTCPCompoundPacket transformRTCPPacket(
             RTCPCompoundPacket inPacket)
     {
+        // Intercept REMBs and forward them to the VideoChannel logic
+        for (RTCPPacket p : inPacket.packets)
+        {
+            if (p != null && p.type == RTCPFBPacket.PSFB)
+            {
+                RTCPFBPacket psfb = (RTCPFBPacket) p;
+                if (psfb.fmt == RTCPREMBPacket.FMT)
+                {
+                    receivedREMB((RTCPREMBPacket) psfb);
+                }
+            }
+        }
+
         // Call the super method that:
         //
         // 1. Removes receiver report blocks from RRs and SRs and kills REMBs.
@@ -132,5 +147,25 @@ public class BasicBridgeRTCPTerminationStrategy
     public RTCPPacket[] makeReports()
     {
         return bridgeReceiverReporting.makeReports();
+    }
+
+    /**
+     * Handles a received REMB packet by passing its bitrate to the appropriate
+     * <tt>VideoChannel</tt>.
+     * @param remb the REMB packet that was received.
+     */
+    private void receivedREMB(RTCPREMBPacket remb)
+    {
+        Conference conference = getConference();
+        if (conference != null)
+        {
+            Channel channel
+                    = conference.findChannelByReceiveSSRC(remb.senderSSRC,
+                                                          MediaType.VIDEO);
+            if (channel != null && channel instanceof VideoChannel)
+            {
+                ((VideoChannel) channel).receivedREMB(remb.getBitrate());
+            }
+        }
     }
 }

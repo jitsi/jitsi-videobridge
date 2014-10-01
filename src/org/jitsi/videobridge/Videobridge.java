@@ -697,6 +697,11 @@ public class Videobridge
                             if (lastN != null)
                                 channel.setLastN(lastN);
 
+                            Boolean adaptiveLastN
+                                    = channelIQ.getAdaptiveLastN();
+                            if (adaptiveLastN != null)
+                                channel.setAdaptiveLastN(adaptiveLastN);
+
                             /*
                              * XXX The attribute initiator is optional. If a
                              * value is not specified, then the Channel
