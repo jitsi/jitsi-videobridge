@@ -687,6 +687,12 @@ public class Content
             try
             {
                 Class<?> clazz = Class.forName(strategyFQN);
+
+                RTCPTerminationStrategy oldStrategy
+                        = rtpTranslator.getRTCPTerminationStrategy();
+                if (clazz.isInstance(oldStrategy))
+                    return;
+
                 RTCPTerminationStrategy strategy
                     = (RTCPTerminationStrategy) clazz.newInstance();
 
