@@ -6,17 +6,17 @@
  */
 package org.jitsi.videobridge;
 
+import java.io.*;
+import java.util.*;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.sf.fmj.media.rtp.*;
+
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.json.simple.*;
-
-import java.io.*;
-import java.lang.ref.*;
-import java.util.*;
 
 /**
  * The simulcast manager of a <tt>VideoChannel</tt>.
