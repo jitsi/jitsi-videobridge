@@ -591,19 +591,31 @@ public class Conference
 
             List<Endpoint> hqEndpoints = new ArrayList<Endpoint>(1);
             hqEndpoints.add(hqEndpoint);
-            ((VideoChannel) receiver.getChannels(MediaType.VIDEO))
-                    .getSimulcastManager().setReceivingSimulcastLayer(
-                    hqEndpoints, 10);
 
+            List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
+            if (channels != null
+                    && !channels.isEmpty()
+                    && channels.get(0) instanceof VideoChannel)
+            {
+                ((VideoChannel) channels.get(0))
+                        .getSimulcastManager().setReceivingSimulcastLayer(
+                        hqEndpoints, 10);
+            }
             // NOTE(gp) 10 here is an arbitrary large value that, maybe, it
             // should be a constant. I'm not sure if that's good enough though.
         }
 
         if (!lqEndpoints.isEmpty())
         {
-            ((VideoChannel) receiver.getChannels(MediaType.VIDEO))
-                    .getSimulcastManager().setReceivingSimulcastLayer(
-                    lqEndpoints, 0);
+            List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
+            if (channels != null
+                    && !channels.isEmpty()
+                    && channels.get(0) instanceof VideoChannel)
+            {
+                ((VideoChannel) channels.get(0))
+                        .getSimulcastManager().setReceivingSimulcastLayer(
+                        lqEndpoints, 0);
+            }
         }
     }
 
