@@ -84,9 +84,9 @@ This property can be used to disable binding on IPv6 addresses.
 Default: none
 Type: integer between 1 and 65535
 
-If this property is set, Jitsi Videobridge will announce additional
-TCP srflx candidates with the given port (one candidate for each host
-candidate).
+If this property is set, Jitsi Videobridge will use the given port
+in the candidates that it advertises, but the actual port it listens on
+will not change.
 
 
 ### *org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS*
@@ -105,4 +105,18 @@ NAT_HARVESTER_PUBLIC_ADDRESS=2.2.2.2
 should be configured.
 
 
+# Examples
+## None of the TCP specific properties set, successful bind on port 443
+Jitsi Videobridge will bind to port 443 and announce port 443.
 
+## None of the TCP specific properties set, failure to bind on port 443 (lack of privileges, or web-server already bound on 443)
+Jitsi Videobridge will bind to port 4443 and announce port 4443.
+
+## To bind on port 4443 and announce port 443 set the following
+```org.jitsi.videobridge.TCP_HARVESTER_PORT=4443```
+
+```org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT=443```
+
+In order for this to work, port forwarding needs to be set up by
+external means (e.g. with iptables), so that port 443 is forwarded
+to port 4443.

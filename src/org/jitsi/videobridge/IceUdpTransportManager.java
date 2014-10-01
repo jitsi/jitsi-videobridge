@@ -150,6 +150,11 @@ public class IceUdpTransportManager
     private static boolean tcpHostHarvesterInitialized = false;
 
     /**
+     * The "mapped port" added to {@link #tcpHostHarvester}, or -1.
+     */
+    private static int tcpHostHarvesterMappedPort = -1;
+
+    /**
      * Logs a specific <tt>String</tt> at debug level.
      *
      * @param s the <tt>String</tt> to log at debug level
@@ -784,7 +789,19 @@ public class IceUdpTransportManager
                 if ((candidates != null) && !candidates.isEmpty())
                 {
                     for (LocalCandidate candidate : candidates)
+                    {
+                        if (candidate.getTransport() == Transport.TCP
+                              && tcpHostHarvesterMappedPort != -1
+                              && (candidate.getTransportAddress().getPort()
+                                   != tcpHostHarvesterMappedPort))
+                        {
+                            // In case we use a mapped port with the TCP
+                            // harvester, do not advertise the candidates with
+                            // the actual port that we listen on.
+                            continue;
+                        }
                         describe(candidate, pe);
+                    }
                 }
             }
 
@@ -1655,7 +1672,10 @@ public class IceUdpTransportManager
 
                 int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
                 if (mappedPort != -1)
+                {
+                    tcpHostHarvesterMappedPort = mappedPort;
                     tcpHostHarvester.addMappedPort(mappedPort);
+                }
 
                 if (AwsCandidateHarvester.smellsLikeAnEC2())
                 {
