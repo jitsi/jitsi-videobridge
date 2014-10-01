@@ -10,6 +10,7 @@ if [[ "$1" == "--help"  || $# -lt 1 ]]; then
     echo -e "\t--host=HOST\t sets the hostname of the XMPP server (default: domain, if domain is set, \"localhost\" otherwise)"
     echo -e "\t--port=PORT\t sets the port of the XMPP server (default: 5275)"
     echo -e "\t--subdomain=SUBDOMAIN\t sets the sub-domain used to bind JVB XMPP component (default: jitsi-videobridge)"
+    echo -e "\t--apis=APIS where APIS is a comma separated list of APIs to enable. Currently supported APIs are 'xmpp' and 'rest'. The default is 'xmpp'."
     echo
     exit 1
 fi

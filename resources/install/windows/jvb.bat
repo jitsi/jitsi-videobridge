@@ -15,6 +15,7 @@ echo 	--max-port=MP	sets the max port used for media (default: 20000)
 echo 	--host=HOST	sets the hostname of the XMPP server (default: domain, if domain is set, localhost otherwise)
 echo 	--port=PORT	sets the port of the XMPP server (default: 5275)
 echo    --subdomain=SUBDOMAIN sets the sub-domain used to bind JVB XMPP component (default: jitsi-videobridge)
+echo    --apis=APIS where APIS is a comma separated list of APIs to enable. Currently supported APIs are xmpp and rest. The default is xmpp.
 echo.
 exit /B 1
 
