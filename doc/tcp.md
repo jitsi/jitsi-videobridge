@@ -113,9 +113,9 @@ Jitsi Videobridge will bind to port 443 and announce port 443.
 Jitsi Videobridge will bind to port 4443 and announce port 4443.
 
 ## To bind on port 4443 and announce port 443 set the following
-```org.jitsi.videobridge.TCP_HARVESTER_PORT=4443```
+org.jitsi.videobridge.TCP_HARVESTER_PORT=4443
 
-```org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT=443```
+org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT=443
 
 In order for this to work, port forwarding needs to be set up by
 external means (e.g. with iptables), so that port 443 is forwarded
