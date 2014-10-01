@@ -732,7 +732,8 @@ public class VideoChannel
         readLock.lock();
         try
         {
-            endpoints.addAll(lastNEndpoints);
+            if (lastNEndpoints != null)
+                endpoints.addAll(lastNEndpoints);
         }
         finally
         {

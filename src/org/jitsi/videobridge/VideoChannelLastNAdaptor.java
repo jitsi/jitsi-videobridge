@@ -144,6 +144,12 @@ public class VideoChannelLastNAdaptor
     private long firstRemb = -1;
 
     /**
+     * Whether this <tt>VideoChannelLastNAdaptor</tt> has changed the
+     * value of lastN at least once already.
+     */
+    private boolean initialLastNSet = false;
+
+    /**
      * The list of recently received REMB values, used to compute the average
      * over the last <tt>REMB_AVERAGE_INTERVAL_MS</tt>.
      */
@@ -159,8 +165,6 @@ public class VideoChannelLastNAdaptor
     {
         this.channel = channel;
         initializeConfiguration();
-
-        setInitialLastN();
     }
 
     /**
@@ -286,6 +290,12 @@ public class VideoChannelLastNAdaptor
         // incoming REMBs to "ramp-up").
         if (now - firstRemb <= INITIAL_INTERVAL_MS)
             return;
+
+        if (!initialLastNSet)
+        {
+            setInitialLastN();
+            initialLastNSet = true;
+        }
 
         // Our estimate of the available bandwidth is the average of all
         // REMBs received in the last REMB_AVERAGE_INTERVAL_MS milliseconds. We
