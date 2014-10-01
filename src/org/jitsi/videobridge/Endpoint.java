@@ -485,7 +485,7 @@ public class Endpoint
                     if (logger.isDebugEnabled())
                     {
                         logger.debug(
-                                "Endpoint + " + getID() + " selected "
+                                "Endpoint " + getID() + " selected "
                                     + newSelectedEndpoint);
                     }
                     firePropertyChange(

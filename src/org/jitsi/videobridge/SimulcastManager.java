@@ -57,8 +57,8 @@ public class SimulcastManager
      * manager uses this map to determine whether or not to forward a video RTP
      * packet to its associated endpoint or not.
      */
-    private Map<WeakReference<Endpoint>, SimulcastLayer> simLayersMap
-            = new HashMap<WeakReference<Endpoint>, SimulcastLayer>();
+    private final Map<Endpoint, SimulcastLayer> simLayersMap
+            = new WeakHashMap<Endpoint, SimulcastLayer>();
 
     /**
      * Represents a notification/event that is sent to an endpoint through data
@@ -159,108 +159,22 @@ public class SimulcastManager
      */
     private SimulcastLayer electSimulcastLayer(VideoChannel srcVideoChannel)
     {
-        Endpoint targetEndpoint = videoChannel.getEndpoint();
         Endpoint sourceEndpoint =  srcVideoChannel.getEndpoint();
-        SimulcastLayer electedSimulcastLayer = null;
-        // TODO(gp) should be Map<WeakReference<VideoChannel>, SimulcastLayer>
+        SimulcastLayer electedSimulcastLayer;
+
         synchronized (simulcastLayersSyncRoot)
         {
-            for (WeakReference<Endpoint> wr : simLayersMap.keySet())
+            if (!simLayersMap.containsKey(sourceEndpoint))
             {
-                Endpoint e = wr.get();
-                if (e != null)
-                {
-                    if (e.equals(sourceEndpoint))
-                    {
-                        electedSimulcastLayer = simLayersMap.get(wr);
-                        break;
-                    }
-                }
+                Map<Endpoint, Integer> endpointsQualityMap
+                        = new HashMap<Endpoint, Integer>(1);
+
+                endpointsQualityMap.put(sourceEndpoint, initialSimulcastLayer);
+
+                setReceivingSimulcastLayer(endpointsQualityMap);
             }
 
-            if (electedSimulcastLayer == null)
-            {
-                SortedSet<SimulcastLayer> srcSimulcastLayers
-                        = srcVideoChannel.getSimulcastManager()
-                                .getSimulcastLayers();
-
-                // start with some predefined initial quality layer.
-                Iterator<SimulcastLayer> layersIterator
-                        = srcSimulcastLayers.iterator();
-                int currentLayer = 0;
-                while (layersIterator.hasNext()
-                        && currentLayer++ <= initialSimulcastLayer)
-                {
-
-                    electedSimulcastLayer = layersIterator.next();
-                }
-
-                WeakReference<Endpoint> wr
-                        = new WeakReference<Endpoint>(sourceEndpoint);
-
-                simLayersMap.put(wr, electedSimulcastLayer);
-            }
-        }
-
-        // Source is currently being watched at the target.
-        if (sourceEndpoint.getID().equals(
-                targetEndpoint.getSelectedEndpointID())
-
-                // The elected simulcast layer is not the high quality one.
-                && electedSimulcastLayer != srcVideoChannel
-                        .getSimulcastManager().getSimulcastLayers().last()
-
-                // Data channel to target endpoint is open.
-                && videoChannel.getEndpoint().getSctpConnection().isReady()
-                && !videoChannel.getEndpoint().getSctpConnection().isExpired())
-        {
-            SimulcastLayer hqLayer = srcVideoChannel.getSimulcastManager()
-                    .getSimulcastLayers().last();
-
-            // Receiving simulcast layers changed, create and send an event
-            // through data channels to the receiving endpoint.
-            SimulcastLayersChangedEvent event
-                    = new SimulcastLayersChangedEvent();
-
-            event.endpointSimulcastLayers = new EndpointSimulcastLayer[1];
-            event.endpointSimulcastLayers[0] = new EndpointSimulcastLayer(
-                    srcVideoChannel.getEndpoint().getID(),
-                    hqLayer);
-
-            String json = MyJsonEncoder.toJson(event);
-            boolean sent = false;
-            try
-            {
-                videoChannel.getEndpoint().sendMessageOnDataChannel(json);
-                sent = true;
-
-                if (logger.isInfoEnabled())
-                {
-                    logger.info("Receiving simulcast layers for endpoint "
-                            + videoChannel.getEndpoint().getID() + " changed:" +
-                            json);
-                }
-            }
-            catch (IOException e)
-            {
-                logger.error("Failed to send message on data channel " +
-                        "(although it was reported to be ready!).", e);
-            }
-
-            if (sent)
-            {
-                // Only update the receiving simulcast layer if we managed to
-                // send a notification to the endpoint.
-
-                electedSimulcastLayer = hqLayer;
-                synchronized (simulcastLayersSyncRoot)
-                {
-                    WeakReference<Endpoint> wr
-                            = new WeakReference<Endpoint>(sourceEndpoint);
-
-                    simLayersMap.put(wr, electedSimulcastLayer);
-                }
-            }
+            electedSimulcastLayer = simLayersMap.get(sourceEndpoint);
         }
 
         return electedSimulcastLayer;
@@ -382,12 +296,10 @@ public class SimulcastManager
      * Sets the receiving simulcast substream for the peers in the endpoints
      * parameter.
      *
-     * @param endpoints
-     * @param receivingSimulcastLayer
+     * @param endpointsQualityMap
      */
     public void setReceivingSimulcastLayer(
-            Collection<Endpoint> endpoints,
-            Integer receivingSimulcastLayer)
+            Map<Endpoint, Integer> endpointsQualityMap)
     {
         Content content = videoChannel.getContent();
         if (content == null)
@@ -397,7 +309,7 @@ public class SimulcastManager
         if (conference == null)
             return;
 
-        if (endpoints == null || endpoints.isEmpty())
+        if (endpointsQualityMap == null || endpointsQualityMap.isEmpty())
             return;
 
         // TODO(gp) add expired check.
@@ -405,21 +317,19 @@ public class SimulcastManager
         if (self == null)
             return;
 
-        Map<WeakReference<Endpoint>, SimulcastLayer> map
-                = new HashMap<WeakReference<Endpoint>, SimulcastLayer>(
-                endpoints.size());
+        Map<Endpoint, SimulcastLayer> map
+                = new HashMap<Endpoint, SimulcastLayer>(
+                        endpointsQualityMap.size());
 
         List<EndpointSimulcastLayer> endpointSimulcastLayers
-                = new ArrayList<EndpointSimulcastLayer>(endpoints.size());
+                = new ArrayList<EndpointSimulcastLayer>(endpointsQualityMap.size());
 
-        for (Endpoint peer : endpoints)
+        for (Map.Entry<Endpoint, Integer> entry
+                : endpointsQualityMap.entrySet())
         {
+            Endpoint peer = entry.getKey();
             if (peer == self)
                 continue;
-
-            WeakReference<Endpoint> wr
-                    = new WeakReference<Endpoint>(peer);
-
 
             List<RtpChannel> rtpChannels = peer
                     .getChannels(MediaType.VIDEO);
@@ -443,15 +353,14 @@ public class SimulcastManager
                         SimulcastLayer simulcastLayer = null;
                         int currentLayer = 0;
                         while (layersIterator.hasNext()
-                                && currentLayer++ <= receivingSimulcastLayer)
+                                && currentLayer++ <= entry.getValue())
                         {
-
                             simulcastLayer = layersIterator.next();
                         }
 
                         if (simulcastLayer != null)
                         {
-                            map.put(wr, simulcastLayer);
+                            map.put(peer, simulcastLayer);
                             EndpointSimulcastLayer endpointSimulcastLayer
                                     = new EndpointSimulcastLayer(peer.getID(),
                                     simulcastLayer);
@@ -497,7 +406,7 @@ public class SimulcastManager
 
         synchronized (simulcastLayersSyncRoot)
         {
-            this.simLayersMap = map;
+            this.simLayersMap.putAll(map);
         }
     }
 

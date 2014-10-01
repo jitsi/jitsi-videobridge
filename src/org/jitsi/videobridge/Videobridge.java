@@ -744,10 +744,18 @@ public class Videobridge
 
                                 if (endpoints != null && !endpoints.isEmpty())
                                 {
+                                    Map<Endpoint, Integer> endpointsQuality =
+                                            new HashMap<Endpoint, Integer>(
+                                                    endpoints.size());
+
+                                    for (Endpoint e : endpoints)
+                                    {
+                                        endpointsQuality.put(e,
+                                                receiveSimulcastLayer);
+                                    }
                                     videoChannel.getSimulcastManager()
                                             .setReceivingSimulcastLayer(
-                                                    endpoints,
-                                                    receiveSimulcastLayer);
+                                                    endpointsQuality);
                                 }
                             }
 

@@ -339,7 +339,7 @@ public class Conference
     private void maybeSendStopHighQualityStreamCommand(String id)
     {
         Endpoint oldEndpoint = null;
-        if (id != null && id.length() != 0 &&
+        if (!StringUtils.isNullOrEmpty(id) &&
                 id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
         {
             oldEndpoint = getEndpoint(id);
@@ -382,8 +382,8 @@ public class Conference
 
                 if (oldEndpoint != e
                        && (oldEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || e.getSelectedEndpointID() == null
-                        || e.getSelectedEndpointID().length() == 0))
+                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
+                   )
                 {
                     // somebody is watching the old endpoint or somebody has not
                     // yet signaled its selected endpoint to the bridge, don't
@@ -415,38 +415,6 @@ public class Conference
                 {
                     logger.error("Failed to send message on data channel.", e1);
                 }
-
-                // Go through all the endpoints in the conference and configure
-                // them to receive the base quality stream for the oldSender
-
-                // NOTE(gp) since we have arrived at this line, this should
-                // already be the case.
-                Collection<Endpoint> endpoints = getEndpoints();
-                if (endpoints != null)
-                {
-                    endpoints.remove(oldEndpoint);
-                    if (!endpoints.isEmpty())
-                    {
-                        Collection<Endpoint> changedEndpoints =
-                                new ArrayList<Endpoint>(1);
-                        changedEndpoints.add(oldEndpoint);
-
-                        for (Endpoint e : endpoints)
-                        {
-                            for (RtpChannel c : e.getChannels(MediaType.VIDEO))
-                            {
-                                SimulcastManager simulcastManager =
-                                        ((VideoChannel)c).getSimulcastManager();
-
-                                if (simulcastManager != null)
-                                {
-                                    simulcastManager.setReceivingSimulcastLayer(
-                                            changedEndpoints, 0);
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }
@@ -460,7 +428,7 @@ public class Conference
     private void maybeSendStartHighQualityStreamCommand(String id)
     {
         Endpoint newEndpoint = null;
-        if (id != null && id.length() != 0 &&
+        if (!StringUtils.isNullOrEmpty(id) &&
                 id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
         {
             newEndpoint = getEndpoint(id);
@@ -503,8 +471,8 @@ public class Conference
 
                 if (newEndpoint != e
                        && (newEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || e.getSelectedEndpointID() == null
-                        || e.getSelectedEndpointID().length() == 0))
+                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
+                   )
                 {
                     // somebody is watching the new endpoint or somebody has not
                     // yet signaled its selected endpoint to the bridge, start
@@ -512,8 +480,16 @@ public class Conference
 
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug(e.getID() + " is (probably) watching "
-                                + newEndpoint.getID());
+                        if (StringUtils.isNullOrEmpty(
+                                e.getSelectedEndpointID()))
+                        {
+                            logger.debug("Maybe " + e.getID() + " is watching "
+                                    + newEndpoint.getID());
+                        } else {
+
+                            logger.debug(e.getID() + " is watching "
+                                    + newEndpoint.getID());
+                        }
                     }
 
                     startHighQualityStream = true;
@@ -553,16 +529,20 @@ public class Conference
                                          String oldValue,
                                          String newValue)
     {
-        // Rule 1: if the old endpoint is not being watched by any of the
+        // TODO(gp) handle the event from within the SimulcastManager; must
+        // not pollute Conference with this.
+
+        // Rule 1: send an hq stream only for the selected endpoint.
+        configureHighQualitySenderForReceiver(endpoint, newValue);
+
+        // Rule 2: if the old endpoint is not being watched by any of the
         // receivers, the bridge tells it to stop streaming its hq stream.
         maybeSendStopHighQualityStreamCommand(oldValue);
 
-        // Rule 2: if the new endpoint is being watched by any of the receivers,
+        // Rule 3: if the new endpoint is being watched by any of the receivers,
         // the bridge tells it to start streaming its hq stream.
         maybeSendStartHighQualityStreamCommand(newValue);
 
-        // Rule 3: send an hq stream only for the selected endpoint.
-        configureHighQualitySenderForReceiver(endpoint, newValue);
     }
 
     /**
@@ -579,43 +559,37 @@ public class Conference
         if (receiver == null)
             return;
 
-        Collection<Endpoint> lqEndpoints = getEndpoints();
-        if (lqEndpoints == null || lqEndpoints.isEmpty())
+        Collection<Endpoint> endpoints = getEndpoints();
+        if (endpoints == null || endpoints.isEmpty())
             return;
 
-        Endpoint hqEndpoint;
-        if (StringUtils.isNullOrEmpty(highQualitySenderId)
-                && (hqEndpoint = getEndpoint(highQualitySenderId)) != null)
+        Map<Endpoint, Integer> qualityMap
+                = new HashMap<Endpoint, Integer>(endpoints.size());
+
+        for (Endpoint e : endpoints)
         {
-            lqEndpoints.remove(hqEndpoint);
-
-            List<Endpoint> hqEndpoints = new ArrayList<Endpoint>(1);
-            hqEndpoints.add(hqEndpoint);
-
-            List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
-            if (channels != null
-                    && !channels.isEmpty()
-                    && channels.get(0) instanceof VideoChannel)
+            if (!StringUtils.isNullOrEmpty(highQualitySenderId)
+                && highQualitySenderId.equals(e.getID()))
             {
-                ((VideoChannel) channels.get(0))
-                        .getSimulcastManager().setReceivingSimulcastLayer(
-                        hqEndpoints, 10);
+                // NOTE(gp) 10 here is an arbitrary large value that, maybe, it
+                // should be a constant. I'm not sure if that's good enough though.
+                qualityMap.put(e, 10);
             }
-            // NOTE(gp) 10 here is an arbitrary large value that, maybe, it
-            // should be a constant. I'm not sure if that's good enough though.
+            else
+            {
+                qualityMap.put(e, 0);
+            }
         }
 
-        if (!lqEndpoints.isEmpty())
+        List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
+        if (channels != null
+                && !channels.isEmpty()
+                && channels.get(0) instanceof VideoChannel)
         {
-            List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
-            if (channels != null
-                    && !channels.isEmpty()
-                    && channels.get(0) instanceof VideoChannel)
-            {
-                ((VideoChannel) channels.get(0))
-                        .getSimulcastManager().setReceivingSimulcastLayer(
-                        lqEndpoints, 0);
-            }
+            // TODO(gp) need to make sure we get the right VideoChannel.
+            ((VideoChannel) channels.get(0))
+                    .getSimulcastManager().setReceivingSimulcastLayer(
+                    qualityMap);
         }
     }
 
