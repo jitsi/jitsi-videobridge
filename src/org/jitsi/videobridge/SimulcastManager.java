@@ -40,7 +40,7 @@ public class SimulcastManager
     /**
      * Defines the simulcast substream to receive, if there is no other
      */
-    private static final Integer initialSimulcastLayer = 1;
+    private static final Integer initialSimulcastLayer = 0;
 
     /**
      * The <tt>simulcastLayers</tt> SyncRoot.
@@ -104,19 +104,20 @@ public class SimulcastManager
     {
         boolean accept = true;
 
-        // Iterate the simulcast layers of the endpoint.
-        SortedSet<SimulcastLayer> simulcastLayers
-                = sourceVideoChannel.getSimulcastManager().getSimulcastLayers();
+        if (sourceVideoChannel != null
+                && sourceVideoChannel.getSimulcastManager().hasLayers())
+        {
 
-        if (simulcastLayers == null || simulcastLayers.size() < 2)
-            return accept;
+            // FIXME(gp) inconsistent usage of longs and ints.
 
-        // FIXME(gp) inconsistent usage of longs and ints.
+            // Get the SSRC of the packet.
+            long ssrc = readSSRC(buffer, offset, length) & 0xffffffffl;
 
-        // Get the SSRC of the packet.
-        long ssrc = readSSRC(buffer, offset, length) & 0xffffffffl;
-
-        accept = acceptSimulcastLayer(ssrc, sourceVideoChannel);
+            if (ssrc > 0)
+            {
+                accept = acceptSimulcastLayer(ssrc, sourceVideoChannel);
+            }
+        }
 
         return accept;
     }
@@ -135,19 +136,34 @@ public class SimulcastManager
     {
         boolean accept = true;
 
-        // Iterate the simulcast layers of the endpoint.
-        SortedSet<SimulcastLayer> srcSimulcastLayers
-                = srcVideoChannel.getSimulcastManager().getSimulcastLayers();
+        if (ssrc > 0
+                && srcVideoChannel != null
+                && srcVideoChannel.getSimulcastManager().hasLayers())
+        {
+            SimulcastLayer electedSimulcastLayer
+                    = electSimulcastLayer(srcVideoChannel);
 
-        if (srcSimulcastLayers == null || srcSimulcastLayers.size() < 2)
-            return accept;
-
-        SimulcastLayer electedSimulcastLayer
-                = electSimulcastLayer(srcVideoChannel);
-
-        accept = electedSimulcastLayer.contains(ssrc);
+            if (electedSimulcastLayer != null)
+            {
+                accept = electedSimulcastLayer.contains(ssrc);
+            }
+        }
 
         return accept;
+    }
+
+    /**
+     * Returns true if the endpoint has signaled two or more simulcast layers.
+     *
+     * @return
+     */
+    private boolean hasLayers()
+    {
+        synchronized (simulcastLayersSyncRoot)
+        {
+            return simulcastLayers != null
+                    && simulcastLayers.size() > 1;
+        }
     }
 
     /**
@@ -159,22 +175,32 @@ public class SimulcastManager
      */
     private SimulcastLayer electSimulcastLayer(VideoChannel srcVideoChannel)
     {
-        Endpoint sourceEndpoint =  srcVideoChannel.getEndpoint();
-        SimulcastLayer electedSimulcastLayer;
+        SimulcastLayer electedSimulcastLayer = null;
 
-        synchronized (simulcastLayersSyncRoot)
+        if (srcVideoChannel != null)
         {
-            if (!simLayersMap.containsKey(sourceEndpoint))
+            // No need to waste resources if the source hasn't signaled any
+            // simulcast layers.
+            if (srcVideoChannel.getSimulcastManager().hasLayers())
             {
-                Map<Endpoint, Integer> endpointsQualityMap
-                        = new HashMap<Endpoint, Integer>(1);
+                synchronized (simulcastLayersSyncRoot)
+                {
+                    Endpoint sourceEndpoint = srcVideoChannel.getEndpoint();
 
-                endpointsQualityMap.put(sourceEndpoint, initialSimulcastLayer);
+                    if (!simLayersMap.containsKey(sourceEndpoint))
+                    {
+                       Map<Endpoint, Integer> endpointsQualityMap
+                                = new HashMap<Endpoint, Integer>(1);
 
-                setReceivingSimulcastLayer(endpointsQualityMap);
+                        endpointsQualityMap.put(sourceEndpoint,
+                                initialSimulcastLayer);
+
+                        setReceivingSimulcastLayer(endpointsQualityMap);
+                    }
+
+                    electedSimulcastLayer = simLayersMap.get(sourceEndpoint);
+                }
             }
-
-            electedSimulcastLayer = simLayersMap.get(sourceEndpoint);
         }
 
         return electedSimulcastLayer;
@@ -261,7 +287,6 @@ public class SimulcastManager
             }
         }
 
-
         synchronized (simulcastLayersSyncRoot)
         {
             simulcastLayers = layers;
@@ -301,18 +326,10 @@ public class SimulcastManager
     public void setReceivingSimulcastLayer(
             Map<Endpoint, Integer> endpointsQualityMap)
     {
-        Content content = videoChannel.getContent();
-        if (content == null)
-            return;
-
-        Conference conference = content.getConference();
-        if (conference == null)
-            return;
-
         if (endpointsQualityMap == null || endpointsQualityMap.isEmpty())
             return;
 
-        // TODO(gp) add expired check.
+        // TODO(gp) maybe add expired check (?)
         Endpoint self = videoChannel.getEndpoint();
         if (self == null)
             return;
@@ -344,39 +361,49 @@ public class SimulcastManager
                                 = (VideoChannel) rtpChannel;
 
                         SortedSet<SimulcastLayer> simulcastLayers =
-                                sourceVideoChannel.getSimulcastManager()
+                                sourceVideoChannel
+                                        .getSimulcastManager()
                                         .getSimulcastLayers();
 
-                        Iterator<SimulcastLayer> layersIterator
-                                = simulcastLayers.iterator();
-
-                        SimulcastLayer simulcastLayer = null;
-                        int currentLayer = 0;
-                        while (layersIterator.hasNext()
-                                && currentLayer++ <= entry.getValue())
+                        if (simulcastLayers != null
+                                && simulcastLayers.size() > 1)
                         {
-                            simulcastLayer = layersIterator.next();
+                            // If the peer hasn't signaled any simulcast streams
+                            // then there's nothing to configure.
+
+                            Iterator<SimulcastLayer> layersIterator
+                                    = simulcastLayers.iterator();
+
+                            SimulcastLayer simulcastLayer = null;
+                            int currentLayer = 0;
+                            while (layersIterator.hasNext()
+                                    && currentLayer++ <= entry.getValue())
+                            {
+                                simulcastLayer = layersIterator.next();
+                            }
+
+                            if (simulcastLayer != null)
+                            {
+                                map.put(peer, simulcastLayer);
+                                EndpointSimulcastLayer endpointSimulcastLayer
+                                        = new EndpointSimulcastLayer(
+                                                peer.getID(),
+                                                simulcastLayer);
+
+                                endpointSimulcastLayers.add(
+                                        endpointSimulcastLayer);
+                            }
+
+                            break;
                         }
-
-                        if (simulcastLayer != null)
-                        {
-                            map.put(peer, simulcastLayer);
-                            EndpointSimulcastLayer endpointSimulcastLayer
-                                    = new EndpointSimulcastLayer(peer.getID(),
-                                    simulcastLayer);
-
-                            endpointSimulcastLayers.add(endpointSimulcastLayer);
-                        }
-
-                        break;
                     }
                 }
             }
         }
 
-        // TODO(gp) remove the SimulcastLayersChangedEvent event receivers
-        // should listen for MediaStreamTrackActivity instead. It was a bad
-        // idea to begin with.
+        // TODO(gp) remove the SimulcastLayersChangedEvent event. Receivers
+        // should listen for MediaStreamTrackActivity instead. It was probably
+        // a bad idea to begin with.
         if (!endpointSimulcastLayers.isEmpty())
         {
             // Receiving simulcast layers changed, create and send an event
@@ -390,6 +417,9 @@ public class SimulcastManager
             String json = MyJsonEncoder.toJson(event);
             try
             {
+                // FIXME(gp) sendMessageOnDataChannel may silently fail to send
+                // a data message. We want to be able to handle those errors
+                // ourselves.
                 self.sendMessageOnDataChannel(json);
             }
             catch (IOException e)
@@ -399,8 +429,15 @@ public class SimulcastManager
 
             if (logger.isInfoEnabled())
             {
-                logger.info("Receiving simulcast layers for endpoint "
-                        + self.getID() + " changed:" + json);
+                for (EndpointSimulcastLayer esl
+                        : event.endpointSimulcastLayers)
+                {
+                    StringBuilder b = new StringBuilder();
+                    MyJsonEncoder.toJson(b, esl.simulcastLayer);
+
+                    logger.info(self.getID() + " now receives from "
+                            + esl.endpoint + ": " + b.toString());
+                }
             }
         }
 
