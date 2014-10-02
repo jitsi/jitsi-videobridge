@@ -146,9 +146,8 @@ If you set this property to true the statistics will be generated and sent. By
 default(if you haven't set this property) they are disabled.
 
  * **org.jitsi.videobridge.STATISTICS_TRANSPORT** - string property. 
-The possible values for this property are "colibri" and "pubsub". By default 
-"pubsub" is used.
- * **org.jitsi.videobridge.STATISTICS_INTERVAL** - intiger property. 
+The possible values for this property are "colibri" and "pubsub".
+ * **org.jitsi.videobridge.STATISTICS_INTERVAL** - integer property. 
 This property specifies the time in milliseconds between generation of the 
 statistics. By default the interval is 1000 milliseconds.
  * **org.jitsi.videobridge.PUBSUB_SERVICE** - string property. 
