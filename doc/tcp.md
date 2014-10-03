@@ -69,8 +69,26 @@ right away.
 ### *org.ice4j.ice.harvest.ALLOWED_INTERFACES*
 Default: all interfaces are allowed.
 
-This property can be used to specify a ";"-separated list of interfaces which will
-be used to bind on. All IP addresses on the specified interfaces will be used.
+This property can be used to specify a ";"-separated list of interfaces which are
+allowed to be used for candidate allocations.
+
+### *org.ice4j.ice.harvest.BLOCKED_INTERFACES*
+Default: no interfaces are blocked.
+
+This property can be used to specify a ";"-separated list of interfaces which are
+not allowed to be used for candidate allocations.
+
+### *org.ice4j.ice.harvest.ALLOWED_ADDRESSES*
+Default: all addresses are allowed.
+
+This property can be used to specify a ";"-separated list of IP addresses which
+are allowed to be used for candidate allocations.
+
+### *org.ice4j.ice.harvest.BLOCKED_ADDRESSES*
+Default: no addresses are blocked.
+
+This property can be used to specify a ";"-separated list of IP addresses which
+are not allowed to be used for candidate allocations.
 
 ### *org.ice4j.ipv6.DISABLED*
 Type: boolean
