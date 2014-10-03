@@ -8,6 +8,7 @@ package org.jitsi.videobridge.osgi;
 
 import java.util.*;
 
+import org.ice4j.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
@@ -157,6 +158,11 @@ public class OSGi
                     .DROP_MUTED_AUDIO_SOURCE_IN_REVERSE_TRANSFORM,
                 true_);
         defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
+
+        // In the majority of use-cases the clients which connect to Jitsi
+        // Videobridge are not in the same network, so we don't need to
+        // advertise link-local addresses.
+        defaults.put(StackProperties.DISABLE_LINK_LOCAL_ADDRESSES, true_);
 
         for (Map.Entry<String,String> e : defaults.entrySet())
         {
