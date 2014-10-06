@@ -543,8 +543,18 @@ public class RtpChannel
     void askForKeyframes()
     {
         int[] receiveSSRCs = getReceiveSSRCs();
+        askForKeyframes(receiveSSRCs);
+    }
 
-        if (receiveSSRCs.length != 0)
+    /**
+     * Asks this <tt>Channel</tt> to request keyframes in the RTP video streams
+     * that it receives.
+     *
+     * @param receiveSSRCs the SSRCs to request an FIR for.
+     */
+    void askForKeyframes(int[] receiveSSRCs)
+    {
+        if (receiveSSRCs != null && receiveSSRCs.length != 0)
         {
             RTCPFeedbackMessageSender rtcpFeedbackMessageSender
                 = getContent().getRTCPFeedbackMessageSender();

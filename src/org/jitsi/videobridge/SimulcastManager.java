@@ -334,9 +334,12 @@ public class SimulcastManager
         if (self == null)
             return;
 
-        Map<Endpoint, SimulcastLayer> map
+        Map<Endpoint, SimulcastLayer> endpointMap
                 = new HashMap<Endpoint, SimulcastLayer>(
                         endpointsQualityMap.size());
+
+        Map<RtpChannel, SimulcastLayer> channelMap
+                = new HashMap<RtpChannel, SimulcastLayer>(endpointsQualityMap.size());
 
         List<EndpointSimulcastLayer> endpointSimulcastLayers
                 = new ArrayList<EndpointSimulcastLayer>(endpointsQualityMap.size());
@@ -382,9 +385,13 @@ public class SimulcastManager
                                 simulcastLayer = layersIterator.next();
                             }
 
-                            if (simulcastLayer != null)
+                            if (simulcastLayer != null
+                                    && (!endpointMap.containsKey(peer)
+                                        || endpointMap.get(peer) != simulcastLayer))
                             {
-                                map.put(peer, simulcastLayer);
+                                endpointMap.put(peer, simulcastLayer);
+                                channelMap.put(rtpChannel, simulcastLayer);
+
                                 EndpointSimulcastLayer endpointSimulcastLayer
                                         = new EndpointSimulcastLayer(
                                                 peer.getID(),
@@ -441,9 +448,22 @@ public class SimulcastManager
             }
         }
 
+        // Send FIR requests
+        if (!channelMap.isEmpty())
+        {
+            for (Map.Entry<RtpChannel, SimulcastLayer> entry
+                    : channelMap.entrySet())
+            {
+                SimulcastLayer layer = entry.getValue();
+                RtpChannel channel = entry.getKey();
+                channel.askForKeyframes(
+                        new int[] { (int) layer.getPrimarySSRC() });
+            }
+        }
+
         synchronized (simulcastLayersSyncRoot)
         {
-            this.simLayersMap.putAll(map);
+            this.simLayersMap.putAll(endpointMap);
         }
     }
 
