@@ -9,6 +9,7 @@ package org.jitsi.videobridge.stats;
 import java.lang.management.*;
 import java.text.*;
 import java.util.*;
+import java.util.concurrent.locks.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
@@ -119,6 +120,15 @@ public class VideobridgeStatistics
     }
 
     /**
+     * The indicator which determines whether {@link #generate()} is executing
+     * on this <tt>VideobridgeStatistics</tt>. If <tt>true</tt>, invocations of
+     * <tt>generate()</tt> will do nothing. Introduced in order to mitigate an
+     * issue in which a blocking in <tt>generate()</tt> will cause a multiple of
+     * threads to be initialized and blocked.
+     */
+    private boolean inGenerate = false;
+
+    /**
      * The time in milliseconds at which {@link #generate()} was invoked last.
      */
     private long lastGenerateTime;
@@ -128,26 +138,77 @@ public class VideobridgeStatistics
      */
     public VideobridgeStatistics()
     {
-        setStat(AUDIOCHANNELS, 0);
-        setStat(BITRATE_DOWNLOAD, decimalFormat.format(0.0d));
-        setStat(BITRATE_UPLOAD, decimalFormat.format(0.0d));
-        setStat(CONFERENCES, 0);
-        setStat(CPU_USAGE, decimalFormat.format(0.0d));
-        setStat(NUMBEROFPARTICIPANTS, 0);
-        setStat(NUMBEROFTHREADS, 0);
-        setStat(RTP_LOSS, decimalFormat.format(0.0d));
-        setStat(TOTAL_MEMORY, 0);
-        setStat(USED_MEMORY, 0);
-        setStat(VIDEOCHANNELS, 0);
+        unlockedSetStat(AUDIOCHANNELS, 0);
+        unlockedSetStat(BITRATE_DOWNLOAD, decimalFormat.format(0.0d));
+        unlockedSetStat(BITRATE_UPLOAD, decimalFormat.format(0.0d));
+        unlockedSetStat(CONFERENCES, 0);
+        unlockedSetStat(CPU_USAGE, decimalFormat.format(0.0d));
+        unlockedSetStat(NUMBEROFPARTICIPANTS, 0);
+        unlockedSetStat(NUMBEROFTHREADS, 0);
+        unlockedSetStat(RTP_LOSS, decimalFormat.format(0.0d));
+        unlockedSetStat(TOTAL_MEMORY, 0);
+        unlockedSetStat(USED_MEMORY, 0);
+        unlockedSetStat(VIDEOCHANNELS, 0);
 
-        setStat(TIMESTAMP, currentTimeMillis());
+        unlockedSetStat(TIMESTAMP, currentTimeMillis());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public synchronized void generate()
+    public void generate()
+    {
+        // If a thread is already executing generate and has potentially
+        // blocked, do not allow other threads to fall into the same trap.
+        Lock lock = this.lock.writeLock();
+        boolean inGenerate;
+
+        lock.lock();
+        try
+        {
+            if (this.inGenerate)
+            {
+                inGenerate = true;
+            }
+            else
+            {
+                // Enter the generate method.
+                inGenerate = false;
+                this.inGenerate = true;
+            }
+        }
+        finally
+        {
+            lock.unlock();
+        }
+        if (!inGenerate)
+        {
+            try
+            {
+                generate0();
+            }
+            finally
+            {
+                // Exit the generate method.
+                lock.lock();
+                try
+                {
+                    this.inGenerate = false;
+                }
+                finally
+                {
+                    lock.unlock();
+                }
+            }
+        }
+    }
+
+    /**
+     * Generates/updates the statistics represented by this instance outside a
+     * synchronized block.
+     */
+    protected void generate0()
     {
         int audioChannels = 0, videoChannels = 0;
         int conferences = 0;
@@ -195,40 +256,17 @@ public class VideobridgeStatistics
             }
         }
 
+        // BITRATE_DOWNLOAD, BITRATE_UPLOAD
         long now = System.currentTimeMillis();
-        double bitrateDownload = 0.0d;
-        double bitrateUpload = 0.0d;
 
-        if (lastGenerateTime != 0)
-        {
-            long period = now - lastGenerateTime;
-
-            if (period > 0)
-            {
-                bitrateDownload = calculateBitRate(bytesReceived, period);
-                bitrateUpload = calculateBitRate(bytesSent, period);
-            }
-        }
-        lastGenerateTime = now;
-
-        setStat(BITRATE_DOWNLOAD, decimalFormat.format(bitrateDownload));
-        setStat(BITRATE_UPLOAD, decimalFormat.format(bitrateUpload));
-
+        // RTP_LOSS
         double rtpLoss
             = ((packetsLost > 0) && (packets > 0))
                 ? ((double) packetsLost) / packets
                 : 0.0d;
 
-        setStat(RTP_LOSS, decimalFormat.format(rtpLoss));
-
-        setStat(AUDIOCHANNELS, audioChannels);
-        setStat(CONFERENCES, conferences);
-        setStat(NUMBEROFPARTICIPANTS, endpoints);
-        setStat(VIDEOCHANNELS, videoChannels);
-
-        setStat(
-                NUMBEROFTHREADS,
-                ManagementFactory.getThreadMXBean().getThreadCount());
+        // NUMBEROFTHREADS
+        int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
         // OsStatistics
         OsStatistics osStatistics = OsStatistics.getOsStatistics();
@@ -236,12 +274,61 @@ public class VideobridgeStatistics
         int totalMemory = osStatistics.getTotalMemory();
         int usedMemory = osStatistics.getUsedMemory();
 
-        setStat(
-                CPU_USAGE,
-                (cpuUsage < 0) ? null : decimalFormat.format(cpuUsage));
-        setStat(TOTAL_MEMORY, (totalMemory < 0) ? null : totalMemory);
-        setStat(USED_MEMORY, (usedMemory < 0) ? null : usedMemory);
+        // TIMESTAMP
+        String timestamp = currentTimeMillis();
 
-        setStat(TIMESTAMP, currentTimeMillis());
+        // Now that (the new values of) the statistics have been calculated and
+        // the risks of the current thread hanging have been reduced as much as
+        // possible, commit (the new values of) the statistics.
+        Lock lock = this.lock.writeLock();
+
+        lock.lock();
+        try
+        {
+            double bitrateDownload = 0.0d;
+            double bitrateUpload = 0.0d;
+
+            if (lastGenerateTime != 0)
+            {
+                long period = now - lastGenerateTime;
+
+                if (period > 0)
+                {
+                    bitrateDownload = calculateBitRate(bytesReceived, period);
+                    bitrateUpload = calculateBitRate(bytesSent, period);
+                }
+            }
+            lastGenerateTime = now;
+
+            unlockedSetStat(
+                    BITRATE_DOWNLOAD,
+                    decimalFormat.format(bitrateDownload));
+            unlockedSetStat(
+                    BITRATE_UPLOAD,
+                    decimalFormat.format(bitrateUpload));
+
+            unlockedSetStat(RTP_LOSS, decimalFormat.format(rtpLoss));
+
+            unlockedSetStat(AUDIOCHANNELS, audioChannels);
+            unlockedSetStat(CONFERENCES, conferences);
+            unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);
+            unlockedSetStat(VIDEOCHANNELS, videoChannels);
+
+            unlockedSetStat(NUMBEROFTHREADS, threadCount);
+
+            unlockedSetStat(
+                    CPU_USAGE,
+                    (cpuUsage < 0) ? null : decimalFormat.format(cpuUsage));
+            unlockedSetStat(
+                    TOTAL_MEMORY,
+                    (totalMemory < 0) ? null : totalMemory);
+            unlockedSetStat(USED_MEMORY, (usedMemory < 0) ? null : usedMemory);
+
+            unlockedSetStat(TIMESTAMP, timestamp);
+        }
+        finally
+        {
+            lock.unlock();
+        }
     }
 }
