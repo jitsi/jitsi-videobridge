@@ -408,6 +408,19 @@ public class SimulcastManager
             }
         }
 
+        // Send FIR requests first.
+        if (!channelMap.isEmpty())
+        {
+            for (Map.Entry<RtpChannel, SimulcastLayer> entry
+                    : channelMap.entrySet())
+            {
+                SimulcastLayer layer = entry.getValue();
+                RtpChannel channel = entry.getKey();
+                channel.askForKeyframes(
+                        new int[] { (int) layer.getPrimarySSRC() });
+            }
+        }
+
         // TODO(gp) remove the SimulcastLayersChangedEvent event. Receivers
         // should listen for MediaStreamTrackActivity instead. It was probably
         // a bad idea to begin with.
@@ -448,18 +461,6 @@ public class SimulcastManager
             }
         }
 
-        // Send FIR requests
-        if (!channelMap.isEmpty())
-        {
-            for (Map.Entry<RtpChannel, SimulcastLayer> entry
-                    : channelMap.entrySet())
-            {
-                SimulcastLayer layer = entry.getValue();
-                RtpChannel channel = entry.getKey();
-                channel.askForKeyframes(
-                        new int[] { (int) layer.getPrimarySSRC() });
-            }
-        }
 
         synchronized (simulcastLayersSyncRoot)
         {
