@@ -820,6 +820,9 @@ public class Videobridge
                         else
                         {
                             sctpConn = content.getSctpConnection(id);
+                            // Expire an expired/non-existing SCTP connection.
+                            if (sctpConn == null && expire == 0)
+                                continue;
                             // endpoint
                             if (endpointID != null)
                                 sctpConn.setEndpoint(endpointID);
