@@ -69,12 +69,6 @@ public class IceUdpTransportManager
         = "org.jitsi.videobridge.FORCE_AWS_HARVESTER";
 
     /**
-     * The indicator which determines whether the one-time method
-     * {@link JitsiTransportManager#initializePortNumbers()} is to be executed.
-     */
-    private static boolean initializePortNumbers = true;
-
-    /**
      * The <tt>Logger</tt> used by the <tt>IceUdpTransportManager</tt> class and
      * its instances to print debug information.
      */
@@ -725,29 +719,14 @@ public class IceUdpTransportManager
         iceAgent.setControlling(isControlling);
         iceAgent.setPerformConsentFreshness(true);
 
-        // createIceStream
-
-        /*
-         * Read the ranges of ports to be utilized from the ConfigurationService
-         * once.
-         */
-        synchronized (IceUdpTransportManager.class)
-        {
-            if (initializePortNumbers)
-            {
-                initializePortNumbers = false;
-                JitsiTransportManager.initializePortNumbers();
-            }
-        }
-
-        // TODO: Use the default tracker somehow?
         PortTracker portTracker
-                = JitsiTransportManager.getPortTracker(MediaType.AUDIO);
+                = JitsiTransportManager.getPortTracker(null);
+        int portBase = portTracker.getPort();
 
         IceMediaStream iceStream
                 = nams.createIceStream(
                 numComponents,
-                portTracker.getPort(),
+                portBase,
                 iceStreamName,
                 iceAgent);
 
@@ -755,9 +734,10 @@ public class IceUdpTransportManager
         try
         {
             portTracker.setNextPort(
-                    1 + iceStream.getComponent(Component.RTCP)
-                            .getLocalCandidates()
-                            .get(0).getTransportAddress().getPort());
+                    1 + iceStream.getComponent(
+                            numComponents > 1 ? Component.RTCP : Component.RTP)
+                        .getLocalCandidates()
+                        .get(0).getTransportAddress().getPort());
         }
         catch (Throwable t)
         {
@@ -765,6 +745,8 @@ public class IceUdpTransportManager
                 Thread.currentThread().interrupt();
             else if (t instanceof ThreadDeath)
                 throw (ThreadDeath) t;
+            else
+                portTracker.setNextPort(numComponents + portBase);
         }
 
         return iceAgent;
