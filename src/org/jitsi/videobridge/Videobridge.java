@@ -778,31 +778,34 @@ public class Videobridge
                             : contentIQ.getSctpConnections())
                     {
                         String id = sctpConnIq.getID();
-
-                        Endpoint endpoint
-                            = conference.getOrCreateEndpoint(
-                                    sctpConnIq.getEndpoint());
-
-                        SctpConnection sctpConn = null;
+                        SctpConnection sctpConn;
 
                         int expire = sctpConnIq.getExpire();
                         String channelBundleId = sctpConnIq.getChannelBundleId();
 
-                        // No ID means SCTP connection is to be created or focus
-                        // uses endpoint identity
+                        // No ID means SCTP connection is to either be created
+                        // or focus uses endpoint identity.
                         if (id == null)
                         {
-                            // FIXME: depreciated and to be removed
+                            Endpoint endpoint
+                                = conference.getOrCreateEndpoint(
+                                        sctpConnIq.getEndpoint());
+
+                            // FIXME The method
+                            // Content.getSctpConnection(Endpoint) is annotated
+                            // as deprecated but SctpConnection identification
+                            // by Endpoint (ID) is to continue to be supported
+                            // for legacy purposes.
                             sctpConn = content.getSctpConnection(endpoint);
-
-                            // Expire an expired/non-existing SCTP connection.
-                            if(expire == 0)
-                                continue;
-
-                            int sctpPort = sctpConnIq.getPort();
-
                             if (sctpConn == null)
                             {
+                                // Expire an expired/non-existing SCTP
+                                // connection.
+                                if (expire == 0)
+                                    continue;
+
+                                int sctpPort = sctpConnIq.getPort();
+
                                 sctpConn
                                     = content.createSctpConnection(
                                             endpoint,
@@ -824,7 +827,7 @@ public class Videobridge
                         }
 
                         // Check if SCTP connection has expired.
-                        if(sctpConn.isExpired())
+                        if (sctpConn.isExpired())
                             continue;
 
                         // initiator
@@ -840,8 +843,9 @@ public class Videobridge
                         {
                             TransportManager transportManager
                                 = conference.getTransportManager(
-                                    channelBundleId,
-                                    true);
+                                        channelBundleId,
+                                        true);
+
                             transportManager.addChannel(sctpConn);
                         }
 
@@ -858,17 +862,18 @@ public class Videobridge
                 if (responseConferenceIQ == null)
                     break;
             }
-            for(ColibriConferenceIQ.ChannelBundle channelBundleIq
-                : conferenceIQ.getChannelBundles())
+            for (ColibriConferenceIQ.ChannelBundle channelBundleIq
+                    : conferenceIQ.getChannelBundles())
             {
                 TransportManager transportManager
                     = conference.getTransportManager(channelBundleIq.getId());
                 IceUdpTransportPacketExtension transportIq
-                        = channelBundleIq.getTransport();
-                if (transportManager != null
-                        && transportIq != null)
+                    = channelBundleIq.getTransport();
+
+                if (transportManager != null && transportIq != null)
                 {
-                    transportManager.startConnectivityEstablishment(transportIq);
+                    transportManager.startConnectivityEstablishment(
+                            transportIq);
                 }
             }
         }
