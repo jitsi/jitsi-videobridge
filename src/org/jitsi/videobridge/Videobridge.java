@@ -677,11 +677,10 @@ public class Videobridge
                                 transportManager.addChannel(channel);
                             }
 
-                            /*
-                             * The attribute endpoint is optional. If a value is
-                             * not specified, then the Channel endpoint is to
-                             * not be changed.
-                             */
+                            // endpoint
+                            // The attribute endpoint is optional. If a value is
+                            // not specified, then the Channel endpoint is to
+                            // not be changed.
                             String endpoint = channelIQ.getEndpoint();
 
                             if (endpoint != null)
@@ -719,43 +718,46 @@ public class Videobridge
 
                             channel.setDirection(channelIQ.getDirection());
 
-                            if (channel instanceof VideoChannel
-                                    && channelIQ.getSourceGroups() != null)
+                            if (channel instanceof VideoChannel)
                             {
+                                List<SourceGroupPacketExtension> sourceGroups
+                                    = channelIQ.getSourceGroups();
                                 VideoChannel videoChannel
-                                        = (VideoChannel) channel;
+                                    = (VideoChannel) channel;
 
-                                videoChannel.getSimulcastManager()
-                                        .updateSimulcastLayers(
-                                        channelIQ.getSourceGroups());
-                            }
-
-                            if (channel instanceof VideoChannel
-                                    && channelIQ.getReceivingSimulcastLayer() != null)
-                            {
-                                VideoChannel videoChannel
-                                        = (VideoChannel) channel;
-
-                                Integer receiveSimulcastLayer =
-                                        channelIQ.getReceivingSimulcastLayer();
-
-                                Collection<Endpoint> endpoints =
-                                        conference.getEndpoints();
-
-                                if (endpoints != null && !endpoints.isEmpty())
+                                if (sourceGroups != null)
                                 {
-                                    Map<Endpoint, Integer> endpointsQuality =
-                                            new HashMap<Endpoint, Integer>(
+                                    videoChannel
+                                        .getSimulcastManager()
+                                            .updateSimulcastLayers(
+                                                    sourceGroups);
+                                }
+
+                                Integer receivingSimulcastLayer
+                                    = channelIQ.getReceivingSimulcastLayer();
+
+                                if (receivingSimulcastLayer != null)
+                                {
+                                    Collection<Endpoint> endpoints
+                                        = conference.getEndpoints();
+
+                                    if (!endpoints.isEmpty())
+                                    {
+                                        Map<Endpoint,Integer> endpointsQuality
+                                            = new HashMap<Endpoint,Integer>(
                                                     endpoints.size());
 
-                                    for (Endpoint e : endpoints)
-                                    {
-                                        endpointsQuality.put(e,
-                                                receiveSimulcastLayer);
+                                        for (Endpoint e : endpoints)
+                                        {
+                                            endpointsQuality.put(
+                                                    e,
+                                                    receivingSimulcastLayer);
+                                        }
+                                        videoChannel
+                                            .getSimulcastManager()
+                                                .setReceivingSimulcastLayer(
+                                                        endpointsQuality);
                                     }
-                                    videoChannel.getSimulcastManager()
-                                            .setReceivingSimulcastLayer(
-                                                    endpointsQuality);
                                 }
                             }
 
@@ -774,12 +776,12 @@ public class Videobridge
                             break;
                     }
 
-                    for(ColibriConferenceIQ.SctpConnection sctpConnIq
+                    for (ColibriConferenceIQ.SctpConnection sctpConnIq
                             : contentIQ.getSctpConnections())
                     {
                         String id = sctpConnIq.getID();
+                        String endpointID = sctpConnIq.getEndpoint();
                         SctpConnection sctpConn;
-
                         int expire = sctpConnIq.getExpire();
                         String channelBundleId = sctpConnIq.getChannelBundleId();
 
@@ -787,15 +789,17 @@ public class Videobridge
                         // or focus uses endpoint identity.
                         if (id == null)
                         {
-                            Endpoint endpoint
-                                = conference.getOrCreateEndpoint(
-                                        sctpConnIq.getEndpoint());
-
                             // FIXME The method
                             // Content.getSctpConnection(Endpoint) is annotated
                             // as deprecated but SctpConnection identification
                             // by Endpoint (ID) is to continue to be supported
                             // for legacy purposes.
+                            Endpoint endpoint
+                                = (endpointID == null)
+                                    ? null
+                                    : conference.getOrCreateEndpoint(
+                                            endpointID);
+
                             sctpConn = content.getSctpConnection(endpoint);
                             if (sctpConn == null)
                             {
@@ -816,6 +820,9 @@ public class Videobridge
                         else
                         {
                             sctpConn = content.getSctpConnection(id);
+                            // endpoint
+                            if (endpointID != null)
+                                sctpConn.setEndpoint(endpointID);
                         }
 
                         // expire
