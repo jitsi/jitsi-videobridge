@@ -1625,7 +1625,7 @@ public class IceUdpTransportManager
                                 + ".");
                 }
 
-                if (fallback)
+                if (tcpHostHarvester == null && fallback)
                 {
                     port = TCP_FALLBACK_PORT;
                     try
