@@ -133,6 +133,11 @@ public class SctpConnection
     private boolean assocIsUp;
 
     /**
+     * Indicates if we have accepted incoming connection.
+     */
+    private boolean acceptedIncomingConnection;
+
+    /**
      * Data channels mapped by SCTP stream identified(sid).
      */
     private final Map<Integer,WebRtcDataStream> channels
@@ -164,12 +169,6 @@ public class SctpConnection
      */
     private final List<WebRtcDataStreamListener> listeners
         = new ArrayList<WebRtcDataStreamListener>();
-
-    /**
-     * The indicator which determines whether an SCTP peer address has been
-     * confirmed.
-     */
-    private boolean peerAddrIsConfirmed;
 
     /**
      * Remote SCTP port.
@@ -252,7 +251,7 @@ public class SctpConnection
             synchronized (this)
             {
                 assocIsUp = false;
-                peerAddrIsConfirmed = false;
+                acceptedIncomingConnection = false;
                 if (sctpSocket != null)
                 {
                     sctpSocket.close();
@@ -364,7 +363,7 @@ public class SctpConnection
      */
     public boolean isReady()
     {
-        return assocIsUp && peerAddrIsConfirmed;
+        return assocIsUp && acceptedIncomingConnection;
     }
 
     /**
@@ -491,20 +490,6 @@ public class SctpConnection
      */
     private void notifySctpConnectionReadyInEventDispatcher()
     {
-        /*
-         * FIXME Lyubomir Marinov: If usrsctp_send is invoked immediately after
-         * SCTP_ASSOC_CHANGE SCTP_COMM_UP or SCTP_PEER_ADDR_CHANGE
-         * SCTP_ADDR_CONFIRMED, it returns "Transport endpoint is not
-         * connected".
-         */
-        try
-        {
-            Thread.sleep(1000);
-        }
-        catch (InterruptedException ex)
-        {
-        }
-
         /*
          * When executing asynchronously in eventDispatcher, it is technically
          * possible that this SctpConnection may have expired by now.
@@ -680,26 +665,6 @@ public class SctpConnection
                 catch (IOException e)
                 {
                     logger.error("Error closing SCTP socket", e);
-                }
-                break;
-            }
-            break;
-
-        case SctpNotification.SCTP_PEER_ADDR_CHANGE:
-            SctpNotification.PeerAddressChange peerAddrChange
-                = (SctpNotification.PeerAddressChange) notification;
-
-            switch (peerAddrChange.state)
-            {
-            case SctpNotification.PeerAddressChange.SCTP_ADDR_AVAILABLE:
-            case SctpNotification.PeerAddressChange.SCTP_ADDR_CONFIRMED:
-                if (!peerAddrIsConfirmed)
-                {
-                    boolean wasReady = isReady();
-
-                    peerAddrIsConfirmed = true;
-                    if (isReady() && !wasReady)
-                        notifySctpConnectionReady();
                 }
                 break;
             }
@@ -938,7 +903,7 @@ public class SctpConnection
             // Meet)
             sctpSocket = Sctp.createSocket(5000);
             assocIsUp = false;
-            peerAddrIsConfirmed = false;
+            acceptedIncomingConnection = false;
         }
 
         // Implement output network link for SCTP stack on DTLS transport
@@ -988,11 +953,19 @@ public class SctpConnection
                         {
                             // sctpSocket is set to null on close
                             sctpSocket = SctpConnection.this.sctpSocket;
-                            while (sctpSocket != null &&
-                                    !sctpSocket.accept())
+                            while (sctpSocket != null)
                             {
+                                if (sctpSocket.accept())
+                                {
+                                    acceptedIncomingConnection = true;
+                                    break;
+                                }
                                 Thread.sleep(100);
                                 sctpSocket = SctpConnection.this.sctpSocket;
+                            }
+                            if (isReady())
+                            {
+                                notifySctpConnectionReady();
                             }
                         }
                         catch (Exception e)
@@ -1070,7 +1043,7 @@ public class SctpConnection
             synchronized (this)
             {
                 assocIsUp = false;
-                peerAddrIsConfirmed = false;
+                acceptedIncomingConnection = false;
                 if(sctpSocket != null)
                 {
                     sctpSocket.close();
