@@ -11,6 +11,8 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+import javax.media.rtp.*;
+
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.netaddr.*;
@@ -28,8 +30,6 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.osgi.framework.*;
-
-import javax.media.rtp.*;
 
 /**
  * Implements the Jingle ICE-UDP transport.
@@ -106,6 +106,13 @@ public class IceUdpTransportManager
     private static final int TCP_FALLBACK_PORT = 4443;
 
     /**
+     * The name of the property which specifies an additional port to be
+     * advertised by the TCP harvester.
+     */
+    private static final String TCP_HARVESTER_MAPPED_PORT
+        = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
+
+    /**
      * The name of the property which controls the port to which the
      * <tt>MultiplexingTcpHostHarvester</tt> will bind.
      */
@@ -117,14 +124,7 @@ public class IceUdpTransportManager
      * <tt>MultiplexingTcpHostHarvester</tt>.
      */
     private static final String TCP_HARVESTER_SSLTCP
-            = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
-
-    /**
-     * The name of the property which specifies an additional port to be
-     * advertised by the TCP harvester.
-     */
-    private static final String TCP_HARVESTER_MAPPED_PORT
-            = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
+        = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
 
     /**
      * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
@@ -355,8 +355,8 @@ public class IceUdpTransportManager
             return false;
 
         if (channel instanceof SctpConnection
-              && sctpConnection != null
-              && sctpConnection != channel)
+                && sctpConnection != null
+                && sctpConnection != channel)
         {
             logd("Not adding a second SctpConnection to TransportManager.");
             return false;
@@ -430,9 +430,9 @@ public class IceUdpTransportManager
             awsHarvester = new AwsCandidateHarvester();
 
         ConfigurationService cfg
-                = ServiceUtils.getService(
-                getBundleContext(),
-                ConfigurationService.class);
+            = ServiceUtils.getService(
+                    getBundleContext(),
+                    ConfigurationService.class);
 
         //if no configuration is found then we simply log and bail
         if (cfg == null)
@@ -477,9 +477,9 @@ public class IceUdpTransportManager
             // It appears that the port number values ("9") are unused (and
             // presumably it would be too much of a cliché to use "42")
             localAddress
-                    = new TransportAddress(localAddressStr, 9, Transport.UDP);
+                = new TransportAddress(localAddressStr, 9, Transport.UDP);
             publicAddress
-                    = new TransportAddress(publicAddressStr, 9, Transport.UDP);
+                = new TransportAddress(publicAddressStr, 9, Transport.UDP);
 
             logger.info("Will append a NAT harvester for " +
                                 localAddress + "=>" + publicAddress);
@@ -494,7 +494,7 @@ public class IceUdpTransportManager
         }
 
         MappingCandidateHarvester natHarvester
-                = new MappingCandidateHarvester(publicAddress, localAddress);
+            = new MappingCandidateHarvester(publicAddress, localAddress);
 
         iceAgent.addCandidateHarvester(natHarvester);
     }
@@ -1786,7 +1786,7 @@ public class IceUdpTransportManager
         {
             //Assume/try TCP
             streamConnector
-                    = new DefaultTCPStreamConnector(
+                = new DefaultTCPStreamConnector(
                         iceSockets[0].getTCPSocket(),
                         iceSockets[1] == null ? null : iceSockets[1].getTCPSocket(),
                         rtcpmux);
@@ -1891,7 +1891,8 @@ public class IceUdpTransportManager
         {
             Agent iceAgent = this.iceAgent;
             IceProcessingState state
-                    = iceAgent == null ? null : iceAgent.getState();
+                = iceAgent == null ? null : iceAgent.getState();
+
             while (IceProcessingState.RUNNING.equals(state)
                     || IceProcessingState.WAITING.equals(state))
             {
