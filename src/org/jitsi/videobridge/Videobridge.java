@@ -587,7 +587,7 @@ public class Videobridge
                 {
                     // Set the RTCP termination strategy.
                     if (strategyFQN != null)
-                        content.setRTCPTerminationStrategyFromFQN(strategyFQN);
+                        content.setRTCPTerminationStrategyFQN(strategyFQN);
 
                     ColibriConferenceIQ.Content responseContentIQ
                         = new ColibriConferenceIQ.Content(content.getName());

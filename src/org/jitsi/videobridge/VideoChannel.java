@@ -755,7 +755,7 @@ public class VideoChannel
         {
             // Ensure that we are using BasicBridgeRTCPTerminationStrategy,
             // which is currently needed to notify us of incoming REMBs
-            getContent().setRTCPTerminationStrategyFromFQN(
+            getContent().setRTCPTerminationStrategyFQN(
                     BasicBridgeRTCPTerminationStrategy.class.getCanonicalName());
         }
     }
