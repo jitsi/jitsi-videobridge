@@ -120,6 +120,13 @@ public class Videobridge
             = "org.jitsi.videobridge.rtcp.strategy";
 
     /**
+     * The name of the property which specifies the FQN name of the RTCP
+     * strategy to use when there are less than 3 participants.
+     */
+    static final String RTCP_TERMINATION_FALLBACK_STRATEGY_PNAME
+            = "org.jitsi.videobridge.rtcp.fallbackStrategy";
+
+    /**
      * The XMPP API of Jitsi Videobridge.
      */
     public static final String XMPP_API = "xmpp";

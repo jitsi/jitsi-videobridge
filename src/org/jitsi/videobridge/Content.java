@@ -11,7 +11,6 @@ import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
-import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
@@ -689,9 +688,7 @@ public class Content
 
     private String rtcpTerminationStrategyFQN;
 
-    // TODO(gp) the fallback strategy should be configurable
-    private String duoStrategyFQN = SilentBridgeRTCPTerminationStrategy
-            .class.getName();
+    private String fallbackSrategyFQN;
 
     public void setRTCPTerminationStrategyFQN(String strategyFQN)
     {
@@ -733,7 +730,9 @@ public class Content
          */
         if (endpoints != null && endpoints.size() < 3)
         {
-            strategyFQN = this.duoStrategyFQN;
+            strategyFQN = this.fallbackSrategyFQN;
+            if (StringUtils.isNullOrEmpty(strategyFQN))
+                strategyFQN = this.rtcpTerminationStrategyFQN;
         }
         else
         {
@@ -788,6 +787,11 @@ public class Content
 
         if (cfg != null)
         {
+            String fallbackFQN = cfg.getString(
+                    Videobridge.RTCP_TERMINATION_FALLBACK_STRATEGY_PNAME, "");
+
+            setRTCPTerminationFallbackStrategyFQN(fallbackFQN);
+
             String strategyFQN = cfg.getString(
                     Videobridge.RTCP_TERMINATION_STRATEGY_PNAME, "");
 
@@ -975,6 +979,12 @@ public class Content
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
         }
+    }
+
+    public void setRTCPTerminationFallbackStrategyFQN(
+            String rtcpTerminationFallbackStrategyFQN)
+    {
+        this.fallbackSrategyFQN = rtcpTerminationFallbackStrategyFQN;
     }
 
 
