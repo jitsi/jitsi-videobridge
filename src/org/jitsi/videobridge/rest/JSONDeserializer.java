@@ -333,6 +333,9 @@ final class JSONDeserializer
                 = conference.get(JSONSerializer.CHANNEL_BUNDLES);
             Object recording
                 = conference.get(ColibriConferenceIQ.Recording.ELEMENT_NAME);
+            Object strategy
+                    = conference.get(ColibriConferenceIQ
+                        .RTCPTerminationStrategy.ELEMENT_NAME);
 
             conferenceIQ = new ColibriConferenceIQ();
             // id
@@ -351,8 +354,33 @@ final class JSONDeserializer
             // recording
             if (recording != null)
                 deserializeRecording((JSONObject) recording, conferenceIQ);
+            if (strategy != null)
+                deserializeRTCPTerminationStrategy((JSONObject) strategy,
+                        conferenceIQ);
         }
         return conferenceIQ;
+    }
+
+    private static void deserializeRTCPTerminationStrategy(
+            JSONObject strategy, ColibriConferenceIQ conferenceIQ)
+    {
+        if (strategy != null & conferenceIQ != null)
+        {
+            Object attrName
+                    = strategy.get(ColibriConferenceIQ
+                        .RTCPTerminationStrategy.NAME_ATTR_NAME);
+
+            String name;
+            if (attrName == null || (name = attrName.toString()).length() == 0)
+                return;
+
+            ColibriConferenceIQ.RTCPTerminationStrategy strategyIQ
+                    = new ColibriConferenceIQ.RTCPTerminationStrategy();
+
+            strategyIQ.setName(name);
+
+            conferenceIQ.setRTCPTerminationStrategy(strategyIQ);
+        }
     }
 
     public static ColibriConferenceIQ.Content deserializeContent(
