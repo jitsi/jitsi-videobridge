@@ -216,9 +216,13 @@ public class PubSubPublisher
      * @param nodeName the name of the node.
      * @throws Exception if sending the request fails.
      */
-    public void createNode(String nodeName)
+    public void createNode(String nodeName, boolean skip)
         throws Exception
     {
+        if (skip) {
+            nodes.add(nodeName);
+            return;
+        }
         PubSub request = new PubSub();
         request.setTo(serviceName);
         request.setType(Type.SET);
