@@ -87,9 +87,10 @@ Otherwise, we don't <!--'--> change lastN.
 We try to decrease aggressively, and increase conservatively.
 
 
-Currently we do not support lastN=0. We specifically never let lastN fall under 1, because
-if it does, the receiver will continue to emit REMB packets, but with very low values,
-which would never lead to a subsequent increase.
+When lastN falls to 0, the endpoint will not receive any video. Consequently, it will still emit
+REMB packets, however their bitrate will not increase. For this reason if lastN stay 0 for
+MAX\_STAY\_AT\_ZERO\_MS milliseconds, we will increase it to 1, in order to "probe" for available
+bandwidth.
 
 
 # Configuration
@@ -102,3 +103,4 @@ org.jitsi.videobridge.VideoChannelLastNAdaptor.INITIAL\_INTERVAL\_MS=70000
 org.jitsi.videobridge.VideoChannelLastNAdaptor.REMB\_MULT\_CONSTANT=1.0
 org.jitsi.videobridge.VideoChannelLastNAdaptor.MIN\_ASSUMED\_ENDPOINT\_BITRATE\_BPS=400000
 org.jitsi.videobridge.VideoChannelLastNAdaptor.REMB\_AVERAGE\_INTERVAL\_MS=5000
+org.jitsi.videobridge.VideoChannelLastNAdaptor.MAX\_STAY\_AT\_ZERO\_MS=60000

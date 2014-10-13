@@ -77,6 +77,14 @@ public class VideoChannelLastNAdaptor
             + ".REMB_AVERAGE_INTERVAL_MS";
 
     /**
+     * The name of the property which can be used to control the
+     * <tt>MAX_STAY_AT_ZERO_MS</tt> constant.
+     */
+    private static final String MAX_STAY_AT_ZERO_MS_PNAME
+            = "org.jitsi.videobridge.VideoChannelLastNAdaptor"
+            + ".MAX_STAY_AT_ZERO_MS";
+
+    /**
      * The constant that specifies the minimum amount of time in milliseconds
      * that we wait before increasing lastN.
      * That is, we only increase lastN if for the last
@@ -117,6 +125,11 @@ public class VideoChannelLastNAdaptor
     private static int REMB_AVERAGE_INTERVAL_MS = 5000;
 
     /**
+     * The maximum amount of time in milliseconds to keep lastN=0.
+     */
+    private static int MAX_STAY_AT_ZERO_MS = 60000;
+
+    /**
      * Whether the values for the constants have been initialized or not.
      */
     private static boolean configurationInitialized = false;
@@ -137,6 +150,11 @@ public class VideoChannelLastNAdaptor
      * increase lastN or keep it as it is (but not decrease it).
      */
     private long lastNonDecrease = -1;
+
+    /**
+     * The last time that lastN was non-zero.
+     */
+    private long lastNonZeroLastN = -1;
 
     /**
      * The time of reception of first REMB packet.
@@ -217,6 +235,10 @@ public class VideoChannelLastNAdaptor
                 MIN_ASSUMED_ENDPOINT_BITRATE_BPS
                         = cfg.getInt(MIN_ASSUMED_ENDPOINT_BITRATE_BPS_PNAME,
                                      MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
+
+                MAX_STAY_AT_ZERO_MS
+                        = cfg.getInt(MAX_STAY_AT_ZERO_MS_PNAME,
+                                     MAX_STAY_AT_ZERO_MS);
             }
         }
     }
@@ -244,18 +266,17 @@ public class VideoChannelLastNAdaptor
         /*
          * We update lastN if either:
          * 1. It is currently disabled (-1)
-         * 2. It is currently 0 (because we don't currently support 0)
-         * 3. It is currently more than the number of endpoints (because
+         * 2. It is currently more than the number of endpoints (because
          * otherwise we detect this as a drop in the number of endpoint the
          * channel can receive and we drop it aggressively)
          *
-         * In the other cases (0 < lastN <= endpointsCount) we leave it as it
+         * In the other cases (0 <= lastN <= endpointsCount) we leave it as it
          * is because it is a reasonable start point.
          */
-        if (lastN <= 0 || lastN > endpointsCount)
+        if (lastN < 0 || lastN > endpointsCount)
         {
-            lastN = Math.max(1, endpointsCount);
-            channel.setLastN(lastN);
+            lastN = endpointsCount;
+            channel.setLastN(endpointsCount);
         }
 
         return lastN;
@@ -273,6 +294,11 @@ public class VideoChannelLastNAdaptor
 
         // The current value of lastN
         int lastN = channel.getLastN();
+
+        if (lastN > 0)
+        {
+            lastNonZeroLastN = now;
+        }
 
         // The ordered (by speech activity) list of endpoints currently in the
         // conference.
@@ -300,6 +326,14 @@ public class VideoChannelLastNAdaptor
         {
             lastN = setInitialLastN(lastN);
             initialLastNSet = true;
+        }
+
+        if (lastN == 0
+                && lastNonZeroLastN != -1
+                && now - lastNonZeroLastN > MAX_STAY_AT_ZERO_MS)
+        {
+            channel.setLastN(1);
+            return;
         }
 
         // Our estimate of the available bandwidth is the average of all
@@ -347,10 +381,8 @@ public class VideoChannelLastNAdaptor
                 // Decrease aggressively
                 int newn = Math.min(numEndpointsThatFitIn - 1, lastN / 2);
 
-                // Never set N=0 because if we don't send anything, the REMBs
-                // would never ramp-up, and N would stay 0 forever.
-                if (newn <= 0)
-                    newn = 1;
+                if (newn < 0)
+                    newn = 0;
                 channel.setLastN(newn);
             }
         }
