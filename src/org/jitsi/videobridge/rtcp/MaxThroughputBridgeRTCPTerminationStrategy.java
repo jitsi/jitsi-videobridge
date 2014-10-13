@@ -87,53 +87,10 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
 
             if (info != null)
             {
-                int baseseq = info.baseseq;
-                int cycles = info.cycles;
-                double jitter = info.jitter;
-                long lastSRntptimestamp = info.lastSRntptimestamp;
-                long lastSRreceiptTime = info.lastSRreceiptTime;
-                int maxseq = info.maxseq;
-                int received = info.received;
+                RTCPReportBlock receiverReport
+                        = info.makeReceiverReport(time);
 
-                long lastseq = maxseq + cycles;
-                long lsr
-                    = (int) ((lastSRntptimestamp & 0x0000ffffffff0000L) >> 16);
-                long dlsr
-                    = (int) ((time - lastSRreceiptTime) * 65.536000000000001D);
-                int packetslost = (int) (lastseq - baseseq + 1L - received);
-
-                if (packetslost < 0)
-                    packetslost = 0;
-
-                double frac
-                    = (packetslost - info.prevlost)
-                        / (double) (lastseq - info.prevmaxseq);
-
-                if (frac < 0.0D)
-                    frac = 0.0D;
-
-                int fractionlost = (int) (frac * 256D);
-
-                receiverReports.add(
-                        new RTCPReportBlock(
-                                ssrc,
-                                fractionlost,
-                                packetslost,
-                                lastseq,
-                                (int) jitter,
-                                lsr,
-                                dlsr));
-
-                info.prevmaxseq = (int) lastseq;
-                info.prevlost = packetslost;
-
-                if (logger.isInfoEnabled())
-                {
-                    logger.info(
-                            "FMJ reports " + packetslost + " lost packets ("
-                                + fractionlost + ") for SSRC "
-                                + (ssrc & 0xffffffffl) + " (" + ssrc + ")");
-                }
+                receiverReports.add(receiverReport);
             }
             else
             {
