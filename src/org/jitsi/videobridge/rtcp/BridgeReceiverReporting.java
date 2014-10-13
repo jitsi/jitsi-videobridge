@@ -95,8 +95,8 @@ public class BridgeReceiverReporting
 
         for (int ssrc : ssrcs)
         {
-            // TODO(gp) we need a mutex here.
-
+            // TODO(gp) we need a mutex here for accessing the RTCP transmitter
+            // cache.
             SSRCInfo info = rtcpTransmitter.cache.cache.get(ssrc);
 
             if (info != null)
