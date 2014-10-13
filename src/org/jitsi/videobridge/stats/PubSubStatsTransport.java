@@ -41,6 +41,11 @@ public class PubSubStatsTransport
     private PubSubPublisher publisher;
 
     /**
+     * Whether to skip node creation and configuration
+     */
+    private boolean skipCreate;
+
+    /**
      * The <tt>ServiceListener</tt> which listens to the <tt>BundleContext</tt>
      * in which this <tt>StatsTransport</tt> is started in order to track when
      * <tt>ComponentImpl</tt>s are registered and unregistering.
@@ -66,10 +71,11 @@ public class PubSubStatsTransport
      * @param serviceName the name of the service.
      * @param nodeName the name of the PubSub node.
      */
-    public PubSubStatsTransport(String serviceName, String nodeName)
+    public PubSubStatsTransport(String serviceName, String nodeName, boolean skipCreate)
     {
         this.serviceName = serviceName;
         this.nodeName = nodeName;
+        this.skipCreate = skipCreate;
     }
 
     /**
@@ -120,7 +126,7 @@ public class PubSubStatsTransport
             publisher.addResponseListener(this);
             try
             {
-                publisher.createNode(nodeName);
+                publisher.createNode(nodeName, skipCreate);
             }
             catch (Exception e)
             {

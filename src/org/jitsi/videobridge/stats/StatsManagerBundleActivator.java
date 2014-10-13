@@ -43,6 +43,11 @@ public class StatsManagerBundleActivator
     private static final String DEFAULT_STAT_TRANSPORT = null;
 
     /**
+     * The default value for skipping the pubsub node creation and configuration
+     */
+    private static final boolean DEFAULT_PUBSUB_SKIPNODECREATE = false;
+
+    /**
      * The name of the property which enables generating and sending statistics
      * about the Videobridge.
      */
@@ -71,6 +76,13 @@ public class StatsManagerBundleActivator
      */
     private static final String PUBSUB_SERVICE_PNAME
         = "org.jitsi.videobridge.PUBSUB_SERVICE";
+
+    /**
+     * The name of the property which specifies whether to skip node creation
+     * and configuration when the PubSub transport is used to send statistics.
+     */
+    private static final String PUBSUB_SKIP_NODECREATE
+        = "org.jitsi.videobridge.PUBSUB_SKIP_NODE_CREATION";
 
     /**
      * The value for COLIBRI statistics transport.
@@ -175,11 +187,13 @@ public class StatsManagerBundleActivator
         // Add StatsTransports to StatsManager.
         String transport = DEFAULT_STAT_TRANSPORT;
         int interval = DEFAULT_STAT_INTERVAL;
+        boolean skipNodeCreate = DEFAULT_PUBSUB_SKIPNODECREATE;
 
         if (cfg != null)
         {
             transport = cfg.getString(STATISTICS_TRANSPORT_PNAME, transport);
             interval = cfg.getInt(STATISTICS_INTERVAL_PNAME, interval);
+            skipNodeCreate = cfg.getBoolean(PUBSUB_SKIP_NODECREATE, skipNodeCreate);
         }
         if (STAT_TRANSPORT_COLIBRI.equals(transport))
         {
@@ -193,7 +207,7 @@ public class StatsManagerBundleActivator
             if(service != null && node != null)
             {
                 statsMgr.addTransport(
-                        new PubSubStatsTransport(service, node),
+                        new PubSubStatsTransport(service, node, skipNodeCreate),
                         interval);
             }
             else
