@@ -50,7 +50,7 @@ public class VideoChannelLastNAdaptor
      */
     private static final String INITIAL_INTERVAL_MS_PNAME
         = "org.jitsi.videobridge.VideoChannelLastNAdaptor"
-            + ".INITIAL_INTERVAL_MS_PNAME";
+            + ".INITIAL_INTERVAL_MS";
 
     /**
      * The name of the property which can be used to control the
