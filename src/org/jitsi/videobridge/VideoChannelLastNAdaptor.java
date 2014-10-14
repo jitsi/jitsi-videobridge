@@ -91,7 +91,7 @@ public class VideoChannelLastNAdaptor
      * <tt>INCREASE_LAG_MS</tt> milliseconds we have not received a REMB
      * indicating that we should decrease lastN or keep it as it is.
      */
-    private static int INCREASE_LAG_MS = 8000;
+    private static int INCREASE_LAG_MS = 20000;
 
     /**
      * The constant that specifies the minimum amount of time in milliseconds
@@ -100,7 +100,7 @@ public class VideoChannelLastNAdaptor
      * <tt>DECREASE_LAG_MS</tt> milliseconds we have not received a REMB
      * indicating that we should increase lastN or keep it as it is.
      */
-    private static int DECREASE_LAG_MS = 3000;
+    private static int DECREASE_LAG_MS = 10000;
 
     /**
      * The constant that specifies the initial period during which we will not

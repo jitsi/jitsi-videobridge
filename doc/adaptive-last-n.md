@@ -97,8 +97,8 @@ bandwidth.
 The parameters from the above section can be configured with the following
 properties (with their default values given):
 
-org.jitsi.videobridge.VideoChannelLastNAdaptor.INCREASE\_LAG\_MS=8000
-org.jitsi.videobridge.VideoChannelLastNAdaptor.DECREASE\_LAG\_MS=3000
+org.jitsi.videobridge.VideoChannelLastNAdaptor.INCREASE\_LAG\_MS=20000
+org.jitsi.videobridge.VideoChannelLastNAdaptor.DECREASE\_LAG\_MS=10000
 org.jitsi.videobridge.VideoChannelLastNAdaptor.INITIAL\_INTERVAL\_MS=70000
 org.jitsi.videobridge.VideoChannelLastNAdaptor.REMB\_MULT\_CONSTANT=1.0
 org.jitsi.videobridge.VideoChannelLastNAdaptor.MIN\_ASSUMED\_ENDPOINT\_BITRATE\_BPS=400000
