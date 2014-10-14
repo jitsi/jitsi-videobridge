@@ -829,6 +829,11 @@ public class IceUdpTransportManager
         }
         candidatePE.setProtocol(transport.toString());
 
+        if (transport == Transport.TCP || transport == Transport.SSLTCP)
+        {
+            candidatePE.setTcpType(candidate.getTcpType());
+        }
+
         candidatePE.setType(
                 CandidateType.valueOf(candidate.getType().toString()));
 
