@@ -223,10 +223,12 @@ public class VideoChannelLastNAdaptor
 
     /**
      * Sets the initial value of lastN.
+     *
+     * @param lastN The current value of lastN.
+     * @return the new value of lastN.
      */
-    private void setInitialLastN()
+    private int setInitialLastN(int lastN)
     {
-        int lastN = channel.getLastN();
         int endpointsCount = 0;
         List<WeakReference<Endpoint>> lastNEndpoints
                 = channel.getLastNEndpoints();
@@ -252,8 +254,11 @@ public class VideoChannelLastNAdaptor
          */
         if (lastN <= 0 || lastN > endpointsCount)
         {
-            channel.setLastN(Math.max(1, endpointsCount));
+            lastN = Math.max(1, endpointsCount);
+            channel.setLastN(lastN);
         }
+
+        return lastN;
     }
 
     /**
@@ -293,7 +298,7 @@ public class VideoChannelLastNAdaptor
 
         if (!initialLastNSet)
         {
-            setInitialLastN();
+            lastN = setInitialLastN(lastN);
             initialLastNSet = true;
         }
 
