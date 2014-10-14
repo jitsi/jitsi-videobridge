@@ -191,16 +191,20 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                     rtpTranslatorImpl.writeControlPayload(
                             payload,
                             channel.getStream());
+
+                    /*
+                     * NOTE(gp, lyubomir): RTCPTransmitter cannot transmit
+                     * specific reports to specific destinations so we've
+                     * implemented the transmission ourselves. We're updating
+                     * the (global) transmission statistics maintained by
+                     * RTCPTranmitter by calling its onRTCPCompoundPacketSent
+                     * method.
+                     */
+                    rtcpTransmitter.onRTCPCompoundPacketSent(compoundPacket);
                 }
             }
         }
 
-        /*
-         * TODO Lyubomir: RTCPTransmitter cannot transmit specific reports to
-         * specific destinations so we've implemented the transmission
-         * ourselves. However, we're not updating the (global) transmission
-         * statistics maintained by RTCPTranmitter.
-         */
         return null;
     }
 
