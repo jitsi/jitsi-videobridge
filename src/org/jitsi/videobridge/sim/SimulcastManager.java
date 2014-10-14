@@ -259,100 +259,11 @@ public class SimulcastManager
     private final static SimulcastMessagesMapper mapper
             = new SimulcastMessagesMapper();
 
-    /**
-     * Updates the receiving simulcast layers of this <tt>Simulcast</tt>
-     * instance.
-     *
-     * @param sourceGroups
-     */
-    public void updateSimulcastLayers(
-            List<SourceGroupPacketExtension> sourceGroups)
+    public void setSimulcastLayers(SortedSet<SimulcastLayer> simulcastLayers)
     {
-        if (sourceGroups == null)
-            return;
-
         synchronized (simulcastLayersSyncRoot)
         {
-            if (sourceGroups.size() == 0)
-                simulcastLayers = null;
-        }
-
-        Map<Long, SimulcastLayer> reverseMap
-                = new HashMap<Long, SimulcastLayer>();
-
-        // Build the simulcast layers.
-        SortedSet<SimulcastLayer> layers = new TreeSet<SimulcastLayer>();
-        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
-        {
-            List<SourcePacketExtension> sources = sourceGroup.getSources();
-
-            if (sources == null || sources.size() == 0
-                    || !"SIM".equals(sourceGroup.getSemantics()))
-            {
-                continue;
-            }
-
-            // sources are in low to high order.
-            int order = 0;
-            for (SourcePacketExtension source : sources)
-            {
-                Long primarySSRC = source.getSSRC();
-                SimulcastLayer simulcastLayer = new SimulcastLayer(primarySSRC,
-                        order++);
-
-                // Add the layer to the reverse map.
-                reverseMap.put(primarySSRC, simulcastLayer);
-
-                // Add the layer to the sorted set.
-                layers.add(simulcastLayer);
-            }
-
-        }
-
-        // Append associated SSRCs from other source groups.
-        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
-        {
-            List<SourcePacketExtension> sources = sourceGroup.getSources();
-
-            if (sources == null || sources.size() == 0
-                    || "SIM".equals(sourceGroup.getSemantics()))
-            {
-                continue;
-            }
-
-            SimulcastLayer simulcastLayer = null;
-
-            // Find all the associated ssrcs for this group.
-            Set<Long> ssrcs = new HashSet<Long>();
-            for (SourcePacketExtension source : sources)
-            {
-                Long ssrc = source.getSSRC();
-                ssrcs.add(source.getSSRC());
-                if (reverseMap.containsKey(ssrc))
-                {
-                    simulcastLayer = reverseMap.get(ssrc);
-                }
-            }
-
-            if (simulcastLayer != null)
-            {
-                simulcastLayer.associateSSRCs(ssrcs);
-            }
-        }
-
-        synchronized (simulcastLayersSyncRoot)
-        {
-            simulcastLayers = layers;
-        }
-
-        // Debug print signaling information.
-        if (logger.isInfoEnabled())
-        {
-            synchronized (simulcastLayersSyncRoot)
-            {
-                logger.info("Endpoint " + videoChannel.getEndpoint().getID()
-                        + " has signaled :" + mapper.toJson(simulcastLayers));
-            }
+            this.simulcastLayers = simulcastLayers;
         }
     }
 
