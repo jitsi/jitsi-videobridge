@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.sim;
 
 import java.io.*;
 import java.net.*;
@@ -17,6 +17,7 @@ import net.sf.fmj.media.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
 import org.json.simple.*;
 
 /**

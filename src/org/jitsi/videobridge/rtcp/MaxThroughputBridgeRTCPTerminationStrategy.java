@@ -16,6 +16,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.sim.*;
 
 /**
  *

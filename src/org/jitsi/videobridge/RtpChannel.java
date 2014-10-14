@@ -552,7 +552,7 @@ public class RtpChannel
      *
      * @param receiveSSRCs the SSRCs to request an FIR for.
      */
-    void askForKeyframes(int[] receiveSSRCs)
+    public void askForKeyframes(int[] receiveSSRCs)
     {
         if (receiveSSRCs != null && receiveSSRCs.length != 0)
         {
