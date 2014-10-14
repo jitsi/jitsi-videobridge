@@ -7,6 +7,7 @@
 package org.jitsi.videobridge;
 
 import java.io.*;
+import java.net.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -26,7 +27,7 @@ import org.json.simple.*;
 public class SimulcastManager
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>Simulcast</tt> class and its
+     * The <tt>Logger</tt> used by the <tt>SimulcastManager</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
@@ -59,6 +60,81 @@ public class SimulcastManager
      */
     private final Map<Endpoint, SimulcastLayer> simLayersMap
             = new WeakHashMap<Endpoint, SimulcastLayer>();
+
+    /**
+     * Notifies this instance that a <tt>DatagramPacket</tt> packet received on
+     * the data <tt>DatagramSocket</tt> of this <tt>Channel</tt> has been
+     * accepted for further processing within Jitsi Videobridge.
+     *
+     * @param p the <tt>DatagramPacket</tt> received on the data
+     * <tt>DatagramSocket</tt> of this <tt>Channel</tt>
+     */
+    public void acceptedDataInputStreamDatagramPacket(DatagramPacket p)
+    {
+        // With native simulcast we don't have a notification when a stream
+        // has started/stopped. The simulcast manager implements a timeout
+        // for the high quality stream and it needs to be notified when
+        // the channel has accepted a datagram packet for the timeout to
+        // function correctly.
+
+        if (hasLayers() && p != null)
+        {
+            int acceptedSSRC = readSSRC(p.getData(), p.getOffset() + 8,
+                    p.getLength());
+
+            SortedSet<SimulcastLayer> layers = null;
+            SimulcastLayer acceptedLayer = null;
+
+            if (acceptedSSRC != 0)
+            {
+                layers = getSimulcastLayers();
+
+                // Find the accepted layer.
+                for (SimulcastLayer layer : layers)
+                {
+                    if ((int) layer.getPrimarySSRC() == acceptedSSRC)
+                    {
+                        acceptedLayer = layer;
+                        break;
+                    }
+                }
+            }
+
+            // If we can't find an accepted layer, log and return as this
+            // situation makes no sense.
+            if (acceptedLayer == null)
+            {
+                if (logger.isInfoEnabled())
+                {
+                    logger.info("Accepted a Datagram packet of unknown source");
+                }
+
+                return;
+            }
+
+            // NOTE(gp) we expect the base layer to be always on.
+
+
+            if (acceptedLayer == layers.first())
+            {
+                // We have accepted a base layer packet, starve the higher
+                // quality layers.
+                for (SimulcastLayer layer : layers)
+                {
+                    if (acceptedLayer != layer)
+                    {
+                        layer.starve();
+                    }
+                }
+            }
+            else
+            {
+                // We have accepted a non-base layer packet, feed the accepted
+                // layer.
+                acceptedLayer.feed();
+            }
+        }
+    }
 
     /**
      * Represents a notification/event that is sent to an endpoint through data

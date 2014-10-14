@@ -702,6 +702,13 @@ public class VideoChannel
             // same content, with adaptive-last-n turned on), in order to not
             // waste resources.
             incomingBitrate.update(p.getLength(), System.currentTimeMillis());
+
+            // With native simulcast we don't have a notification when a stream
+            // has started/stopped. The simulcast manager implements a timeout
+            // for the high quality stream and it needs to be notified when
+            // the channel has accepted a datagram packet for the timeout to
+            // function correctly.
+            simulcastManager.acceptedDataInputStreamDatagramPacket(p);
         }
 
         return accept;
