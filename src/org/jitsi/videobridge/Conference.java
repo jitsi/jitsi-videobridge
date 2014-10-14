@@ -24,7 +24,7 @@ import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.sim.*;
-import org.json.simple.*;
+import org.jitsi.videobridge.sim.messages.*;
 import org.osgi.framework.*;
 
 /**
@@ -432,6 +432,9 @@ public class Conference
     {
         iq.setID(getID());
     }
+
+    private final static SimulcastMessagesMapper mapper
+            = new SimulcastMessagesMapper();
 
     /**
      * Notifies this instance that {@link #speechActivity} has identified a
@@ -1250,7 +1253,7 @@ public class Conference
                 StartSimulcastLayerCommand command
                         = new StartSimulcastLayerCommand(hqLayer);
 
-                String json = MyJsonEncoder.toJSON(command);
+                String json = mapper.toJson(command);
                 try
                 {
                     newEndpoint.sendMessageOnDataChannel(json);
@@ -1339,7 +1342,7 @@ public class Conference
                 StopSimulcastLayerCommand command
                         = new StopSimulcastLayerCommand(hqLayer);
 
-                String json = MyJsonEncoder.toJSON(command);
+                String json = mapper.toJson(command);
 
                 try
                 {
@@ -1752,92 +1755,6 @@ public class Conference
             {
                 endpointRecorder.updateEndpoint(endpoint);
             }
-        }
-    }
-
-    static class MyJsonEncoder
-    {
-        // NOTE(gp) custom JSON encoders/decoders are a maintenance burden and
-        // a source of bugs. We should consider using a specialized library that
-        // does that automatically, like Gson or Jackson. It would work like
-        // this;
-        //
-        // Gson gson = new Gson();
-        // String json = gson.toJson(event);
-        //
-        // So, basically it would work exactly like this custom encoder, but
-        // without having to write a single line of code.
-
-        public static String toJSON(StartSimulcastLayerCommand command)
-        {
-            StringBuilder b = new StringBuilder(
-                    "{\"colibriClass\":\"StartSimulcastLayerEvent\"");
-
-            b.append(",\"simulcastLayer\":[");
-            toJSON(b, command.simulcastLayer);
-            b.append("]}");
-
-            return b.toString();
-        }
-
-        public static String toJSON(StopSimulcastLayerCommand command)
-        {
-            StringBuilder b = new StringBuilder(
-                    "{\"colibriClass\":\"StopSimulcastLayerEvent\"");
-
-            b.append(",\"simulcastLayer\":[");
-            toJSON(b, command.simulcastLayer);
-            b.append("]}");
-
-            return b.toString();
-        }
-
-        private static void toJSON(StringBuilder b,
-                                   SimulcastLayer simulcastLayer)
-        {
-            b.append("{\"primarySSRC\":");
-            b.append(JSONValue.escape(
-                    Long.toString(simulcastLayer.getPrimarySSRC())));
-
-            List<Long> associatedSSRCs = simulcastLayer.getAssociatedSSRCs();
-            if (associatedSSRCs != null && associatedSSRCs.size() != 0)
-            {
-                b.append(",\"asociatedSSRCs\":[");
-                for (int i = 0; i < associatedSSRCs.size(); i++)
-                {
-                    b.append(JSONValue.escape(
-                            Long.toString(associatedSSRCs.get(i))));
-
-                    if (i != associatedSSRCs.size() - 1)
-                        b.append(",");
-                }
-                b.append("]");
-            }
-            b.append("}");
-        }
-    }
-
-    static class StartSimulcastLayerCommand
-    {
-        // TODO(gp) rename this to StartSimulcastLayerCommand
-        final String colibriClass = "StartSimulcastLayerEvent";
-
-        final SimulcastLayer simulcastLayer;
-        public StartSimulcastLayerCommand(SimulcastLayer simulcastLayer)
-        {
-            this.simulcastLayer = simulcastLayer;
-        }
-    }
-
-    static class StopSimulcastLayerCommand
-    {
-        // TODO(gp) rename this to StopSimulcastLayerCommand
-        final String colibriClass = "StopSimulcastLayerEvent";
-
-        final SimulcastLayer simulcastLayer;
-        public StopSimulcastLayerCommand(SimulcastLayer simulcastLayer)
-        {
-            this.simulcastLayer = simulcastLayer;
         }
     }
 }

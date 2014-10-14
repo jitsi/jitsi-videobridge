@@ -18,7 +18,7 @@ import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.json.simple.*;
+import org.jitsi.videobridge.sim.messages.*;
 
 /**
  * The simulcast manager of a <tt>VideoChannel</tt>.
@@ -135,33 +135,6 @@ public class SimulcastManager
                 acceptedLayer.feed();
             }
         }
-    }
-
-    /**
-     * Represents a notification/event that is sent to an endpoint through data
-     * channels when there is a change in the simulcast substream the bridge is
-     * pushing to that specific endpoint.
-     */
-    static class SimulcastLayersChangedEvent
-    {
-        final String colibriClass = "SimulcastLayersChangedEvent";
-        EndpointSimulcastLayer[] endpointSimulcastLayers;
-    }
-
-    /**
-     * Associates a simulcast layer with an endpoint ID.
-     */
-    static class EndpointSimulcastLayer
-    {
-        public EndpointSimulcastLayer(String endpoint,
-                                      SimulcastLayer simulcastLayer)
-        {
-            this.endpoint = endpoint;
-            this.simulcastLayer = simulcastLayer;
-        }
-
-        final String endpoint;
-        final SimulcastLayer simulcastLayer;
     }
 
     public SimulcastManager(VideoChannel videoChannel)
@@ -283,6 +256,9 @@ public class SimulcastManager
         return electedSimulcastLayer;
     }
 
+    private final static SimulcastMessagesMapper mapper
+            = new SimulcastMessagesMapper();
+
     /**
      * Updates the receiving simulcast layers of this <tt>Simulcast</tt>
      * instance.
@@ -375,7 +351,7 @@ public class SimulcastManager
             synchronized (simulcastLayersSyncRoot)
             {
                 logger.info("Endpoint " + videoChannel.getEndpoint().getID()
-                        + " has signaled :" + MyJsonEncoder.toJson(simulcastLayers));
+                        + " has signaled :" + mapper.toJson(simulcastLayers));
             }
         }
     }
@@ -511,7 +487,7 @@ public class SimulcastManager
             event.endpointSimulcastLayers = endpointSimulcastLayers.toArray(
                     new EndpointSimulcastLayer[endpointSimulcastLayers.size()]);
 
-            String json = MyJsonEncoder.toJson(event);
+            String json = mapper.toJson(event);
             try
             {
                 // FIXME(gp) sendMessageOnDataChannel may silently fail to send
@@ -530,7 +506,7 @@ public class SimulcastManager
                         : event.endpointSimulcastLayers)
                 {
                     StringBuilder b = new StringBuilder();
-                    MyJsonEncoder.toJson(b, esl.simulcastLayer);
+                    mapper.toJson(b, esl.simulcastLayer);
 
                     logger.info(self.getID() + " now receives from "
                             + esl.endpoint + ": " + b.toString());
@@ -542,82 +518,6 @@ public class SimulcastManager
         synchronized (simulcastLayersSyncRoot)
         {
             this.simLayersMap.putAll(endpointMap);
-        }
-    }
-
-    static class MyJsonEncoder
-    {
-        // NOTE(gp) custom JSON encoders/decoders are a maintenance burden and
-        // a source of bugs. We should consider using a specialized library that
-        // does that automatically, like Gson or Jackson. It would work like
-        // this;
-        //
-        // Gson gson = new Gson();
-        // String json = gson.toJson(event);
-        //
-        // So, basically it would work exactly like this custom encoder, but
-        // without having to write a single line of code.
-
-        private static String toJson(SortedSet<SimulcastLayer> simulcastLayers)
-        {
-            StringBuilder b = new StringBuilder("[");
-            for (SimulcastLayer simulcastLayer : simulcastLayers)
-            {
-                toJson(b, simulcastLayer);
-            }
-            b.append("]");
-
-            return b.toString();
-        }
-
-        private static String toJson(SimulcastLayersChangedEvent event)
-        {
-            StringBuilder b = new StringBuilder(
-                    "{\"colibriClass\":\"SimulcastLayersChangedEvent\"");
-
-            b.append(",\"endpointSimulcastLayers\":[");
-            for (int i = 0; i < event.endpointSimulcastLayers.length; i++)
-            {
-                toJson(b, event.endpointSimulcastLayers[i]);
-                if (i != event.endpointSimulcastLayers.length - 1)
-                    b.append(",");
-            }
-            b.append("]}");
-
-            return b.toString();
-        }
-
-        private static void toJson(StringBuilder b,
-                                   EndpointSimulcastLayer endpointSimulcastLayer)
-        {
-            b.append("{\"endpoint\":");
-            b.append(JSONValue.toJSONString(endpointSimulcastLayer.endpoint));
-            b.append(",\"simulcastLayer\":");
-            toJson(b, endpointSimulcastLayer.simulcastLayer);
-            b.append("}");
-        }
-
-        private static void toJson(StringBuilder b, SimulcastLayer simulcastLayer)
-        {
-            b.append("{\"primarySSRC\":");
-            b.append(JSONValue.escape(
-                    Long.toString(simulcastLayer.getPrimarySSRC())));
-
-            List<Long> associatedSSRCs = simulcastLayer.getAssociatedSSRCs();
-            if (associatedSSRCs != null && associatedSSRCs.size() != 0)
-            {
-                b.append(",\"asociatedSSRCs\":[");
-                for (int i = 0; i < associatedSSRCs.size(); i++)
-                {
-                    b.append(JSONValue.escape(
-                            Long.toString(associatedSSRCs.get(i))));
-
-                    if (i != associatedSSRCs.size() - 1)
-                        b.append(",");
-                }
-                b.append("]");
-            }
-            b.append("}");
         }
     }
 
