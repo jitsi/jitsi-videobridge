@@ -626,12 +626,10 @@ public class Content
         if (mixer == null)
         {
             MediaType mediaType = getMediaType();
-            MediaDevice device;
-
-            if (MediaType.AUDIO.equals(mediaType))
-                device = new AudioSilenceMediaDevice();
-            else
-                device = null;
+            MediaDevice device
+                = MediaType.AUDIO.equals(mediaType)
+                    ? new AudioSilenceMediaDevice()
+                    : null;
 
             if (device == null)
             {
@@ -640,7 +638,9 @@ public class Content
                                 + " for " + mediaType);
             }
             else
+            {
                 mixer = getMediaService().createMixer(device);
+            }
         }
         return mixer;
     }
@@ -670,13 +670,14 @@ public class Content
         if (recorder == null)
         {
             MediaType mediaType = getMediaType();
-            if (!MediaType.VIDEO.equals(mediaType)
-                    && !MediaType.AUDIO.equals(mediaType))
-                return null;
 
-            recorder = getMediaService()
-                    .createRecorder(getRTPTranslator());
-            recorder.setEventHandler(getConference().getRecorderEventHandler());
+            if (MediaType.AUDIO.equals(mediaType)
+                    || MediaType.VIDEO.equals(mediaType))
+            {
+                recorder = getMediaService().createRecorder(getRTPTranslator());
+                recorder.setEventHandler(
+                        getConference().getRecorderEventHandler());
+            }
         }
         return recorder;
     }
@@ -835,8 +836,7 @@ public class Content
 
                         rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
 
-                        MediaType mediaType = getMediaType();
-                        if (MediaType.VIDEO.equals(mediaType))
+                        if (MediaType.VIDEO.equals(getMediaType()))
                             setRTCPTerminationStrategyFromConfiguration();
 
                         rtcpFeedbackMessageSender
@@ -942,10 +942,7 @@ public class Content
     private boolean startRecorder(Recorder recorder)
     {
         boolean started = false;
-        MediaType mediaType = getMediaType();
-        String format = null;
-        if (MediaType.AUDIO.equals(mediaType))
-            format = "mp3";
+        String format = MediaType.AUDIO.equals(getMediaType()) ? "mp3" : null;
 
         try
         {
