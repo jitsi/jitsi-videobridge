@@ -320,8 +320,21 @@ public class PubSubPublisher
     private void handleErrorResponse(XMPPError error, String packetID)
     {
         if(error != null
-            && XMPPError.Type.CANCEL.equals(error.getType()))
+            && ((XMPPError.Type.CANCEL.equals(error.getType())
+                 && (XMPPError.Condition.conflict.toString()
+                     .equals(error.getCondition())))
+                || (XMPPError.Type.AUTH.equals(error.getType())
+                    && (XMPPError.Condition.forbidden.toString()
+                        .equals(error.getCondition())))
+               )
+            )
         {
+            if(XMPPError.Condition.forbidden.toString()
+               .equals(error.getCondition()))
+            {
+                logger.warn("Creating node failed with <forbidden/>"
+                             + " error. Continuing anyway.");
+            }
             String nodeName = pendingCreateRequests.get(packetID);
             if(nodeName != null)
             {
