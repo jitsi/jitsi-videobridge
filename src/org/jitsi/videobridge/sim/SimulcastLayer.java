@@ -6,6 +6,7 @@
  */
 package org.jitsi.videobridge.sim;
 
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 
@@ -32,9 +33,10 @@ public class SimulcastLayer
     private static final Logger logger
             = Logger.getLogger(SimulcastLayer.class);
 
-    public static final String IS_STREAMING_PROPERTY = "isStreaming";
+    public static final String IS_STREAMING_PROPERTY =
+            SimulcastLayer.class.getName() + ".isStreaming";
 
-    private int counter = 0;
+    private int seenHigh = -1;
 
     public long getPrimarySSRC()
     {
@@ -85,49 +87,75 @@ public class SimulcastLayer
 
     public boolean isStreaming()
     {
-        return this.counter > 0;
+        return isStreaming;
     }
 
-    public synchronized void starve()
-    {
-        int oldValue = this.counter;
-        this.counter--;
+    private boolean isStreaming = false;
 
-        if (oldValue > 0 && this.counter < 1)
+    private int seenBase = 0;
+
+    public synchronized void timeout()
+    {
+        if (++seenBase % 10 == 0)
         {
-            if (logger.isDebugEnabled())
+            // Every base layer packet we have observed 10 low quality packets.
+            //
+            // If for every 10 base quality packets we have not seen at least
+            // one high quality packet, then the high quality layer must have
+            // been dropped (this means approximately 100 packets loss).
+
+            if (this.isStreaming &&  this.seenHigh == 0)
             {
-                logger.debug(new StringBuilder()
-                        .append("Starved ")
-                        .append(getPrimarySSRC()).toString());
+                this.isStreaming = false;
+
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(new StringBuilder()
+                            .append(getSimulcastManager()
+                                    .getVideoChannel()
+                                    .getEndpoint()
+                                    .getID())
+                            .append(" stopped streaming ")
+                            .append(getPrimarySSRC())
+                            .append("."));
+                }
+
+                // FIXME(gp) use an event dispatcher.
+                new Thread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        firePropertyChange(IS_STREAMING_PROPERTY, true, false);
+                    }
+                }).start();
             }
 
-            // FIXME(gp) use an event dispatcher.
-            new Thread(new Runnable()
-            {
-                @Override
-                public void run()
-                {
-                    firePropertyChange(IS_STREAMING_PROPERTY, true, false);
-                }
-            }).start();
+            this.seenHigh = 0;
         }
     }
 
-    private static final int FEED_COUNT = 10;
-
     public synchronized void touch()
     {
-        int oldValue = this.counter;
-        this.counter = FEED_COUNT;
+        this.seenHigh++;
 
-        if (oldValue < 1)
+        if (!this.isStreaming)
         {
+            // Do not activate the hq stream if the bitrate estimation is not
+            // above 300kbps.
+
+            this.isStreaming = true;
+
             if (logger.isDebugEnabled())
             {
                 logger.debug(new StringBuilder()
-                        .append("Fed ")
-                        .append(getPrimarySSRC()).toString());
+                        .append(getSimulcastManager()
+                                .getVideoChannel()
+                                .getEndpoint()
+                                .getID())
+                        .append(" started streaming ")
+                        .append(getPrimarySSRC())
+                        .append(" again."));
             }
 
             // FIXME(gp) use an event dispatcher.
@@ -140,5 +168,6 @@ public class SimulcastLayer
                 }
             }).start();
         }
+
     }
 }
