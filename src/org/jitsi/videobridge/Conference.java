@@ -275,54 +275,6 @@ public class Conference
     }
 
     /**
-     * Configures the simulcast manager of the receiver to receive a high
-     * quality stream only from the designated sender.
-     *
-     * @param receiver
-     * @param highQualitySenderId
-     */
-    private void configureHighQualitySenderForReceiver(
-            Endpoint receiver,
-            String highQualitySenderId)
-    {
-        if (receiver == null)
-            return;
-
-        Collection<Endpoint> endpoints = getEndpoints();
-        if (endpoints == null || endpoints.isEmpty())
-            return;
-
-        Map<Endpoint, Integer> qualityMap
-                = new HashMap<Endpoint, Integer>(endpoints.size());
-
-        for (Endpoint e : endpoints)
-        {
-            if (!StringUtils.isNullOrEmpty(highQualitySenderId)
-                && highQualitySenderId.equals(e.getID()))
-            {
-                // NOTE(gp) 10 here is an arbitrary large value that, maybe, it
-                // should be a constant. I'm not sure if that's good enough though.
-                qualityMap.put(e, 10);
-            }
-            else
-            {
-                qualityMap.put(e, 0);
-            }
-        }
-
-        List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
-        if (channels != null
-                && !channels.isEmpty()
-                && channels.get(0) instanceof VideoChannel)
-        {
-            // TODO(gp) need to make sure we get the right VideoChannel.
-            ((VideoChannel) channels.get(0))
-                    .getSimulcastManager().setReceivingSimulcastLayer(
-                    qualityMap);
-        }
-    }
-
-    /**
      * Initializes a new <tt>String</tt> to be sent over an
      * <tt>SctpConnection</tt> in order to notify an <tt>Endpoint</tt> that the
      * dominant speaker in this multipoint conference has changed to a specific
@@ -433,8 +385,6 @@ public class Conference
         iq.setID(getID());
     }
 
-    private final static SimulcastMessagesMapper mapper
-            = new SimulcastMessagesMapper();
 
     /**
      * Notifies this instance that {@link #speechActivity} has identified a
@@ -1164,199 +1114,6 @@ public class Conference
     }
 
     /**
-     * Sends a data channel command to a simulcast enabled video sender to make
-     * it start streaming its hq stream, if it's being watched by some receiver.
-     *
-     * @param id
-     */
-    private void maybeSendStartHighQualityStreamCommand(String id)
-    {
-        Endpoint newEndpoint = null;
-        if (!StringUtils.isNullOrEmpty(id) &&
-                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
-        {
-            newEndpoint = getEndpoint(id);
-        }
-
-        List<RtpChannel> newVideoChannels = null;
-        if (newEndpoint != null)
-        {
-            newVideoChannels = newEndpoint.getChannels(MediaType.VIDEO);
-        }
-
-        VideoChannel newVideoChannel = null;
-        if (newVideoChannels != null && newVideoChannels.size() != 0)
-        {
-            newVideoChannel = (VideoChannel) newVideoChannels.get(0);
-        }
-
-        SortedSet<SimulcastLayer> newSimulcastLayers = null;
-        if (newVideoChannel != null)
-        {
-            newSimulcastLayers = newVideoChannel.getSimulcastManager()
-                    .getSimulcastLayers();
-        }
-
-        if (newSimulcastLayers != null
-                && newSimulcastLayers.size() > 1
-                /* newEndpoint != null is implied*/
-                && newEndpoint.getSctpConnection().isReady()
-                && !newEndpoint.getSctpConnection().isExpired())
-        {
-            // we have a new endpoint and it has an SCTP connection that is
-            // ready and not expired. if somebody else is watching the new
-            // endpoint, start its hq stream.
-
-            boolean startHighQualityStream = false;
-            for (Endpoint e : getEndpoints())
-            {
-                // TODO(gp) need some synchronization here. What if the
-                // selected endpoint changes while we're in the loop?
-
-                if (newEndpoint != e
-                       && (newEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
-                   )
-                {
-                    // somebody is watching the new endpoint or somebody has not
-                    // yet signaled its selected endpoint to the bridge, start
-                    // the hq stream.
-
-                    if (logger.isDebugEnabled())
-                    {
-                        if (StringUtils.isNullOrEmpty(
-                                e.getSelectedEndpointID()))
-                        {
-                            logger.debug("Maybe " + e.getID() + " is watching "
-                                    + newEndpoint.getID());
-                        } else {
-
-                            logger.debug(e.getID() + " is watching "
-                                    + newEndpoint.getID());
-                        }
-                    }
-
-                    startHighQualityStream = true;
-                    break;
-                }
-            }
-
-            if (startHighQualityStream)
-            {
-                // TODO(gp) this assumes only a single hq stream.
-
-                logger.info("Starting the HQ stream of " + newEndpoint.getID()
-                        + ".");
-
-                SimulcastLayer hqLayer = newSimulcastLayers.last();
-
-                StartSimulcastLayerCommand command
-                        = new StartSimulcastLayerCommand(hqLayer);
-
-                String json = mapper.toJson(command);
-                try
-                {
-                    newEndpoint.sendMessageOnDataChannel(json);
-                }
-                catch (IOException e1)
-                {
-                    logger.error("Failed to send message on data channel.", e1);
-                }
-            }
-        }
-    }
-
-    /**
-     * Sends a data channel command to a simulcast enabled video sender to make
-     * it stop streaming its hq stream, if it's not being watched by any
-     * receiver.
-     *
-     * @param id
-     */
-    private void maybeSendStopHighQualityStreamCommand(String id)
-    {
-        Endpoint oldEndpoint = null;
-        if (!StringUtils.isNullOrEmpty(id) &&
-                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
-        {
-            oldEndpoint = getEndpoint(id);
-        }
-
-        List<RtpChannel> oldVideoChannels = null;
-        if (oldEndpoint != null)
-        {
-            oldVideoChannels = oldEndpoint.getChannels(MediaType.VIDEO);
-        }
-
-        VideoChannel oldVideoChannel = null;
-        if (oldVideoChannels != null && oldVideoChannels.size() != 0)
-        {
-            oldVideoChannel = (VideoChannel) oldVideoChannels.get(0);
-        }
-
-        SortedSet<SimulcastLayer> oldSimulcastLayers = null;
-        if (oldVideoChannel != null)
-        {
-            oldSimulcastLayers = oldVideoChannel.getSimulcastManager()
-                    .getSimulcastLayers();
-        }
-
-        if (oldSimulcastLayers != null
-                && oldSimulcastLayers.size() > 1
-                /* oldEndpoint != null is implied*/
-                && oldEndpoint.getSctpConnection().isReady()
-                && !oldEndpoint.getSctpConnection().isExpired())
-        {
-            // we have an old endpoint and it has an SCTP connection that is
-            // ready and not expired. if nobody else is watching the old
-            // endpoint, stop its hq stream.
-
-            boolean stopHighQualityStream = true;
-            for (Endpoint e : getEndpoints())
-            {
-                // TODO(gp) need some synchronization here. What if the selected
-                // endpoint changes while we're in the loop?
-
-                if (oldEndpoint != e
-                       && (oldEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
-                   )
-                {
-                    // somebody is watching the old endpoint or somebody has not
-                    // yet signaled its selected endpoint to the bridge, don't
-                    // stop the hq stream.
-                    stopHighQualityStream = false;
-                    break;
-                }
-            }
-
-            if (stopHighQualityStream)
-            {
-                // TODO(gp) this assumes only a single hq stream.
-
-                logger.info("Stopping the HQ stream of " + oldEndpoint.getID()
-                        + ".");
-
-                SimulcastLayer hqLayer = oldSimulcastLayers.last();
-
-                StopSimulcastLayerCommand command
-                        = new StopSimulcastLayerCommand(hqLayer);
-
-                String json = mapper.toJson(command);
-
-                try
-                {
-                    oldEndpoint.sendMessageOnDataChannel(json);
-                }
-                catch (IOException e1)
-                {
-                    logger.error("Failed to send message on data channel.", e1);
-                }
-            }
-        }
-    }
-
-    /**
      * Notifies this instance that there was a change in the value of a property
      * of an object in which this instance is interested.
      *
@@ -1427,14 +1184,6 @@ public class Conference
 
                     endpointSctpConnectionChanged(endpoint, oldValue, newValue);
                 }
-                else if (Endpoint
-                        .SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
-                {
-                    String oldValue = (String) ev.getOldValue();
-                    String newValue = (String) ev.getNewValue();
-
-                    selectedEndpointChanged(endpoint, oldValue, newValue);
-                }
             }
         }
     }
@@ -1497,29 +1246,6 @@ public class Conference
                 endpoint.sctpConnectionReady(sctpConnection);
             }
         }
-    }
-
-    /**
-     * Notifies this instance that an endpoint has changed its video selection.
-     */
-    private void selectedEndpointChanged(Endpoint endpoint,
-                                         String oldValue,
-                                         String newValue)
-    {
-        // TODO(gp) handle the event from within the SimulcastManager; must
-        // not pollute Conference with this.
-
-        // Rule 1: send an hq stream only for the selected endpoint.
-        configureHighQualitySenderForReceiver(endpoint, newValue);
-
-        // Rule 2: if the old endpoint is not being watched by any of the
-        // receivers, the bridge tells it to stop streaming its hq stream.
-        maybeSendStopHighQualityStreamCommand(oldValue);
-
-        // Rule 3: if the new endpoint is being watched by any of the receivers,
-        // the bridge tells it to start streaming its hq stream.
-        maybeSendStartHighQualityStreamCommand(newValue);
-
     }
 
     /**

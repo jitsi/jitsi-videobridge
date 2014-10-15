@@ -21,7 +21,8 @@ public class SimulcastLayersFactory
      * instance.
      */
     public static SortedSet<SimulcastLayer> fromSourceGroups(
-            List<SourceGroupPacketExtension> sourceGroups)
+            List<SourceGroupPacketExtension> sourceGroups,
+            SimulcastManager manager)
     {
         if (sourceGroups == null
                 || sourceGroups.size() == 0)
@@ -47,8 +48,8 @@ public class SimulcastLayersFactory
             for (SourcePacketExtension source : sources)
             {
                 Long primarySSRC = source.getSSRC();
-                SimulcastLayer simulcastLayer = new SimulcastLayer(primarySSRC,
-                        order++);
+                SimulcastLayer simulcastLayer = new SimulcastLayer(manager,
+                        primarySSRC, order++);
 
                 // Add the layer to the reverse map.
                 reverseMap.put(primarySSRC, simulcastLayer);

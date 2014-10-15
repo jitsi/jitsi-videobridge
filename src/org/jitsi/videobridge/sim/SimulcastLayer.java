@@ -18,6 +18,13 @@ public class SimulcastLayer
     extends PropertyChangeNotifier
         implements Comparable<SimulcastLayer>
 {
+    public SimulcastManager getSimulcastManager()
+    {
+        return simulcastManager;
+    }
+
+    private final SimulcastManager simulcastManager;
+
     /**
      * The <tt>Logger</tt> used by the <tt>SimulcastLayer</tt> class and its
      * instances to print debug information.
@@ -44,8 +51,9 @@ public class SimulcastLayer
 
     private final int order;
 
-    public SimulcastLayer(long primarySSRC, int order)
+    public SimulcastLayer(SimulcastManager manager, long primarySSRC, int order)
     {
+        this.simulcastManager = manager;
         this.primarySSRC = primarySSRC;
         this.order = order;
     }
@@ -80,12 +88,12 @@ public class SimulcastLayer
         return this.counter > 0;
     }
 
-    public void starve()
+    public synchronized void starve()
     {
         int oldValue = this.counter;
         this.counter--;
 
-        if (oldValue > 0)
+        if (oldValue > 0 && this.counter < 1)
         {
             if (logger.isDebugEnabled())
             {
@@ -94,13 +102,21 @@ public class SimulcastLayer
                         .append(getPrimarySSRC()).toString());
             }
 
-            firePropertyChange(IS_STREAMING_PROPERTY, true, false);
+            // FIXME(gp) use an event dispatcher.
+            new Thread(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    firePropertyChange(IS_STREAMING_PROPERTY, true, false);
+                }
+            }).start();
         }
     }
 
-    private static final int FEED_COUNT = 3;
+    private static final int FEED_COUNT = 10;
 
-    public void feed()
+    public synchronized void touch()
     {
         int oldValue = this.counter;
         this.counter = FEED_COUNT;
@@ -114,7 +130,15 @@ public class SimulcastLayer
                         .append(getPrimarySSRC()).toString());
             }
 
-            firePropertyChange(IS_STREAMING_PROPERTY, false, true);
+            // FIXME(gp) use an event dispatcher.
+            new Thread(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    firePropertyChange(IS_STREAMING_PROPERTY, false, true);
+                }
+            }).start();
         }
     }
 }

@@ -735,13 +735,16 @@ public class Videobridge
 
                                 if (sourceGroups != null)
                                 {
+                                    SimulcastManager manager = videoChannel
+                                            .getSimulcastManager();
+
                                     SortedSet<SimulcastLayer> layers =
                                             SimulcastLayersFactory
                                                     .fromSourceGroups(
-                                                            sourceGroups);
-                                    videoChannel
-                                        .getSimulcastManager()
-                                            .setSimulcastLayers(layers);
+                                                            sourceGroups,
+                                                            manager);
+
+                                    manager.setSimulcastLayers(layers);
                                 }
 
                                 Integer receivingSimulcastLayer

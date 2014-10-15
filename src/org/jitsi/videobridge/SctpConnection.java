@@ -653,6 +653,8 @@ public class SctpConnection
     @Override
     protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
     {
+        super.onEndpointChanged(oldValue, newValue);
+
         if (oldValue != null)
             oldValue.setSctpConnection(null);
         if (newValue != null)

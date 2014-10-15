@@ -54,6 +54,13 @@ public abstract class Channel
     private final String channelBundleId;
 
     /**
+     * The name of the <tt>Channel</tt> property <tt>endpoint</tt> which
+     * points to the <tt>Endpoint</tt> of the conference participant associated
+     * with this <tt>Channel</tt>..
+     */
+    public static final String ENDPOINT_PROPERTY_NAME = ".endpoint";
+
+    /**
      * The <tt>Content</tt> which has initialized this <tt>Channel</tt>.
      */
     private final Content content;
@@ -576,8 +583,11 @@ public abstract class Channel
      * @param oldValue old <tt>Endpoint</tt>, can be <tt>null</tt>.
      * @param newValue new <tt>Endpoint</tt>, can be <tt>null</tt>.
      */
-    protected abstract void onEndpointChanged(Endpoint oldValue,
-                                              Endpoint newValue);
+    protected void onEndpointChanged(Endpoint oldValue,
+                                              Endpoint newValue)
+    {
+        firePropertyChange(ENDPOINT_PROPERTY_NAME, oldValue, newValue);
+    }
 
     /**
      * Sets the identifier of the endpoint of the conference participant
