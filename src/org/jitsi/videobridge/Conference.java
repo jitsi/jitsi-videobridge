@@ -240,6 +240,40 @@ public class Conference
     }
 
     /**
+     * Closes the {@link #transportManagers} of this <tt>Conference</tt>.
+     */
+    private void closeTransportManagers()
+    {
+        synchronized (transportManagers)
+        {
+            for (IceUdpTransportManager transportManager
+                    : transportManagers.values())
+            {
+                try
+                {
+                    transportManager.close();
+                }
+                catch (Throwable t)
+                {
+                    logger.warn(
+                            "Failed to close an IceUdpTransportManager of"
+                                + " conference " + getID() + "!",
+                            t);
+                    // The whole point of explicitly closing the
+                    // transportManagers of this Conference is to prevent memory
+                    // leaks. Hence, it does not make sense to possibly leave
+                    // TransportManagers open because a TransportManager has
+                    // failed to close.
+                    if (t instanceof InterruptedException)
+                        Thread.currentThread().interrupt();
+                    else if (t instanceof ThreadDeath)
+                        throw (ThreadDeath) t;
+                }
+            }
+        }
+    }
+
+    /**
      * Configures the simulcast manager of the receiver to receive a high
      * quality stream only from the designated sender.
      *
@@ -509,10 +543,20 @@ public class Conference
                             "Failed to expire content " + content.getName()
                                 + " of conference " + getID() + "!",
                             t);
-                    if (t instanceof ThreadDeath)
+                    if (t instanceof InterruptedException)
+                        Thread.currentThread().interrupt();
+                    else if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                 }
             }
+
+            // Close the transportManagers of this Conference. Normally, there
+            // will be no TransportManager left to close at this point because
+            // all Channels have expired and the last Channel to be removed from
+            // a TransportManager closes the TransportManager. However, a
+            // Channel may have expired before it has learned of its
+            // TransportManager and then the TransportManager will not close.
+            closeTransportManagers();
 
             if (logger.isInfoEnabled())
             {
@@ -1032,7 +1076,7 @@ public class Conference
         synchronized (transportManagers)
         {
             transportManager = transportManagers.get(channelBundleId);
-            if (transportManager == null && create)
+            if (transportManager == null && create && !isExpired())
             {
                 try
                 {
