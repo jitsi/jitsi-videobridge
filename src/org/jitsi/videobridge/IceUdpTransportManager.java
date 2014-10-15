@@ -596,9 +596,7 @@ public class IceUdpTransportManager
             synchronized (connectThreadSyncRoot)
             {
                 if (connectThread != null)
-                {
                     connectThread.interrupt();
-                }
             }
 
             super.close();
@@ -614,6 +612,7 @@ public class IceUdpTransportManager
     public boolean close(Channel channel)
     {
         boolean removed = super.close(channel);
+
         if (removed)
         {
             if (channel == sctpConnection)
@@ -631,11 +630,11 @@ public class IceUdpTransportManager
                 {
                     RtpChannel newChannelForDtls = null;
 
-                    List<Channel> channels = getChannels();
-                    for (Channel c : channels)
+                    for (Channel c : getChannels())
+                    {
                         if (c instanceof RtpChannel)
                             newChannelForDtls = (RtpChannel) c;
-
+                    }
                     if (newChannelForDtls != null)
                     {
                         newChannelForDtls.getDatagramFilter(false)
@@ -649,6 +648,7 @@ public class IceUdpTransportManager
                 if (channel instanceof RtpChannel)
                 {
                     RtpChannel rtpChannel = (RtpChannel) channel;
+
                     rtpChannel.getDatagramFilter(false).setAcceptNonRtp(false);
                     rtpChannel.getDatagramFilter(true).setAcceptNonRtp(false);
                 }
@@ -657,20 +657,21 @@ public class IceUdpTransportManager
             try
             {
                 StreamConnector connector = channel.getStreamConnector();
+
                 if (connector != null)
                 {
                     DatagramSocket datagramSocket = connector.getDataSocket();
+
                     if (datagramSocket != null)
                         datagramSocket.close();
-
                     datagramSocket = connector.getControlSocket();
                     if (datagramSocket != null)
                         datagramSocket.close();
 
                     Socket socket = connector.getDataTCPSocket();
+
                     if (socket != null)
                         socket.close();
-
                     socket = connector.getControlTCPSocket();
                     if (socket != null)
                         socket.close();
@@ -678,8 +679,9 @@ public class IceUdpTransportManager
             }
             catch (IOException ioe)
             {
-                logd("Failed to close sockets when closing a channel:" +
-                             ioe);
+                logd(
+                        "Failed to close sockets when closing a channel:"
+                            + ioe);
             }
 
             updatePayloadTypeFilters();

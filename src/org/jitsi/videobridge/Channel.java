@@ -28,12 +28,6 @@ public abstract class Channel
     extends PropertyChangeNotifier
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>Channel</tt> class and its instances
-     * to print debug information.
-     */
-    private static final Logger logger = Logger.getLogger(Channel.class);
-
-    /**
      * The default number of seconds of inactivity after which <tt>Channel</tt>s
      * expire.
      */
@@ -46,6 +40,18 @@ public abstract class Channel
      * <tt>Channel</tt>.
      */
     public static final String INITIATOR_PROPERTY = "initiator";
+
+    /**
+     * The <tt>Logger</tt> used by the <tt>Channel</tt> class and its instances
+     * to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Channel.class);
+
+    /**
+     * The ID of the channel-bundle that this <tt>Channel</tt> is part of, or
+     * <tt>null</tt> if it is not part of a channel-bundle.
+     */
+    private final String channelBundleId;
 
     /**
      * The <tt>Content</tt> which has initialized this <tt>Channel</tt>.
@@ -92,6 +98,11 @@ public abstract class Channel
     private long lastActivityTime;
 
     /**
+     * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
+     */
+    private StreamConnector streamConnector;
+
+    /**
      * The <tt>TransportManager</tt> that represents the Jingle transport of
      * this <tt>Channel</tt>.
      */
@@ -102,17 +113,6 @@ public abstract class Channel
      * {@link #transportManager}.
      */
     private final Object transportManagerSyncRoot = new Object();
-
-    /**
-     * The ID of the channel-bundle that this <tt>Channel</tt> is part of, or
-     * <tt>null</tt> if it is not part of a channel-bundle.
-     */
-    private final String channelBundleId;
-
-    /**
-     * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
-     */
-    private StreamConnector streamConnector;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -143,6 +143,13 @@ public abstract class Channel
     }
 
     /**
+     * Called when <tt>Channel</tt> is being expired. Derived class should close
+     * any open streams.
+     */
+    protected abstract void closeStream()
+        throws IOException;
+
+    /**
      * Initializes the pair of <tt>DatagramSocket</tt>s for RTP and RTCP
      * traffic.
      *
@@ -157,21 +164,6 @@ public abstract class Channel
         throws IOException
     {
         return getTransportManager().getStreamConnector(this);
-    }
-
-    /**
-     * Gets the <tt>StreamConnector</tt> currently used by this instance.
-     * @return the <tt>StreamConnector</tt> currently used by this instance.
-     * @throws IOException
-     */
-    StreamConnector getStreamConnector()
-            throws IOException
-    {
-        if (streamConnector == null)
-        {
-            streamConnector = createStreamConnector();
-        }
-        return streamConnector;
     }
 
     /**
@@ -211,10 +203,13 @@ public abstract class Channel
         if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
         {
             Content content = getContent();
-            return new IceUdpTransportManager(content.getConference(),
-                                                 isInitiator(),
-                                                 2 /* num components */,
-                                                 content.getName());
+
+            return
+                new IceUdpTransportManager(
+                        content.getConference(),
+                        isInitiator(),
+                        2 /* numComponents */,
+                        content.getName());
         }
         else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
         {
@@ -372,23 +367,6 @@ public abstract class Channel
     }
 
     /**
-     * Called when <tt>Channel</tt> is being expired. Derived class should close
-     * any open streams.
-     */
-    protected abstract void closeStream()
-        throws IOException;
-
-    /**
-     * Gets the <tt>Content</tt> which has initialized this <tt>Channel</tt>.
-     *
-     * @return the <tt>Content</tt> which has initialized this <tt>Content</tt>
-     */
-    public final Content getContent()
-    {
-        return content;
-    }
-
-    /**
      * Gets the <tt>BundleContext</tt> associated with this <tt>Channel</tt>.
      * The method is a convenience which gets the <tt>BundleContext</tt>
      * associated with the XMPP component implementation in which the
@@ -399,6 +377,16 @@ public abstract class Channel
     public BundleContext getBundleContext()
     {
         return getContent().getBundleContext();
+    }
+
+    /**
+     * Gets the <tt>Content</tt> which has initialized this <tt>Channel</tt>.
+     *
+     * @return the <tt>Content</tt> which has initialized this <tt>Content</tt>
+     */
+    public final Content getContent()
+    {
+        return content;
     }
 
     /**
@@ -469,6 +457,21 @@ public abstract class Channel
     }
 
     /**
+     * Gets the <tt>StreamConnector</tt> currently used by this instance.
+     * @return the <tt>StreamConnector</tt> currently used by this instance.
+     * @throws IOException
+     */
+    StreamConnector getStreamConnector()
+            throws IOException
+    {
+        if (streamConnector == null)
+        {
+            streamConnector = createStreamConnector();
+        }
+        return streamConnector;
+    }
+
+    /**
      * Gets the <tt>TransportManager</tt> which represents the Jingle transport
      * of this <tt>Channel</tt>. If the <tt>TransportManager</tt> has not been
      * created yet, it is created.
@@ -483,30 +486,30 @@ public abstract class Channel
         {
             if (transportManager == null)
             {
+                Conference conference = getContent().getConference();
+
                 // If this channel is not part of a channel-bundle, it creates
                 // its own TransportManager
                 if (channelBundleId == null)
                 {
                     transportManager
-                            = createTransportManager(
-                            getContent()
-                                    .getConference()
+                        = createTransportManager(
+                                conference
                                     .getVideobridge()
-                                    .getDefaultTransportManager());
+                                        .getDefaultTransportManager());
                 }
                 // Otherwise, it uses a TransportManager specific to the
                 // channel-bundle, which is maintained by the Conference object.
                 else
                 {
                     transportManager
-                            = getContent().getConference()
-                                .getTransportManager(channelBundleId, true);
+                        = conference.getTransportManager(
+                                channelBundleId,
+                                true);
                 }
 
                 if (transportManager == null)
-                {
                     throw new IOException("Failed to get transport manager.");
-                }
 
                 transportManager.addChannel(this);
 
@@ -688,9 +691,7 @@ public abstract class Channel
         throws IOException
     {
         if (transport != null)
-        {
             getTransportManager().startConnectivityEstablishment(transport);
-        }
 
         touch(); // It seems this Channel is still active.
     }
@@ -712,6 +713,15 @@ public abstract class Channel
 
     /**
      * Notifies this <tt>Channel</tt> that its <tt>TransportManager</tt> has
+     * been closed.
+     */
+    void transportClosed()
+    {
+        expire();
+    }
+
+    /**
+     * Notifies this <tt>Channel</tt> that its <tt>TransportManager</tt> has
      * established connectivity.
      */
     void transportConnected()
@@ -729,14 +739,5 @@ public abstract class Channel
             logger.warn("Failed to start stream for channel: " + getID()
                                 + ": " + ioe);
         }
-    }
-
-    /**
-     * Notifies this <tt>Channel</tt> that its <tt>TransportManager</tt> has
-     * been closed.
-     */
-    void transportClosed()
-    {
-        expire();
     }
 }

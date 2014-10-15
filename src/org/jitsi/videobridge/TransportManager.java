@@ -28,24 +28,24 @@ public abstract class TransportManager
     private static long nextCandidateID = 1;
 
     /**
-     * The <tt>Channel</tt> which has initialized this instance
-     */
-    private final List<Channel> channels = new LinkedList<Channel>();
-
-    /**
      * The <tt>PropertyChangeListener</tt> which listens to changes in the
      * values of the properties of <tt>Channel</tt>-s in {@link #channels}.
      * Facilitates extenders.
      */
     private final PropertyChangeListener channelPropertyChangeListener
-            = new PropertyChangeListener()
-    {
-        @Override
-        public void propertyChange(PropertyChangeEvent ev)
+        = new PropertyChangeListener()
         {
-            channelPropertyChange(ev);
-        }
-    };
+            @Override
+            public void propertyChange(PropertyChangeEvent ev)
+            {
+                channelPropertyChange(ev);
+            }
+        };
+
+    /**
+     * The <tt>Channel</tt> which has initialized this instance
+     */
+    private final List<Channel> channels = new LinkedList<Channel>();
 
     /**
      * Initializes a new <tt>TransportManager</tt> instance.
@@ -68,11 +68,12 @@ public abstract class TransportManager
             if (!channels.contains(channel))
             {
                 channels.add(channel);
-                channel.addPropertyChangeListener(channelPropertyChangeListener);
+                channel.addPropertyChangeListener(
+                        channelPropertyChangeListener);
                 return true;
             }
-            return false;
         }
+        return false;
     }
 
     /**
@@ -119,6 +120,36 @@ public abstract class TransportManager
         }
 
         //NOTE: nothing happens when the last channel is removed.
+    }
+
+    /**
+     * Sets the values of the properties of a specific
+     * <tt>ColibriConferenceIQ.ChannelBundle</tt>
+     * to the values of the respective properties of this instance. Thus, the
+     * specified <tt>iq</tt> may be thought of as containing a description of
+     * this instance.
+     *
+     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
+     * values of the properties of this instance
+     */
+    public void describe(ColibriConferenceIQ.ChannelBundle iq)
+    {
+        IceUdpTransportPacketExtension pe = iq.getTransport();
+        String namespace = getXmlNamespace();
+
+        if ((pe == null) || !namespace.equals(pe.getNamespace()))
+        {
+            if (IceUdpTransportPacketExtension.NAMESPACE.equals(namespace))
+                pe = new IceUdpTransportPacketExtension();
+            else if (RawUdpTransportPacketExtension.NAMESPACE.equals(namespace))
+                pe = new RawUdpTransportPacketExtension();
+            else
+                pe = null;
+
+            iq.setTransport(pe);
+        }
+        if (pe != null)
+            describe(pe);
     }
 
     /**
@@ -180,6 +211,30 @@ public abstract class TransportManager
     }
 
     /**
+     * Returns the list of <tt>Channel</tt>s maintained by this
+     * <tt>TransportManager</tt>.
+     * @return the list of <tt>Channel</tt>s maintained by this
+     * <tt>TransportManager</tt>.
+     */
+    protected List<Channel> getChannels()
+    {
+        synchronized (channels)
+        {
+            return channels;
+        }
+    }
+
+    /**
+     * Returns the <tt>DtlsControl</tt> allocated by this instance for use by a
+     * specific <tt>Channel</tt>.
+     * @param channel the <tt>Channel</tt> for which to return the
+     * <tt>DtlsControl</tt>.
+     * @return the <tt>DtlsControl</tt> allocated by this instance for use by a
+     * specific <tt>Channel</tt>.
+     */
+    public abstract DtlsControl getDtlsControl(Channel channel);
+
+    /**
      * Gets the <tt>StreamConnector</tt> which represents the datagram sockets
      * allocated by this instance for the purposes of a specific
      * <tt>Channel</tt>.
@@ -203,16 +258,6 @@ public abstract class TransportManager
     public abstract MediaStreamTarget getStreamTarget(Channel channel);
 
     /**
-     * Returns the <tt>DtlsControl</tt> allocated by this instance for use by a
-     * specific <tt>Channel</tt>.
-     * @param channel the <tt>Channel</tt> for which to return the
-     * <tt>DtlsControl</tt>.
-     * @return the <tt>DtlsControl</tt> allocated by this instance for use by a
-     * specific <tt>Channel</tt>.
-     */
-    public abstract DtlsControl getDtlsControl(Channel channel);
-
-    /**
      * Gets the XML namespace of the Jingle transport implemented by this
      * <tt>TransportManager</tt>.
      *
@@ -233,49 +278,5 @@ public abstract class TransportManager
      */
     public abstract void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport);
-
-    /**
-     * Returns the list of <tt>Channel</tt>s maintained by this
-     * <tt>TransportManager</tt>.
-     * @return the list of <tt>Channel</tt>s maintained by this
-     * <tt>TransportManager</tt>.
-     */
-    protected List<Channel> getChannels()
-    {
-        synchronized (channels)
-        {
-            return channels;
-        }
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ.ChannelBundle</tt>
-     * to the values of the respective properties of this instance. Thus, the
-     * specified <tt>iq</tt> may be thought of as containing a description of
-     * this instance.
-     *
-     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
-     * values of the properties of this instance
-     */
-    public void describe(ColibriConferenceIQ.ChannelBundle iq)
-    {
-        IceUdpTransportPacketExtension pe = iq.getTransport();
-        String namespace = getXmlNamespace();
-
-        if ((pe == null) || !namespace.equals(pe.getNamespace()))
-        {
-            if (IceUdpTransportPacketExtension.NAMESPACE.equals(namespace))
-                pe = new IceUdpTransportPacketExtension();
-            else if (RawUdpTransportPacketExtension.NAMESPACE.equals(namespace))
-                pe = new RawUdpTransportPacketExtension();
-            else
-                pe = null;
-
-            iq.setTransport(pe);
-        }
-        if (pe != null)
-            describe(pe);
-    }
 }
 

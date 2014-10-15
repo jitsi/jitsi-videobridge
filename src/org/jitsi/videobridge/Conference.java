@@ -133,16 +133,16 @@ public class Conference
     private final ConferenceSpeechActivity speechActivity;
 
     /**
-     * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
-     */
-    private final Videobridge videobridge;
-
-    /**
      * Maps an ID of a channel-bundle to the <tt>TransportManager</tt> instance
      * responsible for its transport.
      */
     private final Map<String, IceUdpTransportManager> transportManagers
         = new HashMap<String, IceUdpTransportManager>();
+
+    /**
+     * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
+     */
+    private final Videobridge videobridge;
 
     /**
      * The <tt>WebRtcpDataStreamListener</tt> which listens to the
@@ -240,6 +240,54 @@ public class Conference
     }
 
     /**
+     * Configures the simulcast manager of the receiver to receive a high
+     * quality stream only from the designated sender.
+     *
+     * @param receiver
+     * @param highQualitySenderId
+     */
+    private void configureHighQualitySenderForReceiver(
+            Endpoint receiver,
+            String highQualitySenderId)
+    {
+        if (receiver == null)
+            return;
+
+        Collection<Endpoint> endpoints = getEndpoints();
+        if (endpoints == null || endpoints.isEmpty())
+            return;
+
+        Map<Endpoint, Integer> qualityMap
+                = new HashMap<Endpoint, Integer>(endpoints.size());
+
+        for (Endpoint e : endpoints)
+        {
+            if (!StringUtils.isNullOrEmpty(highQualitySenderId)
+                && highQualitySenderId.equals(e.getID()))
+            {
+                // NOTE(gp) 10 here is an arbitrary large value that, maybe, it
+                // should be a constant. I'm not sure if that's good enough though.
+                qualityMap.put(e, 10);
+            }
+            else
+            {
+                qualityMap.put(e, 0);
+            }
+        }
+
+        List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
+        if (channels != null
+                && !channels.isEmpty()
+                && channels.get(0) instanceof VideoChannel)
+        {
+            // TODO(gp) need to make sure we get the right VideoChannel.
+            ((VideoChannel) channels.get(0))
+                    .getSimulcastManager().setReceivingSimulcastLayer(
+                    qualityMap);
+        }
+    }
+
+    /**
      * Initializes a new <tt>String</tt> to be sent over an
      * <tt>SctpConnection</tt> in order to notify an <tt>Endpoint</tt> that the
      * dominant speaker in this multipoint conference has changed to a specific
@@ -257,6 +305,27 @@ public class Conference
             "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
                 + "\"dominantSpeakerEndpoint\":\"" + dominantSpeaker.getID()
                 + "\"}";
+    }
+
+    /**
+     * Adds the channel-bundles of this <tt>Conference</tt> as
+     * <tt>ColibriConferenceIQ.ChannelBundle</tt> instances in <tt>iq</tt>.
+     * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
+     */
+    void describeChannelBundles(ColibriConferenceIQ iq)
+    {
+        synchronized (transportManagers)
+        {
+            for (Map.Entry<String, IceUdpTransportManager> entry
+                    : transportManagers.entrySet())
+            {
+                ColibriConferenceIQ.ChannelBundle responseBundleIQ
+                    = new ColibriConferenceIQ.ChannelBundle(entry.getKey());
+
+                entry.getValue().describe(responseBundleIQ);
+                iq.addChannelBundle(responseBundleIQ);
+            }
+        }
     }
 
     /**
@@ -327,356 +396,6 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
-    }
-
-    /**
-     * Sends a data channel command to a simulcast enabled video sender to make
-     * it stop streaming its hq stream, if it's not being watched by any
-     * receiver.
-     *
-     * @param id
-     */
-    private void maybeSendStopHighQualityStreamCommand(String id)
-    {
-        Endpoint oldEndpoint = null;
-        if (!StringUtils.isNullOrEmpty(id) &&
-                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
-        {
-            oldEndpoint = getEndpoint(id);
-        }
-
-        List<RtpChannel> oldVideoChannels = null;
-        if (oldEndpoint != null)
-        {
-            oldVideoChannels = oldEndpoint.getChannels(MediaType.VIDEO);
-        }
-
-        VideoChannel oldVideoChannel = null;
-        if (oldVideoChannels != null && oldVideoChannels.size() != 0)
-        {
-            oldVideoChannel = (VideoChannel) oldVideoChannels.get(0);
-        }
-
-        SortedSet<SimulcastLayer> oldSimulcastLayers = null;
-        if (oldVideoChannel != null)
-        {
-            oldSimulcastLayers = oldVideoChannel.getSimulcastManager()
-                    .getSimulcastLayers();
-        }
-
-        if (oldSimulcastLayers != null
-                && oldSimulcastLayers.size() > 1
-                /* oldEndpoint != null is implied*/
-                && oldEndpoint.getSctpConnection().isReady()
-                && !oldEndpoint.getSctpConnection().isExpired())
-        {
-            // we have an old endpoint and it has an SCTP connection that is
-            // ready and not expired. if nobody else is watching the old
-            // endpoint, stop its hq stream.
-
-            boolean stopHighQualityStream = true;
-            for (Endpoint e : getEndpoints())
-            {
-                // TODO(gp) need some synchronization here. What if the selected
-                // endpoint changes while we're in the loop?
-
-                if (oldEndpoint != e
-                       && (oldEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
-                   )
-                {
-                    // somebody is watching the old endpoint or somebody has not
-                    // yet signaled its selected endpoint to the bridge, don't
-                    // stop the hq stream.
-                    stopHighQualityStream = false;
-                    break;
-                }
-            }
-
-            if (stopHighQualityStream)
-            {
-                // TODO(gp) this assumes only a single hq stream.
-
-                logger.info("Stopping the HQ stream of " + oldEndpoint.getID()
-                        + ".");
-
-                SimulcastLayer hqLayer = oldSimulcastLayers.last();
-
-                StopSimulcastLayerCommand command
-                        = new StopSimulcastLayerCommand(hqLayer);
-
-                String json = MyJsonEncoder.toJSON(command);
-
-                try
-                {
-                    oldEndpoint.sendMessageOnDataChannel(json);
-                }
-                catch (IOException e1)
-                {
-                    logger.error("Failed to send message on data channel.", e1);
-                }
-            }
-        }
-    }
-
-    /**
-     * Sends a data channel command to a simulcast enabled video sender to make
-     * it start streaming its hq stream, if it's being watched by some receiver.
-     *
-     * @param id
-     */
-    private void maybeSendStartHighQualityStreamCommand(String id)
-    {
-        Endpoint newEndpoint = null;
-        if (!StringUtils.isNullOrEmpty(id) &&
-                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
-        {
-            newEndpoint = getEndpoint(id);
-        }
-
-        List<RtpChannel> newVideoChannels = null;
-        if (newEndpoint != null)
-        {
-            newVideoChannels = newEndpoint.getChannels(MediaType.VIDEO);
-        }
-
-        VideoChannel newVideoChannel = null;
-        if (newVideoChannels != null && newVideoChannels.size() != 0)
-        {
-            newVideoChannel = (VideoChannel) newVideoChannels.get(0);
-        }
-
-        SortedSet<SimulcastLayer> newSimulcastLayers = null;
-        if (newVideoChannel != null)
-        {
-            newSimulcastLayers = newVideoChannel.getSimulcastManager()
-                    .getSimulcastLayers();
-        }
-
-        if (newSimulcastLayers != null
-                && newSimulcastLayers.size() > 1
-                /* newEndpoint != null is implied*/
-                && newEndpoint.getSctpConnection().isReady()
-                && !newEndpoint.getSctpConnection().isExpired())
-        {
-            // we have a new endpoint and it has an SCTP connection that is
-            // ready and not expired. if somebody else is watching the new
-            // endpoint, start its hq stream.
-
-            boolean startHighQualityStream = false;
-            for (Endpoint e : getEndpoints())
-            {
-                // TODO(gp) need some synchronization here. What if the
-                // selected endpoint changes while we're in the loop?
-
-                if (newEndpoint != e
-                       && (newEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
-                   )
-                {
-                    // somebody is watching the new endpoint or somebody has not
-                    // yet signaled its selected endpoint to the bridge, start
-                    // the hq stream.
-
-                    if (logger.isDebugEnabled())
-                    {
-                        if (StringUtils.isNullOrEmpty(
-                                e.getSelectedEndpointID()))
-                        {
-                            logger.debug("Maybe " + e.getID() + " is watching "
-                                    + newEndpoint.getID());
-                        } else {
-
-                            logger.debug(e.getID() + " is watching "
-                                    + newEndpoint.getID());
-                        }
-                    }
-
-                    startHighQualityStream = true;
-                    break;
-                }
-            }
-
-            if (startHighQualityStream)
-            {
-                // TODO(gp) this assumes only a single hq stream.
-
-                logger.info("Starting the HQ stream of " + newEndpoint.getID()
-                        + ".");
-
-                SimulcastLayer hqLayer = newSimulcastLayers.last();
-
-                StartSimulcastLayerCommand command
-                        = new StartSimulcastLayerCommand(hqLayer);
-
-                String json = MyJsonEncoder.toJSON(command);
-                try
-                {
-                    newEndpoint.sendMessageOnDataChannel(json);
-                }
-                catch (IOException e1)
-                {
-                    logger.error("Failed to send message on data channel.", e1);
-                }
-            }
-        }
-    }
-
-    /**
-     * Notifies this instance that an endpoint has changed its video selection.
-     */
-    private void selectedEndpointChanged(Endpoint endpoint,
-                                         String oldValue,
-                                         String newValue)
-    {
-        // TODO(gp) handle the event from within the SimulcastManager; must
-        // not pollute Conference with this.
-
-        // Rule 1: send an hq stream only for the selected endpoint.
-        configureHighQualitySenderForReceiver(endpoint, newValue);
-
-        // Rule 2: if the old endpoint is not being watched by any of the
-        // receivers, the bridge tells it to stop streaming its hq stream.
-        maybeSendStopHighQualityStreamCommand(oldValue);
-
-        // Rule 3: if the new endpoint is being watched by any of the receivers,
-        // the bridge tells it to start streaming its hq stream.
-        maybeSendStartHighQualityStreamCommand(newValue);
-
-    }
-
-    /**
-     * Configures the simulcast manager of the receiver to receive a high
-     * quality stream only from the designated sender.
-     *
-     * @param receiver
-     * @param highQualitySenderId
-     */
-    private void configureHighQualitySenderForReceiver(
-            Endpoint receiver,
-            String highQualitySenderId)
-    {
-        if (receiver == null)
-            return;
-
-        Collection<Endpoint> endpoints = getEndpoints();
-        if (endpoints == null || endpoints.isEmpty())
-            return;
-
-        Map<Endpoint, Integer> qualityMap
-                = new HashMap<Endpoint, Integer>(endpoints.size());
-
-        for (Endpoint e : endpoints)
-        {
-            if (!StringUtils.isNullOrEmpty(highQualitySenderId)
-                && highQualitySenderId.equals(e.getID()))
-            {
-                // NOTE(gp) 10 here is an arbitrary large value that, maybe, it
-                // should be a constant. I'm not sure if that's good enough though.
-                qualityMap.put(e, 10);
-            }
-            else
-            {
-                qualityMap.put(e, 0);
-            }
-        }
-
-        List<RtpChannel> channels = receiver.getChannels(MediaType.VIDEO);
-        if (channels != null
-                && !channels.isEmpty()
-                && channels.get(0) instanceof VideoChannel)
-        {
-            // TODO(gp) need to make sure we get the right VideoChannel.
-            ((VideoChannel) channels.get(0))
-                    .getSimulcastManager().setReceivingSimulcastLayer(
-                    qualityMap);
-        }
-    }
-
-    static class StartSimulcastLayerCommand
-    {
-        public StartSimulcastLayerCommand(SimulcastLayer simulcastLayer)
-        {
-            this.simulcastLayer = simulcastLayer;
-        }
-
-        // TODO(gp) rename this to StartSimulcastLayerCommand
-        final String colibriClass = "StartSimulcastLayerEvent";
-        final SimulcastLayer simulcastLayer;
-    }
-
-    static class StopSimulcastLayerCommand
-    {
-        public StopSimulcastLayerCommand(SimulcastLayer simulcastLayer)
-        {
-            this.simulcastLayer = simulcastLayer;
-        }
-
-        // TODO(gp) rename this to StopSimulcastLayerCommand
-        final String colibriClass = "StopSimulcastLayerEvent";
-        final SimulcastLayer simulcastLayer;
-    }
-
-    static class MyJsonEncoder
-    {
-        // NOTE(gp) custom JSON encoders/decoders are a maintenance burden and
-        // a source of bugs. We should consider using a specialized library that
-        // does that automatically, like Gson or Jackson. It would work like
-        // this;
-        //
-        // Gson gson = new Gson();
-        // String json = gson.toJson(event);
-        //
-        // So, basically it would work exactly like this custom encoder, but
-        // without having to write a single line of code.
-
-        public static String toJSON(StartSimulcastLayerCommand command)
-        {
-            StringBuilder b = new StringBuilder(
-                    "{\"colibriClass\":\"StartSimulcastLayerEvent\"");
-
-            b.append(",\"simulcastLayer\":[");
-            toJSON(b, command.simulcastLayer);
-            b.append("]}");
-
-            return b.toString();
-        }
-
-        public static String toJSON(StopSimulcastLayerCommand command)
-        {
-            StringBuilder b = new StringBuilder(
-                    "{\"colibriClass\":\"StopSimulcastLayerEvent\"");
-
-            b.append(",\"simulcastLayer\":[");
-            toJSON(b, command.simulcastLayer);
-            b.append("]}");
-
-            return b.toString();
-        }
-
-        private static void toJSON(StringBuilder b,
-                                   SimulcastLayer simulcastLayer)
-        {
-            b.append("{\"primarySSRC\":");
-            b.append(JSONValue.escape(
-                    Long.toString(simulcastLayer.getPrimarySSRC())));
-
-            List<Long> associatedSSRCs = simulcastLayer.getAssociatedSSRCs();
-            if (associatedSSRCs != null && associatedSSRCs.size() != 0)
-            {
-                b.append(",\"asociatedSSRCs\":[");
-                for (int i = 0; i < associatedSSRCs.size(); i++)
-                {
-                    b.append(JSONValue.escape(
-                            Long.toString(associatedSSRCs.get(i))));
-
-                    if (i != associatedSSRCs.size() - 1)
-                        b.append(",");
-                }
-                b.append("]");
-            }
-            b.append("}");
-        }
     }
 
     /**
@@ -1280,6 +999,62 @@ public class Conference
     }
 
     /**
+     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
+     *
+     * @param channelBundleId the ID of the channel-bundle for which to return
+     * the <tt>TransportManager</tt>.
+     * @return the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
+     */
+    TransportManager getTransportManager(String channelBundleId)
+    {
+        return getTransportManager(channelBundleId, false);
+    }
+
+    /**
+     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>. If no instance exists and
+     * <tt>create</tt> is <tt>true</tt>, one will be created.
+     *
+     * @param channelBundleId the ID of the channel-bundle for which to return
+     * the <tt>TransportManager</tt>.
+     * @param create whether to create a new instance, if one doesn't exist.
+     * @return the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>.
+     */
+    IceUdpTransportManager getTransportManager(
+            String channelBundleId,
+            boolean create)
+    {
+        IceUdpTransportManager transportManager;
+
+        synchronized (transportManagers)
+        {
+            transportManager = transportManagers.get(channelBundleId);
+            if (transportManager == null && create)
+            {
+                try
+                {
+                    //FIXME: the initiator is hard-coded
+                    // We assume rtcp-mux when bundle is used, so we make only
+                    // one component.
+                    transportManager
+                        = new IceUdpTransportManager(this, true, 1);
+                }
+                catch (IOException ioe)
+                {
+                    throw new UndeclaredThrowableException(ioe);
+                }
+
+                transportManagers.put(channelBundleId, transportManager);
+            }
+        }
+
+        return transportManager;
+    }
+
+    /**
      * Gets the <tt>Videobridge</tt> which has initialized this
      * <tt>Conference</tt>.
      *
@@ -1338,6 +1113,199 @@ public class Conference
             setRecording(recording);
 
         return this.recording;
+    }
+
+    /**
+     * Sends a data channel command to a simulcast enabled video sender to make
+     * it start streaming its hq stream, if it's being watched by some receiver.
+     *
+     * @param id
+     */
+    private void maybeSendStartHighQualityStreamCommand(String id)
+    {
+        Endpoint newEndpoint = null;
+        if (!StringUtils.isNullOrEmpty(id) &&
+                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
+        {
+            newEndpoint = getEndpoint(id);
+        }
+
+        List<RtpChannel> newVideoChannels = null;
+        if (newEndpoint != null)
+        {
+            newVideoChannels = newEndpoint.getChannels(MediaType.VIDEO);
+        }
+
+        VideoChannel newVideoChannel = null;
+        if (newVideoChannels != null && newVideoChannels.size() != 0)
+        {
+            newVideoChannel = (VideoChannel) newVideoChannels.get(0);
+        }
+
+        SortedSet<SimulcastLayer> newSimulcastLayers = null;
+        if (newVideoChannel != null)
+        {
+            newSimulcastLayers = newVideoChannel.getSimulcastManager()
+                    .getSimulcastLayers();
+        }
+
+        if (newSimulcastLayers != null
+                && newSimulcastLayers.size() > 1
+                /* newEndpoint != null is implied*/
+                && newEndpoint.getSctpConnection().isReady()
+                && !newEndpoint.getSctpConnection().isExpired())
+        {
+            // we have a new endpoint and it has an SCTP connection that is
+            // ready and not expired. if somebody else is watching the new
+            // endpoint, start its hq stream.
+
+            boolean startHighQualityStream = false;
+            for (Endpoint e : getEndpoints())
+            {
+                // TODO(gp) need some synchronization here. What if the
+                // selected endpoint changes while we're in the loop?
+
+                if (newEndpoint != e
+                       && (newEndpoint.getID().equals(e.getSelectedEndpointID())
+                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
+                   )
+                {
+                    // somebody is watching the new endpoint or somebody has not
+                    // yet signaled its selected endpoint to the bridge, start
+                    // the hq stream.
+
+                    if (logger.isDebugEnabled())
+                    {
+                        if (StringUtils.isNullOrEmpty(
+                                e.getSelectedEndpointID()))
+                        {
+                            logger.debug("Maybe " + e.getID() + " is watching "
+                                    + newEndpoint.getID());
+                        } else {
+
+                            logger.debug(e.getID() + " is watching "
+                                    + newEndpoint.getID());
+                        }
+                    }
+
+                    startHighQualityStream = true;
+                    break;
+                }
+            }
+
+            if (startHighQualityStream)
+            {
+                // TODO(gp) this assumes only a single hq stream.
+
+                logger.info("Starting the HQ stream of " + newEndpoint.getID()
+                        + ".");
+
+                SimulcastLayer hqLayer = newSimulcastLayers.last();
+
+                StartSimulcastLayerCommand command
+                        = new StartSimulcastLayerCommand(hqLayer);
+
+                String json = MyJsonEncoder.toJSON(command);
+                try
+                {
+                    newEndpoint.sendMessageOnDataChannel(json);
+                }
+                catch (IOException e1)
+                {
+                    logger.error("Failed to send message on data channel.", e1);
+                }
+            }
+        }
+    }
+
+    /**
+     * Sends a data channel command to a simulcast enabled video sender to make
+     * it stop streaming its hq stream, if it's not being watched by any
+     * receiver.
+     *
+     * @param id
+     */
+    private void maybeSendStopHighQualityStreamCommand(String id)
+    {
+        Endpoint oldEndpoint = null;
+        if (!StringUtils.isNullOrEmpty(id) &&
+                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
+        {
+            oldEndpoint = getEndpoint(id);
+        }
+
+        List<RtpChannel> oldVideoChannels = null;
+        if (oldEndpoint != null)
+        {
+            oldVideoChannels = oldEndpoint.getChannels(MediaType.VIDEO);
+        }
+
+        VideoChannel oldVideoChannel = null;
+        if (oldVideoChannels != null && oldVideoChannels.size() != 0)
+        {
+            oldVideoChannel = (VideoChannel) oldVideoChannels.get(0);
+        }
+
+        SortedSet<SimulcastLayer> oldSimulcastLayers = null;
+        if (oldVideoChannel != null)
+        {
+            oldSimulcastLayers = oldVideoChannel.getSimulcastManager()
+                    .getSimulcastLayers();
+        }
+
+        if (oldSimulcastLayers != null
+                && oldSimulcastLayers.size() > 1
+                /* oldEndpoint != null is implied*/
+                && oldEndpoint.getSctpConnection().isReady()
+                && !oldEndpoint.getSctpConnection().isExpired())
+        {
+            // we have an old endpoint and it has an SCTP connection that is
+            // ready and not expired. if nobody else is watching the old
+            // endpoint, stop its hq stream.
+
+            boolean stopHighQualityStream = true;
+            for (Endpoint e : getEndpoints())
+            {
+                // TODO(gp) need some synchronization here. What if the selected
+                // endpoint changes while we're in the loop?
+
+                if (oldEndpoint != e
+                       && (oldEndpoint.getID().equals(e.getSelectedEndpointID())
+                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
+                   )
+                {
+                    // somebody is watching the old endpoint or somebody has not
+                    // yet signaled its selected endpoint to the bridge, don't
+                    // stop the hq stream.
+                    stopHighQualityStream = false;
+                    break;
+                }
+            }
+
+            if (stopHighQualityStream)
+            {
+                // TODO(gp) this assumes only a single hq stream.
+
+                logger.info("Stopping the HQ stream of " + oldEndpoint.getID()
+                        + ".");
+
+                SimulcastLayer hqLayer = oldSimulcastLayers.last();
+
+                StopSimulcastLayerCommand command
+                        = new StopSimulcastLayerCommand(hqLayer);
+
+                String json = MyJsonEncoder.toJSON(command);
+
+                try
+                {
+                    oldEndpoint.sendMessageOnDataChannel(json);
+                }
+                catch (IOException e1)
+                {
+                    logger.error("Failed to send message on data channel.", e1);
+                }
+            }
+        }
     }
 
     /**
@@ -1481,6 +1449,29 @@ public class Conference
                 endpoint.sctpConnectionReady(sctpConnection);
             }
         }
+    }
+
+    /**
+     * Notifies this instance that an endpoint has changed its video selection.
+     */
+    private void selectedEndpointChanged(Endpoint endpoint,
+                                         String oldValue,
+                                         String newValue)
+    {
+        // TODO(gp) handle the event from within the SimulcastManager; must
+        // not pollute Conference with this.
+
+        // Rule 1: send an hq stream only for the selected endpoint.
+        configureHighQualitySenderForReceiver(endpoint, newValue);
+
+        // Rule 2: if the old endpoint is not being watched by any of the
+        // receivers, the bridge tells it to stop streaming its hq stream.
+        maybeSendStopHighQualityStreamCommand(oldValue);
+
+        // Rule 3: if the new endpoint is being watched by any of the receivers,
+        // the bridge tells it to start streaming its hq stream.
+        maybeSendStartHighQualityStreamCommand(newValue);
+
     }
 
     /**
@@ -1719,81 +1710,89 @@ public class Conference
         }
     }
 
-    /**
-     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>. If no instance exists and
-     * <tt>create</tt> is <tt>true</tt>, one will be created.
-     *
-     * @param channelBundleId the ID of the channel-bundle for which to return
-     * the <tt>TransportManager</tt>.
-     * @param create whether to create a new instance, if one doesn't exist.
-     * @return the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>.
-     */
-    IceUdpTransportManager getTransportManager(
-            String channelBundleId,
-            boolean create)
+    static class MyJsonEncoder
     {
-        IceUdpTransportManager transportManager;
-        synchronized (transportManagers)
+        // NOTE(gp) custom JSON encoders/decoders are a maintenance burden and
+        // a source of bugs. We should consider using a specialized library that
+        // does that automatically, like Gson or Jackson. It would work like
+        // this;
+        //
+        // Gson gson = new Gson();
+        // String json = gson.toJson(event);
+        //
+        // So, basically it would work exactly like this custom encoder, but
+        // without having to write a single line of code.
+
+        public static String toJSON(StartSimulcastLayerCommand command)
         {
-            transportManager = transportManagers.get(channelBundleId);
+            StringBuilder b = new StringBuilder(
+                    "{\"colibriClass\":\"StartSimulcastLayerEvent\"");
 
-            if (transportManager == null
-                    && create)
+            b.append(",\"simulcastLayer\":[");
+            toJSON(b, command.simulcastLayer);
+            b.append("]}");
+
+            return b.toString();
+        }
+
+        public static String toJSON(StopSimulcastLayerCommand command)
+        {
+            StringBuilder b = new StringBuilder(
+                    "{\"colibriClass\":\"StopSimulcastLayerEvent\"");
+
+            b.append(",\"simulcastLayer\":[");
+            toJSON(b, command.simulcastLayer);
+            b.append("]}");
+
+            return b.toString();
+        }
+
+        private static void toJSON(StringBuilder b,
+                                   SimulcastLayer simulcastLayer)
+        {
+            b.append("{\"primarySSRC\":");
+            b.append(JSONValue.escape(
+                    Long.toString(simulcastLayer.getPrimarySSRC())));
+
+            List<Long> associatedSSRCs = simulcastLayer.getAssociatedSSRCs();
+            if (associatedSSRCs != null && associatedSSRCs.size() != 0)
             {
-                try
+                b.append(",\"asociatedSSRCs\":[");
+                for (int i = 0; i < associatedSSRCs.size(); i++)
                 {
-                    //FIXME: the initiator is hard-coded
-                    // We assume rtcp-mux when bundle is used, so we make only
-                    // one component.
-                    transportManager = new IceUdpTransportManager(this, true, 1);
-                }
-                catch (IOException ioe)
-                {
-                    throw new UndeclaredThrowableException(ioe);
-                }
+                    b.append(JSONValue.escape(
+                            Long.toString(associatedSSRCs.get(i))));
 
-                transportManagers.put(channelBundleId, transportManager);
+                    if (i != associatedSSRCs.size() - 1)
+                        b.append(",");
+                }
+                b.append("]");
             }
-
-            return transportManager;
+            b.append("}");
         }
     }
 
-    /**
-     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
-     *
-     * @param channelBundleId the ID of the channel-bundle for which to return
-     * the <tt>TransportManager</tt>.
-     * @return the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>, or <tt>null</tt> if one doesn't exist.
-     */
-    TransportManager getTransportManager(String channelBundleId)
+    static class StartSimulcastLayerCommand
     {
-        return getTransportManager(channelBundleId, false);
+        // TODO(gp) rename this to StartSimulcastLayerCommand
+        final String colibriClass = "StartSimulcastLayerEvent";
+
+        final SimulcastLayer simulcastLayer;
+        public StartSimulcastLayerCommand(SimulcastLayer simulcastLayer)
+        {
+            this.simulcastLayer = simulcastLayer;
+        }
     }
 
-    /**
-     * Adds the channel-bundles of this <tt>Conference</tt> as
-     * <tt>ColibriConferenceIQ.ChannelBundle</tt> instances in <tt>iq</tt>.
-     * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
-     */
-    void describeChannelBundles(ColibriConferenceIQ iq)
+    static class StopSimulcastLayerCommand
     {
-        synchronized (transportManagers)
+        // TODO(gp) rename this to StopSimulcastLayerCommand
+        final String colibriClass = "StopSimulcastLayerEvent";
+
+        final SimulcastLayer simulcastLayer;
+        public StopSimulcastLayerCommand(SimulcastLayer simulcastLayer)
         {
-            for (Map.Entry<String, IceUdpTransportManager> entry :
-                    transportManagers.entrySet())
-            {
-                ColibriConferenceIQ.ChannelBundle responseBundleIQ
-                        = new ColibriConferenceIQ.ChannelBundle(entry.getKey());
-
-                entry.getValue().describe(responseBundleIQ);
-                iq.addChannelBundle(responseBundleIQ);
-            }
+            this.simulcastLayer = simulcastLayer;
         }
-
     }
 }

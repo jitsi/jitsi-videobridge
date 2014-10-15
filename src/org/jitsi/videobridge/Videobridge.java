@@ -114,17 +114,17 @@ public class Videobridge
 
     /**
      * The name of the property which specifies the FQN name of the RTCP
-     * strategy to use by default.
-     */
-    static final String RTCP_TERMINATION_STRATEGY_PNAME
-            = "org.jitsi.videobridge.rtcp.strategy";
-
-    /**
-     * The name of the property which specifies the FQN name of the RTCP
      * strategy to use when there are less than 3 participants.
      */
     static final String RTCP_TERMINATION_FALLBACK_STRATEGY_PNAME
             = "org.jitsi.videobridge.rtcp.fallbackStrategy";
+
+    /**
+     * The name of the property which specifies the FQN name of the RTCP
+     * strategy to use by default.
+     */
+    static final String RTCP_TERMINATION_STRATEGY_PNAME
+            = "org.jitsi.videobridge.rtcp.strategy";
 
     /**
      * The XMPP API of Jitsi Videobridge.
@@ -677,10 +677,10 @@ public class Videobridge
                             if (channelBundleId != null)
                             {
                                 TransportManager transportManager
-                                        = conference
-                                        .getTransportManager(
-                                                channelBundleId,
-                                                true);
+                                    = conference.getTransportManager(
+                                            channelBundleId,
+                                            true);
+
                                 transportManager.addChannel(channel);
                             }
 

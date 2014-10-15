@@ -35,6 +35,11 @@ public class RawUdpTransportManager
         = Logger.getLogger(RawUdpTransportManager.class);
 
     /**
+     * The single <tt>Channel</tt> in this instance.
+     */
+    private final Channel channel;
+
+    /**
      * The generation of the candidates produced by this Jingle transport.
      */
     private final int generation;
@@ -54,11 +59,6 @@ public class RawUdpTransportManager
      * allocated by this instance for the purposes of RTP and RTCP transmission.
      */
     private final StreamConnector streamConnector;
-
-    /**
-     * The single <tt>Channel</tt> in this instance.
-     */
-    private final Channel channel;
 
     /**
      * Initializes a new <tt>RawUdpTransportManager</tt> instance.
@@ -96,9 +96,19 @@ public class RawUdpTransportManager
     @Override
     public boolean addChannel(Channel c)
     {
-        if (getChannels().isEmpty())
-            return super.addChannel(c);
-        return false;
+        return getChannels().isEmpty() ? super.addChannel(c) : false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close()
+    {
+        super.close();
+
+        if (streamConnector != null)
+            streamConnector.close();
     }
 
     /**
@@ -117,18 +127,6 @@ public class RawUdpTransportManager
             return true;
         }
         return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void close()
-    {
-        super.close();
-
-        if (streamConnector != null)
-            streamConnector.close();
     }
 
     /**
@@ -314,6 +312,16 @@ public class RawUdpTransportManager
 
     /**
      * {@inheritDoc}
+     * RawUdpTransportManager does not implement DTLS.
+     */
+    @Override
+    public DtlsControl getDtlsControl(Channel channel)
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
      */
     @Override
     public StreamConnector getStreamConnector(Channel channel)
@@ -330,16 +338,6 @@ public class RawUdpTransportManager
      */
     @Override
     public MediaStreamTarget getStreamTarget(Channel channel)
-    {
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     * RawUdpTransportManager does not implement DTLS.
-     */
-    @Override
-    public DtlsControl getDtlsControl(Channel channel)
     {
         return null;
     }

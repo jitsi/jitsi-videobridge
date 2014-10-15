@@ -127,15 +127,15 @@ public class SctpConnection
     }
 
     /**
+     * Indicates if we have accepted incoming connection.
+     */
+    private boolean acceptedIncomingConnection;
+
+    /**
      * Indicates whether the STCP association is ready and has not been ended by
      * a subsequent state change.
      */
     private boolean assocIsUp;
-
-    /**
-     * Indicates if we have accepted incoming connection.
-     */
-    private boolean acceptedIncomingConnection;
 
     /**
      * Data channels mapped by SCTP stream identified(sid).
@@ -267,6 +267,40 @@ public class SctpConnection
                 // close the socket.
                 //iceUdpSocket.close();
             }
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Creates a <tt>TransportManager</tt> instance suitable for an
+     * <tt>SctpConnection</tt> (e.g. with 1 component only).
+     */
+    protected TransportManager createTransportManager(String xmlNamespace)
+            throws IOException
+    {
+        if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+        {
+            Content content = getContent();
+
+            return
+                new IceUdpTransportManager(
+                        content.getConference(),
+                        isInitiator(),
+                        1 /* numComponents */,
+                        content.getName());
+        }
+        else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+        {
+            //TODO: support RawUdp once RawUdpTransportManager is updated
+            //return new RawUdpTransportManager(this);
+            throw new IllegalArgumentException(
+                    "Unsupported Jingle transport " + xmlNamespace);
+        }
+        else
+        {
+            throw new IllegalArgumentException(
+                    "Unsupported Jingle transport " + xmlNamespace);
         }
     }
 
@@ -1067,37 +1101,6 @@ public class SctpConnection
         if(sendAck != ack.length)
         {
             logger.error("Failed to send open channel confirmation");
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Creates a <tt>TransportManager</tt> instance suitable for an
-     * <tt>SctpConnection</tt> (e.g. with 1 component only).
-     */
-    protected TransportManager createTransportManager(String xmlNamespace)
-            throws IOException
-    {
-        if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
-        {
-            Content content = getContent();
-            return new IceUdpTransportManager(content.getConference(),
-                                                 isInitiator(),
-                                                 1 /* num components */,
-                                                 content.getName());
-        }
-        else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
-        {
-            //TODO: support RawUdp once RawUdpTransportManager is updated
-            //return new RawUdpTransportManager(this);
-            throw new IllegalArgumentException(
-                    "Unsupported Jingle transport " + xmlNamespace);
-        }
-        else
-        {
-            throw new IllegalArgumentException(
-                    "Unsupported Jingle transport " + xmlNamespace);
         }
     }
 }
