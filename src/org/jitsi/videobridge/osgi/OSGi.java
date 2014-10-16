@@ -60,6 +60,9 @@ public class OSGi
                 "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
             },
             {
+                "org/jitsi/videobridge/log/LoggingBundleActivator"
+            },
+            {
                 "org/jitsi/videobridge/VideobridgeBundleActivator"
             },
             {

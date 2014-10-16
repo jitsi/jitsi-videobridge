@@ -23,6 +23,7 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.json.simple.*;
+import org.jitsi.videobridge.log.*;
 import org.osgi.framework.*;
 
 /**
@@ -198,6 +199,10 @@ public class Conference
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
+
+        LoggingService loggingService = videobridge.getLoggingService();
+        if (loggingService != null)
+            loggingService.logEvent(EventFactory.conferenceCreated(id));
     }
 
     /**
@@ -522,6 +527,10 @@ public class Conference
             else
                 expired = true;
         }
+
+        LoggingService loggingService = videobridge.getLoggingService();
+        if (loggingService != null)
+            loggingService.logEvent(EventFactory.conferenceExpired(id));
 
         setRecording(false);
         if (recorderEventHandler != null)

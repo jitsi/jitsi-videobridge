@@ -17,6 +17,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.log.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.osgi.framework.*;
 
@@ -154,6 +155,12 @@ public class Content
 
         mediaType = MediaType.parseString(this.name);
 
+
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+            loggingService.logEvent(
+                    EventFactory.contentCreated(name, conference.getID()));
         touch();
     }
 
@@ -316,6 +323,11 @@ public class Content
         setRecording(false, null);
         Conference conference = getConference();
 
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+            loggingService.logEvent(
+                    EventFactory.contentExpired(name, conference.getID()));
         try
         {
             conference.expireContent(this);

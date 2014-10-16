@@ -16,6 +16,7 @@ import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.log.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.simulcast.*;
@@ -439,6 +440,26 @@ public class Videobridge
             }
             return defaultTransportManager;
         }
+    }
+
+    /**
+     * Returns the <tt>LoggingService</tt> used by this
+     * <tt>Videobridge</tt>.
+     *
+     * @return the <tt>LoggingService</tt> used by this
+     * <tt>Videobridge</tt>.
+     */
+    public LoggingService getLoggingService()
+    {
+        BundleContext bundleContext = getBundleContext();
+
+        if (bundleContext != null)
+        {
+            return ServiceUtils2.getService(bundleContext,
+                                            LoggingService.class);
+        }
+
+        return null;
     }
 
     /**
