@@ -336,7 +336,7 @@ public class Videobridge
              */
             String conferenceFocus = conference.getFocus();
 
-            if ((conferenceFocus == null) || conferenceFocus.equals(focus))
+            if ((focus == null) || focus.equals(conferenceFocus))
             {
                 // It seems the conference is still active.
                 conference.touch();
