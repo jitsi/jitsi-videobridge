@@ -150,10 +150,13 @@ public abstract class Channel
         Conference conference = content.getConference();
         LoggingService loggingService
                 = conference.getVideobridge().getLoggingService();
-        loggingService.logEvent(
+        if (loggingService != null)
+        {
+            loggingService.logEvent(
                 EventFactory.channelCreated(id,
                                             content.getName(),
                                             conference.getID()));
+        }
         touch();
     }
 
