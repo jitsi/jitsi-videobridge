@@ -25,7 +25,6 @@ Homepage: https://jitsi.org/videobridge
 
 Package: jitsi-videobridge
 Architecture: any
-Pre-Depends: adduser
 Depends: ${misc:Depends},
          default-jre-headless,
          libjitsi,
