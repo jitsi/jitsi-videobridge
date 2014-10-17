@@ -9,6 +9,7 @@ package org.jitsi.videobridge.rtcp;
 import net.sf.fmj.media.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.videobridge.*;
 
 import java.util.*;
@@ -90,17 +91,6 @@ public class BridgeSenderReporting
                     if (stream == null)
                         continue;
 
-                    // "Clone" the SR.
-                    RTCPSRPacket sr = new RTCPSRPacket(
-                            senderSSRC, new RTCPReportBlock[0]);
-                    sr.ntptimestampmsw = senderReport.ntptimestampmsw;
-                    sr.ntptimestamplsw = senderReport.ntptimestamplsw;
-                    sr.rtptimestamp = senderReport.rtptimestamp;
-                    sr.octetcount = senderReport.octetcount;
-                    sr.packetcount = senderReport.packetcount;
-
-                    Integer receiverSSRC = (int) stream.getLocalSourceID();
-
                     boolean destIsReceiving
                             = srcRtpChannel.isInLastN(destChannel);
 
@@ -119,76 +109,116 @@ public class BridgeSenderReporting
                                     = (VideoChannel) destChannel;
 
                             destIsReceiving
-                                = destVideoChannel.getSimulcastManager()
+                                    = destVideoChannel.getSimulcastManager()
                                     .acceptSimulcastLayer(ssrc,
-                                                          srcVideoChannel);
+                                            srcVideoChannel);
                         }
                     }
 
-                    if (destIsReceiving)
-                    {
-                        // The sender is being received by this receiver:
-                        // Cache the sender information.
-                        SenderInformation si = new SenderInformation();
-                        si.octetCount = senderReport.octetcount;
-                        si.packetCount = senderReport.packetcount;
+                    explodeSenderReport(destIsReceiving, outPacket,
+                            senderReport,
+                            rtpTranslatorImpl,
+                            senderSSRC,
+                            receiverSenderInformationMap,
+                            stream);
+                }
 
-                        synchronized (receiverSenderInformationMap)
-                        {
-                            receiverSenderInformationMap.put(receiverSSRC, si);
-                        }
-                    }
-                    else
-                    {
-                        // The sender is NOT being received by this receiver:
-                        // We keep the packet count/octet count stable.
-                        SenderInformation si;
-                        synchronized (receiverSenderInformationMap)
-                        {
-                            if (receiverSenderInformationMap
-                                    .containsKey(receiverSSRC))
-                            {
-                                si = receiverSenderInformationMap
-                                        .get(receiverSSRC);
-                            }
-                            else
-                            {
-                                si = null;
-                            }
-                        }
+                Recorder recorder = content.getRecorder();
+                MediaStream s;
 
-                        if (si != null)
-                        {
-                            sr.packetcount = si.packetCount;
-                            sr.octetcount = si.octetCount;
-                        }
-                        else
-                        {
-                            sr.packetcount = 0L;
-                            sr.octetcount = 0L;
-                        }
-                    }
-
-                    // Send the SR to the receiver.
-                    RTCPPacket[] packets
-                            = new RTCPPacket[outPacket.packets.length];
-
-                    packets[0] = sr;
-
-                    System.arraycopy(
-                            outPacket.packets, 1,
-                            packets, 1, outPacket.packets.length - 1);
-
-                    RTCPCompoundPacket compoundPacket
-                            = new RTCPCompoundPacket(packets);
-
-                    Payload payload = new RTCPPacketPayload(compoundPacket);
-                    rtpTranslatorImpl.writeControlPayload(payload, stream);
+                if (recorder != null && (s = recorder.getMediaStream()) != null)
+                {
+                    explodeSenderReport(true, outPacket,
+                            senderReport,
+                            rtpTranslatorImpl,
+                            senderSSRC,
+                            receiverSenderInformationMap,
+                            s);
                 }
             }
         }
 
         return true;
+    }
+
+    private void explodeSenderReport(boolean destIsReceiving,
+            RTCPCompoundPacket outPacket,
+            RTCPSRPacket senderReport,
+            RTPTranslatorImpl rtpTranslatorImpl,
+            Integer senderSSRC,
+            Map<Integer, SenderInformation> receiverSenderInformationMap,
+            MediaStream stream)
+    {
+        // "Clone" the SR.
+        RTCPSRPacket sr = new RTCPSRPacket(
+                senderSSRC, new RTCPReportBlock[0]);
+        sr.ntptimestampmsw = senderReport.ntptimestampmsw;
+        sr.ntptimestamplsw = senderReport.ntptimestamplsw;
+        sr.rtptimestamp = senderReport.rtptimestamp;
+        sr.octetcount = senderReport.octetcount;
+        sr.packetcount = senderReport.packetcount;
+
+        Integer receiverSSRC = (int) stream.getLocalSourceID();
+
+        if (destIsReceiving)
+        {
+            // The sender is being received by this receiver:
+            // Cache the sender information.
+            SenderInformation si = new SenderInformation();
+            si.octetCount = senderReport.octetcount;
+            si.packetCount = senderReport.packetcount;
+
+            synchronized (receiverSenderInformationMap)
+            {
+                receiverSenderInformationMap.put(receiverSSRC, si);
+            }
+        }
+        else
+        {
+            // The sender is NOT being received by this receiver:
+            // We keep the packet count/octet count stable.
+            SenderInformation si;
+            synchronized (receiverSenderInformationMap)
+            {
+                if (receiverSenderInformationMap
+                        .containsKey(receiverSSRC))
+                {
+                    si = receiverSenderInformationMap
+                            .get(receiverSSRC);
+                }
+                else
+                {
+                    si = null;
+                }
+            }
+
+            if (si != null)
+            {
+                sr.packetcount = si.packetCount;
+                sr.octetcount = si.octetCount;
+            }
+            else
+            {
+                sr.packetcount = 0L;
+                sr.octetcount = 0L;
+            }
+        }
+
+        // Send the SR to the receiver.
+        RTCPPacket[] packets
+                = new RTCPPacket[outPacket.packets.length];
+
+        packets[0] = sr;
+
+        System.arraycopy(
+                outPacket.packets, 1,
+                packets, 1, outPacket.packets.length - 1);
+
+        RTCPCompoundPacket compoundPacket
+                = new RTCPCompoundPacket(packets);
+
+        Payload payload = new RTCPPacketPayload(compoundPacket);
+        rtpTranslatorImpl.writeControlPayload(payload, stream);
     }
 
     private Map<Integer, SenderInformation> getReceiverSenderInformationMap(
