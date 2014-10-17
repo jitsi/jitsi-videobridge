@@ -123,11 +123,11 @@ public class BridgeSenderReporting
                             stream);
                 }
 
-                Recorder recorder = content.getRecorder();
-                MediaStream s;
-
                 if (content.isRecording())
                 {
+                    Recorder recorder = content.getRecorder();
+                    MediaStream s;
+
                     if (recorder != null && (s = recorder.getMediaStream()) != null)
                     {
                         explodeSenderReport(true, outPacket,
