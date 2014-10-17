@@ -126,14 +126,17 @@ public class BridgeSenderReporting
                 Recorder recorder = content.getRecorder();
                 MediaStream s;
 
-                if (recorder != null && (s = recorder.getMediaStream()) != null)
+                if (content.isRecording())
                 {
-                    explodeSenderReport(true, outPacket,
-                            senderReport,
-                            rtpTranslatorImpl,
-                            senderSSRC,
-                            receiverSenderInformationMap,
-                            s);
+                    if (recorder != null && (s = recorder.getMediaStream()) != null)
+                    {
+                        explodeSenderReport(true, outPacket,
+                                senderReport,
+                                rtpTranslatorImpl,
+                                senderSSRC,
+                                receiverSenderInformationMap,
+                                s);
+                    }
                 }
             }
         }
