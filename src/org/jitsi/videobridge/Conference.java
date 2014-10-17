@@ -20,11 +20,8 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.sim.*;
-import org.jitsi.videobridge.sim.messages.*;
 import org.osgi.framework.*;
 
 /**

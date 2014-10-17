@@ -6,11 +6,10 @@
  */
 package org.jitsi.videobridge.sim;
 
-import org.jitsi.service.neomedia.*;
+import java.util.*;
+
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-
-import java.util.*;
 
 /**
  * @author George Politis
