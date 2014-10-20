@@ -32,4 +32,4 @@ debian/usr/share/jitsi-videobridge/lib/util.jar
 debian/usr/share/jitsi-videobridge/lib/whack.jar
 debian/usr/share/jitsi-videobridge/lib/xpp3.jar
 debian/usr/share/jitsi-videobridge/lib/zrtp4j.jar
-debian/usr/share/doc/jitsi-videobridge/changelog.Debian.gz
+
