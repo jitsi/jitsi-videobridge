@@ -58,12 +58,6 @@ case "$1" in
         # we create home folder only if it doesn't exist
         if [ ! -d /usr/share/jitsi-videobridge ]; then
             mkdir -p /usr/share/jitsi-videobridge
-
-            # ensure we don't overwrite previously existing .properties
-            if [ ! -d /usr/share/jitsi-videobridge/.sip-communicator ]; then
-                mkdir /usr/share/jitsi-videobridge/.sip-communicator
-                cp /usr/share/doc/jitsi-videobridge/sip-communicator.properties /usr/share/jitsi-videobridge/.sip-communicator/
-            fi
         fi
 
         # we claim the home folder of jvb in case it is owned by someone else
