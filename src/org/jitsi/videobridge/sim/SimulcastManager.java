@@ -73,7 +73,8 @@ public class SimulcastManager
     /**
      * Associates sending endpoints to receiving simulcast layer. This simulcast
      * manager uses this map to determine whether or not to forward a video RTP
-     * packet to its associated endpoint or not.
+     * packet to its associated endpoint or not.  An entry in a this map will
+     * automatically be removed when its key is no longer in ordinary use.
      */
     private final Map<Endpoint, ReceivingLayers> simLayersMap
             = new WeakHashMap<Endpoint, ReceivingLayers>();
@@ -861,14 +862,19 @@ public class SimulcastManager
             // endpoint, start its hq stream.
 
             boolean startHighQualityStream = false;
-            for (Endpoint e : videoChannel.getContent().getConference().getEndpoints())
+            for (Endpoint e
+                    : videoChannel.getContent().getConference().getEndpoints())
             {
                 // TODO(gp) need some synchronization here. What if the
                 // selected endpoint changes while we're in the loop?
 
                 if (newEndpoint != e
-                        && (newEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
+                        && (newEndpoint.getID().equals(
+                            e.getSelectedEndpointID())
+                        || (SIMULCAST_LAYER_ORDER_INIT
+                                > SIMULCAST_LAYER_ORDER_LQ
+                            && StringUtils.isNullOrEmpty(
+                                e.getSelectedEndpointID())))
                         )
                 {
                     // somebody is watching the new endpoint or somebody has not
