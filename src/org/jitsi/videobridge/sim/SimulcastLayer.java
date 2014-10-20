@@ -59,7 +59,7 @@ public class SimulcastLayer
         this.order = order;
     }
 
-    public boolean contains(long ssrc)
+    public boolean accept(long ssrc)
     {
         // FIXME(gp) longs or an ints.. everywhere
 
@@ -116,6 +116,8 @@ public class SimulcastLayer
                                     .getID())
                             .append(" stopped streaming ")
                             .append(getPrimarySSRC())
+                            .append(" of order ")
+                            .append(getOrder())
                             .append("."));
                 }
 
@@ -154,7 +156,9 @@ public class SimulcastLayer
                                 .getID())
                         .append(" started streaming ")
                         .append(getPrimarySSRC())
-                        .append(" again."));
+                        .append(" of order ")
+                        .append(getOrder())
+                        .append("."));
             }
 
             // FIXME(gp) use an event dispatcher.

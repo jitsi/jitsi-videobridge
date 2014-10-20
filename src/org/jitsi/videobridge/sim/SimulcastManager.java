@@ -75,8 +75,8 @@ public class SimulcastManager
      * manager uses this map to determine whether or not to forward a video RTP
      * packet to its associated endpoint or not.
      */
-    private final Map<Endpoint, SimulcastLayer> simLayersMap
-            = new WeakHashMap<Endpoint, SimulcastLayer>();
+    private final Map<Endpoint, ReceivingLayers> simLayersMap
+            = new WeakHashMap<Endpoint, ReceivingLayers>();
 
     /**
      * The <tt>PropertyChangeListener</tt> implementation employed by this
@@ -220,12 +220,12 @@ public class SimulcastManager
                 != null
                 && simulcastManager.hasLayers())
         {
-            SimulcastLayer electedSimulcastLayer
-                    = electSimulcastLayer(srcVideoChannel);
+            ReceivingLayers receivingLayers
+                    = getOrElectReceivingLayers(srcVideoChannel);
 
-            if (electedSimulcastLayer != null)
+            if (receivingLayers != null)
             {
-                accept = electedSimulcastLayer.contains(ssrc);
+                accept = receivingLayers.accept(ssrc);
             }
         }
 
@@ -253,9 +253,9 @@ public class SimulcastManager
      * @param srcVideoChannel
      * @return
      */
-    private SimulcastLayer electSimulcastLayer(VideoChannel srcVideoChannel)
+    private ReceivingLayers getOrElectReceivingLayers(VideoChannel srcVideoChannel)
     {
-        SimulcastLayer electedSimulcastLayer = null;
+        ReceivingLayers electedSimulcastLayer = null;
 
         SimulcastManager simulcastManager;
         if (srcVideoChannel == null
@@ -279,8 +279,10 @@ public class SimulcastManager
                 if (logger.isDebugEnabled())
                 {
                     logger.debug(new StringBuilder()
+                            .append(getVideoChannel().getEndpoint().getID())
+                            .append(" elects initial simulcast layer for ")
                             .append(srcVideoChannel.getEndpoint().getID())
-                            .append(" elects initial simulcast layer."));
+                            .append("."));
                 }
 
                 Map<Endpoint, ReceivingSimulcastOptions> endpointsQualityMap
@@ -404,7 +406,7 @@ public class SimulcastManager
             if (rtpChannels == null || rtpChannels.isEmpty())
             {
                 logger.warn(self.getID() + " cannot set receiving simulcast " +
-                        "layers because the peer has no RTP channels");
+                        "layers because the peer has no RTP channels.");
                 continue;
             }
 
@@ -450,8 +452,25 @@ public class SimulcastManager
                 synchronized (simulcastLayersSyncRoot)
                 {
                     if ((simLayersMap.containsKey(peer)
-                            && simLayersMap.get(peer) == simulcastLayer))
+                            && simLayersMap.get(peer).getCurrent()
+                                == simulcastLayer))
                     {
+                        if (logger.isInfoEnabled())
+                        {
+                            logger.info(new StringBuilder()
+                                    .append(self.getID())
+                                    .append(" already receives SSRC ")
+                                    .append(simulcastLayer.getPrimarySSRC())
+                                    .append(" of order ")
+                                    .append(simulcastLayer.getOrder())
+                                    .append(" from ")
+                                    .append(simulcastLayer
+                                            .getSimulcastManager()
+                                            .getVideoChannel()
+                                            .getEndpoint()
+                                            .getID())
+                                    .append("."));
+                        }
                         continue;
                     }
                 }
@@ -466,20 +485,6 @@ public class SimulcastManager
                 endpointSimulcastLayers.add(new EndpointSimulcastLayer(
                         peer.getID(),
                         simulcastLayer));
-
-                if (logger.isDebugEnabled())
-                {
-
-                    logger.debug(new StringBuilder()
-                            .append(self.getID())
-                            .append(" now receives ")
-                            .append(simulcastLayer.getPrimarySSRC())
-                            .append(hardSwitch
-                                    ? " (HARD switch) " : " (SOFT switch) ")
-                            .append("from ")
-                            .append(peer.getID())
-                            .append("."));
-                }
 
                 // XXX(gp) why not handle the rest of the video channels?
                 break;
@@ -497,7 +502,19 @@ public class SimulcastManager
                 SimulcastLayer layer = entry.getValue();
                 RtpChannel channel = entry.getKey();
                 channel.askForKeyframes(
-                        new int[] { (int) layer.getPrimarySSRC() });
+                        new int[]{(int) layer.getPrimarySSRC()});
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(new StringBuilder()
+                            .append(self.getID())
+                            .append(" asked a key frame from ")
+                            .append(channel.getEndpoint().getID())
+                            .append(" for its SSRC ")
+                            .append(layer.getPrimarySSRC())
+                            .append(" of order ")
+                            .append(layer.getOrder())
+                            .append("."));
+                }
             }
         }
 
@@ -538,8 +555,17 @@ public class SimulcastManager
                 {
                     // FIXME(gp) don't waste resources add only once
 
+                    ReceivingLayers receivingLayers;
+
                     if (!simLayersMap.containsKey(entry.getKey()))
                     {
+                        receivingLayers = new ReceivingLayers(
+                                entry.getKey(),
+                                this.videoChannel.getEndpoint());
+
+                        // Put the association to the qualities map.
+                        this.simLayersMap.put(entry.getKey(), receivingLayers);
+
                         // This is an endpoint we have never seen before, hook
                         // its SimulcastManager.
                         SimulcastManager manager = entry.getValue()
@@ -549,9 +575,12 @@ public class SimulcastManager
                         manager.addPropertyChangeListener(
                                 propertyChangeListener);
                     }
+                    else
+                    {
+                        receivingLayers = simLayersMap.get(entry.getKey());
+                    }
 
-                    // Put the association to the qualities map.
-                    this.simLayersMap.put(entry.getKey(), entry.getValue());
+                    receivingLayers.setCurrent(entry.getValue());
                 }
             }
         }
@@ -855,7 +884,8 @@ public class SimulcastManager
                                         e.getSelectedEndpointID()) ?
                                         "(maybe) " : "")
                                 .append("watching ")
-                                .append(newEndpoint.getID()));
+                                .append(newEndpoint.getID())
+                                .append("."));
                     }
 
                     startHighQualityStream = true;
