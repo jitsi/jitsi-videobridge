@@ -52,12 +52,12 @@ class ReceivingLayers
     /**
      *
      */
-    private int currentCount;
+    private int seenCurrent;
 
     /**
      *
      */
-    private static final int MAX_CURRENT_COUNT = 250; // < 5 seconds approx.
+    private static final int MAX_CURRENT_SEEN = 250; // < 5 seconds approx.
 
     /**
      *
@@ -112,7 +112,7 @@ class ReceivingLayers
 
             // Since the currently received layer has changed, reset the
             // seenCurrent counter.
-            this.currentCount = 0;
+            this.seenCurrent = 0;
 
             // Log/dump the current state of things.
             if (logger.isInfoEnabled()
@@ -195,7 +195,7 @@ class ReceivingLayers
 
         if (current == null || accept)
         {
-            timeoutPrevious();
+            maybeTimeoutPrevious();
         }
 
         SimulcastLayer previous = getPrevious();
@@ -210,7 +210,7 @@ class ReceivingLayers
     /**
      *
      */
-    private synchronized void timeoutPrevious()
+    private synchronized void maybeTimeoutPrevious()
     {
         SimulcastLayer previous = getPrevious();
 
@@ -218,8 +218,8 @@ class ReceivingLayers
         // "enough" packets from the current layer, expire the previous layer.
         if (previous != null)
         {
-            currentCount++;
-            if (currentCount > MAX_CURRENT_COUNT)
+            seenCurrent++;
+            if (seenCurrent > MAX_CURRENT_SEEN)
             {
                 if (logger.isInfoEnabled()
                         && source.get() != null && target.get() != null)
