@@ -55,6 +55,10 @@ case "$1" in
             useradd -r --user-group --shell /bin/bash --create-home -d /usr/share/jitsi-videobridge jvb
         fi
 
+        # the generated values file should not be world readable
+        chown jvb:jvb /etc/default/jitsi-videobridge
+        chmod 640 /etc/default/jitsi-videobridge
+
         # we create home folder only if it doesn't exist
         if [ ! -d /usr/share/jitsi-videobridge ]; then
             mkdir -p /usr/share/jitsi-videobridge
