@@ -624,14 +624,19 @@ public class SimulcastManager
                 .SELECTED_ENDPOINT_PROPERTY_NAME.equals(
                         propertyChangeEvent.getPropertyName()))
         {
-            Endpoint endpoint =
-                    (Endpoint) propertyChangeEvent.getSource();
-
             // endpoint == this.videoChannel.getEndpoint() is implied.
 
             String oldValue = (String) propertyChangeEvent.getOldValue();
             String newValue = (String) propertyChangeEvent.getNewValue();
 
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(new StringBuilder()
+                        .append(this.videoChannel.getEndpoint().getID())
+                        .append(" is now watching ")
+                        .append(newValue)
+                        .append("."));
+            }
 
             onSelectedEndpointChanged(oldValue, newValue);
         }
@@ -794,7 +799,8 @@ public class SimulcastManager
             {
                 // TODO(gp) this assumes only a single hq stream.
 
-                logger.debug("Notifies " + oldEndpoint.getID() + " to stop " +
+                logger.debug(this.videoChannel.getEndpoint().getID() +
+                        " notifies " + oldEndpoint.getID() + " to stop " +
                         "its HQ stream.");
 
                 SimulcastLayer hqLayer = oldSimulcastLayers.last();
@@ -903,7 +909,8 @@ public class SimulcastManager
             {
                 // TODO(gp) this assumes only a single hq stream.
 
-                logger.debug("Notifies " + newEndpoint.getID() + " to start " +
+                logger.debug(this.videoChannel.getEndpoint().getID() +
+                        " notifies " + newEndpoint.getID() + " to start " +
                         "its HQ stream.");
 
                 SimulcastLayer hqLayer = newSimulcastLayers.last();
