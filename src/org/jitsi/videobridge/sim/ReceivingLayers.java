@@ -42,12 +42,12 @@ class ReceivingLayers
     /**
      *
      */
-    private SimulcastLayer current;
+    private WeakReference<SimulcastLayer> current;
 
     /**
      *
      */
-    private SimulcastLayer previous;
+    private WeakReference<SimulcastLayer> previous;
 
     /**
      *
@@ -57,7 +57,7 @@ class ReceivingLayers
     /**
      *
      */
-    private static final int MAX_CURRENT_COUNT = 100;
+    private static final int MAX_CURRENT_COUNT = 250; // < 5 seconds approx.
 
     /**
      *
@@ -65,58 +65,106 @@ class ReceivingLayers
      */
     public SimulcastLayer getCurrent()
     {
-        return current;
-    }
+        SimulcastLayer layer = null;
 
-    /**
-     *
-     * @param current
-     */
-    public synchronized void setCurrent(SimulcastLayer current)
-    {
-        if (this.current != current)
+        if (current != null)
         {
-            this.current = current;
-
-            if (logger.isInfoEnabled()
-                    && source.get() != null && target.get() != null)
-            {
-                logger.info(new StringBuilder()
-                        .append(target.get().getID())
-                        .append(" now receives SSRC ")
-                        .append(current.getPrimarySSRC())
-                        .append(" of order ")
-                        .append(current.getOrder())
-                        .append(" from ")
-                        .append(source.get().getID())
-                        .append("."));
-            }
-
-            this.maybeRotateLayers();
+            layer = current.get();
         }
+
+        return layer;
     }
 
     /**
      *
+     * @return
      */
-    private synchronized void maybeRotateLayers()
+    private SimulcastLayer getPrevious()
     {
-        // Rotate.
-        if (this.current != null && this.previous == null)
+        SimulcastLayer layer = null;
+
+        if (previous != null)
         {
+            layer = previous.get();
+        }
+
+        return layer;
+    }
+
+    /**
+     *
+     * @param newCurrent
+     */
+    public synchronized void setCurrent(SimulcastLayer newCurrent)
+    {
+        SimulcastLayer oldCurrent = getCurrent();
+
+        // If the layer we receive has changed, then continue streaming the
+        // previous layer for a short period of time while the client
+        // receives adjusts its video.
+        if (oldCurrent != newCurrent)
+        {
+            // Update the previously receiving layer reference.
+            this.previous = this.current;
+
+            // Update the currently received layer reference.
+            this.current = new WeakReference<SimulcastLayer>(newCurrent);
+
+            // Since the currently received layer has changed, reset the
+            // seenCurrent counter.
+            this.currentCount = 0;
+
+            // Log/dump the current state of things.
             if (logger.isInfoEnabled()
                     && source.get() != null && target.get() != null)
             {
-                logger.info(new StringBuilder()
-                        .append(target.get().getID())
-                        .append(" rotates the layers it ")
-                        .append("receives from ")
-                        .append(source.get().getID())
-                        .append("."));
-            }
+                if (this.current == null || this.current.get() == null)
+                {
+                    logger.info(new StringBuilder()
+                            .append(target.get().getID())
+                            .append(" now does not receive a current layer ")
+                            .append("from ")
+                            .append(source.get().getID())
+                            .append("."));
 
-            this.previous = this.current;
-            this.currentCount = 0;
+                }
+                else
+                {
+                    logger.info(new StringBuilder()
+                            .append(target.get().getID())
+                            .append(" now receives current layer")
+                            .append(" with SSRC ")
+                            .append(this.current.get().getPrimarySSRC())
+                            .append(" of order ")
+                            .append(this.current.get().getOrder())
+                            .append(" from ")
+                            .append(source.get().getID())
+                            .append("."));
+                }
+
+                if (this.previous == null || this.previous.get() == null)
+                {
+                    logger.info(new StringBuilder()
+                            .append(target.get().getID())
+                            .append(" now does not receive a previous layer ")
+                            .append("from ")
+                            .append(source.get().getID())
+                            .append("."));
+                }
+                else
+                {
+                    logger.info(new StringBuilder()
+                            .append(target.get().getID())
+                            .append(" now receives previous layer")
+                            .append(" with SSRC ")
+                            .append(this.previous.get().getPrimarySSRC())
+                            .append(" of order ")
+                            .append(this.previous.get().getOrder())
+                            .append(" from ")
+                            .append(source.get().getID())
+                            .append("."));
+                }
+            }
         }
     }
 
@@ -129,17 +177,28 @@ class ReceivingLayers
     {
         boolean accept = false;
 
+        SimulcastLayer current = getCurrent();
         if (current != null)
         {
             accept = current.accept(ssrc);
-
-            // Expire previous.
-            if (accept && this.previous != null)
-            {
-                timeoutPrevious();
-            }
         }
 
+        // The previous layer *has* to timeout at some point in the future
+        // (requirement).
+        //
+        // If we don't expect any packets (current == null), then attempt to
+        // timeout the previous layer.
+        //
+        // If we expect packets (current != null) and the just received packet
+        // packet is from the current layer, then attempt to timeout the
+        // previous layer.
+
+        if (current == null || accept)
+        {
+            timeoutPrevious();
+        }
+
+        SimulcastLayer previous = getPrevious();
         if (!accept && previous != null)
         {
             accept = previous.accept(ssrc);
@@ -153,26 +212,31 @@ class ReceivingLayers
      */
     private synchronized void timeoutPrevious()
     {
-        currentCount++;
-        if (currentCount > MAX_CURRENT_COUNT
-                // If previous == current, we don't to timeout the current!
-                && this.previous != this.current)
-        {
-            if (logger.isInfoEnabled()
-                    && source.get() != null && target.get() != null)
-            {
-                logger.info(new StringBuilder()
-                        .append(target.get().getID())
-                        .append(" stopped receiving SSRC ")
-                        .append(this.previous.getPrimarySSRC())
-                        .append(" of order ")
-                        .append(this.previous.getOrder())
-                        .append(" that it was previously receiving from ")
-                        .append(source.get().getID())
-                        .append("."));
-            }
+        SimulcastLayer previous = getPrevious();
 
-            this.previous = null;
+        // If there is a previous layer to timeout, and we have received
+        // "enough" packets from the current layer, expire the previous layer.
+        if (previous != null)
+        {
+            currentCount++;
+            if (currentCount > MAX_CURRENT_COUNT)
+            {
+                if (logger.isInfoEnabled()
+                        && source.get() != null && target.get() != null)
+                {
+                    logger.info(new StringBuilder()
+                            .append(target.get().getID())
+                            .append(" stopped receiving previous layer from ")
+                            .append(source.get().getID())
+                            .append(" with SSRC ")
+                            .append(previous.getPrimarySSRC())
+                            .append(" of order ")
+                            .append(previous.getOrder())
+                            .append("."));
+                }
+
+                this.previous = null;
+            }
         }
     }
 }
