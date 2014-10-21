@@ -107,7 +107,7 @@ class ReceivingLayers
             // Update the previously receiving layer reference.
             this.previous = this.current;
 
-            // Update the currently received layer reference.
+            // Update the currently receiving layer reference.
             this.current = new WeakReference<SimulcastLayer>(newCurrent);
 
             // Since the currently received layer has changed, reset the
@@ -190,8 +190,8 @@ class ReceivingLayers
         // timeout the previous layer.
         //
         // If we expect packets (current != null) and the just received packet
-        // packet is from the current layer, then attempt to timeout the
-        // previous layer.
+        // is from the current layer, then attempt to timeout the previous
+        // layer.
 
         if (current == null || accept)
         {
