@@ -18,6 +18,8 @@ public class SimulcastLayer
     extends PropertyChangeNotifier
         implements Comparable<SimulcastLayer>
 {
+    private static final int MAX_SEEN_BASE = 25;
+
     public SimulcastManager getSimulcastManager()
     {
         return simulcastManager;
@@ -95,13 +97,14 @@ public class SimulcastLayer
 
     public synchronized void maybeTimeout()
     {
-        if (++seenBase % 10 == 0)
+        if (++seenBase % MAX_SEEN_BASE == 0)
         {
             // Every base layer packet we have observed 10 low quality packets.
             //
-            // If for every 10 base quality packets we have not seen at least
-            // one high quality packet, then the high quality layer must have
-            // been dropped (this means approximately 100 packets loss).
+            // If for every MAX_SEEN_BASE base quality packets we have not seen
+            // at least one high quality packet, then the high quality layer
+            // must have been dropped (this means approximately MAX_SEEN_BASE*10
+            // packets loss).
 
             if (this.isStreaming &&  this.seenHigh == 0)
             {
@@ -121,7 +124,7 @@ public class SimulcastLayer
                             .append("."));
                 }
 
-                // FIXME(gp) use an event dispatcher.
+                // FIXME(gp) use an event dispatcher or a thread pool.
                 new Thread(new Runnable()
                 {
                     @Override
@@ -161,7 +164,7 @@ public class SimulcastLayer
                         .append("."));
             }
 
-            // FIXME(gp) use an event dispatcher.
+            // FIXME(gp) use an event dispatcher or a thread pool.
             new Thread(new Runnable()
             {
                 @Override

@@ -9,9 +9,9 @@ package org.jitsi.videobridge.sim;
 /**
 * Created by gp on 16/10/14.
 */
-public class ReceivingSimulcastOptions
+public class SimulcastReceiverOptions
 {
-    public ReceivingSimulcastOptions(int targetOrder, boolean hardSwitch)
+    public SimulcastReceiverOptions(int targetOrder, boolean hardSwitch)
     {
         this.targetOrder = targetOrder;
         this.hardSwitch = hardSwitch;
