@@ -148,7 +148,7 @@ public class SimulcastManager
                 {
                     if (acceptedLayer != layer)
                     {
-                        layer.timeout();
+                        layer.maybeTimeout();
                     }
                 }
             }

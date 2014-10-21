@@ -93,7 +93,7 @@ public class SimulcastLayer
 
     private int seenBase = 0;
 
-    public synchronized void timeout()
+    public synchronized void maybeTimeout()
     {
         if (++seenBase % 10 == 0)
         {
