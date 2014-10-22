@@ -13,16 +13,6 @@ case "$1" in
         # Clear the debconf variable
         db_purge
 
-        # stop the jitsi-videobridge
-        if [ -x /etc/init.d/jitsi-videobridge ]; then
-            invoke-rc.d jitsi-videobridge stop
-        fi
-
-        # clear user and group
-        # ensure nothing is running as jvb user
-        if ps -u jvb h; then
-            `ps -u jvb -o pid h | xargs kill`
-        fi
         # and then remove the user
         if getent passwd jvb > /dev/null ; then
             deluser jvb
