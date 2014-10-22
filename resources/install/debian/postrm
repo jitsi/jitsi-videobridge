@@ -24,14 +24,11 @@ case "$1" in
         fi
 
         rm -f /etc/default/jitsi-videobridge
-    ;;
-
-    remove)
         rm -rf /usr/share/jitsi-videobridge/.java
         rm -rf /usr/share/jitsi-videobridge/.sip-communicator
-     ;;
+    ;;
 
-    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+    remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
     ;;
 
     *)
