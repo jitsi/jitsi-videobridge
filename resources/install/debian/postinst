@@ -6,10 +6,17 @@ set -e
 case "$1" in
     configure)
 
+        CONFIG="/etc/jitsi/videobridge/config"
+
         # we don't want to regenerate config on upgrade
         OLDCONFIG="false"
+        # migrate any old config found
         if [ -f "/etc/default/jitsi-videobridge" ]; then
-            . /etc/default/jitsi-videobridge
+            mv /etc/default/jitsi-videobridge $CONFIG
+        fi
+
+        if [ -f $CONFIG ]; then
+            . $CONFIG
             if [ -n "$JVB_HOSTNAME" ] && [ -n "$JVB_PORT" ] && [ -n "$JVB_SECRET" ]; then
                 OLDCONFIG="true"
             fi
@@ -40,11 +47,11 @@ case "$1" in
             JVB_PORT=5347
 
             # storing default for later use by Jitsi Meet and other packages
-            echo '# Jitsi Videobridge settings' > /etc/default/jitsi-videobridge
-            echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> /etc/default/jitsi-videobridge
-            echo "JVB_PORT=$JVB_PORT" >> /etc/default/jitsi-videobridge
-            echo "JVB_SECRET=$JVB_SECRET" >> /etc/default/jitsi-videobridge
-            echo "JVB_OPTS=\"\"" >> /etc/default/jitsi-videobridge
+            echo '# Jitsi Videobridge settings' > $CONFIG
+            echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> $CONFIG
+            echo "JVB_PORT=$JVB_PORT" >> $CONFIG
+            echo "JVB_SECRET=$JVB_SECRET" >> $CONFIG
+            echo "JVB_OPTS=\"\"" >> $CONFIG
 
             # and we're done with debconf
             db_stop

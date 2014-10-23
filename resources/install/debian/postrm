@@ -23,7 +23,7 @@ case "$1" in
             rm -rf "/var/log/jitsi"
         fi
 
-        rm -f /etc/default/jitsi-videobridge
+        rm -f /etc/jitsi/videobridge/config
         rm -rf /usr/share/jitsi-videobridge/.java
         rm -rf /usr/share/jitsi-videobridge/.sip-communicator
     ;;
