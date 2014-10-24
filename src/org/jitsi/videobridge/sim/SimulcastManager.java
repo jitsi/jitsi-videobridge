@@ -6,7 +6,6 @@
  */
 package org.jitsi.videobridge.sim;
 
-import java.beans.*;
 import java.net.*;
 import java.util.*;
 
