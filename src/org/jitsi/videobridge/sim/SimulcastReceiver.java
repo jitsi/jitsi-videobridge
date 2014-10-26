@@ -81,10 +81,10 @@ class SimulcastReceiver
     private WeakReference<SimulcastLayer> weakCurrent;
 
     /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that was
-     * previously being received.
+     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that will be
+     * (possibly) received next.
      */
-    private WeakReference<SimulcastLayer> weakPrevious;
+    private WeakReference<SimulcastLayer> weakNext;
 
     /**
      * The sync root object for synchronizing access to the receive layers.
@@ -92,15 +92,15 @@ class SimulcastReceiver
     private final Object receiveLayersSyncRoot = new Object();
 
     /**
-     * Holds how many packets of the current layer have been seen so far.
+     * Holds the number of packets of the next layer have been seen so far.
      */
-    private int seenCurrent;
+    private int seenNext;
 
     /**
-     * Defines how many packets of the current layer must be seen before
-     * stop accepting packets for the previous layer.
+     * Defines how many packets of the next layer must be seen before switching
+     * to that layer.
      */
-    private static final int MAX_CURRENT_SEEN = 250; // < 5 seconds approx.
+    private static final int MAX_NEXT_SEEN = 250; // < 5 seconds approx.
 
     /**
      * Helper object that <tt>SimulcastReceiver</tt> instances use to build
@@ -127,92 +127,69 @@ class SimulcastReceiver
      *
      * @return
      */
-    private SimulcastLayer getPrevious()
+    private SimulcastLayer getNext()
     {
         synchronized (receiveLayersSyncRoot)
         {
-            return (weakPrevious != null) ? weakPrevious.get() : null;
+            return (weakNext != null) ? weakNext.get() : null;
         }
     }
 
-    /**
-     *
-     * @param newCurrent
-     */
-    private void setCurrent(SimulcastLayer newCurrent)
+    private void dump()
     {
+        Endpoint peer, self;
         synchronized (receiveLayersSyncRoot)
         {
-            SimulcastLayer oldCurrent = getCurrent();
-
-            // If the layer we receive has changed, then continue streaming the
-            // previous layer for a short period of time while the client
-            // receives adjusts its video.
-            if (oldCurrent != newCurrent)
+            if (logger.isInfoEnabled()
+                    && (peer = getPeer()) != null && (self = getSelf()) != null)
             {
-                // Update the previously receiving layer reference.
-                this.weakPrevious = this.weakCurrent;
-
-                // Update the currently receiving layer reference.
-                this.weakCurrent = new WeakReference<SimulcastLayer>(newCurrent);
-
-                // Since the currently received layer has changed, reset the
-                // seenCurrent counter.
-                this.seenCurrent = 0;
-
-                // Log/dump the current state of things.
-                Endpoint peer, self;
-                if (logger.isInfoEnabled() && (peer = getPeer()) != null
-                        && (self = this.getSelf()) != null)
+                SimulcastLayer current = getCurrent();
+                if (current == null)
                 {
-                    SimulcastLayer current = getCurrent();
-                    if (current == null)
-                    {
-                        logger.info(new StringBuilder()
-                                .append(self.getID())
-                                .append(" does not receive a current layer anymore ")
-                                .append(" from ")
-                                .append(peer.getID())
-                                .append("."));
+                    logger.info(new StringBuilder()
+                            .append(self.getID())
+                            .append(" does not receive a current layer anymore")
+                            .append(" from ")
+                            .append(peer.getID())
+                            .append("."));
 
-                    }
-                    else
-                    {
-                        logger.info(new StringBuilder()
-                                .append(self.getID())
-                                .append(" now receives current layer")
-                                .append(" with SSRC ")
-                                .append(current.getPrimarySSRC())
-                                .append(" of order ")
-                                .append(current.getOrder())
-                                .append(" from ")
-                                .append(peer.getID())
-                                .append("."));
-                    }
+                }
+                else
+                {
+                    logger.info(new StringBuilder()
+                            .append(self.getID())
+                            .append(" now receives current layer")
+                            .append(" with SSRC ")
+                            .append(current.getPrimarySSRC())
+                            .append(" of order ")
+                            .append(current.getOrder())
+                            .append(" from ")
+                            .append(peer.getID())
+                            .append("."));
+                }
 
-                    SimulcastLayer previous = getPrevious();
-                    if (previous == null)
-                    {
-                        logger.info(new StringBuilder()
-                                .append(self.getID())
-                                .append(" does not receive a previous layer anymore ")
-                                .append(" from ")
-                                .append(peer.getID())
-                                .append("."));
-                    }
-                    else
-                    {
-                        logger.info(new StringBuilder()
-                                .append(self.getID())
-                                .append(" now receives previous layer")
-                                .append(" with SSRC ")
-                                .append(previous.getPrimarySSRC())
-                                .append(" of order ")
-                                .append(previous.getOrder())
-                                .append(" from ")
-                                .append(peer.getID())
-                                .append("."));
-                    }
+                SimulcastLayer next = getNext();
+                if (next == null)
+                {
+                    logger.info(new StringBuilder()
+                            .append(self.getID())
+                            .append(" will not receive a next layer")
+                            .append(" from ")
+                            .append(peer.getID())
+                            .append("."));
+                }
+                else
+                {
+                    logger.info(new StringBuilder()
+                            .append(self.getID())
+                            .append(" will receive a next layer")
+                            .append(" with SSRC ")
+                            .append(next.getPrimarySSRC())
+                            .append(" of order ")
+                            .append(next.getOrder())
+                            .append(" from ")
+                            .append(peer.getID())
+                            .append("."));
                 }
             }
         }
@@ -235,25 +212,14 @@ class SimulcastReceiver
                 accept = current.accept(ssrc);
             }
 
-            // The previous layer *has* to timeout at some point in the future
-            // (requirement).
-            //
-            // If we don't expect any packets (current == null), then attempt to
-            // timeout the previous layer.
-            //
-            // If we expect packets (current != null) and the just received
-            // packet is from the current layer, then attempt to timeout the
-            // previous layer.
-
-            if (current == null || accept)
+            SimulcastLayer next;
+            if (!accept && (next = getNext()) != null)
             {
-                maybeTimeoutPrevious();
-            }
-
-            SimulcastLayer previous = getPrevious();
-            if (!accept && previous != null)
-            {
-                accept = previous.accept(ssrc);
+                accept = next.accept(ssrc);
+                if (accept)
+                {
+                    maybeSwitchToNext();
+                }
             }
 
             return accept;
@@ -263,36 +229,25 @@ class SimulcastReceiver
     /**
      *
      */
-    private void maybeTimeoutPrevious()
+    private void maybeSwitchToNext()
     {
         synchronized (receiveLayersSyncRoot)
         {
-            SimulcastLayer previous = getPrevious();
+            SimulcastLayer next = getNext();
 
             // If there is a previous layer to timeout, and we have received
-            // "enough" packets from the current layer, expire the previous layer.
-            if (previous != null)
+            // "enough" packets from the current layer, expire the previous
+            // layer.
+            if (next != null)
             {
-                seenCurrent++;
-                if (seenCurrent > MAX_CURRENT_SEEN)
+                seenNext++;
+                if (seenNext > MAX_NEXT_SEEN)
                 {
-                    Endpoint peer, self;
-                    if (logger.isInfoEnabled()
-                            && (peer = getPeer()) != null
-                            && (self = getSelf()) != null)
-                    {
-                        logger.info(new StringBuilder()
-                                .append(self.getID())
-                                .append(" stopped receiving previous layer from ")
-                                .append(peer.getID())
-                                .append(" with SSRC ")
-                                .append(previous.getPrimarySSRC())
-                                .append(" of order ")
-                                .append(previous.getOrder())
-                                .append("."));
-                    }
+                    this.sendSimulcastLayersChangedEvent(next);
 
-                    this.weakPrevious = null;
+                    this.weakCurrent = weakNext;
+                    this.weakNext = null;
+                    this.dump();
                 }
             }
         }
@@ -320,6 +275,19 @@ class SimulcastReceiver
         }
 
         return peer;
+    }
+
+    private SimulcastManager getPeerSM()
+    {
+        SimulcastManager peerSM
+                = (this.weakPeerSM != null) ? this.weakPeerSM.get() : null;
+
+        if (peerSM == null)
+        {
+            this.logger.warn("The peer simulcast manager is null!");
+        }
+
+        return peerSM;
     }
 
     private Endpoint getSelf()
@@ -350,7 +318,7 @@ class SimulcastReceiver
      *
      * @param options
      */
-    public void configure(SimulcastReceiverOptions options)
+    protected void configure(SimulcastReceiverOptions options)
     {
         Endpoint self = getSelf();
 
@@ -368,7 +336,7 @@ class SimulcastReceiver
             return;
         }
 
-        SimulcastManager peerSM = this.weakPeerSM.get();
+        SimulcastManager peerSM = this.getPeerSM();
 
         if (peerSM == null || !peerSM.hasLayers())
         {
@@ -376,26 +344,26 @@ class SimulcastReceiver
             return;
         }
 
-        SortedSet<SimulcastLayer> peerLayers = peerSM.getSimulcastLayers();
+        SortedSet<SimulcastLayer> layers = peerSM.getSimulcastLayers();
 
         // If the peer hasn't signaled any simulcast streams then
         // there's nothing to configure.
 
-        Iterator<SimulcastLayer> it = peerLayers.iterator();
+        Iterator<SimulcastLayer> it = layers.iterator();
 
-        SimulcastLayer peerLayer = null;
+        SimulcastLayer next = null;
         int currentLayer = SimulcastManager.SIMULCAST_LAYER_ORDER_LQ;
         while (it.hasNext()
                 && currentLayer++ <= options.getTargetOrder())
         {
-            peerLayer = it.next();
+            next = it.next();
         }
 
         // Do NOT switch to hq if it's not streaming.
-        if (peerLayer == null
-                || (peerLayer.getOrder()
+        if (next == null
+                || (next.getOrder()
                         != SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
-                    && !peerLayer.isStreaming()))
+                    && !next.isStreaming()))
         {
             logger.info(self.getID() + " ignoring request to switch to " +
                     "higher order layer because it is not currently " +
@@ -404,18 +372,19 @@ class SimulcastReceiver
         }
 
         Endpoint peer = getPeer();
+        SimulcastLayer current = getCurrent();
 
         // Do NOT switch to an already receiving layer.
-        if (getCurrent() == peerLayer)
+        if (current == next)
         {
             if (logger.isInfoEnabled() && peer != null)
             {
                 logger.info(new StringBuilder()
                         .append(self.getID())
                         .append(" already receives SSRC ")
-                        .append(peerLayer.getPrimarySSRC())
+                        .append(next.getPrimarySSRC())
                         .append(" of order ")
-                        .append(peerLayer.getOrder())
+                        .append(next.getOrder())
                         .append(" from ")
                         .append(peer.getID())
                         .append("."));
@@ -423,72 +392,188 @@ class SimulcastReceiver
 
             return;
         }
-
-        // Request an FIR, notify the parent endpoint and change the receiving
-        // streams in a single atomic operation.
-
-        // TODO(gp) move to FIR request and data channel notification send in
-        // setCurrent().
-        synchronized (receiveLayersSyncRoot)
+        else
         {
-            if (options.isHardSwitch())
+            // If current has changed, request an FIR, notify the parent endpoint
+            // and change the receiving streams in a single atomic operation.
+            synchronized (receiveLayersSyncRoot)
             {
-                // XXX(gp) run these in the event dispatcher thread?
-
-                // Send FIR requests first.
-                peerSM.getVideoChannel().askForKeyframes(
-                        new int[]{(int) peerLayer.getPrimarySSRC()});
-
-                if (logger.isDebugEnabled() && peer != null)
+                if (options.isHardSwitch() && next != getNext())
                 {
-                    logger.debug(new StringBuilder()
-                            .append(self.getID())
-                            .append(" asked a key frame from ")
-                            .append(peer.getID())
-                            .append(" for its SSRC ")
-                            .append(peerLayer.getPrimarySSRC())
-                            .append(" of order ")
-                            .append(peerLayer.getOrder())
-                            .append("."));
+                    // XXX(gp) run these in the event dispatcher thread?
+
+                    // Send FIR requests first.
+                    this.askForKeyframe(next);
                 }
+
+                if (options.isUrgent() || current == null)
+                {
+                    // Receiving simulcast layers have brutally changed. Create
+                    // and send an event through data channels to the receiving
+                    // endpoint.
+                    this.sendSimulcastLayersChangedEvent(next);
+
+                    this.weakCurrent = new WeakReference<SimulcastLayer>(next);
+                    this.weakNext = null;
+                }
+                else
+                {
+                    // Receiving simulcast layers are changing, create and send
+                    // an event through data channels to the receiving endpoint.
+                    this.sendSimulcastLayersChangingEvent(next);
+
+                    // If the layer we receive has changed (hasn't dropped),
+                    // then continue streaming the previous layer for a short
+                    // period of time while the client receives adjusts its
+                    // video.
+                    this.weakNext = new WeakReference<SimulcastLayer>(next);
+                }
+
+                // Since the currently received layer has changed, reset the
+                // seenCurrent counter.
+                this.seenNext = 0;
+
+                // Log/dump the state this receiver.
+                this.dump();
             }
+        }
+    }
 
-            if (peer != null)
+    private void askForKeyframe(SimulcastLayer layer)
+    {
+        if (layer == null)
+        {
+            logger.warn("Requested a key frame for null layer!");
+            return;
+        }
+
+        SimulcastManager peerSM = getPeerSM();
+        if (peerSM == null)
+        {
+            logger.warn("Requested a key frame but the peer simulcast " +
+                    "manager is null!");
+            return;
+        }
+
+        peerSM.getVideoChannel().askForKeyframes(
+                new int[]{(int) layer.getPrimarySSRC()});
+
+        Endpoint peer, self;
+        if (logger.isDebugEnabled()
+                && (peer = getPeer()) != null && (self = getSelf()) != null)
+        {
+            logger.debug(new StringBuilder()
+                    .append(self.getID())
+                    .append(" asked a key frame from ")
+                    .append(peer.getID())
+                    .append(" for its SSRC ")
+                    .append(layer.getPrimarySSRC())
+                    .append(" of order ")
+                    .append(layer.getOrder())
+                    .append("."));
+        }
+    }
+
+    private void sendSimulcastLayersChangedEvent(SimulcastLayer layer)
+    {
+        if (layer == null)
+        {
+            logger.warn("Requested to send a simulcast layers changed event" +
+                    "but layer is null!");
+            return;
+        }
+
+        Endpoint self, peer;
+
+        if ((self = getSelf()) != null && (peer = getPeer()) != null)
+        {
+            // XXX(gp) it'd be nice if we could remove the
+            // SimulcastLayersChangedEvent event. Ideally, receivers should
+            // listen for MediaStreamTrackActivity instead. Unfortunately,
+            // such an event does not exist in WebRTC.
+
+            // Receiving simulcast layers changed, create and send
+            // an event through data channels to the receiving endpoint.
+            SimulcastLayersChangedEvent ev
+                    = new SimulcastLayersChangedEvent();
+
+            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
+                    new EndpointSimulcastLayer(peer.getID(), layer)
+            };
+
+            String json = mapper.toJson(ev);
+            try
             {
-                // XXX(gp) it'd be nice if we could remove the
-                // SimulcastLayersChangedEvent event. Ideally, receivers should
-                // listen for MediaStreamTrackActivity instead. Unfortunately,
-                // such an event does not exist in WebRTC.
-
-                // Receiving simulcast layers changed, create and send an event
-                // through data channels to the receiving endpoint.
-                SimulcastLayersChangedEvent ev
-                        = new SimulcastLayersChangedEvent();
-
-                ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
-                        new EndpointSimulcastLayer(peer.getID(), peerLayer)
-                };
-
-                String json = mapper.toJson(ev);
-                try
-                {
-                    // FIXME(gp) sendMessageOnDataChannel may silently fail to
-                    // send a data message. We want to be able to handle those
-                    // errors ourselves.
-                    self.sendMessageOnDataChannel(json);
-                }
-                catch (IOException e)
-                {
-                    logger.error(self.getID() + " failed to send message on " +
-                            "data channel.", e);
-                }
-            } else
-            {
-                logger.error(self.getID() + " didn't send message on data " +
-                        "channel because the peer is null!?");
+                // FIXME(gp) sendMessageOnDataChannel may silently fail to
+                // send a data message. We want to be able to handle those
+                // errors ourselves.
+                self.sendMessageOnDataChannel(json);
             }
+            catch (IOException e)
+            {
+                logger.error(self.getID() + " failed to send message on " +
+                        "data channel.", e);
+            }
+        }
+        else
+        {
+            logger.warn("Didn't send simulcast layers changed event " +
+                    "because self == null || peer == null " +
+                    "|| current == null");
+        }
 
-            this.setCurrent(peerLayer);
+    }
+
+    private void sendSimulcastLayersChangingEvent(SimulcastLayer layer)
+    {
+        if (layer == null)
+        {
+            logger.warn("Requested to send a simulcast layers changing event" +
+                    "but layer is null!");
+            return;
+        }
+
+        Endpoint self, peer;
+
+        if ((self = getSelf()) != null && (peer = getPeer()) != null)
+        {
+            logger.info("Sending a simulcast layers changing event to "
+                    + self.getID());
+
+            // XXX(gp) it'd be nice if we could remove the
+            // SimulcastLayersChangedEvent event. Ideally, receivers should
+            // listen for MediaStreamTrackActivity instead. Unfortunately,
+            // such an event does not exist in WebRTC.
+
+            // Receiving simulcast layers changed, create and send
+            // an event through data channels to the receiving
+            // endpoint.
+            SimulcastLayersChangingEvent ev
+                    = new SimulcastLayersChangingEvent();
+
+            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
+                    new EndpointSimulcastLayer(peer.getID(), layer)
+            };
+
+            String json = mapper.toJson(ev);
+            try
+            {
+                // FIXME(gp) sendMessageOnDataChannel may silently fail to
+                // send a data message. We want to be able to handle those
+                // errors ourselves.
+                self.sendMessageOnDataChannel(json);
+            }
+            catch (IOException e)
+            {
+                logger.error(self.getID() + " failed to send message on " +
+                        "data channel.", e);
+            }
+        }
+        else
+        {
+            logger.warn("Didn't send simulcast layers changing event " +
+                    "because self == null || peer == null " +
+                    "|| current == null");
         }
     }
 
@@ -500,10 +585,10 @@ class SimulcastReceiver
         {
             // A remote simulcast layer has either started or stopped
             // streaming. Deal with it.
-            SimulcastLayer peerLayer
+            SimulcastLayer layer
                     = (SimulcastLayer) propertyChangeEvent.getSource();
 
-            onPeerLayerChanged(peerLayer);
+            onPeerLayerChanged(layer);
         }
         else if (Endpoint
                 .SELECTED_ENDPOINT_PROPERTY_NAME.equals(
@@ -562,18 +647,19 @@ class SimulcastReceiver
         }
     }
 
-    private void onPeerLayerChanged(SimulcastLayer peerLayer)
+    private void onPeerLayerChanged(SimulcastLayer layer)
     {
         synchronized (receiveLayersSyncRoot)
         {
-            if (!peerLayer.isStreaming())
+            if (!layer.isStreaming())
             {
                 // HQ stream has stopped, switch to a lower quality stream.
 
-                SimulcastReceiverOptions options =
-                        new SimulcastReceiverOptions(
-                                SimulcastManager.SIMULCAST_LAYER_ORDER_LQ,
-                                true);
+                SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+
+                options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
+                options.setHardSwitch(true);
+                options.setUrgent(true);
 
                 configure(options);
             }
@@ -585,10 +671,13 @@ class SimulcastReceiver
                 if (peer != null && self != null &&
                         peer.getID().equals(self.getSelectedEndpointID()))
                 {
-                    SimulcastReceiverOptions options =
-                            new SimulcastReceiverOptions(
-                                    SimulcastManager.SIMULCAST_LAYER_ORDER_HQ,
-                                    false);
+                    SimulcastReceiverOptions options
+                            = new SimulcastReceiverOptions();
+
+                    options.setTargetOrder(
+                            SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
+                    options.setHardSwitch(false);
+                    options.setUrgent(false);
 
                     configure(options);
                 }
@@ -650,9 +739,11 @@ class SimulcastReceiver
                 && (peer = getPeer()) != null
                 && id.equals(peer.getID()))
         {
-            SimulcastReceiverOptions options
-                    = new SimulcastReceiverOptions(
-                    SimulcastManager.SIMULCAST_LAYER_ORDER_HQ, true);
+            SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+
+            options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
+            options.setHardSwitch(true);
+            options.setUrgent(false);
 
             configure(options);
 
@@ -677,9 +768,11 @@ class SimulcastReceiver
                 && (peer = getPeer()) != null
                 && id.equals(peer.getID()))
         {
-            SimulcastReceiverOptions options
-                    = new SimulcastReceiverOptions(
-                    SimulcastManager.SIMULCAST_LAYER_ORDER_LQ, true);
+            SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+
+            options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
+            options.setHardSwitch(true);
+            options.setUrgent(false);
 
             configure(options);
 

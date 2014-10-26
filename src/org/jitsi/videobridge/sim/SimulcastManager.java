@@ -261,8 +261,11 @@ public class SimulcastManager
 
                     // Initialize the receiver.
                     SimulcastReceiverOptions options
-                            = new SimulcastReceiverOptions(
-                                    SIMULCAST_LAYER_ORDER_LQ, true);
+                            = new SimulcastReceiverOptions();
+
+                    options.setTargetOrder(SIMULCAST_LAYER_ORDER_LQ);
+                    options.setHardSwitch(false);
+                    options.setUrgent(false);
 
                     sr.configure(options);
 

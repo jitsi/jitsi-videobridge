@@ -11,15 +11,33 @@ package org.jitsi.videobridge.sim;
 */
 public class SimulcastReceiverOptions
 {
-    public SimulcastReceiverOptions(int targetOrder, boolean hardSwitch)
+
+    private int targetOrder;
+
+    /**
+     * A switch that requires a key frame.
+     */
+    private boolean hardSwitch;
+
+    public void setUrgent(boolean urgent)
+    {
+        this.urgent = urgent;
+    }
+
+    public void setTargetOrder(int targetOrder)
     {
         this.targetOrder = targetOrder;
+    }
+
+    public void setHardSwitch(boolean hardSwitch)
+    {
         this.hardSwitch = hardSwitch;
     }
 
-    private final int targetOrder;
-
-    private final boolean hardSwitch;
+    /**
+     * A switch that is urgent (e.g. because of a layer drop).
+     */
+    private boolean urgent;
 
     public int getTargetOrder()
     {
@@ -29,5 +47,10 @@ public class SimulcastReceiverOptions
     public boolean isHardSwitch()
     {
         return hardSwitch;
+    }
+
+    public boolean isUrgent()
+    {
+        return urgent;
     }
 }
