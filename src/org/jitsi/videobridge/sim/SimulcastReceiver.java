@@ -159,6 +159,19 @@ class SimulcastReceiver
         return accept;
     }
 
+    private void maybeForgetNext()
+    {
+        SimulcastLayer next = getNext();
+        if (next != null && !next.isStreaming())
+        {
+            synchronized (receiveLayersSyncRoot)
+            {
+                this.weakNext = null;
+                this.seenNext = 0;
+            }
+        }
+    }
+
     /**
      *
      */
@@ -652,6 +665,8 @@ class SimulcastReceiver
             options.setUrgent(true);
 
             configure(options);
+
+            maybeForgetNext();
         }
         else
         {

@@ -88,7 +88,8 @@ public class SimulcastLayer
 
     public boolean isStreaming()
     {
-        return isStreaming;
+        // NOTE(gp) we assume that the base layer is always streaming.
+        return isStreaming ? isStreaming : order == 0;
     }
 
     private boolean isStreaming = false;
