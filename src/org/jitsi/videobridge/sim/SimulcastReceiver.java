@@ -116,10 +116,8 @@ class SimulcastReceiver
      */
     private SimulcastLayer getCurrent()
     {
-        synchronized (receiveLayersSyncRoot)
-        {
-            return (weakCurrent != null) ? weakCurrent.get() : null;
-        }
+        WeakReference<SimulcastLayer> wr = this.weakCurrent;
+        return (wr != null) ? wr.get() : null;
     }
 
     /**
@@ -129,10 +127,8 @@ class SimulcastReceiver
      */
     private SimulcastLayer getNext()
     {
-        synchronized (receiveLayersSyncRoot)
-        {
-            return (weakNext != null) ? weakNext.get() : null;
-        }
+        WeakReference<SimulcastLayer> wr = this.weakNext;
+        return (wr != null) ? wr.get() : null;
     }
 
     private void dump()
@@ -202,28 +198,25 @@ class SimulcastReceiver
      */
     public boolean accept(long ssrc)
     {
-        synchronized (receiveLayersSyncRoot)
+        boolean accept = false;
+
+        SimulcastLayer current = getCurrent();
+        if (current != null)
         {
-            boolean accept = false;
-
-            SimulcastLayer current = getCurrent();
-            if (current != null)
-            {
-                accept = current.accept(ssrc);
-            }
-
-            SimulcastLayer next;
-            if (!accept && (next = getNext()) != null)
-            {
-                accept = next.accept(ssrc);
-                if (accept)
-                {
-                    maybeSwitchToNext();
-                }
-            }
-
-            return accept;
+            accept = current.accept(ssrc);
         }
+
+        SimulcastLayer next;
+        if (!accept && (next = getNext()) != null)
+        {
+            accept = next.accept(ssrc);
+            if (accept)
+            {
+                maybeSwitchToNext();
+            }
+        }
+
+        return accept;
     }
 
     /**
@@ -231,14 +224,14 @@ class SimulcastReceiver
      */
     private void maybeSwitchToNext()
     {
-        synchronized (receiveLayersSyncRoot)
-        {
-            SimulcastLayer next = getNext();
+        SimulcastLayer next = getNext();
 
-            // If there is a previous layer to timeout, and we have received
-            // "enough" packets from the current layer, expire the previous
-            // layer.
-            if (next != null)
+        // If there is a previous layer to timeout, and we have received
+        // "enough" packets from the current layer, expire the previous
+        // layer.
+        if (next != null)
+        {
+            synchronized (receiveLayersSyncRoot)
             {
                 seenNext++;
                 if (seenNext > MAX_NEXT_SEEN)
@@ -255,13 +248,13 @@ class SimulcastReceiver
 
     private Endpoint getPeer()
     {
-        // TODO(gp) maybe add expired check (?)
-        Endpoint peer
-                = (this.weakPeerSM != null
-                    && this.weakPeerSM.get() != null
-                    && this.weakPeerSM.get().getVideoChannel() != null)
-                ? this.weakPeerSM.get().getVideoChannel().getEndpoint()
-                : null;
+        // TODO(gp) maybe add expired checks (?)
+        SimulcastManager sm;
+        VideoChannel vc;
+        Endpoint peer;
+
+        peer = ((sm = getPeerSM()) != null && (vc = sm.getVideoChannel()) != null)
+                ? vc.getEndpoint() : null;
 
         if (peer == null)
         {
@@ -279,8 +272,8 @@ class SimulcastReceiver
 
     private SimulcastManager getPeerSM()
     {
-        SimulcastManager peerSM
-                = (this.weakPeerSM != null) ? this.weakPeerSM.get() : null;
+        WeakReference<SimulcastManager> wr = this.weakPeerSM;
+        SimulcastManager peerSM = (wr != null) ? wr.get() : null;
 
         if (peerSM == null)
         {
@@ -292,11 +285,13 @@ class SimulcastReceiver
 
     private Endpoint getSelf()
     {
-        // TODO(gp) maybe add expired check (?)
-        Endpoint self
-                = (this.mySM != null && this.mySM.getVideoChannel() != null)
-                ? this.mySM.getVideoChannel().getEndpoint()
-                : null;
+        // TODO(gp) maybe add expired checks (?)
+        SimulcastManager sm = this.mySM;
+        VideoChannel vc;
+        Endpoint self;
+
+        self = (sm != null && (vc = sm.getVideoChannel()) != null)
+                ? vc.getEndpoint() : null;
 
         if (self == null)
         {
@@ -362,8 +357,8 @@ class SimulcastReceiver
         // Do NOT switch to hq if it's not streaming.
         if (next == null
                 || (next.getOrder()
-                        != SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
-                    && !next.isStreaming()))
+                != SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
+                && !next.isStreaming()))
         {
             logger.info(self.getID() + " ignoring request to switch to " +
                     "higher order layer because it is not currently " +
@@ -394,18 +389,19 @@ class SimulcastReceiver
         }
         else
         {
-            // If current has changed, request an FIR, notify the parent endpoint
-            // and change the receiving streams in a single atomic operation.
+            // If current has changed, request an FIR, notify the parent
+            // endpoint and change the receiving streams.
+
+            if (options.isHardSwitch() && next != getNext())
+            {
+                // XXX(gp) run these in the event dispatcher thread?
+
+                // Send FIR requests first.
+                this.askForKeyframe(next);
+            }
+
             synchronized (receiveLayersSyncRoot)
             {
-                if (options.isHardSwitch() && next != getNext())
-                {
-                    // XXX(gp) run these in the event dispatcher thread?
-
-                    // Send FIR requests first.
-                    this.askForKeyframe(next);
-                }
-
                 if (options.isUrgent() || current == null)
                 {
                     // Receiving simulcast layers have brutally changed. Create
@@ -415,6 +411,10 @@ class SimulcastReceiver
 
                     this.weakCurrent = new WeakReference<SimulcastLayer>(next);
                     this.weakNext = null;
+
+                    // Since the currently received layer has changed, reset the
+                    // seenCurrent counter.
+                    this.seenNext = 0;
                 }
                 else
                 {
@@ -427,16 +427,17 @@ class SimulcastReceiver
                     // period of time while the client receives adjusts its
                     // video.
                     this.weakNext = new WeakReference<SimulcastLayer>(next);
+
+                    // Since the currently received layer has changed, reset the
+                    // seenCurrent counter.
+                    this.seenNext = 0;
+
+                    // Log/dump the state this receiver.
+                    this.dump();
                 }
-
-                // Since the currently received layer has changed, reset the
-                // seenCurrent counter.
-                this.seenNext = 0;
-
-                // Log/dump the state this receiver.
-                this.dump();
             }
         }
+
     }
 
     private void askForKeyframe(SimulcastLayer layer)
@@ -649,38 +650,35 @@ class SimulcastReceiver
 
     private void onPeerLayerChanged(SimulcastLayer layer)
     {
-        synchronized (receiveLayersSyncRoot)
+        if (!layer.isStreaming())
         {
-            if (!layer.isStreaming())
+            // HQ stream has stopped, switch to a lower quality stream.
+
+            SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+
+            options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
+            options.setHardSwitch(true);
+            options.setUrgent(true);
+
+            configure(options);
+        }
+        else
+        {
+            Endpoint self = getSelf();
+            Endpoint peer = getPeer();
+
+            if (peer != null && self != null &&
+                    peer.getID().equals(self.getSelectedEndpointID()))
             {
-                // HQ stream has stopped, switch to a lower quality stream.
+                SimulcastReceiverOptions options
+                        = new SimulcastReceiverOptions();
 
-                SimulcastReceiverOptions options = new SimulcastReceiverOptions();
-
-                options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
-                options.setHardSwitch(true);
-                options.setUrgent(true);
+                options.setTargetOrder(
+                        SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
+                options.setHardSwitch(false);
+                options.setUrgent(false);
 
                 configure(options);
-            }
-            else
-            {
-                Endpoint self = getSelf();
-                Endpoint peer = getPeer();
-
-                if (peer != null && self != null &&
-                        peer.getID().equals(self.getSelectedEndpointID()))
-                {
-                    SimulcastReceiverOptions options
-                            = new SimulcastReceiverOptions();
-
-                    options.setTargetOrder(
-                            SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
-                    options.setHardSwitch(false);
-                    options.setUrgent(false);
-
-                    configure(options);
-                }
             }
         }
     }
