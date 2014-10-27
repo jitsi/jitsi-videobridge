@@ -352,4 +352,25 @@ public class SimulcastManager
 
         return 0;
     }
+
+    protected SimulcastLayer getSimulcastLayer(int targetOrder)
+    {
+        SimulcastLayer next = null;
+
+        SortedSet<SimulcastLayer> layers = getSimulcastLayers();
+
+        if (layers != null && !layers.isEmpty())
+        {
+            Iterator<SimulcastLayer> it = layers.iterator();
+
+            int currentLayer = SimulcastManager.SIMULCAST_LAYER_ORDER_LQ;
+            while (it.hasNext()
+                    && currentLayer++ <= targetOrder)
+            {
+                next = it.next();
+            }
+        }
+
+        return next;
+    }
 }

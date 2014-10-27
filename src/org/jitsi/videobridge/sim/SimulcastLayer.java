@@ -112,16 +112,14 @@ public class SimulcastLayer
 
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug(new StringBuilder()
-                            .append(getSimulcastManager()
-                                    .getVideoChannel()
-                                    .getEndpoint()
-                                    .getID())
-                            .append(" stopped streaming ")
-                            .append(getPrimarySSRC())
-                            .append(" of order ")
-                            .append(getOrder())
-                            .append("."));
+                    Map<String, Object> map = new HashMap<String, Object>(2);
+                    map.put("parent", getSimulcastManager().getVideoChannel()
+                            .getEndpoint());
+                    map.put("self", this);
+                    StringCompiler sc = new StringCompiler(map);
+
+                    logger.debug(sc.c("{parent.id} stopped streaming its " +
+                            "order-{self.order} layer ({self.primarySSRC})."));
                 }
 
                 // FIXME(gp) use an event dispatcher or a thread pool.
@@ -152,16 +150,14 @@ public class SimulcastLayer
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(new StringBuilder()
-                        .append(getSimulcastManager()
-                                .getVideoChannel()
-                                .getEndpoint()
-                                .getID())
-                        .append(" started streaming ")
-                        .append(getPrimarySSRC())
-                        .append(" of order ")
-                        .append(getOrder())
-                        .append("."));
+                Map<String, Object> map = new HashMap<String, Object>(2);
+                map.put("parent", getSimulcastManager().getVideoChannel()
+                        .getEndpoint());
+                map.put("self", this);
+                StringCompiler sc = new StringCompiler(map);
+
+                logger.debug(sc.c("{parent.id} started streaming its " +
+                        "order-{self.order} layer ({self.primarySSRC})."));
             }
 
             // FIXME(gp) use an event dispatcher or a thread pool.
