@@ -440,7 +440,7 @@ public class VideoChannel
             if (accept && source instanceof VideoChannel)
             {
                 VideoChannel videoChannel = (VideoChannel) source;
-                accept = simulcastManager.acceptSimulcastLayer(
+                accept = simulcastManager.accept(
                         buffer, offset, length, videoChannel);
             }
         }

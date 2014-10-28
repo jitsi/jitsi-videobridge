@@ -110,7 +110,7 @@ public class BridgeSenderReporting
 
                             destIsReceiving
                                     = destVideoChannel.getSimulcastManager()
-                                    .acceptSimulcastLayer(ssrc,
+                                    .accept(ssrc,
                                             srcVideoChannel);
                         }
                     }

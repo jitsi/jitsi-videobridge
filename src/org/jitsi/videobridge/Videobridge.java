@@ -752,10 +752,11 @@ public class Videobridge
 
                                 if (receivingSimulcastLayer != null)
                                 {
-                                    handleReceivingSimulcastLayer(
-                                            conference,
-                                            videoChannel,
-                                            receivingSimulcastLayer);
+                                    // TODO(gp) remove the receiving simulcast
+                                    // layer attribute from the COLIBRI stanza. It
+                                    // was introduced in the very early stages of
+                                    // simulcast development and it is no longer
+                                    // required.
                                 }
                             }
 
@@ -906,33 +907,6 @@ public class Videobridge
                     org.jivesoftware.smack.packet.IQ.Type.RESULT);
         }
         return responseConferenceIQ;
-    }
-
-    private void handleReceivingSimulcastLayer(
-            Conference conference,
-            VideoChannel videoChannel,
-            Integer receivingSimulcastLayer)
-    {
-        Collection<Endpoint> endpoints = conference.getEndpoints();
-
-        if (!endpoints.isEmpty())
-        {
-            Map<Endpoint,ReceivingSimulcastOptions> endpointsQuality
-                = new HashMap<Endpoint, ReceivingSimulcastOptions>(
-                    endpoints.size());
-
-            for (Endpoint e : endpoints)
-            {
-                ReceivingSimulcastOptions receivingSimulcastOptions
-                        = new ReceivingSimulcastOptions(
-                            receivingSimulcastLayer, true);
-
-                endpointsQuality.put(e, receivingSimulcastOptions);
-            }
-
-            videoChannel.getSimulcastManager().setReceivingSimulcastLayer(
-                    endpointsQuality);
-        }
     }
 
     public void handleIQResponse(org.jivesoftware.smack.packet.IQ response)

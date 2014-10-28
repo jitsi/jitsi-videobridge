@@ -18,6 +18,8 @@ public class SimulcastLayer
     extends PropertyChangeNotifier
         implements Comparable<SimulcastLayer>
 {
+    private static final int MAX_SEEN_BASE = 25;
+
     public SimulcastManager getSimulcastManager()
     {
         return simulcastManager;
@@ -86,22 +88,24 @@ public class SimulcastLayer
 
     public boolean isStreaming()
     {
-        return isStreaming;
+        // NOTE(gp) we assume that the base layer is always streaming.
+        return isStreaming ? isStreaming : order == 0;
     }
 
     private boolean isStreaming = false;
 
     private int seenBase = 0;
 
-    public synchronized void timeout()
+    public synchronized void maybeTimeout()
     {
-        if (++seenBase % 10 == 0)
+        if (++seenBase % MAX_SEEN_BASE == 0)
         {
             // Every base layer packet we have observed 10 low quality packets.
             //
-            // If for every 10 base quality packets we have not seen at least
-            // one high quality packet, then the high quality layer must have
-            // been dropped (this means approximately 100 packets loss).
+            // If for every MAX_SEEN_BASE base quality packets we have not seen
+            // at least one high quality packet, then the high quality layer
+            // must have been dropped (this means approximately MAX_SEEN_BASE*10
+            // packets loss).
 
             if (this.isStreaming &&  this.seenHigh == 0)
             {
@@ -109,19 +113,17 @@ public class SimulcastLayer
 
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug(new StringBuilder()
-                            .append(getSimulcastManager()
-                                    .getVideoChannel()
-                                    .getEndpoint()
-                                    .getID())
-                            .append(" stopped streaming ")
-                            .append(getPrimarySSRC())
-                            .append(" of order ")
-                            .append(getOrder())
-                            .append("."));
+                    Map<String, Object> map = new HashMap<String, Object>(2);
+                    map.put("parent", getSimulcastManager().getVideoChannel()
+                            .getEndpoint());
+                    map.put("self", this);
+                    StringCompiler sc = new StringCompiler(map);
+
+                    logger.debug(sc.c("{parent.id} stopped streaming its " +
+                            "order-{self.order} layer ({self.primarySSRC})."));
                 }
 
-                // FIXME(gp) use an event dispatcher.
+                // FIXME(gp) use an event dispatcher or a thread pool.
                 new Thread(new Runnable()
                 {
                     @Override
@@ -149,19 +151,17 @@ public class SimulcastLayer
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(new StringBuilder()
-                        .append(getSimulcastManager()
-                                .getVideoChannel()
-                                .getEndpoint()
-                                .getID())
-                        .append(" started streaming ")
-                        .append(getPrimarySSRC())
-                        .append(" of order ")
-                        .append(getOrder())
-                        .append("."));
+                Map<String, Object> map = new HashMap<String, Object>(2);
+                map.put("parent", getSimulcastManager().getVideoChannel()
+                        .getEndpoint());
+                map.put("self", this);
+                StringCompiler sc = new StringCompiler(map);
+
+                logger.debug(sc.c("{parent.id} started streaming its " +
+                        "order-{self.order} layer ({self.primarySSRC})."));
             }
 
-            // FIXME(gp) use an event dispatcher.
+            // FIXME(gp) use an event dispatcher or a thread pool.
             new Thread(new Runnable()
             {
                 @Override
