@@ -6,16 +6,16 @@
  */
 package org.jitsi.videobridge.sim;
 
+import java.beans.*;
+import java.io.*;
+import java.lang.ref.*;
+import java.util.*;
+
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.sim.messages.*;
-
-import java.beans.*;
-import java.io.*;
-import java.lang.ref.*;
-import java.util.*;
 
 /**
 * @author George Politis
@@ -243,12 +243,12 @@ class SimulcastReceiver
 
         if (peerSM == null)
         {
-            this.logger.warn("The peer simulcast manager is null!");
-
+            logger.warn("The peer simulcast manager is null!");
             if (logger.isDebugEnabled())
             {
-                logger.debug(Arrays.toString(
-                        Thread.currentThread().getStackTrace()));
+                logger.debug(
+                        Arrays.toString(
+                                Thread.currentThread().getStackTrace()));
             }
         }
 
