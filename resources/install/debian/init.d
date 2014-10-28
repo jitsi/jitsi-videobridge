@@ -34,9 +34,9 @@ test -x $DAEMON || exit 0
 set -e
 
 killParentPid() {
-    PPID=$(ps -o pid --no-headers --ppid $1 || true)
-    if [ $PPID ]; then
-        kill $PPID
+    PARENT_PID=$(ps -o pid --no-headers --ppid $1 || true)
+    if [ $PARENT_PID ]; then
+        kill $PARENT_PID
     fi
 }
 
