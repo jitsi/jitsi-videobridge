@@ -548,8 +548,8 @@ public class Videobridge
 
                         if (recording)
                         {
-                            responseRecordingIq.setPath(
-                                    conference.getRecordingPath());
+                            responseRecordingIq.setDirectory(
+                                    conference.getRecordingDirectory());
                         }
                         responseConferenceIQ.setRecording(responseRecordingIq);
                     }

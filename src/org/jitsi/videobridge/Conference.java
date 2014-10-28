@@ -125,6 +125,12 @@ public class Conference
     private String recordingPath = null;
 
     /**
+     * The directory into which files associated with media recordings
+     * for this <tt>Conference</tt> will be stored.
+     */
+    private String recordingDirectory = null;
+
+    /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
      * <tt>Conference</tt>.
      */
@@ -334,7 +340,7 @@ public class Conference
         {
             ColibriConferenceIQ.Recording recordingIQ
                     = new ColibriConferenceIQ.Recording(true);
-            recordingIQ.setPath(getRecordingPath());
+            recordingIQ.setDirectory(getRecordingDirectory());
             iq.setRecording(recordingIQ);
         }
         for (Content content : getContents())
@@ -970,16 +976,31 @@ public class Conference
                     if (path != null)
                     {
                         this.recordingPath
-                            = path + "/"
-                                + new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.")
-                                        .format(new Date())
-                                + getID();
+                            = path + "/" + this.getRecordingDirectory();
                     }
                 }
             }
         }
         return recordingPath;
     }
+
+
+
+    /**
+     * Returns the directory where the recording should be stored
+     *
+     * @return the directory of the new recording
+     */
+    String getRecordingDirectory() {
+        if (this.recordingDirectory == null) {
+            SimpleDateFormat dateFormat
+                    = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.");
+            this.recordingDirectory = dateFormat.format(new Date()) + getID();
+        }
+
+        return this.recordingDirectory;
+    }
+
 
     /**
      * Gets the speech activity (representation) of the <tt>Endpoint</tt>s of
