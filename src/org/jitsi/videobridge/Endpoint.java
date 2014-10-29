@@ -50,12 +50,19 @@ public class Endpoint
         = Endpoint.class.getName() + ".sctpConnection";
 
     /**
+     * A constant that means that an endpoint is not watching video from any
+     * other endpoint.
+     */
+    public static final String SELECTED_ENDPOINT_NOT_WATCHING_VIDEO
+        = "SELECTED_ENDPOINT_NOT_WATCHING_VIDEO";
+
+    /**
      * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
      * which specifies the JID of the currently selected <tt>Endpoint</tt> of
      * this <tt>Endpoint</tt>.
      */
     public static final String SELECTED_ENDPOINT_PROPERTY_NAME
-            = Endpoint.class.getName() + ".selectedEndpoint";
+        = Endpoint.class.getName() + ".selectedEndpoint";
 
     /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
@@ -92,25 +99,6 @@ public class Endpoint
     private final Object selectedEndpointSyncRoot = new Object();
 
     /**
-     * A constant that means that an endpoint is not watching video from any
-     * other endpoint.
-     */
-    public static final String SELECTED_ENDPOINT_NOT_WATCHING_VIDEO
-        = "SELECTED_ENDPOINT_NOT_WATCHING_VIDEO";
-
-    /**
-     * Gets the (unique) identifier/ID of the currently selected
-     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
-     *
-     * @return the (unique) identifier/ID of the currently selected
-     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
-     */
-    public String getSelectedEndpointID()
-    {
-        return selectedEndpointID;
-    }
-
-    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -139,10 +127,9 @@ public class Endpoint
     {
         if (channel == null)
             throw new NullPointerException("channel");
-        /*
-         * The expire state of Channel is final. Adding an expired Channel to
-         * an Endpoint is a no-op.
-         */
+
+        // The expire state of Channel is final. Adding an expired Channel to
+        // an Endpoint is a no-op.
         if (channel.isExpired())
             return false;
 
@@ -201,7 +188,6 @@ public class Endpoint
      */
     void audioLevelChanged(Channel channel, long ssrc, int audioLevel)
     {
-        // TODO Auto-generated method stub
     }
 
     /**
@@ -237,6 +223,7 @@ public class Endpoint
 
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
+     *
      * @return the display name of this <tt>Endpoint</tt>.
      */
     public String getDisplayName()
@@ -256,12 +243,113 @@ public class Endpoint
 
     /**
      * Returns an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>.
-     * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>
-     *         or <tt>null</tt> otherwise.
+     *
+     * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt> or
+     * <tt>null</tt> otherwise.
      */
     public SctpConnection getSctpConnection()
     {
         return sctpConnection.get();
+    }
+
+    /**
+     * Gets the (unique) identifier/ID of the currently selected
+     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     *
+     * @return the (unique) identifier/ID of the currently selected
+     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     */
+    public String getSelectedEndpointID()
+    {
+        return selectedEndpointID;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onBinaryData(WebRtcDataStream src, byte[] data)
+    {
+    }
+
+    @Override
+    public void onStringData(WebRtcDataStream src, String msg)
+    {
+        // JSONParser is NOT thread-safe.
+        JSONParser parser = new JSONParser();
+        JSONObject jsonObject;
+
+        try
+        {
+            Object obj = parser.parse(msg);
+
+            // We utilize JSONObjects only.
+            if (obj instanceof JSONObject)
+                jsonObject = (JSONObject) obj;
+            else
+                return;
+        }
+        catch (ParseException e)
+        {
+            logger.warn("Malformed JSON received from endpoint " + getID(), e);
+            return;
+        }
+
+        // We utilize JSONObjects with colibriClass only.
+        Object colibriClass = jsonObject.get(Videobridge.COLIBRI_CLASS);
+
+        if (colibriClass != null)
+        {
+            if ("SelectedEndpointChangedEvent".equals(colibriClass))
+            {
+                String oldSelectedEndpoint, newSelectedEndpoint;
+                boolean changed;
+
+                synchronized (selectedEndpointSyncRoot)
+                {
+                    oldSelectedEndpoint = this.selectedEndpointID;
+                    newSelectedEndpoint
+                        = (String) jsonObject.get("selectedEndpoint");
+                    if (newSelectedEndpoint == null
+                            || newSelectedEndpoint.length() == 0)
+                    {
+                        newSelectedEndpoint
+                            = SELECTED_ENDPOINT_NOT_WATCHING_VIDEO;
+                    }
+
+                    changed = !newSelectedEndpoint.equals(oldSelectedEndpoint);
+                    if (changed)
+                        this.selectedEndpointID = newSelectedEndpoint;
+                }
+
+                // NOTE(gp) This won't guarantee that property change events are
+                // fired in the correct order. We should probably call the
+                // firePropertyChange() method from inside the synchronized
+                // _and_ the underlying PropertyChangeNotifier should have a
+                // dedicated events queue and a thread for firing
+                // PropertyChangeEvents from the queue.
+
+                if (changed)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug(
+                                "Endpoint " + getID() + " selected "
+                                    + newSelectedEndpoint);
+                    }
+                    firePropertyChange(
+                            SELECTED_ENDPOINT_PROPERTY_NAME,
+                            oldSelectedEndpoint, newSelectedEndpoint);
+                }
+            }
+        }
+        else
+        {
+            logger.warn(
+                    "Malformed JSON received from endpoint " + getID()
+                        + ". JSON object does not contain the colibriClass"
+                        + " field.");
+        }
     }
 
     /**
@@ -320,6 +408,7 @@ public class Endpoint
                 channel.sctpConnectionReady(this);
 
             WebRtcDataStream dataStream;
+
             try
             {
                 dataStream = sctpConnection.getDefaultDataStream();
@@ -346,7 +435,7 @@ public class Endpoint
 
         if(sctpConnection == null)
         {
-            logger.warn("No SCTP connection with " + endpointId);
+            logger.warn("No SCTP connection with " + endpointId + ".");
         }
         else if(sctpConnection.isReady())
         {
@@ -358,7 +447,8 @@ public class Endpoint
                 if(dataStream == null)
                 {
                     logger.warn(
-                            "WebRtc data channel not opened yet " + endpointId);
+                            "WebRtc data channel with " + endpointId
+                                + " not opened yet.");
                 }
                 else
                 {
@@ -376,13 +466,14 @@ public class Endpoint
         else
         {
             logger.warn(
-                    "SCTP connection with " + endpointId + " not ready yet");
+                    "SCTP connection with " + endpointId + " not ready yet.");
         }
     }
 
     /**
      * Sets the display name of this <tt>Endpoint</tt>.
-     * @param displayName the display name to set.
+     *
+     * @param displayName the display name to set on this <tt>Endpoint</tt>.
      */
     public void setDisplayName(String displayName)
     {
@@ -419,93 +510,5 @@ public class Endpoint
     public String toString()
     {
         return getClass().getName() + " " + getID();
-    }
-
-    @Override
-    public void onStringData(WebRtcDataStream src, String msg)
-    {
-        // JSONParser is NOT thread-safe.
-        JSONParser parser = new JSONParser();
-        JSONObject jsonObject;
-
-        try
-        {
-            Object obj = parser.parse(msg);
-
-            // We utilize JSONObjects only.
-            if (obj instanceof JSONObject)
-                jsonObject = (JSONObject) obj;
-            else
-                return;
-        }
-        catch (ParseException e)
-        {
-            logger.warn("Malformed JSON received from endpoint " + getID(), e);
-            return;
-        }
-
-        // We utilize JSONObjects with colibriClass only.
-        Object colibriClass = jsonObject.get(Videobridge.COLIBRI_CLASS);
-
-        if (colibriClass != null)
-        {
-            if ("SelectedEndpointChangedEvent".equals(colibriClass))
-            {
-                String oldSelectedEndpoint, newSelectedEndpoint;
-                boolean changed;
-
-                synchronized (selectedEndpointSyncRoot)
-                {
-                    oldSelectedEndpoint = this.selectedEndpointID;
-                    newSelectedEndpoint
-                        = (String) jsonObject.get("selectedEndpoint");
-                    if (newSelectedEndpoint == null
-                            || newSelectedEndpoint.length() == 0)
-                    {
-                        newSelectedEndpoint
-                                = SELECTED_ENDPOINT_NOT_WATCHING_VIDEO;
-                    }
-
-                    changed = !newSelectedEndpoint.equals(oldSelectedEndpoint);
-                    if (changed)
-                    {
-                        this.selectedEndpointID = newSelectedEndpoint;
-                    }
-                }
-
-                // NOTE(gp) This won't guarantee that property change events are
-                // fired in the correct order. We should probably call the
-                // firePropertyChange() method from inside the synchronized
-                // _and_ the underlying PropertyChangeNotifier should have a
-                // dedicated events queue and a thread for firing
-                // PropertyChangeEvents from the queue.
-
-                if (changed)
-                {
-                    if (logger.isDebugEnabled())
-                    {
-                        logger.debug(
-                                "Endpoint " + getID() + " selected "
-                                    + newSelectedEndpoint);
-                    }
-                    firePropertyChange(
-                            SELECTED_ENDPOINT_PROPERTY_NAME,
-                            oldSelectedEndpoint, newSelectedEndpoint);
-                }
-            }
-        }
-        else
-        {
-            logger.warn(
-                    "Malformed JSON received from endpoint " + getID()
-                        + ". JSON object does not contain the colibriClass"
-                        + " field.");
-        }
-    }
-
-    @Override
-    public void onBinaryData(WebRtcDataStream src, byte[] data)
-    {
-        // Nothing to do here for the time being.
     }
 }

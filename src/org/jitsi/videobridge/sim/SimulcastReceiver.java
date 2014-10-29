@@ -869,8 +869,7 @@ class SimulcastReceiver
 
                 if (oldEndpoint != e
                         && (oldEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID()))
-                        )
+                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID())))
                 {
                     // somebody is watching the old endpoint or somebody has not
                     // yet signaled its selected endpoint to the bridge, don't
@@ -917,35 +916,37 @@ class SimulcastReceiver
     private void maybeSendStartHighQualityStreamCommand(String id)
     {
         Endpoint newEndpoint = null;
-        if (!StringUtils.isNullOrEmpty(id) &&
-                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
-        {
-            newEndpoint = this.mySM.getVideoChannel()
-                    .getContent().getConference().getEndpoint(id);
-        }
-
-        List<RtpChannel> newVideoChannels = null;
-        if (newEndpoint != null)
-        {
-            newVideoChannels = newEndpoint.getChannels(MediaType.VIDEO);
-        }
-
-        VideoChannel newVideoChannel = null;
-        if (newVideoChannels != null && newVideoChannels.size() != 0)
-        {
-            newVideoChannel = (VideoChannel) newVideoChannels.get(0);
-        }
-
         SortedSet<SimulcastLayer> newSimulcastLayers = null;
-        if (newVideoChannel != null)
+
+        if (!StringUtils.isNullOrEmpty(id)
+                && id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
         {
-            newSimulcastLayers = newVideoChannel.getSimulcastManager()
-                    .getSimulcastLayers();
+            newEndpoint
+                = mySM.getVideoChannel().getContent().getConference()
+                    .getEndpoint(id);
+            if (newEndpoint != null)
+            {
+                List<RtpChannel> newVideoChannels
+                    = newEndpoint.getChannels(MediaType.VIDEO);
+
+                if (newVideoChannels != null && newVideoChannels.size() != 0)
+                {
+                    VideoChannel newVideoChannel
+                        = (VideoChannel) newVideoChannels.get(0);
+
+                    if (newVideoChannel != null)
+                    {
+                        newSimulcastLayers
+                            = newVideoChannel.getSimulcastManager()
+                                .getSimulcastLayers();
+                    }
+                }
+            }
         }
 
         if (newSimulcastLayers != null
                 && newSimulcastLayers.size() > 1
-                /* newEndpoint != null is implied*/
+                /* newEndpoint != null is implied */
                 && newEndpoint.getSctpConnection().isReady()
                 && !newEndpoint.getSctpConnection().isExpired())
         {
@@ -954,20 +955,22 @@ class SimulcastReceiver
             // endpoint, start its hq stream.
 
             boolean startHighQualityStream = false;
-            for (Endpoint e : this.mySM.getVideoChannel()
-                    .getContent().getConference().getEndpoints())
+
+            for (Endpoint e
+                    : mySM.getVideoChannel().getContent().getConference()
+                        .getEndpoints())
             {
                 // TODO(gp) need some synchronization here. What if the
                 // selected endpoint changes while we're in the loop?
 
-                if (newEndpoint != e
-                        && (newEndpoint.getID().equals(
-                        e.getSelectedEndpointID())
-                        || (SimulcastManager.SIMULCAST_LAYER_ORDER_INIT
-                        > SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
-                        && StringUtils.isNullOrEmpty(
-                        e.getSelectedEndpointID())))
-                        )
+                if (e == newEndpoint)
+                    continue;
+
+                String eSelectedEndpointID = e.getSelectedEndpointID();
+
+                if (newEndpoint.getID().equals(eSelectedEndpointID)
+                        || (SimulcastManager.SIMULCAST_LAYER_ORDER_INIT > SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
+                                && StringUtils.isNullOrEmpty(eSelectedEndpointID)))
                 {
                     // somebody is watching the new endpoint or somebody has not
                     // yet signaled its selected endpoint to the bridge, start
@@ -975,17 +978,22 @@ class SimulcastReceiver
 
                     if (logger.isDebugEnabled())
                     {
-                        Map<String, Object> map = new HashMap<String, Object>(3);
+                        Map<String,Object> map = new HashMap<String,Object>(3);
+
                         map.put("e", e);
                         map.put("newEndpoint", newEndpoint);
-                        map.put("maybe", StringUtils.isNullOrEmpty(
-                                e.getSelectedEndpointID()) ?
-                                "(maybe) " : "");
-                        StringCompiler sc = new StringCompiler(map);
+                        map.put(
+                                "maybe",
+                                StringUtils.isNullOrEmpty(eSelectedEndpointID)
+                                    ? "(maybe) "
+                                    : "");
 
-                        logger.debug(sc.c("{e.id} is {maybe} watching " +
-                                "{newEndpoint.id}.")
-                                .toString().replaceAll("\\s+", " "));
+                        StringCompiler sc
+                            = new StringCompiler(map)
+                                .c("{e.id} is {maybe} watching {newEndpoint.id}.");
+
+                        logger.debug(
+                                sc.toString().replaceAll("\\s+", " "));
                     }
 
                     startHighQualityStream = true;
@@ -997,24 +1005,26 @@ class SimulcastReceiver
             {
                 // TODO(gp) this assumes only a single hq stream.
 
-                logger.debug(this.mySM.getVideoChannel().getEndpoint().getID() +
-                        " notifies " + newEndpoint.getID() + " to start " +
-                        "its HQ stream.");
+                logger.debug(
+                        mySM.getVideoChannel().getEndpoint().getID()
+                            + " notifies " + newEndpoint.getID()
+                            + " to start its HQ stream.");
 
                 SimulcastLayer hqLayer = newSimulcastLayers.last();
-
                 StartSimulcastLayerCommand command
-                        = new StartSimulcastLayerCommand(hqLayer);
-
+                    = new StartSimulcastLayerCommand(hqLayer);
                 String json = mapper.toJson(command);
+
                 try
                 {
                     newEndpoint.sendMessageOnDataChannel(json);
                 }
-                catch (IOException e1)
+                catch (IOException e)
                 {
-                    logger.error(newEndpoint.getID() + " failed to send " +
-                            "message on data channel.", e1);
+                    logger.error(
+                            newEndpoint.getID()
+                                + " failed to send message on data channel.",
+                            e);
                 }
             }
         }

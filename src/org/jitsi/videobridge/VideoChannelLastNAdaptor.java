@@ -10,32 +10,41 @@ import java.lang.ref.*;
 import java.util.*;
 
 import net.java.sip.communicator.util.*;
+
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 
 /**
  * Implements the "adaptive lastN" feature for a specific <tt>VideoChannel</tt>.
- *
+ * <p>
  * Gets notified of received RTCP REMB packets through
  * {@link #receivedREMB(long)}. Based on this information (the estimation of
- * the available bandwidth to the endpoint of the <tt>VideoChannel</tt>) and
- * on the recent average bitrates coming from the other endpoints in the
- * conference decides whether the value of lastN should be changed (and performs
- * the change).
- *
- * The specific logic used to make the decision is implemented and documented
- * in {@link #receivedREMB(long)}.
+ * the available bandwidth to the endpoint of the <tt>VideoChannel</tt>) and on
+ * the recent average bitrates coming from the other endpoints in the conference
+ * decides whether the value of lastN should be changed (and performs the
+ * change).
+ * </p>
+ * <p>
+ * The specific logic used to make the decision is implemented and documented in
+ * {@link #receivedREMB(long)}.
+ * </p>
  *
  * @author Boris Grozev
  */
 public class VideoChannelLastNAdaptor
 {
     /**
-     * The name of the property which can be used to control the
-     * <tt>INCREASE_LAG_MS</tt> constant.
+     * Whether the values for the constants have been initialized or not.
      */
-    private static final String INCREASE_LAG_MS_PNAME
-        = "org.jitsi.videobridge.VideoChannelLastNAdaptor.INCREASE_LAG_MS";
+    private static boolean configurationInitialized = false;
+
+    /**
+     * The constant that specifies the minimum amount of time in milliseconds
+     * that we wait before decreasing lastN. That is, we only decrease lastN if
+     * for the last <tt>DECREASE_LAG_MS</tt> milliseconds we have not received a
+     * REMB indicating that we should increase lastN or keep it as it is.
+     */
+    private static int DECREASE_LAG_MS = 10000;
 
     /**
      * The name of the property which can be used to control the
@@ -45,20 +54,49 @@ public class VideoChannelLastNAdaptor
         = "org.jitsi.videobridge.VideoChannelLastNAdaptor.DECREASE_LAG_MS";
 
     /**
+     * The constant that specifies the minimum amount of time in milliseconds
+     * that we wait before increasing lastN. That is, we only increase lastN if
+     * for the last <tt>INCREASE_LAG_MS</tt> milliseconds we have not received a
+     * REMB indicating that we should decrease lastN or keep it as it is.
+     */
+    private static int INCREASE_LAG_MS = 20000;
+
+    /**
+     * The name of the property which can be used to control the
+     * <tt>INCREASE_LAG_MS</tt> constant.
+     */
+    private static final String INCREASE_LAG_MS_PNAME
+        = "org.jitsi.videobridge.VideoChannelLastNAdaptor.INCREASE_LAG_MS";
+
+    /**
+     * The constant that specifies the initial period during which we will not
+     * perform lastN adaptation.
+     */
+    private static int INITIAL_INTERVAL_MS = 70000;
+
+    /**
      * The name of the property which can be used to control the
      * <tt>INITIAL_INTERVAL_MS</tt> constant.
      */
     private static final String INITIAL_INTERVAL_MS_PNAME
-        = "org.jitsi.videobridge.VideoChannelLastNAdaptor"
-            + ".INITIAL_INTERVAL_MS";
+        = "org.jitsi.videobridge.VideoChannelLastNAdaptor.INITIAL_INTERVAL_MS";
+
+    /**
+     * The maximum amount of time in milliseconds to keep lastN=0.
+     */
+    private static int MAX_STAY_AT_ZERO_MS = 60000;
 
     /**
      * The name of the property which can be used to control the
-     * <tt>REMB_MULT_CONSTANT</tt> constant.
+     * <tt>MAX_STAY_AT_ZERO_MS</tt> constant.
      */
-    private static final String REMB_MULT_CONSTANT_PNAME
-        = "org.jitsi.videobridge.VideoChannelLastNAdaptor"
-            + ".REMB_MULT_CONSTANT";
+    private static final String MAX_STAY_AT_ZERO_MS_PNAME
+        = "org.jitsi.videobridge.VideoChannelLastNAdaptor.MAX_STAY_AT_ZERO_MS";
+
+    /**
+     * The minimum bitrate in bits per second to assume for an endpoint.
+     */
+    private static int MIN_ASSUMED_ENDPOINT_BITRATE_BPS = 400000;
 
     /**
      * The name of the property which can be used to control the
@@ -69,70 +107,30 @@ public class VideoChannelLastNAdaptor
             + ".MIN_ASSUMED_ENDPOINT_BITRATE_BPS";
 
     /**
-     * The name of the property which can be used to control the
-     * <tt>REMB_AVERAGE_INTERVAL_MS</tt> constant.
-     */
-    private static final String REMB_AVERAGE_INTERVAL_MS_PNAME
-            = "org.jitsi.videobridge.VideoChannelLastNAdaptor"
-            + ".REMB_AVERAGE_INTERVAL_MS";
-
-    /**
-     * The name of the property which can be used to control the
-     * <tt>MAX_STAY_AT_ZERO_MS</tt> constant.
-     */
-    private static final String MAX_STAY_AT_ZERO_MS_PNAME
-            = "org.jitsi.videobridge.VideoChannelLastNAdaptor"
-            + ".MAX_STAY_AT_ZERO_MS";
-
-    /**
-     * The constant that specifies the minimum amount of time in milliseconds
-     * that we wait before increasing lastN.
-     * That is, we only increase lastN if for the last
-     * <tt>INCREASE_LAG_MS</tt> milliseconds we have not received a REMB
-     * indicating that we should decrease lastN or keep it as it is.
-     */
-    private static int INCREASE_LAG_MS = 20000;
-
-    /**
-     * The constant that specifies the minimum amount of time in milliseconds
-     * that we wait before decreasing lastN.
-     * That is, we only decrease lastN if for the last
-     * <tt>DECREASE_LAG_MS</tt> milliseconds we have not received a REMB
-     * indicating that we should increase lastN or keep it as it is.
-     */
-    private static int DECREASE_LAG_MS = 10000;
-
-    /**
-     * The constant that specifies the initial period during which we will not
-     * perform lastN adaptation.
-     */
-    private static int INITIAL_INTERVAL_MS = 70000;
-
-    /**
-     * The constant that we multiply the received REMB by before calculating
-     * the number of endpoints that this endpoint can receive.
-     */
-    private static double REMB_MULT_CONSTANT = 1D;
-
-    /**
-     * The minimum bitrate in bits per second to assume for an endpoint.
-     */
-    private static int MIN_ASSUMED_ENDPOINT_BITRATE_BPS = 400000;
-
-    /**
      * The interval over which the average REMB values will be used.
      */
     private static int REMB_AVERAGE_INTERVAL_MS = 5000;
 
     /**
-     * The maximum amount of time in milliseconds to keep lastN=0.
+     * The name of the property which can be used to control the
+     * <tt>REMB_AVERAGE_INTERVAL_MS</tt> constant.
      */
-    private static int MAX_STAY_AT_ZERO_MS = 60000;
+    private static final String REMB_AVERAGE_INTERVAL_MS_PNAME
+        = "org.jitsi.videobridge.VideoChannelLastNAdaptor"
+            + ".REMB_AVERAGE_INTERVAL_MS";
 
     /**
-     * Whether the values for the constants have been initialized or not.
+     * The constant that we multiply the received REMB by before calculating the
+     * number of endpoints that this endpoint can receive.
      */
-    private static boolean configurationInitialized = false;
+    private static double REMB_MULT_CONSTANT = 1D;
+
+    /**
+     * The name of the property which can be used to control the
+     * <tt>REMB_MULT_CONSTANT</tt> constant.
+     */
+    private static final String REMB_MULT_CONSTANT_PNAME
+        = "org.jitsi.videobridge.VideoChannelLastNAdaptor.REMB_MULT_CONSTANT";
 
     /**
      * The <tt>VideoChannel</tt> of this <tt>VideoChannelLastNAdaptor</tt>.
@@ -140,10 +138,15 @@ public class VideoChannelLastNAdaptor
     private final VideoChannel channel;
 
     /**
-     * The time of reception of the last REMB which indicated that we can
-     * decrease lastN or keep it as it is (but not increase it).
+     * The time of reception of first REMB packet.
      */
-    private long lastNonIncrease = -1;
+    private long firstRemb = -1;
+
+    /**
+     * Whether this <tt>VideoChannelLastNAdaptor</tt> has changed the value of
+     * lastN at least once already.
+     */
+    private boolean initialLastNSet = false;
 
     /**
      * The time of reception of the last REMB which indicated that we can
@@ -152,37 +155,57 @@ public class VideoChannelLastNAdaptor
     private long lastNonDecrease = -1;
 
     /**
+     * The time of reception of the last REMB which indicated that we can
+     * decrease lastN or keep it as it is (but not increase it).
+     */
+    private long lastNonIncrease = -1;
+
+    /**
      * The last time that lastN was non-zero.
      */
     private long lastNonZeroLastN = -1;
-
-    /**
-     * The time of reception of first REMB packet.
-     */
-    private long firstRemb = -1;
-
-    /**
-     * Whether this <tt>VideoChannelLastNAdaptor</tt> has changed the
-     * value of lastN at least once already.
-     */
-    private boolean initialLastNSet = false;
 
     /**
      * The list of recently received REMB values, used to compute the average
      * over the last <tt>REMB_AVERAGE_INTERVAL_MS</tt>.
      */
     private final ReceivedRembList receivedRembs
-            = new ReceivedRembList(REMB_AVERAGE_INTERVAL_MS);
+        = new ReceivedRembList(REMB_AVERAGE_INTERVAL_MS);
 
     /**
      * Initializes a new <tt>VideoChannelLastNAdaptor</tt> instance.
+     *
      * @param channel the <tt>VideoChannel</tt> for which the new instance is to
      * serve.
      */
     VideoChannelLastNAdaptor(VideoChannel channel)
     {
         this.channel = channel;
+
         initializeConfiguration();
+    }
+
+    /**
+     * Returns the incoming bitrate in bits per second from all
+     * <tt>VideoChannel</tt>s of the endpoint <tt>endpoint</tt> or
+     * {@link #MIN_ASSUMED_ENDPOINT_BITRATE_BPS} if the actual bitrate is that
+     * limit.
+     *
+     * @param endpoint the endpoint.
+     * @return the incoming bitrate in bits per second from <tt>endpoint</tt>,
+     * or {@link #MIN_ASSUMED_ENDPOINT_BITRATE_BPS} if the actual bitrate is
+     * below that limit.
+     */
+    private long getEndpointBitrate(Endpoint endpoint)
+    {
+        long bitrate = 0;
+
+        for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
+        {
+            if (channel != null && channel instanceof VideoChannel)
+                bitrate += ((VideoChannel) channel).getIncomingBitrate();
+        }
+        return Math.max(bitrate, MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
     }
 
     /**
@@ -194,33 +217,33 @@ public class VideoChannelLastNAdaptor
         {
             if (configurationInitialized)
                 return;
-
             configurationInitialized = true;
 
             ConfigurationService cfg
-                    = ServiceUtils.getService(
-                    channel.getBundleContext(),
-                    ConfigurationService.class);
+                = ServiceUtils.getService(
+                        channel.getBundleContext(),
+                        ConfigurationService.class);
+
             if (cfg != null)
             {
-                INCREASE_LAG_MS = cfg.getInt(INCREASE_LAG_MS_PNAME,
-                                             INCREASE_LAG_MS);
-
-                INCREASE_LAG_MS = cfg.getInt(DECREASE_LAG_MS_PNAME,
-                                             DECREASE_LAG_MS);
-
-                INITIAL_INTERVAL_MS = cfg.getInt(INITIAL_INTERVAL_MS_PNAME,
-                                                 INITIAL_INTERVAL_MS);
+                INCREASE_LAG_MS
+                    = cfg.getInt(INCREASE_LAG_MS_PNAME, INCREASE_LAG_MS);
+                INCREASE_LAG_MS
+                    = cfg.getInt(DECREASE_LAG_MS_PNAME, DECREASE_LAG_MS);
+                INITIAL_INTERVAL_MS
+                    = cfg.getInt(
+                            INITIAL_INTERVAL_MS_PNAME,
+                            INITIAL_INTERVAL_MS);
 
                 String rembMultConstantStr
-                        = cfg.getString(REMB_MULT_CONSTANT_PNAME, null);
+                    = cfg.getString(REMB_MULT_CONSTANT_PNAME, null);
 
                 if (rembMultConstantStr != null)
                 {
                     try
                     {
                         REMB_MULT_CONSTANT
-                                = Double.parseDouble(rembMultConstantStr);
+                            = Double.parseDouble(rembMultConstantStr);
                     }
                     catch (Exception e)
                     {
@@ -229,62 +252,25 @@ public class VideoChannelLastNAdaptor
                 }
 
                 REMB_AVERAGE_INTERVAL_MS
-                        = cfg.getInt(REMB_AVERAGE_INTERVAL_MS_PNAME,
-                                     REMB_AVERAGE_INTERVAL_MS);
-
+                    = cfg.getInt(
+                            REMB_AVERAGE_INTERVAL_MS_PNAME,
+                            REMB_AVERAGE_INTERVAL_MS);
                 MIN_ASSUMED_ENDPOINT_BITRATE_BPS
-                        = cfg.getInt(MIN_ASSUMED_ENDPOINT_BITRATE_BPS_PNAME,
-                                     MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
-
+                    = cfg.getInt(
+                            MIN_ASSUMED_ENDPOINT_BITRATE_BPS_PNAME,
+                            MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
                 MAX_STAY_AT_ZERO_MS
-                        = cfg.getInt(MAX_STAY_AT_ZERO_MS_PNAME,
-                                     MAX_STAY_AT_ZERO_MS);
+                    = cfg.getInt(
+                            MAX_STAY_AT_ZERO_MS_PNAME,
+                            MAX_STAY_AT_ZERO_MS);
             }
         }
     }
 
     /**
-     * Sets the initial value of lastN.
-     *
-     * @param lastN The current value of lastN.
-     * @return the new value of lastN.
-     */
-    private int setInitialLastN(int lastN)
-    {
-        int endpointsCount = 0;
-        List<WeakReference<Endpoint>> lastNEndpoints
-                = channel.getLastNEndpoints();
-        Endpoint thisEndpoint = channel.getEndpoint();
-
-        for (WeakReference<Endpoint> wr : lastNEndpoints)
-        {
-            Endpoint endpoint = wr.get();
-            if (endpoint != null && !endpoint.equals(thisEndpoint))
-                endpointsCount += 1;
-        }
-
-        /*
-         * We update lastN if either:
-         * 1. It is currently disabled (-1)
-         * 2. It is currently more than the number of endpoints (because
-         * otherwise we detect this as a drop in the number of endpoint the
-         * channel can receive and we drop it aggressively)
-         *
-         * In the other cases (0 <= lastN <= endpointsCount) we leave it as it
-         * is because it is a reasonable start point.
-         */
-        if (lastN < 0 || lastN > endpointsCount)
-        {
-            lastN = endpointsCount;
-            channel.setLastN(endpointsCount);
-        }
-
-        return lastN;
-    }
-
-    /**
      * Notifies this instance that an RTCP REMB packet with a bitrate value of
      * <tt>remb</tt> was received on its associated <tt>VideoChannel</tt>.
+     *
      * @param remb the bitrate of the REMB packet received.
      */
     public void receivedREMB(long remb)
@@ -342,18 +328,21 @@ public class VideoChannelLastNAdaptor
         // change very rapidly and we want to avoid changing lastN often.
         // Multiplying with a constant is an experimental option.
         long remainingBandwidth
-                = (long) (receivedRembs.getAverage(now) * REMB_MULT_CONSTANT);
+            = (long) (receivedRembs.getAverage(now) * REMB_MULT_CONSTANT);
 
         // Calculate the biggest number K, such that there are at least K other
         // endpoints in the conference, and the cumulative bitrate of the first
         // K endpoints does not exceed the available bandwidth estimate.
         int numEndpointsThatFitIn = 0;
+
         for (WeakReference<Endpoint> wr : lastNEndpoints)
         {
             Endpoint endpoint = wr.get();
+
             if (endpoint != null && !endpoint.equals(thisEndpoint))
             {
                 long endpointBitrate = getEndpointBitrate(endpoint);
+
                 if (remainingBandwidth >= endpointBitrate)
                 {
                     numEndpointsThatFitIn += 1;
@@ -413,28 +402,43 @@ public class VideoChannelLastNAdaptor
     }
 
     /**
-     * Returns the incoming bitrate in bits per second from all
-     * <tt>VideoChannel</tt>s of the endpoint <tt>endpoint</tt> or
-     * {@link #MIN_ASSUMED_ENDPOINT_BITRATE_BPS} if the actual bitrate is that
-     * limit.
+     * Sets the initial value of lastN.
      *
-     * @param endpoint the endpoint.
-     * @return the incoming bitrate in bits per second from <tt>endpoint</tt>,
-     * or {@link #MIN_ASSUMED_ENDPOINT_BITRATE_BPS} if the actual bitrate is
-     * below that limit.
+     * @param lastN The current value of lastN.
+     * @return the new value of lastN.
      */
-    private long getEndpointBitrate(Endpoint endpoint)
+    private int setInitialLastN(int lastN)
     {
-        long bitrate = 0;
-        for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
+        int endpointsCount = 0;
+        List<WeakReference<Endpoint>> lastNEndpoints
+            = channel.getLastNEndpoints();
+        Endpoint thisEndpoint = channel.getEndpoint();
+
+        for (WeakReference<Endpoint> wr : lastNEndpoints)
         {
-            if (channel != null && channel instanceof VideoChannel)
-            {
-                bitrate += ((VideoChannel) channel).getIncomingBitrate();
-            }
+            Endpoint endpoint = wr.get();
+
+            if (endpoint != null && !endpoint.equals(thisEndpoint))
+                endpointsCount += 1;
         }
 
-        return Math.max(bitrate, MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
+        /*
+         * We update lastN if either:
+         * 1. It is currently disabled (-1)
+         * 2. It is currently more than the number of endpoints (because
+         * otherwise we detect this as a drop in the number of endpoint the
+         * channel can receive and we drop it aggressively)
+         *
+         * In the other cases (0 <= lastN <= endpointsCount) we leave it as it
+         * is because it is a reasonable start point.
+         */
+        if (lastN < 0 || lastN > endpointsCount)
+        {
+            lastN = endpointsCount;
+            channel.setLastN(endpointsCount);
+        }
+
+        return lastN;
     }
 
     /**
@@ -448,15 +452,15 @@ public class VideoChannelLastNAdaptor
     private static class ReceivedRembList
     {
         /**
+         * The period in milliseconds for which values will be saved.
+         */
+        private final long period;
+
+        /**
          * Maps a time of reception to a received value.
          */
         private final Map<Long, Long> receivedRembs
-                = new HashMap<Long, Long>();
-
-        /**
-         * The period in milliseconds for which values will be saved.
-         */
-        private long period;
+            = new HashMap<Long, Long>();
 
         /**
          * The sum of all values in this list.
@@ -466,11 +470,12 @@ public class VideoChannelLastNAdaptor
         /**
          * Used in {@link #clean(long)}.
          */
-        private List<Long> toRemove = new ArrayList<Long>();
+        private final List<Long> toRemove = new ArrayList<Long>();
 
         /**
          * Initializes a new <tt>ReceivedRembList</tt> with the given period in
          * milliseconds.
+         *
          * @param period the period to save values and compute the average for.
          */
         private ReceivedRembList(long period)
@@ -480,6 +485,7 @@ public class VideoChannelLastNAdaptor
 
         /**
          * Adds a received value to this list.
+         *
          * @param time the time of reception.
          * @param rate the value.
          */
@@ -488,6 +494,26 @@ public class VideoChannelLastNAdaptor
             sum += rate;
             receivedRembs.put(time, rate);
             clean(time);
+        }
+
+        /**
+         * Removes values added before <tt>time - period</tt>.
+         */
+        private void clean(long time)
+        {
+            long oldest = time - period;
+
+            toRemove.clear();
+            for (Map.Entry<Long,Long> entry : receivedRembs.entrySet())
+            {
+                long t = entry.getKey();
+
+                if (t < oldest)
+                    toRemove.add(t);
+            }
+
+            for (long t : toRemove)
+                sum -= receivedRembs.remove(t);
         }
 
         /**
@@ -503,30 +529,8 @@ public class VideoChannelLastNAdaptor
             clean(time);
 
             int size = receivedRembs.size();
-            return size == 0 ? 0 : sum/size;
-        }
 
-        /**
-         * Removes values added before <tt>time - period</tt>.
-         */
-        private void clean(long time)
-        {
-            long oldest = time - period;
-            toRemove.clear();
-            for (Map.Entry<Long,Long> entry : receivedRembs.entrySet())
-            {
-                long t = entry.getKey();
-                if (t < oldest)
-                {
-                    toRemove.add(t);
-                }
-            }
-
-            for (long t : toRemove)
-            {
-                sum -= receivedRembs.remove(t);
-            }
+            return (size == 0) ? 0 : (sum / size);
         }
     }
-
 }

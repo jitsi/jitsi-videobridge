@@ -126,14 +126,14 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
         RemoteBitrateEstimator remoteBitrateEstimator
             = ((VideoMediaStream) videoChannel.getStream())
                 .getRemoteBitrateEstimator();
-
-        Collection<Integer> tmp = remoteBitrateEstimator.getSsrcs();
-        List<Integer> ssrcs = new ArrayList<Integer>(tmp);
+        Collection<Integer> ssrcs = remoteBitrateEstimator.getSsrcs();
 
         // TODO(gp) intersect with SSRCs from signaled simulcast layers
         long[] dest = new long[ssrcs.size()];
-        for (int i = 0; i < ssrcs.size(); i++)
-            dest[i] = ssrcs.get(i) & 0xffffffffl;
+        int i = 0;
+
+        for (Integer ssrc : ssrcs)
+            dest[i++] = ssrc & 0xffffffffl;
 
         // Exp & mantissa
         long bitrate = remoteBitrateEstimator.getLatestEstimate();

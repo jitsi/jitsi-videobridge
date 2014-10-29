@@ -55,8 +55,8 @@ public class SimulcastManager
     /**
      * Defines the simulcast substream to receive, if there is no other
      */
-    protected static final Integer SIMULCAST_LAYER_ORDER_INIT
-            = SIMULCAST_LAYER_ORDER_LQ;
+    protected static final int SIMULCAST_LAYER_ORDER_INIT
+        = SIMULCAST_LAYER_ORDER_LQ;
 
     /**
      * The <tt>simulcastLayers</tt> SyncRoot.

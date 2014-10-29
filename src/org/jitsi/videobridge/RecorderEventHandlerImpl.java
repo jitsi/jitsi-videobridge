@@ -64,6 +64,7 @@ class RecorderEventHandlerImpl
         for (Channel c : endpoint.getChannels(MediaType.VIDEO))
         {
             int[] ssrcs = ((RtpChannel) c).getReceiveSSRCs();
+
             if (ssrcs != null && ssrcs.length > 0)
             {
                 ssrc = ssrcs[0] & 0xffffffffL;
