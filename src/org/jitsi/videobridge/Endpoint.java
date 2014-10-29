@@ -191,6 +191,21 @@ public class Endpoint
     }
 
     /**
+     * Gets the number of <tt>RtpChannel</tt>s of this <tt>Endpoint</tt> which,
+     * optionally, are of a specific <tt>MediaType</tt>.
+     *
+     * @param mediaType the <tt>MediaType</tt> of the <tt>RtpChannel</tt>s to
+     * count or <tt>null</tt> to count all <tt>RtpChannel</tt>s of this
+     * <tt>Endpoint</tt>
+     * @return the number of <tt>RtpChannel</tt>s of this <tt>Endpoint</tt>
+     * which, optionally, are of the specified <tt>mediaType</tt>
+     */
+    public int getChannelCount(MediaType mediaType)
+    {
+        return getChannels(mediaType).size();
+    }
+
+    /**
      * Gets a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
      * a particular <tt>MediaType</tt>.
      *
@@ -200,24 +215,33 @@ public class Endpoint
      */
     public List<RtpChannel> getChannels(MediaType mediaType)
     {
+        boolean removed = false;
         List<RtpChannel> channels = new LinkedList<RtpChannel>();
 
         synchronized (this.channels)
         {
-            for (WeakReference<RtpChannel> wr : this.channels)
+            for (Iterator<WeakReference<RtpChannel>> i
+                        = this.channels.iterator();
+                    i.hasNext();)
             {
-                RtpChannel channel = wr.get();
+                RtpChannel c = i.next().get();
 
-                if ((channel != null)
-                        && !channel.isExpired()
-                        && ((mediaType == null)
-                                || mediaType.equals(
-                                        channel.getContent().getMediaType())))
+                if ((c == null) || c.isExpired())
                 {
-                    channels.add(channel);
+                    i.remove();
+                    removed = true;
+                }
+                else if ((mediaType == null)
+                        || mediaType.equals(c.getContent().getMediaType()))
+                {
+                    channels.add(c);
                 }
             }
         }
+
+        if (removed)
+            firePropertyChange(CHANNELS_PROPERTY_NAME, null, null);
+
         return channels;
     }
 

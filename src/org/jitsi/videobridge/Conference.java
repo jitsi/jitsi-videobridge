@@ -418,6 +418,61 @@ public class Conference
     }
 
     /**
+     * Notifies this instance that there was a change in the value of a property
+     * of an <tt>Endpoint</tt> participating in this multipoint conference.
+     *
+     * @param endpoint the <tt>Endpoint</tt> which is the source of the
+     * event/notification and is participating in this multipoint conference
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the source of
+     * the event/notification, the name of the property and the old and new
+     * values of that property
+     */
+    private void endpointPropertyChange(
+            Endpoint endpoint,
+            PropertyChangeEvent ev)
+    {
+        String propertyName = ev.getPropertyName();
+        boolean maybeRemoveEndpoint;
+
+        if (Endpoint.SCTP_CONNECTION_PROPERTY_NAME.equals(propertyName))
+        {
+            // The SctpConnection of/associated with an Endpoint has changed. We
+            // may want to fire initial events over that SctpConnection (as soon
+            // as it is ready).
+            SctpConnection oldValue = (SctpConnection) ev.getOldValue();
+            SctpConnection newValue = (SctpConnection) ev.getNewValue();
+
+            endpointSctpConnectionChanged(endpoint, oldValue, newValue);
+
+            // The SctpConnection may have expired.
+            maybeRemoveEndpoint = (newValue == null);
+        }
+        else if (Endpoint.CHANNELS_PROPERTY_NAME.equals(propertyName))
+        {
+            // An RtpChannel may have expired.
+            maybeRemoveEndpoint = true;
+        }
+        else
+        {
+            maybeRemoveEndpoint = false;
+        }
+        if (maybeRemoveEndpoint)
+        {
+            // It looks like there is a chance that the Endpoint may have
+            // expired. Endpoints are held by this Conference via WeakReferences
+            // but WeakReferences are unpredictable. We have functionality
+            // though which could benefit from discovering that an Endpoint has
+            // expired as quickly as possible (e.g. ConferenceSpeechActivity).
+            // Consequently, try to expedite the removal of expired Endpoints.
+            if (endpoint.getSctpConnection() == null
+                    && endpoint.getChannelCount(null) == 0)
+            {
+                removeEndpoint(endpoint);
+            }
+        }
+    }
+
+    /**
      * Notifies this instance that the <tt>SctpConnection</tt> of/associated
      * with a specific <tt>Endpoint</tt> participating in this
      * <tt>Conference</tt> has changed.
@@ -626,6 +681,25 @@ public class Conference
      */
     public Endpoint getEndpoint(String id)
     {
+        return getEndpoint(id, /* create */ false);
+    }
+
+    /**
+     * Gets an <tt>Endpoint</tt> participating in this <tt>Conference</tt> which
+     * has a specific identifier/ID. If an <tt>Endpoint</tt> participating in
+     * this <tt>Conference</tt> with the specified <tt>id</tt> does not exist at
+     * the time the method is invoked, the method optionally initializes a new
+     * <tt>Endpoint</tt> instance with the specified <tt>id</tt> and adds it to
+     * the list of <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
+     *
+     * @param id the identifier/ID of the <tt>Endpoint</tt> which is to be
+     * returned
+     * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
+     * which has the specified <tt>id</tt> or <tt>null</tt> if there is no such
+     * <tt>Endpoint</tt> and <tt>create</tt> equals <tt>false</tt>
+     */
+    private Endpoint getEndpoint(String id, boolean create)
+    {
         Endpoint endpoint = null;
         boolean changed = false;
 
@@ -645,6 +719,17 @@ public class Conference
                 {
                     endpoint = e;
                 }
+            }
+
+            if (create && endpoint == null)
+            {
+                endpoint = new Endpoint(id);
+                // The propertyChangeListener will weakly reference this
+                // Conference and will unregister itself from the endpoint
+                // sooner or later.
+                endpoint.addPropertyChangeListener(propertyChangeListener);
+                endpoints.add(new WeakReference<Endpoint>(endpoint));
+                changed = true;
             }
         }
 
@@ -865,45 +950,7 @@ public class Conference
      */
     public Endpoint getOrCreateEndpoint(String id)
     {
-        Endpoint endpoint = null;
-        boolean changed = false;
-
-        synchronized (endpoints)
-        {
-            for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
-                    i.hasNext();)
-            {
-                Endpoint e = i.next().get();
-
-                if (e == null)
-                {
-                    i.remove();
-                    changed = true;
-                }
-                else if (e.getID().equals(id))
-                {
-                    endpoint = e;
-                }
-            }
-
-            if (endpoint == null)
-            {
-                endpoint = new Endpoint(id);
-
-                // The propertyChangeListener will weakly reference this
-                // Conference and will unregister itself from the endpoint
-                // sooner or later.
-                endpoint.addPropertyChangeListener(propertyChangeListener);
-
-                endpoints.add(new WeakReference<Endpoint>(endpoint));
-                changed = true;
-            }
-        }
-
-        if (changed)
-            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
-
-        return endpoint;
+        return getEndpoint(id, /* create */ true);
     }
 
     RecorderEventHandler getRecorderEventHandler()
@@ -1121,12 +1168,10 @@ public class Conference
 
         if (isExpired())
         {
-            /*
-             * An expired Conference is to be treated like a null Conference
-             * i.e. it does not handle any PropertyChangeEvents. If possible,
-             * make sure that no further PropertyChangeEvents will be delivered
-             * to this Conference.
-             */
+            // An expired Conference is to be treated like a null Conference
+            // i.e. it does not handle any PropertyChangeEvents. If possible,
+            // make sure that no further PropertyChangeEvents will be delivered
+            // to this Conference.
             if (source instanceof PropertyChangeNotifier)
             {
                 ((PropertyChangeNotifier) source).removePropertyChangeListener(
@@ -1135,50 +1180,51 @@ public class Conference
         }
         else if (source == speechActivity)
         {
-            String propertyName = ev.getPropertyName();
-
-            if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
-                    propertyName))
-            {
-                /*
-                 * The dominant speaker in this Conference has changed. We will
-                 * likely want to notify the Endpoints participating in this
-                 * Conference.
-                 */
-                dominantSpeakerChanged();
-            }
-            else if (ConferenceSpeechActivity.ENDPOINTS_PROPERTY_NAME.equals(
-                    propertyName))
-            {
-                speechActivityEndpointsChanged();
-            }
+            speechActivityPropertyChange(ev);
         }
         else if (source instanceof Endpoint)
         {
-            /*
-             * We care about PropertyChangeEvents from Endpoint but only if the
-             * Endpoint in question is still participating in this Conference.
-             */
+            // We care about PropertyChangeEvents from Endpoint but only if the
+            // Endpoint in question is still participating in this Conference.
             Endpoint endpoint = getEndpoint(((Endpoint) source).getID());
 
             if (endpoint != null)
+                endpointPropertyChange(endpoint, ev);
+        }
+    }
+
+    /**
+     * Removes a specific <tt>Endpoint</tt> instance from this list of
+     * <tt>Endpoint</tt>s participating in this multipoint conference.
+     *
+     * @param endpoint the <tt>Endpoint</tt> to remove
+     * @return <tt>true</tt> if the list of <tt>Endpoint</tt>s participating in
+     * this multipoint conference changed as a result of the execution of the
+     * method; otherwise, <tt>false</tt>
+     */
+    private boolean removeEndpoint(Endpoint endpoint)
+    {
+        boolean removed = false;
+
+        synchronized (endpoints)
+        {
+            for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
+                    i.hasNext();)
             {
-                String propertyName = ev.getPropertyName();
+                Endpoint e = i.next().get();
 
-                if (Endpoint.SCTP_CONNECTION_PROPERTY_NAME.equals(propertyName))
+                if (e == null || e == endpoint)
                 {
-                    /*
-                     * The SctpConnection of/associated with an Endpoint has
-                     * changed. We may want to fire initial events over that
-                     * SctpConnection (as soon as it is ready).
-                     */
-                    SctpConnection oldValue = (SctpConnection) ev.getOldValue();
-                    SctpConnection newValue = (SctpConnection) ev.getNewValue();
-
-                    endpointSctpConnectionChanged(endpoint, oldValue, newValue);
+                    i.remove();
+                    removed = true;
                 }
             }
         }
+
+        if (removed)
+            firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+
+        return removed;
     }
 
     /**
@@ -1429,6 +1475,33 @@ public class Conference
                     content.askForKeyframes(endpointsToAskForKeyframes);
                 }
             }
+        }
+    }
+
+    /**
+     * Notifies this instance that there was a change in the value of a property
+     * of {@link #speechActivity}.
+     *
+     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the source of
+     * the event/notification, the name of the property and the old and new
+     * values of that property
+     */
+    private void speechActivityPropertyChange(PropertyChangeEvent ev)
+    {
+        String propertyName = ev.getPropertyName();
+
+        if (ConferenceSpeechActivity.DOMINANT_ENDPOINT_PROPERTY_NAME.equals(
+                propertyName))
+        {
+            // The dominant speaker in this Conference has changed. We will
+            // likely want to notify the Endpoints participating in this
+            // Conference.
+            dominantSpeakerChanged();
+        }
+        else if (ConferenceSpeechActivity.ENDPOINTS_PROPERTY_NAME.equals(
+                propertyName))
+        {
+            speechActivityEndpointsChanged();
         }
     }
 
