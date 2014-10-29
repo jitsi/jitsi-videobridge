@@ -98,9 +98,11 @@ class SimulcastReceiver
 
     /**
      * Defines how many packets of the next layer must be seen before switching
-     * to that layer.
+     * to that layer. This value is appropriate for the base layer and needs to
+     * be adjusted for use with upper layers, if one wants to achieve
+     * (approximately) the same timeout for layers of different order.
      */
-    private static final int MAX_NEXT_SEEN = 250; // < 5 seconds approx.
+    private static final int MAX_NEXT_SEEN = 125;
 
     /**
      * Helper object that <tt>SimulcastReceiver</tt> instances use to build
@@ -161,10 +163,10 @@ class SimulcastReceiver
 
     private void maybeForgetNext()
     {
-        SimulcastLayer next = getNext();
-        if (next != null && !next.isStreaming())
+        synchronized (receiveLayersSyncRoot)
         {
-            synchronized (receiveLayersSyncRoot)
+            SimulcastLayer next = getNext();
+            if (next != null && !next.isStreaming())
             {
                 this.weakNext = null;
                 this.seenNext = 0;
@@ -177,17 +179,29 @@ class SimulcastReceiver
      */
     private void maybeSwitchToNext()
     {
-        SimulcastLayer next = getNext();
-
-        // If there is a previous layer to timeout, and we have received
-        // "enough" packets from the current layer, expire the previous
-        // layer.
-        if (next != null)
+        synchronized (receiveLayersSyncRoot)
         {
-            synchronized (receiveLayersSyncRoot)
+            SimulcastLayer next = getNext();
+
+            // If there is a previous layer to timeout, and we have received
+            // "enough" packets from the current layer, expire the previous
+            // layer.
+            if (next != null)
             {
                 seenNext++;
-                if (seenNext > MAX_NEXT_SEEN)
+
+                // NOTE(gp) not unexpectedly we have observed that 250 high
+                // quality packets make 5 seconds to arrive (approx), then 250
+                // low quality packets will make 10 seconds to arrive (approx),
+                // If we don't take that fact into account, then the immediate
+                // lower layer makes twice as much to expire.
+                //
+                // Assuming that each upper layer doubles the number of packets
+                // it sends in a given interval, we normalize the MAX_NEXT_SEEN
+                // to reflect the different relative rates of incoming packets
+                // of the different simulcast layers we receive.
+
+                if (seenNext > MAX_NEXT_SEEN * Math.pow(2, next.getOrder()))
                 {
                     this.sendSimulcastLayersChangedEvent(next);
 
@@ -340,42 +354,47 @@ class SimulcastReceiver
             return;
         }
 
-        SimulcastLayer current = getCurrent();
-
-        // Do NOT switch to an already receiving layer.
-        if (current == next)
+        synchronized (receiveLayersSyncRoot)
         {
-            if (logger.isDebugEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(4);
-                map.put("self", getSelf());
-                map.put("peer", getPeer());
-                map.put("current", current);
-                map.put("next", next);
-                StringCompiler sc = new StringCompiler(map);
+            SimulcastLayer current = getCurrent();
 
-                logger.debug(sc.c("The simulcast receiver of {self.id} for " +
-                        "{peer.id} already receives layer {next.order} " +
-                        "({next.primarySSRC})."));
+            // Do NOT switch to an already receiving layer.
+            if (current == next)
+            {
+                // and forget "previous" next, we're sticking with current.
+                this.weakNext = null;
+                this.seenNext = 0;
+
+                if (logger.isDebugEnabled())
+                {
+                    Map<String, Object> map = new HashMap<String, Object>(4);
+                    map.put("self", getSelf());
+                    map.put("peer", getPeer());
+                    map.put("current", current);
+                    map.put("next", next);
+                    StringCompiler sc = new StringCompiler(map);
+
+                    logger.debug(sc.c("The simulcast receiver of {self.id} for " +
+                            "{peer.id} already receives layer {next.order} " +
+                            "({next.primarySSRC})."));
+                }
+
+                return;
             }
-
-            return;
-        }
-        else
-        {
-            // If current has changed, request an FIR, notify the parent
-            // endpoint and change the receiving streams.
-
-            if (options.isHardSwitch() && next != getNext())
+            else
             {
-                // XXX(gp) run these in the event dispatcher thread?
+                // If current has changed, request an FIR, notify the parent
+                // endpoint and change the receiving streams.
 
-                // Send FIR requests first.
-                this.askForKeyframe(next);
-            }
+                if (options.isHardSwitch() && next != getNext())
+                {
+                    // XXX(gp) run these in the event dispatcher thread?
 
-            synchronized (receiveLayersSyncRoot)
-            {
+                    // Send FIR requests first.
+                    this.askForKeyframe(next);
+                }
+
+
                 if (options.isUrgent() || current == null)
                 {
                     // Receiving simulcast layers have brutally changed. Create
