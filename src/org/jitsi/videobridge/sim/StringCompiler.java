@@ -15,7 +15,7 @@ import java.util.regex.*;
 /**
 * Created by gp on 27/10/14.
 */
-class StringCompiler
+public class StringCompiler
 {
     private final Map<String, Object> map;
 

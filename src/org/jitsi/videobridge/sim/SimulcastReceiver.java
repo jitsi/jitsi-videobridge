@@ -75,6 +75,12 @@ class SimulcastReceiver
     private final WeakReference<SimulcastManager> weakPeerSM;
 
     /**
+     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that overrides
+     * the layer that is currently being received.
+     */
+    private WeakReference<SimulcastLayer> weakOverride;
+
+    /**
      * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that is
      * currently being received.
      */
@@ -110,6 +116,18 @@ class SimulcastReceiver
      */
     private final static SimulcastMessagesMapper mapper
             = new SimulcastMessagesMapper();
+
+    /**
+     * Gets the <tt>SimulcastLayer</tt> that overrides the layer that is
+     * currently being received.
+     *
+     * @return
+     */
+    private SimulcastLayer getOverride()
+    {
+        WeakReference<SimulcastLayer> wr = this.weakOverride;
+        return (wr != null) ? wr.get() : null;
+    }
 
     /**
      * Gets the <tt>SimulcastLayer</tt> that is currently being received.
@@ -158,6 +176,12 @@ class SimulcastReceiver
             }
         }
 
+        SimulcastLayer override = getOverride();
+        if (override != null)
+        {
+            accept = override.accept(ssrc);
+        }
+
         return accept;
     }
 
@@ -203,7 +227,24 @@ class SimulcastReceiver
 
                 if (seenNext > MAX_NEXT_SEEN * Math.pow(2, next.getOrder()))
                 {
-                    this.sendSimulcastLayersChangedEvent(next);
+                    if (getOverride() == null)
+                    {
+                        this.sendSimulcastLayersChangedEvent(next);
+                    }
+                    else
+                    {
+                        if (logger.isDebugEnabled())
+                        {
+                            Map<String, Object> map = new HashMap<String, Object>(2);
+                            map.put("self", getSelf());
+                            map.put("peer", getPeer());
+                            StringCompiler sc = new StringCompiler(map);
+                            logger.debug(sc.c("The simulcast receiver of " +
+                                    "{self.id} for {peer.id} skipped a " +
+                                    "changed event because an override is " +
+                                    "set."));
+                        }
+                    }
 
                     this.weakCurrent = weakNext;
                     this.weakNext = null;
@@ -301,6 +342,15 @@ class SimulcastReceiver
      */
     protected void configure(SimulcastReceiverOptions options)
     {
+        synchronized (receiveLayersSyncRoot)
+        {
+            this.maybeConfigureOverride(options);
+            this.maybeConfigureNext(options);
+        }
+    }
+
+    private void maybeConfigureNext(SimulcastReceiverOptions options)
+    {
         if (options == null)
         {
             if (logger.isWarnEnabled())
@@ -309,13 +359,18 @@ class SimulcastReceiver
                 map.put("self", getSelf());
                 StringCompiler sc = new StringCompiler(map);
 
-                logger.warn(sc.c("{self.id} cannot set receiving simulcast " +
-                        "options because the parameter is null."));
+                logger.warn(sc.c("{self.id} cannot configure next simulcast " +
+                        "layer because the parameter is null."));
             }
 
             return;
         }
 
+        Integer nextOrder = options.getNextOrder();
+        if (nextOrder == null)
+        {
+            return;
+        }
         SimulcastManager peerSM = this.getPeerSM();
 
         if (peerSM == null || !peerSM.hasLayers())
@@ -323,17 +378,17 @@ class SimulcastReceiver
             if (logger.isWarnEnabled())
             {
                 Map<String, Object> map = new HashMap<String, Object>(1);
-                map.put("self", getSelf());
+                map.put("peer", getPeer());
                 StringCompiler sc = new StringCompiler(map);
 
-                logger.warn(sc.c("{self.id} hasn't any simulcast layers."));
+                logger.warn(sc.c("{peer.id} doesn't have any simulcast layers."));
             }
 
             return;
         }
 
         SimulcastLayer next
-                = peerSM.getSimulcastLayer(options.getTargetOrder());
+                = peerSM.getSimulcastLayer(options.getNextOrder());
 
         // Do NOT switch to hq if it's not streaming.
         if (next == null
@@ -391,7 +446,25 @@ class SimulcastReceiver
                     // XXX(gp) run these in the event dispatcher thread?
 
                     // Send FIR requests first.
-                    this.askForKeyframe(next);
+                    if (getOverride() == null)
+                    {
+                        this.askForKeyframe(next);
+                    }
+                    else
+                    {
+                        if (logger.isDebugEnabled())
+                        {
+                            Map<String, Object> map
+                                    = new HashMap<String, Object>(2);
+                            map.put("self", getSelf());
+                            map.put("peer", getPeer());
+                            StringCompiler sc = new StringCompiler(map);
+                            logger.debug(sc.c("The simulcast receiver of " +
+                                    "{self.id} for {peer.id} skipped a key " +
+                                    "frame request because an override is " +
+                                    "set."));
+                        }
+                    }
                 }
 
 
@@ -400,7 +473,21 @@ class SimulcastReceiver
                     // Receiving simulcast layers have brutally changed. Create
                     // and send an event through data channels to the receiving
                     // endpoint.
-                    this.sendSimulcastLayersChangedEvent(next);
+                    if (getOverride() == null)
+                    {
+                        this.sendSimulcastLayersChangedEvent(next);
+                    }
+                    else
+                    {
+                        Map<String, Object> map = new HashMap<String, Object>(2);
+                        map.put("self", getSelf());
+                        map.put("peer", getPeer());
+                        StringCompiler sc = new StringCompiler(map);
+                        logger.debug(sc.c("The simulcast receiver of " +
+                                "{self.id} for {peer.id} skipped a " +
+                                "changed event because an override is " +
+                                "set."));
+                    }
 
                     this.weakCurrent = new WeakReference<SimulcastLayer>(next);
                     this.weakNext = null;
@@ -430,7 +517,21 @@ class SimulcastReceiver
                 {
                     // Receiving simulcast layers are changing, create and send
                     // an event through data channels to the receiving endpoint.
-                    this.sendSimulcastLayersChangingEvent(next);
+                    if (getOverride() == null)
+                    {
+                        this.sendSimulcastLayersChangingEvent(next);
+                    }
+                    else
+                    {
+                        Map<String, Object> map = new HashMap<String, Object>(2);
+                        map.put("self", getSelf());
+                        map.put("peer", getPeer());
+                        StringCompiler sc = new StringCompiler(map);
+                        logger.debug(sc.c("The simulcast receiver of " +
+                                "{self.id} for {peer.id} skipped a " +
+                                "changing event because an override is " +
+                                "set."));
+                    }
 
                     // If the layer we receive has changed (hasn't dropped),
                     // then continue streaming the previous layer for a short
@@ -458,7 +559,105 @@ class SimulcastReceiver
                 }
             }
         }
+    }
 
+    private void maybeConfigureOverride(SimulcastReceiverOptions options)
+    {
+        if (options == null)
+        {
+            if (logger.isWarnEnabled())
+            {
+                Map<String, Object> map = new HashMap<String, Object>(1);
+                map.put("self", getSelf());
+                StringCompiler sc = new StringCompiler(map);
+
+                logger.warn(sc.c("{self.id} cannot configure override" +
+                        " simulcast layer because the parameter is null."));
+            }
+
+            return;
+        }
+
+        Integer overrideOrder = options.getOverrideOrder();
+        if (overrideOrder == null)
+        {
+            return;
+        }
+
+        SimulcastManager peerSM = this.getPeerSM();
+
+        if (peerSM == null || !peerSM.hasLayers())
+        {
+            if (logger.isWarnEnabled())
+            {
+                Map<String, Object> map = new HashMap<String, Object>(1);
+                map.put("peer", getPeer());
+                StringCompiler sc = new StringCompiler(map);
+
+                logger.warn(sc.c("{peer.id} doesn't have any simulcast layers."));
+            }
+
+            return;
+        }
+
+        if (overrideOrder == SimulcastManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
+        {
+            if (logger.isDebugEnabled())
+            {
+                Map<String, Object> map = new HashMap<String, Object>(2);
+                map.put("self", getSelf());
+                map.put("peer", getPeer());
+                StringCompiler sc = new StringCompiler(map);
+
+                logger.debug(sc.c("The simulcast receiver of {self.id} " +
+                        "for {peer.id} is no longer overriding the " +
+                        "receiving layer."));
+            }
+
+            synchronized (receiveLayersSyncRoot)
+            {
+                this.weakOverride = null;
+                SimulcastLayer current = getCurrent();
+                if (current != null)
+                {
+                    this.askForKeyframe(current);
+                    this.sendSimulcastLayersChangedEvent(current);
+                }
+            }
+        }
+        else
+        {
+            if (peerSM != null)
+            {
+                SimulcastLayer override = peerSM.getSimulcastLayer(overrideOrder);
+                if (override != null)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        Map<String, Object> map = new HashMap<String, Object>(3);
+                        map.put("self", getSelf());
+                        map.put("peer", getPeer());
+                        map.put("override", override);
+                        StringCompiler sc = new StringCompiler(map);
+
+                        logger.debug(sc.c("The simulcast receiver of " +
+                                "{self.id} for {peer.id} is now configured " +
+                                "to override the receiving layer with the " +
+                                "{override.order}-order layer " +
+                                "{override.primarySSRC}."));
+                    }
+
+                    synchronized (receiveLayersSyncRoot)
+                    {
+                        this.weakOverride
+                                = new WeakReference<SimulcastLayer>(override);
+                        this.askForKeyframe(override);
+                        this.sendSimulcastLayersChangedEvent(override);
+                    }
+                }
+            }
+
+        }
     }
 
     private void askForKeyframe(SimulcastLayer layer)
@@ -679,7 +878,7 @@ class SimulcastReceiver
 
             SimulcastReceiverOptions options = new SimulcastReceiverOptions();
 
-            options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
+            options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
             options.setHardSwitch(true);
             options.setUrgent(true);
 
@@ -698,10 +897,10 @@ class SimulcastReceiver
                 SimulcastReceiverOptions options
                         = new SimulcastReceiverOptions();
 
-                options.setTargetOrder(
+                options.setNextOrder(
                         SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
-                options.setHardSwitch(false);
-                options.setUrgent(false);
+                // options.setHardSwitch(false);
+                // options.setUrgent(false);
 
                 configure(options);
             }
@@ -769,9 +968,9 @@ class SimulcastReceiver
         {
             SimulcastReceiverOptions options = new SimulcastReceiverOptions();
 
-            options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
+            options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
             options.setHardSwitch(true);
-            options.setUrgent(false);
+            // options.setUrgent(false);
 
             configure(options);
 
@@ -798,9 +997,9 @@ class SimulcastReceiver
         {
             SimulcastReceiverOptions options = new SimulcastReceiverOptions();
 
-            options.setTargetOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
+            options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
             options.setHardSwitch(true);
-            options.setUrgent(false);
+            // options.setUrgent(false);
 
             configure(options);
 
@@ -1028,5 +1227,40 @@ class SimulcastReceiver
                 }
             }
         }
+    }
+
+    public long getIncomingBitrate(boolean noOverride)
+    {
+        long bitrate = 0;
+
+        if (!noOverride)
+        {
+            synchronized (receiveLayersSyncRoot)
+            {
+                SimulcastLayer override = getOverride();
+                if (override != null)
+                {
+                    bitrate = override.getBitrate();
+                }
+                else
+                {
+                    SimulcastLayer current = getCurrent();
+                    if (current != null)
+                    {
+                        bitrate = current.getBitrate();
+                    }
+                }
+            }
+        }
+        else
+        {
+            SimulcastLayer current = getCurrent();
+            if (current != null)
+            {
+                bitrate = current.getBitrate();
+            }
+        }
+
+        return bitrate;
     }
 }

@@ -13,6 +13,7 @@ import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.videobridge.sim.*;
 
 /**
  * Implements the "adaptive lastN" feature for a specific <tt>VideoChannel</tt>.
@@ -30,6 +31,7 @@ import org.jitsi.service.neomedia.*;
  * </p>
  *
  * @author Boris Grozev
+ * @author George Politis
  */
 public class VideoChannelLastNAdaptor
 {
@@ -93,6 +95,13 @@ public class VideoChannelLastNAdaptor
     private static final String MAX_STAY_AT_ZERO_MS_PNAME
         = "org.jitsi.videobridge.VideoChannelLastNAdaptor.MAX_STAY_AT_ZERO_MS";
 
+    /**
+     * The minimum number of endpoints that may fit in the adaptive last n
+     * window before switching to low quality for all the receiving
+     * participants.
+     */
+    private static final int MIN_ENDPOINTS_BEFORE_HQ_DROP = 2;
+    
     /**
      * The minimum bitrate in bits per second to assume for an endpoint.
      */
@@ -166,6 +175,13 @@ public class VideoChannelLastNAdaptor
     private long lastNonZeroLastN = -1;
 
     /**
+     * The <tt>Logger</tt> used by the <tt>VideoChannelLastNAdaptor</tt> class
+     * and its instances to print debug information.
+     */
+    private static final org.jitsi.util.Logger logger
+            = org.jitsi.util.Logger.getLogger(VideoChannelLastNAdaptor.class);
+    
+    /**
      * The list of recently received REMB values, used to compute the average
      * over the last <tt>REMB_AVERAGE_INTERVAL_MS</tt>.
      */
@@ -198,12 +214,24 @@ public class VideoChannelLastNAdaptor
      */
     private long getEndpointBitrate(Endpoint endpoint)
     {
+        SimulcastManager mySM = this.channel.getSimulcastManager();
         long bitrate = 0;
 
         for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
         {
             if (channel != null && channel instanceof VideoChannel)
-                bitrate += ((VideoChannel) channel).getIncomingBitrate();
+            {
+                VideoChannel vc = (VideoChannel) channel;
+                SimulcastManager peerSM = vc.getSimulcastManager();
+                if (mySM != null && peerSM != null && peerSM.hasLayers())
+                {
+                    bitrate += mySM.getIncomingBitrate(peerSM, true);
+                }
+                else
+                {
+                    bitrate += ((VideoChannel) channel).getIncomingBitrate();
+                }
+            }
         }
         return Math.max(bitrate, MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
     }
@@ -267,6 +295,12 @@ public class VideoChannelLastNAdaptor
         }
     }
 
+    // TODO(gp) remove this temporary interface
+    public interface Func<TResult>
+    {
+        TResult call();
+    }
+    
     /**
      * Notifies this instance that an RTCP REMB packet with a bitrate value of
      * <tt>remb</tt> was received on its associated <tt>VideoChannel</tt>.
@@ -276,7 +310,7 @@ public class VideoChannelLastNAdaptor
     public void receivedREMB(long remb)
     {
         long now = System.currentTimeMillis();
-        Endpoint thisEndpoint = channel.getEndpoint();
+        final Endpoint thisEndpoint = channel.getEndpoint();
 
         // The current value of lastN
         int lastN = channel.getLastN();
@@ -288,7 +322,7 @@ public class VideoChannelLastNAdaptor
 
         // The ordered (by speech activity) list of endpoints currently in the
         // conference.
-        List<WeakReference<Endpoint>> lastNEndpoints
+        final List<WeakReference<Endpoint>> lastNEndpoints
                 = channel.getLastNEndpoints();
 
         if (firstRemb == -1)
@@ -327,33 +361,45 @@ public class VideoChannelLastNAdaptor
         // do this in order to reduce the fluctuations, because REMBs often
         // change very rapidly and we want to avoid changing lastN often.
         // Multiplying with a constant is an experimental option.
-        long remainingBandwidth
-            = (long) (receivedRembs.getAverage(now) * REMB_MULT_CONSTANT);
+        final long availableBandwidth
+                = (long) (receivedRembs.getAverage(now) * REMB_MULT_CONSTANT);
 
         // Calculate the biggest number K, such that there are at least K other
         // endpoints in the conference, and the cumulative bitrate of the first
         // K endpoints does not exceed the available bandwidth estimate.
-        int numEndpointsThatFitIn = 0;
-
-        for (WeakReference<Endpoint> wr : lastNEndpoints)
+        Func<Integer> calcNumEndpointsThatFitIn = new Func<Integer>()
         {
-            Endpoint endpoint = wr.get();
-
-            if (endpoint != null && !endpoint.equals(thisEndpoint))
+            @Override
+            public Integer call()
             {
-                long endpointBitrate = getEndpointBitrate(endpoint);
+                long remainingBandwidth = availableBandwidth;
+                int numEndpointsThatFitIn = 0;
 
-                if (remainingBandwidth >= endpointBitrate)
+                for (WeakReference<Endpoint> wr : lastNEndpoints)
                 {
-                    numEndpointsThatFitIn += 1;
-                    remainingBandwidth -= endpointBitrate;
+                    Endpoint endpoint = wr.get();
+
+                    if (endpoint != null && !endpoint.equals(thisEndpoint))
+                    {
+                        long endpointBitrate = getEndpointBitrate(endpoint);
+
+                        if (remainingBandwidth >= endpointBitrate)
+                        {
+                            numEndpointsThatFitIn += 1;
+                            remainingBandwidth -= endpointBitrate;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
                 }
-                else
-                {
-                    break;
-                }
+
+                return numEndpointsThatFitIn;
             }
-        }
+        };
+
+        int numEndpointsThatFitIn = calcNumEndpointsThatFitIn.call();
 
         if (numEndpointsThatFitIn < lastN)
         {
@@ -367,12 +413,68 @@ public class VideoChannelLastNAdaptor
                 // Avoid quick "consecutive" decreases
                 lastNonDecrease = now;
 
-                // Decrease aggressively
-                int newn = Math.min(numEndpointsThatFitIn - 1, lastN / 2);
+                // If there isn't enough bandwidth to fit one high quality from
+                // the selected participant and one low quality from the peer,
+                // then drop the high quality stream from the selected
+                // participant before completely dropping the stream of the
+                // other peer.
+                if (numEndpointsThatFitIn <= MIN_ENDPOINTS_BEFORE_HQ_DROP)
+                {
+                    SimulcastManager mySM = this.channel.getSimulcastManager();
+                    if (mySM != null)
+                    {
+                        if (mySM.override(
+                                SimulcastManager.SIMULCAST_LAYER_ORDER_LQ))
+                        {
 
-                if (newn < 0)
-                    newn = 0;
-                channel.setLastN(newn);
+                            if (logger.isDebugEnabled())
+                            {
+                                Map<String, Object> map
+                                        = new HashMap<String, Object>(2);
+                                map.put("self", thisEndpoint);
+                                map.put("numEndpointsThatFitIn",
+                                        numEndpointsThatFitIn);
+                                StringCompiler sc = new StringCompiler(map);
+
+                                logger.debug(sc.c("The uplink between the " +
+                                        "bridge and {self.id} can only " +
+                                        "support {numEndpointsThatFitIn}. " +
+                                        "Make sure we only stream low " +
+                                        "quality layers."));
+                            }
+
+
+                            numEndpointsThatFitIn
+                                    = calcNumEndpointsThatFitIn.call();
+                        }
+                    }
+                }
+
+                if (numEndpointsThatFitIn < lastN)
+                {
+                    // Decrease aggressively
+                    int newn = Math.min(numEndpointsThatFitIn - 1, lastN / 2);
+
+                    if (newn < 0)
+                        newn = 0;
+
+                    if (logger.isDebugEnabled())
+                    {
+                        Map<String, Object> map
+                                = new HashMap<String, Object>(3);
+                        map.put("self", thisEndpoint);
+                        map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
+                        map.put("newN", newn);
+                        StringCompiler sc = new StringCompiler(map);
+
+                        logger.debug(sc.c("The uplink between the bridge " +
+                                "and {self.id} can only support " +
+                                "{numEndpointsThatFitIn}. Reducing lastN to " +
+                                "{newN}."));
+                    }
+
+                    channel.setLastN(newn);
+                }
             }
         }
         else if (numEndpointsThatFitIn == lastN)
@@ -395,8 +497,58 @@ public class VideoChannelLastNAdaptor
                 // Avoid quick "consecutive" increases
                 lastNonIncrease = now;
 
-                // Increase conservatively, by 1
-                channel.setLastN(lastN + 1);
+                // If there is enough bandwidth to fit one high quality
+                // from the selected participant and one low quality from the
+                // peer, then remove the override.
+                if (numEndpointsThatFitIn > MIN_ENDPOINTS_BEFORE_HQ_DROP)
+                {
+                    SimulcastManager mySM = this.channel.getSimulcastManager();
+                    if (mySM != null)
+                    {
+                        if (mySM.override(SimulcastManager
+                                .SIMULCAST_LAYER_ORDER_NO_OVERRIDE))
+                        {
+                            if (logger.isDebugEnabled())
+                            {
+                                Map<String, Object> map
+                                        = new HashMap<String, Object>(2);
+                                map.put("self", thisEndpoint);
+                                map.put("numEndpointsThatFitIn",
+                                        numEndpointsThatFitIn);
+                                StringCompiler sc = new StringCompiler(map);
+
+                                logger.debug(sc.c("The uplink between the " +
+                                        "bridge and {self.id} can support " +
+                                        "{numEndpointsThatFitIn}. Allow " +
+                                        "streaming of high quality layers."));
+                            }
+
+                            numEndpointsThatFitIn
+                                    = calcNumEndpointsThatFitIn.call();
+                        }
+                    }
+                }
+
+                if (numEndpointsThatFitIn > lastN)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        Map<String, Object> map
+                                = new HashMap<String, Object>(3);
+                        map.put("self", thisEndpoint);
+                        map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
+                        map.put("newN", lastN + 1);
+                        StringCompiler sc = new StringCompiler(map);
+
+                        logger.debug(sc.c("The uplink between the bridge " +
+                                "and {self.id} can support " +
+                                "{numEndpointsThatFitIn}. Increasing lastN " +
+                                "to {newN}."));
+                    }
+
+                    // Increase conservatively, by 1
+                    channel.setLastN(lastN + 1);
+                }
             }
         }
     }

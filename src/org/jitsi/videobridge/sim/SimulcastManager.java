@@ -40,12 +40,17 @@ public class SimulcastManager
     /**
      * Base layer quality order.
      */
-    protected static final int SIMULCAST_LAYER_ORDER_LQ = 0;
+    public static final int SIMULCAST_LAYER_ORDER_LQ = 0;
 
     /**
      * High quality layer order.
      */
     protected static final int SIMULCAST_LAYER_ORDER_HQ = 1;
+
+    /**
+     * The order when there's no override layer.
+     */
+    public static final int SIMULCAST_LAYER_ORDER_NO_OVERRIDE = -1;
 
     /**
      * The associated <tt>VideoChannel</tt> of this simulcast manager.
@@ -83,6 +88,14 @@ public class SimulcastManager
      */
     private final Map<SimulcastManager, SimulcastReceiver> simulcastReceivers
             = new WeakHashMap<SimulcastManager, SimulcastReceiver>();
+
+    private final Object simulcastReceiversSyncRoot = new Object();
+
+    /**
+     * The <tt>SimulcastReceiverOptions</tt> to use when creating a new
+     * <tt>SimulcastReceiver</tt>.
+     */
+    private final SimulcastReceiverOptions initOptions;
 
     /**
      * Notifies this instance that a <tt>DatagramPacket</tt> packet received on
@@ -161,6 +174,15 @@ public class SimulcastManager
     public SimulcastManager(VideoChannel videoChannel)
     {
         this.videoChannel = videoChannel;
+
+        SimulcastReceiverOptions options
+                = new SimulcastReceiverOptions();
+
+        options.setNextOrder(SIMULCAST_LAYER_ORDER_LQ);
+        // options.setUrgent(false);
+        // options.setHardSwitch(false);
+
+        initOptions = options;
     }
 
     /**
@@ -231,7 +253,7 @@ public class SimulcastManager
      *
      * @return
      */
-    protected boolean hasLayers()
+    public boolean hasLayers()
     {
         synchronized (simulcastLayersSyncRoot)
         {
@@ -252,9 +274,9 @@ public class SimulcastManager
     {
         SimulcastReceiver sr = null;
 
-        if (peerSM != null)
+        if (peerSM != null && peerSM.hasLayers())
         {
-            synchronized (simulcastReceivers)
+            synchronized (simulcastReceiversSyncRoot)
             {
                 if (!simulcastReceivers.containsKey(peerSM))
                 {
@@ -262,14 +284,7 @@ public class SimulcastManager
                     sr = new SimulcastReceiver(this, peerSM);
 
                     // Initialize the receiver.
-                    SimulcastReceiverOptions options
-                            = new SimulcastReceiverOptions();
-
-                    options.setTargetOrder(SIMULCAST_LAYER_ORDER_LQ);
-                    options.setHardSwitch(false);
-                    options.setUrgent(false);
-
-                    sr.configure(options);
+                    sr.configure(initOptions);
 
                     simulcastReceivers.put(peerSM, sr);
                 }
@@ -374,5 +389,58 @@ public class SimulcastManager
         }
 
         return next;
+    }
+
+    /**
+     * .
+     * @param peerSM
+     * @return
+     */
+    public long getIncomingBitrate(SimulcastManager peerSM, boolean noOverride)
+    {
+        long bitrate = 0;
+
+        if (peerSM == null || !peerSM.hasLayers())
+        {
+            return bitrate;
+        }
+
+        SimulcastReceiver sr = getOrCreateSimulcastReceiver(peerSM);
+        if (sr != null)
+        {
+            bitrate = sr.getIncomingBitrate(noOverride);
+        }
+
+        return bitrate;
+    }
+
+    public boolean override(int overrideOrder)
+    {
+        synchronized (simulcastReceiversSyncRoot)
+        {
+            if (initOptions.getOverrideOrder() == null ||
+                    initOptions.getOverrideOrder().intValue() != overrideOrder)
+            {
+                initOptions.setOverrideOrder(overrideOrder);
+
+                if (!simulcastReceivers.isEmpty())
+                {
+                    SimulcastReceiverOptions options
+                            = new SimulcastReceiverOptions();
+
+                    options.setOverrideOrder(overrideOrder);
+                    for (SimulcastReceiver sr : simulcastReceivers.values())
+                    {
+                        sr.configure(options);
+                    }
+                }
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
 }
