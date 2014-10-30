@@ -6,8 +6,10 @@
  */
 package org.jitsi.videobridge.sim;
 
+import java.net.*;
 import java.util.*;
 
+import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 
@@ -19,6 +21,20 @@ public class SimulcastLayer
         implements Comparable<SimulcastLayer>
 {
     private static final int MAX_SEEN_BASE = 25;
+
+    /**
+     * The length in milliseconds of the interval for which the average incoming
+     * bitrate for this video channel will be computed and made available
+     * through {@link #getBitrate}.
+     */
+    private static final int INCOMING_BITRATE_INTERVAL_MS = 5000;
+
+    /**
+     * The instance which will be computing the incoming bitrate for this
+     * <tt>SimulcastLayer</tt>.
+     */
+    private final RateStatistics rateStatistics
+            = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
 
     public SimulcastManager getSimulcastManager()
     {
@@ -172,5 +188,23 @@ public class SimulcastLayer
             }).start();
         }
 
+    }
+
+    /**
+     * The length in milliseconds of the interval for which the average incoming
+     * bitrate for this video channel will be computed and made available
+     * through {@link #getBitrate}.
+     */
+    public long getBitrate()
+    {
+        return rateStatistics.getRate(System.currentTimeMillis());
+    }
+
+    public void acceptedDataInputStreamDatagramPacket(DatagramPacket p)
+    {
+        if (p != null)
+        {
+            rateStatistics.update(p.getLength(), System.currentTimeMillis());
+        }
     }
 }

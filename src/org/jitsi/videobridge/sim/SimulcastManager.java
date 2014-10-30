@@ -132,6 +132,8 @@ public class SimulcastManager
                 return;
             }
 
+            acceptedLayer.acceptedDataInputStreamDatagramPacket(p);
+
             // NOTE(gp) we expect the base layer to be always on, so we never
             // touch it or starve it.
 
