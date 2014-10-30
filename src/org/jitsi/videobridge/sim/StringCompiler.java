@@ -74,33 +74,47 @@ class StringCompiler
             if (i == 0)
             {
                 // Init.
-                obj = map.get(identifier);
-            }
-            else
-            {
-                // Decent the object graph.
-                Class<?> c = obj.getClass();
-                Field f;
-
-                try
+                if (map.containsKey(identifier))
                 {
-                    f = c.getDeclaredField(identifier);
+                    obj = map.get(identifier);
                 }
-                catch (NoSuchFieldException e)
+                else
                 {
                     break;
                 }
-
-                if (!f.isAccessible())
+            }
+            else
+            {
+                if (obj != null)
                 {
-                    f.setAccessible(true);
-                }
+                    // Decent the object graph.
+                    Class<?> c = obj.getClass();
+                    Field f;
 
-                try
-                {
-                    obj = f.get(obj);
+                    try
+                    {
+                        f = c.getDeclaredField(identifier);
+                    }
+                    catch (NoSuchFieldException e)
+                    {
+                        break;
+                    }
+
+                    if (!f.isAccessible())
+                    {
+                        f.setAccessible(true);
+                    }
+
+                    try
+                    {
+                        obj = f.get(obj);
+                    }
+                    catch (IllegalAccessException e)
+                    {
+                        break;
+                    }
                 }
-                catch (IllegalAccessException e)
+                else
                 {
                     break;
                 }
