@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.sim.messages;
+package org.jitsi.videobridge.simulcast.messages;
 
 /**
  * Represents a notification/event that is sent to an endpoint through data

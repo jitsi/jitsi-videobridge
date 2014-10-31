@@ -18,7 +18,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.pubsub.*;
-import org.jitsi.videobridge.sim.*;
+import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;

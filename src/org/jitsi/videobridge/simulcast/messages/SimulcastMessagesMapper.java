@@ -4,9 +4,9 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.sim.messages;
+package org.jitsi.videobridge.simulcast.messages;
 
-import org.jitsi.videobridge.sim.*;
+import org.jitsi.videobridge.simulcast.*;
 import org.json.simple.*;
 
 import java.util.*;

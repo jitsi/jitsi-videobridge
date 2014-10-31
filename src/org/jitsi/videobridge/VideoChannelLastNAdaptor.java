@@ -13,7 +13,7 @@ import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.videobridge.sim.*;
+import org.jitsi.videobridge.simulcast.*;
 
 /**
  * Implements the "adaptive lastN" feature for a specific <tt>VideoChannel</tt>.

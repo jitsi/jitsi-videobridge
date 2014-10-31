@@ -20,7 +20,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.rtcp.*;
-import org.jitsi.videobridge.sim.*;
+import org.jitsi.videobridge.simulcast.*;
 import org.json.simple.*;
 
 /**

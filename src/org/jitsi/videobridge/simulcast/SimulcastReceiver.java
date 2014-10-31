@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.sim;
+package org.jitsi.videobridge.simulcast;
 
 import java.beans.*;
 import java.io.*;
@@ -15,7 +15,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.sim.messages.*;
+import org.jitsi.videobridge.simulcast.messages.*;
 
 /**
 * @author George Politis
