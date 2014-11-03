@@ -255,6 +255,7 @@ public class SimulcastManager
      */
     public boolean hasLayers()
     {
+        // TODO(gp) replace with read lock
         synchronized (simulcastLayersSyncRoot)
         {
             return simulcastLayers != null
@@ -305,6 +306,7 @@ public class SimulcastManager
 
     public void setSimulcastLayers(SortedSet<SimulcastLayer> simulcastLayers)
     {
+        // TODO(gp) replace with write lock
         synchronized (simulcastLayersSyncRoot)
         {
             this.simulcastLayers = simulcastLayers;
@@ -336,6 +338,7 @@ public class SimulcastManager
      */
     public SortedSet<SimulcastLayer> getSimulcastLayers()
     {
+        // TODO(gp) replace with read lock.
         synchronized (simulcastLayersSyncRoot)
         {
             return simulcastLayers == null

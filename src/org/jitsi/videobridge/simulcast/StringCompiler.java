@@ -13,7 +13,9 @@ import java.util.*;
 import java.util.regex.*;
 
 /**
-* Created by gp on 27/10/14.
+* @author George Politis
+ *
+ * TODO(gp) move to a more suitable place
 */
 public class StringCompiler
 {
