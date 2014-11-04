@@ -1434,6 +1434,7 @@ public class Conference
                     recorderEventHandler.close();
                 recorderEventHandler = null;
                 recordingPath = null;
+                recordingDirectory = null;
 
                 if (endpointRecorder != null)
                     endpointRecorder.close();
