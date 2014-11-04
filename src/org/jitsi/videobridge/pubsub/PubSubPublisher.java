@@ -320,37 +320,32 @@ public class PubSubPublisher
     private void handleErrorResponse(XMPPError error, String packetID)
     {
         if(error != null
-            && XMPPError.Type.CANCEL.equals(error.getType())
-            && XMPPError.Condition.conflict.toString()
-                .equals(error.getCondition()))
+            && ((XMPPError.Type.CANCEL.equals(error.getType())
+                 && (XMPPError.Condition.conflict.toString()
+                     .equals(error.getCondition())))
+                || (XMPPError.Type.AUTH.equals(error.getType())
+                    && (XMPPError.Condition.forbidden.toString()
+                        .equals(error.getCondition())))
+               )
+            )
         {
+            if(XMPPError.Condition.forbidden.toString()
+               .equals(error.getCondition()))
+            {
+                logger.warn("Creating node failed with <forbidden/>"
+                             + " error. Continuing anyway.");
+            }
             String nodeName = pendingCreateRequests.get(packetID);
             if(nodeName != null)
             {
-                //the node already exists
+                //the node already exists (<conflict/>)
+                //or we are not allowed (forbidden/>)
                 nodes.add(nodeName);
                 pendingCreateRequests.remove(packetID);
                 fireResponseCreateEvent(Response.SUCCESS);
                 return;
             }
         }
-        else if(error != null
-            && XMPPError.Type.AUTH.equals(error.getType())
-            && XMPPError.Condition.forbidden.toString()
-                .equals(error.getCondition()))
-        {
-            String nodeName = pendingCreateRequests.get(packetID);
-            if(nodeName != null)
-            {
-                //the node already exists but isowned by 
-                // someone else
-                nodes.add(nodeName);
-                pendingCreateRequests.remove(packetID);
-                fireResponseCreateEvent(Response.SUCCESS);
-                return;
-            }
-        }
-
         String errorMessage = "Error received when ";
         if(pendingCreateRequests.remove(packetID) != null)
         {
