@@ -19,6 +19,7 @@ import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.json.simple.*;
@@ -57,6 +58,11 @@ public class VideoChannel
     private boolean adaptiveLastN = false;
 
     /**
+     * Whether or not to use adaptive simulcast.
+     */
+    private boolean adaptiveSimulcast = false;
+
+    /**
      * The instance which will be computing the incoming bitrate for this
      * <tt>VideoChannel</tt>.
      */
@@ -70,11 +76,10 @@ public class VideoChannel
     private Integer lastN;
 
     /**
-     * The <tt>VideoChannelLastNAdaptor</tt> which will be controlling the
-     * value of <tt>lastN</tt> for this <tt>VideoChannel</tt>, if the adaptive
-     * lastN feature is enabled.
+     * The <tt>BitrateController</tt> which will be controlling the
+     * value of <tt>bitrate</tt> for this <tt>VideoChannel</tt>.
      */
-    private VideoChannelLastNAdaptor lastNAdaptor;
+    private BitrateController bitrateController;
 
     /**
      * The <tt>Endpoint</tt>s in the multipoint conference in which this
@@ -183,7 +188,7 @@ public class VideoChannel
      *
      * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
      */
-    long getIncomingBitrate()
+    public long getIncomingBitrate()
     {
         return incomingBitrate.getRate(System.currentTimeMillis());
     }
@@ -197,7 +202,7 @@ public class VideoChannel
      * If no value or <tt>null</tt> has been explicitly set or this is not a
      * video <tt>Channel</tt>, returns <tt>-1</tt>.
      */
-    int getLastN()
+    public int getLastN()
     {
         Integer lastNInteger = this.lastN;
 
@@ -205,17 +210,38 @@ public class VideoChannel
     }
 
     /**
-     * Returns the <tt>VideoChannelLastNAdaptor</tt> for this
-     * <tt>VideoChannel</tt>, creating it if necessary.
+     * Gets a boolean value indicating whether or not to use adaptive lastN.
+     *
+     * @return a boolean value indicating whether or not to use adaptive lastN.
+     */
+    public boolean getAdaptiveLastN()
+    {
+        return this.adaptiveLastN;
+    }
+
+    /**
+     * Gets a boolean value indicating whether or not to use adaptive simulcast.
+     *
+     * @return a boolean value indicating whether or not to use adaptive
+     * simulcast.
+     */
+    public boolean getAdaptiveSimulcast()
+    {
+        return this.adaptiveSimulcast;
+    }
+
+    /**
+     * Returns the <tt>BitrateController</tt> for this <tt>VideoChannel</tt>,
+     * creating it if necessary.
      *
      * @return the <tt>VideoChannelLastNAdaptor</tt> for this
      * <tt>VideoChannel</tt>, creating it if necessary.
      */
-    private VideoChannelLastNAdaptor getLastNAdaptor()
+    private BitrateController getBitrateController()
     {
-        if (lastNAdaptor == null)
-            lastNAdaptor = new VideoChannelLastNAdaptor(this);
-        return lastNAdaptor;
+        if (bitrateController == null)
+            bitrateController = new BitrateController(this);
+        return bitrateController;
     }
 
     /**
@@ -223,7 +249,7 @@ public class VideoChannel
      *
      * @return the list of endpoints for the purposes of lastN.
      */
-    List<WeakReference<Endpoint>> getLastNEndpoints()
+    public List<WeakReference<Endpoint>> getLastNEndpoints()
     {
         List<WeakReference<Endpoint>> endpoints
                 = new LinkedList<WeakReference<Endpoint>>();
@@ -537,13 +563,10 @@ public class VideoChannel
      */
     public void receivedREMB(long remb)
     {
-        if (adaptiveLastN)
-        {
-            VideoChannelLastNAdaptor lastNAdaptor = getLastNAdaptor();
+        BitrateController bc = getBitrateController();
 
-            if (lastNAdaptor != null)
-                lastNAdaptor.receivedREMB(remb);
-        }
+        if (bc != null)
+            bc.receivedREMB(remb);
     }
 
     /**
@@ -600,6 +623,23 @@ public class VideoChannel
         this.adaptiveLastN = adaptiveLastN;
 
         if (adaptiveLastN)
+        {
+            // Ensure that we are using BasicBridgeRTCPTerminationStrategy,
+            // which is currently needed to notify us of incoming REMBs.
+            getContent().setRTCPTerminationStrategyFQN(
+                    BasicBridgeRTCPTerminationStrategy.class.getName());
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
+    {
+        this.adaptiveSimulcast = adaptiveSimulcast;
+
+        if (adaptiveSimulcast)
         {
             // Ensure that we are using BasicBridgeRTCPTerminationStrategy,
             // which is currently needed to notify us of incoming REMBs.
@@ -761,5 +801,123 @@ public class VideoChannel
 
         // Request keyframes from the Endpoints entering the list of lastN.
         return endpointsEnteringLastN;
+    }
+
+    public int getReceivingEndpointsSize()
+    {
+        final int receivingEndpointsSize;
+        if (getLastN() == -1)
+        {
+            // LastN is disabled, consequently, this endpoint receives all the
+            // other participants.
+            final Content content = getContent();
+            final Conference conference
+                    = (content != null) ?  content.getConference() : null;
+            final List<Endpoint> endpoints
+                    = (conference != null) ? conference.getEndpoints() : null;
+
+            receivingEndpointsSize
+                    = (endpoints == null) ? endpoints.size() : 0;
+        }
+        else
+        {
+            // LastN is enabled, get the last N endpoints that this endpoint is
+            // receiving.
+            final List<WeakReference<Endpoint>> lastNEndpoints
+                    = getLastNEndpoints();
+            receivingEndpointsSize
+                    = (lastNEndpoints == null) ? lastNEndpoints.size() : 0;
+        }
+
+        return receivingEndpointsSize;
+    }
+
+    /**
+     * Creates and returns an iterator of the endpoints that are currently
+     * being received by this channel.
+     *
+     * @return an iterator of the endpoints that are currently being received
+     * by this channel.
+     */
+    public Iterator<Endpoint> getReceivingEndpoints()
+    {
+        if (getLastN() == -1)
+        {
+            // LastN is disabled, consequently, this endpoint receives all the
+            // other participants.
+            final Content content = getContent();
+            final Conference conference
+                    = (content != null) ?  content.getConference() : null;
+            final List<Endpoint> endpoints
+                    = (conference != null) ? conference.getEndpoints() : null;
+
+            final int lastIdx = (endpoints != null) ? endpoints.size() - 1 : -1;
+
+            return new Iterator<Endpoint>()
+            {
+                int idx = 0;
+
+                @Override
+                public boolean hasNext()
+                {
+                    return idx <= lastIdx;
+                }
+
+                @Override
+                public Endpoint next()
+                {
+                    if (!hasNext())
+                    {
+                        throw new NoSuchElementException();
+                    }
+
+                    return endpoints.get(idx++);
+                }
+
+                @Override
+                public void remove()
+                {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
+        else
+        {
+            // LastN is enabled, get the last N endpoints that this endpoint is
+            // receiving.
+            final List<WeakReference<Endpoint>> lastNEndpoints
+                    = getLastNEndpoints();
+
+            final int lastIdx
+                    = (lastNEndpoints != null) ? lastNEndpoints.size() - 1 : -1;
+
+            return new Iterator<Endpoint>()
+            {
+                int idx = 0;
+
+                @Override
+                public boolean hasNext()
+                {
+                    return idx <= lastIdx;
+                }
+
+                @Override
+                public Endpoint next()
+                {
+                    if (!hasNext())
+                    {
+                        throw new NoSuchElementException();
+                    }
+
+                    return lastNEndpoints.get(idx++).get();
+                }
+
+                @Override
+                public void remove()
+                {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
     }
 }

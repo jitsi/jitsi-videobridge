@@ -693,21 +693,29 @@ public class Content
 
     public void setRTCPTerminationStrategyFQN(String strategyFQN)
     {
-        if ((rtcpTerminationStrategyFQN == null && strategyFQN != null)
-                || (rtcpTerminationStrategyFQN != null &&
-                    !rtcpTerminationStrategyFQN.equals(strategyFQN)))
-        {
-            this.rtcpTerminationStrategyFQN = strategyFQN;
-            this.updateRTCPTerminationStrategy();
-        }
+        // NOTE(gp) we want to *always* update the RTCP termination strategy,
+        // even if rtcpTerminationStrategyFQN.equals(strategyFQN).
+        //
+        // The reason for this is that "this.rtpTranslator" (the translator of
+        // this content) can be "null" when the updateRTCPTerminationStrategy()
+        // method is called, and, as a result, "this.rtpTranslator" might have
+        // not been configured with the correct RTCP termination strategy.
+        //
+        // This is especially true when adaptive last N and adaptive simulcast
+        // are used. Those two features need the basic bridge RTCP termination
+        // strategy but, when they set it, "this.translator" is "null".
+        //
+        // Calling the updateRTCPTerminationStrategy() method even if
+        // rtcpTerminationStrategyFQN.equals(strategyFQN) is fine because the
+        // method checks for class equality.
+
+        this.rtcpTerminationStrategyFQN = strategyFQN;
+        this.updateRTCPTerminationStrategy();
     }
 
     /**
      * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
      * one specified in the rtcpTerminationStrategyFQN parameter.
-     *
-     * TODO(gp) move this method to the Conference since the strategy is per
-     * conference.
      *
      */
     private void updateRTCPTerminationStrategy()

@@ -1447,9 +1447,20 @@ public class RtpChannel
      *
      * Does nothing, allows extenders to implement.
      *
-     * @param adaptiveLastN <tt>true</tt> to enabled and <tt>false</tt> to
+     * @param adaptiveLastN <tt>true</tt> to enable and <tt>false</tt> to
      * disable adaptive lastN.
      */
     public void setAdaptiveLastN(boolean adaptiveLastN)
+    {}
+
+    /**
+     * Enables or disables the adaptive simulcast functionality.
+     *
+     * Does nothing, allows extenders to implement.
+     *
+     * @param adaptiveSimulcast <tt>true</tt> to enable and <tt>false</tt> to
+     * disable adaptive simulcast.
+     */
+    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
     {}
 }

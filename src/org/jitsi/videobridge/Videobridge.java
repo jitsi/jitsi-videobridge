@@ -709,6 +709,11 @@ public class Videobridge
                             if (adaptiveLastN != null)
                                 channel.setAdaptiveLastN(adaptiveLastN);
 
+                            Boolean adaptiveSimulcast
+                                    = channelIQ.getAdaptiveSimulcast();
+                            if (adaptiveSimulcast != null)
+                                channel.setAdaptiveSimulcast(adaptiveSimulcast);
+
                             /*
                              * XXX The attribute initiator is optional. If a
                              * value is not specified, then the Channel
