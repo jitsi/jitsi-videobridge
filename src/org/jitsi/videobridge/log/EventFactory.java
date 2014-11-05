@@ -18,7 +18,13 @@ public class EventFactory
      * The names of the columns of a "conference created" event.
      */
     private static final String[] CONFERENCE_CREATED_COLUMNS
-        = new String[] {"id"};
+        = new String[] {"conference_id"};
+
+    /**
+     * The names of the columns of a "conference expired" event.
+     */
+    private static final String[] CONFERENCE_EXPIRED_COLUMNS
+        = CONFERENCE_CREATED_COLUMNS;
 
     /**
      * The names of the columns of a "content created" event.
@@ -27,10 +33,22 @@ public class EventFactory
         = new String[] {"name", "conference_id"};
 
     /**
+     * The names of the columns of a "content expired" event.
+     */
+    private static final String[] CONTENT_EXPIRED_COLUMNS
+            = CONTENT_CREATED_COLUMNS;
+
+    /**
      * The names of the columns of a "channel created" event.
      */
     private static final String[] CHANNEL_CREATED_COLUMNS
-        = new String[] {"id", "content_name", "conference_id"};
+        = new String[] {"channel_id", "content_name", "conference_id"};
+
+    /**
+     * The names of the columns of a "channel expired" event.
+     */
+    private static final String[] CHANNEL_EXPIRED_COLUMNS
+        = CHANNEL_CREATED_COLUMNS;
 
     /**
      * The names of the columns of a "transport created" event.
@@ -49,7 +67,7 @@ public class EventFactory
      * The names of the columns of a "transport manager channel added" event.
      */
     private static final String[] TRANSPORT_CHANNEL_ADDED_COLUMNS
-            = new String[]
+        = new String[]
             {
                     "hash_code",
                     "conference_id",
@@ -57,10 +75,16 @@ public class EventFactory
             };
 
     /**
+     * The names of the columns of a "transport manager channel removed" event.
+     */
+    private static final String[] TRANSPORT_CHANNEL_REMOVED_COLUMNS
+        = TRANSPORT_CHANNEL_ADDED_COLUMNS;
+
+    /**
      * The names of the columns of a "transport manager connected" event.
      */
     private static final String[] TRANSPORT_CONNECTED_COLUMNS
-            = new String[]
+        = new String[]
             {
                     "hash_code",
                     "conference_id",
@@ -71,7 +95,7 @@ public class EventFactory
      * The names of the columns of a "transport manager connected" event.
      */
     private static final String[] TRANSPORT_STATE_CHANGED_COLUMNS
-            = new String[]
+        = new String[]
             {
                     "hash_code",
                     "conference_id",
@@ -133,7 +157,7 @@ public class EventFactory
     public static Event conferenceExpired(String id)
     {
         return new Event("conference_expired",
-                         CONFERENCE_CREATED_COLUMNS /* reuse */,
+                         CONFERENCE_EXPIRED_COLUMNS,
                          new Object[] {id});
     }
 
@@ -147,7 +171,7 @@ public class EventFactory
     public static Event contentExpired(String name, String conferenceId)
     {
         return new Event("content_expired",
-                         CONTENT_CREATED_COLUMNS /* reuse */,
+                         CONTENT_EXPIRED_COLUMNS,
                          new Object[] {name, conferenceId});
     }
 
@@ -165,7 +189,7 @@ public class EventFactory
             String conferenceId)
     {
         return new Event("channel_expired",
-                         CHANNEL_CREATED_COLUMNS /* reuse */,
+                         CHANNEL_EXPIRED_COLUMNS,
                          new Object[] {id, contentName, conferenceId});
     }
 
@@ -232,7 +256,7 @@ public class EventFactory
             String channelId)
     {
         return new Event("transport_channel_removed",
-                         TRANSPORT_CHANNEL_ADDED_COLUMNS /* reuse */,
+                         TRANSPORT_CHANNEL_REMOVED_COLUMNS,
                          new Object[]{
                                  String.valueOf(hashCode),
                                  conferenceId,
