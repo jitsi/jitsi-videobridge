@@ -18,13 +18,13 @@ public class EventFactory
      * The names of the columns of a "conference created" event.
      */
     private static final String[] CONFERENCE_CREATED_COLUMNS
-        = new String[] {"conference_id"};
+        = new String[] {"conference_id", "focus"};
 
     /**
      * The names of the columns of a "conference expired" event.
      */
     private static final String[] CONFERENCE_EXPIRED_COLUMNS
-        = CONFERENCE_CREATED_COLUMNS;
+        = new String[] {"conference_id"};
 
     /**
      * The names of the columns of a "content created" event.
@@ -116,14 +116,20 @@ public class EventFactory
     /**
      * Creates a new "conference created" <tt>Event</tt>.
      * @param id the ID of the conference.
+     * @param focus the JID which requested the creation of the conference, if
+     * any.
      *
      * @return the <tt>Event</tt> which was created.
      */
-    public static Event conferenceCreated(String id)
+    public static Event conferenceCreated(String id, String focus)
     {
         return new Event("conference_created",
                          CONFERENCE_CREATED_COLUMNS,
-                         new Object[] {id});
+                         new Object[]
+                             {
+                                 id,
+                                 focus != null ? focus : "null"
+                             });
     }
 
     /**

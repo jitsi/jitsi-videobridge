@@ -202,7 +202,7 @@ public class Conference
 
         LoggingService loggingService = videobridge.getLoggingService();
         if (loggingService != null)
-            loggingService.logEvent(EventFactory.conferenceCreated(id));
+            loggingService.logEvent(EventFactory.conferenceCreated(id, focus));
     }
 
     /**
