@@ -104,6 +104,16 @@ public class EventFactory
             };
 
     /**
+     * The names of the columns of an "endpoint created" event.
+     */
+    private static final String[] ENDPOINT_CREATED_COLUMNS
+            = new String[]
+            {
+                    "conference_id",
+                    "endpoint_id",
+            };
+
+    /**
      * Creates a new "conference created" <tt>Event</tt>.
      * @param id the ID of the conference.
      *
@@ -307,5 +317,25 @@ public class EventFactory
                                  conferenceId,
                                  oldState,
                                  newState});
+    }
+
+    /**
+     * Creates a new "endpoint created" <tt>Event</tt>.
+     * @param conferenceId the ID of the endpoint's parent conference.
+     * @param endpointId the ID of the endpoint
+     *
+     * @return the <tt>Event</tt> which was created.
+     */
+    public static Event endpointCreated(
+            String conferenceId,
+            String endpointId)
+    {
+        return new Event("endpoint_created",
+                         ENDPOINT_CREATED_COLUMNS,
+                         new Object[]
+                             {
+                                 conferenceId,
+                                 endpointId
+                             });
     }
 }

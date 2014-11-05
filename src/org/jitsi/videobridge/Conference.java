@@ -745,6 +745,11 @@ public class Conference
                 endpoint.addPropertyChangeListener(propertyChangeListener);
                 endpoints.add(new WeakReference<Endpoint>(endpoint));
                 changed = true;
+
+                LoggingService loggingService = videobridge.getLoggingService();
+                if (loggingService != null)
+                    loggingService.logEvent(
+                            EventFactory.endpointCreated(getID(), id));
             }
         }
 
