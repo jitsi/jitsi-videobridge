@@ -107,17 +107,37 @@ public class EventFactory
      * The names of the columns of an "endpoint created" event.
      */
     private static final String[] ENDPOINT_CREATED_COLUMNS
-            = new String[]
+        = new String[]
             {
                     "conference_id",
                     "endpoint_id",
             };
 
     /**
-     * Creates a new "conference created" <tt>Event</tt>.
-     * @param id the ID of the conference.
-     * @param focus the JID which requested the creation of the conference, if
-     * any.
+     * The names of the columns of a "focus created" event.
+     */
+    private static final String[] FOCUS_CREATED_COLUMNS
+        = new String[]
+            {
+                    "room_jid"
+            };
+
+    /**
+     * The names of the columns of a "conference room" event.
+     */
+    private static final String[] CONFERENCE_ROOM_COLUMNS
+            = new String[]
+            {
+                    "conference_id",
+                    "room_jid"
+            };
+
+    /**
+     * Creates a new "conference created" <tt>Event</tt>, which indicates the
+     * creation of a new COLIBRI conference.
+     * @param id the ID of the COLIBRI conference.
+     * @param focus the JID which requested the creation of the COLIBRI
+     * conference, if any.
      *
      * @return the <tt>Event</tt> which was created.
      */
@@ -133,9 +153,10 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "content created" <tt>Event</tt>.
-     * @param name the name of the content.
-     * @param conferenceId the ID of the content's parent conference.
+     * Creates a new "content created" <tt>Event</tt>, which indicates the
+     * creation of a new COLIBRI content.
+     * @param name the name of the COLIBRI content.
+     * @param conferenceId the ID of the COLIBRI content's parent conference.
      *
      * @return the <tt>Event</tt> which was created.
      */
@@ -147,10 +168,11 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "channel created" <tt>Event</tt>.
-     * @param id the ID of the channel.
-     * @param contentName the name of the channel's parent content.
-     * @param conferenceId the ID of the channel's parent conference.
+     * Creates a new "channel created" <tt>Event</tt>, which indicates the
+     * creation of a new COLIBRI channel.
+     * @param id the ID of the COLIBRI channel.
+     * @param contentName the name of the COLIBRI channel's parent content.
+     * @param conferenceId the ID of the COLIBRI channel's parent conference.
      *
      * @return the <tt>Event</tt> which was created.
      */
@@ -165,8 +187,9 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "conference expired" <tt>Event</tt>.
-     * @param id the ID of the conference.
+     * Creates a new "conference expired" <tt>Event</tt>, which indicates the
+     * expiry of a COLIBRI conference.
+     * @param id the ID of the COLIBRI conference.
      *
      * @return the <tt>Event</tt> which was created.
      */
@@ -178,9 +201,10 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "content expired" <tt>Event</tt>.
-     * @param name the name of the content.
-     * @param conferenceId the ID of the content's parent conference.
+     * Creates a new "content expired" <tt>Event</tt>, which indicates the
+     * expiry of a COLIBRI content.
+     * @param name the name of the COLIBRI content.
+     * @param conferenceId the ID of the COLIBRI content's parent conference.
      *
      * @return the <tt>Event</tt> which was created.
      */
@@ -192,10 +216,11 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "channel expired" <tt>Event</tt>.
-     * @param id the ID of the channel.
-     * @param contentName the name of the channel's parent content.
-     * @param conferenceId the ID of the channel's parent conference.
+     * Creates a new "channel expired" <tt>Event</tt>, which indicates the
+     * expiry of a COLIBRI channel.
+     * @param id the ID of the COLIBRI channel.
+     * @param contentName the name of the COLIBRI channel's parent content.
+     * @param conferenceId the ID of the COLIBRI channel's parent conference.
      *
      * @return the <tt>Event</tt> which was created.
      */
@@ -210,7 +235,8 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "transport created" <tt>Event</tt>.
+     * Creates a new "transport created" <tt>Event</tt>, which indicates the
+     * creation of a new Jitsi Videobridge TransportManager.
      * @param hashCode the hash code of the transport manager object.
      * @param conferenceId the ID of the transport manager's parent conference.
      * @param numComponents the number of ICE components.
@@ -238,7 +264,8 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "transport channel added" <tt>Event</tt>.
+     * Creates a new "transport channel added" <tt>Event</tt>, which indicates
+     * that a COLIBRI channel was added to a Jitsi Videobridge TransportManager.
      * @param hashCode the hash code of the transport manager object.
      * @param conferenceId the ID of the transport manager's parent conference.
      * @param channelId the ID of the channel which was added.
@@ -259,7 +286,9 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "transport channel removed" <tt>Event</tt>.
+     * Creates a new "transport channel removed" <tt>Event</tt>, which indicates
+     * that a COLIBRI channel was removed from a Jitsi Videobridge
+     * TransportManager.
      * @param hashCode the hash code of the transport manager object.
      * @param conferenceId the ID of the transport manager's parent conference.
      * @param channelId the ID of the channel which was added.
@@ -280,7 +309,9 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "transport connected" <tt>Event</tt>.
+     * Creates a new "transport connected" <tt>Event</tt>, which indicates
+     * that a Jitsi Videobridge TransportManager has changed its state to
+     * connected.
      * @param hashCode the hash code of the transport manager object
      * @param conferenceId the ID of the transport manager's parent conference.
      * @param selectedPairs a <tt>String</tt> representation of the ICE pairs
@@ -302,7 +333,9 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "transport manager state changed" <tt>Event</tt>.
+     * Creates a new "transport manager state changed" <tt>Event</tt>, which
+     * indicates that a Jitsi Videobridge TransportManager has changed its
+     * state.
      * @param hashCode the hash code of the transport manager object
      * @param conferenceId the ID of the transport manager's parent conference.
      * @param oldState the old ICE state.
@@ -326,7 +359,8 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "endpoint created" <tt>Event</tt>.
+     * Creates a new "endpoint created" <tt>Event</tt>, which indicates that
+     * a COLIBRI endpoint was created.
      * @param conferenceId the ID of the endpoint's parent conference.
      * @param endpointId the ID of the endpoint
      *
@@ -343,5 +377,44 @@ public class EventFactory
                                  conferenceId,
                                  endpointId
                              });
+    }
+
+    /**
+     * Creates a new "focus created" <tt>Event</tt>.
+     * @param roomJid the JID of the MUC for which the focus was created.
+     *
+     * @return the <tt>Event</tt> which was created.
+     */
+    public static Event focusCreated(
+            String roomJid)
+    {
+        return new Event("focus_created",
+                         FOCUS_CREATED_COLUMNS,
+                         new Object[]
+                                 {
+                                         roomJid,
+                                 });
+    }
+
+    /**
+     * Creates a new "room conference" <tt>Event</tt> which binds a COLIBRI
+     * conference ID to the JID of the associated MUC.
+     *
+     * @param conferenceId the ID of the COLIBRI conference.
+     * @param roomJid the JID of the MUC for which the focus was created.
+     *
+     * @return the <tt>Event</tt> which was created.
+     */
+    public static Event conferenceRoom(
+            String conferenceId,
+            String roomJid)
+    {
+        return new Event("conference_room",
+                         CONFERENCE_ROOM_COLUMNS,
+                         new Object[]
+                                 {
+                                         conferenceId,
+                                         roomJid
+                                 });
     }
 }
