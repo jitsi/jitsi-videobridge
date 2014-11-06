@@ -22,6 +22,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 /**
@@ -295,8 +296,8 @@ public class Conference
     {
         return
             "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
-                + "\"dominantSpeakerEndpoint\":\"" + dominantSpeaker.getID()
-                + "\"}";
+                + "\"dominantSpeakerEndpoint\":\""
+                + JSONValue.escape(dominantSpeaker.getID())+ "\"}";
     }
 
     /**
