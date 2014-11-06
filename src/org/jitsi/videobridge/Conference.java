@@ -23,6 +23,7 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.osgi.framework.*;
+import org.json.simple.*;
 
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
@@ -295,7 +296,8 @@ public class Conference
     {
         return
             "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
-                + "\"dominantSpeakerEndpoint\":\"" + dominantSpeaker.getID()
+                + "\"dominantSpeakerEndpoint\":\"" 
+                + JSONObject.escape(dominantSpeaker.getID())
                 + "\"}";
     }
 
