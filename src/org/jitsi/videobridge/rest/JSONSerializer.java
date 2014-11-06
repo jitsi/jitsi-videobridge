@@ -640,11 +640,11 @@ final class JSONSerializer
                            token);
         }
 
-        String path = recording.getPath();
-        if (path != null)
+        String directory = recording.getDirectory();
+        if (directory != null)
         {
-            jsonObject.put(ColibriConferenceIQ.Recording.PATH_ATTR_NAME,
-                           path);
+            jsonObject.put(ColibriConferenceIQ.Recording.DIRECTORY_ATTR_NAME,
+                    directory);
         }
 
         return jsonObject;
