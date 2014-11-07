@@ -1573,10 +1573,29 @@ public class Conference
 
             if (endpoint != null)
             {
-                endpoint.setDisplayName(colibriEndpoint.getDisplayName());
+                String oldDisplayName = endpoint.getDisplayName();
+                String newDisplayName = colibriEndpoint.getDisplayName();
 
-                if (isRecording() && endpointRecorder != null)
-                    endpointRecorder.updateEndpoint(endpoint);
+                if ( (oldDisplayName == null && newDisplayName != null)
+                        || (oldDisplayName != null
+                              && !oldDisplayName.equals(newDisplayName)))
+                {
+                    endpoint.setDisplayName(newDisplayName);
+
+                    if (isRecording() && endpointRecorder != null)
+                        endpointRecorder.updateEndpoint(endpoint);
+
+                    LoggingService loggingService
+                            = getVideobridge().getLoggingService();
+                    if (loggingService != null)
+                    {
+                        loggingService.logEvent(
+                            EventFactory.endpointDisplayNameChanged(
+                                getID(),
+                                id,
+                                newDisplayName));
+                    }
+                }
             }
         }
     }

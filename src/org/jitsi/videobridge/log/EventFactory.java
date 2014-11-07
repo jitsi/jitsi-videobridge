@@ -133,6 +133,17 @@ public class EventFactory
             };
 
     /**
+     * The names of the columns of an "endpoint display name" event.
+     */
+    private static final String[] ENDPOINT_DISPLAY_NAME_COLUMNS
+            = new String[]
+            {
+                    "conference_id",
+                    "endpoint_id",
+                    "display_name"
+            };
+
+    /**
      * Creates a new "conference created" <tt>Event</tt>, which indicates the
      * creation of a new COLIBRI conference.
      * @param id the ID of the COLIBRI conference.
@@ -415,6 +426,31 @@ public class EventFactory
                                  {
                                          conferenceId,
                                          roomJid
+                                 });
+    }
+
+    /**
+     * Creates a new "endpoint display name changed" <tt>Event</tt>, which
+     * conference ID to the JID of the associated MUC.
+     *
+     * @param conferenceId the ID of the COLIBRI conference.
+     * @param endpointId the ID of the COLIBRI endpoint.
+     * @param displayName the new display name.
+     *
+     * @return the <tt>Event</tt> which was created.
+     */
+    public static Event endpointDisplayNameChanged(
+            String conferenceId,
+            String endpointId,
+            String displayName)
+    {
+        return new Event("endpoint_display_name",
+                         ENDPOINT_DISPLAY_NAME_COLUMNS,
+                         new Object[]
+                                 {
+                                         conferenceId,
+                                         endpointId,
+                                         displayName
                                  });
     }
 }
