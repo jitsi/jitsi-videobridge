@@ -18,6 +18,11 @@ public class SimulcastMessagesMapper
 {
     public String toJson(StartSimulcastLayerCommand command)
     {
+        if (command == null)
+        {
+            return "";
+        }
+
         StringBuilder b = new StringBuilder(
                 "{\"colibriClass\":\"StartSimulcastLayerEvent\"");
 
@@ -30,6 +35,11 @@ public class SimulcastMessagesMapper
 
     public String toJson(StopSimulcastLayerCommand command)
     {
+        if (command == null)
+        {
+            return "";
+        }
+
         StringBuilder b = new StringBuilder(
                 "{\"colibriClass\":\"StopSimulcastLayerEvent\"");
 
@@ -53,23 +63,28 @@ public class SimulcastMessagesMapper
 
     public String toJson(SortedSet<SimulcastLayer> simulcastLayers)
     {
-        if (simulcastLayers != null && !simulcastLayers.isEmpty())
+        if (simulcastLayers == null || simulcastLayers.isEmpty())
         {
-            StringBuilder b = new StringBuilder("[");
-            for (SimulcastLayer simulcastLayer : simulcastLayers)
-            {
-                toJson(b, simulcastLayer);
-            }
-            b.append("]");
-
-            return b.toString();
+            return "";
         }
 
-        return "";
+        StringBuilder b = new StringBuilder("[");
+        for (SimulcastLayer simulcastLayer : simulcastLayers)
+        {
+            toJson(b, simulcastLayer);
+        }
+        b.append("]");
+
+        return b.toString();
     }
 
     public String toJson(SimulcastLayersChangingEvent event)
     {
+        if (event == null)
+        {
+            return "";
+        }
+
         StringBuilder b = new StringBuilder(
                 "{\"colibriClass\":\"SimulcastLayersChangingEvent\"");
 
@@ -87,6 +102,11 @@ public class SimulcastMessagesMapper
 
     public String toJson(SimulcastLayersChangedEvent event)
     {
+        if (event == null)
+        {
+            return "";
+        }
+
         StringBuilder b = new StringBuilder(
                 "{\"colibriClass\":\"SimulcastLayersChangedEvent\"");
 
@@ -105,6 +125,11 @@ public class SimulcastMessagesMapper
     private void toJson(StringBuilder b,
                                EndpointSimulcastLayer endpointSimulcastLayer)
     {
+        if (b == null || endpointSimulcastLayer == null)
+        {
+            return;
+        }
+
         b.append("{\"endpoint\":");
         // TODO(gp) use JSONValue.escape() instead.
         b.append(JSONValue.toJSONString(endpointSimulcastLayer.endpoint));
@@ -115,6 +140,11 @@ public class SimulcastMessagesMapper
 
     public void toJson(StringBuilder b, SimulcastLayer simulcastLayer)
     {
+        if (b == null || simulcastLayer == null)
+        {
+            return;
+        }
+
         b.append("{\"primarySSRC\":");
         b.append(JSONValue.escape(
                 Long.toString(simulcastLayer.getPrimarySSRC())));
