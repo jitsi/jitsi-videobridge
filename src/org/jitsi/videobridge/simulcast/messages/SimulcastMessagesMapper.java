@@ -131,7 +131,8 @@ public class SimulcastMessagesMapper
         }
 
         b.append("{\"endpoint\":");
-        // TODO(gp) use JSONValue.escape() instead.
+        // NOTE(gp) do not change this to JSONValue.escape()! It breaks JSON
+        // parsing at the client!
         b.append(JSONValue.toJSONString(endpointSimulcastLayer.endpoint));
         b.append(",\"simulcastLayer\":");
         toJson(b, endpointSimulcastLayer.simulcastLayer);
@@ -146,8 +147,7 @@ public class SimulcastMessagesMapper
         }
 
         b.append("{\"primarySSRC\":");
-        b.append(JSONValue.escape(
-                Long.toString(simulcastLayer.getPrimarySSRC())));
+        b.append(Long.toString(simulcastLayer.getPrimarySSRC()));
 
         List<Long> associatedSSRCs = simulcastLayer.getAssociatedSSRCs();
         if (associatedSSRCs != null && associatedSSRCs.size() != 0)
@@ -155,8 +155,7 @@ public class SimulcastMessagesMapper
             b.append(",\"asociatedSSRCs\":[");
             for (int i = 0; i < associatedSSRCs.size(); i++)
             {
-                b.append(JSONValue.escape(
-                        Long.toString(associatedSSRCs.get(i))));
+                b.append(Long.toString(associatedSSRCs.get(i)));
 
                 if (i != associatedSSRCs.size() - 1)
                     b.append(",");
