@@ -53,14 +53,19 @@ public class SimulcastMessagesMapper
 
     public String toJson(SortedSet<SimulcastLayer> simulcastLayers)
     {
-        StringBuilder b = new StringBuilder("[");
-        for (SimulcastLayer simulcastLayer : simulcastLayers)
+        if (simulcastLayers != null && !simulcastLayers.isEmpty())
         {
-            toJson(b, simulcastLayer);
-        }
-        b.append("]");
+            StringBuilder b = new StringBuilder("[");
+            for (SimulcastLayer simulcastLayer : simulcastLayers)
+            {
+                toJson(b, simulcastLayer);
+            }
+            b.append("]");
 
-        return b.toString();
+            return b.toString();
+        }
+
+        return "";
     }
 
     public String toJson(SimulcastLayersChangingEvent event)
@@ -101,6 +106,7 @@ public class SimulcastMessagesMapper
                                EndpointSimulcastLayer endpointSimulcastLayer)
     {
         b.append("{\"endpoint\":");
+        // TODO(gp) use JSONValue.escape() instead.
         b.append(JSONValue.toJSONString(endpointSimulcastLayer.endpoint));
         b.append(",\"simulcastLayer\":");
         toJson(b, endpointSimulcastLayer.simulcastLayer);

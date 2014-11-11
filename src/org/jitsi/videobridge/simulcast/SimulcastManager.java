@@ -61,7 +61,7 @@ public class SimulcastManager
      * Defines the simulcast substream to receive, if there is no other
      */
     protected static final int SIMULCAST_LAYER_ORDER_INIT
-        = SIMULCAST_LAYER_ORDER_LQ;
+            = SIMULCAST_LAYER_ORDER_LQ;
 
     /**
      * The <tt>simulcastLayers</tt> SyncRoot.
@@ -92,12 +92,6 @@ public class SimulcastManager
     private final Object simulcastReceiversSyncRoot = new Object();
 
     /**
-     * The <tt>SimulcastReceiverOptions</tt> to use when creating a new
-     * <tt>SimulcastReceiver</tt>.
-     */
-    private final SimulcastReceiverOptions initOptions;
-
-    /**
      * Notifies this instance that a <tt>DatagramPacket</tt> packet received on
      * the data <tt>DatagramSocket</tt> of this <tt>Channel</tt> has been
      * accepted for further processing within Jitsi Videobridge.
@@ -105,7 +99,7 @@ public class SimulcastManager
      * TODO(gp) Move to SimulcastSender.
      *
      * @param p the <tt>DatagramPacket</tt> received on the data
-     * <tt>DatagramSocket</tt> of this <tt>Channel</tt>
+     *          <tt>DatagramSocket</tt> of this <tt>Channel</tt>
      */
     public void acceptedDataInputStreamDatagramPacket(DatagramPacket p)
     {
@@ -174,15 +168,6 @@ public class SimulcastManager
     public SimulcastManager(VideoChannel videoChannel)
     {
         this.videoChannel = videoChannel;
-
-        SimulcastReceiverOptions options
-                = new SimulcastReceiverOptions();
-
-        options.setNextOrder(SIMULCAST_LAYER_ORDER_LQ);
-        // options.setUrgent(false);
-        // options.setHardSwitch(false);
-
-        initOptions = options;
     }
 
     /**
@@ -284,9 +269,6 @@ public class SimulcastManager
                     // Create a new receiver.
                     sr = new SimulcastReceiver(this, peerSM);
 
-                    // Initialize the receiver.
-                    sr.configure(initOptions);
-
                     simulcastReceivers.put(peerSM, sr);
                 }
                 else
@@ -322,12 +304,14 @@ public class SimulcastManager
             }
         }).start();
 
-        if (logger.isDebugEnabled() && videoChannel.getEndpoint() != null)
+        if (logger.isDebugEnabled())
         {
-            logger.debug(new StringBuilder()
-                    .append(videoChannel.getEndpoint().getID())
-                    .append(" signals ")
-                    .append(mapper.toJson(simulcastLayers)));
+            Map<String, Object> map = new HashMap<String, Object>(2);
+            map.put("self", videoChannel.getEndpoint());
+            map.put("simulcastLayers", mapper.toJson(simulcastLayers));
+            StringCompiler sc = new StringCompiler(map);
+
+            logger.debug(sc.c("{self.id} signals {simulcastLayers}"));
         }
     }
 
@@ -421,10 +405,11 @@ public class SimulcastManager
     {
         synchronized (simulcastReceiversSyncRoot)
         {
-            if (initOptions.getOverrideOrder() == null ||
-                    initOptions.getOverrideOrder().intValue() != overrideOrder)
+            if (SimulcastReceiver.initOptions.getOverrideOrder() == null ||
+                    SimulcastReceiver.initOptions.getOverrideOrder().intValue()
+                            != overrideOrder)
             {
-                initOptions.setOverrideOrder(overrideOrder);
+                SimulcastReceiver.initOptions.setOverrideOrder(overrideOrder);
 
                 if (!simulcastReceivers.isEmpty())
                 {

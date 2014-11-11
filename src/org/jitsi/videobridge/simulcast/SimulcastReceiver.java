@@ -24,6 +24,23 @@ class SimulcastReceiver
         implements PropertyChangeListener
 {
     /**
+     * The <tt>SimulcastReceiverOptions</tt> to use when creating a new
+     * <tt>SimulcastReceiver</tt>.
+     */
+    protected static final SimulcastReceiverOptions initOptions;
+
+    static {
+        // Static initialization is performed once per class-loader. So, this
+        // method can be considered thread safe for our purposes.
+
+        initOptions = new SimulcastReceiverOptions();
+
+        initOptions.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
+        // options.setUrgent(false);
+        // options.setHardSwitch(false);
+    }
+
+    /**
      * Ctor.
      *
      * @param mySM
@@ -857,6 +874,9 @@ class SimulcastReceiver
             // normally getPeer() == peerSM.getVideoChannel().getEndpoint()
             // holds.
 
+            // Initialize the receiver.
+            configure(initOptions);
+
             if (logger.isDebugEnabled())
             {
                 Map<String, Object> map = new HashMap<String, Object>(2);
@@ -1049,6 +1069,7 @@ class SimulcastReceiver
                     .getSimulcastLayers();
         }
 
+        // TODO(gp) NPE check getSctpConnection()
         if (oldSimulcastLayers != null
                 && oldSimulcastLayers.size() > 1
                 /* oldEndpoint != null is implied*/
