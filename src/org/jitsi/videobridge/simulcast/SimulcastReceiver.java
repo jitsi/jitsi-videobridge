@@ -1069,12 +1069,13 @@ class SimulcastReceiver
                     .getSimulcastLayers();
         }
 
-        // TODO(gp) NPE check getSctpConnection()
+        SctpConnection sctpConnection;
         if (oldSimulcastLayers != null
                 && oldSimulcastLayers.size() > 1
                 /* oldEndpoint != null is implied*/
-                && oldEndpoint.getSctpConnection().isReady()
-                && !oldEndpoint.getSctpConnection().isExpired())
+                && (sctpConnection = oldEndpoint.getSctpConnection()) != null
+                && sctpConnection.isReady()
+                && !sctpConnection.isExpired())
         {
             // we have an old endpoint and it has an SCTP connection that is
             // ready and not expired. if nobody else is watching the old
@@ -1164,11 +1165,13 @@ class SimulcastReceiver
             }
         }
 
+        SctpConnection sctpConnection;
         if (newSimulcastLayers != null
                 && newSimulcastLayers.size() > 1
                 /* newEndpoint != null is implied */
-                && newEndpoint.getSctpConnection().isReady()
-                && !newEndpoint.getSctpConnection().isExpired())
+                && (sctpConnection = newEndpoint.getSctpConnection()) != null
+                && sctpConnection.isReady()
+                && !sctpConnection.isExpired())
         {
             // we have a new endpoint and it has an SCTP connection that is
             // ready and not expired. if somebody else is watching the new
