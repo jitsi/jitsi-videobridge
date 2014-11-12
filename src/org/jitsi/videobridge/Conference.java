@@ -302,7 +302,7 @@ public class Conference
         return
             "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
                 + "\"dominantSpeakerEndpoint\":\""
-                + JSONValue.escape(dominantSpeaker.getID())+ "\"}";
+                + JSONValue.escape(dominantSpeaker.getID()) + "\"}";
     }
 
     /**
