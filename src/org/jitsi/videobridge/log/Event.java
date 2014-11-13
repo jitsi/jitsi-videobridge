@@ -38,15 +38,16 @@ public class Event
     private boolean useLocalTime = true;
 
     /**
-     * Initializes a new <tt>Event</tt>.
+     * Initializes a new <tt>Event</tt>. The number of elements in
+     * <tt>columns</tt> and <tt>values</tt> MUST match.
      *
-     * @param name the name.
-     * @param columns the column names/keys. Should have the same number of
-     * elements as <tt>values</tt>.
-     * @param values the values. Should have the same number of elements as
-     * <tt>columns</tt>.
+     * @param name the name of the event.
+     * @param columns the column names/keys. The number of elements MUST be the
+     * same as the same number of elements in <tt>values</tt>.
+     * @param values the values. The number of elements MUST be the same as the
+     * same number of elements in <tt>columns</tt>.
      */
-    Event(String name, String[] columns, Object[] values)
+    public Event(String name, String[] columns, Object[] values)
     {
         this.name = name;
         this.columns = columns;
