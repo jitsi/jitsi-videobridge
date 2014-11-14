@@ -94,11 +94,6 @@ public class InfluxDBLoggingService
         if (cfg == null)
             throw new NullPointerException("cfg");
 
-        boolean enabled = cfg.getBoolean(ENABLED_PNAME, false);
-        if (!enabled)
-            throw new Exception("InfluxDBLoggingService is disabled in the"
-                                       + " configuration.");
-
         String s = "Required property not set: ";
         String urlBase = cfg.getString(URL_BASE_PNAME, null);
         if (urlBase == null)

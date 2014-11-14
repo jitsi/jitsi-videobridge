@@ -34,14 +34,19 @@ public class LoggingBundleActivator
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        loggingService
-            = new InfluxDBLoggingService(
-                ServiceUtils2.getService(bundleContext,
-                                         ConfigurationService.class));
+        ConfigurationService cfg =
+            ServiceUtils2.getService(
+                    bundleContext,
+                    ConfigurationService.class);
 
-        serviceRegistration
-            = bundleContext
-                .registerService(LoggingService.class, loggingService, null);
+        if (cfg.getBoolean(InfluxDBLoggingService.ENABLED_PNAME, false))
+        {
+            loggingService = new InfluxDBLoggingService(cfg);
+
+            serviceRegistration
+                = bundleContext.registerService(
+                    LoggingService.class, loggingService, null);
+        }
     }
 
     /**
