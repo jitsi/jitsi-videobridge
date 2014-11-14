@@ -21,5 +21,11 @@ mainClass="org.jitsi.videobridge.Main"
 cp=$(JARS=($SCRIPT_DIR/jitsi-videobridge.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
 libs="$SCRIPT_DIR/lib/native/macosx"
 logging_config="$SCRIPT_DIR/lib/logging.properties"
+videobridge_rc="$SCRIPT_DIR/lib/videobridge.rc"
 
-java -Djava.library.path=$libs -Djava.util.logging.config.file=$logging_config -cp $cp $mainClass $@
+if [ -f $videobridge_rc  ]; then
+        source $videobridge_rc
+fi
+
+
+java $VIDEOBRIDGE_DEBUG_OPTIONS -Djava.library.path=$libs -Djava.util.logging.config.file=$logging_config -cp $cp $mainClass $@
