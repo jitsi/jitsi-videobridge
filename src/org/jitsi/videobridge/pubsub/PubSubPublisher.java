@@ -322,9 +322,8 @@ public class PubSubPublisher
         if(error != null
             && ((XMPPError.Type.CANCEL.equals(error.getType())
                  && (XMPPError.Condition.conflict.toString()
-                     .equals(error.getCondition())))
-                || (XMPPError.Type.AUTH.equals(error.getType())
-                    && (XMPPError.Condition.forbidden.toString()
+                     .equals(error.getCondition())
+                     || XMPPError.Condition.forbidden.toString()
                         .equals(error.getCondition())))
                )
             )
