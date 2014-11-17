@@ -19,129 +19,15 @@ import java.util.*;
  */
 public class BridgeSenderReporting
 {
-
-    public BridgeSenderReporting(BridgeRTCPTerminationStrategy strategy)
-    {
-        this.strategy = strategy;
-    }
-
-    public final BridgeRTCPTerminationStrategy strategy;
-
     private final Map<Integer, Map<Integer, SenderInformation>>
         lastSenderInformationMap
             = new HashMap<Integer, Map<Integer, SenderInformation>>();
 
-    /**
-     * Explode the SRs to make them compliant with features from the translator.
-     *
-     * @param outPacket
-     * @return
-     */
-    public boolean explodeSenderReport(RTCPCompoundPacket outPacket)
+    public final BridgeRTCPTerminationStrategy strategy;
+
+    public BridgeSenderReporting(BridgeRTCPTerminationStrategy strategy)
     {
-        if (outPacket.packets == null
-                || outPacket.packets.length == 0
-                || outPacket.packets[0].type != RTCPPacket.SR)
-        {
-            return false;
-        }
-
-        RTCPSRPacket senderReport = (RTCPSRPacket) outPacket.packets[0];
-
-        Conference conf = strategy.getConference();
-        if (senderReport == null || conf == null)
-            return false;
-
-        RTPTranslator rtpTranslator = strategy.getRTPTranslator();
-        if (rtpTranslator == null
-                || !(rtpTranslator instanceof RTPTranslatorImpl))
-            return false;
-
-        RTPTranslatorImpl rtpTranslatorImpl = (RTPTranslatorImpl)rtpTranslator;
-
-        long ssrc = senderReport.ssrc & 0xFFFFFFFFL;
-        if (ssrc < 1)
-            return false;
-
-        Integer senderSSRC = senderReport.ssrc;
-        Map<Integer, SenderInformation> receiverSenderInformationMap
-                = getReceiverSenderInformationMap(senderSSRC);
-
-        Channel srcChannel = conf
-                .findChannelByReceiveSSRC(ssrc, MediaType.VIDEO);
-
-        if (srcChannel == null || !(srcChannel instanceof RtpChannel))
-            return false;
-
-        RtpChannel srcRtpChannel = (RtpChannel)srcChannel;
-
-        // Send to every channel that receives this sender an SR.
-        for (Content content : conf.getContents())
-        {
-            if (MediaType.VIDEO.equals(content.getMediaType()))
-            {
-                for (Channel destChannel : content.getChannels())
-                {
-                    if (!(destChannel instanceof RtpChannel)
-                            || srcRtpChannel == destChannel)
-                        continue;
-
-                    RtpChannel destRtpChannel = (RtpChannel) destChannel;
-                    MediaStream stream = destRtpChannel.getStream();
-                    if (stream == null)
-                        continue;
-
-                    boolean destIsReceiving
-                            = srcRtpChannel.isInLastN(destChannel);
-
-                    if (destIsReceiving && srcRtpChannel instanceof VideoChannel)
-                    {
-                        VideoChannel srcVideoChannel
-                                = (VideoChannel) srcRtpChannel;
-
-                        if (!(destChannel instanceof VideoChannel))
-                        {
-                            destIsReceiving = false;
-                        }
-                        else
-                        {
-                            VideoChannel destVideoChannel
-                                    = (VideoChannel) destChannel;
-
-                            destIsReceiving
-                                    = destVideoChannel.getSimulcastManager()
-                                    .accept(ssrc,
-                                            srcVideoChannel);
-                        }
-                    }
-
-                    explodeSenderReport(destIsReceiving, outPacket,
-                            senderReport,
-                            rtpTranslatorImpl,
-                            senderSSRC,
-                            receiverSenderInformationMap,
-                            stream);
-                }
-
-                if (content.isRecording())
-                {
-                    Recorder recorder = content.getRecorder();
-                    MediaStream s;
-
-                    if (recorder != null && (s = recorder.getMediaStream()) != null)
-                    {
-                        explodeSenderReport(true, outPacket,
-                                senderReport,
-                                rtpTranslatorImpl,
-                                senderSSRC,
-                                receiverSenderInformationMap,
-                                s);
-                    }
-                }
-            }
-        }
-
-        return true;
+        this.strategy = strategy;
     }
 
     private void explodeSenderReport(boolean destIsReceiving,
@@ -224,6 +110,119 @@ public class BridgeSenderReporting
         rtpTranslatorImpl.writeControlPayload(payload, stream);
     }
 
+    /**
+     * Explode the SRs to make them compliant with features from the translator.
+     *
+     * @param outPacket
+     * @return
+     */
+    public boolean explodeSenderReport(RTCPCompoundPacket outPacket)
+    {
+        if (outPacket.packets == null
+                || outPacket.packets.length == 0
+                || outPacket.packets[0].type != RTCPPacket.SR)
+        {
+            return false;
+        }
+
+        RTCPSRPacket senderReport = (RTCPSRPacket) outPacket.packets[0];
+
+        Conference conf = strategy.getConference();
+        if (senderReport == null || conf == null)
+            return false;
+
+        RTPTranslator rtpTranslator = strategy.getRTPTranslator();
+        if (rtpTranslator == null
+                || !(rtpTranslator instanceof RTPTranslatorImpl))
+            return false;
+
+        RTPTranslatorImpl rtpTranslatorImpl = (RTPTranslatorImpl)rtpTranslator;
+
+        long ssrc = senderReport.ssrc & 0xFFFFFFFFL;
+        if (ssrc < 1)
+            return false;
+
+        Integer senderSSRC = senderReport.ssrc;
+        Map<Integer, SenderInformation> receiverSenderInformationMap
+                = getReceiverSenderInformationMap(senderSSRC);
+
+        Channel srcChannel = conf
+                .findChannelByReceiveSSRC(ssrc, MediaType.VIDEO);
+
+        if (srcChannel == null || !(srcChannel instanceof RtpChannel))
+            return false;
+
+        RtpChannel srcRtpChannel = (RtpChannel)srcChannel;
+
+        // Send to every channel that receives this sender an SR.
+        for (Content content : conf.getContents())
+        {
+            if (MediaType.VIDEO.equals(content.getMediaType()))
+            {
+                for (Channel destChannel : content.getChannels())
+                {
+                    if (!(destChannel instanceof RtpChannel)
+                            || srcRtpChannel == destChannel)
+                        continue;
+
+                    RtpChannel destRtpChannel = (RtpChannel) destChannel;
+                    MediaStream stream = destRtpChannel.getStream();
+                    if (stream == null)
+                        continue;
+
+                    boolean destIsReceiving
+                            = srcRtpChannel.isInLastN(destChannel);
+
+                    if (destIsReceiving && srcRtpChannel instanceof VideoChannel)
+                    {
+                        VideoChannel srcVideoChannel
+                                = (VideoChannel) srcRtpChannel;
+
+                        if (!(destChannel instanceof VideoChannel))
+                        {
+                            destIsReceiving = false;
+                        }
+                        else
+                        {
+                            VideoChannel destVideoChannel
+                                = (VideoChannel) destChannel;
+
+                            destIsReceiving
+                                = destVideoChannel.getSimulcastManager().accept(
+                                        ssrc,
+                                        srcVideoChannel);
+                        }
+                    }
+
+                    explodeSenderReport(destIsReceiving, outPacket,
+                            senderReport,
+                            rtpTranslatorImpl,
+                            senderSSRC,
+                            receiverSenderInformationMap,
+                            stream);
+                }
+
+                if (content.isRecording())
+                {
+                    Recorder recorder = content.getRecorder();
+                    MediaStream s;
+
+                    if (recorder != null && (s = recorder.getMediaStream()) != null)
+                    {
+                        explodeSenderReport(true, outPacket,
+                                senderReport,
+                                rtpTranslatorImpl,
+                                senderSSRC,
+                                receiverSenderInformationMap,
+                                s);
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
     private Map<Integer, SenderInformation> getReceiverSenderInformationMap(
             Integer senderSSRC)
     {
@@ -250,7 +249,7 @@ public class BridgeSenderReporting
 
     private static class SenderInformation
     {
-        long packetCount;
         long octetCount;
+        long packetCount;
     }
 }

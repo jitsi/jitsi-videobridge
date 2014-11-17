@@ -6,13 +6,14 @@
  */
 package org.jitsi.videobridge.ratecontrol;
 
+import java.util.*;
+
 import net.java.sip.communicator.util.*;
+
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
-
-import java.util.*;
 
 /**
  * Controls the bitrate of a specific <tt>VideoChannel</tt>.
@@ -83,6 +84,14 @@ public class BitrateController
             = BitrateController.class.getName() + ".INITIAL_INTERVAL_MS";
 
     /**
+     * The <tt>Logger</tt> used by the <tt>BitrateController</tt> class
+     * and its instances to print debug information.
+     */
+    @SuppressWarnings("unused")
+    private static final org.jitsi.util.Logger logger
+        = org.jitsi.util.Logger.getLogger(BitrateController.class);
+
+    /**
      * The minimum bitrate in bits per second to assume for an endpoint.
      */
     private static int MIN_ASSUMED_ENDPOINT_BITRATE_BPS = 400000;
@@ -112,7 +121,7 @@ public class BitrateController
      * number of endpoints that this endpoint can receive.
      */
     private static double REMB_MULT_CONSTANT = 1D;
-
+    
     /**
      * The name of the property which can be used to control the
      * <tt>REMB_MULT_CONSTANT</tt> constant.
@@ -121,20 +130,26 @@ public class BitrateController
             = BitrateController.class.getName() + ".REMB_MULT_CONSTANT";
 
     /**
+     * The <tt>BitrateAdaptor</tt> to use to adapt the bandwidth.
+     */
+    private BitrateAdaptor bitrateAdaptor;
+    
+    /**
+     * Whether this <tt>BitrateController</tt> has set its
+     * <tt>BitrateAdaptor</tt>.
+     */
+    private boolean bitrateAdaptorSet = false;
+
+    /**
      * The <tt>VideoChannel</tt> of this <tt>BitrateController</tt>.
      */
     private final VideoChannel channel;
-    
+
     /**
      * The time of reception of first REMB packet.
      */
     private long firstRemb = -1;
 
-    /**
-     * The <tt>BitrateAdaptor</tt> to use to adapt the bandwidth.
-     */
-    private BitrateAdaptor bitrateAdaptor;
-    
     /**
      * The time of reception of the last REMB which indicated that we can
      * increase lastN or keep it as it is (but not decrease it).
@@ -146,27 +161,14 @@ public class BitrateController
      * decrease lastN or keep it as it is (but not increase it).
      */
     private long lastNonIncrease = -1;
-
-    /**
-     * Whether this <tt>BitrateController</tt> has set its
-     * <tt>BitrateAdaptor</tt>.
-     */
-    private boolean bitrateAdaptorSet = false;
-
-    /**
-     * The <tt>Logger</tt> used by the <tt>BitrateController</tt> class
-     * and its instances to print debug information.
-     */
-    private static final org.jitsi.util.Logger logger
-            = org.jitsi.util.Logger.getLogger(BitrateController.class);
-
+    
     /**
      * The list of recently received REMB values, used to compute the average
      * over the last <tt>REMB_AVERAGE_INTERVAL_MS</tt>.
      */
     private final ReceivedRembList receivedRembs
             = new ReceivedRembList(REMB_AVERAGE_INTERVAL_MS);
-    
+
     /**
      * Initializes a new <tt>BitrateController</tt> instance.
      *
@@ -178,41 +180,6 @@ public class BitrateController
         this.channel = channel;
 
         initializeConfiguration();
-    }
-
-    /**
-     * Gets the <tt>VideoChannel</tt> of this <tt>BitrateController</tt>.
-     *
-     * @return the <tt>VideoChannel</tt> of this <tt>BitrateController</tt>.
-     */
-    public VideoChannel getChannel()
-    {
-        return channel;
-    }
-
-    /**
-     * Gets, and creates if necessary, the <tt>BitrateAdaptor</tt> of this
-     * <tt>BitrateController</tt>.
-     *
-     * @return the <tt>BitrateAdaptor</tt> of this <tt>BitrateController</tt>.
-     */
-    private BitrateAdaptor getOrCreateBitrateAdaptor()
-    {
-        if (bitrateAdaptor == null && !bitrateAdaptorSet)
-        {
-            bitrateAdaptorSet = true;
-
-            if (channel.getAdaptiveLastN())
-            {
-                bitrateAdaptor = new VideoChannelLastNAdaptor(this);
-            }
-            else if (channel.getAdaptiveSimulcast())
-            {
-                bitrateAdaptor = new SimulcastAdaptor(this);
-            }
-        }
-
-        return bitrateAdaptor;
     }
 
     public int calcNumEndpointsThatFitIn()
@@ -261,6 +228,16 @@ public class BitrateController
     }
 
     /**
+     * Gets the <tt>VideoChannel</tt> of this <tt>BitrateController</tt>.
+     *
+     * @return the <tt>VideoChannel</tt> of this <tt>BitrateController</tt>.
+     */
+    public VideoChannel getChannel()
+    {
+        return channel;
+    }
+
+    /**
      * Returns the incoming bitrate in bits per second from all
      * <tt>VideoChannel</tt>s of the endpoint <tt>endpoint</tt> or
      * {@link #MIN_ASSUMED_ENDPOINT_BITRATE_BPS} if the actual bitrate is that
@@ -295,6 +272,30 @@ public class BitrateController
         return Math.max(bitrate, MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
     }
 
+    /**
+     * Gets, and creates if necessary, the <tt>BitrateAdaptor</tt> of this
+     * <tt>BitrateController</tt>.
+     *
+     * @return the <tt>BitrateAdaptor</tt> of this <tt>BitrateController</tt>.
+     */
+    private BitrateAdaptor getOrCreateBitrateAdaptor()
+    {
+        if (bitrateAdaptor == null && !bitrateAdaptorSet)
+        {
+            bitrateAdaptorSet = true;
+
+            if (channel.getAdaptiveLastN())
+            {
+                bitrateAdaptor = new VideoChannelLastNAdaptor(this);
+            }
+            else if (channel.getAdaptiveSimulcast())
+            {
+                bitrateAdaptor = new SimulcastAdaptor(this);
+            }
+        }
+
+        return bitrateAdaptor;
+    }
     /**
      * Initializes the constants used by this class from the configuration.
      */
@@ -349,6 +350,8 @@ public class BitrateController
             }
         }
     }
+
+
     /**
      * Notifies this instance that an RTCP REMB packet with a bitrate value of
      * <tt>remb</tt> was received on its associated <tt>VideoChannel</tt>.
@@ -429,7 +432,6 @@ public class BitrateController
             }
         }
     }
-
 
     /**
      * Saves the received REMB values along with their time of reception and

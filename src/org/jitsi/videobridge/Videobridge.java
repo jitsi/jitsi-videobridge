@@ -761,14 +761,13 @@ public class Videobridge
 
                                 if (sourceGroups != null)
                                 {
-                                    SimulcastManager manager = videoChannel
-                                            .getSimulcastManager();
-
-                                    SortedSet<SimulcastLayer> layers =
-                                            SimulcastLayersFactory
-                                                    .fromSourceGroups(
-                                                            sourceGroups,
-                                                            manager);
+                                    SimulcastManager manager
+                                        = videoChannel.getSimulcastManager();
+                                    SortedSet<SimulcastLayer> layers
+                                        = SimulcastLayersFactory
+                                            .fromSourceGroups(
+                                                    sourceGroups,
+                                                    manager);
 
                                     manager.setSimulcastLayers(layers);
                                 }
@@ -779,10 +778,10 @@ public class Videobridge
                                 if (receivingSimulcastLayer != null)
                                 {
                                     // TODO(gp) remove the receiving simulcast
-                                    // layer attribute from the COLIBRI stanza. It
-                                    // was introduced in the very early stages of
-                                    // simulcast development and it is no longer
-                                    // required.
+                                    // layer attribute from the COLIBRI stanza.
+                                    // It was introduced in the very early
+                                    // stages of simulcast development and it is
+                                    // no longer required.
                                 }
                             }
 

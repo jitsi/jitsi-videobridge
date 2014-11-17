@@ -63,6 +63,12 @@ public class VideoChannel
     private boolean adaptiveSimulcast = false;
 
     /**
+     * The <tt>BitrateController</tt> which will be controlling the
+     * value of <tt>bitrate</tt> for this <tt>VideoChannel</tt>.
+     */
+    private BitrateController bitrateController;
+
+    /**
      * The instance which will be computing the incoming bitrate for this
      * <tt>VideoChannel</tt>.
      */
@@ -74,12 +80,6 @@ public class VideoChannel
      * to the endpoint associated with this video <tt>Channel</tt>.
      */
     private Integer lastN;
-
-    /**
-     * The <tt>BitrateController</tt> which will be controlling the
-     * value of <tt>bitrate</tt> for this <tt>VideoChannel</tt>.
-     */
-    private BitrateController bitrateController;
 
     /**
      * The <tt>Endpoint</tt>s in the multipoint conference in which this
@@ -138,7 +138,7 @@ public class VideoChannel
     {
         super(content, id, channelBundleId);
 
-        this.simulcastManager = new SimulcastManager(this);
+        simulcastManager = new SimulcastManager(this);
     }
 
     /**
@@ -182,34 +182,6 @@ public class VideoChannel
     }
 
     /**
-     * Returns the current incoming bitrate in bits per second for this
-     * <tt>VideoChannel</tt> (computed as the average bitrate over the last
-     * {@link #INCOMING_BITRATE_INTERVAL_MS} milliseconds).
-     *
-     * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
-     */
-    public long getIncomingBitrate()
-    {
-        return incomingBitrate.getRate(System.currentTimeMillis());
-    }
-
-    /**
-     * Gets the maximum number of video RTP streams to be sent from Jitsi
-     * Videobridge to the endpoint associated with this video <tt>Channel</tt>.
-     *
-     * @return the maximum number of video RTP streams to be sent from Jitsi
-     * Videobridge to the endpoint associated with this video <tt>Channel</tt>.
-     * If no value or <tt>null</tt> has been explicitly set or this is not a
-     * video <tt>Channel</tt>, returns <tt>-1</tt>.
-     */
-    public int getLastN()
-    {
-        Integer lastNInteger = this.lastN;
-
-        return (lastNInteger == null) ? -1 : lastNInteger.intValue();
-    }
-
-    /**
      * Gets a boolean value indicating whether or not to use adaptive lastN.
      *
      * @return a boolean value indicating whether or not to use adaptive lastN.
@@ -245,16 +217,43 @@ public class VideoChannel
     }
 
     /**
+     * Returns the current incoming bitrate in bits per second for this
+     * <tt>VideoChannel</tt> (computed as the average bitrate over the last
+     * {@link #INCOMING_BITRATE_INTERVAL_MS} milliseconds).
+     *
+     * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
+     */
+    public long getIncomingBitrate()
+    {
+        return incomingBitrate.getRate(System.currentTimeMillis());
+    }
+
+    /**
+     * Gets the maximum number of video RTP streams to be sent from Jitsi
+     * Videobridge to the endpoint associated with this video <tt>Channel</tt>.
+     *
+     * @return the maximum number of video RTP streams to be sent from Jitsi
+     * Videobridge to the endpoint associated with this video <tt>Channel</tt>.
+     * If no value or <tt>null</tt> has been explicitly set or this is not a
+     * video <tt>Channel</tt>, returns <tt>-1</tt>.
+     */
+    public int getLastN()
+    {
+        Integer lastNInteger = this.lastN;
+
+        return (lastNInteger == null) ? -1 : lastNInteger.intValue();
+    }
+
+    /**
      * Returns the list of endpoints for the purposes of lastN.
      *
      * @return the list of endpoints for the purposes of lastN.
      */
     public List<WeakReference<Endpoint>> getLastNEndpoints()
     {
-        List<WeakReference<Endpoint>> endpoints
-                = new LinkedList<WeakReference<Endpoint>>();
-
         Lock readLock = lastNSyncRoot.readLock();
+        List<WeakReference<Endpoint>> endpoints
+            = new LinkedList<WeakReference<Endpoint>>();
 
         readLock.lock();
         try
@@ -271,13 +270,160 @@ public class VideoChannel
     }
 
     /**
+     * Creates and returns an iterator of the endpoints that are currently
+     * being received by this channel.
+     *
+     * @return an iterator of the endpoints that are currently being received
+     * by this channel.
+     */
+    public Iterator<Endpoint> getReceivingEndpoints()
+    {
+        if (getLastN() == -1)
+        {
+            // LastN is disabled. Consequently, this endpoint receives all the
+            // other participants.
+            Content content = getContent();
+            final List<Endpoint> endpoints;
+            final int lastIx;
+
+            if (content == null)
+            {
+                endpoints = null;
+                lastIx = -1;
+            }
+            else
+            {
+                Conference conference = content.getConference();
+
+                if (conference == null)
+                {
+                    endpoints = null;
+                    lastIx = -1;
+                }
+                else
+                {
+                    endpoints = conference.getEndpoints();
+                    lastIx = (endpoints == null) ? -1 : (endpoints.size() - 1);
+                }
+            }
+
+            return
+                new Iterator<Endpoint>()
+                {
+                    private int ix = 0;
+
+                    @Override
+                    public boolean hasNext()
+                    {
+                        return ix <= lastIx;
+                    }
+
+                    @Override
+                    public Endpoint next()
+                    {
+                        if (hasNext())
+                            return endpoints.get(ix++);
+                        else
+                            throw new NoSuchElementException();
+                    }
+
+                    @Override
+                    public void remove()
+                    {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+        }
+        else
+        {
+            // LastN is enabled. Get the last N endpoints that this endpoint is
+            // receiving.
+            final List<WeakReference<Endpoint>> lastNEndpoints
+                = getLastNEndpoints();
+            final int lastIx
+                = (lastNEndpoints == null) ? -1 : (lastNEndpoints.size() - 1);
+
+            return
+                new Iterator<Endpoint>()
+                {
+                    private int ix = 0;
+
+                    @Override
+                    public boolean hasNext()
+                    {
+                        return ix <= lastIx;
+                    }
+
+                    @Override
+                    public Endpoint next()
+                    {
+                        if (hasNext())
+                            return lastNEndpoints.get(ix++).get();
+                        else
+                            throw new NoSuchElementException();
+                    }
+
+                    @Override
+                    public void remove()
+                    {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+        }
+    }
+
+    public int getReceivingEndpointsSize()
+    {
+        int receivingEndpointsSize;
+
+        if (getLastN() == -1)
+        {
+            // LastN is disabled. Consequently, this endpoint receives all the
+            // other participants.
+            Content content = getContent();
+
+            if (content == null)
+            {
+                receivingEndpointsSize = 0;
+            }
+            else
+            {
+                Conference conference = content.getConference();
+
+                if (conference == null)
+                {
+                    receivingEndpointsSize = 0;
+                }
+                else
+                {
+                    List<Endpoint> endpoints = conference.getEndpoints();
+
+                    receivingEndpointsSize
+                        = (endpoints == null) ? 0 : endpoints.size();
+                }
+            }
+        }
+        else
+        {
+            // LastN is enabled. Get the last N endpoints that this endpoint is
+            // receiving.
+            List<WeakReference<Endpoint>> lastNEndpoints = getLastNEndpoints();
+
+            receivingEndpointsSize
+                = (lastNEndpoints == null) ? 0 : lastNEndpoints.size();
+        }
+
+        return receivingEndpointsSize;
+    }
+
+    /**
      * Gets the <tt>SimulcastManager</tt> of this <tt>VideoChannel</tt>.
      *
      * @return the simulcast manager of this <tt>VideoChannel</tt>.
      */
     public SimulcastManager getSimulcastManager()
     {
-        return this.simulcastManager;
+        return simulcastManager;
     }
 
     /**
@@ -663,7 +809,7 @@ public class VideoChannel
         boolean askForKeyframes = this.lastN == null;
 
         Lock writeLock = lastNSyncRoot.writeLock();
-        List<Endpoint> endpointsEnteringLastN = new LinkedList <Endpoint>();
+        List<Endpoint> endpointsEnteringLastN = new LinkedList<Endpoint>();
 
         writeLock.lock();
         try
@@ -672,18 +818,18 @@ public class VideoChannel
             {
                 if (lastN > this.lastN)
                 {
-                    Endpoint thisEndpoint = getEndpoint();
                     int n = 0;
+                    Endpoint thisEndpoint = getEndpoint();
+
                     for (WeakReference<Endpoint> wr : lastNEndpoints)
                     {
                         if (n >= lastN)
                             break;
 
                         Endpoint endpoint = wr.get();
+
                         if (endpoint != null && endpoint.equals(thisEndpoint))
-                        {
                             continue;
-                        }
 
                         ++n;
                         if (n > this.lastN && endpoint != null)
@@ -741,9 +887,7 @@ public class VideoChannel
                     if (endpointsEnteringLastN.size() >= lastN)
                         break;
                     if (!e.equals(thisEndpoint))
-                    {
                         endpointsEnteringLastN.add(e);
-                    }
                 }
 
                 if (lastNEndpoints != null && !lastNEndpoints.isEmpty())
@@ -801,123 +945,5 @@ public class VideoChannel
 
         // Request keyframes from the Endpoints entering the list of lastN.
         return endpointsEnteringLastN;
-    }
-
-    public int getReceivingEndpointsSize()
-    {
-        final int receivingEndpointsSize;
-        if (getLastN() == -1)
-        {
-            // LastN is disabled, consequently, this endpoint receives all the
-            // other participants.
-            final Content content = getContent();
-            final Conference conference
-                    = (content != null) ?  content.getConference() : null;
-            final List<Endpoint> endpoints
-                    = (conference != null) ? conference.getEndpoints() : null;
-
-            receivingEndpointsSize
-                    = (endpoints == null) ? endpoints.size() : 0;
-        }
-        else
-        {
-            // LastN is enabled, get the last N endpoints that this endpoint is
-            // receiving.
-            final List<WeakReference<Endpoint>> lastNEndpoints
-                    = getLastNEndpoints();
-            receivingEndpointsSize
-                    = (lastNEndpoints == null) ? lastNEndpoints.size() : 0;
-        }
-
-        return receivingEndpointsSize;
-    }
-
-    /**
-     * Creates and returns an iterator of the endpoints that are currently
-     * being received by this channel.
-     *
-     * @return an iterator of the endpoints that are currently being received
-     * by this channel.
-     */
-    public Iterator<Endpoint> getReceivingEndpoints()
-    {
-        if (getLastN() == -1)
-        {
-            // LastN is disabled, consequently, this endpoint receives all the
-            // other participants.
-            final Content content = getContent();
-            final Conference conference
-                    = (content != null) ?  content.getConference() : null;
-            final List<Endpoint> endpoints
-                    = (conference != null) ? conference.getEndpoints() : null;
-
-            final int lastIdx = (endpoints != null) ? endpoints.size() - 1 : -1;
-
-            return new Iterator<Endpoint>()
-            {
-                int idx = 0;
-
-                @Override
-                public boolean hasNext()
-                {
-                    return idx <= lastIdx;
-                }
-
-                @Override
-                public Endpoint next()
-                {
-                    if (!hasNext())
-                    {
-                        throw new NoSuchElementException();
-                    }
-
-                    return endpoints.get(idx++);
-                }
-
-                @Override
-                public void remove()
-                {
-                    throw new UnsupportedOperationException();
-                }
-            };
-        }
-        else
-        {
-            // LastN is enabled, get the last N endpoints that this endpoint is
-            // receiving.
-            final List<WeakReference<Endpoint>> lastNEndpoints
-                    = getLastNEndpoints();
-
-            final int lastIdx
-                    = (lastNEndpoints != null) ? lastNEndpoints.size() - 1 : -1;
-
-            return new Iterator<Endpoint>()
-            {
-                int idx = 0;
-
-                @Override
-                public boolean hasNext()
-                {
-                    return idx <= lastIdx;
-                }
-
-                @Override
-                public Endpoint next()
-                {
-                    if (!hasNext())
-                    {
-                        throw new NoSuchElementException();
-                    }
-
-                    return lastNEndpoints.get(idx++).get();
-                }
-
-                @Override
-                public void remove()
-                {
-                    throw new UnsupportedOperationException();
-                }
-            };
-        }
     }
 }
