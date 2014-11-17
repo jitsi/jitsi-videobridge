@@ -325,8 +325,11 @@ public class PubSubPublisher
                      .equals(error.getCondition())
                      || XMPPError.Condition.forbidden.toString()
                         .equals(error.getCondition())))
-               )
-            )
+                /* prosody bug, for backward compat */
+                || (XMPPError.Type.AUTH.equals(error.getType())
+                    && (XMPPError.Condition.forbidden.toString()
+                        .equals(error.getCondition())))
+               ))
         {
             if(XMPPError.Condition.forbidden.toString()
                .equals(error.getCondition()))
