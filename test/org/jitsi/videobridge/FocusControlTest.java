@@ -8,18 +8,16 @@ package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
-import org.ice4j.*;
-import org.jitsi.service.neomedia.*;
+
 import org.jitsi.videobridge.osgi.*;
+import org.jivesoftware.smack.packet.*;
 import org.junit.*;
 import org.junit.Test;
 import org.junit.runner.*;
 import org.junit.runners.*;
 import org.osgi.framework.*;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
  * Tests focus access control of the conference and various IQ processing
@@ -42,33 +40,9 @@ public class FocusControlTest
     private static Videobridge bridge;
 
     /**
-     * Creates {@link ColibriConferenceIQ} with audio content and empty channel
-     * IQ. Conference ID is empty hence it can be used to created new conference
-     * on the bridge.
-     *
-     * @param focusJid conference focus owner.
-     *
-     * @return {@link ColibriConferenceIQ} with audio content and empty channel
-     *         IQ.
+     * Bundle activator used to start OSGi(stored for shutdown purpose)
      */
-    private ColibriConferenceIQ createConferenceIq(String focusJid)
-    {
-        ColibriConferenceIQ confIq = new ColibriConferenceIQ();
-
-        confIq.setFrom(focusJid);
-
-        ColibriConferenceIQ.Content audioContent
-            = new ColibriConferenceIQ.Content(MediaType.AUDIO.toString());
-
-        ColibriConferenceIQ.Channel channel
-            = new ColibriConferenceIQ.Channel();
-
-        audioContent.addChannel(channel);
-
-        confIq.addContent(audioContent);
-
-        return confIq;
-    }
+    private static BundleActivator activator;
 
     /**
      * Initializes OSGi and the videobridge.
@@ -77,7 +51,7 @@ public class FocusControlTest
     public static void setUp()
         throws InterruptedException
     {
-        OSGi.start(
+        activator =
             new BundleActivator()
             {
                 @Override
@@ -97,8 +71,9 @@ public class FocusControlTest
                 {
 
                 }
-            }
-        );
+            };
+
+        OSGi.start(activator);
 
         synchronized (FocusControlTest.class)
         {
@@ -111,6 +86,15 @@ public class FocusControlTest
     }
 
     /**
+     * Shutdown OSGi and the videobridge.
+     */
+    @AfterClass
+    public static void tearDown()
+    {
+        OSGi.stop(activator);
+    }
+
+    /**
      * Tests if the conference can be accessed only by the peer that has created
      * the conference.
      */
@@ -120,31 +104,32 @@ public class FocusControlTest
     {
         String focusJid = "focusJid";
 
-        ColibriConferenceIQ confIq = createConferenceIq(focusJid);
-        ColibriConferenceIQ respIq;
+        ColibriConferenceIQ confIq
+            = ColibriUtilities.createConferenceIq(focusJid);
+        IQ respIq;
 
         respIq = bridge.handleColibriConferenceIQ(confIq);
 
-        assertNotNull(respIq);
+        assertTrue(respIq instanceof ColibriConferenceIQ);
 
-        confIq.setID(respIq.getID());
+        ColibriConferenceIQ respConfIq = (ColibriConferenceIQ) respIq;
+
+        confIq.setID(respConfIq.getID());
 
         // Only focus can access this conference now
         confIq.setFrom("someOtherJid");
         respIq = bridge.handleColibriConferenceIQ(confIq);
         assertNull(respIq);
 
-        // Expect NPE when no focus is provided with default options
-        try
-        {
-            confIq.setFrom(null);
-            bridge.handleColibriConferenceIQ(confIq);
-            fail("No NPE thrown");
-        }
-        catch (NullPointerException npe)
-        {
-            // OK
-        }
+        // Expect 'not_authorized' error when no focus is provided
+        // with default options
+        confIq.setFrom(null);
+        IQ notAuthorizedError = bridge.handleColibriConferenceIQ(confIq);
+
+        assertNotNull(notAuthorizedError);
+        assertEquals(IQ.Type.ERROR, notAuthorizedError.getType());
+        assertEquals(XMPPError.Condition.not_authorized.toString(),
+                     notAuthorizedError.getError().getCondition());
     }
 
     /**
@@ -155,14 +140,17 @@ public class FocusControlTest
     public void noFocusControlTest()
         throws Exception
     {
-        ColibriConferenceIQ confIq = createConferenceIq(null);
+        ColibriConferenceIQ confIq = ColibriUtilities.createConferenceIq(null);
         int options = Videobridge.OPTION_ALLOW_NO_FOCUS;
-        ColibriConferenceIQ respIq;
+        IQ respIq;
+        ColibriConferenceIQ respConfIq;
 
         respIq = bridge.handleColibriConferenceIQ(confIq, options);
-        assertNotNull(respIq);
+        assertTrue(respIq instanceof ColibriConferenceIQ);
 
-        confIq.setID(respIq.getID());
+        respConfIq = (ColibriConferenceIQ) respIq;
+
+        confIq.setID(respConfIq.getID());
 
         confIq.setFrom("someJid");
         respIq = bridge.handleColibriConferenceIQ(confIq, options);
@@ -179,16 +167,20 @@ public class FocusControlTest
     {
         String focusJid = "focusJid";
 
-        ColibriConferenceIQ confIq = createConferenceIq(focusJid);
+        ColibriConferenceIQ confIq
+            = ColibriUtilities.createConferenceIq(focusJid);
         int options = Videobridge.OPTION_ALLOW_ANY_FOCUS;
-        ColibriConferenceIQ respIq;
+        IQ respIq;
+        ColibriConferenceIQ respConfIq;
 
         respIq = bridge.handleColibriConferenceIQ(confIq, options);
 
-        assertNotNull(respIq);
+        assertTrue(respIq instanceof ColibriConferenceIQ);
+
+        respConfIq = (ColibriConferenceIQ) respIq;
 
         // Set conference id
-        confIq.setID(respIq.getID());
+        confIq.setID(respConfIq.getID());
 
         // Anyone can access the conference
         confIq.setFrom("someOtherJid");

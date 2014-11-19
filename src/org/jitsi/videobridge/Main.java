@@ -9,6 +9,8 @@ package org.jitsi.videobridge;
 import java.util.*;
 
 import net.java.sip.communicator.service.protocol.*;
+import net.java.sip.communicator.service.shutdown.*;
+import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.osgi.*;
@@ -65,6 +67,11 @@ public class Main
      * it is not explicitly provided.
      */
     private static final String HOST_ARG_VALUE = "localhost";
+
+    /**
+     * The logger instance used.
+     */
+    private static Logger logger = Logger.getLogger(Main.class);
 
     /**
      * The name of the command-line argument which specifies the value of the
@@ -238,6 +245,8 @@ public class Main
                         throws Exception
                     {
                         // TODO Auto-generated method stub
+                        registerShutdownService(
+                            bundleContext, Thread.currentThread(), this);
                     }
 
                     @Override
@@ -270,8 +279,6 @@ public class Main
              */
             do
             {
-                boolean interrupted = false;
-    
                 synchronized (exitSyncRoot)
                 {
                     try
@@ -280,13 +287,62 @@ public class Main
                     }
                     catch (InterruptedException ie)
                     {
-                        interrupted = true;
+                        break;
                     }
                 }
-                if (interrupted)
-                    Thread.currentThread().interrupt();
             }
             while (true);
+
+            try
+            {
+                componentManager.removeComponent(subdomain);
+            }
+            catch (ComponentException e)
+            {
+                logger.error(e, e);
+            }
         }
+    }
+
+    /**
+     * Registers {@link ShutdownService} implementation for videobridge
+     * application.
+     * @param bundleContext the OSGi context
+     * @param mainThread main application thread
+     * @param mainBundleActivator main bundle activator that will be used for
+     *                            stopping the OSGi.
+     */
+    private static void registerShutdownService(
+            BundleContext bundleContext,
+            final Thread mainThread,
+            final BundleActivator mainBundleActivator)
+    {
+        bundleContext.registerService(
+            ShutdownService.class,
+            new ShutdownService()
+            {
+                private boolean shutdownStarted = false;
+
+                @Override
+                public void beginShutdown()
+                {
+                    if (shutdownStarted)
+                        return;
+
+                    shutdownStarted = true;
+
+                    new Thread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            mainThread.interrupt();
+
+                            OSGi.stop(mainBundleActivator);
+                        }
+                    }, "JVB-Shutdown-Thread").start();
+                }
+            }, null
+        );
     }
 }

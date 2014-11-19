@@ -17,7 +17,8 @@ import org.junit.runners.*;
 @RunWith(Suite.class)
 @Suite.SuiteClasses(
     {
-        FocusControlTest.class
+        FocusControlTest.class,
+        BridgeShutdownTest.class // This one must be the last one
     })
 public class VideoBridgeTestSuite
 {

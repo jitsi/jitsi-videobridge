@@ -421,6 +421,7 @@ final class JSONSerializer
             List<ColibriConferenceIQ.ChannelBundle> channelBundles
                 = conference.getChannelBundles();
             ColibriConferenceIQ.Recording recording = conference.getRecording();
+            boolean isGracefulShutdown = conference.isGracefulShutdown();
 
             jsonObject = new JSONObject();
             // id
@@ -441,6 +442,13 @@ final class JSONSerializer
             {
                 jsonObject.put(ColibriConferenceIQ.Recording.ELEMENT_NAME,
                                serializeRecording(recording));
+            }
+            // shutdown
+            if (isGracefulShutdown)
+            {
+                jsonObject.put(
+                    ColibriConferenceIQ.GracefulShutdown.ELEMENT_NAME,
+                    "true");
             }
         }
         return jsonObject;

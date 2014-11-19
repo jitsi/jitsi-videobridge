@@ -74,6 +74,12 @@ public class VideobridgeStatistics
     public static final String RTP_LOSS = "rtp_loss";
 
     /**
+     * The name of the stat that indicates the bridge has entered graceful
+     * shutdown mode.
+     */
+    public static final String SHUTDOWN_IN_PROGRESS = "graceful_shutdown";
+
+    /**
      * The name of the number of conferences statistic.
      */
     public static final String TIMESTAMP = "current_timestamp";
@@ -215,6 +221,7 @@ public class VideobridgeStatistics
         int endpoints = 0;
         long packets = 0, packetsLost = 0;
         long bytesReceived = 0, bytesSent = 0;
+        boolean shutdownInProgress = false;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
@@ -252,6 +259,10 @@ public class VideobridgeStatistics
                     }
                     conferences++;
                     endpoints += conference.getEndpointsCount();
+                }
+                if (videobridge.isShutdownInProgress())
+                {
+                    shutdownInProgress = true;
                 }
             }
         }
@@ -323,6 +334,8 @@ public class VideobridgeStatistics
                     TOTAL_MEMORY,
                     (totalMemory < 0) ? null : totalMemory);
             unlockedSetStat(USED_MEMORY, (usedMemory < 0) ? null : usedMemory);
+
+            unlockedSetStat(SHUTDOWN_IN_PROGRESS, shutdownInProgress);
 
             unlockedSetStat(TIMESTAMP, timestamp);
         }

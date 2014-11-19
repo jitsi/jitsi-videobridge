@@ -34,6 +34,14 @@ public class RESTBundleActivator
 {
     /**
      * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
+     * boolean property which enables graceful shutdown through REST API.
+     * It is disabled by default.
+     */
+    private static final String ENABLE_REST_SHUTDOWN_PNAME
+        = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
+
+    /**
+     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
      * property which specifies the port on which the REST API of Videobridge is
      * to be served over HTTP. The default value is <tt>8080</tt>.
      */
@@ -163,6 +171,7 @@ public class RESTBundleActivator
         int port = 8080, tlsPort = 8443;
         String sslContextFactoryKeyStorePassword, sslContextFactoryKeyStorePath;
         boolean sslContextFactoryNeedClientAuth = false;
+        boolean enableRestShutdown;
 
         if (cfg == null)
         {
@@ -175,6 +184,7 @@ public class RESTBundleActivator
                 = Boolean.getBoolean(JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH);
             start = Boolean.getBoolean(Videobridge.REST_API_PNAME);
             tlsPort = Integer.getInteger(JETTY_TLS_PORT_PNAME, tlsPort);
+            enableRestShutdown = Boolean.getBoolean(ENABLE_REST_SHUTDOWN_PNAME);
         }
         else
         {
@@ -189,6 +199,9 @@ public class RESTBundleActivator
                         sslContextFactoryNeedClientAuth);
             start = cfg.getBoolean(Videobridge.REST_API_PNAME, false);
             tlsPort = cfg.getInt(JETTY_TLS_PORT_PNAME, tlsPort);
+            enableRestShutdown
+                = cfg.getBoolean(
+                        ENABLE_REST_SHUTDOWN_PNAME, false);
         }
         if (!start)
             return;
@@ -257,7 +270,8 @@ public class RESTBundleActivator
                 server.addConnector(sslConnector);
             }
 
-            server.setHandler(new HandlerImpl(bundleContext));
+            server.setHandler(
+                new HandlerImpl(bundleContext, enableRestShutdown));
 
             /*
              * The server will start a non-daemon background Thread which will
@@ -295,6 +309,12 @@ public class RESTBundleActivator
     {
         if (server != null)
         {
+            // FIXME graceful Jetty shutdown
+            // when shutdown request is accepted empty response
+            // is sent back instead of 200, because Jetty is not being
+            // shutdown gracefully
+            Thread.sleep(1000);
+
             server.stop();
             server = null;
         }

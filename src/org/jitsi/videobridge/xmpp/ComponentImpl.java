@@ -16,6 +16,8 @@ import org.jitsi.videobridge.osgi.*;
 import org.osgi.framework.*;
 import org.xmpp.component.*;
 import org.xmpp.packet.*;
+import org.xmpp.packet.IQ;
+import org.xmpp.packet.Packet;
 
 /**
  * Implements <tt>org.xmpp.component.Component</tt> to provide Jitsi Videobridge
@@ -209,6 +211,31 @@ public class ComponentImpl
     }
 
     /**
+     * Handles a <tt>GracefulShutdownIQ</tt> stanza which represents a request.
+     *
+     * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
+     * the request to handle
+     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
+     * represents the response to the specified request or <tt>null</tt> to
+     * reply with <tt>feature-not-implemented</tt>
+     * @throws Exception to reply with <tt>internal-server-error</tt> to the
+     * specified request
+     */
+    private org.jivesoftware.smack.packet.IQ handleGracefulShutdownIQ(
+            GracefulShutdownIQ shutdownIQ)
+        throws Exception
+    {
+        Videobridge videobridge = getVideobridge();
+        org.jivesoftware.smack.packet.IQ iq;
+
+        if (videobridge == null)
+            iq = null;
+        else
+            iq = videobridge.handleGracefulShutdownIQ(shutdownIQ);
+        return iq;
+    }
+
+    /**
      * Handles an <tt>org.xmpp.packet.IQ</tt> stanza of type <tt>get</tt> or
      * <tt>set</tt> which represents a request. Converts the specified
      * <tt>org.xmpp.packet.IQ</tt> to an
@@ -351,6 +378,8 @@ public class ComponentImpl
 
         if (request instanceof ColibriConferenceIQ)
             response = handleColibriConferenceIQ((ColibriConferenceIQ) request);
+        else if (request instanceof GracefulShutdownIQ)
+            response = handleGracefulShutdownIQ((GracefulShutdownIQ)request);
         else
             response = null;
         return response;

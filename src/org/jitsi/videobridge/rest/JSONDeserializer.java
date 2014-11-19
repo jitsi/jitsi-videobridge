@@ -334,8 +334,11 @@ final class JSONDeserializer
             Object recording
                 = conference.get(ColibriConferenceIQ.Recording.ELEMENT_NAME);
             Object strategy
-                    = conference.get(ColibriConferenceIQ
+                = conference.get(ColibriConferenceIQ
                         .RTCPTerminationStrategy.ELEMENT_NAME);
+            Object shutdownExt
+                = conference.get(ColibriConferenceIQ
+                        .GracefulShutdown.ELEMENT_NAME);
 
             conferenceIQ = new ColibriConferenceIQ();
             // id
@@ -357,6 +360,8 @@ final class JSONDeserializer
             if (strategy != null)
                 deserializeRTCPTerminationStrategy((JSONObject) strategy,
                         conferenceIQ);
+            if (shutdownExt != null)
+                conferenceIQ.setGracefulShutdown(true);
         }
         return conferenceIQ;
     }
@@ -627,6 +632,14 @@ final class JSONDeserializer
                         contentIQ);
             }
         }
+    }
+
+    public static GracefulShutdownIQ deserializeShutdownIQ(
+        JSONObject requestJSONObject)
+    {
+        return requestJSONObject.get(
+            GracefulShutdownIQ.ELEMENT_NAME) != null
+                    ? new GracefulShutdownIQ() : null;
     }
 
     public static SourcePacketExtension deserializeSource(
