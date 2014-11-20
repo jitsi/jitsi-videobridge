@@ -821,19 +821,41 @@ public class VideoChannel
                     int n = 0;
                     Endpoint thisEndpoint = getEndpoint();
 
-                    for (WeakReference<Endpoint> wr : lastNEndpoints)
+                    // We do not hold any lock on lastNSyncRoot here because it
+                    // should be OK for multiple threads to check whether
+                    // lastNEndpoints is null and invoke the method to populate
+                    // it because (1) the method to populate lastNEndpoints will
+                    // acquire the necessary locks to ensure preserving the
+                    // correctness of the state of this instance under the
+                    // conditions of concurrent access and (2) we do not want
+                    // to hold a write lock on lastNSyncRoot while invoking the
+                    // method to populate lastNEndpoints because the latter
+                    // might fire an event.
+                    if (lastNEndpoints == null)
                     {
-                        if (n >= lastN)
-                            break;
+                        // Pretend that the ordered list of Endpoints maintained
+                        // by conferenceSpeechActivity has changed in order to
+                        // populate lastNEndpoints.
+                        speechActivityEndpointsChanged(null);
+                    }
 
-                        Endpoint endpoint = wr.get();
+                    if (lastNEndpoints != null)
+                    {
+                        for (WeakReference<Endpoint> wr : lastNEndpoints)
+                        {
+                            if (n >= lastN)
+                                break;
 
-                        if (endpoint != null && endpoint.equals(thisEndpoint))
-                            continue;
+                            Endpoint endpoint = wr.get();
 
-                        ++n;
-                        if (n > this.lastN && endpoint != null)
-                            endpointsEnteringLastN.add(endpoint);
+                            if (endpoint != null
+                                    && endpoint.equals(thisEndpoint))
+                                continue;
+
+                            ++n;
+                            if (n > this.lastN && endpoint != null)
+                                endpointsEnteringLastN.add(endpoint);
+                        }
                     }
                 }
             }
