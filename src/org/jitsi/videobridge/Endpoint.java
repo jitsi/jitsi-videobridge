@@ -65,6 +65,14 @@ public class Endpoint
         = Endpoint.class.getName() + ".selectedEndpoint";
 
     /**
+     * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt>
+     * which specifies the JID of the currently pinned <tt>Endpoint</tt> of
+     * this <tt>Endpoint</tt>.
+     */
+    public static final String PINNED_ENDPOINT_PROPERTY_NAME
+            = Endpoint.class.getName() + ".pinnedEndpoint";
+
+    /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
     private final List<WeakReference<RtpChannel>> channels
@@ -97,6 +105,17 @@ public class Endpoint
      * The <tt>selectedEndpointID</tt> SyncRoot.
      */
     private final Object selectedEndpointSyncRoot = new Object();
+
+    /**
+     * the (unique) identifier/ID of the currently pinned <tt>Endpoint</tt>
+     * at this <tt>Endpoint</tt>.
+     */
+    private String pinnedEndpointID;
+
+    /**
+     * The <tt>pinnedEndpointID</tt> SyncRoot.
+     */
+    private final Object pinnedEndpointSyncRoot = new Object();
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -289,6 +308,18 @@ public class Endpoint
     }
 
     /**
+     * Gets the (unique) identifier/ID of the currently pinned
+     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     *
+     * @return the (unique) identifier/ID of the currently pinned
+     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     */
+    public String getPinnedEndpointID()
+    {
+        return pinnedEndpointID;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -340,6 +371,10 @@ public class Endpoint
                         newSelectedEndpoint
                             = SELECTED_ENDPOINT_NOT_WATCHING_VIDEO;
                     }
+                    else
+                    {
+                        newSelectedEndpoint = newSelectedEndpoint.trim();
+                    }
 
                     changed = !newSelectedEndpoint.equals(oldSelectedEndpoint);
                     if (changed)
@@ -364,6 +399,44 @@ public class Endpoint
                     firePropertyChange(
                             SELECTED_ENDPOINT_PROPERTY_NAME,
                             oldSelectedEndpoint, newSelectedEndpoint);
+                }
+            }
+            else if ("PinnedEndpointChangedEvent".equals(colibriClass))
+            {
+                String oldPinnedEndpoint, newPinnedEndpoint;
+                boolean changed;
+
+                synchronized (pinnedEndpointSyncRoot)
+                {
+                    oldPinnedEndpoint = this.pinnedEndpointID;
+                    newPinnedEndpoint
+                            = (String) jsonObject.get("pinnedEndpoint");
+
+                    newPinnedEndpoint = newPinnedEndpoint == null
+                            ? "" : newPinnedEndpoint.trim();
+
+                    changed = !newPinnedEndpoint.equals(oldPinnedEndpoint);
+                    if (changed)
+                        this.pinnedEndpointID = newPinnedEndpoint;
+                }
+
+                // NOTE(gp) This won't guarantee that property change events are
+                // fired in the correct order. We should probably call the
+                // firePropertyChange() method from inside the synchronized
+                // _and_ the underlying PropertyChangeNotifier should have a
+                // dedicated events queue and a thread for firing
+                // PropertyChangeEvents from the queue.
+
+                if (changed)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug(
+                                "Endpoint " + getID() + " pinned "
+                                        + newPinnedEndpoint);
+                    }
+                    firePropertyChange(PINNED_ENDPOINT_PROPERTY_NAME,
+                            oldPinnedEndpoint, newPinnedEndpoint);
                 }
             }
         }

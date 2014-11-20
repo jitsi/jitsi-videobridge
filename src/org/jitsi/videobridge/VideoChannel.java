@@ -6,6 +6,7 @@
  */
 package org.jitsi.videobridge;
 
+import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.net.*;
@@ -18,6 +19,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
@@ -269,6 +271,37 @@ public class VideoChannel
         return endpoints;
     }
 
+    @Override
+    public void propertyChange(PropertyChangeEvent ev)
+    {
+        super.propertyChange(ev);
+
+        String propertyName = ev.getPropertyName();
+
+        if (Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
+        {
+            // The pinned endpoint is always in the last N set, if last N > 0.
+            // So, it (the pinned endpoint) has changed, the lastN has changed.
+            if (this.getLastN() < 1)
+            {
+                return;
+            }
+
+            // Pretend that the ordered list of Endpoints maintained by
+            // conferenceSpeechActivity has changed in order to populate
+            // lastNEndpoints and get the channel endpoints to ask for key
+            // frames.
+            List<Endpoint> channelEndpointsToAskForKeyframes
+                    = speechActivityEndpointsChanged(null);
+
+            if ((channelEndpointsToAskForKeyframes != null)
+                    && !channelEndpointsToAskForKeyframes.isEmpty())
+            {
+                getContent().askForKeyframes(channelEndpointsToAskForKeyframes);
+            }
+        }
+    }
+
     /**
      * Creates and returns an iterator of the endpoints that are currently
      * being received by this channel.
@@ -475,10 +508,18 @@ public class VideoChannel
             if (lastNEndpoints != null)
             {
                 Endpoint thisEndpoint = getEndpoint();
+                // The pinned endpoint is always in the last N set, if last N > 0.
+                Endpoint pinnedEndpoint = getPinnedEndpoint();
+
                 int n = 0;
 
                 for (WeakReference<Endpoint> wr : lastNEndpoints)
                 {
+                    if (pinnedEndpoint == null && n >= lastN
+                            // keep one empty slot for the pinned endpoint.
+                            || pinnedEndpoint != null && n >= lastN - 1)
+                        break;
+
                     Endpoint e = wr.get();
 
                     if (e != null)
@@ -495,8 +536,11 @@ public class VideoChannel
                     }
 
                     ++n;
-                    if (n >= lastN)
-                        break;
+                }
+
+                if (!inLastN && pinnedEndpoint != null)
+                {
+                    inLastN = channelEndpoint == pinnedEndpoint;
                 }
             }
         }
@@ -537,18 +581,36 @@ public class VideoChannel
         if (effectiveEndpointsEnteringLastN == null)
             effectiveEndpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
 
+        // The pinned endpoint is always in the last N set, if last N > 0.
+        Endpoint pinnedEndpoint = getPinnedEndpoint();
+
         readLock.lock();
         try
         {
             if ((lastNEndpoints != null) && !lastNEndpoints.isEmpty())
             {
                 int n = 0;
+                boolean foundPinnedEndpoint = pinnedEndpoint == null;
 
                 for (WeakReference<Endpoint> wr : lastNEndpoints)
                 {
                     if (n >= lastN)
                         break;
                     Endpoint e = wr.get();
+
+                    // The pinned endpoint is always in the last N set, if
+                    // last N > 0.
+                    if (!foundPinnedEndpoint)
+                    {
+                        if (n == lastN - 1)
+                        {
+                            e = pinnedEndpoint;
+                        }
+                        else
+                        {
+                            foundPinnedEndpoint = e == pinnedEndpoint;
+                        }
+                    }
 
                     if (e != null)
                     {
@@ -857,6 +919,36 @@ public class VideoChannel
                                 endpointsEnteringLastN.add(endpoint);
                         }
                     }
+
+                    // The pinned endpoint is always in the last N set, if
+                    // last N > 0.
+                    // FIXME(gp) no need for a 2nd loop. see foundPinnedEndpoint
+                    // above
+                    Endpoint pinnedEndpoint = getPinnedEndpoint();
+                    if (endpointsEnteringLastN.size() > 0
+                            && pinnedEndpoint != null)
+                    {
+                        boolean found = false;
+
+                        for (Endpoint e : endpointsEnteringLastN)
+                        {
+                            if (e != null)
+                            {
+                                if (pinnedEndpoint.getID().equals(e.getID()))
+                                {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!found)
+                        {
+                            endpointsEnteringLastN
+                                    .remove(endpointsEnteringLastN.size() - 1);
+                            endpointsEnteringLastN.add(pinnedEndpoint);
+                        }
+                    }
                 }
             }
 
@@ -876,6 +968,22 @@ public class VideoChannel
         }
 
         touch(); // It seems this Channel is still active.
+    }
+
+    private Endpoint getPinnedEndpoint()
+    {
+        Endpoint self = getEndpoint();
+        Content content;
+        Conference conference;
+        String pinnedEndpointID;
+
+        return (self != null
+                && !StringUtils.isNullOrEmpty(pinnedEndpointID = self.getPinnedEndpointID())
+                && (content = getContent()) != null
+                && (conference = content.getConference()) != null)
+
+                ?  conference.getEndpoint(pinnedEndpointID)
+                : null;
     }
 
     /**
@@ -910,6 +1018,36 @@ public class VideoChannel
                         break;
                     if (!e.equals(thisEndpoint))
                         endpointsEnteringLastN.add(e);
+                }
+
+                // The pinned endpoint is always in the last N set, if
+                // last N > 0.
+                // FIXME(gp) no need for a 2nd loop. see foundPinnedEndpoint
+                // above
+                Endpoint pinnedEndpoint = getPinnedEndpoint();
+                if (endpointsEnteringLastN.size() > 0
+                        && pinnedEndpoint != null)
+                {
+                    boolean found = false;
+
+                    for (Endpoint e : endpointsEnteringLastN)
+                    {
+                        if (e != null)
+                        {
+                            if (pinnedEndpoint.getID().equals(e.getID()))
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        endpointsEnteringLastN
+                                .remove(endpointsEnteringLastN.size() - 1);
+                        endpointsEnteringLastN.add(pinnedEndpoint);
+                    }
                 }
 
                 if (lastNEndpoints != null && !lastNEndpoints.isEmpty())

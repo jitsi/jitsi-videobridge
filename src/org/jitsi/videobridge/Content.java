@@ -192,7 +192,7 @@ public class Content
         return accept;
     }
 
-    void askForKeyframes(Set<Endpoint> endpoints)
+    void askForKeyframes(Collection<Endpoint> endpoints)
     {
         for (Endpoint endpoint : endpoints)
         {

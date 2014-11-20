@@ -1011,9 +1011,15 @@ public class RtpChannel
         super.onEndpointChanged(oldValue, newValue);
 
         if (oldValue != null)
+        {
             oldValue.removeChannel(this);
+            oldValue.removePropertyChangeListener(this);
+        }
         if (newValue != null)
+        {
             newValue.addChannel(this);
+            newValue.addPropertyChangeListener(this);
+        }
     }
 
     /**
