@@ -322,12 +322,14 @@ public class PubSubPublisher
         if(error != null
             && ((XMPPError.Type.CANCEL.equals(error.getType())
                  && (XMPPError.Condition.conflict.toString()
-                     .equals(error.getCondition())))
+                     .equals(error.getCondition())
+                     || XMPPError.Condition.forbidden.toString()
+                        .equals(error.getCondition())))
+                /* prosody bug, for backward compat */
                 || (XMPPError.Type.AUTH.equals(error.getType())
                     && (XMPPError.Condition.forbidden.toString()
                         .equals(error.getCondition())))
-               )
-            )
+               ))
         {
             if(XMPPError.Condition.forbidden.toString()
                .equals(error.getCondition()))
