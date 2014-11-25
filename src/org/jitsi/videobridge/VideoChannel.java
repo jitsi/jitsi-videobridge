@@ -292,7 +292,7 @@ public class VideoChannel
             // lastNEndpoints and get the channel endpoints to ask for key
             // frames.
             List<Endpoint> channelEndpointsToAskForKeyframes
-                    = speechActivityEndpointsChanged(null);
+                    = speechActivityEndpointsChanged(null, true);
 
             if ((channelEndpointsToAskForKeyframes != null)
                     && !channelEndpointsToAskForKeyframes.isEmpty())
@@ -992,9 +992,15 @@ public class VideoChannel
     @Override
     List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
+        return speechActivityEndpointsChanged(endpoints, false);
+    }
+
+    private List<Endpoint> speechActivityEndpointsChanged(
+            List<Endpoint> endpoints, boolean pinnedEndpointChanged)
+    {
         Lock writeLock = lastNSyncRoot.writeLock();
         List<Endpoint> endpointsEnteringLastN = null;
-        boolean lastNEndpointsChanged = false;
+        boolean lastNEndpointsChanged = pinnedEndpointChanged;
 
         writeLock.lock();
         try
