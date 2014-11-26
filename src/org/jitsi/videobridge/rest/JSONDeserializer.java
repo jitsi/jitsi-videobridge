@@ -334,8 +334,11 @@ final class JSONDeserializer
             Object recording
                 = conference.get(ColibriConferenceIQ.Recording.ELEMENT_NAME);
             Object strategy
-                    = conference.get(ColibriConferenceIQ
+                = conference.get(ColibriConferenceIQ
                         .RTCPTerminationStrategy.ELEMENT_NAME);
+            Object shutdownExt
+                = conference.get(ColibriConferenceIQ
+                        .GracefulShutdown.ELEMENT_NAME);
 
             conferenceIQ = new ColibriConferenceIQ();
             // id
@@ -357,6 +360,8 @@ final class JSONDeserializer
             if (strategy != null)
                 deserializeRTCPTerminationStrategy((JSONObject) strategy,
                         conferenceIQ);
+            if (shutdownExt != null)
+                conferenceIQ.setGracefulShutdown(true);
         }
         return conferenceIQ;
     }
@@ -568,10 +573,10 @@ final class JSONDeserializer
         if (token != null)
             recordingIQ.setToken(token.toString());
 
-        Object path
-                = recording.get(ColibriConferenceIQ.Recording.PATH_ATTR_NAME);
-        if (path != null)
-            recordingIQ.setPath(path.toString());
+        Object directory
+                = recording.get(ColibriConferenceIQ.Recording.DIRECTORY_ATTR_NAME);
+        if (directory != null)
+            recordingIQ.setDirectory(directory.toString());
 
         conferenceIQ.setRecording(recordingIQ);
     }
@@ -627,6 +632,14 @@ final class JSONDeserializer
                         contentIQ);
             }
         }
+    }
+
+    public static GracefulShutdownIQ deserializeShutdownIQ(
+        JSONObject requestJSONObject)
+    {
+        return requestJSONObject.get(
+            GracefulShutdownIQ.ELEMENT_NAME) != null
+                    ? new GracefulShutdownIQ() : null;
     }
 
     public static SourcePacketExtension deserializeSource(

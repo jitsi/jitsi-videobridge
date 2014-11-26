@@ -63,6 +63,10 @@ in order to reduce the fluctuations in the bitrates -- we do not want to change
 *lastN* as a result of very short periods of increased or decreased bitrate
 from an endpoint.
 
+<!---
+TODO describe how this works with simulcast or transform this into a more 
+general document that will describe bitrate control
+-->
 
 
 After we have K, we update the state:
@@ -97,10 +101,10 @@ bandwidth.
 The parameters from the above section can be configured with the following
 properties (with their default values given):
 
-org.jitsi.videobridge.VideoChannelLastNAdaptor.INCREASE\_LAG\_MS=20000
-org.jitsi.videobridge.VideoChannelLastNAdaptor.DECREASE\_LAG\_MS=10000
-org.jitsi.videobridge.VideoChannelLastNAdaptor.INITIAL\_INTERVAL\_MS=70000
-org.jitsi.videobridge.VideoChannelLastNAdaptor.REMB\_MULT\_CONSTANT=1.0
-org.jitsi.videobridge.VideoChannelLastNAdaptor.MIN\_ASSUMED\_ENDPOINT\_BITRATE\_BPS=400000
-org.jitsi.videobridge.VideoChannelLastNAdaptor.REMB\_AVERAGE\_INTERVAL\_MS=5000
-org.jitsi.videobridge.VideoChannelLastNAdaptor.MAX\_STAY\_AT\_ZERO\_MS=60000
+org.jitsi.videobridge.ratecontrol.BitrateController.INCREASE\_LAG\_MS=20000
+org.jitsi.videobridge.ratecontrol.BitrateController.DECREASE\_LAG\_MS=10000
+org.jitsi.videobridge.ratecontrol.BitrateController.INITIAL\_INTERVAL\_MS=70000
+org.jitsi.videobridge.ratecontrol.BitrateController.REMB\_MULT\_CONSTANT=1.0
+org.jitsi.videobridge.ratecontrol.BitrateController.MIN\_ASSUMED\_ENDPOINT\_BITRATE\_BPS=400000
+org.jitsi.videobridge.ratecontrol.BitrateController.REMB\_AVERAGE\_INTERVAL\_MS=5000
+org.jitsi.videobridge.ratecontrol.VideoChannelLastNAdaptor.MAX\_STAY\_AT\_ZERO\_MS=60000

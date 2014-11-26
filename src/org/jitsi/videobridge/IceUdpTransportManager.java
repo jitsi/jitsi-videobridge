@@ -29,6 +29,7 @@ import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.log.*;
 import org.osgi.framework.*;
 
 /**
@@ -321,6 +322,19 @@ public class IceUdpTransportManager
         iceAgent.addStateChangeListener(iceAgentStateChangeListener);
         iceStream = iceAgent.getStream(iceStreamName);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
+
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+        {
+            loggingService.logEvent(
+                EventFactory.transportCreated(
+                    hashCode(),
+                    conference.getID(),
+                    numComponents,
+                    iceAgent.getLocalUfrag(),
+                    isControlling));
+        }
     }
 
     /**
@@ -407,6 +421,17 @@ public class IceUdpTransportManager
 
         if (iceConnected)
             channel.transportConnected();
+
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+        {
+            loggingService.logEvent(
+                EventFactory.transportChannelAdded(
+                    hashCode(),
+                    conference.getID(),
+                    channel.getID()));
+        }
 
         return true;
     }
@@ -685,6 +710,18 @@ public class IceUdpTransportManager
             }
 
             updatePayloadTypeFilters();
+
+            LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+            if (loggingService != null)
+            {
+                loggingService.logEvent(
+                    EventFactory.transportChannelRemoved(
+                        hashCode(),
+                        conference.getID(),
+                        channel.getID())
+                );
+            }
 
             channel.transportClosed();
         }
@@ -1526,6 +1563,9 @@ public class IceUdpTransportManager
 
         try
         {
+            IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
+            IceProcessingState newState = (IceProcessingState) ev.getNewValue();
+
             StringBuilder s = new StringBuilder("ICE processing state of ")
                 .append(getClass().getSimpleName()).append(" #")
                 .append(Integer.toHexString(hashCode()))
@@ -1533,10 +1573,22 @@ public class IceUdpTransportManager
             for (Channel channel : getChannels())
                 s.append(" ").append(channel.getID());
             s.append(")  of conference ").append(conference.getID())
-                .append(" changed from ").append(ev.getOldValue())
-                 .append(" to ").append(ev.getNewValue()).append(".");
+                .append(" changed from ").append(oldState)
+                 .append(" to ").append(newState).append(".");
 
             logd(s.toString());
+
+            LoggingService loggingService
+                    = conference.getVideobridge().getLoggingService();
+            if (loggingService != null)
+            {
+                loggingService.logEvent(
+                    EventFactory.transportStateChanged(
+                            hashCode(),
+                            conference.getID(),
+                            (oldState == null ? "null" : oldState.toString()),
+                            (newState == null ? "null" : newState.toString())));
+            }
         }
         catch (Throwable t)
         {
@@ -1694,6 +1746,25 @@ public class IceUdpTransportManager
     {
         iceConnected = true;
 
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+        {
+            StringBuilder s = new StringBuilder();
+            for (Component component : iceStream.getComponents())
+            {
+                CandidatePair pair = component.getSelectedPair();
+                s.append(pair.getLocalCandidate().getTransportAddress())
+                    .append(" -> ")
+                    .append(pair.getRemoteCandidate().getTransportAddress())
+                    .append("; ");
+            }
+            loggingService.logEvent(
+                EventFactory.transportConnected(
+                    hashCode(),
+                    conference.getID(),
+                    s.toString()));
+        }
         for (Channel channel : getChannels())
         {
             channel.transportConnected();

@@ -138,48 +138,44 @@ public class BridgeReceiverReporting
         if (videoChannel == null)
             throw new IllegalArgumentException("videoChannel");
 
-        // Media SSRC (always 0)
-        final long mediaSSRC = 0l;
-
         // Destination
         RemoteBitrateEstimator remoteBitrateEstimator
-                = ((VideoMediaStream) videoChannel.getStream())
+            = ((VideoMediaStream) videoChannel.getStream())
                 .getRemoteBitrateEstimator();
-
-        Collection<Integer> tmp = remoteBitrateEstimator.getSsrcs();
-        List<Integer> ssrcs = new ArrayList<Integer>(tmp);
+        Collection<Integer> ssrcs = remoteBitrateEstimator.getSsrcs();
 
         // TODO(gp) intersect with SSRCs from signaled simulcast layers
         // NOTE(gp) The Google Congestion Control algorithm (sender side)
         // doesn't seem to care about the SSRCs in the dest field.
         long[] dest = new long[ssrcs.size()];
-        for (int i = 0; i < ssrcs.size(); i++)
-            dest[i] = ssrcs.get(i) & 0xffffffffl;
+        int i = 0;
+
+        for (Integer ssrc : ssrcs)
+            dest[i++] = ssrc & 0xFFFFFFFFL;
 
         // Exp & mantissa
         long bitrate = remoteBitrateEstimator.getLatestEstimate();
+
         if (bitrate == -1)
-        {
             return null;
-        }
 
         if (logger.isDebugEnabled())
             logger.debug("Estimated bitrate: " + bitrate);
 
         // Create and return the packet.
         return
-                new RTCPREMBPacket(
-                        localSSRC & 0xFFFFFFFFL,
-                        mediaSSRC,
-                        bitrate,
-                        dest);
+            new RTCPREMBPacket(
+                    localSSRC & 0xFFFFFFFFL,
+                    /* mediaSSRC */ 0L,
+                    bitrate,
+                    dest);
     }
 
     /**
      * Sends RRs using data from FMJ and and REMBs using data from our remote
      * bitrate estimator.
      *
-     * @return null
+     * @return <tt>null</tt>
      */
     public RTCPPacket[] makeReports()
     {
@@ -189,17 +185,13 @@ public class BridgeReceiverReporting
             return null;
 
         Conference conference = this.strategy.getConference();
-
         long time = System.currentTimeMillis();
-
         RTPTranslatorImpl rtpTranslatorImpl = (RTPTranslatorImpl) rtpTranslator;
-
         // Use the SSRC of the bridge (that is announced through signaling) so
         // that the endpoints won't drop the packet.
         int localSSRC = (int) rtpTranslatorImpl.getLocalSSRC(null);
-
         RTCPTransmitter rtcpTransmitter
-                = strategy.getRTCPReportBuilder().getRTCPTransmitter();
+            = strategy.getRTCPReportBuilder().getRTCPTransmitter();
 
         for (Endpoint endpoint : conference.getEndpoints())
         {
@@ -207,16 +199,16 @@ public class BridgeReceiverReporting
             {
                 // Make the RTCP reports.
                 RTCPPacket[] packets
-                        = makeReportsForChannel(
-                        (VideoChannel) channel,
-                        time,
-                        localSSRC);
+                    = makeReportsForChannel(
+                            (VideoChannel) channel,
+                            time,
+                            localSSRC);
 
                 // Transmit the RTCP reports.
                 if ((packets != null) && (packets.length != 0))
                 {
                     RTCPCompoundPacket compoundPacket
-                            = new RTCPCompoundPacket(packets);
+                        = new RTCPCompoundPacket(packets);
                     Payload payload = new RTCPPacketPayload(compoundPacket);
 
                     rtpTranslatorImpl.writeControlPayload(
@@ -239,13 +231,6 @@ public class BridgeReceiverReporting
         return null;
     }
 
-    /**
-     *
-     * @param videoChannel
-     * @param time
-     * @param localSSRC
-     * @return
-     */
     private RTCPPacket[] makeReportsForChannel(
             VideoChannel videoChannel,
             long time,
@@ -255,26 +240,25 @@ public class BridgeReceiverReporting
 
         // RTCP RR
         RTCPReportBlock[] receiverReports
-                = createRTCPReportBlocksForChannel(videoChannel, time);
+            = createRTCPReportBlocksForChannel(videoChannel, time);
         RTCPPacket rr = new RTCPRRPacket(localSSRC, receiverReports);
 
         packets.add(rr);
 
         // RTCP REMB
         RTCPREMBPacket remb
-                = createRTCPREMBPacketForChannel(videoChannel, localSSRC);
+            = createRTCPREMBPacketForChannel(videoChannel, localSSRC);
 
         if (remb != null)
         {
             packets.add(remb);
-
             if (logger.isDebugEnabled())
                 logger.debug(remb);
         }
 
         // RTCP SDES
         List<RTCPSDES> sdesChunks
-                = new ArrayList<RTCPSDES>(1 + receiverReports.length);
+            = new ArrayList<RTCPSDES>(1 + receiverReports.length);
         RTCPSDES sdesChunk = createRTCPSDES(localSSRC);
 
         if (sdesChunk != null)
@@ -297,12 +281,11 @@ public class BridgeReceiverReporting
         {
             RTCPSDESPacket sdes
                 = new RTCPSDESPacket(
-                sdesChunks.toArray(new RTCPSDES[sdesChunks.size()]));
+                        sdesChunks.toArray(new RTCPSDES[sdesChunks.size()]));
 
             packets.add(sdes);
         }
 
-        RTCPPacket[] pkts = packets.toArray(new RTCPPacket[packets.size()]);
-        return pkts;
+        return packets.toArray(new RTCPPacket[packets.size()]);
     }
 }

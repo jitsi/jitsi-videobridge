@@ -324,6 +324,7 @@
             <fileset dir="lib">
                 <exclude name="native/**"/>
                 <exclude name="bouncycastle.jar"/>
+                <exclude name="jetty-*.jar"/>
             </fileset>
         </copy>
         <jar compress="true"

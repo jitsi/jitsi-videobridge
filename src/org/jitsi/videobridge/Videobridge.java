@@ -7,19 +7,25 @@
 package org.jitsi.videobridge;
 
 import java.util.*;
+import java.util.regex.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.service.shutdown.*;
+import net.java.sip.communicator.util.*;
 
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger;
+import org.jitsi.videobridge.log.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.pubsub.*;
-import org.jitsi.videobridge.sim.*;
+import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.provider.*;
@@ -128,6 +134,14 @@ public class Videobridge
             = "org.jitsi.videobridge.rtcp.strategy";
 
     /**
+     * The property that specifies allowed entities for turning on graceful
+     * shutdown mode. For XMPP API this is "from" JID. In case of REST
+     * the source IP is being copied into the "from" field of the IQ.
+     */
+    static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
+        = "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP";
+
+    /**
      * The XMPP API of Jitsi Videobridge.
      */
     public static final String XMPP_API = "xmpp";
@@ -163,6 +177,17 @@ public class Videobridge
      * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)}
      */
     private int defaultProcessingOptions;
+
+    /**
+     * Indicates if this bridge instance has entered graceful shutdown mode.
+     */
+    private boolean shutdownInProgress;
+
+    /**
+     * The pattern used to filter entities that are allowed to trigger graceful
+     * shutdown mode.
+     */
+    private Pattern shutdownSourcePattern;
 
     /**
      * Initializes a new <tt>Videobridge</tt> instance.
@@ -225,6 +250,21 @@ public class Videobridge
     }
 
     /**
+     * Enables graceful shutdown mode on this bridge instance and eventually
+     * starts the shutdown immediately if no conferences are currently being
+     * hosted. Otherwise bridge will shutdown once all conferences expire.
+     */
+    private void enableGracefulShutdownMode()
+    {
+        if (!shutdownInProgress)
+        {
+            logger.info("Entered graceful shutdown mode");
+        }
+        this.shutdownInProgress = true;
+        maybeDoShutdown();
+    }
+
+    /**
      * Expires a specific <tt>Conference</tt> of this <tt>Videobridge</tt> (i.e.
      * if the specified <tt>Conference</tt> is not in the list of
      * <tt>Conference</tt>s of this <tt>Videobridge</tt>, does nothing).
@@ -249,6 +289,9 @@ public class Videobridge
         }
         if (expireConference)
             conference.expire();
+
+        // Check if it's the time to shutdown now
+        maybeDoShutdown();
     }
 
     /**
@@ -336,7 +379,10 @@ public class Videobridge
              */
             String conferenceFocus = conference.getFocus();
 
-            if ((focus == null) || focus.equals(conferenceFocus))
+            // If no 'focus' was given as an argument or if conference is not
+            // owned by any 'conferenceFocus' then skip equals()
+            if (focus == null || conferenceFocus == null
+                || focus.equals(conferenceFocus))
             {
                 // It seems the conference is still active.
                 conference.touch();
@@ -442,6 +488,26 @@ public class Videobridge
     }
 
     /**
+     * Returns the <tt>LoggingService</tt> used by this
+     * <tt>Videobridge</tt>.
+     *
+     * @return the <tt>LoggingService</tt> used by this
+     * <tt>Videobridge</tt>.
+     */
+    public LoggingService getLoggingService()
+    {
+        BundleContext bundleContext = getBundleContext();
+
+        if (bundleContext != null)
+        {
+            return ServiceUtils2.getService(bundleContext,
+                                            LoggingService.class);
+        }
+
+        return null;
+    }
+
+    /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
      * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
@@ -452,7 +518,7 @@ public class Videobridge
      * @throws Exception to reply with <tt>internal-server-error</tt> to the
      * specified request
      */
-    public ColibriConferenceIQ handleColibriConferenceIQ(
+    public IQ handleColibriConferenceIQ(
             ColibriConferenceIQ conferenceIQ)
         throws Exception
     {
@@ -472,7 +538,7 @@ public class Videobridge
      * @throws Exception to reply with <tt>internal-server-error</tt> to the
      * specified request
      */
-    public ColibriConferenceIQ handleColibriConferenceIQ(
+    public IQ handleColibriConferenceIQ(
             ColibriConferenceIQ conferenceIQ,
             int options)
         throws Exception
@@ -489,7 +555,9 @@ public class Videobridge
 
         if ((focus == null) && ((options & OPTION_ALLOW_NO_FOCUS) == 0))
         {
-            throw new NullPointerException("focus");
+            return IQ.createErrorResponse(
+                conferenceIQ,
+                new XMPPError(XMPPError.Condition.not_authorized));
         }
         else
         {
@@ -501,7 +569,17 @@ public class Videobridge
             String id = conferenceIQ.getID();
 
             if (id == null)
-                conference = createConference(focus);
+            {
+                if (!isShutdownInProgress())
+                {
+                    conference = createConference(focus);
+                }
+                else
+                {
+                    return ColibriConferenceIQ
+                        .createGracefulShutdownErrorResponse(conferenceIQ);
+                }
+            }
             else
                 conference = getConference(id, focus);
 
@@ -526,6 +604,8 @@ public class Videobridge
             responseConferenceIQ = new ColibriConferenceIQ();
             conference.describeShallow(responseConferenceIQ);
 
+            responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
+
             ColibriConferenceIQ.Recording recordingIQ
                 = conferenceIQ.getRecording();
 
@@ -548,8 +628,8 @@ public class Videobridge
 
                         if (recording)
                         {
-                            responseRecordingIq.setPath(
-                                    conference.getRecordingPath());
+                            responseRecordingIq.setDirectory(
+                                    conference.getRecordingDirectory());
                         }
                         responseConferenceIQ.setRecording(responseRecordingIq);
                     }
@@ -709,6 +789,11 @@ public class Videobridge
                             if (adaptiveLastN != null)
                                 channel.setAdaptiveLastN(adaptiveLastN);
 
+                            Boolean adaptiveSimulcast
+                                    = channelIQ.getAdaptiveSimulcast();
+                            if (adaptiveSimulcast != null)
+                                channel.setAdaptiveSimulcast(adaptiveSimulcast);
+
                             /*
                              * XXX The attribute initiator is optional. If a
                              * value is not specified, then the Channel
@@ -735,14 +820,13 @@ public class Videobridge
 
                                 if (sourceGroups != null)
                                 {
-                                    SimulcastManager manager = videoChannel
-                                            .getSimulcastManager();
-
-                                    SortedSet<SimulcastLayer> layers =
-                                            SimulcastLayersFactory
-                                                    .fromSourceGroups(
-                                                            sourceGroups,
-                                                            manager);
+                                    SimulcastManager manager
+                                        = videoChannel.getSimulcastManager();
+                                    SortedSet<SimulcastLayer> layers
+                                        = SimulcastLayersFactory
+                                            .fromSourceGroups(
+                                                    sourceGroups,
+                                                    manager);
 
                                     manager.setSimulcastLayers(layers);
                                 }
@@ -753,10 +837,10 @@ public class Videobridge
                                 if (receivingSimulcastLayer != null)
                                 {
                                     // TODO(gp) remove the receiving simulcast
-                                    // layer attribute from the COLIBRI stanza. It
-                                    // was introduced in the very early stages of
-                                    // simulcast development and it is no longer
-                                    // required.
+                                    // layer attribute from the COLIBRI stanza.
+                                    // It was introduced in the very early
+                                    // stages of simulcast development and it is
+                                    // no longer required.
                                 }
                             }
 
@@ -909,10 +993,83 @@ public class Videobridge
         return responseConferenceIQ;
     }
 
+    /**
+     * Handles a <tt>GracefulShutdownIQ</tt> stanza which represents a request.
+     *
+     * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
+     *        the request to handle
+     * @return an <tt>IQ</tt> stanza which represents the response to
+     *         the specified request or <tt>null</tt> to reply with
+     *         <tt>feature-not-implemented</tt>
+     */
+    public IQ handleGracefulShutdownIQ(GracefulShutdownIQ shutdownIQ)
+    {
+        // Security not configured - service unavailable
+        if (shutdownSourcePattern == null)
+        {
+            return IQ.createErrorResponse(
+                shutdownIQ,
+                new XMPPError(XMPPError.Condition.service_unavailable));
+        }
+        // Check if source matches pattern
+        String from = shutdownIQ.getFrom();
+        if (from != null && shutdownSourcePattern.matcher(from).matches())
+        {
+            logger.info("Accepted shutdown request from: " + from);
+            if (!isShutdownInProgress())
+            {
+                enableGracefulShutdownMode();
+            }
+            return IQ.createResultIQ(shutdownIQ);
+        }
+        else
+        {
+            // Unauthorized
+            logger.error("Rejected shutdown request from: " + from);
+            return IQ.createErrorResponse(
+                shutdownIQ,
+                new XMPPError(XMPPError.Condition.not_authorized));
+        }
+    }
+
     public void handleIQResponse(org.jivesoftware.smack.packet.IQ response)
         throws Exception
     {
         PubSubPublisher.handleIQResponse(response);
+    }
+
+    /**
+     * Returns <tt>true</tt> if this instance has entered graceful shutdown
+     * mode.
+     */
+    public boolean isShutdownInProgress()
+    {
+        return shutdownInProgress;
+    }
+
+    /**
+     * Triggers the shutdown given that we're in graceful shutdown mode and
+     * there are no conferences currently in progress.
+     */
+    private void maybeDoShutdown()
+    {
+        if (!shutdownInProgress)
+            return;
+
+        synchronized (conferences)
+        {
+            if (conferences.size() == 0)
+            {
+                ShutdownService shutdownService
+                    = ServiceUtils.getService(
+                    bundleContext,
+                    ShutdownService.class);
+
+                logger.info("Videobridge is shutting down NOW");
+
+                shutdownService.beginShutdown();
+            }
+        }
     }
 
     /**
@@ -939,6 +1096,25 @@ public class Videobridge
             logger.debug(
                     "Default videobridge processing options: 0x"
                         + Integer.toHexString(defaultProcessingOptions));
+        }
+
+        String shutdownSourcesRegexp
+            = (cfg == null)
+                ? null
+                : cfg.getString(SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME);
+
+        if (!StringUtils.isNullOrEmpty(shutdownSourcesRegexp))
+        {
+            try
+            {
+                shutdownSourcePattern = Pattern.compile(shutdownSourcesRegexp);
+            }
+            catch (PatternSyntaxException exc)
+            {
+                logger.error(
+                   "Error parsing enableGracefulShutdownMode sources reg expr: "
+                        + shutdownSourcesRegexp, exc);
+            }
         }
 
         ProviderManager providerManager = ProviderManager.getInstance();

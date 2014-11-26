@@ -19,14 +19,11 @@ Implementation
 
  * **current_timestamp** - The value is the date and time when the statistics are 
 generated.
- * **threads** - The value is integer with the number of threads that the video bridge 
-is using. 
- * **used_memory** - the number of MB that are used on the machine that runs the video 
-bridge. 
+ * **threads** - The number of Java threads that the video bridge is using. 
+ * **used_memory** - Total used memory on the machine (i.e. what 'free' would return) in megabytes (10^6 B).
  * **total_memory** - The total memory of the machine.
-cpu_usage - The value represents the CPU usage for the machine. The value is 
-between 0 and 1.
- * **bit_rate_download / bit_rate_upload** -  bit rate for the video bridge in Kb/s
+ * **cpu_usage** - CPU usage for the machine. The value is between 0 and 1 and is the fraction of the last interval that the CPU spent in either user, nice, system or iowait state (what would appear in the 'cpu' line in 'top')
+ * **bit_rate_download / bit_rate_upload** -  bit rate for the video bridge in kilobits per second.
  * **rtp_loss** - The value is between 0 and 1 and represents the RTP packet loss for 
 the video bridge.
  * **audiochannels** - Number of audio channels

@@ -15,6 +15,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.log.*;
 import org.osgi.framework.*;
 
 /**
@@ -146,6 +147,16 @@ public abstract class Channel
         this.content = content;
         this.channelBundleId = channelBundleId;
 
+        Conference conference = content.getConference();
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+        {
+            loggingService.logEvent(
+                EventFactory.channelCreated(id,
+                                            content.getName(),
+                                            conference.getID()));
+        }
         touch();
     }
 
@@ -300,15 +311,21 @@ public abstract class Channel
         }
 
         Content content = getContent();
+        Conference conference = content.getConference();
 
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+            loggingService.logEvent(
+                    EventFactory.channelExpired(id,
+                                                content.getName(),
+                                                conference.getID()));
         try
         {
             content.expireChannel(this);
         }
         finally
         {
-            Conference conference = content.getConference();
-
             // stream
             try
             {
@@ -349,7 +366,9 @@ public abstract class Channel
             // endpoint
             try
             {
-                // Handle new null Endpoint == remove from Endpoint
+                // Remove this Channel from the Endpoint. Accomplished by
+                // pretending that the Endpoint associated with this Channel has
+                // changed to null.
                 onEndpointChanged(getEndpoint(), null);
             }
             catch (Throwable t)
@@ -583,8 +602,7 @@ public abstract class Channel
      * @param oldValue old <tt>Endpoint</tt>, can be <tt>null</tt>.
      * @param newValue new <tt>Endpoint</tt>, can be <tt>null</tt>.
      */
-    protected void onEndpointChanged(Endpoint oldValue,
-                                              Endpoint newValue)
+    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
     {
         firePropertyChange(ENDPOINT_PROPERTY_NAME, oldValue, newValue);
     }

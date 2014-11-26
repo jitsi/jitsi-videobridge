@@ -19,6 +19,7 @@ import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.stats.*;
+import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 import org.osgi.framework.*;
@@ -162,6 +163,7 @@ import org.osgi.framework.*;
  * </p>
  *
  * @author Lyubomir Marinov
+ * @author Pawel Domas
  */
 class HandlerImpl
     extends AbstractHandler
@@ -210,6 +212,11 @@ class HandlerImpl
         = JSON_CONTENT_TYPE + ";charset=UTF-8";
 
     /**
+     * The logger instance used by REST handler.
+     */
+    private static final Logger logger = Logger.getLogger(HandlerImpl.class);
+
+    /**
      * The HTTP PATCH method.
      */
     private static final String PATCH_HTTP_METHOD = "PATCH";
@@ -218,6 +225,11 @@ class HandlerImpl
      * The HTTP POST method.
      */
     private static final String POST_HTTP_METHOD = "POST";
+
+    /**
+     * The HTTP resource which is used to trigger graceful shutdown.
+     */
+    private static final String SHUTDOWN = "shutdown";
 
     /**
      * The HTTP resource which list the JSON representation of the
@@ -243,13 +255,22 @@ class HandlerImpl
     private String jsonTarget;
 
     /**
+     * Indicates if graceful shutdown mode is enabled. If not then
+     * SC_SERVICE_UNAVAILABLE status will be returned for {@link #SHUTDOWN}
+     * requests.
+     */
+    private final boolean shutdownEnabled;
+
+    /**
      * Initializes a new <tt>HandlerImpl</tt> instance within a specific
      * <tt>BundleContext</tt>.
      *
      * @param bundleContext the <tt>BundleContext</tt> within which the new
      * instance is to be initialized
+     * @param enableShutdown <tt>true</tt> if graceful shutdown should be
+     *                       enabled
      */
-    public HandlerImpl(BundleContext bundleContext)
+    public HandlerImpl(BundleContext bundleContext, boolean enableShutdown)
     {
         this.bundleContext = bundleContext;
 
@@ -259,6 +280,8 @@ class HandlerImpl
         jsonTarget = DEFAULT_JSON_TARGET;
         if ((jsonTarget != null) && !jsonTarget.startsWith("."))
             jsonTarget = "." + jsonTarget;
+
+        shutdownEnabled = enableShutdown;
     }
 
     /**
@@ -547,17 +570,28 @@ class HandlerImpl
 
                         try
                         {
-                            responseConferenceIQ
+                            IQ responseIQ
                                 = videobridge.handleColibriConferenceIQ(
                                         requestConferenceIQ,
                                         Videobridge.OPTION_ALLOW_NO_FOCUS);
+
+                            if (responseIQ instanceof ColibriConferenceIQ)
+                            {
+                                responseConferenceIQ
+                                    = (ColibriConferenceIQ) responseIQ;
+                            }
+                            else
+                            {
+                                status
+                                    = getHttpStatusCodeForResultIq(responseIQ);
+                            }
                         }
                         catch (Exception e)
                         {
                             status
                                 = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                         }
-                        if (status == 0)
+                        if (status == 0 && responseConferenceIQ != null)
                         {
                             JSONObject responseJSONObject
                                 = JSONSerializer.serializeConference(
@@ -640,16 +674,26 @@ class HandlerImpl
 
                     try
                     {
-                        responseConferenceIQ
+                        IQ responseIQ
                             = videobridge.handleColibriConferenceIQ(
                                     requestConferenceIQ,
                                     Videobridge.OPTION_ALLOW_NO_FOCUS);
+
+                        if (responseIQ instanceof ColibriConferenceIQ)
+                        {
+                            responseConferenceIQ
+                                = (ColibriConferenceIQ) responseIQ;
+                        }
+                        else
+                        {
+                            status = getHttpStatusCodeForResultIq(responseIQ);
+                        }
                     }
                     catch (Exception e)
                     {
                         status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                     }
-                    if (status == 0)
+                    if (status == 0 && responseConferenceIQ != null)
                     {
                         JSONObject responseJSONObject
                             = JSONSerializer.serializeConference(
@@ -673,6 +717,89 @@ class HandlerImpl
         }
     }
 
+    private void doPostShutdownJSON(Request baseRequest,
+                                    HttpServletRequest request,
+                                    HttpServletResponse response)
+        throws IOException
+    {
+        Videobridge videobridge = getVideobridge();
+
+        if (videobridge == null)
+        {
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            return;
+        }
+
+        if (!isJSONContentType(request.getContentType()))
+        {
+            response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
+            return;
+        }
+
+        Object requestJSONObject;
+        int status;
+
+        try
+        {
+            requestJSONObject = new JSONParser().parse(request.getReader());
+            if ((requestJSONObject == null)
+                || !(requestJSONObject instanceof JSONObject))
+            {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+        }
+        catch (ParseException pe)
+        {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
+
+        GracefulShutdownIQ requestShutdownIQ
+            = JSONDeserializer.deserializeShutdownIQ(
+            (JSONObject) requestJSONObject);
+
+        if ((requestShutdownIQ == null))
+        {
+            status = HttpServletResponse.SC_BAD_REQUEST;
+        }
+        else
+        {
+            // Fill source address
+            String ipAddress = request.getHeader("X-FORWARDED-FOR");
+            if (ipAddress == null)
+            {
+                ipAddress = request.getRemoteAddr();
+            }
+
+            requestShutdownIQ.setFrom(ipAddress);
+
+            IQ responseIQ = null;
+            try
+            {
+                responseIQ
+                    = videobridge.handleGracefulShutdownIQ(
+                    requestShutdownIQ);
+
+                if (IQ.Type.RESULT.equals(responseIQ.getType()))
+                {
+                    status = HttpServletResponse.SC_OK;
+                }
+                else
+                {
+                    status = getHttpStatusCodeForResultIq(responseIQ);
+                }
+            }
+            catch (Exception e)
+            {
+                logger.error(
+                    "Error while trying to handle shutdown request", e);
+                status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+            }
+        }
+        response.setStatus(status);
+    }
+
     /**
      * Gets the <tt>BundleContext</tt> in which this Jetty <tt>Handler</tt> has
      * been started.
@@ -684,6 +811,32 @@ class HandlerImpl
     public BundleContext getBundleContext()
     {
         return bundleContext;
+    }
+
+    /**
+     * Analyzes response IQ returned by videobridge handle method and
+     * translates XMPP error into HTTP status code.
+     * @param responseIQ the IQ that is not {@link ColibriConferenceIQ} from
+     *                   which XMPP error will be extracted.
+     * @return HTTP status code
+     */
+    private static int getHttpStatusCodeForResultIq(IQ responseIQ)
+    {
+        XMPPError error = responseIQ.getError();
+        if (XMPPError.Condition.not_authorized.toString()
+            .equals(error.getCondition()))
+        {
+            return HttpServletResponse.SC_UNAUTHORIZED;
+        }
+        else if (XMPPError.Condition.service_unavailable
+            .toString().equals(error.getCondition()))
+        {
+            return HttpServletResponse.SC_SERVICE_UNAVAILABLE;
+        }
+        else
+        {
+            return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+        }
     }
 
     /**
@@ -842,6 +995,26 @@ class HandlerImpl
             {
                 // Get the VideobridgeStatistics of Videobridge.
                 doGetStatisticsJSON(baseRequest, request, response);
+            }
+            else
+            {
+                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            }
+        }
+        else if (target.equals(SHUTDOWN))
+        {
+            if (!shutdownEnabled)
+            {
+                response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                return;
+            }
+
+            String requestMethod = request.getMethod();
+
+            if (POST_HTTP_METHOD.equals(requestMethod))
+            {
+                // Get the VideobridgeStatistics of Videobridge.
+                doPostShutdownJSON(baseRequest, request, response);
             }
             else
             {

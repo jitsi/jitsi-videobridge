@@ -1072,6 +1072,13 @@ public class SctpConnection
             }
             while (true);
         }
+        catch (SocketException ex)
+        {
+            if (!"Socket closed".equals(ex.getMessage()))
+            {
+                throw ex;
+            }
+        }
         finally
         {
             // Eventually, close the socket although it should happen from

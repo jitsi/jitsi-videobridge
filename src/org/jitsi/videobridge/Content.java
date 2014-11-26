@@ -17,6 +17,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.log.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.osgi.framework.*;
 
@@ -154,6 +155,12 @@ public class Content
 
         mediaType = MediaType.parseString(this.name);
 
+
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+            loggingService.logEvent(
+                    EventFactory.contentCreated(name, conference.getID()));
         touch();
     }
 
@@ -185,7 +192,7 @@ public class Content
         return accept;
     }
 
-    void askForKeyframes(Set<Endpoint> endpoints)
+    void askForKeyframes(Collection<Endpoint> endpoints)
     {
         for (Endpoint endpoint : endpoints)
         {
@@ -316,6 +323,11 @@ public class Content
         setRecording(false, null);
         Conference conference = getConference();
 
+        LoggingService loggingService
+                = conference.getVideobridge().getLoggingService();
+        if (loggingService != null)
+            loggingService.logEvent(
+                    EventFactory.contentExpired(name, conference.getID()));
         try
         {
             conference.expireContent(this);
@@ -693,21 +705,29 @@ public class Content
 
     public void setRTCPTerminationStrategyFQN(String strategyFQN)
     {
-        if ((rtcpTerminationStrategyFQN == null && strategyFQN != null)
-                || (rtcpTerminationStrategyFQN != null &&
-                    !rtcpTerminationStrategyFQN.equals(strategyFQN)))
-        {
-            this.rtcpTerminationStrategyFQN = strategyFQN;
-            this.updateRTCPTerminationStrategy();
-        }
+        // NOTE(gp) we want to *always* update the RTCP termination strategy,
+        // even if rtcpTerminationStrategyFQN.equals(strategyFQN).
+        //
+        // The reason for this is that "this.rtpTranslator" (the translator of
+        // this content) can be "null" when the updateRTCPTerminationStrategy()
+        // method is called, and, as a result, "this.rtpTranslator" might have
+        // not been configured with the correct RTCP termination strategy.
+        //
+        // This is especially true when adaptive last N and adaptive simulcast
+        // are used. Those two features need the basic bridge RTCP termination
+        // strategy but, when they set it, "this.translator" is "null".
+        //
+        // Calling the updateRTCPTerminationStrategy() method even if
+        // rtcpTerminationStrategyFQN.equals(strategyFQN) is fine because the
+        // method checks for class equality.
+
+        this.rtcpTerminationStrategyFQN = strategyFQN;
+        this.updateRTCPTerminationStrategy();
     }
 
     /**
      * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
      * one specified in the rtcpTerminationStrategyFQN parameter.
-     *
-     * TODO(gp) move this method to the Conference since the strategy is per
-     * conference.
      *
      */
     private void updateRTCPTerminationStrategy()
@@ -724,11 +744,10 @@ public class Content
 
         String strategyFQN;
         List<Endpoint> endpoints = conf.getEndpoints();
-        /**
-         * If the conference has less than 3 participants, it switches the RTCP
-         * termination strategy to the SilentBridgeRTCPTerminationStrategy. It
-         * restores the configured RTCP termination strategy otherwise.
-         */
+
+        // If the conference has less than 3 participants, it switches the RTCP
+        // termination strategy to the SilentBridgeRTCPTerminationStrategy. It
+        // restores the configured RTCP termination strategy otherwise.
         if (endpoints != null && endpoints.size() < 3)
         {
             strategyFQN = this.fallbackSrategyFQN;
