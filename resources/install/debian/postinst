@@ -49,6 +49,7 @@ case "$1" in
             # storing default for later use by Jitsi Meet and other packages
             echo '# Jitsi Videobridge settings' > $CONFIG
             echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> $CONFIG
+            echo "JVB_HOST=" >> $CONFIG
             echo "JVB_PORT=$JVB_PORT" >> $CONFIG
             echo "JVB_SECRET=$JVB_SECRET" >> $CONFIG
             echo "JVB_OPTS=\"\"" >> $CONFIG
