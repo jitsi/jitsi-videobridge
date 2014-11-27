@@ -538,6 +538,7 @@ public class VideoChannel
                     ++n;
                 }
 
+                // FIXME(gp) move this if before the for loop
                 if (!inLastN && pinnedEndpoint != null)
                 {
                     inLastN = channelEndpoint == pinnedEndpoint;
@@ -876,11 +877,17 @@ public class VideoChannel
         writeLock.lock();
         try
         {
+            // XXX(gp) question to the lastN guru : if this.lastN == null or
+            // this.lastN < 0, do we really want to call lastNEndpointsChanged
+            // with an empty (but not null!!) list of endpoints?
             if (this.lastN != null && this.lastN >= 0)
             {
                 if (lastN > this.lastN)
                 {
-                    int n = 0;
+                    Endpoint pinnedEndpoint = getPinnedEndpoint();
+                    // The pinned endpoint is always in the last N set, if
+                    // last N > 0; Count it here.
+                    int n = (pinnedEndpoint != null) ? 1 : 0;
                     Endpoint thisEndpoint = getEndpoint();
 
                     // We do not hold any lock on lastNSyncRoot here because it
@@ -911,42 +918,20 @@ public class VideoChannel
                             Endpoint endpoint = wr.get();
 
                             if (endpoint != null
-                                    && endpoint.equals(thisEndpoint))
+                                    && (endpoint.equals(thisEndpoint)
+                                    // We have already signalled the fact that
+                                    // the pinned endpoint has entered the lastN
+                                    // set when we handled the "EndpointPinned"
+                                    // event. Also, we've already counted it
+                                    // above. So, we don't want to neither add
+                                    // it in the endpointsEnteringLastN nor
+                                    // count it here.
+                                    || endpoint.equals(pinnedEndpoint)))
                                 continue;
 
                             ++n;
                             if (n > this.lastN && endpoint != null)
                                 endpointsEnteringLastN.add(endpoint);
-                        }
-                    }
-
-                    // The pinned endpoint is always in the last N set, if
-                    // last N > 0.
-                    // FIXME(gp) no need for a 2nd loop. see foundPinnedEndpoint
-                    // above
-                    Endpoint pinnedEndpoint = getPinnedEndpoint();
-                    if (endpointsEnteringLastN.size() > 0
-                            && pinnedEndpoint != null)
-                    {
-                        boolean found = false;
-
-                        for (Endpoint e : endpointsEnteringLastN)
-                        {
-                            if (e != null)
-                            {
-                                if (pinnedEndpoint.getID().equals(e.getID()))
-                                {
-                                    found = true;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (!found)
-                        {
-                            endpointsEnteringLastN
-                                    .remove(endpointsEnteringLastN.size() - 1);
-                            endpointsEnteringLastN.add(pinnedEndpoint);
                         }
                     }
                 }
@@ -1018,42 +1003,21 @@ public class VideoChannel
 
                 // At most the first lastN are entering the list of lastN.
                 endpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
+
+                // The pinned endpoint is always in the last N set, if
+                // last N > 0.
+                Endpoint pinnedEndpoint = getPinnedEndpoint();
+                if (pinnedEndpoint != null && lastN > 0)
+                {
+                    endpointsEnteringLastN.add(pinnedEndpoint);
+                }
+
                 for (Endpoint e : endpoints)
                 {
                     if (endpointsEnteringLastN.size() >= lastN)
                         break;
-                    if (!e.equals(thisEndpoint))
+                    if (!e.equals(thisEndpoint) && !e.equals(pinnedEndpoint))
                         endpointsEnteringLastN.add(e);
-                }
-
-                // The pinned endpoint is always in the last N set, if
-                // last N > 0.
-                // FIXME(gp) no need for a 2nd loop. see foundPinnedEndpoint
-                // above
-                Endpoint pinnedEndpoint = getPinnedEndpoint();
-                if (endpointsEnteringLastN.size() > 0
-                        && pinnedEndpoint != null)
-                {
-                    boolean found = false;
-
-                    for (Endpoint e : endpointsEnteringLastN)
-                    {
-                        if (e != null)
-                        {
-                            if (pinnedEndpoint.getID().equals(e.getID()))
-                            {
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!found)
-                    {
-                        endpointsEnteringLastN
-                                .remove(endpointsEnteringLastN.size() - 1);
-                        endpointsEnteringLastN.add(pinnedEndpoint);
-                    }
                 }
 
                 if (lastNEndpoints != null && !lastNEndpoints.isEmpty())
