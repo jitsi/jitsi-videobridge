@@ -63,6 +63,9 @@ public class OSGi {
               "org/jitsi/videobridge/log/LoggingBundleActivator"
             },
             {
+              "org/jitsi/videobridge/metrics/MetricServiceActivator"
+            },
+            {
               "org/jitsi/videobridge/VideobridgeBundleActivator"
             },
             {
@@ -159,7 +162,7 @@ public class OSGi {
             true_);
     defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
 
-        // In the majority of use-cases the clients which connect to Jitsi
+    // In the majority of use-cases the clients which connect to Jitsi
     // Videobridge are not in the same network, so we don't need to
     // advertise link-local addresses.
     defaults.put(StackProperties.DISABLE_LINK_LOCAL_ADDRESSES, true_);
