@@ -15,7 +15,10 @@ import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.impl.osgi.framework.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.util.*;
+import org.jitsi.videobridge.utils.*;
 import org.osgi.framework.*;
+import java.io.*;
 
 /**
  * Represents the entry point of the OSGi environment of the Jitsi Videobridge
@@ -23,9 +26,16 @@ import org.osgi.framework.*;
  *
  * @author Lyubomir Marinov
  * @author Pawel Domas
+ * @author George Politis
  */
 public class OSGi
 {
+    /**
+     * The default filename of the bundles launch sequence file. This class
+     * expects to find that file in SC_HOME_DIR_LOCATION/SC_HOME_DIR_NAME.
+     */
+    private static final String BUNDLES_FILE = "bundles.txt";
+
     /**
      * The locations of the OSGi bundles (or rather of the class files of their
      * <tt>BundleActivator</tt> implementations) comprising Jitsi Videobridge.
@@ -185,7 +195,7 @@ public class OSGi
     {
         if (launcher == null)
         {
-            launcher = new OSGiLauncher(BUNDLES);
+            launcher = new OSGiLauncher(getBundles());
         }
 
         launcher.start(bundleActivator);
@@ -202,5 +212,49 @@ public class OSGi
         {
             launcher.stop(bundleActivator);
         }
+    }
+
+    /**
+     * Gets the list of the OSGi bundles to launch. It either loads that list
+     * from SC_HOME_DIR_LOCATION/SC_HOME_DIR_NAME/BUNDLES_FILE, or, if that file
+     * doesn't exist, from the <tt>BUNDLES</tt> variable.
+     *
+     * @return the list of OSGi bundles to launch.
+     */
+    private static String[][] getBundles()
+    {
+        File file = ConfigUtils
+                .getAbsoluteFile(BUNDLES_FILE, null);
+
+        if (file == null || !file.exists())
+        {
+            return BUNDLES;
+        }
+
+        List<String[]> lines = new ArrayList<String[]>();
+
+        Scanner input;
+        try
+        {
+            input = new Scanner(file);
+        }
+        catch (FileNotFoundException e)
+        {
+            return BUNDLES;
+        }
+
+        while(input.hasNextLine())
+        {
+            String line = input.nextLine();
+            if (!StringUtils.isNullOrEmpty(line))
+            {
+                lines.add(new String[] { line.trim() });
+            }
+        }
+
+        String[][] bundles = lines.isEmpty()
+                ? BUNDLES : lines.toArray(new String[lines.size()][]);
+
+        return bundles;
     }
 }
