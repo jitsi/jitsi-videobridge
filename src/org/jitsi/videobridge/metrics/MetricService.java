@@ -30,7 +30,8 @@ import org.jitsi.util.*;
  *
  * @author zbettenbuk
  */
-public class MetricService {
+public class MetricService
+{
 
     private static final Logger logger = Logger.getLogger(MetricService.class);
     private List<MetricServicePublisher> publishers;
@@ -40,19 +41,31 @@ public class MetricService {
     public static final String METRIC_CONFERENCELENGTH = "Conference length";
     public static final String METRIC_CHANNELSTART_POSTFIX = " start";
 
-    public MetricService(ConfigurationService config) {
-        this.publishers = new LinkedList<>();
-        List<String> propNames = config.getPropertyNamesByPrefix("org.jitsi.videobridge.metricservice.", false);
-        logger.info("Metric services enabled: " + (propNames == null ? "0" : propNames.size()));
-        if (propNames != null) {
-            for (String propName : propNames) {
+    public MetricService(ConfigurationService config)
+    {
+        this.publishers = new LinkedList<MetricServicePublisher>();
+        List<String> propNames
+            = config.getPropertyNamesByPrefix(
+                    "org.jitsi.videobridge.metricservice.",
+                    false);
+        logger.info("Metric services enabled: "
+                        + (propNames == null ? "0" : propNames.size()));
+        if (propNames != null)
+        {
+            for (String propName : propNames)
+            {
                 logger.info("Initialising metric service: " + propName);
-                try {
+                try
+                {
                     String serviceClassName = config.getString(propName);
                     Class<?> serviceClass = Class.forName(serviceClassName);
-                    MetricServicePublisher publisher = (MetricServicePublisher) serviceClass.getConstructor().newInstance();
+                    MetricServicePublisher publisher
+                        = (MetricServicePublisher) serviceClass.getConstructor()
+                            .newInstance();
                     this.publishers.add(publisher);
-                } catch (Throwable t) {
+                }
+                catch (Throwable t)
+                {
                     logger.error("Error initialising metric service", t);
                 }
             }
@@ -65,14 +78,25 @@ public class MetricService {
      * @param metricName Name of the metric
      * @param metricValue Value of the metric
      */
-    public void publishNumericMetric(String metricName, int metricValue) {
-        for (MetricServicePublisher publisher : this.publishers) {
-            try {
+    public void publishNumericMetric(String metricName, int metricValue)
+    {
+        for (MetricServicePublisher publisher : this.publishers)
+        {
+            try
+            {
                 publisher.publishNumericMetric(metricName, metricValue);
-            } catch (UnsupportedOperationException e) {
-                logger.debug(publisher.getName() + " publisher doesn't support numeric metric: " + metricName);
-            } catch (Throwable t) {
-                logger.error("Error publishing metric \"" + metricName + "\" with publisher: " + publisher.getName(), t);
+            }
+            catch (UnsupportedOperationException e)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(publisher.getName()
+                        + " publisher doesn't support numeric metric: "
+                        + metricName);
+            }
+            catch (Throwable t)
+            {
+                logger.error("Error publishing metric \"" + metricName
+                             + "\" with publisher: " + publisher.getName(), t);
             }
         }
     }
@@ -83,51 +107,83 @@ public class MetricService {
      * @param metricName Name of the metric
      * @param metricValue Value of the metric
      */
-    public void publishStringMetric(String metricName, String metricValue) {
-        for (MetricServicePublisher publisher : this.publishers) {
-            try {
+    public void publishStringMetric(String metricName, String metricValue)
+    {
+        for (MetricServicePublisher publisher : this.publishers)
+        {
+            try
+            {
                 publisher.publishStringMetric(metricName, metricValue);
-            } catch (UnsupportedOperationException e) {
-                logger.debug(publisher.getName() + " publisher doesn't support string metric: " + metricName);
-            } catch (Throwable t) {
-                logger.error("Error publishing metric \"" + metricName + "\" with publisher: " + publisher.getName(), t);
+            }
+            catch (UnsupportedOperationException e)
+            {
+                logger.debug(publisher.getName()
+                             + " publisher doesn't support string metric: "
+                             + metricName);
+            }
+            catch (Throwable t)
+            {
+                logger.error("Error publishing metric \"" + metricName
+                             + "\" with publisher: " + publisher.getName(), t);
             }
         }
     }
 
     /**
-     * Metrod to publish an incremental metric. Metric value with
+     * Method to publish an incremental metric. Metric value with
      * <tt>metricName</tt> will be increased by 1.
      *
      * @param metricName Name of the metric
      */
-    public void publishIncrementalMetric(String metricName) {
-        for (MetricServicePublisher publisher : this.publishers) {
-            try {
+    public void publishIncrementalMetric(String metricName)
+    {
+        for (MetricServicePublisher publisher : this.publishers)
+        {
+            try
+            {
                 publisher.publishIncrementalMetric(metricName);
-            } catch (UnsupportedOperationException e) {
-                logger.debug(publisher.getName() + " publisher doesn't support incremental metric: " + metricName);
-            } catch (Throwable t) {
-                logger.error("Error publishing metric \"" + metricName + "\" with publisher: " + publisher.getName(), t);
+            }
+            catch (UnsupportedOperationException e)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(publisher.getName()
+                        + " publisher doesn't support incremental metric: "
+                        + metricName);
+
+            }
+            catch (Throwable t)
+            {
+                logger.error("Error publishing metric \"" + metricName
+                             + "\" with publisher: " + publisher.getName(), t);
             }
         }
     }
 
     /**
-     * Metrod to publish an incremental metric. Metric value with
+     * Method to publish an incremental metric. Metric value with
      * <tt>metricName</tt> will be increased by <tt>metricName</tt>.
      *
      * @param metricName Name of the metric
      * @param increment Value to increase the metric with
      */
-    public void publishIncrementalMetric(String metricName, int increment) {
-        for (MetricServicePublisher publisher : this.publishers) {
-            try {
+    public void publishIncrementalMetric(String metricName, int increment)
+    {
+        for (MetricServicePublisher publisher : this.publishers)
+        {
+            try
+            {
                 publisher.publishIncrementalMetric(metricName, increment);
-            } catch (UnsupportedOperationException e) {
-                logger.debug(publisher.getName() + " publisher doesn't support incremental metric: " + metricName);
-            } catch (Throwable t) {
-                logger.error("Error publishing metric \"" + metricName + "\" with publisher: " + publisher.getName(), t);
+            }
+            catch (UnsupportedOperationException e)
+            {
+                logger.debug(publisher.getName()
+                             + " publisher doesn't support incremental metric: "
+                             + metricName);
+            }
+            catch (Throwable t)
+            {
+                logger.error("Error publishing metric \"" + metricName
+                             + "\" with publisher: " + publisher.getName(), t);
             }
         }
     }
@@ -138,14 +194,26 @@ public class MetricService {
      * @param transactionType Type of the transaction (e.g. create conference)
      * @param transactionId Unique id of the transaction (e.g. conference ID)
      */
-    public void startMeasuredTransaction(String transactionType, String transactionId) {
-        for (MetricServicePublisher publisher : this.publishers) {
-            try {
+    public void startMeasuredTransaction(String transactionType,
+                                         String transactionId)
+    {
+        for (MetricServicePublisher publisher : this.publishers)
+        {
+            try
+            {
                 publisher.startMeasuredTransaction(transactionType, transactionId);
-            } catch (UnsupportedOperationException e) {
-                logger.debug(publisher.getName() + " publisher doesn't support measured transaction metric: " + transactionType);
-            } catch (Throwable t) {
-                logger.error("Error publishing metric \"" + transactionType + "\" with publisher: " + publisher.getName(), t);
+            }
+            catch (UnsupportedOperationException e)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(publisher.getName()
+                        + " publisher doesn't support measured transaction "
+                        + "metric: " + transactionType);
+            }
+            catch (Throwable t)
+            {
+                logger.error("Error publishing metric \"" + transactionType
+                             + "\" with publisher: " + publisher.getName(), t);
             }
         }
     }
@@ -156,14 +224,25 @@ public class MetricService {
      * @param transactionType Type of the transaction (e.g. create conference)
      * @param transactionId Unique id of the transaction (e.g. conference ID)
      */
-    public void endMeasuredTransaction(String transactionType, String transactionId) {
-        for (MetricServicePublisher publisher : this.publishers) {
-            try {
+    public void endMeasuredTransaction(String transactionType,
+                                       String transactionId)
+    {
+        for (MetricServicePublisher publisher : this.publishers)
+        {
+            try
+            {
                 publisher.endMeasuredTransaction(transactionType, transactionId);
-            } catch (UnsupportedOperationException e) {
-                logger.debug(publisher.getName() + " publisher doesn't support measured transaction metric: " + transactionType);
-            } catch (Throwable t) {
-                logger.error("Error publishing metric \"" + transactionType + "\" with publisher: " + publisher.getName(), t);
+            }
+            catch (UnsupportedOperationException e)
+            {
+                logger.debug(publisher.getName()
+                    + " publisher doesn't support measured transaction metric: "
+                    + transactionType);
+            }
+            catch (Throwable t)
+            {
+                logger.error("Error publishing metric \"" + transactionType
+                             + "\" with publisher: " + publisher.getName(), t);
             }
         }
     }

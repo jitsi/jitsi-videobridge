@@ -18,7 +18,7 @@ import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.log.*;
-import org.jitsi.videobridge.metrics.MetricService;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.osgi.framework.*;
 
@@ -251,8 +251,8 @@ public class Content
         }
         while (channel == null);
 
-        Videobridge videobridge = this.conference.getVideobridge();
-        
+        Videobridge videobridge = getConference().getVideobridge();
+
         if (logger.isInfoEnabled())
         {
             /*
@@ -268,10 +268,13 @@ public class Content
                         + videobridge.getConferenceCount() + ", channels "
                         + videobridge.getChannelCount() + ".");
         }
-        
+
         MetricService metricService = videobridge.getMetricService();
-        if (metricService != null) {
-            metricService.publishNumericMetric(MetricService.METRIC_CHANNELS, videobridge.getChannelCount());
+        if (metricService != null)
+        {
+            metricService
+                .publishNumericMetric(MetricService.METRIC_CHANNELS,
+                                      videobridge.getChannelCount());
         }
 
         return channel;

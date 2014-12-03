@@ -11,7 +11,8 @@ package org.jitsi.videobridge.metrics;
  *
  * @author zbettenbuk
  */
-public interface MetricServicePublisher {
+public interface MetricServicePublisher
+{
 
     /**
      * Method to publish numeric type metrics
@@ -52,7 +53,8 @@ public interface MetricServicePublisher {
      * @param transactionType Type of the transaction (e.g. create conference)
      * @param transactionId Unique id of the transaction (e.g. conference ID)
      */
-    public void startMeasuredTransaction(String transactionType, String transactionId);
+    public void startMeasuredTransaction(String transactionType,
+                                         String transactionId);
 
     /**
      * Records the finish of a transaction and publishes length metric
@@ -60,7 +62,8 @@ public interface MetricServicePublisher {
      * @param transactionType Type of the transaction (e.g. create conference)
      * @param transactionId Unique id of the transaction (e.g. conference ID)
      */
-    public void endMeasuredTransaction(String transactionType, String transactionId);
+    public void endMeasuredTransaction(String transactionType,
+                                       String transactionId);
 
     public String getName();
 

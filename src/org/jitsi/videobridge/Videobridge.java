@@ -21,7 +21,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.log.*;
-import org.jitsi.videobridge.metrics.MetricService;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.simulcast.*;
@@ -246,11 +246,16 @@ public class Videobridge
                         + getConferenceCount() + ", channels "
                         + getChannelCount() + ".");
         }
-        
-        MetricService metricService = this.getMetricService();
-        if (metricService != null) {
-            metricService.publishNumericMetric(MetricService.METRIC_CONFERENCES, this.getConferenceCount());
-            metricService.startMeasuredTransaction(MetricService.METRIC_CONFERENCELENGTH, conference.getID());
+
+        MetricService metricService = getMetricService();
+        if (metricService != null)
+        {
+            metricService
+                .publishNumericMetric(MetricService.METRIC_CONFERENCES,
+                                      getConferenceCount());
+            metricService
+                .startMeasuredTransaction(MetricService.METRIC_CONFERENCELENGTH,
+                                      conference.getID());
         }
 
         return conference;
@@ -518,9 +523,12 @@ public class Videobridge
      * A convenient way to retreive the metric service from the OSGi context
      * @return metric service if present
      */
-    public MetricService getMetricService() {
-        if (this.bundleContext != null) {
-          return ServiceUtils2.getService(this.bundleContext, MetricService.class);
+    public MetricService getMetricService()
+    {
+        if (this.bundleContext != null)
+        {
+          return ServiceUtils2.getService(this.bundleContext,
+                                          MetricService.class);
         }
         return null;
      }
