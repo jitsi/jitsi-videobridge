@@ -737,6 +737,7 @@ class SimulcastReceiver
      *
      * @param id
      */
+    @SuppressWarnings("unused")
     private void maybeSendStartHighQualityStreamCommand(String id)
     {
         Endpoint newEndpoint = null;
