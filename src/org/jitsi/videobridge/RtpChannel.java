@@ -29,6 +29,7 @@ import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.metrics.MetricService;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -935,6 +936,12 @@ public class RtpChannel
                 stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
 
             stream.start();
+            
+            Videobridge videobridge = getContent().getConference().getVideobridge();
+            MetricService metricService = videobridge.getMetricService();
+            if (metricService != null) {
+                metricService.publishStringMetric(this.getClass().getName() + MetricService.METRIC_CHANNELSTART_POSTFIX, this.streamTarget.getDataAddress().getHostAddress());
+            }
         }
 
         if (logger.isTraceEnabled())

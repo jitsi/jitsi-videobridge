@@ -24,6 +24,7 @@ import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.json.simple.*;
 import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.metrics.MetricService;
 import org.osgi.framework.*;
 
 /**
@@ -582,6 +583,12 @@ public class Conference
                             + ". The total number of conferences is now "
                             + videobridge.getConferenceCount() + ", channels "
                             + videobridge.getChannelCount() + ".");
+            }
+            
+            MetricService metricService = videobridge.getMetricService();
+            if (metricService != null) {
+                metricService.publishNumericMetric(MetricService.METRIC_CONFERENCES, videobridge.getConferenceCount());
+                metricService.endMeasuredTransaction(MetricService.METRIC_CONFERENCELENGTH, this.getID());
             }
         }
     }
