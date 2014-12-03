@@ -233,25 +233,32 @@ public class OSGi
 
         List<String[]> lines = new ArrayList<String[]>();
 
-        Scanner input;
+            Scanner input = null;
         try
         {
             input = new Scanner(file);
+
+            while(input.hasNextLine())
+            {
+                String line = input.nextLine();
+                if (!StringUtils.isNullOrEmpty(line))
+                {
+                    lines.add(new String[] { line.trim() });
+                }
+            }            
         }
         catch (FileNotFoundException e)
         {
             return BUNDLES;
         }
-
-        while(input.hasNextLine())
+        finally 
         {
-            String line = input.nextLine();
-            if (!StringUtils.isNullOrEmpty(line))
-            {
-                lines.add(new String[] { line.trim() });
-            }
+        	if (input != null) 
+        	{
+        		input.close();
+        	}
         }
-
+        
         String[][] bundles = lines.isEmpty()
                 ? BUNDLES : lines.toArray(new String[lines.size()][]);
 
