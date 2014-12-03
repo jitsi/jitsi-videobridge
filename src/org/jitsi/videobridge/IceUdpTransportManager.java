@@ -1448,6 +1448,20 @@ public class IceUdpTransportManager
                 catch (SocketException se) // never thrown
                 {}
             }
+            else 
+            {
+            	// closes iceSocket if its not of expected MultiplexingSocket type
+            	if (iceSocket1 != null && !iceSocket1.isClosed()) {
+            		try
+            		{
+						iceSocket1.close();
+					}
+            		catch (IOException e)
+					{
+						// ignore 
+					}
+            	}
+            }
 
             if (channelSocket0 != null || channelSocket1 != null)
             {
@@ -1522,7 +1536,14 @@ public class IceUdpTransportManager
                 catch (SocketException se) // never thrown
                 {}
             }
-
+            else 
+            {
+            	// closes iceSocket if its not of expected MultiplexingDatagramSocket type
+            	if (iceSocket1 != null && !iceSocket1.isClosed()) {
+            		iceSocket1.close();
+            	}
+            }
+            
             if (channelSocket0 != null || channelSocket1 != null)
             {
                 connector
