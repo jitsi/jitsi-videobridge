@@ -836,20 +836,12 @@ public class SctpConnection
 
         // Protocol Length & Protocol
         String protocol = WEBRTC_DATA_CHANNEL_PROTOCOL;
-        byte[] protocolBytes;
-        int protocolByteLength;
+        byte[] protocolBytes = protocol.getBytes("UTF-8");
+        int protocolByteLength = protocolBytes.length;
 
-        if (protocol == null)
+        if (protocolByteLength > 0xFFFF)
         {
-            protocolBytes = null;
-            protocolByteLength = 0;
-        }
-        else
-        {
-            protocolBytes = protocol.getBytes("UTF-8");
-            protocolByteLength = protocolBytes.length;
-            if (protocolByteLength > 0xFFFF)
-                protocolByteLength = 0xFFFF;
+            protocolByteLength = 0xFFFF;
         }
 
         ByteBuffer packet
