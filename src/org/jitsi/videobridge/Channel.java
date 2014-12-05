@@ -105,7 +105,7 @@ public abstract class Channel
      * <tt>Channel</tt>. In the time interval between the last activity and now,
      * this <tt>Channel</tt> is considered inactive.
      */
-    private AtomicLong lastActivityTime = new AtomicLong();
+    private long lastActivityTime;
 
     /**
      * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
@@ -485,7 +485,10 @@ public abstract class Channel
      */
     public long getLastActivityTime()
     {
-        return lastActivityTime.get();
+        synchronized (this)
+        {
+            return lastActivityTime;
+        }
     }
 
     /**
@@ -735,8 +738,11 @@ public abstract class Channel
     {
         long now = System.currentTimeMillis();
 
-        if (getLastActivityTime() < now)
-            lastActivityTime.set(now);
+        synchronized (this)
+        {
+            if (getLastActivityTime() < now)
+                lastActivityTime = now;
+        }
     }
 
     /**
