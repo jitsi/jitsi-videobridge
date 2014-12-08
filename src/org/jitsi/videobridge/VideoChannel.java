@@ -11,12 +11,16 @@ import java.io.*;
 import java.lang.ref.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
+
+import javax.media.rtp.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
+import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -30,6 +34,7 @@ import org.json.simple.*;
  * Implements an <tt>RtpChannel</tt> with <tt>MediaType.VIDEO</tt>.
  *
  * @author Lyubomir Marinov
+ * @author George Politis
  */
 public class VideoChannel
     extends RtpChannel
@@ -55,6 +60,36 @@ public class VideoChannel
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
 
     /**
+     * Updates the values of the property <tt>inLastN</tt> of all
+     * <tt>VideoChannel</tt>s in the <tt>Content</tt> of a specific
+     * <tt>VideoChannel</tt>.
+     *
+     * @param cause the <tt>VideoChannel</tt> which has caused the update and
+     * which defines the <tt>Content</tt> to update
+     */
+    private static void updateInLastN(VideoChannel cause)
+    {
+        Channel[] channels = cause.getContent().getChannels();
+
+        for (Channel channel : channels)
+        {
+            try
+            {
+                ((VideoChannel) channel).updateInLastN(channels);
+            }
+            catch (Throwable t)
+            {
+                if (t instanceof InterruptedException)
+                    Thread.currentThread().interrupt();
+                else if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+                else
+                    logger.error(t);
+            }
+        }
+    }
+
+    /**
      * Whether or not to use adaptive lastN.
      */
     private boolean adaptiveLastN = false;
@@ -76,6 +111,12 @@ public class VideoChannel
      */
     private RateStatistics incomingBitrate
         = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
+
+    /**
+     * The indicator which determines whether this <tt>VideoChannel</tt> is in
+     * any <tt>VideoChannel</tt>/<tt>Endpoint</tt>'s <tt>lastN</tt>.
+     */
+    private final AtomicBoolean inLastN = new AtomicBoolean(true);
 
     /**
      * The maximum number of video RTP stream to be sent from Jitsi Videobridge
@@ -168,6 +209,38 @@ public class VideoChannel
         }
 
         return accept;
+    }
+
+    /**
+     * Performs (additional) <tt>VideoChannel</tt>-specific configuration of the
+     * <tt>TransformEngineChain</tt> employed by the <tt>MediaStream</tt> of
+     * this <tt>RtpChannel</tt>.
+     *
+     * @param chain the <tt>TransformEngineChain</tt> employed by the
+     * <tt>MediaStream</tt> of this <tt>RtpChannel</tt>
+     */
+    private void configureTransformEngineChain(TransformEngineChain chain)
+    {
+        // Make sure there is a LastNTransformEngine in the TransformEngineChain
+        // in order optimize the performance by dropping received RTP packets
+        // from VideoChannels/Endpoints which are not in any
+        // VideoChannel/Endpoint's lastN.
+        TransformEngine[] engines = chain.getEngineChain();
+        boolean add = true;
+
+        if ((engines != null) && (engines.length != 0))
+        {
+            for (TransformEngine engine : engines)
+            {
+                if (engine instanceof LastNTransformEngine)
+                {
+                    add = false;
+                    break;
+                }
+            }
+        }
+        if (add)
+            chain.addEngine(new LastNTransformEngine(this));
     }
 
     /**
@@ -271,35 +344,21 @@ public class VideoChannel
         return endpoints;
     }
 
-    @Override
-    public void propertyChange(PropertyChangeEvent ev)
+    private Endpoint getPinnedEndpoint()
     {
-        super.propertyChange(ev);
+        Endpoint endpoint = getEndpoint();
 
-        String propertyName = ev.getPropertyName();
-
-        if (Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
+        if (endpoint != null)
         {
-            // The pinned endpoint is always in the last N set, if last N > 0.
-            // So, it (the pinned endpoint) has changed, the lastN has changed.
-            if (this.getLastN() < 1)
-            {
-                return;
-            }
+            String pinnedEndpointID = endpoint.getPinnedEndpointID();
 
-            // Pretend that the ordered list of Endpoints maintained by
-            // conferenceSpeechActivity has changed in order to populate
-            // lastNEndpoints and get the channel endpoints to ask for key
-            // frames.
-            List<Endpoint> channelEndpointsToAskForKeyframes
-                    = speechActivityEndpointsChanged(null, true);
-
-            if ((channelEndpointsToAskForKeyframes != null)
-                    && !channelEndpointsToAskForKeyframes.isEmpty())
+            if (!StringUtils.isNullOrEmpty(pinnedEndpointID))
             {
-                getContent().askForKeyframes(channelEndpointsToAskForKeyframes);
+                return
+                    getContent().getConference().getEndpoint(pinnedEndpointID);
             }
         }
+        return null;
     }
 
     /**
@@ -460,6 +519,47 @@ public class VideoChannel
     }
 
     /**
+     * Notifies this <tt>VideoChannel</tt> that the value of its property
+     * <tt>inLastN</tt> has changed from <tt>oldValue</tt> to <tt>newValue</tt>.
+     *
+     * @param oldValue the old value of the property <tt>inLastN</tt> before the
+     * change
+     * @param newValue the new value of the property <tt>inLastN</tt> after the
+     * change
+     */
+    private void inLastNChanged(boolean oldValue, boolean newValue)
+    {
+        Endpoint endpoint = getEndpoint();
+
+        if (endpoint != null)
+        {
+            try
+            {
+                endpoint.sendMessageOnDataChannel(
+                        "{\"colibriClass\":\"InLastNChangeEvent\",\"oldValue\":"
+                            + oldValue + ",\"newValue\":" + newValue + "}");
+            }
+            catch (IOException ex)
+            {
+                logger.error("Failed to send message on data channel.", ex);
+            }
+        }
+    }
+
+    /**
+     * Determines whether this <tt>VideoChannel</tt> is in any
+     * <tt>VideoChannel</tt>/<tt>Endpoint</tt>'s <tt>lastN</tt>.
+     *
+     * @return <tt>true</tt> if the RTP streams received by this
+     * <tt>VideoChannel</tt> are to be sent to its remote endpoints; otherwise,
+     * <tt>false</tt>
+     */
+    public boolean isInLastN()
+    {
+        return inLastN.get();
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -507,17 +607,17 @@ public class VideoChannel
         {
             if (lastNEndpoints != null)
             {
-                Endpoint thisEndpoint = getEndpoint();
-                // The pinned endpoint is always in the last N set, if last N > 0.
-                Endpoint pinnedEndpoint = getPinnedEndpoint();
-
                 int n = 0;
+                // The pinned endpoint is always in the last N set, if
+                // last N > 0.
+                Endpoint pinnedEndpoint = getPinnedEndpoint();
+                // Keep one empty slot for the pinned endpoint.
+                int nMax = (pinnedEndpoint == null) ? lastN : (lastN - 1);
+                Endpoint thisEndpoint = getEndpoint();
 
                 for (WeakReference<Endpoint> wr : lastNEndpoints)
                 {
-                    if (pinnedEndpoint == null && n >= lastN
-                            // keep one empty slot for the pinned endpoint.
-                            || pinnedEndpoint != null && n >= lastN - 1)
+                    if (n >= nMax)
                         break;
 
                     Endpoint e = wr.get();
@@ -540,9 +640,7 @@ public class VideoChannel
 
                 // FIXME(gp) move this if before the for loop
                 if (!inLastN && pinnedEndpoint != null)
-                {
                     inLastN = channelEndpoint == pinnedEndpoint;
-                }
             }
         }
         finally
@@ -560,6 +658,188 @@ public class VideoChannel
      * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
      */
     private void lastNEndpointsChanged(List<Endpoint> endpointsEnteringLastN)
+    {
+        try
+        {
+            sendLastNEndpointsChangeEventOnDataChannel(endpointsEnteringLastN);
+        }
+        finally
+        {
+            updateInLastN(this);
+        }
+    }
+
+    /**
+     * Gets the index of a specific <tt>Endpoint</tt> in a specific list of
+     * <tt>lastN</tt> <tt>Endpoint</tt>s.
+     *
+     * @param endpoints the list of <tt>Endpoint</tt>s into which to look for
+     * <tt>endpoint</tt>
+     * @param lastN the number of <tt>Endpoint</tt>s in <tt>endpoint</tt>s to
+     * look through
+     * @param endpoint the <tt>Endpoint</tt> to find within <tt>lastN</tt>
+     * elements of <tt>endpoints</tt>
+     * @return the <tt>lastN</tt> index of <tt>endpoint</tt> in
+     * <tt>endpoints</tt> or <tt>-1</tt> if <tt>endpoint</tt> is not within the
+     * <tt>lastN</tt> elements of <tt>endpoints</tt>
+     */
+    private int lastNIndexOf(
+            List<Endpoint> endpoints,
+            int lastN,
+            Endpoint endpoint)
+    {
+        Endpoint thisEndpoint = getEndpoint();
+        int n = 0;
+
+        for (Endpoint e : endpoints)
+        {
+            if (n >= lastN)
+                break;
+
+            if (e.equals(thisEndpoint))
+                continue;
+            else if (e.equals(endpoint))
+                return n;
+
+            ++n;
+        }
+        return -1;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Enables the the abs-send-time extension after the stream has been
+     * started.
+     */
+    @Override
+    protected void maybeStartStream()
+        throws IOException
+    {
+        super.maybeStartStream();
+
+        MediaStream stream = getStream();
+
+        if (stream != null)
+        {
+            ConfigurationService cfg
+                = ServiceUtils.getService(
+                        getBundleContext(),
+                        ConfigurationService.class);
+            boolean disableAbsSendTime
+                = cfg != null
+                    && cfg.getBoolean(DISABLE_ABS_SEND_TIME_PNAME, false);
+
+            if (!disableAbsSendTime)
+            {
+                // TODO: remove hard-coded value
+                stream.setAbsSendTimeExtensionID(3);
+            }
+        }
+
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent ev)
+    {
+        super.propertyChange(ev);
+
+        String propertyName = ev.getPropertyName();
+
+        if (Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
+        {
+            // The pinned endpoint is always in the last N set, if last N > 0.
+            // So, it (the pinned endpoint) has changed, the lastN has changed.
+            if (this.getLastN() < 1)
+            {
+                return;
+            }
+
+            // Pretend that the ordered list of Endpoints maintained by
+            // conferenceSpeechActivity has changed in order to populate
+            // lastNEndpoints and get the channel endpoints to ask for key
+            // frames.
+            List<Endpoint> channelEndpointsToAskForKeyframes
+                    = speechActivityEndpointsChanged(null, true);
+
+            if ((channelEndpointsToAskForKeyframes != null)
+                    && !channelEndpointsToAskForKeyframes.isEmpty())
+            {
+                getContent().askForKeyframes(channelEndpointsToAskForKeyframes);
+            }
+        }
+    }
+
+    /**
+     * Notifies this <tt>VideoChannel</tt> that an RTCP REMB packet with a
+     * bitrate value of <tt>remb</tt> bits per second was received.
+     *
+     * @param remb the bitrate of the received REMB packet in bits per second.
+     */
+    public void receivedREMB(long remb)
+    {
+        BitrateController bc = getBitrateController();
+
+        if (bc != null)
+            bc.receivedREMB(remb);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean rtpTranslatorWillWrite(
+            boolean data,
+            byte[] buffer, int offset, int length,
+            Channel source)
+    {
+        boolean accept = true;
+
+        if (data && (source != null))
+        {
+            accept = isInLastN(source);
+            if (accept && source instanceof VideoChannel)
+            {
+                VideoChannel videoChannel = (VideoChannel) source;
+
+                accept
+                    = simulcastManager.accept(
+                            buffer, offset, length,
+                            videoChannel);
+            }
+        }
+
+        return accept;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Fires initial events over the WebRTC data channel of this
+     * <tt>VideoChannel</tt> such as the list of last-n <tt>Endpoint</tt>s whose
+     * video is sent/RTP translated by this <tt>RtpChannel</tt> to its
+     * <tt>Endpoint</tt>.
+     */
+    @Override
+    void sctpConnectionReady(Endpoint endpoint)
+    {
+        super.sctpConnectionReady(endpoint);
+
+        if (endpoint.equals(getEndpoint()))
+            lastNEndpointsChanged(null);
+    }
+
+    /**
+     * Sends a message with <tt>colibriClass</tt>
+     * <tt>LastNEndpointsChangeEvent</tt> to the <tt>Endpoint</tt> of this
+     * <tt>VideoChannel</tt> in order to notify it that the list/set of
+     * <tt>lastN</tt> has changed.
+     *
+     * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
+     * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+     */
+    private void sendLastNEndpointsChangeEventOnDataChannel(
+            List<Endpoint> endpointsEnteringLastN)
     {
         int lastN = getLastN();
 
@@ -604,13 +884,9 @@ public class VideoChannel
                     if (!foundPinnedEndpoint)
                     {
                         if (n == lastN - 1)
-                        {
                             e = pinnedEndpoint;
-                        }
                         else
-                        {
                             foundPinnedEndpoint = e == pinnedEndpoint;
-                        }
                     }
 
                     if (e != null)
@@ -692,135 +968,6 @@ public class VideoChannel
         {
             logger.error("Failed to send message on data channel.", e);
         }
-    }
-
-    /**
-     * Gets the index of a specific <tt>Endpoint</tt> in a specific list of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s.
-     *
-     * @param endpoints the list of <tt>Endpoint</tt>s into which to look for
-     * <tt>endpoint</tt>
-     * @param lastN the number of <tt>Endpoint</tt>s in <tt>endpoint</tt>s to
-     * look through
-     * @param endpoint the <tt>Endpoint</tt> to find within <tt>lastN</tt>
-     * elements of <tt>endpoints</tt>
-     * @return the <tt>lastN</tt> index of <tt>endpoint</tt> in
-     * <tt>endpoints</tt> or <tt>-1</tt> if <tt>endpoint</tt> is not within the
-     * <tt>lastN</tt> elements of <tt>endpoints</tt>
-     */
-    private int lastNIndexOf(
-            List<Endpoint> endpoints,
-            int lastN,
-            Endpoint endpoint)
-    {
-        Endpoint thisEndpoint = getEndpoint();
-        int n = 0;
-
-        for (Endpoint e : endpoints)
-        {
-            if (n >= lastN)
-                break;
-
-            if (e.equals(thisEndpoint))
-                continue;
-            else if (e.equals(endpoint))
-                return n;
-
-            ++n;
-        }
-        return -1;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Enables the the abs-send-time extension after the stream has been
-     * started.
-     */
-    @Override
-    protected void maybeStartStream()
-        throws IOException
-    {
-        super.maybeStartStream();
-
-        MediaStream stream = getStream();
-
-        if (stream != null)
-        {
-            ConfigurationService cfg
-                = ServiceUtils.getService(
-                        getBundleContext(),
-                        ConfigurationService.class);
-            boolean disableAbsSendTime
-                = cfg != null
-                    && cfg.getBoolean(DISABLE_ABS_SEND_TIME_PNAME, false);
-
-            if (!disableAbsSendTime)
-            {
-                // TODO: remove hard-coded value
-                stream.setAbsSendTimeExtensionID(3);
-            }
-        }
-
-    }
-
-    /**
-     * Notifies this <tt>VideoChannel</tt> that an RTCP REMB packet with a
-     * bitrate value of <tt>remb</tt> bits per second was received.
-     *
-     * @param remb the bitrate of the received REMB packet in bits per second.
-     */
-    public void receivedREMB(long remb)
-    {
-        BitrateController bc = getBitrateController();
-
-        if (bc != null)
-            bc.receivedREMB(remb);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    boolean rtpTranslatorWillWrite(
-            boolean data,
-            byte[] buffer, int offset, int length,
-            Channel source)
-    {
-        boolean accept = true;
-
-        if (data && (source != null))
-        {
-            accept = isInLastN(source);
-            if (accept && source instanceof VideoChannel)
-            {
-                VideoChannel videoChannel = (VideoChannel) source;
-
-                accept
-                    = simulcastManager.accept(
-                            buffer, offset, length,
-                            videoChannel);
-            }
-        }
-
-        return accept;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Fires initial events over the WebRTC data channel of this
-     * <tt>VideoChannel</tt> such as the list of last-n <tt>Endpoint</tt>s whose
-     * video is sent/RTP translated by this <tt>RtpChannel</tt> to its
-     * <tt>Endpoint</tt>.
-     */
-    @Override
-    void sctpConnectionReady(Endpoint endpoint)
-    {
-        super.sctpConnectionReady(endpoint);
-
-        if (endpoint.equals(getEndpoint()))
-            lastNEndpointsChanged(null);
     }
 
     /**
@@ -917,17 +1064,19 @@ public class VideoChannel
 
                             Endpoint endpoint = wr.get();
 
-                            if (endpoint != null
-                                    && (endpoint.equals(thisEndpoint)
-                                    // We have already signalled the fact that
-                                    // the pinned endpoint has entered the lastN
-                                    // set when we handled the "EndpointPinned"
-                                    // event. Also, we've already counted it
-                                    // above. So, we don't want to neither add
-                                    // it in the endpointsEnteringLastN nor
-                                    // count it here.
-                                    || endpoint.equals(pinnedEndpoint)))
-                                continue;
+                            if (endpoint != null)
+                            {
+                                if (endpoint.equals(thisEndpoint))
+                                    continue;
+                                // We've already signaled the fact that the
+                                // pinned endpoint has entered the lastN set
+                                // when we handled the "EndpointPinned" event.
+                                // Also, we've already counted it above. So, we
+                                // don't want to either add it in the
+                                // endpointsEnteringLastN or count it here.
+                                if (endpoint.equals(pinnedEndpoint))
+                                    continue;
+                            }
 
                             ++n;
                             if (n > this.lastN && endpoint != null)
@@ -953,22 +1102,6 @@ public class VideoChannel
         }
 
         touch(); // It seems this Channel is still active.
-    }
-
-    private Endpoint getPinnedEndpoint()
-    {
-        Endpoint self = getEndpoint();
-        Content content;
-        Conference conference;
-        String pinnedEndpointID;
-
-        return (self != null
-                && !StringUtils.isNullOrEmpty(pinnedEndpointID = self.getPinnedEndpointID())
-                && (content = getContent()) != null
-                && (conference = content.getConference()) != null)
-
-                ?  conference.getEndpoint(pinnedEndpointID)
-                : null;
     }
 
     /**
@@ -1007,10 +1140,9 @@ public class VideoChannel
                 // The pinned endpoint is always in the last N set, if
                 // last N > 0.
                 Endpoint pinnedEndpoint = getPinnedEndpoint();
+
                 if (pinnedEndpoint != null && lastN > 0)
-                {
                     endpointsEnteringLastN.add(pinnedEndpoint);
-                }
 
                 for (Endpoint e : endpoints)
                 {
@@ -1075,5 +1207,78 @@ public class VideoChannel
 
         // Request keyframes from the Endpoints entering the list of lastN.
         return endpointsEnteringLastN;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * If <tt>newValue</tt> employs a <tt>TransformEngineChain</tt>, allows this
+     * <tt>VideoChannel</tt> to configure it.
+     */
+    @Override
+    protected void streamRTPConnectorChanged(
+            RTPConnector oldValue,
+            RTPConnector newValue)
+    {
+        super.streamRTPConnectorChanged(oldValue, newValue);
+
+        TransformEngine engine;
+
+        if (newValue instanceof RTPTransformTCPConnector)
+            engine = ((RTPTransformTCPConnector) newValue).getEngine();
+        else if (newValue instanceof RTPTransformUDPConnector)
+            engine = ((RTPTransformUDPConnector) newValue).getEngine();
+        else
+            engine = null;
+        if ((engine != null) && (engine instanceof TransformEngineChain))
+            configureTransformEngineChain((TransformEngineChain) engine);
+    }
+
+    /**
+     * Updates the value of the property <tt>inLastN</tt> of this
+     * <tt>VideoChannel</tt>.
+     *
+     * @param channels the list/set of <tt>Channel</tt>s in the <tt>Content</tt>
+     * of this <tt>VideoChannel</tt>. Explicitly provided in order to reduce the
+     * number of allocations in particular and the consequent effects of garbage
+     * collection in general.
+     */
+    private void updateInLastN(Channel[] channels)
+    {
+        boolean inLastN;
+
+        if (channels.length == 0)
+        {
+            // If this VideoChannel is not within the list of Channels of its
+            // associated Content, then something is amiss and we would better
+            // not mess around with its received RTP packets.
+            inLastN = true;
+        }
+        else
+        {
+            Endpoint endpoint = getEndpoint();
+
+            // If videoChannel is the only Channel in its associated Content,
+            // then we do NOT want to drop its received RTP packets.
+            inLastN = true;
+            for (Channel c : channels)
+            {
+                if (equals(c))
+                    continue;
+
+                // A Channel should not be forwarded to another Channel if the
+                // two Channels belong to one and the same Endpoint.
+                // Consequently, isInLastN is unnecessary in the case.
+                if ((endpoint != null) && endpoint.equals(c.getEndpoint()))
+                    continue;
+
+                inLastN = ((VideoChannel) c).isInLastN(this);
+                if (inLastN)
+                    break;
+            }
+        }
+
+        if (this.inLastN.compareAndSet(!inLastN, inLastN))
+            inLastNChanged(!inLastN, inLastN);
     }
 }
