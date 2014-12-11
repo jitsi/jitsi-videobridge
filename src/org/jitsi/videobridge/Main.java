@@ -6,18 +6,25 @@
  */
 package org.jitsi.videobridge;
 
-import java.util.*;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.List;
 
-import net.java.sip.communicator.service.protocol.*;
-import net.java.sip.communicator.service.shutdown.*;
-import net.java.sip.communicator.util.*;
+import net.java.sip.communicator.service.protocol.OperationSetBasicTelephony;
+import net.java.sip.communicator.service.shutdown.ShutdownService;
+import net.java.sip.communicator.util.Logger;
 
-import org.jitsi.service.neomedia.*;
-import org.jitsi.videobridge.osgi.*;
-import org.jitsi.videobridge.xmpp.*;
-import org.jivesoftware.whack.*;
-import org.osgi.framework.*;
-import org.xmpp.component.*;
+import org.jitsi.service.neomedia.DefaultStreamConnector;
+import org.jitsi.videobridge.osgi.OSGi;
+import org.jitsi.videobridge.xmpp.ComponentImpl;
+import org.jivesoftware.whack.ExternalComponentManager;
+import org.osgi.framework.BundleActivator;
+import org.osgi.framework.BundleContext;
+import org.xmpp.component.Component;
+import org.xmpp.component.ComponentException;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -269,9 +276,38 @@ public class Main
                 componentManager.setServerName(domain);
     
             Component component = new ComponentImpl();
-
-            componentManager.addComponent(subdomain, component);
-
+            try
+            {
+                componentManager.addComponent(subdomain, component);
+            }
+            catch(Exception ex)
+            {
+                // extensive error handling for a connect exception
+                if(ex.getCause() instanceof ConnectException) {
+                    logger.error("Connection exception in component: "+component.getName()
+                            +". host: "+host+" port: "+port+" domain: "+domain+" subdomain: "
+                            +subdomain);
+                    // if we are on localhost say even more
+                    if(host.equals("localhost"))
+                    {
+                        logger.error("Be aware that localhost might have multiple ips:");
+                        Enumeration e = NetworkInterface.getNetworkInterfaces();
+                        while(e.hasMoreElements())
+                        {
+                            NetworkInterface n = (NetworkInterface) e.nextElement();
+                            Enumeration ee = n.getInetAddresses();
+                            while (ee.hasMoreElements())
+                            {
+                                InetAddress i = (InetAddress) ee.nextElement();
+                                logger.error(i.getHostAddress());
+                            }
+                        }
+                        logger.error("In doubt specify host: 127.0.0.1 and domain: localhost");
+                    }
+                }
+                // rethrow
+                throw ex;
+            }
             /*
              * The application has nothing more to do but wait for ComponentImpl
              * to perform its duties. Presently, there is no specific shutdown
