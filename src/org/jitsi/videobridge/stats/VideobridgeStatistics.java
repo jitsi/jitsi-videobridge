@@ -258,7 +258,7 @@ public class VideobridgeStatistics
                         }
                     }
                     conferences++;
-                    endpoints += conference.getEndpointsCount();
+                    endpoints += conference.getEndpointCount();
                 }
                 if (videobridge.isShutdownInProgress())
                 {

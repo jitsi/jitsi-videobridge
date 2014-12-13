@@ -122,16 +122,16 @@ public class Conference
     private boolean recording = false;
 
     /**
-     * The path to the directory into which files associated with media
-     * recordings for this <tt>Conference</tt> will be stored.
-     */
-    private String recordingPath = null;
-
-    /**
      * The directory into which files associated with media recordings
      * for this <tt>Conference</tt> will be stored.
      */
     private String recordingDirectory = null;
+
+    /**
+     * The path to the directory into which files associated with media
+     * recordings for this <tt>Conference</tt> will be stored.
+     */
+    private String recordingPath = null;
 
     /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
@@ -773,6 +773,16 @@ public class Conference
     }
 
     /**
+     * Returns the number of <tt>Endpoint</tt>s in this <tt>Conference</tt>.
+     *
+     * @return the number of <tt>Endpoint</tt>s in this <tt>Conference</tt>.
+     */
+    public int getEndpointCount()
+    {
+        return getEndpoints().size();
+    }
+
+    /**
      * Returns the <tt>EndpointRecorder</tt> instance used to save the
      * endpoints information for this <tt>Conference</tt>. Creates an instance
      * if none exists.
@@ -835,16 +845,6 @@ public class Conference
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
 
         return endpoints;
-    }
-
-    /**
-     * Returns the number of endpoints in the conference.
-     *
-     * @return the number of endpoints in the conference.
-     */
-    public int getEndpointsCount()
-    {
-        return getEndpoints().size();
     }
 
     /**
@@ -1016,6 +1016,21 @@ public class Conference
     }
 
     /**
+     * Returns the directory where the recording should be stored
+     *
+     * @return the directory of the new recording
+     */
+    String getRecordingDirectory() {
+        if (this.recordingDirectory == null) {
+            SimpleDateFormat dateFormat
+                    = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.");
+            this.recordingDirectory = dateFormat.format(new Date()) + getID();
+        }
+
+        return this.recordingDirectory;
+    }
+
+    /**
      * Returns the path to the directory where the media recording related files
      * should be saved, or <tt>null</tt> if recording is not enabled in the
      * configuration, or a recording path has not been configured.
@@ -1054,21 +1069,6 @@ public class Conference
             }
         }
         return recordingPath;
-    }
-
-    /**
-     * Returns the directory where the recording should be stored
-     *
-     * @return the directory of the new recording
-     */
-    String getRecordingDirectory() {
-        if (this.recordingDirectory == null) {
-            SimpleDateFormat dateFormat
-                    = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.");
-            this.recordingDirectory = dateFormat.format(new Date()) + getID();
-        }
-
-        return this.recordingDirectory;
     }
 
     /**

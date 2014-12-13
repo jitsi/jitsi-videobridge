@@ -18,10 +18,10 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.messages.*;
 
 /**
-* @author George Politis
-*/
+ * @author George Politis
+ */
 class SimulcastReceiver
-        implements PropertyChangeListener
+    implements PropertyChangeListener
 {
     /**
      * The <tt>SimulcastReceiverOptions</tt> to use when creating a new
@@ -51,12 +51,12 @@ class SimulcastReceiver
      */
     private static final int MAX_NEXT_SEEN = 125;
 
-    static {
+    static
+    {
         // Static initialization is performed once per class-loader. So, this
         // method can be considered thread safe for our purposes.
 
         initOptions = new SimulcastReceiverOptions();
-
         initOptions.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
         // options.setUrgent(false);
         // options.setHardSwitch(false);
@@ -110,7 +110,7 @@ class SimulcastReceiver
      * from <tt>PropertyChangeNotifier</tt>s.
      */
     private final PropertyChangeListener weakPropertyChangeListener
-            = new WeakReferencePropertyChangeListener(this);
+        = new WeakReferencePropertyChangeListener(this);
 
     /**
      * Ctor.

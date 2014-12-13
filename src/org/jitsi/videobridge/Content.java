@@ -53,6 +53,8 @@ public class Content
      */
     private boolean expired = false;
 
+    private String fallbackSrategyFQN;
+
     /**
      * The local synchronization source identifier (SSRC) associated with this
      * <tt>Content</tt>, which is to to be pre-announced by the
@@ -105,6 +107,8 @@ public class Content
 
     private RTCPFeedbackMessageSender rtcpFeedbackMessageSender;
 
+    private String rtcpTerminationStrategyFQN;
+
     /**
      * The <tt>Object</tt> which synchronizes the access to the RTP-level relays
      * (i.e. {@link #mixer} and {@link #rtpTranslator}) provided by this
@@ -135,33 +139,36 @@ public class Content
             throw new NullPointerException("name");
 
         this.conference = conference;
+        this.name = name;
 
         // If endpoints have changed, maybe change the RTCP termination
         // strategy.
         // TODO(gp) this should not always be enabled, it should be configurable
-        this.conference.addPropertyChangeListener(new PropertyChangeListener()
-        {
-            @Override
-            public void propertyChange(PropertyChangeEvent propertyChangeEvent)
-            {
-                if (propertyChangeEvent != null &&
-                        Conference.ENDPOINTS_PROPERTY_NAME
-                                .equals(propertyChangeEvent.getPropertyName()))
+        this.conference.addPropertyChangeListener(
+                new PropertyChangeListener()
                 {
-                    updateRTCPTerminationStrategy();
-                }
-            }
-        });
-        this.name = name;
+                    @Override
+                    public void propertyChange(PropertyChangeEvent ev)
+                    {
+                        if (Conference.ENDPOINTS_PROPERTY_NAME.equals(
+                                ev.getPropertyName()))
+                        {
+                            updateRTCPTerminationStrategy();
+                        }
+                    }
+                });
 
         mediaType = MediaType.parseString(this.name);
 
-
         LoggingService loggingService
-                = conference.getVideobridge().getLoggingService();
+            = this.conference.getVideobridge().getLoggingService();
+
         if (loggingService != null)
+        {
             loggingService.logEvent(
                     EventFactory.contentCreated(name, conference.getID()));
+        }
+
         touch();
     }
 
@@ -252,6 +259,7 @@ public class Content
         while (channel == null);
 
         Videobridge videobridge = getConference().getVideobridge();
+        int channelCount = videobridge.getChannelCount();
 
         if (logger.isInfoEnabled())
         {
@@ -266,15 +274,16 @@ public class Content
                         + getName() + " of conference " + conference.getID()
                         + ". The total number of conferences is now "
                         + videobridge.getConferenceCount() + ", channels "
-                        + videobridge.getChannelCount() + ".");
+                        + channelCount + ".");
         }
 
         MetricService metricService = videobridge.getMetricService();
+
         if (metricService != null)
         {
-            metricService
-                .publishNumericMetric(MetricService.METRIC_CHANNELS,
-                                      videobridge.getChannelCount());
+            metricService.publishNumericMetric(
+                    MetricService.METRIC_CHANNELS,
+                    channelCount);
         }
 
         return channel;
@@ -633,6 +642,7 @@ public class Content
         return mediaType;
     }
 
+
     /**
      * Gets the <tt>MediaDevice</tt> which mixes the media received by the
      * <tt>Channels</tt>  of this <tt>Content</tt> which use a mixer as their
@@ -676,7 +686,6 @@ public class Content
         return name;
     }
 
-
     /**
      * Gets the <tt>Recorder</tt> instance used to record media for this
      * <tt>Content</tt>. Creates it, if necessary.
@@ -706,126 +715,6 @@ public class Content
     RTCPFeedbackMessageSender getRTCPFeedbackMessageSender()
     {
         return rtcpFeedbackMessageSender;
-    }
-
-    private String rtcpTerminationStrategyFQN;
-
-    private String fallbackSrategyFQN;
-
-    public void setRTCPTerminationStrategyFQN(String strategyFQN)
-    {
-        // NOTE(gp) we want to *always* update the RTCP termination strategy,
-        // even if rtcpTerminationStrategyFQN.equals(strategyFQN).
-        //
-        // The reason for this is that "this.rtpTranslator" (the translator of
-        // this content) can be "null" when the updateRTCPTerminationStrategy()
-        // method is called, and, as a result, "this.rtpTranslator" might have
-        // not been configured with the correct RTCP termination strategy.
-        //
-        // This is especially true when adaptive last N and adaptive simulcast
-        // are used. Those two features need the basic bridge RTCP termination
-        // strategy but, when they set it, "this.translator" is "null".
-        //
-        // Calling the updateRTCPTerminationStrategy() method even if
-        // rtcpTerminationStrategyFQN.equals(strategyFQN) is fine because the
-        // method checks for class equality.
-
-        this.rtcpTerminationStrategyFQN = strategyFQN;
-        this.updateRTCPTerminationStrategy();
-    }
-
-    /**
-     * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
-     * one specified in the rtcpTerminationStrategyFQN parameter.
-     *
-     */
-    private void updateRTCPTerminationStrategy()
-    {
-        Conference conf = this.conference;
-
-        if (conf == null)
-            return;
-
-        RTPTranslator rtpTranslator = this.rtpTranslator;
-
-        if (rtpTranslator == null)
-            return;
-
-        String strategyFQN;
-        List<Endpoint> endpoints = conf.getEndpoints();
-
-        // If the conference has less than 3 participants, it switches the RTCP
-        // termination strategy to the SilentBridgeRTCPTerminationStrategy. It
-        // restores the configured RTCP termination strategy otherwise.
-        if (endpoints != null && endpoints.size() < 3)
-        {
-            strategyFQN = this.fallbackSrategyFQN;
-            if (StringUtils.isNullOrEmpty(strategyFQN))
-                strategyFQN = this.rtcpTerminationStrategyFQN;
-        }
-        else
-        {
-            strategyFQN = this.rtcpTerminationStrategyFQN;
-        }
-
-        if (StringUtils.isNullOrEmpty(strategyFQN))
-            return;
-
-        try
-        {
-            Class<?> clazz = Class.forName(strategyFQN);
-
-            RTCPTerminationStrategy oldStrategy
-                    = rtpTranslator.getRTCPTerminationStrategy();
-            if (clazz.isInstance(oldStrategy))
-                return;
-
-            RTCPTerminationStrategy strategy
-                    = (RTCPTerminationStrategy) clazz.newInstance();
-
-            if (strategy instanceof BridgeRTCPTerminationStrategy)
-            {
-                ((BridgeRTCPTerminationStrategy) strategy)
-                        .setConference(this.conference);
-            }
-
-            rtpTranslator.setRTCPTerminationStrategy(strategy);
-        }
-        catch (Exception e)
-        {
-            logger.error(
-                    "Failed to configure the RTCP termination strategy",
-                    e);
-        }
-    }
-
-    /**
-     * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
-     * one specified in the configuration.
-     *
-     */
-    public void setRTCPTerminationStrategyFromConfiguration()
-    {
-        if (!MediaType.VIDEO.equals(mediaType))
-        {
-            return;
-        }
-
-        ConfigurationService cfg = getConference().getVideobridge()
-                .getConfigurationService();
-
-        if (cfg != null)
-        {
-            String fallbackFQN = cfg.getString(
-                    Videobridge.RTCP_TERMINATION_FALLBACK_STRATEGY_PNAME, "");
-
-            setRTCPTerminationFallbackStrategyFQN(fallbackFQN);
-
-            String strategyFQN = cfg.getString(
-                    Videobridge.RTCP_TERMINATION_STRATEGY_PNAME, "");
-
-            setRTCPTerminationStrategyFQN(strategyFQN);
-        }
     }
 
     /**
@@ -961,6 +850,63 @@ public class Content
         return this.recording;
     }
 
+    public void setRTCPTerminationFallbackStrategyFQN(
+            String rtcpTerminationFallbackStrategyFQN)
+    {
+        this.fallbackSrategyFQN = rtcpTerminationFallbackStrategyFQN;
+    }
+
+    public void setRTCPTerminationStrategyFQN(String strategyFQN)
+    {
+        // NOTE(gp) we want to *always* update the RTCP termination strategy,
+        // even if rtcpTerminationStrategyFQN.equals(strategyFQN).
+        //
+        // The reason for this is that "this.rtpTranslator" (the translator of
+        // this content) can be "null" when the updateRTCPTerminationStrategy()
+        // method is called, and, as a result, "this.rtpTranslator" might have
+        // not been configured with the correct RTCP termination strategy.
+        //
+        // This is especially true when adaptive last N and adaptive simulcast
+        // are used. Those two features need the basic bridge RTCP termination
+        // strategy but, when they set it, "this.translator" is "null".
+        //
+        // Calling the updateRTCPTerminationStrategy() method even if
+        // rtcpTerminationStrategyFQN.equals(strategyFQN) is fine because the
+        // method checks for class equality.
+
+        this.rtcpTerminationStrategyFQN = strategyFQN;
+        this.updateRTCPTerminationStrategy();
+    }
+
+    /**
+     * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
+     * one specified in the configuration.
+     *
+     */
+    public void setRTCPTerminationStrategyFromConfiguration()
+    {
+        if (!MediaType.VIDEO.equals(mediaType))
+        {
+            return;
+        }
+
+        ConfigurationService cfg = getConference().getVideobridge()
+                .getConfigurationService();
+
+        if (cfg != null)
+        {
+            String fallbackFQN = cfg.getString(
+                    Videobridge.RTCP_TERMINATION_FALLBACK_STRATEGY_PNAME, "");
+
+            setRTCPTerminationFallbackStrategyFQN(fallbackFQN);
+
+            String strategyFQN = cfg.getString(
+                    Videobridge.RTCP_TERMINATION_STRATEGY_PNAME, "");
+
+            setRTCPTerminationStrategyFQN(strategyFQN);
+        }
+    }
+
     /**
      * Tries to start a specific <tt>Recorder</tt>.
      * @param recorder the <tt>Recorder</tt> to start.
@@ -1006,10 +952,65 @@ public class Content
         }
     }
 
-    public void setRTCPTerminationFallbackStrategyFQN(
-            String rtcpTerminationFallbackStrategyFQN)
+    /**
+     * Sets the RTCP termination strategy of the <tt>rtpTranslator</tt> to the
+     * one specified in the rtcpTerminationStrategyFQN parameter.
+     *
+     */
+    private void updateRTCPTerminationStrategy()
     {
-        this.fallbackSrategyFQN = rtcpTerminationFallbackStrategyFQN;
+        Conference conf = this.conference;
+
+        if (conf == null)
+            return;
+
+        RTPTranslator rtpTranslator = this.rtpTranslator;
+
+        if (rtpTranslator == null)
+            return;
+
+        String strategyFQN;
+
+        // If the conference has less than 3 participants, it switches the RTCP
+        // termination strategy to the SilentBridgeRTCPTerminationStrategy. It
+        // restores the configured RTCP termination strategy otherwise.
+        if (conf.getEndpointCount() < 3)
+        {
+            strategyFQN = this.fallbackSrategyFQN;
+            if (StringUtils.isNullOrEmpty(strategyFQN))
+                strategyFQN = this.rtcpTerminationStrategyFQN;
+        }
+        else
+        {
+            strategyFQN = this.rtcpTerminationStrategyFQN;
+        }
+
+        if (StringUtils.isNullOrEmpty(strategyFQN))
+            return;
+
+        try
+        {
+            Class<?> clazz = Class.forName(strategyFQN);
+            RTCPTerminationStrategy oldStrategy
+                = rtpTranslator.getRTCPTerminationStrategy();
+
+            if (clazz.isInstance(oldStrategy))
+                return;
+
+            RTCPTerminationStrategy strategy
+                = (RTCPTerminationStrategy) clazz.newInstance();
+
+            if (strategy instanceof BridgeRTCPTerminationStrategy)
+                ((BridgeRTCPTerminationStrategy) strategy).setConference(conf);
+
+            rtpTranslator.setRTCPTerminationStrategy(strategy);
+        }
+        catch (Exception e)
+        {
+            logger.error(
+                    "Failed to configure the RTCP termination strategy",
+                    e);
+        }
     }
 
 

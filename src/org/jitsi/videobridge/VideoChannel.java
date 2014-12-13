@@ -320,21 +320,35 @@ public class VideoChannel
     }
 
     /**
-     * Returns the list of endpoints for the purposes of lastN.
+     * Returns the list of <tt>Endpoint</tt>s for the purposes of
+     * &quot;last N&quot;.
      *
-     * @return the list of endpoints for the purposes of lastN.
+     * @return the list of <tt>Endpoint</tt>s for the purposes of
+     * &quot;last N&quot;
      */
-    public List<WeakReference<Endpoint>> getLastNEndpoints()
+    public List<Endpoint> getLastNEndpoints()
     {
         Lock readLock = lastNSyncRoot.readLock();
-        List<WeakReference<Endpoint>> endpoints
-            = new LinkedList<WeakReference<Endpoint>>();
+        List<Endpoint> endpoints;
 
         readLock.lock();
         try
         {
-            if (lastNEndpoints != null)
-                endpoints.addAll(lastNEndpoints);
+            if (lastNEndpoints == null || lastNEndpoints.isEmpty())
+            {
+                endpoints = Collections.emptyList();
+            }
+            else
+            {
+                endpoints = new ArrayList<Endpoint>(lastNEndpoints.size());
+                for (WeakReference<Endpoint> wr : lastNEndpoints)
+                {
+                    Endpoint endpoint = wr.get();
+
+                    if (endpoint != null)
+                        endpoints.add(endpoint);
+                }
+            }
         }
         finally
         {
@@ -361,6 +375,26 @@ public class VideoChannel
         return null;
     }
 
+    public int getReceivingEndpointCount()
+    {
+        int receivingEndpointCount;
+
+        if (getLastN() == -1)
+        {
+            // LastN is disabled. Consequently, this endpoint receives all the
+            // other participants.
+            receivingEndpointCount
+                = getContent().getConference().getEndpointCount();
+        }
+        else
+        {
+            // LastN is enabled. Get the last N endpoints that this endpoint is
+            // receiving.
+            receivingEndpointCount = getLastNEndpoints().size();
+        }
+        return receivingEndpointCount;
+    }
+
     /**
      * Creates and returns an iterator of the endpoints that are currently
      * being received by this channel.
@@ -370,142 +404,49 @@ public class VideoChannel
      */
     public Iterator<Endpoint> getReceivingEndpoints()
     {
-        if (getLastN() == -1)
-        {
-            // LastN is disabled. Consequently, this endpoint receives all the
-            // other participants.
-            Content content = getContent();
-            final List<Endpoint> endpoints;
-            final int lastIx;
-
-            if (content == null)
-            {
-                endpoints = null;
-                lastIx = -1;
-            }
-            else
-            {
-                Conference conference = content.getConference();
-
-                if (conference == null)
-                {
-                    endpoints = null;
-                    lastIx = -1;
-                }
-                else
-                {
-                    endpoints = conference.getEndpoints();
-                    lastIx = (endpoints == null) ? -1 : (endpoints.size() - 1);
-                }
-            }
-
-            return
-                new Iterator<Endpoint>()
-                {
-                    private int ix = 0;
-
-                    @Override
-                    public boolean hasNext()
-                    {
-                        return ix <= lastIx;
-                    }
-
-                    @Override
-                    public Endpoint next()
-                    {
-                        if (hasNext())
-                            return endpoints.get(ix++);
-                        else
-                            throw new NoSuchElementException();
-                    }
-
-                    @Override
-                    public void remove()
-                    {
-                        throw new UnsupportedOperationException();
-                    }
-                };
-        }
-        else
-        {
-            // LastN is enabled. Get the last N endpoints that this endpoint is
-            // receiving.
-            final List<WeakReference<Endpoint>> lastNEndpoints
-                = getLastNEndpoints();
-            final int lastIx
-                = (lastNEndpoints == null) ? -1 : (lastNEndpoints.size() - 1);
-
-            return
-                new Iterator<Endpoint>()
-                {
-                    private int ix = 0;
-
-                    @Override
-                    public boolean hasNext()
-                    {
-                        return ix <= lastIx;
-                    }
-
-                    @Override
-                    public Endpoint next()
-                    {
-                        if (hasNext())
-                            return lastNEndpoints.get(ix++).get();
-                        else
-                            throw new NoSuchElementException();
-                    }
-
-                    @Override
-                    public void remove()
-                    {
-                        throw new UnsupportedOperationException();
-                    }
-                };
-        }
-    }
-
-    public int getReceivingEndpointsSize()
-    {
-        int receivingEndpointsSize;
+        final List<Endpoint> endpoints;
 
         if (getLastN() == -1)
         {
             // LastN is disabled. Consequently, this endpoint receives all the
             // other participants.
-            Content content = getContent();
-
-            if (content == null)
-            {
-                receivingEndpointsSize = 0;
-            }
-            else
-            {
-                Conference conference = content.getConference();
-
-                if (conference == null)
-                {
-                    receivingEndpointsSize = 0;
-                }
-                else
-                {
-                    List<Endpoint> endpoints = conference.getEndpoints();
-
-                    receivingEndpointsSize
-                        = (endpoints == null) ? 0 : endpoints.size();
-                }
-            }
+            endpoints = getContent().getConference().getEndpoints();
         }
         else
         {
             // LastN is enabled. Get the last N endpoints that this endpoint is
             // receiving.
-            List<WeakReference<Endpoint>> lastNEndpoints = getLastNEndpoints();
-
-            receivingEndpointsSize
-                = (lastNEndpoints == null) ? 0 : lastNEndpoints.size();
+            endpoints = getLastNEndpoints();
         }
 
-        return receivingEndpointsSize;
+        final int lastIx = endpoints.size() - 1;
+
+        return
+            new Iterator<Endpoint>()
+            {
+                private int ix = 0;
+
+                @Override
+                public boolean hasNext()
+                {
+                    return ix <= lastIx;
+                }
+
+                @Override
+                public Endpoint next()
+                {
+                    if (hasNext())
+                        return endpoints.get(ix++);
+                    else
+                        throw new NoSuchElementException();
+                }
+
+                @Override
+                public void remove()
+                {
+                    throw new UnsupportedOperationException();
+                }
+            };
     }
 
     /**
