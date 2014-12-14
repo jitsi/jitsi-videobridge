@@ -712,6 +712,7 @@ class SimulcastReceiver
             {
                 this.weakNext = null;
                 this.seenNext = 0;
+                sendNextSimulcastLayerStoppedEvent(next);
             }
         }
     }
@@ -1219,6 +1220,58 @@ class SimulcastReceiver
                     = (SimulcastManager) propertyChangeEvent.getSource();
 
             onPeerLayersChanged(peerSM);
+        }
+    }
+
+    private void sendNextSimulcastLayerStoppedEvent(SimulcastLayer layer)
+    {
+        if (layer == null)
+        {
+            logger.warn("Requested to send a next simulcast layer stopped " +
+                "event but layer is null!");
+            return;
+        }
+
+        Endpoint self, peer;
+
+        if ((self = getSelf()) != null && (peer = getPeer()) != null)
+        {
+            logger.debug("Sending a next simulcast layer stopped event to "
+                + self.getID() + ".");
+
+            // XXX(gp) it'd be nice if we could remove the
+            // SimulcastLayersChangedEvent event. Ideally, receivers should
+            // listen for MediaStreamTrackActivity instead. Unfortunately,
+            // such an event does not exist in WebRTC.
+
+            // Receiving simulcast layers changed, create and send
+            // an event through data channels to the receiving endpoint.
+            NextSimulcastLayerStoppedEvent ev
+                = new NextSimulcastLayerStoppedEvent();
+
+            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
+                new EndpointSimulcastLayer(peer.getID(), layer)
+            };
+
+            String json = mapper.toJson(ev);
+            try
+            {
+                // FIXME(gp) sendMessageOnDataChannel may silently fail to
+                // send a data message. We want to be able to handle those
+                // errors ourselves.
+                self.sendMessageOnDataChannel(json);
+            }
+            catch (IOException e)
+            {
+                logger.error(self.getID() + " failed to send message on " +
+                    "data channel.", e);
+            }
+        }
+        else
+        {
+            logger.warn("Didn't send simulcast layers changed event " +
+                "because self == null || peer == null " +
+                "|| current == null");
         }
     }
 
