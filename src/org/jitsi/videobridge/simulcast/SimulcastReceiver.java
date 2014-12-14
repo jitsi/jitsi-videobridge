@@ -511,7 +511,7 @@ class SimulcastReceiver
                 }
 
 
-                if (options.isUrgent() || current == null)
+                if (options.isUrgent() || current == null || MAX_NEXT_SEEN < 1)
                 {
                     // Receiving simulcast layers have brutally changed. Create
                     // and send an event through data channels to the receiving
