@@ -253,6 +253,56 @@ public class Conference
     }
 
     /**
+     * Closes given {@link #transportManagers} of this <tt>Conference</tt>
+     * and removes corresponding channel bundle.
+     */
+    void closeTransportManager(TransportManager transportManager)
+    {
+        synchronized (transportManagers)
+        {
+            // Find manager's bundle ID
+            String managerBundleId = null;
+            for (String bundleID : transportManagers.keySet())
+            {
+                if (transportManager == transportManagers.get(bundleID))
+                {
+                    managerBundleId = bundleID;
+                    break;
+                }
+            }
+            // Close manager
+            try
+            {
+                transportManager.close();
+            }
+            catch (Throwable t)
+            {
+                logger.warn(
+                        "Failed to close an IceUdpTransportManager of"
+                                + " conference " + getID() + "!",
+                        t);
+                // The whole point of explicitly closing the
+                // transportManagers of this Conference is to prevent memory
+                // leaks. Hence, it does not make sense to possibly leave
+                // TransportManagers open because a TransportManager has
+                // failed to close.
+                if (t instanceof InterruptedException)
+                    Thread.currentThread().interrupt();
+                else if (t instanceof ThreadDeath)
+                    throw (ThreadDeath) t;
+            }
+            finally
+            {
+                // Remove bundle
+                if (managerBundleId != null)
+                {
+                    transportManagers.remove(managerBundleId);
+                }
+            }
+        }
+    }
+
+    /**
      * Closes the {@link #transportManagers} of this <tt>Conference</tt>.
      */
     private void closeTransportManagers()
@@ -262,26 +312,7 @@ public class Conference
             for (IceUdpTransportManager transportManager
                     : transportManagers.values())
             {
-                try
-                {
-                    transportManager.close();
-                }
-                catch (Throwable t)
-                {
-                    logger.warn(
-                            "Failed to close an IceUdpTransportManager of"
-                                + " conference " + getID() + "!",
-                            t);
-                    // The whole point of explicitly closing the
-                    // transportManagers of this Conference is to prevent memory
-                    // leaks. Hence, it does not make sense to possibly leave
-                    // TransportManagers open because a TransportManager has
-                    // failed to close.
-                    if (t instanceof InterruptedException)
-                        Thread.currentThread().interrupt();
-                    else if (t instanceof ThreadDeath)
-                        throw (ThreadDeath) t;
-                }
+                closeTransportManager(transportManager);
             }
         }
     }

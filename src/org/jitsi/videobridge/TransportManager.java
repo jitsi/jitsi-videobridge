@@ -116,10 +116,16 @@ public abstract class TransportManager
 
         synchronized (channels)
         {
-            return channels.remove(channel);
+            boolean removed = channels.remove(channel);
+            // Remove transport manager from parent conference and it's
+            // corresponding channel bundle ID description.
+            if (removed && channels.isEmpty())
+            {
+                Conference conference = channel.getContent().getConference();
+                conference.closeTransportManager(this);
+            }
+            return removed;
         }
-
-        //NOTE: nothing happens when the last channel is removed.
     }
 
     /**
