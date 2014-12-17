@@ -309,8 +309,10 @@ public class Conference
     {
         synchronized (transportManagers)
         {
-            for (IceUdpTransportManager transportManager
-                    : transportManagers.values())
+            List<IceUdpTransportManager> managers
+                = new ArrayList<IceUdpTransportManager>(
+                        transportManagers.values());
+            for (IceUdpTransportManager transportManager : managers)
             {
                 closeTransportManager(transportManager);
             }
