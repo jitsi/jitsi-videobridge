@@ -97,7 +97,7 @@ case "$1" in
         fi
 
         # clean up old jvb group
-        if getent group jitsi > /dev/null; then
+        if getent group jvb > /dev/null; then
             groupdel jvb
         fi
     ;;
