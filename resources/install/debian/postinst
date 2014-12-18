@@ -59,8 +59,11 @@ case "$1" in
         fi
 
         # we don't want to start the daemon as root
+        if ! getent group jitsi > /dev/null; then
+            groupadd jitsi
+        fi
         if ! getent passwd jvb > /dev/null ; then
-            useradd -r --user-group --shell /bin/bash --create-home -d /usr/share/jitsi-videobridge jvb
+            useradd -r -g jitsi --shell /bin/bash --create-home -d /usr/share/jitsi-videobridge jvb
         fi
 
         # we create home folder only if it doesn't exist
@@ -71,22 +74,27 @@ case "$1" in
         # we claim the home folder of jvb in case it is owned by someone else
         OWNER=$(stat -c '%U' /usr/share/jitsi-videobridge)
         GROUP=$(stat -c '%G' /usr/share/jitsi-videobridge)
-        if ! dpkg-statoverride --list /usr/share/jitsi-videobridge/* >/dev/null && [ "$OWNER:$GROUP" != "jvb:jvb" ]; then
-            chown -R jvb:jvb /usr/share/jitsi-videobridge
+        if ! dpkg-statoverride --list /usr/share/jitsi-videobridge/* >/dev/null && [ "$OWNER:$GROUP" != "jvb:jitsi" ]; then
+            chown -R jvb:jitsi /usr/share/jitsi-videobridge
             OWNER=jvb
-            GROUP=jvb
+            GROUP=jitsi
         fi
 
         # die logz
         if [ ! -d /var/log/jitsi ]; then
             mkdir -p /var/log/jitsi
         fi
-        chown -R jvb:jvb /var/log/jitsi
+        chown $OWNER:$GROUP /var/log/jitsi
+        chown $OWNER:$GROUP /var/log/jvb.log*
+        chmod -R 640 /var/log/jitsi
 
         # ensure videobridge is not running - it will be started at the end
         if [ "$(pidof java)" ]; then
             invoke-rc.d jitsi-videobridge stop || true
         fi
+
+        # clean up old jvb group
+        groupdel jvb
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
