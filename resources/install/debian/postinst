@@ -59,11 +59,14 @@ case "$1" in
         fi
 
         # we don't want to start the daemon as root
-        if ! getent group jitsi > /dev/null; then
+        if ! getent group jitsi > /dev/null ; then
             groupadd jitsi
         fi
         if ! getent passwd jvb > /dev/null ; then
             useradd -r -g jitsi --shell /bin/bash --create-home -d /usr/share/jitsi-videobridge jvb
+        fi
+        if ! groups jvb | grep '\bjitsi\b' > /dev/null ; then
+            usermod -g jitsi jvb
         fi
 
         # we create home folder only if it doesn't exist
@@ -94,7 +97,9 @@ case "$1" in
         fi
 
         # clean up old jvb group
-        groupdel jvb
+        if getent group jitsi > /dev/null; then
+            groupdel jvb
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
