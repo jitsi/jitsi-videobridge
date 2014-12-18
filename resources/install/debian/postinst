@@ -88,7 +88,7 @@ case "$1" in
             mkdir -p /var/log/jitsi
         fi
         chown $OWNER:$GROUP /var/log/jitsi
-        chown $OWNER:$GROUP /var/log/jvb.log*
+        chown $OWNER:$GROUP /var/log/jitsi/jvb.log*
         chmod -R 640 /var/log/jitsi
 
         # ensure videobridge is not running - it will be started at the end
