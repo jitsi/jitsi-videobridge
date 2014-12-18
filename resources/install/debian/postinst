@@ -88,7 +88,7 @@ case "$1" in
             mkdir -p /var/log/jitsi
         fi
         chown $OWNER:$GROUP /var/log/jitsi
-        chmod 660 /var/log/jitsi
+        chmod 770 /var/log/jitsi
         chown $OWNER:$GROUP /var/log/jitsi/jvb.log*
         chmod -R 640 /var/log/jitsi/jvb*
 
