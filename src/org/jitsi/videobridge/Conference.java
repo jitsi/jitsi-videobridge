@@ -22,9 +22,9 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.json.simple.*;
 import org.jitsi.videobridge.log.*;
 import org.jitsi.videobridge.metrics.*;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 /**
@@ -260,16 +260,19 @@ public class Conference
     {
         synchronized (transportManagers)
         {
-            // Find manager's bundle ID
-            String managerBundleId = null;
-            for (String bundleID : transportManagers.keySet())
+            for (Iterator<IceUdpTransportManager> i
+                        = transportManagers.values().iterator();
+                    i.hasNext();)
             {
-                if (transportManager == transportManagers.get(bundleID))
+                if (i.next() == transportManager)
                 {
-                    managerBundleId = bundleID;
+                    i.remove();
+                    // Presumably, we have a single association for
+                    // transportManager.
                     break;
                 }
             }
+
             // Close manager
             try
             {
@@ -291,14 +294,6 @@ public class Conference
                 else if (t instanceof ThreadDeath)
                     throw (ThreadDeath) t;
             }
-            finally
-            {
-                // Remove bundle
-                if (managerBundleId != null)
-                {
-                    transportManagers.remove(managerBundleId);
-                }
-            }
         }
     }
 
@@ -309,11 +304,13 @@ public class Conference
     {
         synchronized (transportManagers)
         {
-            List<IceUdpTransportManager> managers
-                = new ArrayList<IceUdpTransportManager>(
-                        transportManagers.values());
-            for (IceUdpTransportManager transportManager : managers)
+            for (Iterator<IceUdpTransportManager> i
+                        = transportManagers.values().iterator();
+                    i.hasNext();)
             {
+                IceUdpTransportManager transportManager = i.next();
+
+                i.remove();
                 closeTransportManager(transportManager);
             }
         }

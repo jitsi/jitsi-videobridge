@@ -111,18 +111,21 @@ public abstract class TransportManager
      */
     public boolean close(Channel channel)
     {
-        if (channel != null)
-            channel.removePropertyChangeListener(channelPropertyChangeListener);
+        if (channel == null)
+            return false;
+
+        channel.removePropertyChangeListener(channelPropertyChangeListener);
 
         synchronized (channels)
         {
             boolean removed = channels.remove(channel);
+
             // Remove transport manager from parent conference and it's
             // corresponding channel bundle ID description.
             if (removed && channels.isEmpty())
             {
-                Conference conference = channel.getContent().getConference();
-                conference.closeTransportManager(this);
+                channel.getContent().getConference().closeTransportManager(
+                        this);
             }
             return removed;
         }
