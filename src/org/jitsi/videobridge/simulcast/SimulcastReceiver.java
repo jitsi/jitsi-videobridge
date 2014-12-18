@@ -11,17 +11,20 @@ import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
+import net.java.sip.communicator.util.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.messages.*;
 
 /**
-* @author George Politis
-*/
+ * @author George Politis
+ */
 class SimulcastReceiver
-        implements PropertyChangeListener
+    implements PropertyChangeListener
 {
     /**
      * The <tt>SimulcastReceiverOptions</tt> to use when creating a new
@@ -49,14 +52,21 @@ class SimulcastReceiver
      * be adjusted for use with upper layers, if one wants to achieve
      * (approximately) the same timeout for layers of different order.
      */
-    private static final int MAX_NEXT_SEEN = 125;
+    private static int MAX_NEXT_SEEN = 125;
 
-    static {
+    /**
+     * The name of the property which can be used to control the
+     * <tt>MAX_NEXT_SEEN</tt> constant.
+     */
+    private static final String MAX_NEXT_SEEN_PNAME =
+        SimulcastReceiver.class.getName() + ".MAX_NEXT_SEEN";
+
+    static
+    {
         // Static initialization is performed once per class-loader. So, this
         // method can be considered thread safe for our purposes.
 
         initOptions = new SimulcastReceiverOptions();
-
         initOptions.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
         // options.setUrgent(false);
         // options.setHardSwitch(false);
@@ -110,7 +120,12 @@ class SimulcastReceiver
      * from <tt>PropertyChangeNotifier</tt>s.
      */
     private final PropertyChangeListener weakPropertyChangeListener
-            = new WeakReferencePropertyChangeListener(this);
+        = new WeakReferencePropertyChangeListener(this);
+
+    /**
+     * Whether the values for the constants have been initialized or not.
+     */
+    private static boolean configurationInitialized = false;
 
     /**
      * Ctor.
@@ -123,6 +138,8 @@ class SimulcastReceiver
         this.weakPeerSM = new WeakReference<SimulcastManager>(peerSM);
         this.mySM = mySM;
 
+        this.initializeConfiguration();
+
         // Listen for property changes.
         peerSM.addPropertyChangeListener(weakPropertyChangeListener);
         onPeerLayersChanged(peerSM);
@@ -132,6 +149,30 @@ class SimulcastReceiver
 
         Endpoint self = getSelf();
         onEndpointChanged(self, null);
+    }
+
+    private void initializeConfiguration()
+    {
+        synchronized (SimulcastReceiver.class)
+        {
+            if (configurationInitialized)
+            {
+                return;
+            }
+
+            configurationInitialized = true;
+
+            VideoChannel channel = this.mySM.getVideoChannel();
+            ConfigurationService cfg
+                = ServiceUtils.getService(
+                channel.getBundleContext(),
+                ConfigurationService.class);
+
+            if (cfg != null)
+            {
+                MAX_NEXT_SEEN = cfg.getInt(MAX_NEXT_SEEN_PNAME, MAX_NEXT_SEEN);
+            }
+        }
     }
 
     /**
@@ -470,7 +511,7 @@ class SimulcastReceiver
                 }
 
 
-                if (options.isUrgent() || current == null)
+                if (options.isUrgent() || current == null || MAX_NEXT_SEEN < 1)
                 {
                     // Receiving simulcast layers have brutally changed. Create
                     // and send an event through data channels to the receiving
@@ -671,6 +712,7 @@ class SimulcastReceiver
             {
                 this.weakNext = null;
                 this.seenNext = 0;
+                sendNextSimulcastLayerStoppedEvent(next);
             }
         }
     }
@@ -1178,6 +1220,58 @@ class SimulcastReceiver
                     = (SimulcastManager) propertyChangeEvent.getSource();
 
             onPeerLayersChanged(peerSM);
+        }
+    }
+
+    private void sendNextSimulcastLayerStoppedEvent(SimulcastLayer layer)
+    {
+        if (layer == null)
+        {
+            logger.warn("Requested to send a next simulcast layer stopped " +
+                "event but layer is null!");
+            return;
+        }
+
+        Endpoint self, peer;
+
+        if ((self = getSelf()) != null && (peer = getPeer()) != null)
+        {
+            logger.debug("Sending a next simulcast layer stopped event to "
+                + self.getID() + ".");
+
+            // XXX(gp) it'd be nice if we could remove the
+            // SimulcastLayersChangedEvent event. Ideally, receivers should
+            // listen for MediaStreamTrackActivity instead. Unfortunately,
+            // such an event does not exist in WebRTC.
+
+            // Receiving simulcast layers changed, create and send
+            // an event through data channels to the receiving endpoint.
+            NextSimulcastLayerStoppedEvent ev
+                = new NextSimulcastLayerStoppedEvent();
+
+            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
+                new EndpointSimulcastLayer(peer.getID(), layer)
+            };
+
+            String json = mapper.toJson(ev);
+            try
+            {
+                // FIXME(gp) sendMessageOnDataChannel may silently fail to
+                // send a data message. We want to be able to handle those
+                // errors ourselves.
+                self.sendMessageOnDataChannel(json);
+            }
+            catch (IOException e)
+            {
+                logger.error(self.getID() + " failed to send message on " +
+                    "data channel.", e);
+            }
+        }
+        else
+        {
+            logger.warn("Didn't send simulcast layers changed event " +
+                "because self == null || peer == null " +
+                "|| current == null");
         }
     }
 

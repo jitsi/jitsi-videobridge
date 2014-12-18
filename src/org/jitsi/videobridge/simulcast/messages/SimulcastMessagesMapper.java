@@ -100,6 +100,28 @@ public class SimulcastMessagesMapper
         return b.toString();
     }
 
+    public String toJson(NextSimulcastLayerStoppedEvent event)
+    {
+        if (event == null)
+        {
+            return "";
+        }
+
+        StringBuilder b = new StringBuilder(
+            "{\"colibriClass\":\"NextSimulcastLayerStoppedEvent\"");
+
+        b.append(",\"endpointSimulcastLayers\":[");
+        for (int i = 0; i < event.endpointSimulcastLayers.length; i++)
+        {
+            toJson(b, event.endpointSimulcastLayers[i]);
+            if (i != event.endpointSimulcastLayers.length - 1)
+                b.append(",");
+        }
+        b.append("]}");
+
+        return b.toString();
+    }
+
     public String toJson(SimulcastLayersChangedEvent event)
     {
         if (event == null)

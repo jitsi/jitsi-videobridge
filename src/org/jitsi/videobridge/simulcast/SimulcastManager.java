@@ -69,11 +69,6 @@ public class SimulcastManager
     private SortedSet<SimulcastLayer> simulcastLayers;
 
     /**
-     * The <tt>simulcastLayers</tt> SyncRoot.
-     */
-    private final Object simulcastLayersSyncRoot = new Object();
-
-    /**
      * Associates sending endpoints to receiving simulcast layer. This simulcast
      * manager uses this map to determine whether or not to forward a video RTP
      * packet to its associated endpoint or not.  An entry in a this map will
@@ -311,14 +306,11 @@ public class SimulcastManager
      */
     public SortedSet<SimulcastLayer> getSimulcastLayers()
     {
-        // TODO(gp) replace with read lock.
-        synchronized (simulcastLayersSyncRoot)
-        {
-            return
-                (simulcastLayers == null)
-                    ? null
-                    : new TreeSet<SimulcastLayer>(simulcastLayers);
-        }
+        SortedSet<SimulcastLayer> sl = simulcastLayers;
+        return
+                (sl == null)
+                        ? null
+                        : new TreeSet<SimulcastLayer>(sl);
     }
 
     public VideoChannel getVideoChannel()
@@ -333,11 +325,8 @@ public class SimulcastManager
      */
     public boolean hasLayers()
     {
-        // TODO(gp) replace with read lock
-        synchronized (simulcastLayersSyncRoot)
-        {
-            return simulcastLayers != null && simulcastLayers.size() > 1;
-        }
+        SortedSet<SimulcastLayer> sl = simulcastLayers;
+        return sl != null && sl.size() > 1;
     }
 
     public boolean override(int overrideOrder)
@@ -394,11 +383,8 @@ public class SimulcastManager
 
     public void setSimulcastLayers(SortedSet<SimulcastLayer> simulcastLayers)
     {
-        // TODO(gp) replace with write lock
-        synchronized (simulcastLayersSyncRoot)
-        {
-            this.simulcastLayers = simulcastLayers;
-        }
+
+        this.simulcastLayers = simulcastLayers;
 
         // FIXME(gp) use an event dispatcher or a thread pool.
         new Thread(new Runnable()

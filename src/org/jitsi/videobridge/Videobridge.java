@@ -21,6 +21,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.simulcast.*;
@@ -244,6 +245,17 @@ public class Videobridge
                         + ". The total number of conferences is now "
                         + getConferenceCount() + ", channels "
                         + getChannelCount() + ".");
+        }
+
+        MetricService metricService = getMetricService();
+        if (metricService != null)
+        {
+            metricService
+                .publishNumericMetric(MetricService.METRIC_CONFERENCES,
+                                      getConferenceCount());
+            metricService
+                .startMeasuredTransaction(MetricService.METRIC_CONFERENCELENGTH,
+                                      conference.getID());
         }
 
         return conference;
@@ -506,6 +518,20 @@ public class Videobridge
 
         return null;
     }
+    
+    /**
+     * A convenient way to retreive the metric service from the OSGi context
+     * @return metric service if present
+     */
+    public MetricService getMetricService()
+    {
+        if (this.bundleContext != null)
+        {
+          return ServiceUtils2.getService(this.bundleContext,
+                                          MetricService.class);
+        }
+        return null;
+     }
 
     /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
@@ -518,6 +544,7 @@ public class Videobridge
      * @throws Exception to reply with <tt>internal-server-error</tt> to the
      * specified request
      */
+    @SuppressWarnings("deprecation")
     public IQ handleColibriConferenceIQ(
             ColibriConferenceIQ conferenceIQ)
         throws Exception

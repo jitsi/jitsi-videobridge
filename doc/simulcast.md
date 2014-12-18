@@ -332,3 +332,33 @@ sender to start its high quality stream.
 [xep0167]: http://xmpp.org/extensions/xep-0167.html
 [xep0166]: http://xmpp.org/extensions/xep-0166.html
 [colibri]: http://xmpp.org/extensions/inbox/colibri.html
+
+Switching layers
+================
+
+The bridge has a feature where when a layer switch is about to happen, it can
+stream both the `current` and the `next` layer for a short period of time `T`.
+The purpose of this feature is to smooth out the transition from the `current`
+layer to the `next` layer. When the switch starts, the bridge fires the
+`SimulcastLayersChanging` event.
+
+After time `T`, the layers are rotated: the `next` layer becomes the `current`
+layer and the bridge fires the `SimulcastLayersChanged` event. The only layer
+that's streamed is the `current` layer.
+
+If, for some reason, the `next` layer has been stopped before the
+`SimulcastLayersChanged` event has been fired, i.e. before the layer rotation,
+then the bridge fires the `NextSimulcastLayerStopped` event.
+
+`T` is not fixed and it corresponds to the time required for the bridge to see
+`MAX_NEXT_SEEN` packets of the `next` stream. You can assign
+its value in the sip-communicator.properties file like this:
+
+    org.jitsi.videobridge.simulcast.SimulcastReceiver.MAX_NEXT_SEEN=N
+
+The `MAX_NEXT_SEEN` constant can be used to enable or disable the aforementioned
+functionality. `{N; N < 1}` are valid values that force the bridge to
+immediately switch layers, i.e. disables layer rotation.
+
+The `NextSimulcastLayerStopped` event and the `SimulcastLayersChanging` event
+are only fired if `MAX_NEXT_SEEN >= 1`.

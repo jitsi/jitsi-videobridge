@@ -16,6 +16,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.metrics.*;
 import org.osgi.framework.*;
 
 /**
@@ -377,9 +378,10 @@ public abstract class Channel
                     throw (ThreadDeath) t;
             }
 
+            Videobridge videobridge = conference.getVideobridge();
+
             if (logger.isInfoEnabled())
             {
-                Videobridge videobridge = conference.getVideobridge();
 
                 logger.info(
                         "Expired channel " + getID() + " of content "
@@ -388,6 +390,14 @@ public abstract class Channel
                             + ". The total number of conferences is now "
                             + videobridge.getConferenceCount() + ", channels "
                             + videobridge.getChannelCount() + ".");
+            }
+
+            MetricService metricService = videobridge.getMetricService();
+            if (metricService != null)
+            {
+                metricService
+                        .publishNumericMetric(MetricService.METRIC_CHANNELS,
+                                              videobridge.getChannelCount());
             }
         }
     }

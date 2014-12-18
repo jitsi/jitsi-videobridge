@@ -370,17 +370,14 @@ public class BitrateController
         long now = System.currentTimeMillis();
 
         // The number of endpoints this channel is currently receiving
-        int receivingEndpointsSize = channel.getReceivingEndpointsSize();
+        int receivingEndpointCount = channel.getReceivingEndpointCount();
 
         if (firstRemb == -1)
-        {
             firstRemb = now;
-        }
 
         // Update the list of received values, so that the new value is taken
         // into account in the average taken below.
         receivedRembs.add(now, remb);
-
 
         // Do not change lastN in the initial interval (give time to the
         // incoming REMBs to "ramp-up").
@@ -389,12 +386,10 @@ public class BitrateController
 
         // Touch the adaptor and give it a chance to prevent bitrate adaptation.
         if (!bitrateAdaptor.touch())
-        {
             return;
-        }
 
         int numEndpointsThatFitIn = calcNumEndpointsThatFitIn();
-        if (numEndpointsThatFitIn < receivingEndpointsSize)
+        if (numEndpointsThatFitIn < receivingEndpointCount)
         {
             lastNonIncrease = now;
 
@@ -409,7 +404,7 @@ public class BitrateController
                 bitrateAdaptor.decrease();
             }
         }
-        else if (numEndpointsThatFitIn == receivingEndpointsSize)
+        else if (numEndpointsThatFitIn == receivingEndpointCount)
         {
             lastNonDecrease = now;
 
@@ -417,7 +412,7 @@ public class BitrateController
             // join we would delay its video by INCREASE_LAG_MS
             //lastNonIncrease = now;
         }
-        else if (numEndpointsThatFitIn > receivingEndpointsSize)
+        else if (numEndpointsThatFitIn > receivingEndpointCount)
         {
             lastNonDecrease = now;
 

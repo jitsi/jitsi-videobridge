@@ -15,6 +15,7 @@ import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.util.ssl.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.utils.*;
 import org.osgi.framework.*;
 
 /**
@@ -99,59 +100,6 @@ public class RESTBundleActivator
     private Server server;
 
     /**
-     * Gets an absolute path in the form of <tt>File</tt> from an absolute or
-     * relative <tt>path</tt> specified in the form of a <tt>String</tt>. If
-     * <tt>path</tt> is relative, it is resolved against
-     * <tt>ConfigurationService.PNAME_SC_HOME_DIR_LOCATION</tt> and
-     * <tt>ConfigurationService.PNAME_SC_HOME_DIR_NAME</tt>, <tt>user.home</tt>,
-     * or the current working directory.
-     *
-     * @param path the absolute or relative path in the form of <tt>String</tt>
-     * for/from which an absolute path in the form of <tt>File</tt> is to be
-     * returned
-     * @param cfg the <tt>ConfigurationService</tt> to be employed by the method
-     * (invocation) if necessary
-     * @return an absolute path in the form of <tt>File</tt> for/from the
-     * specified <tt>path</tt>
-     */
-    private File getAbsoluteFile(String path, ConfigurationService cfg)
-    {
-        File file = new File(path);
-
-        if (!file.isAbsolute())
-        {
-            String scHomeDirLocation, scHomeDirName;
-
-            if (cfg == null)
-            {
-                scHomeDirLocation
-                    = System.getProperty(
-                            ConfigurationService.PNAME_SC_HOME_DIR_LOCATION);
-                scHomeDirName
-                    = System.getProperty(
-                            ConfigurationService.PNAME_SC_HOME_DIR_NAME);
-            }
-            else
-            {
-                scHomeDirLocation = cfg.getScHomeDirLocation();
-                scHomeDirName = cfg.getScHomeDirName();
-            }
-            if (scHomeDirLocation == null)
-            {
-                scHomeDirLocation = System.getProperty("user.home");
-                if (scHomeDirLocation == null)
-                    scHomeDirLocation = ".";
-            }
-            if (scHomeDirName == null)
-                scHomeDirName = ".";
-            file
-                = new File(new File(scHomeDirLocation, scHomeDirName), path)
-                    .getAbsoluteFile();
-        }
-        return file;
-    }
-
-    /**
      * Starts the OSGi bundle which implements a REST API for Videobridge in a
      * specific <tt>BundleContext</tt>.
      *
@@ -233,7 +181,7 @@ public class RESTBundleActivator
             {
                 // HTTPS
                 File sslContextFactoryKeyStoreFile
-                    = getAbsoluteFile(sslContextFactoryKeyStorePath, cfg);
+                    = ConfigUtils.getAbsoluteFile(sslContextFactoryKeyStorePath, cfg);
                 SslContextFactory sslContextFactory = new SslContextFactory();
 
                 sslContextFactory.setExcludeCipherSuites(

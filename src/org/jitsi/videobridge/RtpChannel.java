@@ -29,6 +29,7 @@ import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -935,6 +936,18 @@ public class RtpChannel
                 stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
 
             stream.start();
+
+            Videobridge videobridge
+                = getContent().getConference().getVideobridge();
+            MetricService metricService = videobridge.getMetricService();
+            if (metricService != null)
+            {
+                metricService
+                    .publishStringMetric(
+                            getClass().getName()
+                                + MetricService.METRIC_CHANNELSTART_POSTFIX,
+                            this.streamTarget.getDataAddress().getHostAddress());
+            }
         }
 
         if (logger.isTraceEnabled())
@@ -1194,6 +1207,28 @@ public class RtpChannel
     }
 
     /**
+     * Enables or disables the adaptive lastN functionality.
+     *
+     * Does nothing, allows extenders to implement.
+     *
+     * @param adaptiveLastN <tt>true</tt> to enable and <tt>false</tt> to
+     * disable adaptive lastN.
+     */
+    public void setAdaptiveLastN(boolean adaptiveLastN)
+    {}
+
+    /**
+     * Enables or disables the adaptive simulcast functionality.
+     *
+     * Does nothing, allows extenders to implement.
+     *
+     * @param adaptiveSimulcast <tt>true</tt> to enable and <tt>false</tt> to
+     * disable adaptive simulcast.
+     */
+    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
+    {}
+
+    /**
      * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
      * <p>
      * <b>Warning</b>: The method does nothing if latching has not finished.
@@ -1398,19 +1433,28 @@ public class RtpChannel
          * anywhere else because it will likely be removed.
          */
         String propertyName = ev.getPropertyName();
-        String prefix = MediaStreamImpl.class.getName() + ".rtpConnector.";
+        String prefix = MediaStreamImpl.class.getName() + ".rtpConnector";
 
         if (propertyName.startsWith(prefix))
         {
+            String rtpConnectorPropertyName
+                = propertyName.substring(prefix.length());
             Object newValue = ev.getNewValue();
 
-            if (newValue instanceof RTPConnectorInputStream)
+            if (rtpConnectorPropertyName.equals(""))
             {
-                String rtpConnectorPropertyName
-                    = propertyName.substring(prefix.length());
+                if (newValue instanceof RTPConnector)
+                {
+                    streamRTPConnectorChanged(
+                            (RTPConnector) ev.getOldValue(),
+                            (RTPConnector) newValue);
+                }
+            }
+            else if (newValue instanceof RTPConnectorInputStream)
+            {
                 DatagramPacketFilter datagramPacketFilter;
 
-                if (rtpConnectorPropertyName.equals("controlInputStream"))
+                if (rtpConnectorPropertyName.equals(".controlInputStream"))
                 {
                     datagramPacketFilter
                         = new DatagramPacketFilter()
@@ -1423,7 +1467,7 @@ public class RtpChannel
                             }
                         };
                 }
-                else if (rtpConnectorPropertyName.equals("dataInputStream"))
+                else if (rtpConnectorPropertyName.equals(".dataInputStream"))
                 {
                     datagramPacketFilter
                         = new DatagramPacketFilter()
@@ -1449,24 +1493,20 @@ public class RtpChannel
     }
 
     /**
-     * Enables or disables the adaptive lastN functionality.
+     * Notifies this <tt>Channel</tt> that the value of the
+     * <tt>rtpConnector</tt> property of {@link #stream} has changed from a
+     * specific old value to a specific new value. Allows extenders to override
+     * the method in order to, for example, configure the <tt>rtpConnector</tt>
+     * of <tt>stream</tt>.
      *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveLastN <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive lastN.
+     * @param oldValue the old value of the <tt>rtpConnector</tt> property
+     * before the change
+     * @param newValue the new value of the <tt>rtpConnector</tt> property after
+     * the change
      */
-    public void setAdaptiveLastN(boolean adaptiveLastN)
-    {}
-
-    /**
-     * Enables or disables the adaptive simulcast functionality.
-     *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveSimulcast <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive simulcast.
-     */
-    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
-    {}
+    protected void streamRTPConnectorChanged(
+            RTPConnector oldValue,
+            RTPConnector newValue)
+    {
+    }
 }

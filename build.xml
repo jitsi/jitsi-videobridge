@@ -275,6 +275,7 @@
     </target>
 
     <target name="dist.macosx" depends="make">
+        <mkdir dir="${dist}/macosx" />
         <zip destfile="${dist}/macosx/${packname.macosx}.zip">
             <zipfileset file="jitsi-videobridge.jar"
                         prefix="${packname.macosx}" />
