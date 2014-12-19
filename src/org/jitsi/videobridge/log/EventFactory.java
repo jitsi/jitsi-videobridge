@@ -42,7 +42,14 @@ public class EventFactory
      * The names of the columns of a "channel created" event.
      */
     private static final String[] CHANNEL_CREATED_COLUMNS
-        = new String[] {"channel_id", "content_name", "conference_id"};
+        = new String[]
+            {
+                    "channel_id",
+                    "content_name",
+                    "conference_id",
+                    "endpoint_id",
+                    "lastn"
+            };
 
     /**
      * The names of the columns of a "channel expired" event.
@@ -184,17 +191,22 @@ public class EventFactory
      * @param id the ID of the COLIBRI channel.
      * @param contentName the name of the COLIBRI channel's parent content.
      * @param conferenceId the ID of the COLIBRI channel's parent conference.
+     * @param endpointId the ID of the channel's endpoint.
+     * @param lastN the last-n value for the channel.
      *
      * @return the <tt>Event</tt> which was created.
      */
     public static Event channelCreated(
             String id,
             String contentName,
-            String conferenceId)
+            String conferenceId,
+            String endpointId,
+            int lastN)
     {
         return new Event("channel_created",
                          CHANNEL_CREATED_COLUMNS,
-                         new Object[] {id, contentName, conferenceId});
+                         new Object[] {id, contentName, conferenceId,
+                                 endpointId, lastN});
     }
 
     /**

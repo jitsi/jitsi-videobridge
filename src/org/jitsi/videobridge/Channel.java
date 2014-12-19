@@ -148,16 +148,6 @@ public abstract class Channel
         this.content = content;
         this.channelBundleId = channelBundleId;
 
-        Conference conference = content.getConference();
-        LoggingService loggingService
-                = conference.getVideobridge().getLoggingService();
-        if (loggingService != null)
-        {
-            loggingService.logEvent(
-                EventFactory.channelCreated(id,
-                                            content.getName(),
-                                            conference.getID()));
-        }
         touch();
     }
 

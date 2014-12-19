@@ -715,7 +715,8 @@ public class Videobridge
                         String channelID = channelIQ.getID();
                         int channelExpire = channelIQ.getExpire();
                         String channelBundleId = channelIQ.getChannelBundleId();
-                        RtpChannel channel;
+                        RtpChannel channel = null;
+                        boolean channelCreated = false;
 
                         /*
                          * The presence of the id attribute in the channel
@@ -731,10 +732,12 @@ public class Videobridge
                              * Consequently, it does not make sense to have it
                              * in a channel allocation request.
                              */
-                            channel
-                                = (channelExpire == 0)
-                                    ? null
-                                    : content.createRtpChannel(channelBundleId);
+                            if (channelExpire != 0)
+                            {
+                                channel
+                                    = content.createRtpChannel(channelBundleId);
+                                channelCreated = true;
+                            }
                         }
                         else
                         {
@@ -880,6 +883,22 @@ public class Videobridge
 
                             channel.describe(responseChannelIQ);
                             responseContentIQ.addChannel(responseChannelIQ);
+
+                            LoggingService loggingService;
+                            if (channelCreated
+                                    && (loggingService = getLoggingService())
+                                        != null)
+
+                            {
+                                loggingService.logEvent(
+                                        EventFactory.channelCreated(
+                                                channel.getID(),
+                                                content.getName(),
+                                                conference.getID(),
+                                                endpoint == null ? "" : endpoint,
+                                                lastN == null ? -1 : lastN));
+                            }
+
                         }
 
                         if (responseConferenceIQ == null)
