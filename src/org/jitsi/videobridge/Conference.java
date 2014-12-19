@@ -1294,6 +1294,11 @@ public class Conference
                     removed = true;
                 }
             }
+
+            if (endpoint != null)
+            {
+                endpoint.expire();
+            }
         }
 
         if (removed)

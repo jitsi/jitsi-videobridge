@@ -79,6 +79,12 @@ public class Endpoint
         = new LinkedList<WeakReference<RtpChannel>>();
 
     /**
+     * The indicator which determines whether {@link #expire()} has been called
+     * on this <tt>Endpoint</tt>.
+     */
+    private boolean expired = false;
+
+    /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
      */
     private String displayName;
@@ -607,5 +613,13 @@ public class Endpoint
     public String toString()
     {
         return getClass().getName() + " " + getID();
+    }
+
+    /**
+     * Expires this <tt>Endpoint</tt>.
+     */
+    public void expire()
+    {
+        this.expired = true;
     }
 }
