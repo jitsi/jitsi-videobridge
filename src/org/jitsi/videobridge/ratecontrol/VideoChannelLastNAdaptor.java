@@ -12,7 +12,7 @@ import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.simulcast.*;
+import org.jitsi.videobridge.utils.*;
 
 /**
  *

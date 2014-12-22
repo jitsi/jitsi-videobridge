@@ -13,6 +13,7 @@ import java.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.utils.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
@@ -50,13 +51,6 @@ public class Endpoint
         = Endpoint.class.getName() + ".sctpConnection";
 
     /**
-     * A constant that means that an endpoint is not watching video from any
-     * other endpoint.
-     */
-    public static final String SELECTED_ENDPOINT_NOT_WATCHING_VIDEO
-        = "SELECTED_ENDPOINT_NOT_WATCHING_VIDEO";
-
-    /**
      * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
      * which specifies the JID of the currently selected <tt>Endpoint</tt> of
      * this <tt>Endpoint</tt>.
@@ -77,6 +71,12 @@ public class Endpoint
      */
     private final List<WeakReference<RtpChannel>> channels
         = new LinkedList<WeakReference<RtpChannel>>();
+
+    /**
+     * A weak reference to the <tt>Conference</tt> this <tt>Endpoint</tt>
+     * belongs to.
+     */
+    private final WeakReference<Conference> weakConference;
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -102,10 +102,10 @@ public class Endpoint
         = new WeakReference<SctpConnection>(null);
 
     /**
-     * the (unique) identifier/ID of the currently selected <tt>Endpoint</tt>
-     * at this <tt>Endpoint</tt>.
+     * A weak reference to the currently selected <tt>Endpoint</tt> at this
+     * <tt>Endpoint</tt>.
      */
-    private String selectedEndpointID;
+    private WeakReference<Endpoint> weakSelectedEndpoint;
 
     /**
      * The <tt>selectedEndpointID</tt> SyncRoot.
@@ -113,10 +113,10 @@ public class Endpoint
     private final Object selectedEndpointSyncRoot = new Object();
 
     /**
-     * the (unique) identifier/ID of the currently pinned <tt>Endpoint</tt>
-     * at this <tt>Endpoint</tt>.
+     * A weak reference to the currently pinned <tt>Endpoint</tt> at this
+     * <tt>Endpoint</tt>.
      */
-    private String pinnedEndpointID;
+    private WeakReference<Endpoint> weakPinnedEndpoint;
 
     /**
      * The <tt>pinnedEndpointID</tt> SyncRoot.
@@ -130,11 +130,12 @@ public class Endpoint
      * @param id the identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt> with which the new instance is to be initialized
      */
-    public Endpoint(String id)
+    public Endpoint(String id, Conference conference)
     {
         if (id == null)
             throw new NullPointerException("id");
 
+        this.weakConference = new WeakReference<Conference>(conference);
         this.id = id;
     }
 
@@ -302,27 +303,30 @@ public class Endpoint
     }
 
     /**
-     * Gets the (unique) identifier/ID of the currently selected
-     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     * Gets the currently selected <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
      *
-     * @return the (unique) identifier/ID of the currently selected
-     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     * @return the currently selected <tt>Endpoint</tt> at this
+     * <tt>Endpoint</tt>.
      */
-    public String getSelectedEndpointID()
+    public Endpoint getSelectedEndpoint()
     {
-        return selectedEndpointID;
+        WeakReference<Endpoint> wr = this.weakSelectedEndpoint;
+        Endpoint e = wr == null ? null : wr.get();
+
+        return e == null || e.expired ? null : e;
     }
 
     /**
-     * Gets the (unique) identifier/ID of the currently pinned
-     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     * Gets the currently pinned <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
      *
-     * @return the (unique) identifier/ID of the currently pinned
-     * <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     * @return the currently pinned <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
      */
-    public String getPinnedEndpointID()
+    public Endpoint getPinnedEndpoint()
     {
-        return pinnedEndpointID;
+        WeakReference<Endpoint> wr = this.weakPinnedEndpoint;
+        Endpoint e = wr == null ? null : wr.get();
+
+        return e == null || e.expired ? null : e;
     }
 
     /**
@@ -363,28 +367,40 @@ public class Endpoint
         {
             if ("SelectedEndpointChangedEvent".equals(colibriClass))
             {
-                String oldSelectedEndpoint, newSelectedEndpoint;
-                boolean changed;
+                String newSelectedEndpointID
+                    = (String) jsonObject.get("selectedEndpoint");
 
+                Conference conference = weakConference.get();
+
+                Endpoint newSelectedEndpoint;
+                if (!StringUtils.isNullOrEmpty(newSelectedEndpointID)
+                    && conference != null)
+                {
+                    newSelectedEndpoint
+                        = conference.getEndpoint(newSelectedEndpointID);
+                }
+                else
+                {
+                    newSelectedEndpoint = null;
+                }
+
+                boolean changed;
+                Endpoint oldSelectedEndpoint = this.getSelectedEndpoint();
                 synchronized (selectedEndpointSyncRoot)
                 {
-                    oldSelectedEndpoint = this.selectedEndpointID;
-                    newSelectedEndpoint
-                        = (String) jsonObject.get("selectedEndpoint");
-                    if (newSelectedEndpoint == null
-                            || newSelectedEndpoint.length() == 0)
-                    {
-                        newSelectedEndpoint
-                            = SELECTED_ENDPOINT_NOT_WATCHING_VIDEO;
-                    }
-                    else
-                    {
-                        newSelectedEndpoint = newSelectedEndpoint.trim();
-                    }
-
-                    changed = !newSelectedEndpoint.equals(oldSelectedEndpoint);
+                    changed = newSelectedEndpoint != oldSelectedEndpoint;
                     if (changed)
-                        this.selectedEndpointID = newSelectedEndpoint;
+                    {
+                        if (newSelectedEndpoint == null)
+                        {
+                            this.weakSelectedEndpoint = null;
+                        }
+                        else
+                        {
+                            this.weakSelectedEndpoint
+                                = new WeakReference<Endpoint>(newSelectedEndpoint);
+                        }
+                    }
                 }
 
                 // NOTE(gp) This won't guarantee that property change events are
@@ -398,32 +414,55 @@ public class Endpoint
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug(
-                                "Endpoint " + getID() + " selected "
-                                    + newSelectedEndpoint);
+                        StringCompiler sc = new StringCompiler();
+                        sc.bind("selected", newSelectedEndpoint);
+                        sc.bind("this", this);
+                        logger.debug(sc.c(
+                            "Endpoint {this.id} selected {selected.id}."));
                     }
-                    firePropertyChange(
-                            SELECTED_ENDPOINT_PROPERTY_NAME,
-                            oldSelectedEndpoint, newSelectedEndpoint);
+                    firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
+                        oldSelectedEndpoint, newSelectedEndpoint);
                 }
             }
             else if ("PinnedEndpointChangedEvent".equals(colibriClass))
             {
-                String oldPinnedEndpoint, newPinnedEndpoint;
-                boolean changed;
+                // Find the new pinned endpoint.
+                String newPinnedEndpointID
+                    = (String) jsonObject.get("pinnedEndpoint");
 
+                Conference conference = weakConference.get();
+
+                Endpoint newPinnedEndpoint;
+                if (!StringUtils.isNullOrEmpty(newPinnedEndpointID)
+                    && conference != null)
+                {
+                    newPinnedEndpoint
+                        = conference.getEndpoint(newPinnedEndpointID);
+                }
+                else
+                {
+                    newPinnedEndpoint = null;
+                }
+
+                // Check if that's different to what we think the pinned
+                // endpoint is.
+                boolean changed;
+                Endpoint oldPinnedEndpoint = this.getPinnedEndpoint();
                 synchronized (pinnedEndpointSyncRoot)
                 {
-                    oldPinnedEndpoint = this.pinnedEndpointID;
-                    newPinnedEndpoint
-                            = (String) jsonObject.get("pinnedEndpoint");
-
-                    newPinnedEndpoint = newPinnedEndpoint == null
-                            ? "" : newPinnedEndpoint.trim();
-
-                    changed = !newPinnedEndpoint.equals(oldPinnedEndpoint);
+                    changed = newPinnedEndpoint != oldPinnedEndpoint;
                     if (changed)
-                        this.pinnedEndpointID = newPinnedEndpoint;
+                    {
+                        if (newPinnedEndpoint == null)
+                        {
+                            this.weakPinnedEndpoint = null;
+                        }
+                        else
+                        {
+                            this.weakPinnedEndpoint
+                                = new WeakReference<Endpoint>(newPinnedEndpoint);
+                        }
+                    }
                 }
 
                 // NOTE(gp) This won't guarantee that property change events are
@@ -437,9 +476,11 @@ public class Endpoint
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug(
-                                "Endpoint " + getID() + " pinned "
-                                        + newPinnedEndpoint);
+                        StringCompiler sc = new StringCompiler();
+                        sc.bind("pinned", newPinnedEndpoint);
+                        sc.bind("this", this);
+                        logger.debug(sc.c(
+                                "Endpoint {this.id} pinned {pinned.id}."));
                     }
                     firePropertyChange(PINNED_ENDPOINT_PROPERTY_NAME,
                             oldPinnedEndpoint, newPinnedEndpoint);

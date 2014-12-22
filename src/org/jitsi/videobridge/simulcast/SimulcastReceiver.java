@@ -13,12 +13,11 @@ import java.util.*;
 
 import net.java.sip.communicator.util.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.messages.*;
+import org.jitsi.videobridge.utils.*;
 
 /**
  * @author George Politis
@@ -718,96 +717,48 @@ class SimulcastReceiver
     }
 
     /**
-     *
-     * @param id
+     * Configures this <tt>SimulcastReceiver</tt> to receive the high quality
+     * stream from the associated sender.
      */
-    private boolean maybeReceiveHighFrom(String id)
+    private void receiveHigh()
     {
-        Endpoint peer;
-        if (!StringUtils.isNullOrEmpty(id)
-                && (peer = getPeer()) != null
-                && id.equals(peer.getID()))
-        {
-            SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+        SimulcastReceiverOptions options = new SimulcastReceiverOptions();
 
-            options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
-            options.setHardSwitch(true);
-            // options.setUrgent(false);
+        options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
+        options.setHardSwitch(true);
+        // options.setUrgent(false);
 
-            configure(options);
-
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        configure(options);
     }
 
     /**
-     * Configures the simulcast manager of the receiver to receive a high
-     * quality stream only from the designated sender.
-     *
-     * @param id
+     * Configures this <tt>SimulcastReceiver</tt> to receive the low quality
+     * stream from the associated sender.
      */
-    private boolean maybeReceiveLowFrom(String id)
+    private void receiveLow()
     {
-        Endpoint peer;
-        if (!StringUtils.isNullOrEmpty(id)
-                && (peer = getPeer()) != null
-                && id.equals(peer.getID()))
-        {
-            SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+        SimulcastReceiverOptions options = new SimulcastReceiverOptions();
 
-            options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
-            options.setHardSwitch(true);
-            // options.setUrgent(false);
+        options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
+        options.setHardSwitch(true);
+        // options.setUrgent(false);
 
-            configure(options);
-
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        configure(options);
     }
 
     /**
-     * Sends a data channel command to a simulcast enabled video sender to make
-     * it start streaming its hq stream, if it's being watched by some receiver.
-     *
-     * @param id
+     * Maybe send a data channel command to the associated simulcast sender to
+     * make it start streaming its hq stream, if it's being watched by some receiver.
      */
-    private void maybeSendStartHighQualityStreamCommand(String id)
+    private void maybeSendStartHighQualityStreamCommand()
     {
-        Endpoint newEndpoint = null;
+        Endpoint newEndpoint = getPeer();
         SortedSet<SimulcastLayer> newSimulcastLayers = null;
 
-        if (!StringUtils.isNullOrEmpty(id)
-                && id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
+        SimulcastManager peerSM = getPeerSM();
+        if (peerSM != null)
         {
-            newEndpoint
-                = mySM.getVideoChannel().getContent().getConference()
-                    .getEndpoint(id);
-            if (newEndpoint != null)
-            {
-                List<RtpChannel> newVideoChannels
-                    = newEndpoint.getChannels(MediaType.VIDEO);
-
-                if (newVideoChannels != null && newVideoChannels.size() != 0)
-                {
-                    VideoChannel newVideoChannel
-                        = (VideoChannel) newVideoChannels.get(0);
-
-                    if (newVideoChannel != null)
-                    {
-                        newSimulcastLayers
-                            = newVideoChannel.getSimulcastManager()
-                                .getSimulcastLayers();
-                    }
-                }
-            }
+            newSimulcastLayers = peerSM.getSimulcastLayers();
         }
 
         SctpConnection sctpConnection;
@@ -834,11 +785,11 @@ class SimulcastReceiver
                 if (e == newEndpoint)
                     continue;
 
-                String eSelectedEndpointID = e.getSelectedEndpointID();
+                Endpoint eSelectedEndpoint = e.getSelectedEndpoint();
 
-                if (newEndpoint.getID().equals(eSelectedEndpointID)
+                if (newEndpoint == eSelectedEndpoint
                         || (SimulcastManager.SIMULCAST_LAYER_ORDER_INIT > SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
-                                && StringUtils.isNullOrEmpty(eSelectedEndpointID)))
+                                && eSelectedEndpoint == null))
                 {
                     // somebody is watching the new endpoint or somebody has not
                     // yet signaled its selected endpoint to the bridge, start
@@ -850,10 +801,7 @@ class SimulcastReceiver
 
                         map.put("e", e);
                         map.put("newEndpoint", newEndpoint);
-                        map.put(
-                                "maybe",
-                                StringUtils.isNullOrEmpty(eSelectedEndpointID)
-                                    ? "(maybe) "
+                        map.put("maybe", eSelectedEndpoint == null ? "(maybe) "
                                     : "");
 
                         StringCompiler sc
@@ -899,41 +847,19 @@ class SimulcastReceiver
     }
 
     /**
-     * Sends a data channel command to a simulcast enabled video sender to make
-     * it stop streaming its hq stream, if it's not being watched by any
+     * Maybe send a data channel command to he associated simulcast sender to
+     * make it stop streaming its hq stream, if it's not being watched by any
      * receiver.
-     *
-     * @param id
      */
-    private void maybeSendStopHighQualityStreamCommand(String id)
+    private void maybeSendStopHighQualityStreamCommand()
     {
-        Endpoint oldEndpoint = null;
-        if (!StringUtils.isNullOrEmpty(id) &&
-                id != Endpoint.SELECTED_ENDPOINT_NOT_WATCHING_VIDEO)
-        {
-            oldEndpoint = this.mySM.getVideoChannel()
-                    .getContent()
-                    .getConference()
-                    .getEndpoint(id);
-        }
-
-        List<RtpChannel> oldVideoChannels = null;
-        if (oldEndpoint != null)
-        {
-            oldVideoChannels = oldEndpoint.getChannels(MediaType.VIDEO);
-        }
-
-        VideoChannel oldVideoChannel = null;
-        if (oldVideoChannels != null && oldVideoChannels.size() != 0)
-        {
-            oldVideoChannel = (VideoChannel) oldVideoChannels.get(0);
-        }
-
+        Endpoint oldEndpoint = getPeer();
         SortedSet<SimulcastLayer> oldSimulcastLayers = null;
-        if (oldVideoChannel != null)
+
+        SimulcastManager peerSM = getPeerSM();
+        if (peerSM != null)
         {
-            oldSimulcastLayers = oldVideoChannel.getSimulcastManager()
-                    .getSimulcastLayers();
+            oldSimulcastLayers = peerSM.getSimulcastLayers();
         }
 
         SctpConnection sctpConnection;
@@ -956,8 +882,8 @@ class SimulcastReceiver
                 // endpoint changes while we're in the loop?
 
                 if (oldEndpoint != e
-                        && (oldEndpoint.getID().equals(e.getSelectedEndpointID())
-                        || StringUtils.isNullOrEmpty(e.getSelectedEndpointID())))
+                        && (oldEndpoint == e.getSelectedEndpoint())
+                        || e.getSelectedEndpoint() == null)
                 {
                     // somebody is watching the old endpoint or somebody has not
                     // yet signaled its selected endpoint to the bridge, don't
@@ -1108,7 +1034,7 @@ class SimulcastReceiver
             Endpoint peer = getPeer();
 
             if (peer != null && self != null &&
-                    peer.getID().equals(self.getSelectedEndpointID()))
+                        peer == self.getSelectedEndpoint())
             {
                 SimulcastReceiverOptions options
                         = new SimulcastReceiverOptions();
@@ -1153,27 +1079,30 @@ class SimulcastReceiver
     }
 
     private void onSelectedEndpointChanged(
-            String oldValue, String newValue)
+            Endpoint oldEndpoint, Endpoint newEndpoint)
     {
         synchronized (receiveLayersSyncRoot)
         {
             // Rule 1: send an hq stream only for the selected endpoint.
-            if (this.maybeReceiveHighFrom(newValue))
+            if (newEndpoint == getPeer())
             {
+                this.receiveHigh();
+
                 // Rule 1.1: if the new endpoint is being watched by any of the
                 // receivers, the bridge tells it to start streaming its hq
                 // stream.
-                this.maybeSendStartHighQualityStreamCommand(newValue);
+                this.maybeSendStartHighQualityStreamCommand();
             }
 
             // Rule 2: send an lq stream only for the previously selected
             // endpoint.
-            if (this.maybeReceiveLowFrom(oldValue))
+            if (oldEndpoint == getPeer())
             {
+                this.receiveLow();
                 // Rule 2.1: if the old endpoint is not being watched by any of
                 // the receivers, the bridge tells it to stop streaming its hq
                 // stream.
-                this.maybeSendStopHighQualityStreamCommand(oldValue);
+                this.maybeSendStopHighQualityStreamCommand();
             }
         }
     }
@@ -1198,8 +1127,8 @@ class SimulcastReceiver
             // endpoint == this.manager.getVideoChannel().getEndpoint() is
             // implied.
 
-            String oldValue = (String) propertyChangeEvent.getOldValue();
-            String newValue = (String) propertyChangeEvent.getNewValue();
+            Endpoint oldValue = (Endpoint) propertyChangeEvent.getOldValue();
+            Endpoint newValue = (Endpoint) propertyChangeEvent.getNewValue();
 
             onSelectedEndpointChanged(oldValue, newValue);
         }

@@ -16,6 +16,7 @@ import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.messages.*;
+import org.jitsi.videobridge.utils.*;
 
 /**
  * The simulcast manager of a <tt>VideoChannel</tt>.

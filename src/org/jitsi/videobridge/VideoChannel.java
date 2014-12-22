@@ -361,18 +361,7 @@ public class VideoChannel
     private Endpoint getPinnedEndpoint()
     {
         Endpoint endpoint = getEndpoint();
-
-        if (endpoint != null)
-        {
-            String pinnedEndpointID = endpoint.getPinnedEndpointID();
-
-            if (!StringUtils.isNullOrEmpty(pinnedEndpointID))
-            {
-                return
-                    getContent().getConference().getEndpoint(pinnedEndpointID);
-            }
-        }
-        return null;
+        return endpoint != null ? endpoint.getPinnedEndpoint() : null;
     }
 
     public int getReceivingEndpointCount()

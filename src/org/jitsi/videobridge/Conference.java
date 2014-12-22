@@ -781,7 +781,7 @@ public class Conference
 
             if (create && endpoint == null)
             {
-                endpoint = new Endpoint(id);
+                endpoint = new Endpoint(id, this);
                 // The propertyChangeListener will weakly reference this
                 // Conference and will unregister itself from the endpoint
                 // sooner or later.

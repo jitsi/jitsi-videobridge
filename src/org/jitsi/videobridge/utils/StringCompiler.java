@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.simulcast;
+package org.jitsi.videobridge.utils;
 
 import org.jitsi.util.*;
 
@@ -19,11 +19,21 @@ import java.util.regex.*;
 */
 public class StringCompiler
 {
-    private final Map<String, Object> map;
+    private final Map<String, Object> bindings;
 
-    public StringCompiler(Map<String, Object> map)
+    public StringCompiler(Map<String, Object> bindings)
     {
-        this.map = map;
+        this.bindings = bindings;
+    }
+
+    public StringCompiler()
+    {
+        this.bindings = new HashMap<String, Object>();
+    }
+
+    public void bind(String key, Object value)
+    {
+        this.bindings.put(key, value);
     }
 
     private static final Pattern p = Pattern.compile("\\{([^\\}]+)\\}");
@@ -76,9 +86,9 @@ public class StringCompiler
             if (i == 0)
             {
                 // Init.
-                if (map.containsKey(identifier))
+                if (bindings.containsKey(identifier))
                 {
-                    obj = map.get(identifier);
+                    obj = bindings.get(identifier);
                 }
                 else
                 {

@@ -12,6 +12,7 @@ import java.util.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.utils.*;
 
 /**
  * @author George Politis
