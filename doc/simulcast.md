@@ -17,6 +17,13 @@ It describes 4 streams. SSRCs 1 and 2 are different spatial layers
 In the Jitsi videobridge, we use the `ssrc-group:SIM` attribute to
 signal the simulcast.
 
+Requirements
+============
+
+For simulcast to work you need to use the `BasicBridgeRTCPTerminationStrategy` RTCP termination strategy. You can configure it like this in you $HOME/.sip-communicator/sip-communicator.properties file.
+
+    org.jitsi.videobridge.rtcp.strategy=org.jitsi.videobridge.rtcp.BasicBridgeRTCPTerminationStrategy
+
 Initial signaling
 =================
 
