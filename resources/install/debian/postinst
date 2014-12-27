@@ -89,8 +89,8 @@ case "$1" in
         fi
         chown $OWNER:$GROUP /var/log/jitsi
         chmod 770 /var/log/jitsi
-        chown -f $OWNER:$GROUP /var/log/jitsi/jvb.log*
-        chmod -f -R 640 /var/log/jitsi/jvb*
+        [ -f /var/log/jitsi/jvb.log* ] && chown -f $OWNER:$GROUP /var/log/jitsi/jvb.log*
+        [ -f /var/log/jitsi/jvb* ] && chmod -f -R 640 /var/log/jitsi/jvb*
 
         # ensure videobridge is not running - it will be started at the end
         if [ "$(pidof java)" ]; then
