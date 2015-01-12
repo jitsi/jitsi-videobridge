@@ -207,7 +207,9 @@ public class SctpConnection
             String channelBundleId)
         throws Exception
     {
-        super(content, id, channelBundleId);
+        super(content, id,
+              channelBundleId,
+              IceUdpTransportPacketExtension.NAMESPACE);
 
         setEndpoint(endpoint.getID());
 

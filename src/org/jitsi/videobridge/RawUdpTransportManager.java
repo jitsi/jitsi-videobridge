@@ -61,6 +61,15 @@ public class RawUdpTransportManager
     private final StreamConnector streamConnector;
 
     /**
+     * Indicates whether this transport manager has been started.
+     * {@link Channel#transportConnected()} call has been delayed to the moment
+     * when we receive first transport info for this channel
+     * ({@link #startConnectivityEstablishment(IceUdpTransportPacketExtension)}).
+     * Flag is used to avoid calling it twice.
+     */
+    private boolean started = false;
+
+    /**
      * Initializes a new <tt>RawUdpTransportManager</tt> instance.
      *
      * @param channel the <tt>Channel</tt> which is initializing the new
@@ -82,10 +91,6 @@ public class RawUdpTransportManager
         generation = 0;
         rtpCandidateID = generateCandidateID();
         rtcpCandidateID = generateCandidateID();
-
-        // streamConnector is ready, let the channel start its stream (it
-        // will have to implement latching itself)
-        channel.transportConnected();
     }
 
     /**
@@ -361,5 +366,22 @@ public class RawUdpTransportManager
     public void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport)
     {
+        if (started)
+        {
+            return;
+        }
+
+        if (!(transport instanceof RawUdpTransportPacketExtension))
+        {
+            logger.error(
+                "Only RAW transport is accepted by this transport manager.");
+            return;
+        }
+
+        // streamConnector is ready, let the channel start its stream (it
+        // will have to implement latching itself)
+        channel.transportConnected();
+
+        started = true;
     }
 }

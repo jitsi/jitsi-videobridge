@@ -717,6 +717,9 @@ public class Videobridge
                         String channelBundleId = channelIQ.getChannelBundleId();
                         RtpChannel channel = null;
                         boolean channelCreated = false;
+                        String transportNamespace
+                            = channelIQ.getTransport() != null ?
+                                channelIQ.getTransport().getNamespace() : null;
 
                         /*
                          * The presence of the id attribute in the channel
@@ -735,7 +738,8 @@ public class Videobridge
                             if (channelExpire != 0)
                             {
                                 channel
-                                    = content.createRtpChannel(channelBundleId);
+                                    = content.createRtpChannel(
+                                        channelBundleId, transportNamespace);
                                 channelCreated = true;
                             }
                         }

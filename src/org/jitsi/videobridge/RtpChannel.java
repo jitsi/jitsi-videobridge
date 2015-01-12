@@ -145,7 +145,7 @@ public class RtpChannel
      * of Jitsi Videobridge and which adapts this <tt>Channel</tt> to the terms
      * of <tt>neomedia</tt>.
      */
-    private final MediaStream stream;
+    private MediaStream stream;
 
     /**
      * Whether {@link #stream} has been closed.
@@ -189,27 +189,11 @@ public class RtpChannel
      * not to be a part of a channel-bundle).
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public RtpChannel(Content content, String id, String channelBundleId)
+    public RtpChannel(Content content, String id,
+                      String channelBundleId, String transportNamespace)
         throws Exception
     {
-        super(content, id, channelBundleId);
-
-        MediaService mediaService = getMediaService();
-        MediaType mediaType = getContent().getMediaType();
-
-        stream
-            = mediaService.createMediaStream(
-                null,
-                mediaType,
-                getDtlsControl());
-        /*
-         * Add the PropertyChangeListener to the MediaStream prior to performing
-         * further initialization so that we do not miss changes to the values
-         * of properties we may be interested in.
-         */
-        stream.addPropertyChangeListener(streamPropertyChangeListener);
-        stream.setName(getID());
-        stream.setProperty(RtpChannel.class.getName(), this);
+        super(content, id, channelBundleId, transportNamespace);
 
         /*
          * In the case of content mixing, each Channel has its own local
@@ -855,6 +839,34 @@ public class RtpChannel
     }
 
     /**
+     * {@inheritDoc}
+     *
+     * Creates media stream.
+     */
+    @Override
+    public void initialize()
+            throws IOException
+    {
+        super.initialize();
+
+        MediaService mediaService = getMediaService();
+        MediaType mediaType = getContent().getMediaType();
+
+        stream = mediaService.createMediaStream(
+                null,
+                mediaType,
+                getDtlsControl());
+        /*
+         * Add the PropertyChangeListener to the MediaStream prior to performing
+         * further initialization so that we do not miss changes to the values
+         * of properties we may be interested in.
+         */
+        stream.addPropertyChangeListener(streamPropertyChangeListener);
+        stream.setName(getID());
+        stream.setProperty(RtpChannel.class.getName(), this);
+    }
+
+    /**
      * Determines whether a specific <tt>Channel</tt> is within the set of
      * <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether the RTP video
      * streams of the specified channel are to be sent to the remote endpoint of
@@ -940,7 +952,7 @@ public class RtpChannel
             Videobridge videobridge
                 = getContent().getConference().getVideobridge();
             MetricService metricService = videobridge.getMetricService();
-            if (metricService != null)
+            if (metricService != null && streamTarget != null)
             {
                 metricService
                     .publishStringMetric(

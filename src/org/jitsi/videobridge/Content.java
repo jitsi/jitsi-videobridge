@@ -11,6 +11,8 @@ import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
@@ -218,10 +220,14 @@ public class Content
      * @param channelBundleId the ID of the channel-bundle that the created
      * <tt>RtpChannel</tt> is to be a part of (or <tt>null</tt> if it is not to
      * be a part of a channel-bundle).
+     * @param transportNamespace transport namespace that will used by new
+     * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
+     * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @return the created <tt>RtpChannel</tt> instance.
      * @throws Exception
      */
-    public RtpChannel createRtpChannel(String channelBundleId)
+    public RtpChannel createRtpChannel(String channelBundleId,
+                                       String transportNamespace)
         throws Exception
     {
         RtpChannel channel = null;
@@ -237,7 +243,8 @@ public class Content
                     switch (getMediaType())
                     {
                     case AUDIO:
-                        channel = new AudioChannel(this, id, channelBundleId);
+                        channel = new AudioChannel(
+                            this, id, channelBundleId, transportNamespace);
                         break;
                     case DATA:
                         /*
@@ -246,10 +253,12 @@ public class Content
                          */
                         throw new IllegalStateException("mediaType");
                     case VIDEO:
-                        channel = new VideoChannel(this, id, channelBundleId);
+                        channel = new VideoChannel(
+                            this, id, channelBundleId, transportNamespace);
                         break;
                     default:
-                        channel = new RtpChannel(this, id, channelBundleId);
+                        channel = new RtpChannel(
+                            this, id, channelBundleId, transportNamespace);
                         break;
                     }
                     channels.put(id, channel);
@@ -257,6 +266,9 @@ public class Content
             }
         }
         while (channel == null);
+
+        // Initialize channel
+        channel.initialize();
 
         Videobridge videobridge = getConference().getVideobridge();
         int channelCount = videobridge.getChannelCount();
@@ -320,6 +332,10 @@ public class Content
                         id, this, endpoint, sctpPort, channelBundleId);
             channels.put(sctpConnection.getID(), sctpConnection);
         }
+
+        // Initialize SCTP connection
+        sctpConnection.initialize();
+
         return sctpConnection;
     }
 

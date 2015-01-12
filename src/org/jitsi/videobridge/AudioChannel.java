@@ -56,30 +56,16 @@ public class AudioChannel
      * @param channelBundleId the ID of the channel-bundle this
      * <tt>AudioChannel</tt> is to be a part of (or <tt>null</tt> if no it is
      * not to be a part of a channel-bundle).
+     * @param transportNamespace the namespace of transport used by this
+     * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
+     * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public AudioChannel(Content content, String id, String channelBundleId)
+    public AudioChannel(Content content,         String id,
+                        String  channelBundleId, String transportNamespace)
         throws Exception
     {
-        super(content, id, channelBundleId);
-    }
-
-    /**
-     * Initializes a new <tt>AudioChannel</tt> instance which is to have a
-     * specific ID. The initialization is to be considered requested by a
-     * specific <tt>Content</tt>.
-     *
-     * @param content the <tt>Content</tt> which is initializing the new
-     * instance
-     * @param id the ID of the new instance. It is expected to be unique within
-     * the list of <tt>Channel</tt>s listed in <tt>content</tt> while the new
-     * instance is listed there as well.
-     * @throws Exception if an error occurs while initializing the new instance
-     */
-    public AudioChannel(Content content, String id)
-        throws Exception
-    {
-        this(content, id, null);
+        super(content, id, channelBundleId, transportNamespace);
     }
 
     /**

@@ -118,6 +118,12 @@ public abstract class Channel
     private TransportManager transportManager;
 
     /**
+     * Transport packet extension namespace used by {@link #transportManager}.
+     * Indicates whether ICE or RAW transport is used by this channel.
+     */
+    private final String transportNamespace;
+
+    /**
      * The <tt>Object</tt> which synchronizes the access to
      * {@link #transportManager}.
      */
@@ -134,9 +140,13 @@ public abstract class Channel
      * @param channelBundleId the ID of the channel-bundle this
      * <tt>AudioChannel</tt> is to be a part of (or <tt>null</tt> if no it is
      * not to be a part of a channel-bundle).
+     * @param transportNamespace the namespace of transport used by this
+     * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
+     * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public Channel(Content content, String id, String channelBundleId)
+    public Channel(Content content, String id, String channelBundleId,
+                   String transportNamespace)
         throws Exception
     {
         if (content == null)
@@ -147,6 +157,16 @@ public abstract class Channel
         this.id = id;
         this.content = content;
         this.channelBundleId = channelBundleId;
+
+        // Get default transport namespace
+        if (StringUtils.isNullOrEmpty(transportNamespace))
+        {
+            transportNamespace
+                = getContent().getConference()
+                    .getVideobridge().getDefaultTransportManager();
+        }
+
+        this.transportNamespace = transportNamespace;
 
         touch();
     }
@@ -508,48 +528,41 @@ public abstract class Channel
     protected TransportManager getTransportManager()
         throws IOException
     {
+        return transportManager;
+    }
+
+    /**
+     * Initializes this channel. Creates transport manager for
+     * {@link #transportNamespace} or obtains instance from {@link Conference}
+     * if "bundle" is being used.
+     * @throws IOException in case of transport manager initialization error
+     */
+    public void initialize()
+            throws IOException
+    {
         synchronized (transportManagerSyncRoot)
         {
-            if (transportManager == null)
+            // If this channel is not part of a channel-bundle, it creates
+            // its own TransportManager
+            if (channelBundleId == null)
             {
-                Conference conference = getContent().getConference();
-
-                // If this channel is not part of a channel-bundle, it creates
-                // its own TransportManager
-                if (channelBundleId == null)
-                {
-                    transportManager
-                        = createTransportManager(
-                                conference
-                                    .getVideobridge()
-                                        .getDefaultTransportManager());
-                }
-                // Otherwise, it uses a TransportManager specific to the
-                // channel-bundle, which is maintained by the Conference object.
-                else
-                {
-                    transportManager
-                        = conference.getTransportManager(
-                                channelBundleId,
-                                true);
-                }
-
-                if (transportManager == null)
-                    throw new IOException("Failed to get transport manager.");
-
-                transportManager.addChannel(this);
-
-                /*
-                 * The implementation of the Jingle Raw UDP transport does not
-                 * establish connectivity.
-                 */
-                if (RawUdpTransportPacketExtension.NAMESPACE.equals(
-                        transportManager.getXmlNamespace()))
-                {
-                    maybeStartStream();
-                }
+                transportManager
+                    = createTransportManager(transportNamespace);
             }
-            return transportManager;
+            // Otherwise, it uses a TransportManager specific to the
+            // channel-bundle, which is maintained by the Conference object.
+            else
+            {
+                transportManager
+                    = getContent().getConference()
+                        .getTransportManager(channelBundleId, true);
+
+            }
+
+            if (transportManager == null)
+                throw new IOException("Failed to get transport manager.");
+
+            transportManager.addChannel(this);
         }
     }
 
