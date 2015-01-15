@@ -143,10 +143,12 @@ public abstract class Channel
      * @param transportNamespace the namespace of transport used by this
      * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
      * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
+     * @param initiator the value to use for the initiator field, or
+     * <tt>null</tt> to use the default value.
      * @throws Exception if an error occurs while initializing the new instance
      */
     public Channel(Content content, String id, String channelBundleId,
-                   String transportNamespace)
+                   String transportNamespace, Boolean initiator)
         throws Exception
     {
         if (content == null)
@@ -157,6 +159,8 @@ public abstract class Channel
         this.id = id;
         this.content = content;
         this.channelBundleId = channelBundleId;
+        if (initiator != null)
+            this.initiator = initiator;
 
         // Get default transport namespace
         if (StringUtils.isNullOrEmpty(transportNamespace))

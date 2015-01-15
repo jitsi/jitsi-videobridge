@@ -739,7 +739,9 @@ public class Videobridge
                             {
                                 channel
                                     = content.createRtpChannel(
-                                        channelBundleId, transportNamespace);
+                                        channelBundleId,
+                                        transportNamespace,
+                                        channelIQ.isInitiator());
                                 channelCreated = true;
                             }
                         }
@@ -947,7 +949,8 @@ public class Videobridge
                                     = content.createSctpConnection(
                                             endpoint,
                                             sctpPort,
-                                            channelBundleId);
+                                            channelBundleId,
+                                            sctpConnIq.isInitiator());
                             }
                         }
                         else

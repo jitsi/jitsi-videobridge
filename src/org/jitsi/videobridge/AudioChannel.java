@@ -59,13 +59,18 @@ public class AudioChannel
      * @param transportNamespace the namespace of transport used by this
      * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
      * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
+     * @param initiator the value to use for the initiator field, or
+     * <tt>null</tt> to use the default value.
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public AudioChannel(Content content,         String id,
-                        String  channelBundleId, String transportNamespace)
+    public AudioChannel(Content content,
+                        String id,
+                        String channelBundleId,
+                        String transportNamespace,
+                        Boolean initiator)
         throws Exception
     {
-        super(content, id, channelBundleId, transportNamespace);
+        super(content, id, channelBundleId, transportNamespace, initiator);
     }
 
     /**

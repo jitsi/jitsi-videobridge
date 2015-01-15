@@ -187,13 +187,18 @@ public class RtpChannel
      * @param channelBundleId the ID of the channel-bundle this
      * <tt>RtpChannel</tt> is to be a part of (or <tt>null</tt> if no it is
      * not to be a part of a channel-bundle).
+     * @param initiator the value to use for the initiator field, or
+     * <tt>null</tt> to use the default value.
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public RtpChannel(Content content, String id,
-                      String channelBundleId, String transportNamespace)
+    public RtpChannel(Content content,
+                      String id,
+                      String channelBundleId,
+                      String transportNamespace,
+                      Boolean initiator)
         throws Exception
     {
-        super(content, id, channelBundleId, transportNamespace);
+        super(content, id, channelBundleId, transportNamespace, initiator);
 
         /*
          * In the case of content mixing, each Channel has its own local

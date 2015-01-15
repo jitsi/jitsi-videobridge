@@ -223,11 +223,14 @@ public class Content
      * @param transportNamespace transport namespace that will used by new
      * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
      * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
+     * @param initiator the value to use for the initiator field, or
+     * <tt>null</tt> to use the default value.
      * @return the created <tt>RtpChannel</tt> instance.
      * @throws Exception
      */
     public RtpChannel createRtpChannel(String channelBundleId,
-                                       String transportNamespace)
+                                       String transportNamespace,
+                                       Boolean initiator)
         throws Exception
     {
         RtpChannel channel = null;
@@ -244,7 +247,8 @@ public class Content
                     {
                     case AUDIO:
                         channel = new AudioChannel(
-                            this, id, channelBundleId, transportNamespace);
+                                this, id, channelBundleId,
+                                transportNamespace, initiator);
                         break;
                     case DATA:
                         /*
@@ -254,11 +258,13 @@ public class Content
                         throw new IllegalStateException("mediaType");
                     case VIDEO:
                         channel = new VideoChannel(
-                            this, id, channelBundleId, transportNamespace);
+                                this, id, channelBundleId,
+                                transportNamespace, initiator);
                         break;
                     default:
                         channel = new RtpChannel(
-                            this, id, channelBundleId, transportNamespace);
+                            this, id, channelBundleId,
+                            transportNamespace, initiator);
                         break;
                     }
                     channels.put(id, channel);
@@ -311,14 +317,18 @@ public class Content
      * @param channelBundleId the ID of the channel-bundle that the created
      * <tt>SctpConnection</tt> is to be a part of (or <tt>null</tt> if it is not
      * to be a part of a channel-bundle).
+     * @param initiator the value to use for the initiator field, or
+     * <tt>null</tt> to use the default value.
      * @return new <tt>SctpConnection</tt> with given <tt>Endpoint</tt>
      * @throws Exception if an error occurs while initializing the new instance
      * @throws IllegalArgumentException if <tt>SctpConnection</tt> exists
      * already for given <tt>Endpoint</tt>.
      */
-    public SctpConnection createSctpConnection(Endpoint endpoint,
-                                               int sctpPort,
-                                               String channelBundleId)
+    public SctpConnection createSctpConnection(
+            Endpoint endpoint,
+            int sctpPort,
+            String channelBundleId,
+            Boolean initiator)
         throws Exception
     {
         SctpConnection sctpConnection;
@@ -328,8 +338,8 @@ public class Content
             String id = generateChannelID();
 
             sctpConnection
-                = new SctpConnection(
-                        id, this, endpoint, sctpPort, channelBundleId);
+                = new SctpConnection(id, this, endpoint, sctpPort,
+                                     channelBundleId, initiator);
             channels.put(sctpConnection.getID(), sctpConnection);
         }
 

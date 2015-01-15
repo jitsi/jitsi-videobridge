@@ -204,12 +204,14 @@ public class SctpConnection
             Content content,
             Endpoint endpoint,
             int remoteSctpPort,
-            String channelBundleId)
+            String channelBundleId,
+            Boolean initiator)
         throws Exception
     {
         super(content, id,
               channelBundleId,
-              IceUdpTransportPacketExtension.NAMESPACE);
+              IceUdpTransportPacketExtension.NAMESPACE,
+              initiator);
 
         setEndpoint(endpoint.getID());
 
