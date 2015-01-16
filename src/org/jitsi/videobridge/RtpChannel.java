@@ -1063,27 +1063,6 @@ public class RtpChannel
     }
 
     /**
-     * Notifies this instance that a specific <tt>List</tt> of payload types was
-     * set on this instance. Allows extenders to override.
-     *
-     * This isn't needed anymore, since we have the RTP header extensions
-     * from COLIBRI. It is currently kept to allow interoperability with older
-     * versions of jicofo.
-     * TODO: remove
-     *
-     * @param payloadTypes the <tt>List</tt> of payload types which was set on
-     * this instance and which is the cause of the notification
-     * @param googleChrome <tt>true</tt> if it looks like Google Chrome (in
-     * distinction with Jitsi) is the remote endpoint based on
-     * <tt>payloadTypes</tt>; otherwise, <tt>false</tt> 
-     */
-    protected void payloadTypesSet(
-            List<PayloadTypePacketExtension> payloadTypes,
-            boolean googleChrome)
-    {
-    }
-
-    /**
      * Notifies this instance that there was a change in the value of a property
      * of an object in which this instance is interested.
      *
@@ -1313,19 +1292,6 @@ public class RtpChannel
             if (mediaService != null)
             {
                 int payloadTypeCount = payloadTypes.size();
-                /*
-                 * TODO We will try to recognize Google Chrome (in distinction
-                 * with Jitsi) acting as the remote endpoint in order to use
-                 * RTPExtension.SSRC_AUDIO_LEVEL_URN instead of
-                 * RTPExtension.CSRC_AUDIO_LEVEL_URN while we do not support the
-                 * negotiation of RTP header extension IDs.
-                 *
-                 * This isn't needed anymore, since we have the RTP header
-                 * extensions from COLIBRI. It is currently kept to allow
-                 * interoperability with older versions of jicofo.
-                 * TODO: remove
-                 */
-                boolean googleChrome = false;
 
                 receivePTs = new int[payloadTypeCount];
                 for (int i = 0; i < payloadTypeCount; i++)
@@ -1341,24 +1307,13 @@ public class RtpChannel
                                 mediaService,
                                 null);
 
-                    if (mediaFormat == null)
-                    {
-                        if (!googleChrome
-                                && "iSAC".equalsIgnoreCase(
-                                        payloadType.getName()))
-                        {
-                            googleChrome = true;
-                        }
-                    }
-                    else
+                    if (mediaFormat != null)
                     {
                         stream.addDynamicRTPPayloadType(
                                 (byte) payloadType.getID(),
                                 mediaFormat);
                     }
                 }
-
-                payloadTypesSet(payloadTypes, googleChrome);
             }
         }
 
@@ -1393,7 +1348,7 @@ public class RtpChannel
      * which describes the <tt>RTPExtension</tt> to be added to this
      * <tt>channel</tt>.
      */
-    private void addRtpHeaderExtension(
+    protected void addRtpHeaderExtension(
             RTPHdrExtPacketExtension rtpHdrExtPacketExtension)
     {
         URI uri = rtpHdrExtPacketExtension.getURI();

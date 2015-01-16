@@ -128,50 +128,6 @@ public class AudioChannel
 
     /**
      * {@inheritDoc}
-     *
-     * This isn't needed anymore, since we have the RTP header extensions
-     * from COLIBRI. It is currently kept to allow interoperability with older
-     * versions of jicofo.
-     * TODO: remove
-     */
-    @Override
-    protected void payloadTypesSet(
-            List<PayloadTypePacketExtension> payloadTypes,
-            boolean googleChrome)
-    {
-        super.payloadTypesSet(payloadTypes, googleChrome);
-
-        MediaStream stream;
-
-        if (googleChrome
-                && ((stream = getStream()) instanceof AudioMediaStream))
-        {
-            // TODO Use RTPExtension.SSRC_AUDIO_LEVEL_URN instead of
-            // RTPExtension.CSRC_AUDIO_LEVEL_URN while we do not support the
-            // negotiation of RTP header extension IDs.
-            URI uri;
-
-            try
-            {
-                uri = new URI(RTPExtension.SSRC_AUDIO_LEVEL_URN);
-            }
-            catch (URISyntaxException e)
-            {
-                uri = null;
-            }
-            if (uri != null)
-            {
-                stream.addRTPExtension((byte) 1, new RTPExtension(uri));
-                // Feed the client-to-mixer audio levels into the algorithm
-                // which detects/identifies the active/dominant speaker.
-                ((AudioMediaStream) stream).setCsrcAudioLevelListener(
-                        getCsrcAudioLevelListener());
-            }
-        }
-    }
-
-    /**
-     * {@inheritDoc}
      */
     @Override
     protected void removeStreamListeners()
@@ -320,6 +276,24 @@ public class AudioChannel
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @Override
+    protected void addRtpHeaderExtension(
+            RTPHdrExtPacketExtension rtpHdrExtPacketExtension)
+    {
+        super.addRtpHeaderExtension(rtpHdrExtPacketExtension);
+
+        if (RTPExtension.SSRC_AUDIO_LEVEL_URN
+                .equals(rtpHdrExtPacketExtension.getURI().toString()))
+        {
+            MediaStream stream = getStream();
+            if (stream != null && stream instanceof AudioMediaStream)
+            {
+                ((AudioMediaStream) stream).setCsrcAudioLevelListener(
+                        getCsrcAudioLevelListener());
             }
         }
     }
