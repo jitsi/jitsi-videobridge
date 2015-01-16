@@ -655,7 +655,7 @@ public class VideoChannel
             if (!disableAbsSendTime)
             {
                 // TODO: remove hard-coded value
-                stream.setAbsSendTimeExtensionID(3);
+                //stream.setAbsSendTimeExtensionID(3);
             }
         }
 
