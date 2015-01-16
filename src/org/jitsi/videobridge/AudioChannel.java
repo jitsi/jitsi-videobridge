@@ -128,6 +128,11 @@ public class AudioChannel
 
     /**
      * {@inheritDoc}
+     *
+     * This isn't needed anymore, since we have the RTP header extensions
+     * from COLIBRI. It is currently kept to allow interoperability with older
+     * versions of jicofo.
+     * TODO: remove
      */
     @Override
     protected void payloadTypesSet(

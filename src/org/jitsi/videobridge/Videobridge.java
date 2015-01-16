@@ -843,6 +843,8 @@ public class Videobridge
 
                             channel.setPayloadTypes(
                                     channelIQ.getPayloadTypes());
+                            channel.setRtpHeaderExtensions(
+                                    channelIQ.getRtpHeaderExtensions());
                             channel.setTransport(channelIQ.getTransport());
 
                             channel.setDirection(channelIQ.getDirection());

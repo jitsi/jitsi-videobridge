@@ -1056,6 +1056,11 @@ public class RtpChannel
      * Notifies this instance that a specific <tt>List</tt> of payload types was
      * set on this instance. Allows extenders to override.
      *
+     * This isn't needed anymore, since we have the RTP header extensions
+     * from COLIBRI. It is currently kept to allow interoperability with older
+     * versions of jicofo.
+     * TODO: remove
+     *
      * @param payloadTypes the <tt>List</tt> of payload types which was set on
      * this instance and which is the cause of the notification
      * @param googleChrome <tt>true</tt> if it looks like Google Chrome (in
@@ -1304,6 +1309,11 @@ public class RtpChannel
                  * RTPExtension.SSRC_AUDIO_LEVEL_URN instead of
                  * RTPExtension.CSRC_AUDIO_LEVEL_URN while we do not support the
                  * negotiation of RTP header extension IDs.
+                 *
+                 * This isn't needed anymore, since we have the RTP header
+                 * extensions from COLIBRI. It is currently kept to allow
+                 * interoperability with older versions of jicofo.
+                 * TODO: remove
                  */
                 boolean googleChrome = false;
 
@@ -1343,6 +1353,60 @@ public class RtpChannel
         }
 
         touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Sets the RTP header extensions to be used by this <tt>Channel</tt>.
+     *
+     * @param rtpHeaderExtensions the <tt>RTPHdrExtPacketExtension</tt>s which
+     * specify the RTP header extensions and their associated IDs to be used by
+     * this <tt>Channel</tt>
+     */
+    public void setRtpHeaderExtensions(
+            Collection<RTPHdrExtPacketExtension> rtpHeaderExtensions)
+    {
+        if ((rtpHeaderExtensions != null) && (rtpHeaderExtensions.size() > 0))
+        {
+            for (RTPHdrExtPacketExtension rtpHdrExtPacketExtension
+                    : rtpHeaderExtensions)
+            {
+                addRtpHeaderExtension(rtpHdrExtPacketExtension);
+            }
+        }
+    }
+
+    /**
+     * Adds the <tt>RTPExtension</tt> described in
+     * <tt>rtpHdrExtPacketExtension</tt>to this <tt>channel</tt>'s
+     * <tt>MediaStream</tt>
+     * @param rtpHdrExtPacketExtension the <tt>RTPHdrExtPacketExtension</tt>
+     * which describes the <tt>RTPExtension</tt> to be added to this
+     * <tt>channel</tt>.
+     */
+    private void addRtpHeaderExtension(
+            RTPHdrExtPacketExtension rtpHdrExtPacketExtension)
+    {
+        URI uri = rtpHdrExtPacketExtension.getURI();
+        if (uri == null)
+        {
+            logger.warn("Failed to add an RTP header extension with an invalid"
+                        + " URI: " + rtpHdrExtPacketExtension.getAttribute(
+                    RTPHdrExtPacketExtension.URI_ATTR_NAME));
+            return;
+        }
+
+        Byte id = Byte.valueOf(rtpHdrExtPacketExtension.getID());
+        if (id == null)
+        {
+            logger.warn("Failed to add an RTP header extension with an invalid"
+                        + " ID: " + rtpHdrExtPacketExtension.getID());
+            return;
+        }
+
+        // It is safe to just add it, MediaStream will take care of duplicates.
+        MediaStream stream = getStream();
+        if (stream != null)
+            stream.addRTPExtension(id, new RTPExtension(uri));
     }
 
     /**
