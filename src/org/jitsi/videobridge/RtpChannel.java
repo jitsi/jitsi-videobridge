@@ -16,6 +16,7 @@ import javax.media.rtp.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
+import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 
@@ -23,11 +24,13 @@ import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -42,6 +45,13 @@ public class RtpChannel
     extends Channel
     implements PropertyChangeListener
 {
+    /**
+     * The property which controls whether Jitsi Videobridge will perform
+     * replacement of the timestamps in the abs-send-time RTP header extension.
+     */
+    private static final String DISABLE_ABS_SEND_TIME_PNAME
+            = "org.jitsi.videobridge.DISABLE_ABS_SEND_TIME";
+
     /**
      * The <tt>Logger</tt> used by the <tt>RtpChannel</tt> class and its
      * instances to print debug information.
@@ -1401,6 +1411,21 @@ public class RtpChannel
             logger.warn("Failed to add an RTP header extension with an invalid"
                         + " ID: " + rtpHdrExtPacketExtension.getID());
             return;
+        }
+
+        if (RTPExtension.ABS_SEND_TIME_URN
+                .equals(uri.toString()))
+        {
+            ConfigurationService cfg
+                    = ServiceUtils.getService(
+                    getBundleContext(),
+                    ConfigurationService.class);
+
+            if (cfg != null
+                    && cfg.getBoolean(DISABLE_ABS_SEND_TIME_PNAME, false))
+            {
+                return;
+            }
         }
 
         // It is safe to just add it, MediaStream will take care of duplicates.

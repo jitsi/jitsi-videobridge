@@ -41,13 +41,6 @@ public class VideoChannel
     extends RtpChannel
 {
     /**
-     * The property which controls whether Jitsi Videobridge will perform
-     * replacement of the timestamps in the abs-send-time RTP header extension.
-     */
-    private static final String DISABLE_ABS_SEND_TIME_PNAME
-        = "org.jitsi.videobridge.DISABLE_ABS_SEND_TIME";
-
-    /**
      * The length in milliseconds of the interval for which the average incoming
      * bitrate for this video channel will be computed and made available
      * through {@link #getIncomingBitrate}.
@@ -626,39 +619,6 @@ public class VideoChannel
             ++n;
         }
         return -1;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Enables the the abs-send-time extension after the stream has been
-     * started.
-     */
-    @Override
-    protected void maybeStartStream()
-        throws IOException
-    {
-        super.maybeStartStream();
-
-        MediaStream stream = getStream();
-
-        if (stream != null)
-        {
-            ConfigurationService cfg
-                = ServiceUtils.getService(
-                        getBundleContext(),
-                        ConfigurationService.class);
-            boolean disableAbsSendTime
-                = cfg != null
-                    && cfg.getBoolean(DISABLE_ABS_SEND_TIME_PNAME, false);
-
-            if (!disableAbsSendTime)
-            {
-                // TODO: remove hard-coded value
-                //stream.setAbsSendTimeExtensionID(3);
-            }
-        }
-
     }
 
     @Override
