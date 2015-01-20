@@ -6,9 +6,9 @@
  */
 package org.jitsi.videobridge.ratecontrol;
 
+import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
-import org.jitsi.videobridge.utils.*;
 
 import java.util.*;
 

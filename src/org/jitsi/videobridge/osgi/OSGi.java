@@ -16,7 +16,6 @@ import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.impl.osgi.framework.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.utils.*;
 import org.osgi.framework.*;
 import java.io.*;
 

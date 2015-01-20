@@ -11,8 +11,8 @@ import java.util.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.configuration.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.utils.*;
 
 /**
  *

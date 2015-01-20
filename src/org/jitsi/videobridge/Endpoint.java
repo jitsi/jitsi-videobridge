@@ -13,7 +13,6 @@ import java.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.utils.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 

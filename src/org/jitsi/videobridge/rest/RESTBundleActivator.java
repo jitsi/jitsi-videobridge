@@ -11,11 +11,12 @@ import java.lang.reflect.*;
 
 import net.java.sip.communicator.util.*;
 
+import net.java.sip.communicator.util.Logger;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.util.ssl.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.utils.*;
 import org.osgi.framework.*;
 
 /**
