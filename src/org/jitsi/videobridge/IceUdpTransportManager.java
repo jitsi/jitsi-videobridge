@@ -1119,6 +1119,17 @@ public class IceUdpTransportManager
             if (remoteCandidateCount != 0)
                 iceAgent.startConnectivityEstablishment();
         }
+        else
+        {
+            if (iceStream.getRemoteUfrag() != null &&
+                    iceStream.getRemotePassword() != null)
+            {
+                // We don't have any remote candidates, but we already know the
+                // remote ufrag and password, so we can start ICE.
+                logger.info("Starting ICE agent without remote candidates.");
+                iceAgent.startConnectivityEstablishment();
+            }
+        }
     }
 
     /**
