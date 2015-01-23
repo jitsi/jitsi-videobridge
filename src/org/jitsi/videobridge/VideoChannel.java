@@ -18,13 +18,9 @@ import javax.media.rtp.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.util.*;
 
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
@@ -343,10 +339,14 @@ public class VideoChannel
         return endpoints;
     }
 
-    private Endpoint getPinnedEndpoint()
+    private Endpoint getEffectivePinnedEndpoint()
     {
-        Endpoint endpoint = getEndpoint();
-        return endpoint != null ? endpoint.getPinnedEndpoint() : null;
+        // For the purposes of LastN, we consider that the user has no pinned
+        // participant if he/she has pinned himself/herself.
+        Endpoint thisEndpoint = getEndpoint();
+        Endpoint pinnedEndpoint = thisEndpoint.getPinnedEndpoint();
+        return thisEndpoint != null && !thisEndpoint.equals(pinnedEndpoint)
+            ? pinnedEndpoint : null;
     }
 
     public int getReceivingEndpointCount()
@@ -525,7 +525,7 @@ public class VideoChannel
                 int n = 0;
                 // The pinned endpoint is always in the last N set, if
                 // last N > 0.
-                Endpoint pinnedEndpoint = getPinnedEndpoint();
+                Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
                 // Keep one empty slot for the pinned endpoint.
                 int nMax = (pinnedEndpoint == null) ? lastN : (lastN - 1);
                 Endpoint thisEndpoint = getEndpoint();
@@ -553,7 +553,8 @@ public class VideoChannel
                     ++n;
                 }
 
-                // FIXME(gp) move this if before the for loop
+                // FIXME(gp) move this if before the for loop (to avoid an
+                // unnecessary loop)
                 if (!inLastN && pinnedEndpoint != null)
                     inLastN = channelEndpoint == pinnedEndpoint;
             }
@@ -728,9 +729,9 @@ public class VideoChannel
         if (lastN < 0)
             return;
 
-        Endpoint endpoint = getEndpoint();
+        Endpoint thisEndpoint = getEndpoint();
 
-        if (endpoint == null)
+        if (thisEndpoint == null)
             return;
 
         // Represent the list of Endpoints defined by lastN in JSON format.
@@ -745,7 +746,7 @@ public class VideoChannel
             effectiveEndpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
 
         // The pinned endpoint is always in the last N set, if last N > 0.
-        Endpoint pinnedEndpoint = getPinnedEndpoint();
+        Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
 
         readLock.lock();
         try
@@ -773,7 +774,7 @@ public class VideoChannel
 
                     if (e != null)
                     {
-                        if (e.equals(endpoint))
+                        if (e.equals(thisEndpoint))
                         {
                             continue;
                         }
@@ -844,7 +845,7 @@ public class VideoChannel
         msg.append('}');
         try
         {
-            endpoint.sendMessageOnDataChannel(msg.toString());
+            thisEndpoint.sendMessageOnDataChannel(msg.toString());
         }
         catch (IOException e)
         {
@@ -913,7 +914,7 @@ public class VideoChannel
             {
                 if (lastN > this.lastN)
                 {
-                    Endpoint pinnedEndpoint = getPinnedEndpoint();
+                    Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
                     // The pinned endpoint is always in the last N set, if
                     // last N > 0; Count it here.
                     int n = (pinnedEndpoint != null) ? 1 : 0;
@@ -950,12 +951,19 @@ public class VideoChannel
                             {
                                 if (endpoint.equals(thisEndpoint))
                                     continue;
-                                // We've already signaled the fact that the
-                                // pinned endpoint has entered the lastN set
-                                // when we handled the "EndpointPinned" event.
+
+                                // We've already signaled to the client the fact
+                                // that the pinned endpoint has entered the
+                                // lastN set when we handled the
+                                //
+                                //     PINNED_ENDPOINT_PROPERTY_NAME
+                                //
+                                // property change event.
+                                //
                                 // Also, we've already counted it above. So, we
                                 // don't want to either add it in the
                                 // endpointsEnteringLastN or count it here.
+
                                 if (endpoint.equals(pinnedEndpoint))
                                     continue;
                             }
@@ -1021,7 +1029,7 @@ public class VideoChannel
 
                 // The pinned endpoint is always in the last N set, if
                 // last N > 0.
-                Endpoint pinnedEndpoint = getPinnedEndpoint();
+                Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
 
                 if (pinnedEndpoint != null && lastN > 0)
                     endpointsEnteringLastN.add(pinnedEndpoint);
