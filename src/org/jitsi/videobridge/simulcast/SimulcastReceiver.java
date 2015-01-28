@@ -10,6 +10,9 @@ import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import java.util.concurrent.locks.*;
 
 import net.java.sip.communicator.util.*;
 import org.jitsi.service.configuration.*;
@@ -204,8 +207,82 @@ class SimulcastReceiver
         if (override != null)
             accept = override.accept(ssrc);
 
+        if (!accept)
+        {
+            // For SRTP replay protection the webrtc.org implementation uses a
+            // replay database with extended range, using a rollover counter
+            // (ROC) which counts the number of times the RTP sequence number
+            // carried in the RTP packet has rolled over.
+            //
+            // In this way, the ROC extends the 16-bit RTP sequence number to a
+            // 48-bit “SRTP packet index”. The ROC is not be explicitly
+            // exchanged between the SRTP endpoints because in all practical
+            // situations a rollover of the RTP sequence number can be detected
+            // unless 2^15 consecutive RTP packets are lost.
+            //
+            // For every 0x800 (2048) dropped packets (at most), send 8 packets
+            // so that the receiving endpoint can update its ROC.
+            //
+            // TODO(gp) We may want to move this code somewhere more centralized
+            // to take into account last-n etc.
+
+            Integer key = Integer.valueOf((int) ssrc);
+            CyclicCounter counter = dropped.getOrCreate(key, 0x800);
+            accept = counter.cyclicallyIncrementAndGet() < 8;
+        }
+
         return accept;
     }
+
+
+    static class CyclicCounter {
+
+        private final int maxVal;
+        private final AtomicInteger ai = new AtomicInteger(0);
+
+        public CyclicCounter(int maxVal) {
+            this.maxVal = maxVal;
+        }
+
+        public int cyclicallyIncrementAndGet() {
+            int curVal, newVal;
+            do {
+                curVal = this.ai.get();
+                newVal = (curVal + 1) % this.maxVal;
+                // note that this doesn't guarantee fairness
+            } while (!this.ai.compareAndSet(curVal, newVal));
+            return newVal;
+        }
+
+    }
+
+    /**
+     * Multitone pattern with Lazy Initialization.
+     */
+    static class CyclicCounters
+    {
+        private final Map<Integer, CyclicCounter> instances
+            = new ConcurrentHashMap<Integer, CyclicCounter>();
+        private Lock createLock = new ReentrantLock();
+
+        CyclicCounter getOrCreate(Integer key, int maxVal) {
+            CyclicCounter instance = instances.get(key);
+            if (instance == null) {
+                createLock.lock();
+                try {
+                    if (instance == null) {
+                        instance = new CyclicCounter(maxVal);
+                        instances.put(key, instance);
+                    }
+                } finally {
+                    createLock.unlock();
+                }
+            }
+            return instance;
+        }
+    }
+
+    private final CyclicCounters dropped = new CyclicCounters();
 
     private void askForKeyframe(SimulcastLayer layer)
     {
