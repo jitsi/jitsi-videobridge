@@ -499,8 +499,7 @@ public class IceUdpTransportManager
 
         try
         {
-            // It appears that the port number values ("9") are unused (and
-            // presumably it would be too much of a cliché to use "42")
+            // port 9 is "discard", but the number here seems to be ignored.
             localAddress
                 = new TransportAddress(localAddressStr, 9, Transport.UDP);
             publicAddress

@@ -122,8 +122,8 @@ public class InfluxDBLoggingService
 
     /**
      * Logs an <tt>Event</tt> to an <tt>InfluxDB</tt> database. This method
-     * returns without blocking, the blocking operations are performed in
-     * by a thread from {@link #executor}.
+     * returns without blocking, the blocking operations are performed by a
+     * thread from {@link #executor}.
      *
      * @param e the <tt>Event</tt> to log.
      */
@@ -136,29 +136,55 @@ public class InfluxDBLoggingService
         //    {
         //     "name": "series_name",
         //     "columns": ["column1", "column2"],
-        //     "points": [["value1", 1234]]
+        //     "points": [
+        //           ["value1", 1234],
+        //           ["value2", 5678]
+        //          ]
         //    }
         //  ]
 
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("name", e.getName());
-
+        boolean useLocalTime = e.useLocalTime();
+        long now = System.currentTimeMillis();
+        boolean multipoint = false;
+        int pointCount = 1;
         JSONArray columns = new JSONArray();
-        JSONArray point = new JSONArray();
+        JSONArray points = new JSONArray();
+        Object[] values = e.getValues();
 
-        if (e.useLocalTime())
-        {
+        if (useLocalTime)
             columns.add("time");
-            point.add(System.currentTimeMillis());
+        Collections.addAll(columns, e.getColumns());
+
+        if (values[0] instanceof Object[])
+        {
+            multipoint = true;
+            pointCount = values.length;
         }
 
-        Collections.addAll(columns, e.getColumns());
-        Collections.addAll(point, e.getValues());
+        if (multipoint)
+        {
+            for (int i = 0; i < pointCount; i++)
+            {
+                JSONArray point = new JSONArray();
+                if (useLocalTime)
+                    point.add(now);
+                Collections.addAll(point, values[i]);
+                points.add(point);
+            }
+        }
+        else
+        {
+            JSONArray point = new JSONArray();
+            if (useLocalTime)
+                point.add(System.currentTimeMillis());
+            // Make sure points.length>0
+            Collections.addAll(point, values);
+            points.add(point);
+        }
 
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("name", e.getName());
         jsonObject.put("columns", columns);
-
-        JSONArray points = new JSONArray();
-        points.add(point);
         jsonObject.put("points", points);
 
         JSONArray jsonArray = new JSONArray();
