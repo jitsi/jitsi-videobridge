@@ -29,7 +29,7 @@ import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.influxdb.*;
 import org.osgi.framework.*;
 
 /**

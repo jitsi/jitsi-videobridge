@@ -15,7 +15,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.influxdb.*;
 import org.jitsi.videobridge.metrics.*;
 import org.osgi.framework.*;
 

@@ -20,7 +20,7 @@ import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.influxdb.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.pubsub.*;
@@ -255,7 +255,7 @@ public class Videobridge
                                       getConferenceCount());
             metricService
                 .startMeasuredTransaction(MetricService.METRIC_CONFERENCELENGTH,
-                                      conference.getID());
+                    conference.getID());
         }
 
         return conference;
@@ -899,12 +899,12 @@ public class Videobridge
 
                             {
                                 loggingService.logEvent(
-                                        EventFactory.channelCreated(
-                                                channel.getID(),
-                                                content.getName(),
-                                                conference.getID(),
-                                                endpoint == null ? "" : endpoint,
-                                                lastN == null ? -1 : lastN));
+                                    EventFactory.channelCreated(
+                                        channel.getID(),
+                                        content.getName(),
+                                        conference.getID(),
+                                        endpoint == null ? "" : endpoint,
+                                        lastN == null ? -1 : lastN));
                             }
 
                         }

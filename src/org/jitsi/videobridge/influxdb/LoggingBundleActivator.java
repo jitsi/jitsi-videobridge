@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.log;
+package org.jitsi.videobridge.influxdb;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.videobridge.osgi.*;

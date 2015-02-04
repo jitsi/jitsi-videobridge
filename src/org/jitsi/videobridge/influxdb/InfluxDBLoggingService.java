@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.log;
+package org.jitsi.videobridge.influxdb;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Allows logging of {@link org.jitsi.videobridge.log.Event}s using an
+ * Allows logging of {@link org.jitsi.videobridge.influxdb.Event}s using an
  * <tt>InfluxDB</tt> instance.
  *
  * @author Boris Grozev

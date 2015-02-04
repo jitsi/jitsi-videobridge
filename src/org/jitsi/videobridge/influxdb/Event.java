@@ -4,7 +4,7 @@
  * Distributable under LGPL license.
  * See terms of license at gnu.org.
  */
-package org.jitsi.videobridge.log;
+package org.jitsi.videobridge.influxdb;
 
 /**
  * Represents an event to be logged. An event has a name and a list of

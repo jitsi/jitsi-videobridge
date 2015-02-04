@@ -1,7 +1,7 @@
-package org.jitsi.videobridge.log;
+package org.jitsi.videobridge.influxdb;
 
 /**
- * Allows logging of {@link org.jitsi.videobridge.log.Event}s.
+ * Allows logging of {@link org.jitsi.videobridge.influxdb.Event}s.
  *
  * @author Boris Grozev
  */

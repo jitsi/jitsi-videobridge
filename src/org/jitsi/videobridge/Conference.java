@@ -22,7 +22,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.influxdb.*;
 import org.jitsi.videobridge.metrics.*;
 import org.json.simple.*;
 import org.osgi.framework.*;

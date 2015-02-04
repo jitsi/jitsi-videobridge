@@ -19,7 +19,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.log.*;
+import org.jitsi.videobridge.influxdb.*;
 import org.jitsi.videobridge.metrics.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.osgi.framework.*;
@@ -371,7 +371,7 @@ public class Content
                 = conference.getVideobridge().getLoggingService();
         if (loggingService != null)
             loggingService.logEvent(
-                    EventFactory.contentExpired(name, conference.getID()));
+                EventFactory.contentExpired(name, conference.getID()));
         try
         {
             conference.expireContent(this);
