@@ -15,8 +15,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.influxdb.*;
-import org.jitsi.videobridge.metrics.*;
+import org.jitsi.videobridge.eventadmin.*;
 import org.osgi.framework.*;
 
 /**
@@ -328,13 +327,10 @@ public abstract class Channel
         Content content = getContent();
         Conference conference = content.getConference();
 
-        LoggingService loggingService
-                = conference.getVideobridge().getLoggingService();
-        if (loggingService != null)
-            loggingService.logEvent(
-                    EventFactory.channelExpired(id,
-                                                content.getName(),
-                                                conference.getID()));
+        EventAdmin eventAdmin
+                = conference.getVideobridge().getEventAdmin();
+        if (eventAdmin != null)
+            eventAdmin.sendEvent(EventFactory.channelExpired(this));
         try
         {
             content.expireChannel(this);
@@ -404,14 +400,6 @@ public abstract class Channel
                             + ". The total number of conferences is now "
                             + videobridge.getConferenceCount() + ", channels "
                             + videobridge.getChannelCount() + ".");
-            }
-
-            MetricService metricService = videobridge.getMetricService();
-            if (metricService != null)
-            {
-                metricService
-                        .publishNumericMetric(MetricService.METRIC_CHANNELS,
-                                              videobridge.getChannelCount());
             }
         }
     }
@@ -529,7 +517,7 @@ public abstract class Channel
      * @return the <tt>TransportManager</tt> which represents the Jingle
      * transport of this <tt>Channel</tt>
      */
-    protected TransportManager getTransportManager()
+    public TransportManager getTransportManager()
         throws IOException
     {
         return transportManager;

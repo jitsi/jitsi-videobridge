@@ -7,8 +7,11 @@
 package org.jitsi.videobridge.metrics;
 
 import java.util.*;
+
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.eventadmin.*;
 
 /**
  * A generic service interface to push metrics to cloud based collector servers.
@@ -29,11 +32,13 @@ import org.jitsi.util.*;
  * </ul>
  *
  * @author zbettenbuk
+ * @author George Politis
  */
-public class MetricService
+public class MetricLoggingHandler
+    implements EventHandler
 {
 
-    private static final Logger logger = Logger.getLogger(MetricService.class);
+    private static final Logger logger = Logger.getLogger(MetricLoggingHandler.class);
     private List<MetricServicePublisher> publishers;
 
     public static final String METRIC_CONFERENCES = "Conferences";
@@ -41,7 +46,7 @@ public class MetricService
     public static final String METRIC_CONFERENCELENGTH = "Conference length";
     public static final String METRIC_CHANNELSTART_POSTFIX = " start";
 
-    public MetricService(ConfigurationService config)
+    public MetricLoggingHandler(ConfigurationService config)
     {
         this.publishers = new LinkedList<MetricServicePublisher>();
         List<String> propNames
@@ -78,7 +83,7 @@ public class MetricService
      * @param metricName Name of the metric
      * @param metricValue Value of the metric
      */
-    public void publishNumericMetric(String metricName, int metricValue)
+    private void publishNumericMetric(String metricName, int metricValue)
     {
         for (MetricServicePublisher publisher : this.publishers)
         {
@@ -107,7 +112,7 @@ public class MetricService
      * @param metricName Name of the metric
      * @param metricValue Value of the metric
      */
-    public void publishStringMetric(String metricName, String metricValue)
+    private void publishStringMetric(String metricName, String metricValue)
     {
         for (MetricServicePublisher publisher : this.publishers)
         {
@@ -135,7 +140,7 @@ public class MetricService
      *
      * @param metricName Name of the metric
      */
-    public void publishIncrementalMetric(String metricName)
+    private void publishIncrementalMetric(String metricName)
     {
         for (MetricServicePublisher publisher : this.publishers)
         {
@@ -166,7 +171,7 @@ public class MetricService
      * @param metricName Name of the metric
      * @param increment Value to increase the metric with
      */
-    public void publishIncrementalMetric(String metricName, int increment)
+    private void publishIncrementalMetric(String metricName, int increment)
     {
         for (MetricServicePublisher publisher : this.publishers)
         {
@@ -194,7 +199,7 @@ public class MetricService
      * @param transactionType Type of the transaction (e.g. create conference)
      * @param transactionId Unique id of the transaction (e.g. conference ID)
      */
-    public void startMeasuredTransaction(String transactionType,
+    private void startMeasuredTransaction(String transactionType,
                                          String transactionId)
     {
         for (MetricServicePublisher publisher : this.publishers)
@@ -224,7 +229,7 @@ public class MetricService
      * @param transactionType Type of the transaction (e.g. create conference)
      * @param transactionId Unique id of the transaction (e.g. conference ID)
      */
-    public void endMeasuredTransaction(String transactionType,
+    private void endMeasuredTransaction(String transactionType,
                                        String transactionId)
     {
         for (MetricServicePublisher publisher : this.publishers)
@@ -247,4 +252,202 @@ public class MetricService
         }
     }
 
+    @Override
+    public void handleEvent(Event event)
+    {
+        if (event == null)
+        {
+            logger.debug("Could not handle the event because it was null.");
+            return;
+        }
+
+        if (EventFactory.CHANNEL_CREATED_TOPIC.equals(event.getTopic()))
+        {
+            Channel channel
+                = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
+
+            int channelCount = getChannelCount(channel);
+            publishNumericMetric(METRIC_CHANNELS, channelCount);
+        }
+        else if (EventFactory.CHANNEL_EXPIRED_TOPIC.equals(event.getTopic()))
+        {
+            Channel channel
+                = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
+
+            int channelCount = getChannelCount(channel);
+            publishNumericMetric(METRIC_CHANNELS, channelCount);
+        }
+        else if (
+            EventFactory.CONFERENCE_CREATED_TOPIC.equals(event.getTopic()))
+        {
+            Conference conference
+                = (Conference) event.getProperty(EventFactory.EVENT_SOURCE);
+
+            int sz;
+            try
+            {
+                sz = getConferenceCount(conference);
+            }
+            catch (Exception e)
+            {
+                logger.debug("Could not log conference expired event because " +
+                    "the conference is null.");
+                return;
+            }
+
+            publishNumericMetric(METRIC_CONFERENCES, sz);
+
+            startMeasuredTransaction(METRIC_CONFERENCELENGTH,
+                conference.getID());
+        }
+        else if (
+            EventFactory.CONFERENCE_EXPIRED_TOPIC.equals(event.getTopic()))
+        {
+            Conference conference
+                = (Conference) event.getProperty(EventFactory.EVENT_SOURCE);
+
+            int sz;
+            try
+            {
+                sz =getConferenceCount(conference);
+            }
+            catch (Exception e)
+            {
+                logger.debug("Could not log conference expired event because " +
+                    "the conference is null.");
+                return;
+            }
+
+            publishNumericMetric(METRIC_CONFERENCES, sz);
+
+            endMeasuredTransaction(METRIC_CONFERENCELENGTH, conference.getID());
+        }
+        else if (EventFactory.STREAM_STARTED_TOPIC.equals(event.getTopic()))
+        {
+            RtpChannel rtpChannel
+                = (RtpChannel) event.getProperty(EventFactory.EVENT_SOURCE);
+
+            publishStringMetric(
+                rtpChannel.getClass().getName() + METRIC_CHANNELSTART_POSTFIX,
+                rtpChannel.getStreamTarget().getDataAddress().getHostAddress());
+        }
+    }
+
+    /**
+     * Helper method that gets the !expired conference count.
+     * @param conference
+     * @return
+     */
+    private int getConferenceCount(Conference conference)
+    {
+        if (conference == null)
+        {
+            throw new IllegalArgumentException("conference");
+        }
+
+        Videobridge videobridge = conference.getVideobridge();
+        if (videobridge == null)
+        {
+            throw new NullPointerException("videobridge");
+        }
+
+        // XXX(gp) This method is called after the conference expired field has
+        // been set to true but *before* the conference has been removed from
+        // the conference list of the videobridge object.
+        //
+        // In the following loop we accurately calculate the active conference
+        // count by checking whether or not the conference expired flag has been
+        // set.
+
+        int sz = 0;
+
+        Conference[] conferences = videobridge.getConferences();
+        if (conferences != null && conferences.length != 0)
+        {
+            for (Conference c : conferences)
+            {
+                if (c != null && !c.isExpired())
+                {
+                    sz++;
+                }
+            }
+        }
+
+        return sz;
+    }
+
+    /**
+     * Helper method that gets the !expired channel count.
+     * @param channel
+     * @return
+     */
+    private int getChannelCount(Channel channel)
+    {
+        int channelCount = 0;
+        if (channel == null)
+        {
+            logger.debug("Could not log channel expired event because " +
+                "the channel is null.");
+            return channelCount;
+        }
+
+        Content content = channel.getContent();
+        if (content == null)
+        {
+            logger.debug("Could not log channel expired event because the " +
+                "content is null.");
+            return channelCount;
+        }
+
+        Conference conference = content.getConference();
+        if (conference == null)
+        {
+            logger.debug("Could not log channel expired event because the " +
+                "conference is null.");
+            return channelCount;
+        }
+
+        Videobridge videobridge = conference.getVideobridge();
+        if (videobridge == null)
+        {
+            logger.debug("Could not log channel expired event because the " +
+                "videobridge is null.");
+            return channelCount;
+        }
+
+        // XXX(gp) This method is called after the conference expired field has
+        // been set to true but *before* the conference has been removed from
+        // the conference list of the videobridge object.
+        //
+        // In the following loop we accurately calculate the active conference
+        // count by checking whether or not the conference expired flag has been
+        // set.
+
+        for (Conference c : videobridge.getConferences())
+        {
+            if (c == null || c.isExpired())
+            {
+                continue;
+            }
+
+            for (Content cc : conference.getContents())
+            {
+                if (cc == null || cc.isExpired())
+                {
+                    continue;
+                }
+
+                for (Channel ccc : cc.getChannels())
+                {
+                    if (ccc == null || ccc.isExpired())
+                    {
+                        continue;
+                    }
+
+                    channelCount++;
+                }
+            }
+        }
+        return channelCount;
+    }
 }

@@ -20,8 +20,7 @@ import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.influxdb.*;
-import org.jitsi.videobridge.metrics.*;
+import org.jitsi.videobridge.eventadmin.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.simulcast.*;
@@ -245,17 +244,6 @@ public class Videobridge
                         + ". The total number of conferences is now "
                         + getConferenceCount() + ", channels "
                         + getChannelCount() + ".");
-        }
-
-        MetricService metricService = getMetricService();
-        if (metricService != null)
-        {
-            metricService
-                .publishNumericMetric(MetricService.METRIC_CONFERENCES,
-                                      getConferenceCount());
-            metricService
-                .startMeasuredTransaction(MetricService.METRIC_CONFERENCELENGTH,
-                    conference.getID());
         }
 
         return conference;
@@ -506,32 +494,18 @@ public class Videobridge
      * @return the <tt>LoggingService</tt> used by this
      * <tt>Videobridge</tt>.
      */
-    public LoggingService getLoggingService()
+    public EventAdmin getEventAdmin()
     {
         BundleContext bundleContext = getBundleContext();
 
         if (bundleContext != null)
         {
             return ServiceUtils2.getService(bundleContext,
-                                            LoggingService.class);
+                                            EventAdmin.class);
         }
 
         return null;
     }
-    
-    /**
-     * A convenient way to retreive the metric service from the OSGi context
-     * @return metric service if present
-     */
-    public MetricService getMetricService()
-    {
-        if (this.bundleContext != null)
-        {
-          return ServiceUtils2.getService(this.bundleContext,
-                                          MetricService.class);
-        }
-        return null;
-     }
 
     /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
@@ -892,19 +866,14 @@ public class Videobridge
                             channel.describe(responseChannelIQ);
                             responseContentIQ.addChannel(responseChannelIQ);
 
-                            LoggingService loggingService;
+                            EventAdmin eventAdmin;
                             if (channelCreated
-                                    && (loggingService = getLoggingService())
+                                    && (eventAdmin = getEventAdmin())
                                         != null)
 
                             {
-                                loggingService.logEvent(
-                                    EventFactory.channelCreated(
-                                        channel.getID(),
-                                        content.getName(),
-                                        conference.getID(),
-                                        endpoint == null ? "" : endpoint,
-                                        lastN == null ? -1 : lastN));
+                                eventAdmin.sendEvent(
+                                    EventFactory.channelCreated(channel));
                             }
 
                         }

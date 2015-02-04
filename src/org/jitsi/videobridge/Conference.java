@@ -22,8 +22,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.influxdb.*;
-import org.jitsi.videobridge.metrics.*;
+import org.jitsi.videobridge.eventadmin.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
@@ -201,9 +200,9 @@ public class Conference
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
 
-        LoggingService loggingService = videobridge.getLoggingService();
-        if (loggingService != null)
-            loggingService.logEvent(EventFactory.conferenceCreated(id, focus));
+        EventAdmin eventAdmin = videobridge.getEventAdmin();
+        if (eventAdmin != null)
+            eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
     }
 
     /**
@@ -559,9 +558,9 @@ public class Conference
                 expired = true;
         }
 
-        LoggingService loggingService = videobridge.getLoggingService();
-        if (loggingService != null)
-            loggingService.logEvent(EventFactory.conferenceExpired(id));
+        EventAdmin eventAdmin = videobridge.getEventAdmin();
+        if (eventAdmin != null)
+            eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
 
         setRecording(false);
         if (recorderEventHandler != null)
@@ -613,18 +612,6 @@ public class Conference
                             + ". The total number of conferences is now "
                             + videobridge.getConferenceCount() + ", channels "
                             + videobridge.getChannelCount() + ".");
-            }
-
-            MetricService metricService = videobridge.getMetricService();
-            if (metricService != null)
-            {
-                metricService
-                    .publishNumericMetric(MetricService.METRIC_CONFERENCES,
-                                          videobridge.getConferenceCount());
-                metricService
-                    .endMeasuredTransaction(
-                            MetricService.METRIC_CONFERENCELENGTH,
-                            this.getID());
             }
         }
     }
@@ -789,10 +776,9 @@ public class Conference
                 endpoints.add(new WeakReference<Endpoint>(endpoint));
                 changed = true;
 
-                LoggingService loggingService = videobridge.getLoggingService();
-                if (loggingService != null)
-                    loggingService.logEvent(
-                            EventFactory.endpointCreated(getID(), id));
+                EventAdmin eventAdmin = videobridge.getEventAdmin();
+                if (eventAdmin != null)
+                    eventAdmin.sendEvent(EventFactory.endpointCreated(endpoint));
             }
         }
 
@@ -1633,15 +1619,12 @@ public class Conference
                     if (isRecording() && endpointRecorder != null)
                         endpointRecorder.updateEndpoint(endpoint);
 
-                    LoggingService loggingService
-                            = getVideobridge().getLoggingService();
-                    if (loggingService != null)
+                    EventAdmin eventAdmin
+                            = getVideobridge().getEventAdmin();
+                    if (eventAdmin != null)
                     {
-                        loggingService.logEvent(
-                            EventFactory.endpointDisplayNameChanged(
-                                getID(),
-                                id,
-                                newDisplayName));
+                        eventAdmin.sendEvent(
+                            EventFactory.endpointDisplayNameChanged(endpoint));
                     }
                 }
             }

@@ -44,6 +44,9 @@ public class OSGi
     private static final String[][] BUNDLES
         = {
             {
+                "org/jitsi/videobridge/eventadmin/Activator"
+            },
+            {
                 "net/java/sip/communicator/impl/libjitsi/LibJitsiActivator"
             },
             {
@@ -69,10 +72,10 @@ public class OSGi
                 "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
             },
             {
-                "org/jitsi/videobridge/influxdb/LoggingBundleActivator"
+                "org/jitsi/videobridge/influxdb/InfluxDBLoggingActivator"
             },
             {
-                "org/jitsi/videobridge/metrics/MetricServiceActivator"
+                "org/jitsi/videobridge/metrics/MetricLoggingActivator"
             },
             {
                 "org/jitsi/videobridge/VideobridgeBundleActivator"

@@ -29,10 +29,9 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.metrics.*;
+import org.jitsi.videobridge.eventadmin.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -854,6 +853,18 @@ public class RtpChannel
     }
 
     /**
+     * Returns the <tt>SessionAddress</tt> which is or is to be the
+     * <tt>target</tt> of {@link #stream}. When <tt>DatagramPacket</tt>s are
+     * received through the <tt>DatagramSocket</tt>s of this <tt>Channel</tt>,
+     * their first RTP and RTCP sources will determine, respectively, the RTP
+     * and RTCP targets.
+     */
+    public SessionAddress getStreamTarget()
+    {
+        return streamTarget;
+    }
+
+    /**
      * {@inheritDoc}
      *
      * Creates media stream.
@@ -966,14 +977,11 @@ public class RtpChannel
 
             Videobridge videobridge
                 = getContent().getConference().getVideobridge();
-            MetricService metricService = videobridge.getMetricService();
-            if (metricService != null && streamTarget != null)
+            EventAdmin eventAdmin = videobridge.getEventAdmin();
+            if (eventAdmin != null && streamTarget != null)
             {
-                metricService
-                    .publishStringMetric(
-                            getClass().getName()
-                                + MetricService.METRIC_CHANNELSTART_POSTFIX,
-                            this.streamTarget.getDataAddress().getHostAddress());
+                eventAdmin
+                    .sendEvent(EventFactory.streamStarted(this));
             }
         }
 

@@ -7,21 +7,24 @@
 package org.jitsi.videobridge.metrics;
 
 import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.eventadmin.*;
 import org.jitsi.videobridge.osgi.*;
 import org.osgi.framework.*;
+
+import java.util.*;
 
 /**
  * OSGi activator for the <tt>MetricService</tt>
  *
  * @author zbettenbuk
  */
-public class MetricServiceActivator
+public class MetricLoggingActivator
     implements BundleActivator
 {
 
-    private MetricService metricService;
+    private EventHandler eventHandler;
 
-    private ServiceRegistration<MetricService> serviceRegistration;
+    private ServiceRegistration<MetricLoggingHandler> serviceRegistration;
 
     @Override
     public void start(BundleContext bundleContext)
@@ -29,11 +32,19 @@ public class MetricServiceActivator
     {
         ConfigurationService config
             = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        this.metricService = new MetricService(config);
+        this.eventHandler = new MetricLoggingHandler(config);
+
+        String[] topics = new String[] {
+            "org/jitsi/*"
+        };
+
+        Dictionary props = new Hashtable();
+        props.put(EventConstants.EVENT_TOPIC, topics);
+
         this.serviceRegistration
-            = bundleContext.registerService(MetricService.class,
-                                            this.metricService,
-                                            null);
+            = bundleContext.registerService(EventHandler.class,
+                                            this.eventHandler,
+                                            props);
     }
 
     @Override

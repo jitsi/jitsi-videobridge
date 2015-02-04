@@ -14,7 +14,7 @@ package org.jitsi.videobridge.influxdb;
  *
  * @author Boris Grozev
  */
-public class Event
+public class InfluxDBEvent
 {
     /**
      * The name of this <tt>Event</tt>.
@@ -47,7 +47,7 @@ public class Event
      * @param values the values. The number of elements MUST be the same as the
      * same number of elements in <tt>columns</tt>.
      */
-    public Event(String name, String[] columns, Object[] values)
+    public InfluxDBEvent(String name, String[] columns, Object[] values)
     {
         this.name = name;
         this.columns = columns;

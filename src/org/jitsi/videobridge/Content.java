@@ -19,8 +19,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.influxdb.*;
-import org.jitsi.videobridge.metrics.*;
+import org.jitsi.videobridge.eventadmin.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.osgi.framework.*;
 
@@ -162,13 +161,12 @@ public class Content
 
         mediaType = MediaType.parseString(this.name);
 
-        LoggingService loggingService
-            = this.conference.getVideobridge().getLoggingService();
+        EventAdmin eventAdmin
+            = this.conference.getVideobridge().getEventAdmin();
 
-        if (loggingService != null)
+        if (eventAdmin != null)
         {
-            loggingService.logEvent(
-                    EventFactory.contentCreated(name, conference.getID()));
+            eventAdmin.sendEvent(EventFactory.contentCreated(this));
         }
 
         touch();
@@ -295,15 +293,6 @@ public class Content
                         + channelCount + ".");
         }
 
-        MetricService metricService = videobridge.getMetricService();
-
-        if (metricService != null)
-        {
-            metricService.publishNumericMetric(
-                    MetricService.METRIC_CHANNELS,
-                    channelCount);
-        }
-
         return channel;
     }
 
@@ -350,6 +339,18 @@ public class Content
     }
 
     /**
+     * Gets the indicator which determines whether this <tt>Content</tt> has
+     * expired.
+     *
+     * @return <tt>true</tt> if this <tt>Content</tt> has expired; otherwise,
+     * <tt>false</tt>
+     */
+    public boolean isExpired()
+    {
+        return expired;
+    }
+
+    /**
      * Expires this <tt>Content</tt> and its associated <tt>Channel</tt>s.
      * Releases the resources acquired by this instance throughout its life time
      * and prepares it to be garbage collected.
@@ -367,11 +368,10 @@ public class Content
         setRecording(false, null);
         Conference conference = getConference();
 
-        LoggingService loggingService
-                = conference.getVideobridge().getLoggingService();
-        if (loggingService != null)
-            loggingService.logEvent(
-                EventFactory.contentExpired(name, conference.getID()));
+        EventAdmin eventAdmin
+                = conference.getVideobridge().getEventAdmin();
+        if (eventAdmin != null)
+            eventAdmin.sendEvent(EventFactory.contentExpired(this));
         try
         {
             conference.expireContent(this);

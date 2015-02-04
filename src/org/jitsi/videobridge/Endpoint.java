@@ -329,6 +329,18 @@ public class Endpoint
     }
 
     /**
+     * Gets the <tt>Conference</tt> to which this <tt>Endpoint</tt> belongs to.
+     *
+     * @return the <tt>Conference</tt> to which this <tt>Endpoint</tt> belongs
+     * to.
+     */
+    public Conference getConference()
+    {
+        WeakReference<Conference> wr = weakConference;
+        return wr == null ? null : wr.get();
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
