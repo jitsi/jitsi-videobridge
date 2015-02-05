@@ -338,10 +338,13 @@ public class InfluxDBLoggingHandler
         {
             for (int i = 0; i < pointCount; i++)
             {
+                if (!(values[i] instanceof Object[]))
+                    continue;
+
                 JSONArray point = new JSONArray();
                 if (useLocalTime)
                     point.add(now);
-                Collections.addAll(point, values[i]);
+                Collections.addAll(point, (Object[]) values[i]);
                 points.add(point);
             }
         }
@@ -349,8 +352,7 @@ public class InfluxDBLoggingHandler
         {
             JSONArray point = new JSONArray();
             if (useLocalTime)
-                point.add(System.currentTimeMillis());
-            // Make sure points.length>0
+                point.add(now);
             Collections.addAll(point, values);
             points.add(point);
         }
