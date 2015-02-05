@@ -33,9 +33,12 @@ public class Activator implements BundleActivator
                         = ServiceUtils2.getServices(bundleContext,
                         EventHandler.class);
 
-                    for (EventHandler eventHandler : eventHandlers)
+                    if (eventHandlers != null && !eventHandlers.isEmpty())
                     {
-                        eventHandler.handleEvent(event);
+                        for (EventHandler eventHandler : eventHandlers)
+                        {
+                            eventHandler.handleEvent(event);
+                        }
                     }
                 }
             }, null);
