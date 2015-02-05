@@ -264,7 +264,7 @@ public class EventFactory
         IceProcessingState newState)
     {
         Dictionary properties = new Hashtable(3);
-        properties.put("source", transportManager);
+        properties.put(EVENT_SOURCE, transportManager);
         properties.put("oldState", oldState);
         properties.put("newState", newState);
 
