@@ -22,7 +22,7 @@ import java.util.*;
 public class MetricLoggingActivator
     implements BundleActivator
 {
-    private ServiceRegistration<MetricLoggingHandler> serviceRegistration;
+    private ServiceRegistration<EventHandler> serviceRegistration;
 
     @Override
     public void start(BundleContext bundleContext)
