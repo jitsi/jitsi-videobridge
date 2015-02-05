@@ -318,19 +318,28 @@ public class Videobridge
     }
 
     /**
-     * Gets the number of <tt>Channel</tt>s in this <tt>Videobridge</tt> (across
-     * all <tt>Conference</tt>s and <tt>Content</tt>s).
+     * Gets the number of active <tt>Channel</tt>s in this <tt>Videobridge</tt>
+     * (across all active <tt>Conference</tt>s and active <tt>Content</tt>s).
      *
-     * @return the number of <tt>Channel</tt>s in this <tt>Videobridge</tt>
+     * @return the number of active <tt>Channel</tt>s in this
+     * <tt>Videobridge</tt>
      */
-    int getChannelCount()
+    public int getChannelCount()
     {
         int channelCount = 0;
 
         for (Conference conference : getConferences())
         {
-            for (Content contents : conference.getContents())
-                channelCount += contents.getChannelCount();
+            if (conference != null && !conference.isExpired())
+            {
+                for (Content content : conference.getContents())
+                {
+                    if (content != null && !content.isExpired())
+                    {
+                        channelCount += content.getChannelCount();
+                    }
+                }
+            }
         }
         return channelCount;
     }
@@ -397,16 +406,29 @@ public class Videobridge
     }
 
     /**
-     * Gets the number of <tt>Conference</tt>s of this <tt>Videobridge</tt>.
+     * Gets the number of <tt>Conference</tt>s of this <tt>Videobridge</tt> that
+     * are not expired.
      *
      * @return the number of <tt>Conference</tt>s of this <tt>Videobridge</tt>
+     * that are not expired.
      */
     public int getConferenceCount()
     {
-        synchronized (conferences)
+        int sz = 0;
+
+        Conference[] cs = getConferences();
+        if (cs != null && cs.length != 0)
         {
-            return conferences.size();
+            for (Conference c : cs)
+            {
+                if (c != null && !c.isExpired())
+                {
+                    sz++;
+                }
+            }
         }
+
+        return sz;
     }
 
     /**

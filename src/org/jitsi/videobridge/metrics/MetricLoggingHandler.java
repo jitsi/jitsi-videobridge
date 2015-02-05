@@ -261,21 +261,45 @@ public class MetricLoggingHandler
             return;
         }
 
-        if (EventFactory.CHANNEL_CREATED_TOPIC.equals(event.getTopic()))
+        if (EventFactory.CHANNEL_CREATED_TOPIC.equals(event.getTopic())
+            || EventFactory.CHANNEL_EXPIRED_TOPIC.equals(event.getTopic()))
         {
             Channel channel
                 = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
 
-            int channelCount = getChannelCount(channel);
-            publishNumericMetric(METRIC_CHANNELS, channelCount);
-        }
-        else if (EventFactory.CHANNEL_EXPIRED_TOPIC.equals(event.getTopic()))
-        {
-            Channel channel
-                = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
+            if (channel == null)
+            {
+                logger.debug("Could not log channel expired event because " +
+                    "the channel is null.");
+                return;
+            }
 
-            int channelCount = getChannelCount(channel);
-            publishNumericMetric(METRIC_CHANNELS, channelCount);
+            Content content = channel.getContent();
+            if (content == null)
+            {
+                logger.debug("Could not log channel expired event because " +
+                    "the content is null.");
+                return;
+            }
+
+            Conference conference = content.getConference();
+            if (conference == null)
+            {
+                logger.debug("Could not log channel expired event because " +
+                    "the conference is null.");
+                return;
+            }
+
+            Videobridge videobridge = conference.getVideobridge();
+            if (videobridge == null)
+            {
+                logger.debug("Could not log channel expired event because " +
+                    "the videobridge is null.");
+                return;
+            }
+
+            publishNumericMetric(
+                METRIC_CHANNELS, videobridge.getChannelCount());
         }
         else if (
             EventFactory.CONFERENCE_CREATED_TOPIC.equals(event.getTopic()))
@@ -283,19 +307,16 @@ public class MetricLoggingHandler
             Conference conference
                 = (Conference) event.getProperty(EventFactory.EVENT_SOURCE);
 
-            int sz;
-            try
-            {
-                sz = getConferenceCount(conference);
-            }
-            catch (Exception e)
+            Videobridge videobridge = conference.getVideobridge();
+            if (videobridge == null)
             {
                 logger.debug("Could not log conference expired event because " +
-                    "the conference is null.");
+                    "the videobridge is null.");
                 return;
             }
 
-            publishNumericMetric(METRIC_CONFERENCES, sz);
+            publishNumericMetric(
+                METRIC_CONFERENCES, videobridge.getConferenceCount());
 
             startMeasuredTransaction(METRIC_CONFERENCELENGTH,
                 conference.getID());
@@ -306,19 +327,16 @@ public class MetricLoggingHandler
             Conference conference
                 = (Conference) event.getProperty(EventFactory.EVENT_SOURCE);
 
-            int sz;
-            try
-            {
-                sz =getConferenceCount(conference);
-            }
-            catch (Exception e)
+            Videobridge videobridge = conference.getVideobridge();
+            if (videobridge == null)
             {
                 logger.debug("Could not log conference expired event because " +
-                    "the conference is null.");
+                    "the videobridge is null.");
                 return;
             }
 
-            publishNumericMetric(METRIC_CONFERENCES, sz);
+            publishNumericMetric(
+                METRIC_CONFERENCES, videobridge.getConferenceCount());
 
             endMeasuredTransaction(METRIC_CONFERENCELENGTH, conference.getID());
         }
@@ -331,123 +349,5 @@ public class MetricLoggingHandler
                 rtpChannel.getClass().getName() + METRIC_CHANNELSTART_POSTFIX,
                 rtpChannel.getStreamTarget().getDataAddress().getHostAddress());
         }
-    }
-
-    /**
-     * Helper method that gets the !expired conference count.
-     * @param conference
-     * @return
-     */
-    private int getConferenceCount(Conference conference)
-    {
-        if (conference == null)
-        {
-            throw new IllegalArgumentException("conference");
-        }
-
-        Videobridge videobridge = conference.getVideobridge();
-        if (videobridge == null)
-        {
-            throw new NullPointerException("videobridge");
-        }
-
-        // XXX(gp) This method is called after the conference expired field has
-        // been set to true but *before* the conference has been removed from
-        // the conference list of the videobridge object.
-        //
-        // In the following loop we accurately calculate the active conference
-        // count by checking whether or not the conference expired flag has been
-        // set.
-
-        int sz = 0;
-
-        Conference[] conferences = videobridge.getConferences();
-        if (conferences != null && conferences.length != 0)
-        {
-            for (Conference c : conferences)
-            {
-                if (c != null && !c.isExpired())
-                {
-                    sz++;
-                }
-            }
-        }
-
-        return sz;
-    }
-
-    /**
-     * Helper method that gets the !expired channel count.
-     * @param channel
-     * @return
-     */
-    private int getChannelCount(Channel channel)
-    {
-        int channelCount = 0;
-        if (channel == null)
-        {
-            logger.debug("Could not log channel expired event because " +
-                "the channel is null.");
-            return channelCount;
-        }
-
-        Content content = channel.getContent();
-        if (content == null)
-        {
-            logger.debug("Could not log channel expired event because the " +
-                "content is null.");
-            return channelCount;
-        }
-
-        Conference conference = content.getConference();
-        if (conference == null)
-        {
-            logger.debug("Could not log channel expired event because the " +
-                "conference is null.");
-            return channelCount;
-        }
-
-        Videobridge videobridge = conference.getVideobridge();
-        if (videobridge == null)
-        {
-            logger.debug("Could not log channel expired event because the " +
-                "videobridge is null.");
-            return channelCount;
-        }
-
-        // XXX(gp) This method is called after the conference expired field has
-        // been set to true but *before* the conference has been removed from
-        // the conference list of the videobridge object.
-        //
-        // In the following loop we accurately calculate the active conference
-        // count by checking whether or not the conference expired flag has been
-        // set.
-
-        for (Conference c : videobridge.getConferences())
-        {
-            if (c == null || c.isExpired())
-            {
-                continue;
-            }
-
-            for (Content cc : conference.getContents())
-            {
-                if (cc == null || cc.isExpired())
-                {
-                    continue;
-                }
-
-                for (Channel ccc : cc.getChannels())
-                {
-                    if (ccc == null || ccc.isExpired())
-                    {
-                        continue;
-                    }
-
-                    channelCount++;
-                }
-            }
-        }
-        return channelCount;
     }
 }

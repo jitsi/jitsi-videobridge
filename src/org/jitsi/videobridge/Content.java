@@ -581,16 +581,28 @@ public class Content
     }
 
     /**
-     * Gets the number of <tt>Channel</tt>s of this <tt>Content</tt>.
+     * Gets the number of <tt>Channel</tt>s of this <tt>Content</tt> that are
+     * not expired.
      *
-     * @return the number of <tt>Channel</tt>s of this <tt>Content</tt>
+     * @return the number of <tt>Channel</tt>s of this <tt>Content</tt> that are
+     * not expired.
      */
     public int getChannelCount()
     {
-        synchronized (channels)
+        int sz = 0;
+        Channel[] cs = getChannels();
+        if (cs != null && cs.length != 0)
         {
-            return channels.size();
+            for (int i = 0; i < cs.length; i++)
+            {
+                Channel c = cs[i];
+                if (c != null && !c.isExpired())
+                {
+                    sz++;
+                }
+            }
         }
+        return sz;
     }
 
     /**
