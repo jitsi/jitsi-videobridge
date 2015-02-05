@@ -67,9 +67,9 @@ public class InfluxDBLoggingHandler
         };
 
     /**
-     * The names of the columns of a "channel expired" event.
+     * The names of the columns of a "rtp channel expired" event.
      */
-    private static final String[] CHANNEL_EXPIRED_COLUMNS
+    private static final String[] RTP_CHANNEL_EXPIRED_COLUMNS
         = new String[]
         {
             "channel_id",
@@ -92,6 +92,17 @@ public class InfluxDBLoggingHandler
 
             "nb_packets",
             "nb_packets_lost",
+        };
+
+    /**
+     * The names of the columns of a "channel expired" event.
+     */
+    private static final String[] CHANNEL_EXPIRED_COLUMNS
+        = new String[]
+        {
+            "channel_id",
+            "content_name",
+            "conference_id",
         };
 
     /**
@@ -837,10 +848,9 @@ public class InfluxDBLoggingHandler
             }
         }
 
-        Object[] values;
         if (stats != null)
         {
-            values = new Object[] {
+            Object[] values = new Object[] {
                 channel.getID(),
                 content.getName(),
                 conference.getID(),
@@ -862,18 +872,21 @@ public class InfluxDBLoggingHandler
                 stats.getNbPackets(),
                 stats.getNbPacketsLost(),
             };
+
+            logEvent(new InfluxDBEvent(
+                "channel_expired", RTP_CHANNEL_EXPIRED_COLUMNS, values));
         }
         else
         {
-            values = new Object[] {
+            Object[] values = new Object[] {
                 channel.getID(),
                 content.getName(),
-                conference.getID()
+                conference.getID(),
             };
-        }
 
-        logEvent(new InfluxDBEvent(
-            "channel_expired", CHANNEL_EXPIRED_COLUMNS, values));
+            logEvent(new InfluxDBEvent(
+                "channel_expired", CHANNEL_EXPIRED_COLUMNS, values));
+        }
     }
 
     @Override
