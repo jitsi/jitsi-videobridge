@@ -26,7 +26,7 @@ import java.util.concurrent.*;
  * @author Boris Grozev
  * @author George Politis
  */
-public class InfluxDBLoggingHandler
+public class LoggingHandler
         implements EventHandler
 {
     /**
@@ -51,7 +51,7 @@ public class InfluxDBLoggingHandler
      * The names of the columns of a "content expired" event.
      */
     private static final String[] CONTENT_EXPIRED_COLUMNS
-        = CONTENT_CREATED_COLUMNS;
+        = new String[] {"name", "conference_id"};
 
     /**
      * The names of the columns of a "channel created" event.
@@ -133,7 +133,12 @@ public class InfluxDBLoggingHandler
      * The names of the columns of a "transport manager channel removed" event.
      */
     private static final String[] TRANSPORT_CHANNEL_REMOVED_COLUMNS
-        = TRANSPORT_CHANNEL_ADDED_COLUMNS;
+        = new String[]
+        {
+            "hash_code",
+            "conference_id",
+            "channel_id",
+        };
 
     /**
      * The names of the columns of a "transport manager connected" event.
@@ -166,25 +171,6 @@ public class InfluxDBLoggingHandler
         {
             "conference_id",
             "endpoint_id",
-        };
-
-    /**
-     * The names of the columns of a "focus created" event.
-     */
-    private static final String[] FOCUS_CREATED_COLUMNS
-        = new String[]
-        {
-            "room_jid"
-        };
-
-    /**
-     * The names of the columns of a "conference room" event.
-     */
-    private static final String[] CONFERENCE_ROOM_COLUMNS
-        = new String[]
-        {
-            "conference_id",
-            "room_jid"
         };
 
     /**
@@ -234,11 +220,11 @@ public class InfluxDBLoggingHandler
         = "org.jitsi.videobridge.log.INFLUX_PASS";
 
     /**
-     * The <tt>Logger</tt> used by the <tt>InfluxDBLoggingService</tt> class
+     * The <tt>Logger</tt> used by the <tt>LoggingHandler</tt> class
      * and its instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(InfluxDBLoggingHandler.class);
+        = Logger.getLogger(LoggingHandler.class);
 
     /**
      * The <tt>Executor</tt> which is to perform the task of sending data to
@@ -246,7 +232,7 @@ public class InfluxDBLoggingHandler
      */
     private final Executor executor
         = ExecutorUtils
-        .newCachedThreadPool(true, InfluxDBLoggingHandler.class.getName());
+            .newCachedThreadPool(true, LoggingHandler.class.getName());
 
     /**
      * The <tt>URL</tt> to be used to POST to <tt>InfluxDB</tt>. Besides the
@@ -256,13 +242,13 @@ public class InfluxDBLoggingHandler
     private final URL url;
 
     /**
-     * Initializes a new <tt>InfluxDBLoggingService</tt> instance, by reading
+     * Initializes a new <tt>LoggingHandler</tt> instance, by reading
      * its configuration from <tt>cfg</tt>.
      * @param cfg the <tt>ConfigurationService</tt> to use.
      *
      * @throws Exception if initialization fails
      */
-    InfluxDBLoggingHandler(ConfigurationService cfg)
+    public LoggingHandler(ConfigurationService cfg)
         throws Exception
     {
         if (cfg == null)
@@ -295,14 +281,14 @@ public class InfluxDBLoggingHandler
     }
 
     /**
-     * Logs an <tt>Event</tt> to an <tt>InfluxDB</tt> database. This method
-     * returns without blocking, the blocking operations are performed by a
-     * thread from {@link #executor}.
+     * Logs an <tt>InfluxDBEvent</tt> to an <tt>InfluxDB</tt> database. This
+     * method returns without blocking, the blocking operations are performed
+     * by a thread from {@link #executor}.
      *
      * @param e the <tt>Event</tt> to log.
      */
     @SuppressWarnings("unchecked")
-    private void logEvent(InfluxDBEvent e)
+    protected void logEvent(InfluxDBEvent e)
     {
         // The following is a sample JSON message in the format used by InfluxDB
         //  [
@@ -900,74 +886,69 @@ public class InfluxDBLoggingHandler
             return;
         }
 
-        if (EventFactory.CHANNEL_CREATED_TOPIC.equals(event.getTopic()))
+        String topic = event.getTopic();
+        if (EventFactory.CHANNEL_CREATED_TOPIC.equals(topic))
         {
             Channel channel
                 = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
             channelCreated(channel);
         }
-        else if (EventFactory.CHANNEL_EXPIRED_TOPIC.equals(event.getTopic()))
+        else if (EventFactory.CHANNEL_EXPIRED_TOPIC.equals(topic))
         {
             Channel channel
                 = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
             channelExpired(channel);
         }
         else if (
-            EventFactory.CONFERENCE_CREATED_TOPIC.equals(event.getTopic()))
+            EventFactory.CONFERENCE_CREATED_TOPIC.equals(topic))
         {
             Conference conference
                 = (Conference) event.getProperty(EventFactory.EVENT_SOURCE);
             conferenceCreated(conference);
         }
-        else if (
-            EventFactory.CONFERENCE_EXPIRED_TOPIC.equals(event.getTopic()))
+        else if (EventFactory.CONFERENCE_EXPIRED_TOPIC.equals(topic))
         {
             Conference conference
                 = (Conference) event.getProperty(EventFactory.EVENT_SOURCE);
             conferenceExpired(conference);
         }
-        else if (EventFactory.CONTENT_CREATED_TOPIC.equals(event.getTopic()))
+        else if (EventFactory.CONTENT_CREATED_TOPIC.equals(topic))
         {
             Content content
                 = (Content) event.getProperty(EventFactory.EVENT_SOURCE);
             contentCreated(content);
         }
-        else if (EventFactory.CONTENT_EXPIRED_TOPIC.equals(event.getTopic()))
+        else if (EventFactory.CONTENT_EXPIRED_TOPIC.equals(topic))
         {
             Content content
                 = (Content) event.getProperty(EventFactory.EVENT_SOURCE);
             contentExpired(content);
         }
-        else if (EventFactory.ENDPOINT_CREATED_TOPIC.equals(event.getTopic()))
+        else if (EventFactory.ENDPOINT_CREATED_TOPIC.equals(topic))
         {
             Endpoint endpoint
                 = (Endpoint) event.getProperty(EventFactory.EVENT_SOURCE);
             endpointCreated(endpoint);
         }
-        else if (EventFactory.ENDPOINT_DISPLAY_NAME_CHANGED_TOPIC
-            .equals(event.getTopic()))
+        else if (EventFactory.ENDPOINT_DISPLAY_NAME_CHANGED_TOPIC.equals(topic))
         {
             Endpoint endpoint
                 = (Endpoint) event.getProperty(EventFactory.EVENT_SOURCE);
             endpointDisplayNameChanged(endpoint);
-
         }
-        else if (EventFactory.TRANSPORT_CHANNEL_ADDED_TOPIC
-            .equals(event.getTopic()))
+        else if (EventFactory.TRANSPORT_CHANNEL_ADDED_TOPIC.equals(topic))
         {
             Channel channel
                 = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
             transportChannelAdded(channel);
         }
-        else if (EventFactory.TRANSPORT_CHANNEL_REMOVED_TOPIC
-            .equals(event.getTopic()))
+        else if (EventFactory.TRANSPORT_CHANNEL_REMOVED_TOPIC.equals(topic))
         {
             Channel channel
                 = (Channel) event.getProperty(EventFactory.EVENT_SOURCE);
             transportChannelRemoved(channel);
         }
-        else if (EventFactory.TRANSPORT_CONNECTED_TOPIC
-            .equals(event.getTopic()))
+        else if (EventFactory.TRANSPORT_CONNECTED_TOPIC.equals(topic))
         {
             IceUdpTransportManager transportManager
                 = (IceUdpTransportManager) event.getProperty(
@@ -975,15 +956,14 @@ public class InfluxDBLoggingHandler
 
             transportConnected(transportManager);
         }
-        else if (EventFactory.TRANSPORT_CREATED_TOPIC.equals(event.getTopic()))
+        else if (EventFactory.TRANSPORT_CREATED_TOPIC.equals(topic))
         {
             IceUdpTransportManager transportManager
                 = (IceUdpTransportManager) event.getProperty(
                 EventFactory.EVENT_SOURCE);
             transportCreated(transportManager);
         }
-        else if (EventFactory.TRANSPORT_STATE_CHANGED_TOPIC
-            .equals(event.getTopic()))
+        else if (EventFactory.TRANSPORT_STATE_CHANGED_TOPIC.equals(topic))
         {
             IceUdpTransportManager transportManager
                 = (IceUdpTransportManager) event.getProperty(

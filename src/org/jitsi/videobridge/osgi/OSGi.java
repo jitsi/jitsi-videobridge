@@ -72,7 +72,7 @@ public class OSGi
                 "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
             },
             {
-                "org/jitsi/videobridge/influxdb/InfluxDBLoggingActivator"
+                "org/jitsi/videobridge/influxdb/Activator"
             },
             {
                 "org/jitsi/videobridge/metrics/MetricLoggingActivator"

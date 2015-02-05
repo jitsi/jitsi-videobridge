@@ -85,16 +85,6 @@ public class EventFactory
     public static final String ENDPOINT_CREATED_TOPIC
         = "org/jitsi/videobridge/Endpoint/CREATED";
     /**
-     * The name of the topic of a "focus created" event.
-     */
-    public static final String FOCUS_CREATED_TOPIC
-        = "org/jitsi/jicofo/Focus/CREATED";
-    /**
-     * The name of the topic of a "conference room" event.
-     */
-    public static final String CONFERENCE_ROOM_TOPIC
-        = "org/jitsi/jicofo/Conference/Room/CREATED";
-    /**
      * The name of the topic of a "endpoint display name changed" event.
      */
     public static final String ENDPOINT_DISPLAY_NAME_CHANGED_TOPIC
@@ -305,7 +295,7 @@ public class EventFactory
             makeProperties(rtpChannel));
     }
 
-    private static Dictionary makeProperties(Object source)
+    protected static Dictionary makeProperties(Object source)
     {
         Dictionary properties = new Hashtable(1);
         properties.put(EVENT_SOURCE, source);
