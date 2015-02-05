@@ -8,6 +8,7 @@ package org.jitsi.videobridge.influxdb;
 
 import org.ice4j.ice.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.eventadmin.*;
@@ -69,7 +70,29 @@ public class InfluxDBLoggingHandler
      * The names of the columns of a "channel expired" event.
      */
     private static final String[] CHANNEL_EXPIRED_COLUMNS
-        = CHANNEL_CREATED_COLUMNS;
+        = new String[]
+        {
+            "channel_id",
+            "content_name",
+            "conference_id",
+
+            "local_ip",
+            "local_port",
+            "remote_ip",
+            "remote_port",
+
+            "nb_received_bytes",
+            "nb_sent_bytes",
+            "nb_discarded",
+            "nb_discarded_full",
+            "nb_discarded_late",
+            "nb_discarded_reset",
+            "nb_discarded_shrink",
+            "nb_fec",
+
+            "nb_packets",
+            "nb_packets_lost",
+        };
 
     /**
      * The names of the columns of a "transport created" event.
@@ -803,13 +826,54 @@ public class InfluxDBLoggingHandler
             return;
         }
 
-        logEvent(new InfluxDBEvent("channel_expired",
-            CHANNEL_EXPIRED_COLUMNS,
-            new Object[] {
+        MediaStreamStats stats = null;
+        if (channel instanceof RtpChannel)
+        {
+            RtpChannel rtpChannel = (RtpChannel) channel;
+            MediaStream stream = rtpChannel.getStream();
+            if (stream != null)
+            {
+                stats = stream.getMediaStreamStats();
+            }
+        }
+
+        Object[] values;
+        if (stats != null)
+        {
+            values = new Object[] {
+                channel.getID(),
+                content.getName(),
+                conference.getID(),
+
+                stats.getLocalIPAddress(),
+                stats.getLocalPort(),
+                stats.getRemoteIPAddress(),
+                stats.getRemotePort(),
+
+                stats.getNbReceivedBytes(),
+                stats.getNbSentBytes(),
+                stats.getNbDiscarded(),
+                stats.getNbDiscardedFull(),
+                stats.getNbDiscardedLate(),
+                stats.getNbDiscardedReset(),
+                stats.getNbDiscardedShrink(),
+                stats.getNbFec(),
+
+                stats.getNbPackets(),
+                stats.getNbPacketsLost(),
+            };
+        }
+        else
+        {
+            values = new Object[] {
                 channel.getID(),
                 content.getName(),
                 conference.getID()
-            }));
+            };
+        }
+
+        logEvent(new InfluxDBEvent(
+            "channel_expired", CHANNEL_EXPIRED_COLUMNS, values));
     }
 
     @Override
