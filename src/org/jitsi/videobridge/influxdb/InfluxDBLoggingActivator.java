@@ -22,11 +22,6 @@ import java.util.*;
 public class InfluxDBLoggingActivator
         implements BundleActivator
 {
-    /**
-     * The <tt>LoggingService</tt> instance in use.
-     */
-    private EventHandler eventHandler;
-
     private ServiceRegistration<EventHandler> serviceRegistration;
 
     /**
@@ -39,24 +34,17 @@ public class InfluxDBLoggingActivator
         throws Exception
     {
         ConfigurationService cfg =
-            ServiceUtils2.getService(
-                    bundleContext,
-                    ConfigurationService.class);
+            ServiceUtils2.getService(bundleContext, ConfigurationService.class);
 
         if (cfg.getBoolean(InfluxDBLoggingHandler.ENABLED_PNAME, false))
         {
-            String[] topics = new String[] {
-                "org/jitsi/*"
-            };
+            String[] topics = new String[] { "org/jitsi/*" };
 
             Dictionary props = new Hashtable();
             props.put(EventConstants.EVENT_TOPIC, topics);
 
-            eventHandler = new InfluxDBLoggingHandler(cfg);
-
-            serviceRegistration
-                = bundleContext.registerService(
-                EventHandler.class, eventHandler, props);
+            serviceRegistration = bundleContext.registerService(
+                EventHandler.class, new InfluxDBLoggingHandler(cfg), props);
         }
     }
 

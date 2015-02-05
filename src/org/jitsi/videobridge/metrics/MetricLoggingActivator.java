@@ -17,34 +17,25 @@ import java.util.*;
  * OSGi activator for the <tt>MetricService</tt>
  *
  * @author zbettenbuk
+ * @author George Politis
  */
 public class MetricLoggingActivator
     implements BundleActivator
 {
-
-    private EventHandler eventHandler;
-
     private ServiceRegistration<MetricLoggingHandler> serviceRegistration;
 
     @Override
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        ConfigurationService config
-            = ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-        this.eventHandler = new MetricLoggingHandler(config);
-
-        String[] topics = new String[] {
-            "org/jitsi/*"
-        };
+        ConfigurationService config = ServiceUtils2.getService(
+            bundleContext, ConfigurationService.class);
 
         Dictionary props = new Hashtable();
-        props.put(EventConstants.EVENT_TOPIC, topics);
+        props.put(EventConstants.EVENT_TOPIC, new String[] { "org/jitsi/*" });
 
-        this.serviceRegistration
-            = bundleContext.registerService(EventHandler.class,
-                                            this.eventHandler,
-                                            props);
+        this.serviceRegistration = bundleContext.registerService(
+            EventHandler.class, new MetricLoggingHandler(config), props);
     }
 
     @Override
