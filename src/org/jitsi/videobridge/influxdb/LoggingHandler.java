@@ -76,22 +76,22 @@ public class LoggingHandler
             "content_name",
             "conference_id",
 
-            "local_ip",
-            "local_port",
-            "remote_ip",
-            "remote_port",
+            "stats.local_ip",
+            "stats.local_port",
+            "stats.remote_ip",
+            "stats.remote_port",
 
-            "nb_received_bytes",
-            "nb_sent_bytes",
-            "nb_discarded",
-            "nb_discarded_full",
-            "nb_discarded_late",
-            "nb_discarded_reset",
-            "nb_discarded_shrink",
-            "nb_fec",
+            "stats.nb_received_bytes",
+            "stats.nb_sent_bytes",
+            "stats.nb_discarded",
+            "stats.nb_discarded_full",
+            "stats.nb_discarded_late",
+            "stats.nb_discarded_reset",
+            "stats.nb_discarded_shrink",
+            "stats.nb_fec",
 
-            "nb_packets",
-            "nb_packets_lost",
+            "stats.nb_packets",
+            "stats.nb_packets_lost",
         };
 
     /**
