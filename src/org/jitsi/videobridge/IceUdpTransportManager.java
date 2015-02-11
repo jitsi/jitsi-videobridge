@@ -1784,21 +1784,10 @@ public class IceUdpTransportManager
     {
         iceConnected = true;
 
-        EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
         if (eventAdmin != null)
-        {
-            StringBuilder s = new StringBuilder();
-            for (Component component : iceStream.getComponents())
-            {
-                CandidatePair pair = component.getSelectedPair();
-                s.append(pair.getLocalCandidate().getTransportAddress())
-                    .append(" -> ")
-                    .append(pair.getRemoteCandidate().getTransportAddress())
-                    .append("; ");
-            }
             eventAdmin.sendEvent(EventFactory.transportConnected(this));
-        }
+
         for (Channel channel : getChannels())
         {
             channel.transportConnected();
