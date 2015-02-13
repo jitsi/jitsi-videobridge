@@ -6,10 +6,13 @@
  */
 package org.jitsi.videobridge.pubsub;
 
+import org.jivesoftware.smack.packet.*;
+
 /**
  * Interface for listener of PubSub responses.
  *
  * @author Hristo Terezov
+ * @author Lyubomir Marinov
  */
 public interface PubSubResponseListener
 {
@@ -30,7 +33,9 @@ public interface PubSubResponseListener
 
     /**
      * The method is called when response for publish is received
-     * @param response the type of the response.
+     *
+     * @param type the type of the response.
+     * @param iq the response <tt>IQ</tt>
      */
-    public void onPublishResponse(Response response);
+    public void onPublishResponse(Response type, IQ iq);
 }

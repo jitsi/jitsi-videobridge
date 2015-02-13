@@ -10,44 +10,49 @@ import java.util.*;
 
 import net.java.sip.communicator.util.*;
 
-import org.jitsi.videobridge.pubsub.PubSubResponseListener.Response;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smack.packet.IQ.Type;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.packet.*;
 import org.osgi.framework.*;
 
 /**
- * A class that implements some parts of PubSub (XEP-0060).
+ * Implements some parts of PubSub (XEP-0060: Publish-Subscribe) for the
+ * purposes of a publisher (e.g. statistics transport).
  *
  * @author Hristo Terezov
+ * @author Lyubomir Marinov
  */
 public class PubSubPublisher
 {
     /**
-     * Maps a service name (e.g. "pubsub.example.com") to the PubSubPublisher
-     * instance responsible for it.
+     * Maps a service name (e.g. &quot;pubsub.example.com&quot;) to the
+     * <tt>PubSubPublisher</tt> instance responsible for it.
      */
-    private static Map<String, PubSubPublisher> instances
+    private static final Map<String, PubSubPublisher> instances
         = new HashMap<String, PubSubPublisher>();
 
     /**
-     * Logger instance.
+     * The <tt>Logger</tt> used by the <tt>PubSubPublisher</tt> class and its
+     * instances to print debug information.
      */
-    private static Logger logger = Logger.getLogger(PubSubPublisher.class);
+    private static final Logger logger
+        = Logger.getLogger(PubSubPublisher.class);
 
     /**
      * The default timeout of the packets in milliseconds.
      */
-    private static int PACKET_TIMEOUT = 500;
+    private static final int PACKET_TIMEOUT = 500;
 
     /**
-     * Creates and returns <tt>PubSubPublisher</tt> instance for the given service
+     * Gets a <tt>PubSubPublisher</tt> instance for a specific service (name).
+     * If a <tt>PubSubPublisher</tt> instance for the specified
+     * <tt>serviceName</tt> does not exist yet, a new instance is initialized.
      *
      * @param serviceName the name of the service
-     * @return <tt>PubSubPublisher</tt> instance.
+     * @return the <tt>PubSubPublisher</tt> instance for the specified
+     * <tt>serviceName</tt>
      */
     public static PubSubPublisher getPubsubManager(String serviceName)
     {
@@ -66,7 +71,8 @@ public class PubSubPublisher
     }
 
     /**
-     * Handles received response IQ packet
+     * Handles received response IQ packet.
+     *
      * @param response the IQ packet.
      */
     public static void handleIQResponse(IQ response)
@@ -79,9 +85,7 @@ public class PubSubPublisher
 
             if (publisher != null)
             {
-                publisher.handleErrorResponse(
-                        response.getError(),
-                        response.getPacketID());
+                publisher.handleErrorResponse(response);
             }
         }
         else if (IQ.Type.RESULT.equals(type))
@@ -91,16 +95,17 @@ public class PubSubPublisher
             if (publisher != null)
             {
                 publisher.handleCreateNodeResponse(response);
-                publisher.handleConfigurationResponse(response);
+                publisher.handleConfigureResponse(response);
                 publisher.handlePublishResponse(response);
             }
         }
     }
 
     /**
-     * Releases the resources for the <tt>PubSubPublisher</tt> and removes it from
-     * the list of available instances.
-     * @param publisher the <tt>PubSubPublisher</tt> that will be released.
+     * Releases the resources for the <tt>PubSubPublisher</tt> and removes it
+     * from the list of available instances.
+     *
+     * @param publisher the <tt>PubSubPublisher</tt> release.
      */
     public static void releasePubsubManager(PubSubPublisher publisher)
     {
@@ -123,19 +128,19 @@ public class PubSubPublisher
      * Map with the requests for configuring a node.
      */
     private Map<String, String> pendingConfigureRequests
-        =  new HashMap<String, String>();
+        = new HashMap<String, String>();
 
     /**
      * Map with the requests for node creation.
      */
     private Map<String, String> pendingCreateRequests
-        =  new HashMap<String, String>();
+        = new HashMap<String, String>();
 
     /**
      * Map with the publish requests.
      */
     private Map<String, String> pendingPublishRequests
-        =  new HashMap<String, String>();
+        = new HashMap<String, String>();
 
     /**
      * The name of the PubSub service.
@@ -148,7 +153,8 @@ public class PubSubPublisher
     private Timer timeoutTimer = new Timer();
 
     /**
-     * Initializes a new <tt>PubSubPublisher</tt> instance for a specific service.
+     * Initializes a new <tt>PubSubPublisher</tt> instance for a specific
+     * service (name).
      *
      * @param serviceName the name of the service.
      */
@@ -158,31 +164,37 @@ public class PubSubPublisher
     }
 
     /**
-     * Adds <tt>PubSubResponseListener</tt> to the list of listeners.
-     * @param l the listener to be added.
+     * Adds a new <tt>PubSubResponseListener</tt> to the list of listeners.
+     *
+     * @param l the listener to add.
+     * @throws NullPointerException if <tt>l</tt> is <tt>null</tt>
      */
     public void addResponseListener(PubSubResponseListener l)
     {
-        if(!listeners.contains(l))
-        {
+        if (l == null)
+            throw new NullPointerException("l");
+        else if(!listeners.contains(l))
             listeners.add(l);
-        }
     }
 
     /**
-     * Configures PubSub node
+     * Configures PubSub node.
+     *
      * @param nodeName the name of the node
      */
     private void configureNode(String nodeName)
     {
         ConfigureForm cfg = new ConfigureForm(FormType.submit);
         PubSub pubsub = new PubSub();
-        pubsub.setTo(serviceName);
-        pubsub.setType(Type.SET);
+
         cfg.setAccessModel(AccessModel.open);
         cfg.setPersistentItems(false);
         cfg.setPublishModel(PublishModel.open);
+        pubsub.setTo(serviceName);
+        pubsub.setType(IQ.Type.SET);
+
         final String packetID = IQ.nextID();
+
         pubsub.setPacketID(packetID);
         pubsub.addExtension(new FormNode(FormNodeType.CONFIGURE_OWNER, cfg));
         try
@@ -192,27 +204,35 @@ public class PubSubPublisher
         catch (Exception e)
         {
             logger.error("Error sending configuration form.");
-            fireResponseCreateEvent(Response.SUCCESS);
+            fireResponseCreateEvent(PubSubResponseListener.Response.SUCCESS);
             return;
         }
         pendingConfigureRequests.put(packetID, nodeName);
-        timeoutTimer.schedule(new TimerTask()
-        {
-            @Override
-            public void run()
-            {
-                if(pendingConfigureRequests.containsKey(packetID))
+        timeoutTimer.schedule(
+                new TimerTask()
                 {
-                    pendingConfigureRequests.remove(packetID);
-                    logger.error("Configuration of the node failed.");
-                    fireResponseCreateEvent(Response.SUCCESS);
-                }
-            }
-        }, PACKET_TIMEOUT);
+                    @Override
+                    public void run()
+                    {
+                        String nodeName
+                            = pendingConfigureRequests.remove(packetID);
+
+                        if(nodeName != null)
+                        {
+                            logger.error(
+                                    "Configuration of the node failed: "
+                                        + nodeName);
+                            fireResponseCreateEvent(
+                                    PubSubResponseListener.Response.SUCCESS);
+                        }
+                    }
+                },
+                PACKET_TIMEOUT);
     }
 
     /**
      * Creates a PubSub node.
+     *
      * @param nodeName the name of the node.
      * @throws Exception if sending the request fails.
      */
@@ -220,10 +240,15 @@ public class PubSubPublisher
         throws Exception
     {
         PubSub request = new PubSub();
+
         request.setTo(serviceName);
-        request.setType(Type.SET);
+        request.setType(IQ.Type.SET);
+
         final String packetID = Packet.nextID();
+
         request.setPacketID(packetID);
+        request.addExtension(
+                new NodeExtension(PubSubElementType.CREATE, nodeName));
 
         pendingCreateRequests.put(packetID, nodeName);
         timeoutTimer.schedule(
@@ -237,157 +262,181 @@ public class PubSubPublisher
                 },
                 PACKET_TIMEOUT);
 
-        request.addExtension(
-                new NodeExtension(PubSubElementType.CREATE, nodeName));
-
         send(request);
     }
 
     /**
-     * Releases the resources for the <tt>PubSubPublisher</tt>.
+     * Releases the resources of this <tt>PubSubPublisher</tt> i.e. prepares it
+     * for garbage collection.
      */
     private void dispose()
     {
-        serviceName = null;
-        nodes.clear();
-        nodes = null;
-        pendingConfigureRequests.clear();
-        pendingConfigureRequests = null;
-        pendingCreateRequests.clear();
-        pendingCreateRequests = null;
-        pendingPublishRequests.clear();
-        pendingPublishRequests = null;
         timeoutTimer.cancel();
         timeoutTimer = null;
-        listeners.clear();
+
         listeners = null;
+        nodes = null;
+        pendingConfigureRequests = null;
+        pendingCreateRequests = null;
+        pendingPublishRequests = null;
+        serviceName = null;
     }
 
     /**
      * Fires event about the response of creating a node.
+     *
      * @param type the type of the response
      */
-    private void fireResponseCreateEvent(Response type)
+    private void fireResponseCreateEvent(PubSubResponseListener.Response type)
     {
         for(PubSubResponseListener l : listeners)
-        {
             l.onCreateNodeResponse(type);
-        }
     }
 
     /**
      * Fires event about the response of publishing an item to a node.
+     *
      * @param type the type of the response
      */
-    private void fireResponsePublishEvent(Response type)
+    private void fireResponsePublishEvent(
+            PubSubResponseListener.Response type,
+            IQ iq)
     {
         for(PubSubResponseListener l : listeners)
-        {
-            l.onPublishResponse(type);
-        }
+            l.onPublishResponse(type, iq);
     }
 
     /**
      * Handles PubSub configuration responses.
+     *
      * @param response the configuration response.
      */
-    private void handleConfigurationResponse(IQ response)
+    private void handleConfigureResponse(IQ response)
     {
         if(pendingConfigureRequests.remove(response.getPacketID()) != null)
-            fireResponseCreateEvent(Response.SUCCESS);
+            fireResponseCreateEvent(PubSubResponseListener.Response.SUCCESS);
     }
 
     /**
      * Handles responses about PubSub node creation.
+     *
      * @param response the response
      */
     private void handleCreateNodeResponse(IQ response)
     {
         String packetID = response.getPacketID();
-        String nodeName = pendingCreateRequests.get(packetID);
-        if (nodeName == null)
-            return;
-        nodes.add(nodeName);
-        pendingCreateRequests.remove(packetID);
-        configureNode(nodeName);
+        String nodeName = pendingCreateRequests.remove(packetID);
+
+        if (nodeName != null)
+        {
+            nodes.add(nodeName);
+            configureNode(nodeName);
+        }
     }
 
     /**
      * Handles all error responses.
-     * @param error the error object.
-     * @param packetID the id of the received packet.
+     *
+     * @param response the response
      */
-    private void handleErrorResponse(XMPPError error, String packetID)
+    private void handleErrorResponse(IQ response)
     {
-        if(error != null
-            && ((XMPPError.Type.CANCEL.equals(error.getType())
-                 && (XMPPError.Condition.conflict.toString()
-                     .equals(error.getCondition())
-                     || XMPPError.Condition.forbidden.toString()
-                        .equals(error.getCondition())))
-                /* prosody bug, for backward compat */
-                || (XMPPError.Type.AUTH.equals(error.getType())
-                    && (XMPPError.Condition.forbidden.toString()
-                        .equals(error.getCondition())))
-               ))
+        XMPPError err = response.getError();
+        String packetID = response.getPacketID();
+
+        if(err != null)
         {
-            if(XMPPError.Condition.forbidden.toString()
-               .equals(error.getCondition()))
+            XMPPError.Type errType = err.getType();
+            String errCondition = err.getCondition();
+
+            if((XMPPError.Type.CANCEL.equals(errType)
+                        && (XMPPError.Condition.conflict.toString().equals(
+                                errCondition)
+                            || XMPPError.Condition.forbidden.toString().equals(
+                                    errCondition)))
+                    /* prosody bug, for backward compatibility */
+                    || (XMPPError.Type.AUTH.equals(errType)
+                        && XMPPError.Condition.forbidden.toString().equals(
+                                errCondition)))
             {
-                logger.warn("Creating node failed with <forbidden/>"
-                             + " error. Continuing anyway.");
+                if (XMPPError.Condition.forbidden.toString().equals(
+                        errCondition))
+                {
+                    logger.warn(
+                            "Creating node failed with <forbidden/> error."
+                                + " Continuing anyway.");
+                }
+
+                String nodeName = pendingCreateRequests.remove(packetID);
+
+                if (nodeName != null)
+                {
+                    // The node exists already (<conflict/>) or we are not
+                    // allowed (forbidden/>).
+                    nodes.add(nodeName);
+                    fireResponseCreateEvent(
+                            PubSubResponseListener.Response.SUCCESS);
+                    return;
+                }
             }
-            String nodeName = pendingCreateRequests.get(packetID);
-            if(nodeName != null)
-            {
-                //the node already exists (<conflict/>)
-                //or we are not allowed (forbidden/>)
-                nodes.add(nodeName);
-                pendingCreateRequests.remove(packetID);
-                fireResponseCreateEvent(Response.SUCCESS);
-                return;
-            }
-        }
-        String errorMessage = "Error received when ";
-        if(pendingCreateRequests.remove(packetID) != null)
-        {
-            fireResponseCreateEvent(Response.FAIL);
-            errorMessage += " creating the node.";
-        }
-        else if(pendingConfigureRequests.remove(packetID) != null)
-        {
-            errorMessage += " configuring the node.";
-            fireResponseCreateEvent(Response.SUCCESS);
-        }
-        else if(pendingPublishRequests.remove(packetID) != null)
-        {
-            errorMessage +=  "pubshing to the node.";
-            fireResponsePublishEvent(Response.FAIL);
         }
 
-        if(error != null)
-            errorMessage += " Message: "
-                + error.getMessage() + ". Condition: " + error.getCondition()
-                + ". For packet with id: " + packetID + ". ";
+        String nodeName;
+        StringBuilder errMsg = new StringBuilder("Error received");
 
-        logger.error(errorMessage);
+        if((nodeName = pendingCreateRequests.remove(packetID)) != null)
+        {
+            fireResponseCreateEvent(PubSubResponseListener.Response.FAIL);
+            errMsg.append(" when creating the node: ");
+        }
+        else if((nodeName = pendingConfigureRequests.remove(packetID)) != null)
+        {
+            fireResponseCreateEvent(PubSubResponseListener.Response.SUCCESS);
+            errMsg.append(" when configuring the node: ");
+        }
+        else if((nodeName = pendingPublishRequests.remove(packetID)) != null)
+        {
+            fireResponsePublishEvent(
+                    PubSubResponseListener.Response.FAIL,
+                    response);
+            errMsg.append(" when publishing to the node: ");
+        }
+        else
+        {
+            nodeName = null;
+        }
+        if (nodeName != null)
+            errMsg.append(nodeName);
+        // Finish the sentence started with "Error received".
+        errMsg.append(".");
+        if(err != null)
+        {
+            errMsg.append(" Message: ").append(err.getMessage())
+                    .append(". Condition: ").append(err.getCondition())
+                    .append(". For packet with id: ").append(packetID)
+                    .append(".");
+        }
+        logger.error(errMsg);
     }
 
     /**
      * Handles PubSub publish responses.
+     *
      * @param response the response
      */
-    private void handlePublishResponse(Packet response)
+    private void handlePublishResponse(IQ response)
     {
-        if (pendingPublishRequests.containsKey(response.getPacketID()))
+        if (pendingPublishRequests.remove(response.getPacketID()) != null)
         {
-            pendingPublishRequests.remove(response.getPacketID());
-            fireResponsePublishEvent(Response.SUCCESS);
+            fireResponsePublishEvent(
+                    PubSubResponseListener.Response.SUCCESS,
+                    response);
         }
     }
 
     /**
      * Publishes items to a given PubSub node.
+     *
      * @param nodeName the PubSub node.
      * @param ext the item to be send.
      * @throws Exception if fail to send the item or the node is not created.
@@ -397,11 +446,16 @@ public class PubSubPublisher
     {
         if(!nodes.contains(nodeName))
             throw new IllegalArgumentException("The node doesn't exists");
+
         PubSub packet = new PubSub();
+
         packet.setTo(serviceName);
-        packet.setType(Type.SET);
+        packet.setType(IQ.Type.SET);
+
         final String packetID = IQ.nextID();
+
         packet.setPacketID(packetID);
+
         PayloadItem<PacketExtension> item
             = new PayloadItem<PacketExtension>(ext);
 
@@ -414,10 +468,13 @@ public class PubSubPublisher
                     @Override
                     public void run()
                     {
-                        if(pendingPublishRequests.containsKey(packetID))
+                        String nodeName
+                            = pendingPublishRequests.remove(packetID);
+
+                        if(nodeName != null)
                         {
-                            pendingPublishRequests.remove(packetID);
-                            logger.error("Publish request timeout.");
+                            logger.error(
+                                    "Publish request timeout: " + nodeName);
                         }
                     }
                 },
@@ -426,7 +483,8 @@ public class PubSubPublisher
     }
 
     /**
-     * Removes <tt>PubSubResponseListener</tt> from the list of listeners.
+     * Removes a <tt>PubSubResponseListener</tt> from the list of listeners.
+     *
      * @param l the listener to be removed
      */
     public void removeResponseListener(PubSubResponseListener l)
@@ -436,6 +494,7 @@ public class PubSubPublisher
 
     /**
      * Sends <tt>IQ</tt> packet.
+     *
      * @param iq the packet.
      * @throws Exception if sending fails.
      */
@@ -451,9 +510,7 @@ public class PubSubPublisher
                 = ComponentImpl.getComponents(bundleContext);
 
             for (ComponentImpl component : components)
-            {
                 component.send(iq);
-            }
         }
     }
 }

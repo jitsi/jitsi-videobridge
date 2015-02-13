@@ -12,6 +12,7 @@ import net.java.sip.communicator.util.*;
 
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jivesoftware.smack.packet.*;
 import org.osgi.framework.*;
 
 /**
@@ -25,7 +26,8 @@ public class PubSubStatsTransport
     implements PubSubResponseListener
 {
     /**
-     * Logger instance.
+     * The <tt>Logger</tt> used by the <tt>PubSubStatsTransport</tt> class and
+     * its instances to print debug information.
      */
     private static final Logger logger
         = Logger.getLogger(PubSubStatsTransport.class);
@@ -122,9 +124,9 @@ public class PubSubStatsTransport
             {
                 publisher.createNode(nodeName);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                logger.error("Error creating pubsub node.");
+                logger.error("Failed to create PubSub node: " + nodeName);
                 dispose();
             }
         }
@@ -177,6 +179,9 @@ public class PubSubStatsTransport
             dispose();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onCreateNodeResponse(Response response)
     {
@@ -184,13 +189,58 @@ public class PubSubStatsTransport
             dispose();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void onPublishResponse(Response response)
+    public void onPublishResponse(Response type, IQ iq)
     {
-        if(Response.FAIL.equals(response))
+        if (Response.FAIL.equals(type))
+        {
+            // It appears that Prosody may destroy the node for unknown reasons.
+            // We want to continue publishing statistics in such a case though
+            // so we have to re-create the node.
+            XMPPError err = iq.getError();
+
+            if (err != null
+                    && XMPPError.Type.CANCEL.equals(err.getType())
+                    && XMPPError.Condition.item_not_found.toString().equals(
+                            err.getCondition()))
+            {
+                // We are about to attempt to resurrect this
+                // PubSubStatsTransport which means that it must have been alive
+                // at some point.
+                PubSubPublisher publisher = this.publisher;
+
+                if (publisher != null)
+                {
+                    String nodeName = this.nodeName;
+
+                    try
+                    {
+                        publisher.createNode(nodeName);
+                        // Do not abandon/dispose of this PubSubStatsTransport
+                        // because we've just initiated its resurrection.
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.error(
+                                "Failed to re-create PubSub node: " + nodeName);
+                        // Fall through and, thus, abandon/dispose of this
+                        // PubSubStatsTransport because we failed to resurrect
+                        // it.
+                    }
+                }
+            }
+
             dispose();
+        }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void publishStatistics(Statistics stats)
     {
