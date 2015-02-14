@@ -48,10 +48,20 @@ case "$1" in
 
             # storing default for later use by Jitsi Meet and other packages
             echo '# Jitsi Videobridge settings' > $CONFIG
+            echo >> $CONFIG
+            echo '# sets the XMPP domain (default: none)' >> $CONFIG
             echo "JVB_HOSTNAME=$JVB_HOSTNAME" >> $CONFIG
+            echo >> $CONFIG
+            echo '# sets the hostname of the XMPP server (default: domain if set, localhost otherwise)' >> $CONFIG
             echo "JVB_HOST=" >> $CONFIG
+            echo >> $CONFIG
+            echo '# sets the port of the XMPP server (default: 5275)' >> $CONFIG
             echo "JVB_PORT=$JVB_PORT" >> $CONFIG
+            echo >> $CONFIG
+            echo '# sets the shared secret used to authenticate to the XMPP server' >> $CONFIG
             echo "JVB_SECRET=$JVB_SECRET" >> $CONFIG
+            echo >> $CONFIG
+            echo '# extra options to pass to the JVB daemon' >> $CONFIG
             echo "JVB_OPTS=\"\"" >> $CONFIG
 
             # and we're done with debconf
