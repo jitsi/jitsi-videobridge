@@ -3,16 +3,16 @@ Index: jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
 ===================================================================
 --- jvb.orig/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
 +++ jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
-@@ -12,6 +12,8 @@ import java.lang.reflect.*;
- import net.java.sip.communicator.util.*;
+@@ -13,6 +13,8 @@ import net.java.sip.communicator.util.*;
  
+ import net.java.sip.communicator.util.Logger;
  import org.eclipse.jetty.server.*;
 +import org.eclipse.jetty.server.nio.*;
 +import org.eclipse.jetty.server.ssl.*;
  import org.eclipse.jetty.util.ssl.*;
  import org.jitsi.service.configuration.*;
- import org.jitsi.videobridge.*;
-@@ -162,10 +164,6 @@ public class RESTBundleActivator
+ import org.jitsi.util.*;
+@@ -158,10 +160,6 @@ public class RESTBundleActivator
          try
          {
              Server server = new Server();
@@ -23,7 +23,7 @@ Index: jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
  
              /*
               * If HTTPS is not enabled, serve the REST API of Jitsi Videobridge
-@@ -174,10 +172,8 @@ public class RESTBundleActivator
+@@ -170,10 +168,8 @@ public class RESTBundleActivator
              if (sslContextFactoryKeyStorePath == null)
              {
                  // HTTP
@@ -36,10 +36,10 @@ Index: jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
  
                  httpConnector.setPort(port);
                  server.addConnector(httpConnector);
-@@ -187,7 +183,10 @@ public class RESTBundleActivator
+@@ -183,7 +179,10 @@ public class RESTBundleActivator
                  // HTTPS
                  File sslContextFactoryKeyStoreFile
-                     = getAbsoluteFile(sslContextFactoryKeyStorePath, cfg);
+                     = ConfigUtils.getAbsoluteFile(sslContextFactoryKeyStorePath, cfg);
 -                SslContextFactory sslContextFactory = new SslContextFactory();
 +                SslSelectChannelConnector sslConnector
 +                    = new SslSelectChannelConnector();
@@ -48,7 +48,7 @@ Index: jvb/src/org/jitsi/videobridge/rest/RESTBundleActivator.java
  
                  sslContextFactory.setExcludeCipherSuites(
                          "SSL_RSA_WITH_DES_CBC_SHA",
-@@ -208,17 +207,6 @@ public class RESTBundleActivator
+@@ -204,17 +203,6 @@ public class RESTBundleActivator
                  sslContextFactory.setNeedClientAuth(
                          sslContextFactoryNeedClientAuth);
  
