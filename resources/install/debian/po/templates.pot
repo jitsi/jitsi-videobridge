@@ -28,19 +28,3 @@ msgstr ""
 #: ../templates:1001
 msgid "The jisti-videobridge package needs the DNS hostname of your instance."
 msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../templates:2001
-msgid "Proceed with advanced install?"
-msgstr ""
-
-#. Type: boolean
-#. Description
-#: ../templates:2001
-msgid ""
-"The default installation should give you a working Jitsi Videobridge  "
-"instance right away, while the advanced one may help you troubleshoot or "
-"select installation parameters instead of the defaults and keep the  install "
-"minimal.."
-msgstr ""
