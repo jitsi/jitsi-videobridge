@@ -22,11 +22,17 @@ case "$1" in
             fi
         fi
 
-        # generate config on new install
-        if [ "$OLDCONFIG" = "false" ]; then
+        # debconf hostname question
+        . /usr/share/debconf/confmodule
 
-            # debconf hostname question
-            . /usr/share/debconf/confmodule
+        # the default vars
+        db_get jitsi-videobridge/jvb-hostname
+        JVB_HOSTNAME_IN="$RET"
+
+        # generate config on new install or when we are reconfiguring
+        # and all install is different than current one
+        if [ "$OLDCONFIG" = "false" ] || [ "$JVB_HOSTNAME" != "$JVB_HOSTNAME_IN" ]; then
+
             LOCALNAME="$(hostname)"
             LOCALIP="$(hostname -I)"
             NAMEBYIP="$(host $LOCALNAME | cut -f4 -d ' ')"
@@ -39,11 +45,11 @@ case "$1" in
                 fi
             done
 
-            # the default vars
-            db_get jitsi-videobridge/jvb-hostname
-            JVB_HOSTNAME="$RET"
-            # 8-chars random secret, alternative to pwgen 8
-            JVB_SECRET=`head -c 8 /dev/urandom | tr '\0-\377' 'a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9@@@@####'`
+            JVB_HOSTNAME="$JVB_HOSTNAME_IN"
+            if [ "$OLDCONFIG" = "false" ]; then
+                # 8-chars random secret, alternative to pwgen 8
+                JVB_SECRET=`head -c 8 /dev/urandom | tr '\0-\377' 'a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9a-zA-Z0-9@@@@####'`
+            fi
             JVB_PORT=5347
 
             # storing default for later use by Jitsi Meet and other packages
@@ -54,9 +60,10 @@ case "$1" in
             echo "JVB_SECRET=$JVB_SECRET" >> $CONFIG
             echo "JVB_OPTS=\"\"" >> $CONFIG
 
-            # and we're done with debconf
-            db_stop
         fi
+
+        # and we're done with debconf
+        db_stop
 
         # we don't want to start the daemon as root
         if ! getent group jitsi > /dev/null ; then
