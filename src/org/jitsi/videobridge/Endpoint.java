@@ -302,12 +302,35 @@ public class Endpoint
     }
 
     /**
+     * Gets the currently effectively selected <tt>Endpoint</tt> at this
+     * <tt>Endpoint</tt>.
+     *
+     * @return the currently effectively selected <tt>Endpoint</tt> at this
+     * <tt>Endpoint</tt>.
+     */
+    public Endpoint getEffectivelySelectedEndpoint()
+    {
+        Endpoint pinned = getPinnedEndpoint();
+        if (pinned == null)
+        {
+            WeakReference<Endpoint> wr = this.weakSelectedEndpoint;
+            Endpoint e = wr == null ? null : wr.get();
+
+            return e == null || e.expired ? null : e;
+        }
+        else
+        {
+            return pinned;
+        }
+    }
+
+    /**
      * Gets the currently selected <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
      *
      * @return the currently selected <tt>Endpoint</tt> at this
      * <tt>Endpoint</tt>.
      */
-    public Endpoint getSelectedEndpoint()
+    private Endpoint getSelectedEndpoint()
     {
         WeakReference<Endpoint> wr = this.weakSelectedEndpoint;
         Endpoint e = wr == null ? null : wr.get();

@@ -862,7 +862,7 @@ class SimulcastReceiver
                 if (e == newEndpoint)
                     continue;
 
-                Endpoint eSelectedEndpoint = e.getSelectedEndpoint();
+                Endpoint eSelectedEndpoint = e.getEffectivelySelectedEndpoint();
 
                 if (newEndpoint == eSelectedEndpoint
                         || (SimulcastManager.SIMULCAST_LAYER_ORDER_INIT > SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
@@ -959,8 +959,8 @@ class SimulcastReceiver
                 // endpoint changes while we're in the loop?
 
                 if (oldEndpoint != e
-                        && (oldEndpoint == e.getSelectedEndpoint())
-                        || e.getSelectedEndpoint() == null)
+                        && (oldEndpoint == e.getEffectivelySelectedEndpoint())
+                        || e.getEffectivelySelectedEndpoint() == null)
                 {
                     // somebody is watching the old endpoint or somebody has not
                     // yet signaled its selected endpoint to the bridge, don't
@@ -1111,7 +1111,7 @@ class SimulcastReceiver
             Endpoint peer = getPeer();
 
             if (peer != null && self != null &&
-                        peer == self.getSelectedEndpoint())
+                        peer == self.getEffectivelySelectedEndpoint())
             {
                 SimulcastReceiverOptions options
                         = new SimulcastReceiverOptions();
@@ -1199,6 +1199,9 @@ class SimulcastReceiver
         }
         else if (Endpoint
                 .SELECTED_ENDPOINT_PROPERTY_NAME.equals(
+                        propertyChangeEvent.getPropertyName()) ||
+                Endpoint
+                .PINNED_ENDPOINT_PROPERTY_NAME.equals(
                         propertyChangeEvent.getPropertyName()))
         {
             // endpoint == this.manager.getVideoChannel().getEndpoint() is
