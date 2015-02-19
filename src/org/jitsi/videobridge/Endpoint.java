@@ -404,6 +404,17 @@ public class Endpoint
                 String newSelectedEndpointID
                     = (String) jsonObject.get("selectedEndpoint");
 
+                if (logger.isDebugEnabled())
+                {
+                    StringCompiler sc = new StringCompiler();
+                    sc.bind("selectedId", newSelectedEndpointID);
+                    sc.bind("this", this);
+                    logger.debug(sc.c(
+                        "Endpoint {this.id} notified us that its bit screen" +
+                            " displays endpoint {selectedId}."));
+                }
+
+
                 Conference conference = weakConference.get();
 
                 Endpoint newSelectedEndpoint;
@@ -463,6 +474,15 @@ public class Endpoint
                 // Find the new pinned endpoint.
                 String newPinnedEndpointID
                     = (String) jsonObject.get("pinnedEndpoint");
+
+                if (logger.isDebugEnabled())
+                {
+                    StringCompiler sc = new StringCompiler();
+                    sc.bind("pinnedId", newPinnedEndpointID);
+                    sc.bind("this", this);
+                    logger.debug(sc.c("Endpoint {this.id} notified us that" +
+                        " it has pinned {pinnedId}."));
+                }
 
                 Conference conference = weakConference.get();
 
