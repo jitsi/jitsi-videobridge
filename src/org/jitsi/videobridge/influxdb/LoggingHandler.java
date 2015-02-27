@@ -83,12 +83,6 @@ public class LoggingHandler
 
             "stats.nb_received_bytes",
             "stats.nb_sent_bytes",
-            "stats.nb_discarded",
-            "stats.nb_discarded_full",
-            "stats.nb_discarded_late",
-            "stats.nb_discarded_reset",
-            "stats.nb_discarded_shrink",
-            "stats.nb_fec",
 
             "stats.nb_packets",
             "stats.nb_packets_lost",
@@ -850,12 +844,6 @@ public class LoggingHandler
 
                 stats.getNbReceivedBytes(),
                 stats.getNbSentBytes(),
-                stats.getNbDiscarded(),
-                stats.getNbDiscardedFull(),
-                stats.getNbDiscardedLate(),
-                stats.getNbDiscardedReset(),
-                stats.getNbDiscardedShrink(),
-                stats.getNbFec(),
 
                 stats.getNbPackets(),
                 stats.getNbPacketsLost(),
