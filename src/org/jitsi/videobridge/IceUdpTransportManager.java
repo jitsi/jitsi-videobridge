@@ -63,6 +63,13 @@ public class IceUdpTransportManager
         = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
 
     /**
+     * The name of the property which controls the port number used for
+     * <tt>SinglePortUdpHarvester</tt>s.
+     */
+    private static final String SINGLE_PORT_HARVESTER_PORT
+            = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
+
+    /**
      * Contains the name of the property flag that may indicate that AWS address
      * harvesting should be forced without first trying to auto detect it.
      */
@@ -139,10 +146,17 @@ public class IceUdpTransportManager
     private static MultiplexingTcpHostHarvester tcpHostHarvester = null;
 
     /**
-     * The flag which indicates whether {@link #tcpHostHarvester} has been
-     * initialized.
+     * The <tt>SinglePortUdpHarvester</tt>s which will be appended to ICE
+     * <tt>Agent</tt>s managed by <tt>IceUdpTransportManager</tt> instances.
      */
-    private static boolean tcpHostHarvesterInitialized = false;
+    private static List<SinglePortUdpHarvester> singlePortHarvesters = null;
+
+    /**
+     * The flag which indicates whether application-wide harvesters, stored
+     * in the static fields {@link #tcpHostHarvester} and
+     * {@link #singlePortHarvesters} have been initialized.
+     */
+    private static boolean staticHarvestersInitialized = false;
 
     /**
      * The "mapped port" added to {@link #tcpHostHarvester}, or -1.
@@ -435,9 +449,13 @@ public class IceUdpTransportManager
      */
     private void appendVideobridgeHarvesters(Agent iceAgent)
     {
-        initializeTcpHarvester();
+        initializeStaticHarvesters();
+
         if (tcpHostHarvester != null)
             iceAgent.addCandidateHarvester(tcpHostHarvester);
+        if (singlePortHarvesters != null)
+            for (CandidateHarvester harvester : singlePortHarvesters)
+                iceAgent.addCandidateHarvester(harvester);
 
         AwsCandidateHarvester awsHarvester = null;
         //does this look like an Amazon AWS EC2 machine?
@@ -1663,18 +1681,32 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Initializes {@link #tcpHostHarvester}.
+     * Initializes the static <tt>Harvester</tt> instances used by all
+     * <tt>IceUdpTransportManager</tt> instances, that is
+     * {@link #tcpHostHarvester} and {@link #singlePortHarvester}.
      */
-    private void initializeTcpHarvester()
+    private void initializeStaticHarvesters()
     {
         synchronized (IceUdpTransportManager.class)
         {
-            if (tcpHostHarvesterInitialized)
+            if (staticHarvestersInitialized)
                 return;
-            tcpHostHarvesterInitialized = true;
+            staticHarvestersInitialized = true;
 
             ConfigurationService cfg =
                     conference.getVideobridge().getConfigurationService();
+
+            int singlePort = -1;
+            if ((singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT, -1)) != -1)
+            {
+                singlePortHarvesters
+                        = SinglePortUdpHarvester.createHarvesters(singlePort);
+                if (singlePortHarvesters.isEmpty())
+                {
+                    singlePortHarvesters = null;
+                    logger.info("No single-port harvesters created.");
+                }
+            }
 
             boolean fallback = false;
             if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
