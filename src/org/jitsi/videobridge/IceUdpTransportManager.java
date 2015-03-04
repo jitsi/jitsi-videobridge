@@ -937,6 +937,9 @@ public class IceUdpTransportManager
     private synchronized void doStartConnectivityEstablishment(
             IceUdpTransportPacketExtension transport)
     {
+        if (closed)
+            return;
+
         if (transport.isRtcpMux())
         {
             rtcpmux = true;
@@ -2022,17 +2025,22 @@ public class IceUdpTransportManager
                 }
             };
 
+        Agent iceAgent = this.iceAgent;
+        if (iceAgent == null)
+        {
+            // The TransportManager has been closed, so we should return and
+            // let the thread finish.
+            return;
+        }
+
         iceAgent.addStateChangeListener(propertyChangeListener);
 
         // Wait for the connectivity checks to finish if they have been started.
         boolean interrupted = false;
 
+        IceProcessingState state = iceAgent.getState();
         synchronized (syncRoot)
         {
-            Agent iceAgent = this.iceAgent;
-            IceProcessingState state
-                = iceAgent == null ? null : iceAgent.getState();
-
             while (IceProcessingState.RUNNING.equals(state)
                     || IceProcessingState.WAITING.equals(state))
             {
@@ -2046,8 +2054,9 @@ public class IceUdpTransportManager
                 }
                 finally
                 {
-                    iceAgent = this.iceAgent;
-                    state = iceAgent == null ? null : iceAgent.getState();
+                    state = iceAgent.getState();
+                    if (this.iceAgent == null)
+                        break;
                 }
             }
         }
@@ -2062,10 +2071,16 @@ public class IceUdpTransportManager
         iceAgent.removeStateChangeListener(propertyChangeListener);
 
         // Check the state of ICE processing and throw an exception if failed.
-        if (IceProcessingState.FAILED.equals(iceAgent.getState()))
+        if (this.iceAgent == null)
         {
             throw new OperationFailedException(
-                    "Could not establish connection (ICE failed)",
+                    "TransportManager closed",
+                    OperationFailedException.GENERAL_ERROR);
+        }
+        else if (IceProcessingState.FAILED.equals(state))
+        {
+            throw new OperationFailedException(
+                    "ICE failed",
                     OperationFailedException.GENERAL_ERROR);
         }
     }
