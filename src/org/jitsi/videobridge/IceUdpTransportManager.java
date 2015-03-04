@@ -332,7 +332,7 @@ public class IceUdpTransportManager
         this.dtlsControl = new DtlsControlImpl(false);
         dtlsControl.registerUser(this);
 
-        iceAgent = createIceAgent(isControlling, iceStreamName);
+        iceAgent = createIceAgent(isControlling, iceStreamName, rtcpmux);
         iceAgent.addStateChangeListener(iceAgentStateChangeListener);
         iceStream = iceAgent.getStream(iceStreamName);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
@@ -446,16 +446,22 @@ public class IceUdpTransportManager
      *
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
+     * @param rtcpmux whether rtcp will be used by this
+     * <tt>IceUdpTransportManager</tt>.
      */
-    private void appendVideobridgeHarvesters(Agent iceAgent)
+    private void appendVideobridgeHarvesters(Agent iceAgent,
+                                             boolean rtcpmux)
     {
-        initializeStaticHarvesters();
+        if (rtcpmux)
+        {
+            initializeStaticHarvesters();
 
-        if (tcpHostHarvester != null)
-            iceAgent.addCandidateHarvester(tcpHostHarvester);
-        if (singlePortHarvesters != null)
-            for (CandidateHarvester harvester : singlePortHarvesters)
-                iceAgent.addCandidateHarvester(harvester);
+            if (tcpHostHarvester != null)
+                iceAgent.addCandidateHarvester(tcpHostHarvester);
+            if (singlePortHarvesters != null)
+                for (CandidateHarvester harvester : singlePortHarvesters)
+                    iceAgent.addCandidateHarvester(harvester);
+        }
 
         AwsCandidateHarvester awsHarvester = null;
         //does this look like an Amazon AWS EC2 machine?
@@ -747,7 +753,8 @@ public class IceUdpTransportManager
      * purposes of this <tt>TransportManager</tt> fails
      */
     private Agent createIceAgent(boolean isControlling,
-                                 String iceStreamName)
+                                 String iceStreamName,
+                                 boolean rtcpmux)
             throws IOException
     {
         NetworkAddressManagerService nams
@@ -757,7 +764,7 @@ public class IceUdpTransportManager
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        appendVideobridgeHarvesters(iceAgent);
+        appendVideobridgeHarvesters(iceAgent, rtcpmux);
         iceAgent.setControlling(isControlling);
         iceAgent.setPerformConsentFreshness(true);
 
@@ -1683,7 +1690,7 @@ public class IceUdpTransportManager
     /**
      * Initializes the static <tt>Harvester</tt> instances used by all
      * <tt>IceUdpTransportManager</tt> instances, that is
-     * {@link #tcpHostHarvester} and {@link #singlePortHarvester}.
+     * {@link #tcpHostHarvester} and {@link #singlePortHarvesters}.
      */
     private void initializeStaticHarvesters()
     {
