@@ -84,8 +84,19 @@ public class LoggingHandler
             "stats.nb_received_bytes",
             "stats.nb_sent_bytes",
 
-            "stats.nb_packets",
-            "stats.nb_packets_lost",
+            "stats.nb_received_packets",
+            "stats.nb_received_packets_lost",
+
+            "stats.nb_sent_packets",
+            "stats.nb_sent_packets_lost",
+
+            "stats.min_download_jitter_ms",
+            "stats.max_download_jitter_ms",
+            "stats.avg_download_jitter_ms",
+
+            "stats.min_upload_jitter_ms",
+            "stats.max_upload_jitter_ms",
+            "stats.avg_upload_jitter_ms"
         };
 
     /**
@@ -845,8 +856,20 @@ public class LoggingHandler
                 stats.getNbReceivedBytes(),
                 stats.getNbSentBytes(),
 
-                stats.getNbPackets(),
-                stats.getNbPacketsLost(),
+                // Number of packets sent from the other side
+                stats.getNbPacketsReceived() + stats.getDownloadNbPacketLost(),
+                stats.getDownloadNbPacketLost(),
+
+                stats.getNbPacketsSent(),
+                stats.getUploadNbPacketLost(),
+
+                stats.getMinDownloadJitterMs(),
+                stats.getMaxDownloadJitterMs(),
+                stats.getAvgDownloadJitterMs(),
+
+                stats.getMinUploadJitterMs(),
+                stats.getMaxUploadJitterMs(),
+                stats.getAvgUploadJitterMs()
             };
 
             logEvent(new InfluxDBEvent(
