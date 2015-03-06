@@ -734,9 +734,15 @@ public class LoggingHandler
         for (Component component : iceStream.getComponents())
         {
             CandidatePair pair = component.getSelectedPair();
-            s.append(pair.getLocalCandidate().getTransportAddress())
+            if (pair == null)
+                continue;
+            Candidate localCandidate = pair.getLocalCandidate();
+            Candidate remoteCandidate = pair.getRemoteCandidate();
+            s.append((localCandidate == null)
+                         ? "unknown" : localCandidate.getTransportAddress())
                 .append(" -> ")
-                .append(pair.getRemoteCandidate().getTransportAddress())
+                .append((remoteCandidate == null)
+                        ? "unknown" : remoteCandidate.getTransportAddress())
                 .append("; ");
         }
 
