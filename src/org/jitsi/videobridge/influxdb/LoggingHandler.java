@@ -75,6 +75,7 @@ public class LoggingHandler
             "channel_id",
             "content_name",
             "conference_id",
+            "endpoint_id",
 
             "stats.local_ip",
             "stats.local_port",
@@ -108,6 +109,7 @@ public class LoggingHandler
             "channel_id",
             "content_name",
             "conference_id",
+            "endpoint_id"
         };
 
     /**
@@ -847,12 +849,16 @@ public class LoggingHandler
             }
         }
 
+        Endpoint endpoint = channel.getEndpoint();
+        String endpointID = endpoint == null ? "" : endpoint.getID();
+
         if (stats != null)
         {
             Object[] values = new Object[] {
                 channel.getID(),
                 content.getName(),
                 conference.getID(),
+                endpointID,
 
                 stats.getLocalIPAddress(),
                 stats.getLocalPort(),
@@ -887,6 +893,7 @@ public class LoggingHandler
                 channel.getID(),
                 content.getName(),
                 conference.getID(),
+                endpointID
             };
 
             logEvent(new InfluxDBEvent(
