@@ -1578,4 +1578,72 @@ public class RtpChannel
             RTPConnector newValue)
     {
     }
+
+    /**
+     * The <tt>Set</tt> of the SSRCs that this <tt>RtpChannel</tt> has signaled.
+     */
+    private final Set<Long> sendSSRCs = new HashSet<Long>();
+
+    /**
+     * The sync root object for the sendSSRCs field.
+     */
+    private final Object sendSSRCsSyncRoot = new Object();
+
+    /**
+     * Sets the <tt>Set</tt> of the SSRCs that this <tt>RtpChannel</tt> has
+     * signaled and updates the <tt>Content</tt> SSRCs accordingly.
+     *
+     * @param sources The <tt>List</tt> of <tt>SourcePacketExtension</tt> that
+     * describes the list of sources of this <tt>RtpChannel</tt> and that is
+     * used as the input in the update of the Sets the <tt>Set</tt> of the SSRCs
+     * that this <tt>RtpChannel</tt> has signaled.
+     */
+    public void setSources(List<SourcePacketExtension> sources)
+    {
+        // Build the set of the new SSRCs.
+        Set<Long> ssrcs = new HashSet<Long>();
+        if (sources != null && !sources.isEmpty())
+        {
+            for (SourcePacketExtension source : sources)
+            {
+                ssrcs.add(source.getSSRC());
+            }
+        }
+
+        Set<Long> pool = null;
+        Content content = getContent();
+        if (content != null)
+        {
+            pool = content.getSSRCs();
+        }
+
+        // prevent an admittedly unlikely race condition.
+        synchronized (sendSSRCsSyncRoot)
+        {
+            // Remove from the shared SSRCs set all the old SSRCs that are not
+            // in the new SSRCs.
+            if (sendSSRCs != null && !sendSSRCs.isEmpty())
+            {
+                sendSSRCs.removeAll(ssrcs);
+                if (pool != null)
+                {
+                    pool.removeAll(sendSSRCs);
+                }
+            }
+
+            sendSSRCs.clear();
+
+            // Add to the shared SSRCs set all the new SSRCs.
+            if (!ssrcs.isEmpty())
+            {
+                sendSSRCs.addAll(ssrcs);
+                if (pool != null)
+                {
+                    pool.addAll(sendSSRCs);
+                }
+            }
+        }
+
+        touch(); // It seems this Channel is still active.
+    }
 }

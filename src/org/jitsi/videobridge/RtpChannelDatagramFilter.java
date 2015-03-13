@@ -7,6 +7,7 @@
 package org.jitsi.videobridge;
 
 import java.net.*;
+import java.util.*;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
@@ -134,12 +135,37 @@ class RtpChannelDatagramFilter
             {
                 long packetSenderSSRC
                     = RTPTranslatorImpl.readInt(data, off + 4) & 0xFFFFFFFFL;
-                long[] channelSSRCs = channel.receiveSSRCs;
 
-                for (long channelSSRC : channelSSRCs)
+                boolean backwardsCompatibility = true;
+                if (channel != null)
                 {
-                    if (channelSSRC == packetSenderSSRC)
-                        return true;
+                    Content content = channel.getContent();
+                    if (content != null)
+                    {
+                        Set<Long> ssrcs = content.getSSRCs();
+                        backwardsCompatibility
+                            = ssrcs == null || ssrcs.isEmpty();
+
+                        if (ssrcs != null && !ssrcs.isEmpty()
+                            && ssrcs.contains(packetSenderSSRC))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                if (backwardsCompatibility)
+                {
+                    // kept for backwards compatibility with old foci that don't
+                    // signal sources to the bridge. Eventually, we should phase
+                    // this out.
+                    long[] channelSSRCs = channel.receiveSSRCs;
+
+                    for (long channelSSRC : channelSSRCs)
+                    {
+                        if (channelSSRC == packetSenderSSRC)
+                            return true;
+                    }
                 }
             }
             return false;
