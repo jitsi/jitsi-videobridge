@@ -1582,12 +1582,7 @@ public class RtpChannel
     /**
      * The <tt>Set</tt> of the SSRCs that this <tt>RtpChannel</tt> has signaled.
      */
-    private final Set<Long> sendSSRCs = new HashSet<Long>();
-
-    /**
-     * The sync root object for the sendSSRCs field.
-     */
-    private final Object sendSSRCsSyncRoot = new Object();
+    private Set<Integer> signaledSSRCs = new HashSet<Integer>();
 
     /**
      * Sets the <tt>Set</tt> of the SSRCs that this <tt>RtpChannel</tt> has
@@ -1600,49 +1595,41 @@ public class RtpChannel
      */
     public void setSources(List<SourcePacketExtension> sources)
     {
+        Set<Integer> oldSignaledSSRCs = signaledSSRCs;
+
         // Build the set of the new SSRCs.
-        Set<Long> ssrcs = new HashSet<Long>();
+        Set<Integer> newSignaledSSRCs = new HashSet<Integer>();
         if (sources != null && !sources.isEmpty())
         {
             for (SourcePacketExtension source : sources)
             {
-                ssrcs.add(source.getSSRC());
+                newSignaledSSRCs.add((int) source.getSSRC());
             }
         }
 
-        Set<Long> pool = null;
-        Content content = getContent();
-        if (content != null)
+        // Add the added SSRCs.
+        Set<Integer> addedSSRCs = new HashSet<Integer>(newSignaledSSRCs);
+        addedSSRCs.removeAll(oldSignaledSSRCs);
+        if (!addedSSRCs.isEmpty())
         {
-            pool = content.getSSRCs();
+            for (Integer addedSSRC : addedSSRCs)
+            {
+                addReceiveSSRC(addedSSRC);
+            }
         }
 
-        // prevent an admittedly unlikely race condition.
-        synchronized (sendSSRCsSyncRoot)
+        // Remove the removed SSRCs.
+        oldSignaledSSRCs.removeAll(newSignaledSSRCs);
+        if (!oldSignaledSSRCs.isEmpty())
         {
-            // Remove from the shared SSRCs set all the old SSRCs that are not
-            // in the new SSRCs.
-            if (sendSSRCs != null && !sendSSRCs.isEmpty())
+            for (Integer removedSSRC : oldSignaledSSRCs)
             {
-                sendSSRCs.removeAll(ssrcs);
-                if (pool != null)
-                {
-                    pool.removeAll(sendSSRCs);
-                }
-            }
-
-            sendSSRCs.clear();
-
-            // Add to the shared SSRCs set all the new SSRCs.
-            if (!ssrcs.isEmpty())
-            {
-                sendSSRCs.addAll(ssrcs);
-                if (pool != null)
-                {
-                    pool.addAll(sendSSRCs);
-                }
+                removeReceiveSSRC(removedSSRC);
             }
         }
+
+        // Set the new signaled ssrcs.
+        signaledSSRCs = newSignaledSSRCs;
 
         touch(); // It seems this Channel is still active.
     }

@@ -10,7 +10,6 @@ import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
@@ -142,7 +141,6 @@ public class Content
 
         this.conference = conference;
         this.name = name;
-        this.ssrcs = Collections.newSetFromMap(new ConcurrentHashMap<Long, Boolean>());
 
         // If endpoints have changed, maybe change the RTCP termination
         // strategy.
@@ -1052,29 +1050,6 @@ public class Content
                     e);
         }
     }
-
-    /**
-     * The set of all the SSRCs of all <tt>Channel</tt>s of this
-     * <tt>Content</tt>. It is up to each individual <tt>Channel</tt> to
-     * manage its SSRCs and add/remove them to/from this <tt>Set</tt>. The
-     * returned <tt>Set</tt> is thread-safe.
-     */
-    private final Set<Long> ssrcs;
-
-    /**
-     * Returns the set of all the SSRCs of all <tt>Channel</tt>s of this
-     * <tt>Content</tt>. It is up to each individual <tt>Channel</tt> to
-     * manage its SSRCs and add/remove them to/from this <tt>Set</tt>. The
-     * returned <tt>Set</tt> is thread-safe.
-     *
-     * @returns A thread-safe <tt>Set</tt> of all the SSRCs of all
-     * <tt>Channel</tt>s of this <tt>Content</tt>.
-     */
-    public Set<Long> getSSRCs()
-    {
-        return ssrcs;
-    }
-
 
     private static class RTPTranslatorWriteFilter
         implements RTPTranslator.WriteFilter
