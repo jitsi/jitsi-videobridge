@@ -1595,13 +1595,19 @@ public class RtpChannel
      */
     public void setSources(List<SourcePacketExtension> sources)
     {
+        if (sources == null || sources.isEmpty())
+        {
+            return;
+        }
+
         Set<Integer> oldSignaledSSRCs = signaledSSRCs;
 
         // Build the set of the new SSRCs.
         Set<Integer> newSignaledSSRCs = new HashSet<Integer>();
-        if (sources != null && !sources.isEmpty())
+        for (SourcePacketExtension source : sources)
         {
-            for (SourcePacketExtension source : sources)
+            int ssrc = (int) source.getSSRC();
+            if (ssrc != -1)
             {
                 newSignaledSSRCs.add((int) source.getSSRC());
             }
