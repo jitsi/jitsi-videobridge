@@ -1593,14 +1593,14 @@ public class RtpChannel
      * used as the input in the update of the Sets the <tt>Set</tt> of the SSRCs
      * that this <tt>RtpChannel</tt> has signaled.
      */
-    public void setSources(List<SourcePacketExtension> sources)
+    public synchronized void setSources(List<SourcePacketExtension> sources)
     {
         if (sources == null || sources.isEmpty())
         {
             return;
         }
 
-        Set<Integer> oldSignaledSSRCs = signaledSSRCs;
+        Set<Integer> oldSignaledSSRCs = new HashSet<Integer>(signaledSSRCs);
 
         // Build the set of the new SSRCs.
         Set<Integer> newSignaledSSRCs = new HashSet<Integer>();
