@@ -315,6 +315,8 @@ endif
                  link="lib"/>
         <symlink resource="/usr/share/java/slf4j-api.jar"
                  link="lib"/>
+        <symlink resource="/usr/share/java/slf4j-jdk14.jar"
+                 link="lib"/>
         <symlink resource="/usr/share/jitsi-common/smacklib.jar/smacklib.jar"
                  link="lib"/>
 
