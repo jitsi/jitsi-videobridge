@@ -77,7 +77,7 @@ reload() {
 }
 
 status() {
-    echo 'Not yet implemented.'
+    status_of_proc -p $PIDFILE "$DAEMON" "$NAME" && exit 0 || exit $?
 }
 
 case "$1" in
