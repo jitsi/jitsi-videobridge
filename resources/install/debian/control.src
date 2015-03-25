@@ -27,8 +27,8 @@ Package: jitsi-videobridge
 Architecture: any
 Depends: ${misc:Depends},
          default-jre-headless,
-         libjitsi,
-         jitsi-common,
+         libjitsi (= ${libjitsi:version}),
+         jitsi-common (= ${jitsi-common:version}),
          libservlet3.1-java,
          libdom4j-java,
          libjetty8-java,
