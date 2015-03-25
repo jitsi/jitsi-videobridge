@@ -787,16 +787,6 @@ public class Videobridge
                             if (rtpLevelRelayType != null)
                                 channel.setRTPLevelRelayType(rtpLevelRelayType);
 
-                            if (channelBundleId != null)
-                            {
-                                TransportManager transportManager
-                                    = conference.getTransportManager(
-                                            channelBundleId,
-                                            true);
-
-                                transportManager.addChannel(channel);
-                            }
-
                             // endpoint
                             // The attribute endpoint is optional. If a value is
                             // not specified, then the Channel endpoint is to
@@ -841,7 +831,6 @@ public class Videobridge
                                     channelIQ.getPayloadTypes());
                             channel.setRtpHeaderExtensions(
                                     channelIQ.getRtpHeaderExtensions());
-                            channel.setTransport(channelIQ.getTransport());
 
                             channel.setDirection(channelIQ.getDirection());
 
@@ -879,6 +868,18 @@ public class Videobridge
                                     // no longer required.
                                 }
                             }
+
+                            if (channelBundleId != null)
+                            {
+                                TransportManager transportManager
+                                        = conference.getTransportManager(
+                                        channelBundleId,
+                                        true);
+
+                                transportManager.addChannel(channel);
+                            }
+
+                            channel.setTransport(channelIQ.getTransport());
 
                             /*
                              * Provide (a description of) the current state of
