@@ -773,4 +773,15 @@ public abstract class Channel
                                 + ": " + ioe);
         }
     }
+
+    /**
+     * Returns the ID of channel-bundle of this <tt>Channel</tt>, or
+     * <tt>null</tt> if the <tt>Channel</tt> is not part of a channel-bundle.
+     * @return  the ID of channel-bundle of this <tt>Channel</tt>, or
+     * <tt>null</tt> if the <tt>Channel</tt> is not part of a channel-bundle.
+     */
+    public String getChannelBundleId()
+    {
+        return channelBundleId;
+    }
 }

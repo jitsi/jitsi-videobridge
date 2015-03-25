@@ -10,20 +10,23 @@ import java.net.*;
 
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.util.*;
 
 /**
  * Filters RTP or RTCP packet for a specific <tt>RtpChannel</tt>.
+ * @author Boris Grozev
  */
 class RtpChannelDatagramFilter
     implements DatagramPacketFilter
 {
 
-    /*
-     * The <tt>DatagramPacketFilter</tt> which accepts DTLS
-     * <tt>DatagramPacket</tt>s when {@link #acceptNonRtp} equals <tt>true</tt>.
+    /**
+     * The <tt>Logger</tt> used by the <tt>RtpChannelDatagramFilter</tt> class
+     * and its instances to print debug information.
      */
-    private static final DatagramPacketFilter DTLS_DATAGRAM_FILTER
-        = new DTLSDatagramFilter();
+    private static final Logger logger
+        = Logger.getLogger(RtpChannelDatagramFilter.class);
+
      /**
      * Whether to accept non-RTP and non-RTCP packets (DTLS, STUN, ZRTP)
      */
@@ -36,20 +39,9 @@ class RtpChannelDatagramFilter
     private final RtpChannel channel;
 
     /**
-     * Whether or not to check the value of the RTCP Sender SSRC field against
-     * the known SSRCs for {@link #channel}. If set to <tt>false</tt>, this
-     * <tt>DatagramPacketFilter</tt> will accept all RTCP packets, regardless
-     * of their Sender SSRC field.
+     * Whether we have logged a warning about missing payload-type numbers.
      */
-    private boolean checkRtcpSsrc = true;
-
-    /**
-     * Whether or not to check the value of RTP Payload-Type field against the
-     * known payload types for {@link #channel}. If set to <tt>false</tt>, this
-     * <tt>DatagramPacketFilter</tt> will accept all RTP packets, regardless
-     * of their payload type number.
-     */
-    private boolean checkRtpPayloadType = true;
+    private boolean missingPtsWarningLogged = false;
 
     /**
      * Whether this <tt>DatagramFilter</tt> is to accept RTP packets (if
@@ -111,7 +103,7 @@ class RtpChannelDatagramFilter
             }
         }
 
-        return acceptNonRtp && DTLS_DATAGRAM_FILTER.accept(p);
+        return acceptNonRtp && DTLSDatagramFilter.isDTLS(p);
     }
 
     /**
@@ -128,26 +120,19 @@ class RtpChannelDatagramFilter
      */
     private boolean acceptRTCP(byte[] data, int off, int len)
     {
-        if (checkRtcpSsrc)
+        if (len >= 8)
         {
-            if (len >= 8)
-            {
-                int packetSenderSSRC
-                    = RTPTranslatorImpl.readInt(data, off + 4);
-                int[] channelSSRCs = channel.getReceiveSSRCs();
+            int packetSenderSSRC
+                = RTPTranslatorImpl.readInt(data, off + 4);
+            int[] channelSSRCs = channel.getReceiveSSRCs();
 
-                for (int channelSSRC : channelSSRCs)
-                {
-                    if (channelSSRC == packetSenderSSRC)
-                        return true;
-                }
+            for (int channelSSRC : channelSSRCs)
+            {
+                if (channelSSRC == packetSenderSSRC)
+                    return true;
             }
-            return false;
         }
-        else
-        {
-            return true;
-        }
+        return false;
     }
 
     /**
@@ -163,21 +148,43 @@ class RtpChannelDatagramFilter
      */
     private boolean acceptRTP(int pt)
     {
-        if (checkRtpPayloadType)
-        {
-            int[] channelPTs = channel.receivePTs;
+        int[] channelPTs = channel.receivePTs;
 
-            for (int channelPT : channelPTs)
-            {
-                if (channelPT == pt)
-                    return true;
-            }
-            return false;
-        }
-        else
+        if (channelPTs == null || channelPTs.length == 0)
         {
-            return true;
+            // The controller of the conference has not specified RTP
+            // payload-type numbers for this channel.
+            // Without bundle we can safely accept all packets, allowing the
+            // bridge to operate without payload-type numbers being specified.
+            // With bundle, however, we cannot operate without PT numbers for
+            // each channel, because we use them as a base for demultiplexing.
+            if (channel.getChannelBundleId() == null)
+            {
+                return true;
+            }
+            else
+            {
+                // This likely indicates a problem with the conference focus,
+                // which might be hard to debug.
+                if (!missingPtsWarningLogged)
+                {
+                    missingPtsWarningLogged = true;
+                    logger.warn("No payload-types specified for channel "
+                                        + channel.getID()
+                                        + " while bundle is in use. Packets"
+                                        + " are dropped.");
+                }
+
+                return false;
+            }
         }
+
+        for (int channelPT : channelPTs)
+        {
+            if (channelPT == pt)
+                return true;
+        }
+        return false;
     }
 
     /**
@@ -187,23 +194,5 @@ class RtpChannelDatagramFilter
     public void setAcceptNonRtp(boolean acceptNonRtp)
     {
         this.acceptNonRtp = acceptNonRtp;
-    }
-
-    /**
-     * Sets the value of the <tt>checkRtcpSsrc</tt> flag.
-     * @param checkRtcpSsrc the value to set.
-     */
-    public void setCheckRtcpSsrc(boolean checkRtcpSsrc)
-    {
-        this.checkRtcpSsrc = checkRtcpSsrc;
-    }
-
-    /**
-     * Sets the value of the <tt>checkRtpPayloadType</tt> flag.
-     * @param checkRtpPayloadType the value to set.
-     */
-    public void setCheckRtpPayloadType(boolean checkRtpPayloadType)
-    {
-        this.checkRtpPayloadType = checkRtpPayloadType;
     }
 }

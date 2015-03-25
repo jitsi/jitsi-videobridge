@@ -425,8 +425,6 @@ public class IceUdpTransportManager
             rtpChannel.getDatagramFilter(true).setAcceptNonRtp(!rtcpmux);
         }
 
-        updatePayloadTypeFilters();
-
         if (iceConnected)
             channel.transportConnected();
 
@@ -721,8 +719,6 @@ public class IceUdpTransportManager
                         "Failed to close sockets when closing a channel:"
                             + ioe);
             }
-
-            updatePayloadTypeFilters();
 
             EventAdmin eventAdmin
                 = conference.getVideobridge().getEventAdmin();
@@ -1958,38 +1954,6 @@ public class IceUdpTransportManager
         // For DTLS, the media type doesn't matter (as long as it's not
         // null).
         dtlsControl.start(MediaType.AUDIO);
-    }
-
-    /**
-     * Updates the states of the <tt>RtpChannelDatagramFilters</tt> for our
-     * RTP channels, according to whether we are (effectively) using bundle
-     * (that is, we have more than one <tt>RtpChannel</tt>). The filters are
-     * configured to check the RTP payload type and the RTCP Sender SSRC fields
-     * if and only if bundle is used.
-     *
-     * This allows non-bundled channels to work correctly without the need for
-     * the focus to explicitly specify via COLIBRI the payload types to be used
-     * by each channel.
-     */
-    private void updatePayloadTypeFilters()
-    {
-        List<RtpChannel> rtpChannels = new LinkedList<RtpChannel>();
-        for (Channel channel : getChannels())
-            if (channel instanceof RtpChannel)
-                rtpChannels.add((RtpChannel) channel);
-
-        int numRtpChannels = rtpChannels.size();
-        if (numRtpChannels > 0)
-        {
-            boolean bundle = numRtpChannels > 1;
-            for (RtpChannel channel : rtpChannels)
-            {
-                // Enable filtering by PT iff we are (effectively) using bundle
-                channel.getDatagramFilter(false).setCheckRtpPayloadType(bundle);
-                // Enable RTCP filtering by SSRC iff we are bundle
-                channel.getDatagramFilter(true).setCheckRtcpSsrc(bundle);
-            }
-        }
     }
 
     /**

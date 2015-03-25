@@ -597,7 +597,7 @@ public class RtpChannel
          * FIXME The attribute rtp-level-relay-type/Channel property
          * rtpLevelRelayType is pretty much the most important given that Jitsi
          * Videobridge implements an RTP-level relay. Unfortunately, we do not
-         * currently support switching between the differents types of RTP-level
+         * currently support switching between the different types of RTP-level
          * relays. The following is a hack/workaround making sure that the
          * attribute/property in question has a value as soon as necessary and
          * before this Channel is made available to the conference focus for
