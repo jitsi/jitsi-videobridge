@@ -1,2 +1,3 @@
 lib/*.jar usr/share/jitsi-videobridge/lib
+lib/*.properties usr/share/jitsi-videobridge/lib
 jitsi-videobridge.jar usr/share/jitsi-videobridge

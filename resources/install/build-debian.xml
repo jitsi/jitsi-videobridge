@@ -181,6 +181,7 @@
         <copy todir="${debian.release}">
             <fileset dir=".">
                 <include name="src/**"/>
+                <include name="lib/logging.properties"/>
                 <include name="build.xml"/>
                 <include name="resources/install/build-debian.xml"/>
                 <include name="resources/install/linux-64/jvb.sh"/>
