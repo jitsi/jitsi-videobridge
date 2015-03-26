@@ -195,7 +195,7 @@
             <replacevalue>/usr/lib/jni</replacevalue>
         </replace>
         <replace file="${debian.release}/resources/install/linux-64/jvb.sh"
-                 token="$SCRIPT_DIR/lib/native/linux">
+                 token="$SCRIPT_DIR/lib/native/linux-64">
             <replacevalue>/usr/lib/jni</replacevalue>
         </replace>
         <copy todir="${debian.release}">
