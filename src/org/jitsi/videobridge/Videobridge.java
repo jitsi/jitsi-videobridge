@@ -18,6 +18,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.eventadmin.*;
@@ -241,9 +242,7 @@ public class Videobridge
         {
             logger.info(
                     "Created conference " + conference.getID()
-                        + ". The total number of conferences is now "
-                        + getConferenceCount() + ", channels "
-                        + getChannelCount() + ".");
+                        + ". " + getConferenceCountString());
         }
 
         return conference;
@@ -1274,5 +1273,95 @@ public class Videobridge
         throws Exception
     {
         this.bundleContext = null;
+    }
+
+    /**
+     * Returns a short string that contains the total number of
+     * conferences/channels/video streams, for the purposes of logging.
+     *
+     * The metric "video streams" is an estimation of the total number of
+     * video streams received or sent. It may not be exactly accurate, because
+     * we assume, for example, that all endpoints are sending video. It is a
+     * better representation of the level of usage of the bridge than simply
+     * the number of channels, because it takes into account the size of each
+     * conference.
+     *
+     * The calculations are performed ad-hoc to avoid looping through all
+     * components multiple times.
+     *
+     * @return a short string that contains the total number of
+     * conferences/channels/video streams, for the purposes of logging.
+     */
+    String getConferenceCountString()
+    {
+        int conferenceCount = 0, channelCount = 0, streamCount = 0;
+
+        Conference[] conferences = getConferences();
+        if (conferences != null && conferences.length != 0)
+        {
+            for (Conference conference : conferences)
+            {
+                if (conference != null && !conference.isExpired())
+                {
+                    conferenceCount++;
+
+                    for (Content content : conference.getContents())
+                    {
+                        if (content != null && !content.isExpired())
+                        {
+                            int contentChannelCount = content.getChannelCount();
+                            channelCount += contentChannelCount;
+
+                            if (MediaType.VIDEO.equals(content.getMediaType()))
+                            {
+                                streamCount +=
+                                    getContentStreamCount(content,
+                                                          contentChannelCount);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return "The total number of conferences is now " + conferenceCount
+                + ", channels " + channelCount
+                + ", video streams " + streamCount + ".";
+    }
+
+    /**
+     * Gets the number of video streams for a given <tt>Content</tt>. See the
+     * documentation for {@link #getConferenceCountString()}.
+     *
+     * @param content the content.
+     * @param contentChannelCount the number of channels in the content.
+     * @return  the number of video streams for a given <tt>Content</tt>. See the
+     * documentation for {@link #getConferenceCountString()}.
+     */
+    private int getContentStreamCount(Content content, int contentChannelCount)
+    {
+        Channel[] channels = content.getChannels();
+        int contentStreamCount = 0;
+        if (channels != null && channels.length != 0)
+        {
+            for (Channel channel : channels)
+            {
+                if (channel != null
+                        && !channel.isExpired()
+                        && channel instanceof VideoChannel)
+                {
+                    VideoChannel videoChannel = (VideoChannel) channel;
+                    int channelStreams = 1; //assume we're receiving a stream
+                    int lastN = videoChannel.getLastN();
+                    channelStreams +=
+                            lastN == -1
+                                    ? contentChannelCount - 1
+                                    : Math.min(lastN, contentChannelCount - 1);
+
+                    contentStreamCount += channelStreams;
+                }
+            }
+        }
+        return contentStreamCount;
     }
 }

@@ -275,7 +275,6 @@ public class Content
         channel.initialize();
 
         Videobridge videobridge = getConference().getVideobridge();
-        int channelCount = videobridge.getChannelCount();
 
         if (logger.isInfoEnabled())
         {
@@ -288,9 +287,7 @@ public class Content
             logger.info(
                     "Created channel " + channel.getID() + " of content "
                         + getName() + " of conference " + conference.getID()
-                        + ". The total number of conferences is now "
-                        + videobridge.getConferenceCount() + ", channels "
-                        + channelCount + ".");
+                        + ". " + videobridge.getConferenceCountString());
         }
 
         return channel;
@@ -411,9 +408,7 @@ public class Content
                 logger.info(
                         "Expired content " + getName() + " of conference "
                             + conference.getID()
-                            + ". The total number of conferences is now "
-                            + videobridge.getConferenceCount() + ", channels "
-                            + videobridge.getChannelCount() + ".");
+                            + ". " + videobridge.getConferenceCountString());
             }
         }
     }
