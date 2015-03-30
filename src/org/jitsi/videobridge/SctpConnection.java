@@ -1062,6 +1062,9 @@ public class SctpConnection
                             raw.getBuffer(), raw.getOffset(), raw.getLength());
                 }
 
+                if (sctpSocket == null)
+                    break;
+
                 // Pass network packet to SCTP stack
                 sctpSocket.onConnIn(
                     raw.getBuffer(), raw.getOffset(), raw.getLength());
