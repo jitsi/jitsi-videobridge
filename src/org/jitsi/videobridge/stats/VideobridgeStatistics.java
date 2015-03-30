@@ -25,7 +25,7 @@ public class VideobridgeStatistics
     extends Statistics
 {
     /**
-     * The name of the number of conferences statistic.
+     * The name of the number of audio channels statistic.
      */
     public static final String AUDIOCHANNELS = "audiochannels";
 
@@ -59,12 +59,12 @@ public class VideobridgeStatistics
         = new DecimalFormat("#.#####");
 
     /**
-     * The name of the number of conferences statistic.
+     * The name of the number of participants statistic.
      */
     public static final String NUMBEROFPARTICIPANTS = "participants";
 
     /**
-     * The name of the number of conferences statistic.
+     * The name of the number of threads statistic.
      */
     public static final String NUMBEROFTHREADS = "threads";
 
@@ -95,9 +95,14 @@ public class VideobridgeStatistics
     public static final String USED_MEMORY = "used_memory";
 
     /**
-     * The name of the number of conferences statistic.
+     * The name of the number of video channels statistic.
      */
     public static final String VIDEOCHANNELS = "videochannels";
+
+    /**
+     * The name of the number of video streams statistic.
+     */
+    public static final String VIDEOSTREAMS = "videostreams";
 
     static
     {
@@ -155,6 +160,7 @@ public class VideobridgeStatistics
         unlockedSetStat(TOTAL_MEMORY, 0);
         unlockedSetStat(USED_MEMORY, 0);
         unlockedSetStat(VIDEOCHANNELS, 0);
+        unlockedSetStat(VIDEOSTREAMS, 0);
 
         unlockedSetStat(TIMESTAMP, currentTimeMillis());
     }
@@ -219,6 +225,7 @@ public class VideobridgeStatistics
         int audioChannels = 0, videoChannels = 0;
         int conferences = 0;
         int endpoints = 0;
+        int videoStreams = 0;
         long packets = 0, packetsLost = 0;
         long bytesReceived = 0, bytesSent = 0;
         boolean shutdownInProgress = false;
@@ -236,9 +243,10 @@ public class VideobridgeStatistics
                     for (Content content : conference.getContents())
                     {
                         MediaType mediaType = content.getMediaType();
+                        int contentChannelCount = content.getChannelCount();
 
                         if(MediaType.AUDIO.equals(mediaType))
-                            audioChannels += content.getChannelCount();
+                            audioChannels += contentChannelCount;
                         else if(MediaType.VIDEO.equals(mediaType))
                             videoChannels += content.getChannelCount();
 
@@ -254,6 +262,20 @@ public class VideobridgeStatistics
                                 bytesReceived
                                     += rtpChannel.getNBReceivedBytes();
                                 bytesSent += rtpChannel.getNBSentBytes();
+                            }
+                            if (channel instanceof VideoChannel)
+                            {
+                                VideoChannel videoChannel
+                                        = (VideoChannel) channel;
+
+                                //assume we're receiving a stream
+                                int channelStreams = 1;
+                                int lastN = videoChannel.getLastN();
+                                channelStreams += lastN == -1
+                                    ? contentChannelCount - 1
+                                    : Math.min(lastN, contentChannelCount - 1);
+
+                                videoStreams += channelStreams;
                             }
                         }
                     }
@@ -324,6 +346,7 @@ public class VideobridgeStatistics
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);
             unlockedSetStat(VIDEOCHANNELS, videoChannels);
+            unlockedSetStat(VIDEOSTREAMS, videoStreams);
 
             unlockedSetStat(NUMBEROFTHREADS, threadCount);
 

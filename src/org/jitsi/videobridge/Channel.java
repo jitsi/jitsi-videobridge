@@ -396,10 +396,8 @@ public abstract class Channel
                 logger.info(
                         "Expired channel " + getID() + " of content "
                             + content.getName() + " of conference "
-                            + conference.getID()
-                            + ". The total number of conferences is now "
-                            + videobridge.getConferenceCount() + ", channels "
-                            + videobridge.getChannelCount() + ".");
+                            + conference.getID() + ". "
+                            + videobridge.getConferenceCountString());
             }
         }
     }

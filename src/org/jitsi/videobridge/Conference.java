@@ -609,9 +609,7 @@ public class Conference
             {
                 logger.info(
                         "Expired conference " + getID()
-                            + ". The total number of conferences is now "
-                            + videobridge.getConferenceCount() + ", channels "
-                            + videobridge.getChannelCount() + ".");
+                            + ". " + videobridge.getConferenceCountString());
             }
         }
     }
@@ -976,9 +974,7 @@ public class Conference
 
             logger.info(
                     "Created content " + name + " of conference " + getID()
-                        + ". The total number of conferences is now "
-                        + videobridge.getConferenceCount() + ", channels "
-                        + videobridge.getChannelCount() + ".");
+                        + ". " + videobridge.getConferenceCountString());
         }
 
         return content;
