@@ -1602,7 +1602,7 @@ public class RtpChannel
 
         Set<Integer> oldSignaledSSRCs = new HashSet<Integer>(signaledSSRCs);
 
-        // Build the set of the new SSRCs.
+        // Build the set of the newly signaled SSRCs.
         Set<Integer> newSignaledSSRCs = new HashSet<Integer>();
         for (SourcePacketExtension source : sources)
         {
@@ -1634,7 +1634,7 @@ public class RtpChannel
             }
         }
 
-        // Set the new signaled ssrcs.
+        // Set the newly signaled ssrcs.
         signaledSSRCs = newSignaledSSRCs;
 
         touch(); // It seems this Channel is still active.

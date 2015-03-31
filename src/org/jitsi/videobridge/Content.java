@@ -1005,8 +1005,9 @@ public class Content
         String strategyFQN;
 
         // If the conference has less than 3 participants, it switches the RTCP
-        // termination strategy to the SilentBridgeRTCPTerminationStrategy. It
-        // restores the configured RTCP termination strategy otherwise.
+        // termination strategy to the RTCP termination strategy defined by
+        // {@link fallbackSrategyFQN}. It restores the configured RTCP
+        // termination strategy otherwise.
         if (conf.getEndpointCount() < 3)
         {
             strategyFQN = this.fallbackSrategyFQN;
