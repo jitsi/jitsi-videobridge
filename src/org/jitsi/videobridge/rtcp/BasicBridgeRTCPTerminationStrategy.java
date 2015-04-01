@@ -10,8 +10,13 @@ import net.sf.fmj.media.rtp.*;
 
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
+import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.rtp.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
+
+import java.util.*;
 
 /**
  * This class extends the <tt>BasicRTCPTerminationStrategy</tt> to make it work
@@ -21,151 +26,269 @@ import org.jitsi.videobridge.*;
  * @author George Politis
  */
 public class BasicBridgeRTCPTerminationStrategy
-    extends BasicRTCPTerminationStrategy
-    implements BridgeRTCPTerminationStrategy
+    extends AbstractBridgeRTCPTerminationStrategy
 {
-    /**
-     * The <tt>Conference</tt> associated to this
-     * <tt>BasicBridgeRTCPTerminationStrategy</tt>
-     */
-    private Conference conference;
-
-    /**
-     * The <tt>BridgeSenderReporting</tt> responsible for sender reporting in
-     * the bridge.
-     */
-    private final BridgeSenderReporting bridgeSenderReporting;
-
-    /**
-     * The <tt>BridgeReceiverReporting</tt> responsible for receiver reporting in
-     * the bridge.
-     */
-    private final BridgeReceiverReporting bridgeReceiverReporting;
+    private static final Logger logger
+            = Logger.getLogger(BasicBridgeRTCPTerminationStrategy.class);
 
     /**
      * Constructor.
      */
     public BasicBridgeRTCPTerminationStrategy()
     {
-        this.bridgeSenderReporting = new BridgeSenderReporting(this);
-        this.bridgeReceiverReporting = new BridgeReceiverReporting(this);
+        setTransformerChain(new Transformer[]{
+                new REMBNotifier(this),
+                new ReceiverFeedbackFilter(),
+                new SenderFeedbackExploder(this)
+        });
     }
 
     /**
-     * Sets the <tt>Conference</tt> associated to this
-     * <tt>BridgeRTCPTerminationStrategy</tt>
+     * Sends RRs using data from FMJ and and REMBs using data from our remote
+     * bitrate estimator.
      *
-     * @param conference The <tt>Conference</tt> associated to this
-     * <tt>BridgeRTCPTerminationStrategy</tt>
+     * @return <tt>null</tt>
      */
-    @Override
-    public void setConference(Conference conference)
+    public RTCPPacket[] makeReports()
     {
-        this.conference = conference;
-    }
+        RTPTranslator rtpTranslator = this.getRTPTranslator();
 
-    /**
-     * Gets the <tt>Conference</tt> associated to this
-     * <tt>BridgeRTCPTerminationStrategy</tt>
-     *
-     * @return The <tt>Conference</tt> associated to this
-     * <tt>BridgeRTCPTerminationStrategy</tt>
-     */
-    @Override
-    public Conference getConference()
-    {
-        return this.conference;
-    }
+        if (!(rtpTranslator instanceof RTPTranslatorImpl))
+            return null;
 
-    /**
-     * Implements
-     * {@link org.jitsi.service.neomedia.RTCPPacketTransformer#transformRTCPPacket(net.sf.fmj.media.rtp.RTCPCompoundPacket)}
-     *
-     * 1. Removes receiver report blocks from RRs and SRs and kills REMBs.
-     * 2. Updates the receiver feedback cache.
-     * 3. "Explodes" sender reports.
-     *
-     * @param inPacket the incoming RTCP packet to transform.
-     * @return the transformed RTCP packet. If no transformations were made,
-     * the method returns the input packet. If the packet is to be dropped,
-     * the method returns null.
-     */
-    @Override
-    public RTCPCompoundPacket transformRTCPPacket(
-            RTCPCompoundPacket inPacket)
-    {
-        // Intercept REMBs and forward them to the VideoChannel logic
-        for (RTCPPacket p : inPacket.packets)
+        Conference conference = this.getConference();
+        if (conference == null)
+            return null;
+
+        long time = System.currentTimeMillis();
+        RTPTranslatorImpl rtpTranslatorImpl = (RTPTranslatorImpl) rtpTranslator;
+        // Use the SSRC of the bridge (that is announced through signaling) so
+        // that the endpoints won't drop the packet.
+        int localSSRC = (int) rtpTranslatorImpl.getLocalSSRC(null);
+        RTCPTransmitter rtcpTransmitter
+                = this.getRTCPReportBuilder().getRTCPTransmitter();
+
+        for (Endpoint endpoint : conference.getEndpoints())
         {
-            if (p != null && p.type == RTCPFBPacket.PSFB)
+            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
             {
-                RTCPFBPacket psfb = (RTCPFBPacket) p;
-                if (psfb.fmt == RTCPREMBPacket.FMT)
+                // Make the RTCP reports.
+                RTCPPacket[] packets
+                        = makeReportsForChannel(
+                        (VideoChannel) channel,
+                        time,
+                        localSSRC);
+
+                // Transmit the RTCP reports.
+                if ((packets != null) && (packets.length != 0))
                 {
-                    receivedREMB((RTCPREMBPacket) psfb);
+                    RTCPCompoundPacket compoundPacket
+                            = new RTCPCompoundPacket(packets);
+                    Payload payload = new RTCPPacketPayload(compoundPacket);
+
+                    rtpTranslatorImpl.writeControlPayload(
+                            payload,
+                            channel.getStream());
+
+                    /*
+                     * NOTE(gp, lyubomir): RTCPTransmitter cannot transmit
+                     * specific reports to specific destinations so we've
+                     * implemented the transmission ourselves. We're updating
+                     * the (global) transmission statistics maintained by
+                     * RTCPTranmitter by calling its onRTCPCompoundPacketSent
+                     * method.
+                     */
+                    rtcpTransmitter.onRTCPCompoundPacketSent(compoundPacket);
                 }
             }
         }
 
-        // Call the super method that:
-        //
-        // 1. Removes receiver report blocks from RRs and SRs and kills REMBs.
-        // 2. Updates the receiver feedback cache.
+        return null;
+    }
 
-        RTCPCompoundPacket outPacket = super.transformRTCPPacket(inPacket);
 
-        if (outPacket.packets != null
-            && outPacket.packets.length != 0
-            && outPacket.packets[0].type == RTCPPacket.SR)
+    /**
+     *
+     * @param ssrc
+     * @return
+     */
+    private RTCPSDES createRTCPSDES(int ssrc)
+    {
+        RTCPTransmitter rtcpTransmitter
+                = this.getRTCPReportBuilder().getRTCPTransmitter();
+
+        SSRCInfo ssrcInfo = rtcpTransmitter.cache.cache.get(ssrc);
+        RTCPSDES rtcpSDES = null;
+
+        if (ssrcInfo != null)
         {
-            // 3. This is a sender report, pass it on to the bridge sender
-            // reporting for "explosion".
-            if (bridgeSenderReporting.explodeSenderReport(outPacket))
+            String cname = ssrcInfo.getCNAME();
+
+            if (cname != null)
             {
-                return null;
+                rtcpSDES = new RTCPSDES();
+
+                rtcpSDES.ssrc = ssrc;
+                rtcpSDES.items
+                        = new RTCPSDESItem[]
+                        {
+                                new RTCPSDESItem(RTCPSDESItem.CNAME, cname)
+                        };
+            }
+        }
+        return rtcpSDES;
+    }
+
+    /**
+     *
+     * @param videoChannel
+     * @param time
+     * @return
+     */
+    private RTCPReportBlock[] createRTCPReportBlocksForChannel(
+            VideoChannel videoChannel,
+            long time)
+    {
+        RTCPTransmitter rtcpTransmitter
+                = this.getRTCPReportBuilder().getRTCPTransmitter();
+
+        int[] ssrcs = videoChannel.getReceiveSSRCs();
+        List<RTCPReportBlock> receiverReports
+                = new ArrayList<RTCPReportBlock>(ssrcs.length);
+
+        for (int ssrc : ssrcs)
+        {
+            // TODO(gp) we need a mutex here for accessing the RTCP transmitter
+            // cache.
+            SSRCInfo info = rtcpTransmitter.cache.cache.get(ssrc);
+
+            if (info != null)
+            {
+                RTCPReportBlock receiverReport
+                        = info.makeReceiverReport(time);
+
+                receiverReports.add(receiverReport);
             }
             else
             {
-                // "Explosion" failed, send as is.
-                return outPacket;
+                // Don't send RTCP feedback information for this sub-stream.
+                // TODO(gp) Any endpoints receiving this stream must switch to
+                // a lower quality stream.
+                if (logger.isInfoEnabled())
+                {
+                    logger.info(
+                            "FMJ has no information for SSRC "
+                                    + (ssrc & 0xffffffffl) + " (" + ssrc + ")");
+                }
             }
         }
-        else
-        {
-            // Not an SR, don't touch.
-            return outPacket;
-        }
+
+        return
+                receiverReports.toArray(
+                        new RTCPReportBlock[receiverReports.size()]);
     }
 
     /**
-     * Sends RRs using data from FMJ and and REMBs using data from our own
-     * remote bitrate estimator.
      *
-     * @return null
+     * @param videoChannel
+     * @param localSSRC
+     * @return
      */
-    @Override
-    public RTCPPacket[] makeReports()
+    private RTCPREMBPacket createRTCPREMBPacketForChannel(
+            VideoChannel videoChannel,
+            int localSSRC)
     {
-        return bridgeReceiverReporting.makeReports();
+        if (videoChannel == null)
+            throw new IllegalArgumentException("videoChannel");
+
+        // Destination
+        RemoteBitrateEstimator remoteBitrateEstimator
+                = ((VideoMediaStream) videoChannel.getStream())
+                .getRemoteBitrateEstimator();
+        Collection<Integer> ssrcs = remoteBitrateEstimator.getSsrcs();
+
+        // TODO(gp) intersect with SSRCs from signaled simulcast layers
+        // NOTE(gp) The Google Congestion Control algorithm (sender side)
+        // doesn't seem to care about the SSRCs in the dest field.
+        long[] dest = new long[ssrcs.size()];
+        int i = 0;
+
+        for (Integer ssrc : ssrcs)
+            dest[i++] = ssrc & 0xFFFFFFFFL;
+
+        // Exp & mantissa
+        long bitrate = remoteBitrateEstimator.getLatestEstimate();
+
+        if (bitrate == -1)
+            return null;
+
+        if (logger.isDebugEnabled())
+            logger.debug("Estimated bitrate: " + bitrate);
+
+        // Create and return the packet.
+        return
+                new RTCPREMBPacket(
+                        localSSRC & 0xFFFFFFFFL,
+                    /* mediaSSRC */ 0L,
+                        bitrate,
+                        dest);
     }
 
-    /**
-     * Handles a received REMB packet by passing its bitrate to the appropriate
-     * <tt>VideoChannel</tt>.
-     * @param remb the REMB packet that was received.
-     */
-    private void receivedREMB(RTCPREMBPacket remb)
+    private RTCPPacket[] makeReportsForChannel(
+            VideoChannel videoChannel,
+            long time,
+            int localSSRC)
     {
-        Conference conference = getConference();
-        if (conference != null)
+        List<RTCPPacket> packets = new ArrayList<RTCPPacket>(3);
+
+        // RTCP RR
+        RTCPReportBlock[] receiverReports
+                = createRTCPReportBlocksForChannel(videoChannel, time);
+        RTCPPacket rr = new RTCPRRPacket(localSSRC, receiverReports);
+
+        packets.add(rr);
+
+        // RTCP REMB
+        RTCPREMBPacket remb
+                = createRTCPREMBPacketForChannel(videoChannel, localSSRC);
+
+        if (remb != null)
         {
-            Channel channel
-                    = conference.findChannelByReceiveSSRC(remb.senderSSRC,
-                                                          MediaType.VIDEO);
-            if (channel != null && channel instanceof VideoChannel)
-            {
-                ((VideoChannel) channel).receivedREMB(remb.getBitrate());
-            }
+            packets.add(remb);
+            if (logger.isDebugEnabled())
+                logger.debug(remb);
         }
+
+        // RTCP SDES
+        List<RTCPSDES> sdesChunks
+                = new ArrayList<RTCPSDES>(1 + receiverReports.length);
+        RTCPSDES sdesChunk = createRTCPSDES(localSSRC);
+
+        if (sdesChunk != null)
+            sdesChunks.add(sdesChunk);
+
+        long[] dest = new long[receiverReports.length];
+
+        for (int i = 0; i < dest.length; i++)
+            dest[i] = receiverReports[i].getSSRC();
+
+        for (long ssrc : dest)
+        {
+            sdesChunk = createRTCPSDES((int) ssrc);
+            if (sdesChunk != null)
+                sdesChunks.add(sdesChunk);
+        }
+
+        // TODO(gp) why does this happen : sdesChunks.size() == 0
+        if (sdesChunks.size() != 0)
+        {
+            RTCPSDESPacket sdes
+                    = new RTCPSDESPacket(
+                    sdesChunks.toArray(new RTCPSDES[sdesChunks.size()]));
+
+            packets.add(sdes);
+        }
+
+        return packets.toArray(new RTCPPacket[packets.size()]);
     }
 }

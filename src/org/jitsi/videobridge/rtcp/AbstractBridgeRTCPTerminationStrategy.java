@@ -6,14 +6,17 @@
  */
 package org.jitsi.videobridge.rtcp;
 
-import org.jitsi.service.neomedia.*;
+import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.videobridge.*;
 
 /**
  * @author George Politis
  */
-public interface BridgeRTCPTerminationStrategy extends RTCPTerminationStrategy
+public abstract class AbstractBridgeRTCPTerminationStrategy
+    extends AbstractRTCPTerminationStrategy
 {
+    private Conference conference;
+
     /**
      * Sets the <tt>Conference</tt> associated to this
      * <tt>BridgeRTCPTerminationStrategy</tt>
@@ -21,7 +24,10 @@ public interface BridgeRTCPTerminationStrategy extends RTCPTerminationStrategy
      * @param conference The <tt>Conference</tt> associated to this
      * <tt>BridgeRTCPTerminationStrategy</tt>
      */
-    public void setConference(Conference conference);
+    public void setConference(Conference conference)
+    {
+        this.conference = conference;
+    }
 
     /**
      * Gets the <tt>Conference</tt> associated to this
@@ -30,5 +36,8 @@ public interface BridgeRTCPTerminationStrategy extends RTCPTerminationStrategy
      * @return The <tt>Conference</tt> associated to this
      * <tt>BridgeRTCPTerminationStrategy</tt>
      */
-    public Conference getConference();
+    public Conference getConference()
+    {
+        return conference;
+    }
 }

@@ -10,19 +10,44 @@ import net.sf.fmj.media.rtp.*;
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 
 /**
  * @author George Politis
  */
 @Deprecated
 public class HighestQualityBridgeRTCPTerminationStrategy
-        extends BasicBridgeRTCPTerminationStrategy
+        extends AbstractBridgeRTCPTerminationStrategy
 {
+    private static final Logger logger =
+            Logger.getLogger(HighestQualityBridgeRTCPTerminationStrategy.class);
+
     /**
      * The cache processor that will be making the RTCP reports coming from
      * the bridge.
      */
     private FeedbackCacheProcessor feedbackCacheProcessor;
+
+    /**
+     * A cache of media receiver feedback. It contains both receiver report
+     * blocks and REMB packets.
+     */
+    private final FeedbackCache feedbackCache;
+
+    public HighestQualityBridgeRTCPTerminationStrategy()
+    {
+        logger.warn("This RTCP termination strategy is deprecated and should" +
+                "not be used!");
+
+        this.feedbackCache = new FeedbackCache();
+
+        setTransformerChain(new Transformer[]{
+                new REMBNotifier(this),
+                new FeedbackCacheUpdater(feedbackCache),
+                new ReceiverFeedbackFilter(),
+                new SenderFeedbackExploder(this)
+        });
+    }
 
     @Override
     public RTCPPacket[] makeReports()
@@ -38,7 +63,7 @@ public class HighestQualityBridgeRTCPTerminationStrategy
         if (this.feedbackCacheProcessor == null)
         {
             this.feedbackCacheProcessor
-                    = new FeedbackCacheProcessor(getFeedbackCache());
+                    = new FeedbackCacheProcessor(feedbackCache);
 
             // TODO(gp) make percentile configurable.
             this.feedbackCacheProcessor.setPercentile(70);

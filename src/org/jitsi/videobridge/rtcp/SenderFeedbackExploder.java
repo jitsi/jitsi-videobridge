@@ -17,26 +17,63 @@ import java.util.*;
 /**
  * @author George Politis
  */
-public class BridgeSenderReporting
+class SenderFeedbackExploder implements Transformer<RTCPCompoundPacket>
 {
-    private final Map<Integer, Map<Integer, SenderInformation>>
-        lastSenderInformationMap
-            = new HashMap<Integer, Map<Integer, SenderInformation>>();
+    private final AbstractBridgeRTCPTerminationStrategy strategy;
 
-    public final BridgeRTCPTerminationStrategy strategy;
-
-    public BridgeSenderReporting(BridgeRTCPTerminationStrategy strategy)
+    /**
+     * Ctor.
+     *
+     * @param strategy
+     */
+    public SenderFeedbackExploder(AbstractBridgeRTCPTerminationStrategy strategy)
     {
         this.strategy = strategy;
     }
 
+    @Override
+    public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+    {
+        // Call the super method that:
+        //
+        // 1. Removes receiver report blocks from RRs and SRs and kills REMBs.
+        // 2. Updates the receiver feedback cache.
+
+        // RTCPCompoundPacket outPacket = super.reverseTransform(inPacket);
+        RTCPCompoundPacket outPacket = inPacket;
+
+        if (outPacket.packets != null
+                && outPacket.packets.length != 0
+                && outPacket.packets[0].type == RTCPPacket.SR)
+        {
+            // 3. This is a sender report, pass it on to the bridge sender
+            // reporting for "explosion".
+            if (explodeSenderReport(outPacket))
+            {
+                return null;
+            } else
+            {
+                // "Explosion" failed, send as is.
+                return outPacket;
+            }
+        } else
+        {
+            // Not an SR, don't touch.
+            return outPacket;
+        }
+    }
+
+    private final Map<Integer, Map<Integer, SenderInformation>>
+            lastSenderInformationMap
+            = new HashMap<Integer, Map<Integer, SenderInformation>>();
+
     private void explodeSenderReport(boolean destIsReceiving,
-            RTCPCompoundPacket outPacket,
-            RTCPSRPacket senderReport,
-            RTPTranslatorImpl rtpTranslatorImpl,
-            Integer senderSSRC,
-            Map<Integer, SenderInformation> receiverSenderInformationMap,
-            MediaStream stream)
+                                     RTCPCompoundPacket outPacket,
+                                     RTCPSRPacket senderReport,
+                                     RTPTranslatorImpl rtpTranslatorImpl,
+                                     Integer senderSSRC,
+                                     Map<Integer, SenderInformation> receiverSenderInformationMap,
+                                     MediaStream stream)
     {
         // "Clone" the SR.
         RTCPSRPacket sr = new RTCPSRPacket(
@@ -185,12 +222,12 @@ public class BridgeSenderReporting
                         else
                         {
                             VideoChannel destVideoChannel
-                                = (VideoChannel) destChannel;
+                                    = (VideoChannel) destChannel;
 
                             destIsReceiving
-                                = destVideoChannel.getSimulcastManager().accept(
-                                        ssrc,
-                                        srcVideoChannel);
+                                    = destVideoChannel.getSimulcastManager().accept(
+                                    ssrc,
+                                    srcVideoChannel);
                         }
                     }
 

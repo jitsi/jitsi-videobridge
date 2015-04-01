@@ -25,15 +25,10 @@ import org.jitsi.videobridge.simulcast.*;
  */
 @Deprecated
 public class MaxThroughputBridgeRTCPTerminationStrategy
-    extends AbstractRTCPReportBuilder
-    implements BridgeRTCPTerminationStrategy,
-               RTCPPacketTransformer
+    extends AbstractBridgeRTCPTerminationStrategy
 {
     private static final Logger logger
         = Logger.getLogger(MaxThroughputBridgeRTCPTerminationStrategy.class);
-
-    private Conference conference;
-    private RTPTranslator rtpTranslator;
 
     private RTCPSDES createRTCPSDES(RTCPTransmitter rtcpTransmitter, int ssrc)
     {
@@ -57,18 +52,6 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
             }
         }
         return rtcpSDES;
-    }
-
-    @Override
-    public RTCPPacketTransformer getRTCPPacketTransformer()
-    {
-        return this;
-    }
-
-    @Override
-    public RTCPReportBuilder getRTCPReportBuilder()
-    {
-        return this;
     }
 
     private RTCPReportBlock[] makeReceiverReports(
@@ -155,9 +138,9 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
     }
 
     @Override
-    public RTCPPacket[] makeReports(RTCPTransmitter rtcpTransmitter)
+    public RTCPPacket[] makeReports()
     {
-        RTPTranslator rtpTranslator = this.rtpTranslator;
+        RTPTranslator rtpTranslator = this.getRTPTranslator();
 
         if (!(rtpTranslator instanceof RTPTranslatorImpl))
             return null;
@@ -170,7 +153,7 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
         // that the endpoints won't drop the packet.
         int localSSRC = (int) rtpTranslatorImpl.getLocalSSRC(null);
 
-        for (Endpoint endpoint : this.conference.getEndpoints())
+        for (Endpoint endpoint : getConference().getEndpoints())
         {
             for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
             {
@@ -178,7 +161,7 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                 RTCPPacket[] packets
                     = makeReports(
                             (VideoChannel) channel,
-                            rtcpTransmitter,
+                            getRTCPTransmitter(),
                             time,
                             localSSRC);
 
@@ -201,7 +184,7 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                      * RTCPTranmitter by calling its onRTCPCompoundPacketSent
                      * method.
                      */
-                    rtcpTransmitter.onRTCPCompoundPacketSent(compoundPacket);
+                    getRTCPTransmitter().onRTCPCompoundPacketSent(compoundPacket);
                 }
             }
         }
@@ -258,94 +241,82 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                 : new RTCPPacket[] { rr, sdes };
     }
 
-    @Override
-    public void setConference(Conference conference)
+    public MaxThroughputBridgeRTCPTerminationStrategy()
     {
-        this.conference = conference;
+        logger.warn("This RTCP termination strategy is deprecated and should" +
+                "not be used!");
+        setTransformerChain(new Transformer[]{
+                transformer
+        });
     }
 
-    @Override
-    public Conference getConference()
+    Transformer<RTCPCompoundPacket> transformer = new Transformer<RTCPCompoundPacket>()
     {
-        return this.conference;
-    }
-
-    @Override
-    public void setRTPTranslator(RTPTranslator translator)
-    {
-        this.rtpTranslator = translator;
-    }
-
-    @Override
-    public RTPTranslator getRTPTranslator()
-    {
-        return this.rtpTranslator;
-    }
-
-    @Override
-    public RTCPCompoundPacket transformRTCPPacket(RTCPCompoundPacket inPacket)
-    {
-        if (inPacket == null)
-            return inPacket;
-
-        RTCPPacket[] inPackets = inPacket.packets;
-
-        if ((inPackets == null) || (inPackets.length == 0))
-            return inPacket;
-
-        List<RTCPPacket> outPackets
-            = new ArrayList<RTCPPacket>(inPackets.length);
-
-        for (RTCPPacket p : inPackets)
+        @Override
+        public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
         {
-            switch (p.type)
+            if (inPacket == null)
+                return inPacket;
+
+            RTCPPacket[] inPackets = inPacket.packets;
+
+            if ((inPackets == null) || (inPackets.length == 0))
+                return inPacket;
+
+            List<RTCPPacket> outPackets
+                    = new ArrayList<RTCPPacket>(inPackets.length);
+
+            for (RTCPPacket p : inPackets)
             {
-            case RTCPPacket.RR:
-                // Mute RRs from the peers. We send our own.
-                break;
-
-            case RTCPPacket.SR:
-                // Remove feedback information from the SR and forward.
-                RTCPSRPacket sr = (RTCPSRPacket) p;
-
-                sr.reports = new RTCPReportBlock[0];
-                outPackets.add(sr);
-                break;
-
-            case RTCPFBPacket.PSFB:
-                RTCPFBPacket psfb = (RTCPFBPacket) p;
-
-                switch (psfb.fmt)
+                switch (p.type)
                 {
-                case RTCPREMBPacket.FMT:
-                    // Mute REMBs.
-                    break;
-                default:
-                    // Pass through everything else, like PLIs and NACKs
-                    outPackets.add(psfb);
-                    break;
+                    case RTCPPacket.RR:
+                        // Mute RRs from the peers. We send our own.
+                        break;
+
+                    case RTCPPacket.SR:
+                        // Remove feedback information from the SR and forward.
+                        RTCPSRPacket sr = (RTCPSRPacket) p;
+
+                        sr.reports = new RTCPReportBlock[0];
+                        outPackets.add(sr);
+                        break;
+
+                    case RTCPFBPacket.PSFB:
+                        RTCPFBPacket psfb = (RTCPFBPacket) p;
+
+                        switch (psfb.fmt)
+                        {
+                            case RTCPREMBPacket.FMT:
+                                // Mute REMBs.
+                                break;
+                            default:
+                                // Pass through everything else, like PLIs and NACKs
+                                outPackets.add(psfb);
+                                break;
+                        }
+                        break;
+
+                    default:
+                        // Pass through everything else, like PLIs and NACKs
+                        outPackets.add(p);
+                        break;
                 }
-                break;
-
-            default:
-                // Pass through everything else, like PLIs and NACKs
-                outPackets.add(p);
-                break;
             }
-        }
 
-        RTCPCompoundPacket outPacket;
+            RTCPCompoundPacket outPacket;
 
-        if (outPackets.isEmpty())
-        {
-            outPacket = null;
-        }
-        else
-        {
-            outPacket
-                = new RTCPCompoundPacket(
+            if (outPackets.isEmpty())
+            {
+                outPacket = null;
+            }
+            else
+            {
+                outPacket
+                        = new RTCPCompoundPacket(
                         outPackets.toArray(new RTCPPacket[outPackets.size()]));
+            }
+            return outPacket;
         }
-        return outPacket;
-    }
+    };
 }
