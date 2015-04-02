@@ -1034,8 +1034,8 @@ public class Content
             RTCPTerminationStrategy strategy
                 = (RTCPTerminationStrategy) clazz.newInstance();
 
-            if (strategy instanceof BridgeRTCPTerminationStrategy)
-                ((BridgeRTCPTerminationStrategy) strategy).setConference(conf);
+            if (strategy instanceof AbstractBridgeRTCPTerminationStrategy)
+                ((AbstractBridgeRTCPTerminationStrategy) strategy).setConference(conf);
 
             rtpTranslator.setRTCPTerminationStrategy(strategy);
         }
