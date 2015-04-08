@@ -253,7 +253,7 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
     Transformer<RTCPCompoundPacket> transformer = new Transformer<RTCPCompoundPacket>()
     {
         @Override
-        public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+        public RTCPCompoundPacket reverseTransform(RTCPCompoundPacket inPacket)
         {
             if (inPacket == null)
                 return inPacket;
@@ -317,6 +317,24 @@ public class MaxThroughputBridgeRTCPTerminationStrategy
                         outPackets.toArray(new RTCPPacket[outPackets.size()]));
             }
             return outPacket;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void close()
+        {
+            // nothing to be done here
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+        {
+            return inPacket;
         }
     };
 }

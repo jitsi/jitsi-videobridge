@@ -32,7 +32,7 @@ class SenderFeedbackExploder implements Transformer<RTCPCompoundPacket>
     }
 
     @Override
-    public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+    public RTCPCompoundPacket reverseTransform(RTCPCompoundPacket inPacket)
     {
         // Call the super method that:
         //
@@ -61,6 +61,24 @@ class SenderFeedbackExploder implements Transformer<RTCPCompoundPacket>
             // Not an SR, don't touch.
             return outPacket;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close()
+    {
+        // nothing to be done here
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+    {
+        return inPacket;
     }
 
     private final Map<Integer, Map<Integer, SenderInformation>>

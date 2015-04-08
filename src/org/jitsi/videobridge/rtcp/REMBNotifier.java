@@ -24,7 +24,7 @@ class REMBNotifier implements Transformer<RTCPCompoundPacket>
     }
 
     @Override
-    public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+    public RTCPCompoundPacket reverseTransform(RTCPCompoundPacket inPacket)
     {
         // Intercept REMBs and forward them to the VideoChannel logic
         for (RTCPPacket p : inPacket.packets)
@@ -50,6 +50,24 @@ class REMBNotifier implements Transformer<RTCPCompoundPacket>
             }
         }
 
+        return inPacket;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close()
+    {
+        // nothing to be done here
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+    {
         return inPacket;
     }
 }
