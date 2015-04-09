@@ -1302,6 +1302,7 @@ public class RtpChannel
                 int payloadTypeCount = payloadTypes.size();
 
                 receivePTs = new int[payloadTypeCount];
+                stream.clearDynamicRTPPayloadTypes();
                 for (int i = 0; i < payloadTypeCount; i++)
                 {
                     PayloadTypePacketExtension payloadType
