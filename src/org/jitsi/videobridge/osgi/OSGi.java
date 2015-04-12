@@ -15,6 +15,7 @@ import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.impl.osgi.framework.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.osgi.framework.*;
 import java.io.*;
@@ -181,6 +182,10 @@ public class OSGi
         // Videobridge are not in the same network, so we don't need to
         // advertise link-local addresses.
         defaults.put(StackProperties.DISABLE_LINK_LOCAL_ADDRESSES, true_);
+
+        // If DTMF handling is enabled, DTMF packets will be read and swallowed.
+        // We want them forwarded as normal packets.
+        defaults.put(AudioMediaStream.DISABLE_DTMF_HANDLING_PNAME, true_);
 
         for (Map.Entry<String,String> e : defaults.entrySet())
         {
