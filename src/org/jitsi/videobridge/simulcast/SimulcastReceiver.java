@@ -215,7 +215,7 @@ class SimulcastReceiver
             // carried in the RTP packet has rolled over.
             //
             // In this way, the ROC extends the 16-bit RTP sequence number to a
-            // 48-bit “SRTP packet index”. The ROC is not be explicitly
+            // 48-bit "SRTP packet index". The ROC is not be explicitly
             // exchanged between the SRTP endpoints because in all practical
             // situations a rollover of the RTP sequence number can be detected
             // unless 2^15 consecutive RTP packets are lost.
