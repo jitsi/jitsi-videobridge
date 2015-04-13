@@ -410,7 +410,7 @@ public class Endpoint
                     sc.bind("selectedId", newSelectedEndpointID);
                     sc.bind("this", this);
                     logger.debug(sc.c(
-                        "Endpoint {this.id} notified us that its bit screen" +
+                        "Endpoint {this.id} notified us that its big screen" +
                             " displays endpoint {selectedId}."));
                 }
 
