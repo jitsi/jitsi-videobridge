@@ -148,7 +148,7 @@ class RtpChannelDatagramFilter
      */
     private boolean acceptRTP(int pt)
     {
-        int[] channelPTs = channel.receivePTs;
+        int[] channelPTs = channel.getReceivePTs();
 
         if (channelPTs == null || channelPTs.length == 0)
         {

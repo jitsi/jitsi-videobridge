@@ -131,7 +131,7 @@ public class RtpChannel
     /**
      * Contains the payload type numbers configured for this channel.
      */
-    int[] receivePTs = new int[0];
+    private int[] receivePTs = new int[0];
 
     /**
      * The list of RTP SSRCs received on this <tt>Channel</tt>. An element at
@@ -1322,6 +1322,12 @@ public class RtpChannel
                                 mediaFormat);
                     }
                 }
+
+                TransportManager transportManager = getTransportManager();
+                if (transportManager != null)
+                {
+                    transportManager.payloadTypesChanged(this);
+                }
             }
         }
 
@@ -1638,5 +1644,16 @@ public class RtpChannel
         signaledSSRCs = newSignaledSSRCs;
 
         touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     * Returns the RTP Payload Type numbers which this channel is configured
+     * to receive.
+     * @return the RTP Payload Type numbers which this channel is configured
+     * to receive.
+     */
+    public int[] getReceivePTs()
+    {
+        return receivePTs;
     }
 }

@@ -13,6 +13,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 
 /**
  * Represents the state of a Jingle transport.
@@ -26,6 +27,13 @@ public abstract class TransportManager
      * The ID to be assigned to the next transport candidate.
      */
     private static long nextCandidateID = 1;
+
+    /**
+     * The <tt>Logger</tt> used by the <tt>TransportManager</tt> class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger
+            = Logger.getLogger(TransportManager.class);
 
     /**
      * The <tt>PropertyChangeListener</tt> which listens to changes in the
@@ -287,5 +295,47 @@ public abstract class TransportManager
      */
     public abstract void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport);
+
+    /**
+     * Notifies this <tt>TransportManager</tt> that the configured RTP Payload
+     * Type numbers for one of its <tt>RtpChannel</tt>s have been updated.
+     *
+     * @param channel
+     */
+    public void payloadTypesChanged(RtpChannel channel)
+    {
+        checkPayloadTypes(channel);
+    }
+
+    /**
+     * Logs a warning if the addition of <tt>channel</tt> to <tt>channels</tt>
+     * will result in the same Payload Type number being received by more than
+     * one channel (which is bound to cause issues and probably indicates a
+     * problem on the signalling side).
+     *
+     * @param channel the <tt>Channel</tt> being added.
+     */
+    private void checkPayloadTypes(RtpChannel channel)
+    {
+        synchronized (channels)
+        {
+            for (Channel c : channels)
+            {
+                if ( !(c instanceof RtpChannel) || c == channel)
+                    continue;
+
+                // We only have a couple of PTs for each channel and this does
+                // not executes often.
+                for (int pt1 : ((RtpChannel) c).getReceivePTs())
+                    for (int pt2 : channel.getReceivePTs())
+                    {
+                        if (pt1 == pt2)
+                            logger.warn("The same PT (" + pt1 + ") used by two "
+                                            + "channels in the same bundle.");
+                    }
+            }
+        }
+    }
+
 }
 
