@@ -188,14 +188,13 @@ public abstract class Channel
      * @return a new <tt>StreamConnector</tt> instance which represents the pair
      * of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
      * <tt>rtpConnector</tt> is to use
-     * @throws IOException if anything goes wrong while initializing the pair of
-     * <tt>DatagramSocket</tt>s for RTP and RTCP traffic <tt>rtpConnector</tt>
-     * is to use
      */
     protected StreamConnector createStreamConnector()
-        throws IOException
     {
-        return getTransportManager().getStreamConnector(this);
+        TransportManager transportManager = getTransportManager();
+        return transportManager != null
+            ? transportManager.getStreamConnector(this)
+            : null;
     }
 
     /**
@@ -207,14 +206,10 @@ public abstract class Channel
      */
     protected MediaStreamTarget createStreamTarget()
     {
-        try
-        {
-            return getTransportManager().getStreamTarget(this);
-        }
-        catch (IOException ioe)
-        {
-            return null;
-        }
+        TransportManager transportManager = getTransportManager();
+        return transportManager != null
+            ? transportManager.getStreamTarget(this)
+            : null;
     }
 
     /**
@@ -296,17 +291,10 @@ public abstract class Channel
      */
     private void describeTransportManager(ColibriConferenceIQ.ChannelCommon iq)
     {
-        TransportManager transportManager;
-        try
-        {
-            transportManager = getTransportManager();
-        }
-        catch (IOException ioe)
-        {
-            throw new UndeclaredThrowableException(ioe);
-        }
+        TransportManager  transportManager = getTransportManager();
 
-        transportManager.describe(iq);
+        if (transportManager != null)
+            transportManager.describe(iq);
     }
 
     /**
@@ -434,9 +422,11 @@ public abstract class Channel
      *         <tt>null</tt> otherwise.
      */
     protected DtlsControl getDtlsControl()
-        throws IOException
     {
-        return getTransportManager().getDtlsControl(this);
+        TransportManager transportManager = getTransportManager();
+        return transportManager != null
+            ? transportManager.getDtlsControl(this)
+            : null;
     }
 
     /**
@@ -495,10 +485,8 @@ public abstract class Channel
     /**
      * Gets the <tt>StreamConnector</tt> currently used by this instance.
      * @return the <tt>StreamConnector</tt> currently used by this instance.
-     * @throws IOException
      */
     StreamConnector getStreamConnector()
-            throws IOException
     {
         if (streamConnector == null)
         {
@@ -508,15 +496,10 @@ public abstract class Channel
     }
 
     /**
-     * Gets the <tt>TransportManager</tt> which represents the Jingle transport
-     * of this <tt>Channel</tt>. If the <tt>TransportManager</tt> has not been
-     * created yet, it is created.
-     *
-     * @return the <tt>TransportManager</tt> which represents the Jingle
-     * transport of this <tt>Channel</tt>
+     * Gets the <tt>TransportManager</tt> for this <tt>Channel</tt>.
+     * @return the <tt>TransportManager</tt> for this <tt>Channel</tt>.
      */
     public TransportManager getTransportManager()
-        throws IOException
     {
         return transportManager;
     }
@@ -719,10 +702,16 @@ public abstract class Channel
      * this <tt>Channel</tt>
      */
     public void setTransport(IceUdpTransportPacketExtension transport)
-        throws IOException
     {
         if (transport != null)
-            getTransportManager().startConnectivityEstablishment(transport);
+        {
+            TransportManager transportManager = getTransportManager();
+            if (transportManager != null)
+                transportManager.startConnectivityEstablishment(transport);
+            else
+                logger.warn("Failed to start connectivity establishment: "
+                            + "transport manager is null.");
+        }
 
         touch(); // It seems this Channel is still active.
     }

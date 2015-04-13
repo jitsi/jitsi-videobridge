@@ -568,15 +568,11 @@ public class LoggingHandler
 
     private void transportChannelAdded(Channel channel)
     {
-        TransportManager transportManager;
-        try
+        TransportManager transportManager = channel.getTransportManager();
+        if (transportManager == null)
         {
-            transportManager = channel.getTransportManager();
-        }
-        catch (IOException e)
-        {
-            logger.error("Could not log the transport channel added event " +
-                "because of an error.", e);
+            logger.error("Could not log the transport channel added event: " +
+                "the transport manager is null.");
             return;
         }
 
@@ -611,15 +607,11 @@ public class LoggingHandler
      */
     private void transportChannelRemoved(Channel channel)
     {
-        TransportManager transportManager;
-        try
+        TransportManager transportManager = channel.getTransportManager();
+        if (transportManager == null)
         {
-            transportManager = channel.getTransportManager();
-        }
-        catch (IOException e)
-        {
-            logger.error("Could not log the transport channel removed event " +
-                "because of an error.", e);
+            logger.error("Could not log the transport channel removed event: " +
+                "the transport manager is null.");
             return;
         }
 
