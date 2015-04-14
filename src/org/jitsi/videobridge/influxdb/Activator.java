@@ -28,8 +28,7 @@ public class Activator
      * The <tt>Logger</tt> used by the <tt>Activator</tt> class
      * and its instances to print debug information.
      */
-    private static final Logger logger
-            = Logger.getLogger(LoggingHandler.class);
+    private static final Logger logger = Logger.getLogger(LoggingHandler.class);
 
     /**
      * The name of the property which configured the class to use as
@@ -42,6 +41,7 @@ public class Activator
 
     /**
      * Initializes a <tt>LoggingService</tt>.
+     *
      * @param bundleContext the <tt>bundleContext</tt> to use.
      * @throws Exception
      */
@@ -54,12 +54,8 @@ public class Activator
 
         if (cfg.getBoolean(LoggingHandler.ENABLED_PNAME, false))
         {
-            String[] topics = new String[]{"org/jitsi/*"};
-
-            Dictionary props = new Hashtable();
-            props.put(EventConstants.EVENT_TOPIC, topics);
-
             LoggingHandler handler;
+
             try
             {
                 handler = getHandlerInstance(cfg);
@@ -70,8 +66,16 @@ public class Activator
                 return;
             }
 
-            serviceRegistration = bundleContext.registerService(
-                    EventHandler.class, handler, props);
+            Dictionary props = new Hashtable();
+            String[] topics = { "org/jitsi/*" };
+
+            props.put(EventConstants.EVENT_TOPIC, topics);
+
+            serviceRegistration
+                = bundleContext.registerService(
+                        EventHandler.class,
+                        handler,
+                        props);
         }
     }
 
@@ -84,19 +88,19 @@ public class Activator
     {
         String className
             = cfg.getString(
-                LOGGING_HANDLER_CLASS_PNAME,
-                LoggingHandler.class.getCanonicalName());
-
+                    LOGGING_HANDLER_CLASS_PNAME,
+                    LoggingHandler.class.getCanonicalName());
         Class clazz = Class.forName(className);
-
         Constructor constructor
-                = clazz.getConstructor(ConfigurationService.class);
+            = clazz.getConstructor(ConfigurationService.class);
+
         return (LoggingHandler) constructor.newInstance(cfg);
     }
 
     /**
-     * Removes the previously initialized <tt>LoggingService</tt> instance
-     * from <tt>bundleContext</tt>.
+     * Removes the previously initialized <tt>LoggingService</tt> instance from
+     * <tt>bundleContext</tt>.
+     *
      * @param bundleContext the <tt>bundleContext</tt> to use.
      * @throws Exception
      */
@@ -105,9 +109,6 @@ public class Activator
         throws Exception
     {
         if (serviceRegistration != null)
-        {
             serviceRegistration.unregister();
-        }
-
     }
 }

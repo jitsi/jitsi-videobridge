@@ -539,9 +539,7 @@ public class Videobridge
      * @throws Exception to reply with <tt>internal-server-error</tt> to the
      * specified request
      */
-    @SuppressWarnings("deprecation")
-    public IQ handleColibriConferenceIQ(
-            ColibriConferenceIQ conferenceIQ)
+    public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIQ)
         throws Exception
     {
         return

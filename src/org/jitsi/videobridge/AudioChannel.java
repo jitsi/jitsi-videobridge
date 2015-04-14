@@ -6,7 +6,6 @@
  */
 package org.jitsi.videobridge;
 
-import java.net.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
