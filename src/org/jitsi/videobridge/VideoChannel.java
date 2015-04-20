@@ -21,10 +21,12 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
+import org.jitsi.videobridge.transform.*;
 import org.json.simple.*;
 
 /**
@@ -163,6 +165,7 @@ public class VideoChannel
         super(content, id, channelBundleId, transportNamespace, initiator);
 
         simulcastManager = new SimulcastManager(this);
+        setTransformEngine(new RtpChannelTransformEngine(this));
     }
 
     /**
@@ -1170,5 +1173,41 @@ public class VideoChannel
 
         if (this.inLastN.compareAndSet(!inLastN, inLastN))
             inLastNChanged(!inLastN, inLastN);
+    }
+
+    /**
+     *
+     * @param payloadTypes the <tt>PayloadTypePacketExtension</tt>s which
+     * specify the payload types (i.e. the <tt>MediaFormat</tt>s) to be used by
+     */
+    @Override
+    public void setPayloadTypes(List<PayloadTypePacketExtension> payloadTypes)
+    {
+        super.setPayloadTypes(payloadTypes);
+
+        boolean enableRedFilter = true;
+
+        // If we're not given any PTs at all, assume that we shouldn't touch
+        // RED.
+        if (payloadTypes == null || payloadTypes.size() == 0)
+            enableRedFilter = false;
+
+        if (payloadTypes != null)
+        {
+            for (PayloadTypePacketExtension payloadTypePacketExtension
+                    : payloadTypes)
+            {
+                if (Constants.RED.equals(payloadTypePacketExtension.getName()))
+                {
+                    enableRedFilter = false;
+                    break;
+                }
+            }
+        }
+
+        // If the endpoint supports RED we disable the filter (e.g. leave RED).
+        // Otherwise, we strip it.
+        if (transformEngine != null)
+            transformEngine.enableREDFilter(enableRedFilter);
     }
 }
