@@ -8,6 +8,7 @@ package org.jitsi.videobridge;
 
 import java.io.*;
 import java.lang.reflect.*;
+import java.util.concurrent.atomic.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -82,7 +83,7 @@ public abstract class Channel
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Channel</tt>.
      */
-    private boolean expired = false;
+    private AtomicBoolean expired = new AtomicBoolean(false);
 
     /**
      * The ID of this <tt>Channel</tt> (which is unique within the list of
@@ -304,13 +305,11 @@ public abstract class Channel
      */
     public void expire()
     {
-        synchronized (this)
-        {
-            if (expired)
-                return;
-            else
-                expired = true;
-        }
+    	if (!expired.compareAndSet(false, true))
+    	{
+    		// fail-fast return if expired is already true
+    		return;
+    	}
 
         Content content = getContent();
         Conference conference = content.getConference();
@@ -548,10 +547,7 @@ public abstract class Channel
      */
     public boolean isExpired()
     {
-        synchronized (this)
-        {
-            return expired;
-        }
+        return expired.get();
     }
 
     /**
