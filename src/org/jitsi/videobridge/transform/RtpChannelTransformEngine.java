@@ -80,7 +80,7 @@ public class RtpChannelTransformEngine
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
      */
-    RtpChannelTransformEngine(RtpChannel channel)
+    public RtpChannelTransformEngine(RtpChannel channel)
     {
         this.channel = channel;
 
@@ -156,4 +156,14 @@ public class RtpChannelTransformEngine
         if (redFilter != null)
             redFilter.setEnabled(enabled);
     }
+
+    /**
+     * Returns the cache of outgoing packets.
+     * @return the cache of outgoing packets.
+     */
+    public RawPacketCache getCache()
+    {
+        return cache;
+    }
+
 }

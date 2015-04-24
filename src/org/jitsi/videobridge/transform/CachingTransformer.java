@@ -393,7 +393,10 @@ public class CachingTransformer
             // packets, we assume that it doesn't contain packets spanning
             // more than one ROC.
 
-            return pkt;
+            return new RawPacket(
+                    pkt.getBuffer().clone(),
+                    pkt.getOffset(),
+                    pkt.getLength());
         }
 
         /**

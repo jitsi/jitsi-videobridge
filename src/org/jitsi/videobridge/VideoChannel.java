@@ -19,6 +19,8 @@ import javax.media.rtp.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.codec.*;
@@ -37,6 +39,7 @@ import org.json.simple.*;
  */
 public class VideoChannel
     extends RtpChannel
+    implements NACKHandler
 {
     /**
      * The length in milliseconds of the interval for which the average incoming
@@ -1209,5 +1212,49 @@ public class VideoChannel
         // Otherwise, we strip it.
         if (transformEngine != null)
             transformEngine.enableREDFilter(enableRedFilter);
+    }
+
+    /**
+     * Implements
+     * {@link org.jitsi.videobridge.rtcp.NACKHandler#handleNACK(org.jitsi.impl.neomedia.rtcp.NACKPacket)}
+     *
+     *
+     * TODO: consider doing this in a separate thread, as it might slow down
+     * the receiving RTCP thread.
+     */
+    @Override
+    public void handleNACK(NACKPacket nackPacket)
+    {
+        Set<Integer> lostPackets = new HashSet<Integer>();
+        lostPackets.addAll(nackPacket.getLostPackets());
+
+        long ssrc = nackPacket.sourceSSRC;
+
+        RawPacketCache cache = transformEngine.getCache();
+        if (cache != null)
+        {
+            Iterator<Integer> iter = lostPackets.iterator();
+            while (iter.hasNext())
+            {
+                int seq = iter.next();
+                RawPacket pkt = cache.get(ssrc, seq);
+                if (pkt != null)
+                {
+                    //retransmit(pkt); // Note: this needs to decide whether to use 4588 or not
+                    iter.remove();
+                }
+            }
+        }
+
+        // The remaining lostPackets are not in the cache. We will request them
+        // from the sender via a NACK.
+
+        // When we add transformers which change the sequence numbers and/or
+        // SSRC of packets for this endpoint, we will need here to translate
+        // the seq/SSRC back.
+
+        NACKPacket newNack
+            = new NACKPacket(nackPacket.senderSSRC, ssrc, lostPackets);
+        //transmit(newNack);
     }
 }
