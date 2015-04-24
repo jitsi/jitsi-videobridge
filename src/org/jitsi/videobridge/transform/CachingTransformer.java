@@ -19,7 +19,7 @@ import java.util.concurrent.*;
  */
 public class CachingTransformer
     extends SinglePacketTransformer
-    implements RawPacketCache
+    implements RawPacketCache, TransformEngine
 {
     /**
      * The <tt>Logger</tt> used by the <tt>CachingTransformer</tt> class and
@@ -256,6 +256,24 @@ public class CachingTransformer
         pkt.setLength(0);
 
         return pkt;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public PacketTransformer getRTPTransformer()
+    {
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public PacketTransformer getRTCPTransformer()
+    {
+        return null;
     }
 
     /**

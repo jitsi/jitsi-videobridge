@@ -6,10 +6,14 @@
  */
 package org.jitsi.videobridge.transform;
 
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rtcp.*;
+
+import java.util.*;
 
 /**
  * Implements a <tt>TransformEngine</tt> for a specific <tt>RtpChannel</tt>.
@@ -17,7 +21,7 @@ import org.jitsi.videobridge.*;
  * @author Boris Grozev
  */
 public class RtpChannelTransformEngine
-    implements TransformEngine, PacketTransformer
+    extends TransformEngineChain
 {
     /**
      * The payload type number for RED packets. We should set this dynamically
@@ -25,6 +29,12 @@ public class RtpChannelTransformEngine
      * <tt>RtpChannel</tt>, but on other channels from the <tt>Content</tt>.
      */
     private static final byte RED_PAYLOAD_TYPE = 116;
+
+    /**
+     * The name of the property used to disable NACK termination.
+     */
+    private static final String DISABLE_NACK_TERMINATION_PNAME
+        = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
      * The <tt>Logger</tt> used by the <tt>RtpChannelTransformEngine</tt> class
@@ -39,95 +49,91 @@ public class RtpChannelTransformEngine
     private final RtpChannel channel;
 
     /**
-     * The chain of <tt>PacketTransformer</tt>s which will be used to transform
-     * outgoing packets.
-     */
-    private final PacketTransformer[] chain;
-
-    /**
      * The transformer which strips RED encapsulation.
      */
-    private final REDFilterTransformEngine redFilter;
+    private REDFilterTransformEngine redFilter;
+
+    /**
+     * The transformer which caches outgoing RTP packets.
+     */
+    private CachingTransformer cache;
+
+    /**
+     * The transformer which parses incoming RTCP packets.
+     */
+    private RTCPTransformEngine rtcpTransformEngine;
+
+    /**
+     * The transformer which intercepts NACK packets and passes them on to the
+     * channel logic.
+     */
+    private NACKNotifier nackNotifier;
 
     /**
      * The transformer which replaces the timestamp in an abs-send-time RTP
      * header extension.
      */
-    private final AbsSendTimeEngine absSendTime;
+    private AbsSendTimeEngine absSendTime;
 
+    /**
+     * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
+     * <tt>RtpChannel</tt>.
+     * @param channel the <tt>RtpChannel</tt>.
+     */
     RtpChannelTransformEngine(RtpChannel channel)
     {
         this.channel = channel;
 
+        this.engineChain = createChain();
+    }
+
+    /**
+     * Initializes the transformers used by this instance and returns them as
+     * an array.
+     */
+    private TransformEngine[] createChain()
+    {
+        List<TransformEngine> transformerList
+            = new LinkedList<TransformEngine>();
+
         redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
+        transformerList.add(redFilter);
+
         absSendTime = new AbsSendTimeEngine();
+        transformerList.add(absSendTime);
 
-        chain = new PacketTransformer[]{ redFilter, absSendTime};
-    }
-
-    /**
-     * {@inheritDoc}
-     * Implements
-     * {@link org.jitsi.impl.neomedia.transform.TransformEngine#getRTPTransformer()}
-     */
-    @Override
-    public PacketTransformer getRTPTransformer()
-    {
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     * Implements
-     * {@link org.jitsi.impl.neomedia.transform.TransformEngine#getRTCPTransformer()}
-     */
-    @Override
-    public PacketTransformer getRTCPTransformer()
-    {
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     * Implements
-     * {@link org.jitsi.impl.neomedia.transform.PacketTransformer#close()}
-     */
-    @Override
-    public void close()
-    {
-
-    }
-
-    /**
-     * {@inheritDoc}
-     * Implements
-     * {@link org.jitsi.impl.neomedia.transform.PacketTransformer#reverseTransform(org.jitsi.impl.neomedia.RawPacket[])}
-     */
-    @Override
-    public RawPacket[] reverseTransform(RawPacket[] pkts)
-    {
-        return pkts;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Transforms outgoing packets, by using each element of {@link #chain} in
-     * order.
-     */
-    @Override
-    public RawPacket[] transform(RawPacket[] pkts)
-    {
-        if (pkts == null)
-            return pkts;
-
-        for (PacketTransformer packetTransformer : chain)
+        boolean enableNackTermination = true;
+        Conference conference = channel.getContent().getConference();
+        if (conference != null)
         {
-            if (packetTransformer != null)
-                pkts = packetTransformer.transform(pkts);
+            ConfigurationService cfg
+                    = conference.getVideobridge().getConfigurationService();
+            if (cfg != null)
+                enableNackTermination
+                    = cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
         }
 
-        return pkts;
+        if (enableNackTermination && channel instanceof NACKHandler)
+        {
+            cache = new CachingTransformer();
+            transformerList.add(cache);
+
+            // Note: we use a separate RTCPTransformer here, instead of using
+            // the RTCPTerminationStrategy, because interpreting RTCP NACK
+            // packets should happen in the context of a specific channel, and
+            // the RTCPTermination strategy is a single instance for a
+            // conference. The current intention/idea is to eventually move
+            // the RTCP parsing code from the RTCPTerminationStrategy here, so
+            // that we only parse RTCP once, and so that the REMB/RR code
+            // doesn't have to find the source Channel by SSRC.
+            nackNotifier = new NACKNotifier((NACKHandler) channel);
+            rtcpTransformEngine
+                    = new RTCPTransformEngine(new Transformer[] {nackNotifier});
+            transformerList.add(rtcpTransformEngine);
+        }
+
+        return
+            transformerList.toArray(new TransformEngine[transformerList.size()]);
     }
 
     /**
@@ -139,7 +145,6 @@ public class RtpChannelTransformEngine
     {
         if (absSendTime != null)
             absSendTime.setExtensionID(extensionID);
-        logger.warn("XXXX "+channel.getEndpoint().getID()+" AST ID="+extensionID);
     }
 
     /**
@@ -150,6 +155,5 @@ public class RtpChannelTransformEngine
     {
         if (redFilter != null)
             redFilter.setEnabled(enabled);
-        logger.warn("XXXX "+channel.getEndpoint().getID()+" RED filter: " +enabled);
     }
 }
