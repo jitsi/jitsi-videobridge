@@ -393,10 +393,12 @@ public class CachingTransformer
             // packets, we assume that it doesn't contain packets spanning
             // more than one ROC.
 
-            return new RawPacket(
-                    pkt.getBuffer().clone(),
-                    pkt.getOffset(),
-                    pkt.getLength());
+            return
+                    pkt == null
+                    ? null
+                    : new RawPacket(pkt.getBuffer().clone(),
+                                    pkt.getOffset(),
+                                    pkt.getLength());
         }
 
         /**
@@ -509,7 +511,10 @@ public class CachingTransformer
 
                 try
                 {
-                    wait(10000);
+                    synchronized (this)
+                    {
+                        wait(10000);
+                    }
                 }
                 catch (InterruptedException ie)
                 {

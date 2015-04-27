@@ -110,7 +110,7 @@ public class RtpChannelTransformEngine
                     = conference.getVideobridge().getConfigurationService();
             if (cfg != null)
                 enableNackTermination
-                    = cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
+                    = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
         }
 
         if (enableNackTermination && channel instanceof NACKHandler)
