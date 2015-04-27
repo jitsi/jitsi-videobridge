@@ -1240,14 +1240,17 @@ public class VideoChannel
                 RawPacket pkt = cache.get(ssrc, seq);
                 if (pkt != null)
                 {
-                    //retransmit(pkt); // Note: this needs to decide whether to use 4588 or not
+                    getStream().injectPacket(
+                            createPacketForRetransmission(pkt),
+                            true,
+                            true);
                     iter.remove();
                 }
             }
         }
 
         // The remaining lostPackets are not in the cache. We will request them
-        // from the sender via a NACK.
+        // from the sender via a new NACK packet which we construct below.
 
         // When we add transformers which change the sequence numbers and/or
         // SSRC of packets for this endpoint, we will need here to translate
@@ -1255,6 +1258,34 @@ public class VideoChannel
 
         NACKPacket newNack
             = new NACKPacket(nackPacket.senderSSRC, ssrc, lostPackets);
-        //transmit(newNack);
+        RawPacket pkt = null;
+        try
+        {
+            pkt = newNack.toRawPacket();
+        }
+        catch (IOException ioe)
+        {
+            logger.warn("Failed to create NACK packet: " + ioe);
+        }
+
+        if (pkt != null)
+        {
+            Channel channel = getContent().findChannelByReceiveSSRC(ssrc);
+            if (channel != null && channel instanceof RtpChannel)
+            {
+                ((RtpChannel) channel).getStream().injectPacket(pkt, false, true);
+
+            }
+        }
+    }
+
+    /**
+     * Creates an RTP packet which is to carry the retransmission of the given
+     * RTP packet. If the endpoint supports RFC4588 we may encapsulate it in
+     * that format. Currently we just retransmit the packet as-is.
+     */
+    private RawPacket createPacketForRetransmission(RawPacket pkt)
+    {
+        return pkt;
     }
 }
