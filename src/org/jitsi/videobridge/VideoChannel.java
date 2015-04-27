@@ -1230,6 +1230,14 @@ public class VideoChannel
 
         long ssrc = nackPacket.sourceSSRC;
 
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Received NACK on channel " + getID() +" for SSRC "
+                                 + ssrc + ". Packets reported lost: "
+                                 + lostPackets);
+        }
+
+
         RawPacketCache cache = transformEngine.getCache();
         if (cache != null)
         {
@@ -1240,6 +1248,11 @@ public class VideoChannel
                 RawPacket pkt = cache.get(ssrc, seq);
                 if (pkt != null)
                 {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Retransmitting packet from cache. SSRC "
+                                             + ssrc + " seq " + seq);
+                    }
                     getStream().injectPacket(
                             createPacketForRetransmission(pkt),
                             true,
@@ -1249,32 +1262,58 @@ public class VideoChannel
             }
         }
 
-        // The remaining lostPackets are not in the cache. We will request them
-        // from the sender via a new NACK packet which we construct below.
-
-        // When we add transformers which change the sequence numbers and/or
-        // SSRC of packets for this endpoint, we will need here to translate
-        // the seq/SSRC back.
-
-        NACKPacket newNack
-            = new NACKPacket(nackPacket.senderSSRC, ssrc, lostPackets);
-        RawPacket pkt = null;
-        try
+        if (!lostPackets.isEmpty())
         {
-            pkt = newNack.toRawPacket();
-        }
-        catch (IOException ioe)
-        {
-            logger.warn("Failed to create NACK packet: " + ioe);
-        }
+            // The remaining lostPackets are not in the cache. We will request
+            // them from the actual sender via a new NACK packet which we
+            // construct below.
 
-        if (pkt != null)
-        {
-            Channel channel = getContent().findChannelByReceiveSSRC(ssrc);
-            if (channel != null && channel instanceof RtpChannel)
+            // When we add transformers which change the sequence numbers and/or
+            // SSRC of packets for this endpoint, we will need here to translate
+            // the seq/SSRC back.
+
+            NACKPacket newNack
+                    = new NACKPacket(nackPacket.senderSSRC, ssrc, lostPackets);
+            RawPacket pkt = null;
+            try
             {
-                ((RtpChannel) channel).getStream().injectPacket(pkt, false, true);
+                pkt = newNack.toRawPacket();
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Failed to create NACK packet: " + ioe);
+            }
 
+            if (pkt != null)
+            {
+                Set<RtpChannel> channelsToSendTo = new HashSet<RtpChannel>();
+                Channel channel = getContent().findChannelByReceiveSSRC(ssrc);
+                if (channel != null && channel instanceof RtpChannel)
+                {
+                    channelsToSendTo.add((RtpChannel) channel);
+                }
+                else
+                {
+                    // If searching by SSRC fails, we transmit the NACK on all
+                    // other channels.
+                    for (Channel c : getContent().getChannels())
+                    {
+                        if (c != null && c instanceof RtpChannel && c != this)
+                            channelsToSendTo.add((RtpChannel) c);
+                    }
+                }
+
+                for (RtpChannel c : channelsToSendTo)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Sending a NACK for SSRC " + ssrc
+                                             + " , packets " + lostPackets
+                                             + " on channel " + c.getID());
+                    }
+
+                    c.getStream().injectPacket(pkt, false, true);
+                }
             }
         }
     }
