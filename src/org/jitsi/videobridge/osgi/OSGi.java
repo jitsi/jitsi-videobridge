@@ -187,6 +187,17 @@ public class OSGi
         // We want them forwarded as normal packets.
         defaults.put(AudioMediaStream.DISABLE_DTMF_HANDLING_PNAME, true_);
 
+        // This causes RTP/RTCP packets received before the DTLS agent is ready
+        // to decrypt them to be dropped. Without it, these packets are passed
+        // on without decryption and this leads to:
+        // 1. Garbage being sent to the endpoints (or at least something they
+        //      cannot decrypt).
+        // 2. Failed attempts to parse encrypted RTCP packets (in a compound
+        //      packet, the headers of all but the first packet are encrypted).
+        defaults.put("org.jitsi.impl.neomedia.transform.dtls."
+                             + "DtlsPacketTransformer.dropUnencryptedPkts=true",
+                     true_);
+
         for (Map.Entry<String,String> e : defaults.entrySet())
         {
             String key = e.getKey();
