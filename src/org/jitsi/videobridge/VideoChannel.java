@@ -1296,6 +1296,12 @@ public class VideoChannel
                 {
                     // If searching by SSRC fails, we transmit the NACK on all
                     // other channels.
+                    // TODO: We might want to *always* send these to all channels,
+                    // in order to not prevent the mechanism for avoidance of
+                    // retransmission of multiple RTCP FB defined in AVPF:
+                    // https://tools.ietf.org/html/rfc4585#section-3.2
+                    // This is, unless/until we implement some mechanism of our
+                    // own.
                     for (Channel c : getContent().getChannels())
                     {
                         if (c != null && c instanceof RtpChannel && c != this)

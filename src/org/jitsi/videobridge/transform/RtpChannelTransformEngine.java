@@ -115,6 +115,8 @@ public class RtpChannelTransformEngine
 
         if (enableNackTermination && channel instanceof NACKHandler)
         {
+            logger.info("Enabling NACK termination for channel "
+                                + channel.getID());
             cache = new CachingTransformer();
             transformerList.add(cache);
 
