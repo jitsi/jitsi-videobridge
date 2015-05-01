@@ -1714,49 +1714,54 @@ public class IceUdpTransportManager
                 }
             }
 
-            boolean fallback = false;
             if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
             {
+                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
+                boolean fallback = false;
                 boolean ssltcp = cfg.getBoolean(TCP_HARVESTER_SSLTCP,
                                                 TCP_HARVESTER_SSLTCP_DEFAULT);
 
-                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
                 if (port == -1)
                 {
-                    fallback = true;
                     port = TCP_DEFAULT_PORT;
+                    fallback = true;
                 }
 
                 try
                 {
                     tcpHostHarvester
-                            = new MultiplexingTcpHostHarvester(port, ssltcp);
+                        = new MultiplexingTcpHostHarvester(port, ssltcp);
                 }
                 catch (IOException ioe)
                 {
-                    logger.warn("Failed to initialize TCP harvester on port "
-                                + port + ": " + ioe
+                    logger.warn(
+                            "Failed to initialize TCP harvester on port " + port
+                                + ": " + ioe
                                 + (fallback
                                     ? ". Retrying on port " + TCP_FALLBACK_PORT
                                     : "")
                                 + ".");
+                    // If no fallback is allowed, the method will return.
                 }
-
-                if (tcpHostHarvester == null && fallback)
+                if (tcpHostHarvester == null)
                 {
+                    // If TCP_HARVESTER_PORT specified a port, then fallback was
+                    // disabled. However, if the binding on the port (above)
+                    // fails, then the method should return.
+                    if (!fallback)
+                        return;
+
                     port = TCP_FALLBACK_PORT;
                     try
                     {
                         tcpHostHarvester
-                            = new MultiplexingTcpHostHarvester(
-                                port,
-                                ssltcp);
-
+                            = new MultiplexingTcpHostHarvester(port, ssltcp);
                     }
-                    catch (IOException e)
+                    catch (IOException ioe)
                     {
-                        logger.warn("Failed to initialize TCP harvester on "
-                                    + "fallback port " + port + ": " + e);
+                        logger.warn(
+                                "Failed to initialize TCP harvester on fallback"
+                                    + " port " + port + ": " + ioe);
                         return;
                     }
                 }
@@ -1768,9 +1773,9 @@ public class IceUdpTransportManager
                 }
 
                 String localAddressStr
-                        = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
+                    = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
                 String publicAddressStr
-                        = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
+                    = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
                 if (localAddressStr != null && publicAddressStr != null)
                 {
                     try

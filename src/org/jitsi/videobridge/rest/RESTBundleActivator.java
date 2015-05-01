@@ -10,8 +10,8 @@ import java.io.*;
 import java.lang.reflect.*;
 
 import net.java.sip.communicator.util.*;
-
 import net.java.sip.communicator.util.Logger;
+
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.util.ssl.*;
 import org.jitsi.service.configuration.*;
@@ -41,6 +41,9 @@ public class RESTBundleActivator
      */
     private static final String ENABLE_REST_SHUTDOWN_PNAME
         = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
+
+    private static final String JETTY_HOST_PNAME
+        = Videobridge.REST_API_PNAME + ".jetty.host";
 
     /**
      * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
@@ -117,6 +120,7 @@ public class RESTBundleActivator
                     bundleContext,
                     ConfigurationService.class);
         boolean start;
+        String host = null;
         int port = 8080, tlsPort = 8443;
         String sslContextFactoryKeyStorePassword, sslContextFactoryKeyStorePath;
         boolean sslContextFactoryNeedClientAuth = false;
@@ -124,6 +128,8 @@ public class RESTBundleActivator
 
         if (cfg == null)
         {
+            enableRestShutdown = Boolean.getBoolean(ENABLE_REST_SHUTDOWN_PNAME);
+            host = System.getProperty(JETTY_HOST_PNAME, host);
             port = Integer.getInteger(JETTY_PORT_PNAME, port);
             sslContextFactoryKeyStorePassword
                 = System.getProperty(JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD);
@@ -133,10 +139,12 @@ public class RESTBundleActivator
                 = Boolean.getBoolean(JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH);
             start = Boolean.getBoolean(Videobridge.REST_API_PNAME);
             tlsPort = Integer.getInteger(JETTY_TLS_PORT_PNAME, tlsPort);
-            enableRestShutdown = Boolean.getBoolean(ENABLE_REST_SHUTDOWN_PNAME);
         }
         else
         {
+            enableRestShutdown
+                = cfg.getBoolean(ENABLE_REST_SHUTDOWN_PNAME, false);
+            host = cfg.getString(JETTY_HOST_PNAME, host);
             port = cfg.getInt(JETTY_PORT_PNAME, port);
             sslContextFactoryKeyStorePassword
                 = cfg.getString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD);
@@ -148,9 +156,6 @@ public class RESTBundleActivator
                         sslContextFactoryNeedClientAuth);
             start = cfg.getBoolean(Videobridge.REST_API_PNAME, false);
             tlsPort = cfg.getInt(JETTY_TLS_PORT_PNAME, tlsPort);
-            enableRestShutdown
-                = cfg.getBoolean(
-                        ENABLE_REST_SHUTDOWN_PNAME, false);
         }
         if (!start)
             return;
@@ -163,18 +168,18 @@ public class RESTBundleActivator
             httpCfg.setSecurePort(tlsPort);
             httpCfg.setSecureScheme("https");
 
-            /*
-             * If HTTPS is not enabled, serve the REST API of Jitsi Videobridge
-             * over HTTP.
-             */
+            // If HTTPS is not enabled, serve the REST API of Jitsi Videobridge
+            // over HTTP.
             if (sslContextFactoryKeyStorePath == null)
             {
                 // HTTP
                 ServerConnector httpConnector
-                    = new ServerConnector(
+                    = new MuxServerConnector(
                             server,
                             new HttpConnectionFactory(httpCfg));
 
+                if (host != null)
+                    httpConnector.setHost(host);
                 httpConnector.setPort(port);
                 server.addConnector(httpConnector);
             }
@@ -182,7 +187,9 @@ public class RESTBundleActivator
             {
                 // HTTPS
                 File sslContextFactoryKeyStoreFile
-                    = ConfigUtils.getAbsoluteFile(sslContextFactoryKeyStorePath, cfg);
+                    = ConfigUtils.getAbsoluteFile(
+                            sslContextFactoryKeyStorePath,
+                            cfg);
                 SslContextFactory sslContextFactory = new SslContextFactory();
 
                 sslContextFactory.setExcludeCipherSuites(
@@ -209,23 +216,24 @@ public class RESTBundleActivator
                 httpsCfg.addCustomizer(new SecureRequestCustomizer());
 
                 ServerConnector sslConnector
-                    = new ServerConnector(
+                    = new MuxServerConnector(
                             server,
                             new SslConnectionFactory(
                                     sslContextFactory,
                                     "http/1.1"),
                             new HttpConnectionFactory(httpsCfg));
+
+                if (host != null)
+                    sslConnector.setHost(host);
                 sslConnector.setPort(tlsPort);
                 server.addConnector(sslConnector);
             }
 
             server.setHandler(
-                new HandlerImpl(bundleContext, enableRestShutdown));
+                    new HandlerImpl(bundleContext, enableRestShutdown));
 
-            /*
-             * The server will start a non-daemon background Thread which will
-             * keep the application running on success. 
-             */
+            // The server will start a non-daemon background Thread which will
+            // keep the application running on success.
             server.start();
 
             this.server = server;
@@ -259,9 +267,8 @@ public class RESTBundleActivator
         if (server != null)
         {
             // FIXME graceful Jetty shutdown
-            // when shutdown request is accepted empty response
-            // is sent back instead of 200, because Jetty is not being
-            // shutdown gracefully
+            // When shutdown request is accepted, empty response is sent back
+            // instead of 200, because Jetty is not being shutdown gracefully.
             Thread.sleep(1000);
 
             server.stop();
