@@ -8,16 +8,20 @@ package org.jitsi.videobridge.rest;
 
 import java.io.*;
 import java.lang.reflect.*;
+import java.util.*;
 
-import net.java.sip.communicator.util.*;
-import net.java.sip.communicator.util.Logger;
-
+import org.eclipse.jetty.rewrite.handler.*;
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.handler.*;
+import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.util.ssl.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
+
+import net.java.sip.communicator.util.*;
+import net.java.sip.communicator.util.Logger;
 
 /**
  * Implements <tt>BundleActivator</tt> for the OSGi bundle which implements a
@@ -52,6 +56,24 @@ public class RESTBundleActivator
      */
     private static final String JETTY_PORT_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.port";
+
+    private static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
+        = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.hostHeader";
+
+    private static final String JETTY_PROXY_SERVLET_PATH_SPEC_PNAME
+        = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.pathSpec";
+
+    private static final String JETTY_PROXY_SERVLET_PROXY_TO_PNAME
+            = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.proxyTo";
+
+    private static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
+        = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.resourceBase";
+
+    private static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
+        = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.regex";
+
+    private static final String JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME
+        = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.replacement";
 
     /**
      * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
@@ -98,10 +120,345 @@ public class RESTBundleActivator
         = Logger.getLogger(RESTBundleActivator.class);
 
     /**
+     * The {@code ConfigurationService} which looks up values of configuration
+     * properties.
+     */
+    private ConfigurationService cfg;
+
+    /**
      * The Jetty <tt>Server</tt> which provides the HTTP(S) interface to the
      * REST API of Videobridge.
      */
     private Server server;
+
+    /**
+     * Returns the value of a specific {@code boolean}
+     * {@code ConfigurationService} or {@code System} property.
+     *
+     * @param property the name of the property
+     * @param defaultValue the value to be returned if {@code property} does not
+     * have any value assigned in either {@code ConfigurationService} or
+     * {@code System}
+     * @return the value of {@code property} in {@code ConfigurationService} or
+     * {@code System}
+     */
+    private boolean getCfgBoolean(String property, boolean defaultValue)
+    {
+        ConfigurationService cfg = this.cfg;
+        boolean b;
+
+        if (cfg == null)
+        {
+            String s = System.getProperty(property);
+
+            b
+                = (s == null || s.length() == 0)
+                    ? defaultValue
+                    : Boolean.parseBoolean(s);
+        }
+        else
+        {
+            b = cfg.getBoolean(property, defaultValue);
+        }
+        return b;
+    }
+
+    /**
+     * Returns the value of a specific {@code int} {@code ConfigurationService}
+     * or {@code System} property.
+     *
+     * @param property the name of the property
+     * @param defaultValue the value to be returned if {@code property} does not
+     * have any value assigned in either {@code ConfigurationService} or
+     * {@code System}
+     * @return the value of {@code property} in {@code ConfigurationService} or
+     * {@code System}
+     */
+    private int getCfgInt(String property, int defaultValue)
+    {
+        ConfigurationService cfg = this.cfg;
+        int i;
+
+        if (cfg == null)
+        {
+            String s = System.getProperty(property);
+
+            if (s == null || s.length() == 0)
+            {
+                i = defaultValue;
+            }
+            else
+            {
+                try
+                {
+                    i = Integer.parseInt(s);
+                }
+                catch (NumberFormatException nfe)
+                {
+                    i = defaultValue;
+                }
+            }
+        }
+        else
+        {
+            i = cfg.getInt(property, defaultValue);
+        }
+        return i;
+    }
+
+    /**
+     * Returns the value of a specific {@code String}
+     * {@code ConfigurationService} or {@code System} property.
+     *
+     * @param property the name of the property
+     * @param defaultValue the value to be returned if {@code property} does not
+     * have any value assigned in either {@code ConfigurationService} or
+     * {@code System}
+     * @return the value of {@code property} in {@code ConfigurationService} or
+     * {@code System}
+     */
+    private String getCfgString(String property, String defaultValue)
+    {
+        ConfigurationService cfg = this.cfg;
+        String s;
+
+        if (cfg == null)
+            s = System.getProperty(property, defaultValue);
+        else
+            s = cfg.getString(property, defaultValue);
+        return s;
+    }
+
+    /**
+     * Initializes a new {@link Handler} instance which is to handle the
+     * &quot;/colibri&quot; target for a specific {@code Server} instance.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} for which the new instance is to handle
+     * the &quot;/colibri&quot; target
+     * @return a new {@code Handler} instance which is to handle the
+     * &quot;/colibri&quot; target for {@code server}
+     */
+    private Handler initializeColibriHandler(
+            BundleContext bundleContext,
+            Server server)
+    {
+        return
+            new HandlerImpl(
+                    bundleContext,
+                    getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false));
+    }
+
+    /**
+     * Initializes a new {@link Handler} instance to be set on a specific
+     * {@code Server} instance.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} on which the new instance will be set
+     * @return the new {code Handler} instance to be set on {@code server}
+     */
+    private Handler initializeHandler(
+            BundleContext bundleContext,
+            Server server)
+    {
+        // The main content served by Server. It may include, for example, the
+        // /colibri target of the REST API, purely static content, and
+        // ProxyServlet.
+        Handler handler = initializeHandlerList(bundleContext, server);
+
+        // When handling requests, the main content may be superseded by
+        // RewriteHandler.
+        HandlerWrapper rewriteHandler
+            = initializeRewriteHandler(bundleContext, server);
+
+        if (rewriteHandler != null)
+        {
+            rewriteHandler.setHandler(handler);
+            handler = rewriteHandler;
+        }
+
+        return handler;
+    }
+
+    /**
+     * Initializes a new {@link HandlerList} instance to be set on a specific
+     * {@code Server} instance.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} on which the new instance will be set
+     * @return the new {code HandlerList} instance to be set on {@code server}
+     */
+    private Handler initializeHandlerList(
+            BundleContext bundleContext,
+            Server server)
+    {
+        List<Handler> handlers = new ArrayList<Handler>();
+
+        // The /colibri target of the REST API.
+        Handler colibriHandler
+            = initializeColibriHandler(bundleContext, server);
+
+        if (colibriHandler != null)
+            handlers.add(colibriHandler);
+
+        // Purely static content.
+        Handler resourceHandler
+            = initializeResourceHandler(bundleContext, server);
+
+        if (resourceHandler != null)
+            handlers.add(resourceHandler);
+
+        // ServletHandler to serve, for example, ProxyServlet.
+        Handler servletHandler
+            = initializeServletHandler(bundleContext, server);
+
+        if (servletHandler != null)
+            handlers.add(servletHandler);
+
+        int handlerCount = handlers.size();
+
+        if (handlerCount == 1)
+        {
+            return handlers.get(0);
+        }
+        else
+        {
+            HandlerList handlerList = new HandlerList();
+
+            handlerList.setHandlers(
+                    handlers.toArray(new Handler[handlerCount]));
+            return handlerList;
+        }
+    }
+
+    /**
+     * Initializes a new {@link Handler} instance which is to serve purely
+     * static content for a specific {@code Server} instance.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} for which the new instance is to serve
+     * purely static content
+     * @return a new {@code Handler} instance which is to serve purely static
+     * content for {@code server}
+     */
+    private Handler initializeResourceHandler(
+            BundleContext bundleContext,
+            Server server)
+    {
+        String resourceBase
+            = getCfgString(JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME, null);
+        ResourceHandler resourceHandler;
+
+        if (resourceBase == null || resourceBase.length() == 0)
+        {
+            resourceHandler = null;
+        }
+        else
+        {
+            resourceHandler = new ResourceHandler();
+            resourceHandler.setResourceBase(resourceBase);
+        }
+        return resourceHandler;
+    }
+
+    /**
+     * Initializes a new {@link HandlerWrapper} instance which is to match
+     * requests against a set of rules and modify them accordingly for any rules
+     * that match.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} for which the new instance is to match
+     * requests against a set of rules and modify them accordingly for any rules
+     * that match
+     * @return a new {@code HandlerWrapper} instance which is to match requests
+     * against a set of rules and modify them accordingly for any rules that
+     * match
+     */
+    private HandlerWrapper initializeRewriteHandler(
+            BundleContext bundleContext,
+            Server server)
+    {
+        String regex = getCfgString(JETTY_REWRITE_HANDLER_REGEX_PNAME, null);
+        RewriteHandler handler = null;
+
+        if (regex != null && regex.length() != 0)
+        {
+            String replacement
+                = getCfgString(JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME, null);
+
+            if (replacement != null)
+            {
+                RewriteRegexRule rule = new RewriteRegexRule();
+
+                rule.setRegex(regex);
+                rule.setReplacement(replacement);
+
+                handler = new RewriteHandler();
+                handler.addRule(rule);
+            }
+        }
+        return handler;
+    }
+
+    /**
+     * Initializes a new {@link ServletHandler} instance which is to map
+     * requests to servlets.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} for which the new instance is to map
+     * requests to servlets
+     * @return a new {@code ServletHandler} instance which is to map requests to
+     * servlets for {@code server}
+     */
+    private Handler initializeServletHandler(
+            BundleContext bundleContext,
+            Server server)
+    {
+        String pathSpec
+            = getCfgString(JETTY_PROXY_SERVLET_PATH_SPEC_PNAME, null);
+        Handler handler = null;
+
+        if (pathSpec != null && pathSpec.length() != 0)
+        {
+            String proxyTo
+                = getCfgString(JETTY_PROXY_SERVLET_PROXY_TO_PNAME, null);
+
+            if (proxyTo != null && proxyTo.length() != 0)
+            {
+                ServletHolder holder = new ServletHolder();
+
+                holder.setHeldClass(ProxyServletImpl.class);
+                // XXX ProxyServlet will throw an IllegalStateException without
+                // maxThreads. The documentation on ProxyServlet says the
+                // default value is 256.
+                holder.setInitParameter("maxThreads", Integer.toString(256));
+                holder.setInitParameter("prefix", pathSpec);
+                holder.setInitParameter("proxyTo", proxyTo);
+
+                // hostHeader
+                String hostHeader
+                    = getCfgString(JETTY_PROXY_SERVLET_HOST_HEADER_PNAME, null);
+
+                if (hostHeader != null && hostHeader.length() != 0)
+                    holder.setInitParameter("hostHeader", hostHeader);
+
+                ServletContextHandler servletContextHandler
+                    = new ServletContextHandler();
+
+                servletContextHandler.addServlet(holder, pathSpec);
+                servletContextHandler.setContextPath("/");
+
+                handler = servletContextHandler;
+            }
+        }
+        return handler;
+    }
 
     /**
      * Starts the OSGi bundle which implements a REST API for Videobridge in a
@@ -114,74 +471,41 @@ public class RESTBundleActivator
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        // The REST API of Videobridge does not start by default.
-        ConfigurationService cfg
+        cfg
             = ServiceUtils.getService(
                     bundleContext,
                     ConfigurationService.class);
-        boolean start;
-        String host = null;
-        int port = 8080, tlsPort = 8443;
-        String sslContextFactoryKeyStorePassword, sslContextFactoryKeyStorePath;
-        boolean sslContextFactoryNeedClientAuth = false;
-        boolean enableRestShutdown;
 
-        if (cfg == null)
+        // The REST API of Videobridge does not start by default.
+        if (!getCfgBoolean(Videobridge.REST_API_PNAME, false))
         {
-            enableRestShutdown = Boolean.getBoolean(ENABLE_REST_SHUTDOWN_PNAME);
-            host = System.getProperty(JETTY_HOST_PNAME, host);
-            port = Integer.getInteger(JETTY_PORT_PNAME, port);
-            sslContextFactoryKeyStorePassword
-                = System.getProperty(JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD);
-            sslContextFactoryKeyStorePath
-                = System.getProperty(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH);
-            sslContextFactoryNeedClientAuth
-                = Boolean.getBoolean(JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH);
-            start = Boolean.getBoolean(Videobridge.REST_API_PNAME);
-            tlsPort = Integer.getInteger(JETTY_TLS_PORT_PNAME, tlsPort);
-        }
-        else
-        {
-            enableRestShutdown
-                = cfg.getBoolean(ENABLE_REST_SHUTDOWN_PNAME, false);
-            host = cfg.getString(JETTY_HOST_PNAME, host);
-            port = cfg.getInt(JETTY_PORT_PNAME, port);
-            sslContextFactoryKeyStorePassword
-                = cfg.getString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD);
-            sslContextFactoryKeyStorePath
-                = cfg.getString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH);
-            sslContextFactoryNeedClientAuth
-                = cfg.getBoolean(
-                        JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH,
-                        sslContextFactoryNeedClientAuth);
-            start = cfg.getBoolean(Videobridge.REST_API_PNAME, false);
-            tlsPort = cfg.getInt(JETTY_TLS_PORT_PNAME, tlsPort);
-        }
-        if (!start)
+            cfg = null;
             return;
+        }
 
         try
         {
             Server server = new Server();
             HttpConfiguration httpCfg = new HttpConfiguration();
+            int tlsPort = getCfgInt(JETTY_TLS_PORT_PNAME, 8443);
 
             httpCfg.setSecurePort(tlsPort);
             httpCfg.setSecureScheme("https");
+
+            String sslContextFactoryKeyStorePath
+                = getCfgString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH, null);
+            ServerConnector connector;
 
             // If HTTPS is not enabled, serve the REST API of Jitsi Videobridge
             // over HTTP.
             if (sslContextFactoryKeyStorePath == null)
             {
                 // HTTP
-                ServerConnector httpConnector
+                connector
                     = new MuxServerConnector(
                             server,
                             new HttpConnectionFactory(httpCfg));
-
-                if (host != null)
-                    httpConnector.setHost(host);
-                httpConnector.setPort(port);
-                server.addConnector(httpConnector);
+                connector.setPort(getCfgInt(JETTY_PORT_PNAME, 8080));
             }
             else
             {
@@ -191,6 +515,14 @@ public class RESTBundleActivator
                             sslContextFactoryKeyStorePath,
                             cfg);
                 SslContextFactory sslContextFactory = new SslContextFactory();
+                String sslContextFactoryKeyStorePassword
+                    = getCfgString(
+                            JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD,
+                            null);
+                boolean sslContextFactoryNeedClientAuth
+                    = getCfgBoolean(
+                        JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH,
+                        false);
 
                 sslContextFactory.setExcludeCipherSuites(
                         "SSL_RSA_WITH_DES_CBC_SHA",
@@ -215,22 +547,26 @@ public class RESTBundleActivator
 
                 httpsCfg.addCustomizer(new SecureRequestCustomizer());
 
-                ServerConnector sslConnector
+                connector
                     = new MuxServerConnector(
                             server,
                             new SslConnectionFactory(
                                     sslContextFactory,
                                     "http/1.1"),
                             new HttpConnectionFactory(httpsCfg));
-
-                if (host != null)
-                    sslConnector.setHost(host);
-                sslConnector.setPort(tlsPort);
-                server.addConnector(sslConnector);
+                connector.setPort(tlsPort);
             }
 
-            server.setHandler(
-                    new HandlerImpl(bundleContext, enableRestShutdown));
+            String host = getCfgString(JETTY_HOST_PNAME, null);
+
+            if (host != null)
+                connector.setHost(host);
+            server.addConnector(connector);
+
+            Handler handler = initializeHandler(bundleContext, server);
+
+            if (handler != null)
+                server.setHandler(handler);
 
             // The server will start a non-daemon background Thread which will
             // keep the application running on success.
@@ -274,5 +610,7 @@ public class RESTBundleActivator
             server.stop();
             server = null;
         }
+
+        cfg = null;
     }
 }
