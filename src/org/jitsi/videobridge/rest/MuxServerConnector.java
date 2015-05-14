@@ -136,7 +136,7 @@ public class MuxServerConnector
                             = new HashMap<String,Object>();
 
                         properties.put(
-                                MuxServerSocketChannel
+                                MuxServerSocketChannelFactory
                                     .SOCKET_REUSE_ADDRESS_PROPERTY_NAME,
                                 getReuseAddress());
 
@@ -151,11 +151,12 @@ public class MuxServerConnector
                             endpoint = new InetSocketAddress(host, port);
 
                         serverChannel
-                            = MuxServerSocketChannel.openAndBind(
-                                    properties,
-                                    endpoint,
-                                    /* backlog */ getAcceptQueueSize(),
-                                    HTTP_DEMUX_FILTER);
+                            = MuxServerSocketChannelFactory
+                                .openAndBindMuxServerSocketChannel(
+                                        properties,
+                                        endpoint,
+                                        /* backlog */ getAcceptQueueSize(),
+                                        HTTP_DEMUX_FILTER);
 
                         int localPort = serverChannel.socket().getLocalPort();
 
