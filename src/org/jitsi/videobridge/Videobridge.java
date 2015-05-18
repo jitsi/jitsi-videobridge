@@ -452,7 +452,7 @@ public class Videobridge
      * @return the <tt>ConfigurationService</tt> used by this
      * <tt>Videobridge</tt>.
      */
-    ConfigurationService getConfigurationService()
+    public ConfigurationService getConfigurationService()
     {
         BundleContext bundleContext = getBundleContext();
 

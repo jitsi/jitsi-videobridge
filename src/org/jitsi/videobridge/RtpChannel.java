@@ -32,6 +32,7 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.eventadmin.*;
+import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -182,6 +183,11 @@ public class RtpChannel
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
      */
     private final SessionAddress streamTarget = new SessionAddress();
+
+    /**
+     * The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     */
+    RtpChannelTransformEngine transformEngine = null;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -890,6 +896,8 @@ public class RtpChannel
         stream.addPropertyChangeListener(streamPropertyChangeListener);
         stream.setName(getID());
         stream.setProperty(RtpChannel.class.getName(), this);
+        if (transformEngine != null)
+            stream.setExternalTransformer(transformEngine);
     }
 
     /**
@@ -1396,6 +1404,9 @@ public class RtpChannel
             {
                 return;
             }
+
+            if (transformEngine != null)
+                transformEngine.enableAbsSendTime(id);
         }
 
         // It is safe to just add it, MediaStream will take care of duplicates.
@@ -1656,5 +1667,20 @@ public class RtpChannel
     public int[] getReceivePTs()
     {
         return receivePTs;
+    }
+
+    /**
+     * Sets the <tt>RtpChannelTransformEngine</tt> to be used by this
+     * <tt>RtpChannel</tt>.
+     * @param transformEngine the <tt>RtpChannelTransformEngine</tt> to set.
+     */
+    void setTransformEngine(RtpChannelTransformEngine transformEngine)
+    {
+        if (this.transformEngine != transformEngine)
+        {
+            this.transformEngine = transformEngine;
+            if (stream != null)
+                stream.setExternalTransformer(transformEngine);
+        }
     }
 }

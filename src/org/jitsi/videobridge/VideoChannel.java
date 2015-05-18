@@ -19,12 +19,16 @@ import javax.media.rtp.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
+import org.jitsi.videobridge.transform.*;
 import org.json.simple.*;
 
 /**
@@ -35,6 +39,7 @@ import org.json.simple.*;
  */
 public class VideoChannel
     extends RtpChannel
+    implements NACKHandler
 {
     /**
      * The length in milliseconds of the interval for which the average incoming
@@ -163,6 +168,7 @@ public class VideoChannel
         super(content, id, channelBundleId, transportNamespace, initiator);
 
         simulcastManager = new SimulcastManager(this);
+        setTransformEngine(new RtpChannelTransformEngine(this));
     }
 
     /**
@@ -1170,5 +1176,161 @@ public class VideoChannel
 
         if (this.inLastN.compareAndSet(!inLastN, inLastN))
             inLastNChanged(!inLastN, inLastN);
+    }
+
+    /**
+     *
+     * @param payloadTypes the <tt>PayloadTypePacketExtension</tt>s which
+     * specify the payload types (i.e. the <tt>MediaFormat</tt>s) to be used by
+     */
+    @Override
+    public void setPayloadTypes(List<PayloadTypePacketExtension> payloadTypes)
+    {
+        super.setPayloadTypes(payloadTypes);
+
+        boolean enableRedFilter = true;
+
+        // If we're not given any PTs at all, assume that we shouldn't touch
+        // RED.
+        if (payloadTypes == null || payloadTypes.size() == 0)
+            enableRedFilter = false;
+
+        if (payloadTypes != null)
+        {
+            for (PayloadTypePacketExtension payloadTypePacketExtension
+                    : payloadTypes)
+            {
+                if (Constants.RED.equals(payloadTypePacketExtension.getName()))
+                {
+                    enableRedFilter = false;
+                    break;
+                }
+            }
+        }
+
+        // If the endpoint supports RED we disable the filter (e.g. leave RED).
+        // Otherwise, we strip it.
+        if (transformEngine != null)
+            transformEngine.enableREDFilter(enableRedFilter);
+    }
+
+    /**
+     * Implements
+     * {@link org.jitsi.videobridge.rtcp.NACKHandler#handleNACK(org.jitsi.impl.neomedia.rtcp.NACKPacket)}
+     *
+     *
+     * TODO: consider doing this in a separate thread, as it might slow down
+     * the receiving RTCP thread.
+     */
+    @Override
+    public void handleNACK(NACKPacket nackPacket)
+    {
+        Set<Integer> lostPackets = new HashSet<Integer>();
+        lostPackets.addAll(nackPacket.getLostPackets());
+
+        long ssrc = nackPacket.sourceSSRC;
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Received NACK on channel " + getID() +" for SSRC "
+                                 + ssrc + ". Packets reported lost: "
+                                 + lostPackets);
+        }
+
+
+        RawPacketCache cache = transformEngine.getCache();
+        if (cache != null)
+        {
+            Iterator<Integer> iter = lostPackets.iterator();
+            while (iter.hasNext())
+            {
+                int seq = iter.next();
+                RawPacket pkt = cache.get(ssrc, seq);
+                if (pkt != null)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Retransmitting packet from cache. SSRC "
+                                             + ssrc + " seq " + seq);
+                    }
+                    getStream().injectPacket(
+                            createPacketForRetransmission(pkt),
+                            true,
+                            true);
+                    iter.remove();
+                }
+            }
+        }
+
+        if (!lostPackets.isEmpty())
+        {
+            // The remaining lostPackets are not in the cache. We will request
+            // them from the actual sender via a new NACK packet which we
+            // construct below.
+
+            // When we add transformers which change the sequence numbers and/or
+            // SSRC of packets for this endpoint, we will need here to translate
+            // the seq/SSRC back.
+
+            NACKPacket newNack
+                    = new NACKPacket(nackPacket.senderSSRC, ssrc, lostPackets);
+            RawPacket pkt = null;
+            try
+            {
+                pkt = newNack.toRawPacket();
+            }
+            catch (IOException ioe)
+            {
+                logger.warn("Failed to create NACK packet: " + ioe);
+            }
+
+            if (pkt != null)
+            {
+                Set<RtpChannel> channelsToSendTo = new HashSet<RtpChannel>();
+                Channel channel = getContent().findChannelByReceiveSSRC(ssrc);
+                if (channel != null && channel instanceof RtpChannel)
+                {
+                    channelsToSendTo.add((RtpChannel) channel);
+                }
+                else
+                {
+                    // If searching by SSRC fails, we transmit the NACK on all
+                    // other channels.
+                    // TODO: We might want to *always* send these to all channels,
+                    // in order to not prevent the mechanism for avoidance of
+                    // retransmission of multiple RTCP FB defined in AVPF:
+                    // https://tools.ietf.org/html/rfc4585#section-3.2
+                    // This is, unless/until we implement some mechanism of our
+                    // own.
+                    for (Channel c : getContent().getChannels())
+                    {
+                        if (c != null && c instanceof RtpChannel && c != this)
+                            channelsToSendTo.add((RtpChannel) c);
+                    }
+                }
+
+                for (RtpChannel c : channelsToSendTo)
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Sending a NACK for SSRC " + ssrc
+                                             + " , packets " + lostPackets
+                                             + " on channel " + c.getID());
+                    }
+
+                    c.getStream().injectPacket(pkt, false, true);
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates an RTP packet which is to carry the retransmission of the given
+     * RTP packet. If the endpoint supports RFC4588 we may encapsulate it in
+     * that format. Currently we just retransmit the packet as-is.
+     */
+    private RawPacket createPacketForRetransmission(RawPacket pkt)
+    {
+        return pkt;
     }
 }
