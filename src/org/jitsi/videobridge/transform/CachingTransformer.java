@@ -12,6 +12,7 @@ import org.jitsi.util.*;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * Implements a cache of outgoing RTP packets.
@@ -114,6 +115,23 @@ public class CachingTransformer
     private int maxSizeInPackets = 0;
 
     /**
+     * Counts the number of requests (calls to {@link #get(long, int)}) which
+     * the cache was able to answer.
+     */
+    private AtomicInteger totalHits = new AtomicInteger(0);
+
+    /**
+     * Counts the number of requests (calls to {@link #get(long, int)}) which
+     * the cache was not able to answer.
+     */
+    private AtomicInteger totalMisses = new AtomicInteger(0);
+
+    /**
+     * Counts the total number of packets added to this cache.
+     */
+    private AtomicInteger totalPacketsAdded = new AtomicInteger(0);
+
+    /**
      * Whether or not this <tt>TransformEngine</tt> has been closed.
      */
     private boolean closed = false;
@@ -168,8 +186,14 @@ public class CachingTransformer
         if (closed)
             return;
         closed = true;
-        logger.info("Closing. Maximum size reached: " + maxSizeInBytes
-                            + " bytes; " + maxSizeInPackets + " packets.");
+        logger.info("Closing. Maximum size reached: "
+                            + maxSizeInBytes + " bytes, "
+                            + maxSizeInPackets + " packets; "
+                            + totalHits + " hits, "
+                            + totalMisses + " misses ("
+                            + (totalHits.get() + totalMisses.get())
+                            + " total requests); "
+                            + totalPacketsAdded.get() + " total packets added.");
 
         synchronized (caches)
         {
@@ -189,7 +213,14 @@ public class CachingTransformer
     {
         Cache cache = getCache(ssrc & 0xffffffffL, false);
 
-        return cache != null ? cache.get(seq) : null;
+        RawPacket pkt =  cache != null ? cache.get(seq) : null;
+
+        if (pkt != null)
+            totalHits.incrementAndGet();
+        else
+            totalMisses.incrementAndGet();
+
+        return pkt;
     }
 
 
@@ -234,7 +265,10 @@ public class CachingTransformer
         Cache cache = getCache(pkt.getSSRC() & 0xffffffffL, true);
 
         if (cache != null)
+        {
             cache.insert(pkt);
+            totalPacketsAdded.incrementAndGet();
+        }
     }
 
     /**
