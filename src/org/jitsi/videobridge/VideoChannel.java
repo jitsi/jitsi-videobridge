@@ -1193,12 +1193,12 @@ public class VideoChannel
         // If we're not given any PTs at all, assume that we shouldn't touch
         // RED.
         if (payloadTypes == null || payloadTypes.size() == 0)
-            enableRedFilter = false;
+            return;
 
         if (payloadTypes != null)
         {
             for (PayloadTypePacketExtension payloadTypePacketExtension
-                    : payloadTypes)
+                : payloadTypes)
             {
                 if (Constants.RED.equals(payloadTypePacketExtension.getName()))
                 {
