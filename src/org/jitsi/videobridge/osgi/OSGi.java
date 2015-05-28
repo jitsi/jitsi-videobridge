@@ -82,6 +82,9 @@ public class OSGi
                 "org/jitsi/videobridge/VideobridgeBundleActivator"
             },
             {
+                "org/jitsi/videobridge/version/VersionActivator"
+            },
+            {
                 /*
                  * The HTTP/JSON API of Videobridge is started after and in a
                  * start level separate from Videobridge because the HTTP/JSON
