@@ -2055,6 +2055,15 @@ public class IceUdpTransportManager
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isConnected()
+    {
+        return iceConnected;
+    }
+
+    /**
      * Extends
      * <tt>net.java.sip.communicator.service.protocol.media.TransportManager</tt>
      * in order to get access to certain protected static methods and thus avoid

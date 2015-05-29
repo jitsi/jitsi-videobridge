@@ -158,6 +158,11 @@ public class RtpChannel
     private MediaStream stream;
 
     /**
+     * Used to synchronize access to {@link #stream}.
+     */
+    private final Object streamSyncRoot = new Object();
+
+    /**
      * Whether {@link #stream} has been closed.
      */
     private boolean streamClosed = false;
@@ -884,20 +889,32 @@ public class RtpChannel
         MediaService mediaService = getMediaService();
         MediaType mediaType = getContent().getMediaType();
 
-        stream = mediaService.createMediaStream(
-                null,
-                mediaType,
-                getDtlsControl());
-        /*
-         * Add the PropertyChangeListener to the MediaStream prior to performing
-         * further initialization so that we do not miss changes to the values
-         * of properties we may be interested in.
-         */
-        stream.addPropertyChangeListener(streamPropertyChangeListener);
-        stream.setName(getID());
-        stream.setProperty(RtpChannel.class.getName(), this);
-        if (transformEngine != null)
-            stream.setExternalTransformer(transformEngine);
+        synchronized (streamSyncRoot)
+        {
+            stream = mediaService.createMediaStream(
+                    null,
+                    mediaType,
+                    getDtlsControl());
+
+             // Add the PropertyChangeListener to the MediaStream prior to
+             // performing further initialization so that we do not miss changes
+             // to the values of properties we may be interested in.
+            stream.addPropertyChangeListener(streamPropertyChangeListener);
+            stream.setName(getID());
+            stream.setProperty(RtpChannel.class.getName(), this);
+            if (transformEngine != null)
+                stream.setExternalTransformer(transformEngine);
+
+            // The transport manager could be already connected, in which case
+            // (since we just created the stream), any previous calls to
+            // transportConnected() have failed started the stream. So trigger
+            // one now, to make sure that the stream is started.
+            TransportManager transportManager = getTransportManager();
+            if (transportManager != null && transportManager.isConnected())
+            {
+                transportConnected();
+            }
+        }
     }
 
     /**
@@ -934,6 +951,13 @@ public class RtpChannel
     protected void maybeStartStream()
         throws IOException
     {
+        // The stream hasn't been initialized yet.
+        synchronized (streamSyncRoot)
+        {
+            if (stream == null)
+                return;
+        }
+
         // connector
         StreamConnector connector = getStreamConnector();
 
