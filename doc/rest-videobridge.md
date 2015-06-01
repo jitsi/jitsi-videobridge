@@ -135,7 +135,7 @@ The respective response could look like:
 
 Configuration
 ==============
-**To enable the REST API you have to start Jitsi video bridge with parameter --apis=rest.**
+**To enable the REST API you have to start Jitsi video bridge with parameter --apis=rest (or --apis=rest,xmpp to enable both REST and XMPP).**
 
 **The following configuration properties can be added in the Jitsi Videobridge configuration file(HOME/.sip-communicator/sip-communicator.properties):**
 
