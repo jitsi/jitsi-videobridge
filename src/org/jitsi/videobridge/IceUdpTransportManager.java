@@ -450,6 +450,8 @@ public class IceUdpTransportManager
     private void appendVideobridgeHarvesters(Agent iceAgent,
                                              boolean rtcpmux)
     {
+        boolean enableDynamicHostHarvester = true;
+
         if (rtcpmux)
         {
             initializeStaticHarvesters();
@@ -457,9 +459,17 @@ public class IceUdpTransportManager
             if (tcpHostHarvester != null)
                 iceAgent.addCandidateHarvester(tcpHostHarvester);
             if (singlePortHarvesters != null)
+            {
                 for (CandidateHarvester harvester : singlePortHarvesters)
+                {
                     iceAgent.addCandidateHarvester(harvester);
+                    enableDynamicHostHarvester = false;
+                }
+            }
         }
+
+        // Use dynamic ports iff we're not sing "single port".
+        iceAgent.setUseHostHarvester(enableDynamicHostHarvester);
 
         AwsCandidateHarvester awsHarvester = null;
         //does this look like an Amazon AWS EC2 machine?
@@ -1346,7 +1356,7 @@ public class IceUdpTransportManager
             return
                 getTCPStreamConnector(
                         rtpChannel,
-                        new Socket[] { tcpSocket0, tcpSocket1 });
+                        new Socket[]{tcpSocket0, tcpSocket1});
         }
     }
 
