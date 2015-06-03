@@ -420,7 +420,7 @@ public class CachingTransformer
             // Since sequence numbers wrap at 2^16, we can't know with absolute
             // certainty which packet the request refers to. We assume that it
             // is for the latest packet (i.e. the one with the highest index).
-            RawPacket pkt = cache.get(seq + ROC*(1<<16));
+            RawPacket pkt = cache.get(seq + ROC * (1 << 16));
 
             // Maybe the ROC was just bumped recently.
             if (pkt == null && ROC > 0)
@@ -450,12 +450,12 @@ public class CachingTransformer
             if (size <= 0)
                 return;
 
-            long lastTimestamp = cache.lastEntry().getValue().getTimestamp();
+            long lastTimestamp = 0xffffffffL & cache.lastEntry().getValue().getTimestamp();
             long cleanBefore = getCleanBefore(lastTimestamp);
 
             Iterator<Map.Entry<Integer,RawPacket>> iter
                     = cache.entrySet().iterator();
-            int removesPackets = 0;
+            int removedPackets = 0;
             int removedBytes = 0;
             while (iter.hasNext())
             {
@@ -467,7 +467,7 @@ public class CachingTransformer
                     size--;
                 }
                 else if (lessThanTS(cleanBefore,
-                                    pkt.getTimestamp()))
+                                    0xffffffffL & pkt.getTimestamp()))
                 {
                     // We reached a packet with a timestamp after 'cleanBefore'.
                     // The rest of the packets are even more recent.
@@ -476,22 +476,32 @@ public class CachingTransformer
 
                 iter.remove();
                 removedBytes += pkt.getLength();
-                removesPackets++;
+                removedPackets++;
                 pool.offer(pkt);
             }
 
             synchronized (sizesSyncRoot)
             {
                 sizeInBytes -= removedBytes;
-                sizeInPackets -= removesPackets;
+                sizeInPackets -= removedPackets;
             }
 
         }
 
         synchronized private void empty()
         {
+            int removedBytes = 0;
             for (RawPacket pkt : cache.values())
+            {
+                removedBytes += pkt.getBuffer().length;
                 pool.offer(pkt);
+            }
+
+            synchronized (sizesSyncRoot)
+            {
+                sizeInPackets -= cache.size();
+                sizeInBytes -= removedBytes;
+            }
 
             cache.clear();
         }
