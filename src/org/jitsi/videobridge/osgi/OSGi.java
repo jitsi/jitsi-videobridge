@@ -197,9 +197,12 @@ public class OSGi
         //      cannot decrypt).
         // 2. Failed attempts to parse encrypted RTCP packets (in a compound
         //      packet, the headers of all but the first packet are encrypted).
-        defaults.put("org.jitsi.impl.neomedia.transform.dtls."
-                             + "DtlsPacketTransformer.dropUnencryptedPkts=true",
-                     true_);
+
+        // This is currently disabled, because it makes DTLS mandatory, and
+        // thus breaks communication with jigasi and jitsi.
+        //defaults.put("org.jitsi.impl.neomedia.transform.dtls."
+        //                     + "DtlsPacketTransformer.dropUnencryptedPkts",
+        //             true_);
 
         for (Map.Entry<String,String> e : defaults.entrySet())
         {
