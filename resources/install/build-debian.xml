@@ -87,6 +87,7 @@
             <fileset dir="resources/install/debian">
                 <include name="**"/>
                 <exclude name="*.src"/>
+                <exclude name="patches/**"/><!-- we use patches only for deb-src -->
             </fileset>
         </copy>
 
@@ -259,6 +260,12 @@ endif
         <symlink resource="/usr/share/java/jetty8-server.jar"
                  link="lib"/>
         <symlink resource="/usr/share/java/jetty8-util.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/jetty8-servlets.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/jetty8-servlet.jar"
+                 link="lib"/>
+        <symlink resource="/usr/share/java/jetty8-rewrite.jar"
                  link="lib"/>
         <symlink resource="/usr/share/java/sigar.jar"
                  link="lib"/>
