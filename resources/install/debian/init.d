@@ -67,8 +67,14 @@ start() {
         exit 1
     fi
     echo -n "Starting $DESC: "
+    DAEMON_START_CMD="exec $DAEMON $DAEMON_OPTS < /dev/null >> $LOGFILE 2>&1"
+    AUTHBIND_CMD=""
+    if [ "$AUTHBIND" = "yes" ]; then
+        AUTHBIND_CMD="/usr/bin/authbind --deep /bin/bash -c "
+        DAEMON_START_CMD="'$DAEMON_START_CMD'"
+    fi
     start-stop-daemon --start --quiet --background --chuid $USER --make-pidfile --pidfile $PIDFILE \
-        --exec /bin/bash -- -c "exec $DAEMON $DAEMON_OPTS < /dev/null >> $LOGFILE 2>&1"
+        --exec /bin/bash -- -c "AUTHBIND_CMD $DAEMON_START_CMD"
     echo "$NAME started."
 }
 
