@@ -362,7 +362,14 @@ public class RESTBundleActivator
             resourceHandler = new ResourceHandler();
             resourceHandler.setResourceBase(resourceBase);
         }
-        return resourceHandler;
+
+        // Create context handler and enable alisases, so we can handle
+        // symlinks
+        ContextHandler contextHandler=new ContextHandler();
+        contextHandler.setHandler(resourceHandler);
+        contextHandler.addAliasCheck(new ContextHandler.ApproveAliases());
+
+        return contextHandler;
     }
 
     /**
