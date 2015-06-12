@@ -7,6 +7,7 @@
 package org.jitsi.videobridge.rest;
 
 import java.lang.reflect.*;
+import java.net.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
@@ -145,6 +146,7 @@ final class JSONDeserializer
             Object sources = channel.get(JSONSerializer.SOURCES);
             Object sourceGroups = channel.get(JSONSerializer.SOURCE_GROUPS);
             Object ssrcs = channel.get(JSONSerializer.SSRCS);
+            Object headerExtensions = channel.get(JSONSerializer.RTP_HEADER_EXTS);
 
             channelIQ = new ColibriConferenceIQ.Channel();
             deserializeChannelCommon(channel, channelIQ);
@@ -197,6 +199,9 @@ final class JSONDeserializer
             // ssrcs
             if (ssrcs != null)
                 deserializeSSRCs((JSONArray) ssrcs, channelIQ);
+            // header extensions
+            if (headerExtensions != null)
+                deserializeHeaderExtensions((JSONArray) headerExtensions, channelIQ);
 
             contentIQ.addChannel(channelIQ);
         }
@@ -512,6 +517,45 @@ final class JSONDeserializer
             }
         }
     }
+
+    public static RTPHdrExtPacketExtension deserializeHeaderExtension(
+            JSONObject headerExtension,
+            ColibriConferenceIQ.Channel channelIQ) {
+        RTPHdrExtPacketExtension headerExtensionIQ;
+        if (headerExtension == null)
+        {
+            headerExtensionIQ = null;
+        }
+        else
+        {
+            Long id = (Long)headerExtension.get(RTPHdrExtPacketExtension.ID_ATTR_NAME);
+            String uriString = (String)headerExtension.get(RTPHdrExtPacketExtension.URI_ATTR_NAME);
+            headerExtensionIQ = new RTPHdrExtPacketExtension();
+            headerExtensionIQ.setID(String.valueOf(id));
+            URI uri = null;
+            try {
+                uri = new URI(uriString);
+            }
+            catch (URISyntaxException e) {
+                System.out.println(e.toString());
+            }
+            headerExtensionIQ.setURI(uri);
+            channelIQ.addRtpHeaderExtension(headerExtensionIQ);
+        }
+        return headerExtensionIQ;
+    }
+
+    public static void deserializeHeaderExtensions(
+        JSONArray headerExtensions,
+        ColibriConferenceIQ.Channel channelIQ)
+    {
+        if ((headerExtensions != null) && !headerExtensions.isEmpty()) {
+            for (Object headerExtension : headerExtensions) {
+                deserializeHeaderExtension((JSONObject) headerExtension, channelIQ);
+            }
+        }
+    }
+
 
     public static PayloadTypePacketExtension deserializePayloadType(
             JSONObject payloadType,
