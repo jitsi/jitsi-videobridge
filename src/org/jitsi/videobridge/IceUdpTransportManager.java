@@ -207,6 +207,12 @@ public class IceUdpTransportManager
     private final DtlsControlImpl dtlsControl;
 
     /**
+     * The <tt>AbstractRTPConnector</tt> which this transport manager creates
+     * for the purposes of DTLS.
+     */
+    private AbstractRTPConnector rtpConnector;
+
+    /**
      * The <tt>Agent</tt> which implements the ICE protocol and which is used
      * by this instance to implement the Jingle ICE-UDP transport.
      */
@@ -613,6 +619,12 @@ public class IceUdpTransportManager
             {
                 dtlsControl.start(null); //stop
                 dtlsControl.cleanup(this);
+            }
+
+            if (rtpConnector != null)
+            {
+                rtpConnector.close();
+                rtpConnector = null;
             }
 
             //DatagramSocket[] datagramSockets = getStreamConnectorSockets();
@@ -1924,7 +1936,11 @@ public class IceUdpTransportManager
         }
 
         StreamConnector streamConnector;
-        AbstractRTPConnector rtpConnector;
+        if (rtpConnector != null)
+        {
+            rtpConnector.close();
+            logger.warn("More than one RTPConnector. Closing the old one.");
+        }
 
         DatagramSocket udpSocket = iceSockets[0].getUDPSocket();
         if (udpSocket != null)
