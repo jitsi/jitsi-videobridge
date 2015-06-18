@@ -82,6 +82,9 @@ public class OSGi
                 "org/jitsi/videobridge/VideobridgeBundleActivator"
             },
             {
+                "org/jitsi/videobridge/version/VersionActivator"
+            },
+            {
                 /*
                  * The HTTP/JSON API of Videobridge is started after and in a
                  * start level separate from Videobridge because the HTTP/JSON
@@ -186,6 +189,20 @@ public class OSGi
         // If DTMF handling is enabled, DTMF packets will be read and swallowed.
         // We want them forwarded as normal packets.
         defaults.put(AudioMediaStream.DISABLE_DTMF_HANDLING_PNAME, true_);
+
+        // This causes RTP/RTCP packets received before the DTLS agent is ready
+        // to decrypt them to be dropped. Without it, these packets are passed
+        // on without decryption and this leads to:
+        // 1. Garbage being sent to the endpoints (or at least something they
+        //      cannot decrypt).
+        // 2. Failed attempts to parse encrypted RTCP packets (in a compound
+        //      packet, the headers of all but the first packet are encrypted).
+
+        // This is currently disabled, because it makes DTLS mandatory, and
+        // thus breaks communication with jigasi and jitsi.
+        //defaults.put("org.jitsi.impl.neomedia.transform.dtls."
+        //                     + "DtlsPacketTransformer.dropUnencryptedPkts",
+        //             true_);
 
         for (Map.Entry<String,String> e : defaults.entrySet())
         {

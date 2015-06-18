@@ -6,38 +6,20 @@
  */
 package org.jitsi.videobridge.xmpp;
 
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.OutputStreamWriter;
-import java.io.StringReader;
-import java.io.Writer;
 import java.util.*;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-
-
-
-
-
-
-import org.w3c.dom.Attr;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.xml.sax.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 
+import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jivesoftware.smack.packet.*;
 import org.osgi.framework.*;
 import org.xmpp.component.*;
 import org.xmpp.packet.*;
+import org.xmpp.packet.IQ;
+import org.xmpp.packet.Packet;
 
 /**
  * Implements <tt>org.xmpp.component.Component</tt> to provide Jitsi Videobridge
@@ -110,18 +92,8 @@ public class ComponentImpl
      * OSGi bundle.
      */
     private BundleContext bundleContext;
-    
-    
-    
-    private static String roomName;
 
-    public static String getRoomName() {
-		return roomName;
-	}
-
-	
-
-	/**
+    /**
      * Initializes a new <tt>ComponentImpl</tt> instance.
      */
     public ComponentImpl()
@@ -146,7 +118,10 @@ public class ComponentImpl
                         ProtocolProviderServiceJabberImpl
                             .URN_XMPP_JINGLE_ICE_UDP_1,
                         ProtocolProviderServiceJabberImpl
-                            .URN_XMPP_JINGLE_RAW_UDP_0
+                            .URN_XMPP_JINGLE_RAW_UDP_0,
+                        // TODO this should be a constant in
+                        // ProtocolProviderServiceJabberImpl.
+                        "jabber:iq:version"
                     };
     }
 
@@ -213,6 +188,26 @@ public class ComponentImpl
                 = ServiceUtils2.getService(bundleContext, Videobridge.class);
         }
         return videobridge;
+    }
+
+    /**
+     * Returns the <tt>VersionService</tt> used by this
+     * <tt>Videobridge</tt>.
+     *
+     * @return the <tt>VersionService</tt> used by this
+     * <tt>Videobridge</tt>.
+     */
+    public VersionService getVersionService()
+    {
+        BundleContext bundleContext = getBundleContext();
+
+        if (bundleContext != null)
+        {
+            return ServiceUtils2.getService(bundleContext,
+                VersionService.class);
+        }
+
+        return null;
     }
 
     /**
@@ -287,78 +282,9 @@ public class ComponentImpl
     {
         try
         {
+            logd("RECV: " + iq.toXML());
 
-            logger.info("######################"+iq+"##########################\n");
-            
-            logger.info(iq.toString());
-            
-            logd("\nRECV: " + iq.toXML());
-            
-            java.io.FileWriter fw = new java.io.FileWriter("./my-file.xml");
-            fw.write(iq.toString());
-            fw.close(); 
-            
-            
-          //  DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-          //  DocumentBuilder builder = factory.newDocumentBuilder();
-          //  Document document = builder.parse(ClassLoader.getSystemResourceAsStream(name)
-
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            org.xml.sax.InputSource inputSource = new org.xml.sax.InputSource(new StringReader(iq.toXML()));
-            
-            Document doc = builder.parse(inputSource);
-            
-            Element root = doc.getDocumentElement();
-            logger.info("@@@@@"+root.getNodeName()+"@@@@@");
-            
-            Node node1 = root.getFirstChild();
-            logger.info("@@@@@"+node1.getNodeName()+"@@@@@");
-            
-            Node node2 = node1.getFirstChild();
-            logger.info("@@@@@"+node2.getNodeName()+"@@@@@");
-            
-            Node node3 = node2.getFirstChild();
-            logger.info("@@@@@"+node3.getNodeName()+"@@@@@");
-            
-         //  NamedNodeMap nMap = node3.getAttributes();
-           
-         //  String x = nMap.getNamedItem("endPoint").getNodeValue();
-           
-         //  logger.info("@@##"+x+"##@@");
- 
-           logger.info("List attributes for node: " + node3.getNodeName());
-           NamedNodeMap attributes = node3.getAttributes();
-           
-         int num = attributes.getLength();
-         
-         for (int i =0 ; i < attributes.getLength();i++)
-         {
-        	 Attr attr = (Attr) attributes.item(i);
-        	 String attrName = attr.getNodeName();
-       
-        	 String attrValue = attr.getNodeValue();
-        	 
-        	 if(attr.getNodeName()=="roomname")
-        	 {
-        		 roomName =attr.getNodeValue();
-        	 }
-
-        	 
-        	logger.info("Found attribute: " + attrName + " with value: " + attrValue);
-        	//logger.info("******"+roomName+"*******");
-         }
-
-           
-           
-            
-          //  getData(smackIQ);
-            
-           
-           
-           
             org.jivesoftware.smack.packet.IQ smackIQ = IQUtils.convert(iq);
-           
             org.jivesoftware.smack.packet.IQ resultSmackIQ = handleIQ(smackIQ);
             IQ resultIQ;
 
@@ -479,9 +405,58 @@ public class ComponentImpl
             response = handleColibriConferenceIQ((ColibriConferenceIQ) request);
         else if (request instanceof GracefulShutdownIQ)
             response = handleGracefulShutdownIQ((GracefulShutdownIQ)request);
+        else if (request instanceof org.jivesoftware.smackx.packet.Version)
+            response = handleVersionIQ(
+                (org.jivesoftware.smackx.packet.Version) request);
         else
             response = null;
         return response;
+    }
+
+    /**
+     * Handles a <tt>Version</tt> stanza which represents a request.
+     *
+     * @param versionRequest the <tt>Version</tt> stanza represents
+     * the request to handle
+     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
+     * represents the response to the specified request.
+     */
+    private org.jivesoftware.smack.packet.IQ handleVersionIQ(
+        org.jivesoftware.smackx.packet.Version versionRequest)
+    {
+        VersionService versionService = getVersionService();
+        if (versionService == null)
+        {
+            return org.jivesoftware.smack.packet.IQ.createErrorResponse(
+                versionRequest,
+                new XMPPError(XMPPError.Condition.service_unavailable));
+        }
+
+        org.jitsi.service.version.Version
+            currentVersion = versionService.getCurrentVersion();
+
+        if (currentVersion == null)
+        {
+            return org.jivesoftware.smack.packet.IQ.createErrorResponse(
+                versionRequest,
+                new XMPPError(XMPPError.Condition.interna_server_error));
+        }
+
+        // send packet
+        org.jivesoftware.smackx.packet.Version versionResult =
+            new org.jivesoftware.smackx.packet.Version();
+
+        // to, from and packetId are set by the caller.
+        // versionResult.setTo(versionRequest.getFrom());
+        // versionResult.setFrom(versionRequest.getTo());
+        // versionResult.setPacketID(versionRequest.getPacketID());
+        versionResult.setType(org.jivesoftware.smack.packet.IQ.Type.RESULT);
+
+        versionResult.setName(currentVersion.getApplicationName());
+        versionResult.setVersion(currentVersion.toString());
+        versionResult.setOs(System.getProperty("os.name"));
+
+        return versionResult;
     }
 
     private void handleIQResponse(org.jivesoftware.smack.packet.IQ response)

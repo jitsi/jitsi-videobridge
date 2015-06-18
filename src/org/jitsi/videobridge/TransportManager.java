@@ -337,5 +337,12 @@ public abstract class TransportManager
         }
     }
 
+    /**
+     * Checks whether this transport manager has established connectivity.
+     * @return <tt>true</tt> iff this transport manager has established
+     * connectivity.
+     */
+    public abstract boolean isConnected();
+
 }
 

@@ -32,6 +32,7 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.eventadmin.*;
+import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -157,6 +158,11 @@ public class RtpChannel
     private MediaStream stream;
 
     /**
+     * Used to synchronize access to {@link #stream}.
+     */
+    private final Object streamSyncRoot = new Object();
+
+    /**
      * Whether {@link #stream} has been closed.
      */
     private boolean streamClosed = false;
@@ -182,6 +188,11 @@ public class RtpChannel
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
      */
     private final SessionAddress streamTarget = new SessionAddress();
+
+    /**
+     * The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     */
+    RtpChannelTransformEngine transformEngine = null;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -878,18 +889,32 @@ public class RtpChannel
         MediaService mediaService = getMediaService();
         MediaType mediaType = getContent().getMediaType();
 
-        stream = mediaService.createMediaStream(
-                null,
-                mediaType,
-                getDtlsControl());
-        /*
-         * Add the PropertyChangeListener to the MediaStream prior to performing
-         * further initialization so that we do not miss changes to the values
-         * of properties we may be interested in.
-         */
-        stream.addPropertyChangeListener(streamPropertyChangeListener);
-        stream.setName(getID());
-        stream.setProperty(RtpChannel.class.getName(), this);
+        synchronized (streamSyncRoot)
+        {
+            stream = mediaService.createMediaStream(
+                    null,
+                    mediaType,
+                    getDtlsControl());
+
+             // Add the PropertyChangeListener to the MediaStream prior to
+             // performing further initialization so that we do not miss changes
+             // to the values of properties we may be interested in.
+            stream.addPropertyChangeListener(streamPropertyChangeListener);
+            stream.setName(getID());
+            stream.setProperty(RtpChannel.class.getName(), this);
+            if (transformEngine != null)
+                stream.setExternalTransformer(transformEngine);
+
+            // The transport manager could be already connected, in which case
+            // (since we just created the stream), any previous calls to
+            // transportConnected() have failed started the stream. So trigger
+            // one now, to make sure that the stream is started.
+            TransportManager transportManager = getTransportManager();
+            if (transportManager != null && transportManager.isConnected())
+            {
+                transportConnected();
+            }
+        }
     }
 
     /**
@@ -926,6 +951,13 @@ public class RtpChannel
     protected void maybeStartStream()
         throws IOException
     {
+        // The stream hasn't been initialized yet.
+        synchronized (streamSyncRoot)
+        {
+            if (stream == null)
+                return;
+        }
+
         // connector
         StreamConnector connector = getStreamConnector();
 
@@ -1396,6 +1428,9 @@ public class RtpChannel
             {
                 return;
             }
+
+            if (transformEngine != null)
+                transformEngine.enableAbsSendTime(id);
         }
 
         // It is safe to just add it, MediaStream will take care of duplicates.
@@ -1656,5 +1691,20 @@ public class RtpChannel
     public int[] getReceivePTs()
     {
         return receivePTs;
+    }
+
+    /**
+     * Sets the <tt>RtpChannelTransformEngine</tt> to be used by this
+     * <tt>RtpChannel</tt>.
+     * @param transformEngine the <tt>RtpChannelTransformEngine</tt> to set.
+     */
+    void setTransformEngine(RtpChannelTransformEngine transformEngine)
+    {
+        if (this.transformEngine != transformEngine)
+        {
+            this.transformEngine = transformEngine;
+            if (stream != null)
+                stream.setExternalTransformer(transformEngine);
+        }
     }
 }
