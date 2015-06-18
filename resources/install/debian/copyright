@@ -4,8 +4,8 @@ Upstream-Contact: Emil Ivov <emcho@jitsi.org>
 Source: https://github.com/jitsi/jitsi-videobridge
 
 Files: *
-Copyright: 2013-2014 Jitsi
-License: LGPL-2.1
+Copyright: 2015 Atlassian Pty Ltd
+License: Apache-2.0
 
 Files: lib/src/tinder-1.2.2
 Copyright:
