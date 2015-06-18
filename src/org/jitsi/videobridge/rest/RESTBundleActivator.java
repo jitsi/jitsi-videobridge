@@ -8,14 +8,12 @@ package org.jitsi.videobridge.rest;
 
 import java.io.*;
 import java.lang.reflect.*;
-import java.net.*;
 import java.util.*;
 
 import org.eclipse.jetty.rewrite.handler.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.servlet.*;
-import org.eclipse.jetty.util.resource.*;
 import org.eclipse.jetty.util.ssl.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
@@ -70,14 +68,6 @@ public class RESTBundleActivator
 
     private static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.resourceBase";
-
-    /**
-     * Prefix that can configure multiple location aliases.
-     * rest.api.jetty.ResourceHandler.alias./config.js=/etc/jitsi/my-config.js
-     * rest.api.jetty.ResourceHandler.alias./settings.js=/etc/jitsi/my-sets.js
-     */
-    private static final String JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
-        = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.alias";
 
     private static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.regex";
@@ -321,12 +311,6 @@ public class RESTBundleActivator
         if (resourceHandler != null)
             handlers.add(resourceHandler);
 
-        Handler aliasHandler
-            = initializeResourceHandlerAliases(bundleContext, server);
-
-        if (aliasHandler != null)
-            handlers.add(aliasHandler);
-
         // ServletHandler to serve, for example, ProxyServlet.
         Handler servletHandler
             = initializeServletHandler(bundleContext, server);
@@ -378,53 +362,7 @@ public class RESTBundleActivator
             resourceHandler = new ResourceHandler();
             resourceHandler.setResourceBase(resourceBase);
         }
-
-        // Create context handler and enable alisases, so we can handle
-        // symlinks
-        ContextHandler contextHandler=new ContextHandler();
-        contextHandler.setHandler(resourceHandler);
-        contextHandler.addAliasCheck(new ContextHandler.ApproveAliases());
-
-        return contextHandler;
-    }
-
-    /**
-     * Initializes a new {@link Handler} instance which is to serve purely
-     * static content for a specific {@code Server} instance and only the
-     * aliases configured.
-     *
-     * @param bundleContext the {@code BundleContext} in which the new instance
-     * is to be initialized
-     * @param server the {@code Server} for which the new instance is to serve
-     * purely static content
-     * @return a new {@code Handler} instance which is to serve purely static
-     * content for {@code server}
-     */
-    private Handler initializeResourceHandlerAliases(
-            BundleContext bundleContext,
-            Server server)
-    {
-        return new ResourceHandler()
-        {
-            /**
-             * Checks whether there is configured alias/link for the path
-             * and if there is use the configured value as resource to return.
-             * @param path the path to check
-             * @return the resource to server.
-             * @throws MalformedURLException
-             */
-            public Resource getResource(String path)
-                throws MalformedURLException
-            {
-                String value = getCfgString(
-                    JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "." + path, null);
-
-                if(value == null)
-                    return null;
-
-                return Resource.newResource(value);
-            }
-        };
+        return resourceHandler;
     }
 
     /**
@@ -587,19 +525,14 @@ public class RESTBundleActivator
                         false);
 
                 sslContextFactory.setExcludeCipherSuites(
-                    "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA",
-                    "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
-                    "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA",
-                    ".*NULL.*",
-                    ".*RC4.*",
-                    ".*MD5.*",
-                    ".*DES.*",
-                    ".*DSS.*");
-                sslContextFactory.setIncludeCipherSuites(
-                    "TLS_DHE_RSA.*",
-                    "TLS_ECDHE.*");
-                sslContextFactory.setExcludeProtocols("SSLv3");
-                sslContextFactory.setRenegotiationAllowed(false);
+                        "SSL_RSA_WITH_DES_CBC_SHA",
+                        "SSL_DHE_RSA_WITH_DES_CBC_SHA",
+                        "SSL_DHE_DSS_WITH_DES_CBC_SHA",
+                        "SSL_RSA_EXPORT_WITH_RC4_40_MD5",
+                        "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                        "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                        "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA");
+                sslContextFactory.setIncludeCipherSuites(".*RC4.*");
                 if (sslContextFactoryKeyStorePassword != null)
                 {
                     sslContextFactory.setKeyStorePassword(

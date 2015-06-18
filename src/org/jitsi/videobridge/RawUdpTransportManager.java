@@ -384,13 +384,4 @@ public class RawUdpTransportManager
 
         started = true;
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isConnected()
-    {
-        return true;
-    }
 }

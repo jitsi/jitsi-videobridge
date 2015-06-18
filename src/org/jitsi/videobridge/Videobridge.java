@@ -14,9 +14,13 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
+import net.sf.fmj.media.Log;
 
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
+import org.jitsi.impl.protocol.xmpp.extensions.ConferenceIq;
+import org.jitsi.jicofo.FocusManager;
+import org.jitsi.jicofo.ForJVB;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -31,6 +35,7 @@ import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.provider.*;
 import org.osgi.framework.*;
+
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -56,6 +61,12 @@ public class Videobridge
      * The XML namespace of the <tt>TransportManager</tt> type to be initialized
      * by <tt>Channel</tt> by default.
      */
+    
+    
+    private String roomName;
+    
+    
+    
     private static String defaultTransportManager;
 
     /**
@@ -301,7 +312,23 @@ public class Videobridge
      */
     private String generateConferenceID()
     {
-        return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
+    	
+    	
+    	String roomName = ComponentImpl.getRoomName();
+    	
+    	String array[] = roomName.split("@");
+    	String room = array[0];
+    	
+    	logger.info("******"+room+"*******");
+    	
+    	
+    	
+    	return (room+System.currentTimeMillis());
+    	
+    	
+    	
+    	
+      //  return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
     }
 
     /**
@@ -452,7 +479,7 @@ public class Videobridge
      * @return the <tt>ConfigurationService</tt> used by this
      * <tt>Videobridge</tt>.
      */
-    public ConfigurationService getConfigurationService()
+    ConfigurationService getConfigurationService()
     {
         BundleContext bundleContext = getBundleContext();
 
@@ -587,6 +614,9 @@ public class Videobridge
              * conference is to be modified.
              */
             String id = conferenceIQ.getID();
+            
+            String roomName = conferenceIQ.getRoomName();
+            logger.info(roomName);
 
             if (id == null)
             {

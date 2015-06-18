@@ -17,7 +17,6 @@ import net.java.sip.communicator.util.*;
 
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
-import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.stats.*;
 import org.jivesoftware.smack.packet.*;
@@ -180,12 +179,6 @@ class HandlerImpl
      * <tt>Videobridge</tt>.
      */
     private static final String DEFAULT_COLIBRI_TARGET = "/colibri/";
-
-    /**
-     * The HTTP resource which returns the JSON representation of the
-     * <tt>Version</tt> of the <tt>Videobridge</tt>.
-     */
-    private static final String VERSION_TARGET = "/version";
 
     /**
      * The default suffix/extension of the HTTP resources which provide access
@@ -453,48 +446,6 @@ class HandlerImpl
                 jsonObject.writeJSONString(response.getWriter());
             }
         }
-    }
-
-    /**
-     * Gets a JSON representation of the <tt>Version</tt> of (the associated)
-     * <tt>Videobridge</tt>.
-     *
-     * @param response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetVersionJSON(
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        BundleContext bundleContext = getBundleContext();
-        if (bundleContext != null)
-        {
-            VersionService versionService
-                = ServiceUtils.getService(bundleContext, VersionService.class);
-
-            if (versionService != null)
-            {
-                org.jitsi.service.version.Version currentVersion
-                    = versionService.getCurrentVersion();
-                JSONObject versionJSONObject = new JSONObject();
-
-                versionJSONObject.put(
-                    "name", currentVersion.getApplicationName());
-                versionJSONObject.put("version", currentVersion.toString());
-                versionJSONObject.put("os", System.getProperty("os.name"));
-
-                Writer writer = response.getWriter();
-
-                response.setStatus(HttpServletResponse.SC_OK);
-                versionJSONObject.writeJSONString(writer);
-
-                return;
-            }
-        }
-
-        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
     }
 
     /**
@@ -953,27 +904,6 @@ class HandlerImpl
                         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                     baseRequest.setHandled(true);
                 }
-            }
-        }
-        else if ((target != null) && VERSION_TARGET.equals(target))
-        {
-            if (GET_HTTP_METHOD.equals(request.getMethod()))
-            {
-                response.setContentType(JSON_CONTENT_TYPE_WITH_CHARSET);
-                response.setHeader("Access-Control-Allow-Origin", "*");
-
-                doGetVersionJSON(response);
-            }
-            else
-            {
-                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-            }
-
-            if (!baseRequest.isHandled())
-            {
-                if (response.getStatus() == 0)
-                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                baseRequest.setHandled(true);
             }
         }
     }
