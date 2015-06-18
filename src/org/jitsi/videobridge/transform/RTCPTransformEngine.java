@@ -1,4 +1,4 @@
-package org.jitsi.videobridge.transform;
+/*
  * Copyright @ 2015 Atlassian Pty Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +12,25 @@ package org.jitsi.videobridge.transform;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ */
+
+package org.jitsi.videobridge.transform;
+
+import net.sf.fmj.media.rtp.*;
+import net.sf.fmj.media.rtp.util.*;
+import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.rtcp.*;
+import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
+
+/**
+ * A <tt>TransformEngine</tt> implementation which parses RTCP packets and
+ * transforms them using a transformer for <tt>RTCPCompoundPacket</tt>s.
+ * This is similar to (and based on) <tt>libjitsi</tt>'s
+ * <tt>RTCPTerminationTransformEngine</tt> but is not connected with a
+ * <tt>MediaStream</tt>.
+ * @author Boris Grozev
  */
 public class RTCPTransformEngine
     extends SinglePacketTransformer
