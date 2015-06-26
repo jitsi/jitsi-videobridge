@@ -520,7 +520,8 @@ final class JSONDeserializer
 
     public static RTPHdrExtPacketExtension deserializeHeaderExtension(
             JSONObject headerExtension,
-            ColibriConferenceIQ.Channel channelIQ) {
+            ColibriConferenceIQ.Channel channelIQ)
+    {
         RTPHdrExtPacketExtension headerExtensionIQ;
         if (headerExtension == null)
         {
@@ -530,17 +531,26 @@ final class JSONDeserializer
         {
             Long id = (Long)headerExtension.get(RTPHdrExtPacketExtension.ID_ATTR_NAME);
             String uriString = (String)headerExtension.get(RTPHdrExtPacketExtension.URI_ATTR_NAME);
-            headerExtensionIQ = new RTPHdrExtPacketExtension();
-            headerExtensionIQ.setID(String.valueOf(id));
             URI uri = null;
-            try {
+            try
+            {
                 uri = new URI(uriString);
             }
-            catch (URISyntaxException e) {
-                System.out.println(e.toString());
+            catch (URISyntaxException e)
+            {
+                uri = null;
             }
-            headerExtensionIQ.setURI(uri);
-            channelIQ.addRtpHeaderExtension(headerExtensionIQ);
+            if (uri != null)
+            {
+                headerExtensionIQ = new RTPHdrExtPacketExtension();
+                headerExtensionIQ.setID(String.valueOf(id));
+                headerExtensionIQ.setURI(uri);
+                channelIQ.addRtpHeaderExtension(headerExtensionIQ);
+            }
+            else
+            {
+                headerExtensionIQ = null;
+            }
         }
         return headerExtensionIQ;
     }
@@ -549,8 +559,10 @@ final class JSONDeserializer
         JSONArray headerExtensions,
         ColibriConferenceIQ.Channel channelIQ)
     {
-        if ((headerExtensions != null) && !headerExtensions.isEmpty()) {
-            for (Object headerExtension : headerExtensions) {
+        if ((headerExtensions != null) && !headerExtensions.isEmpty())
+        {
+            for (Object headerExtension : headerExtensions)
+            {
                 deserializeHeaderExtension((JSONObject) headerExtension, channelIQ);
             }
         }
