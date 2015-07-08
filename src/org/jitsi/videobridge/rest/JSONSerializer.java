@@ -114,6 +114,13 @@ final class JSONSerializer
         = ColibriConferenceIQ.Channel.SSRC_ELEMENT_NAME + "s";
 
     /**
+     * The name of the JSON pair which specifics the value of the
+     * <tt>rtp-hdrexts</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
+     */
+    static final String RTP_HEADER_EXTS
+        = RTPHdrExtPacketExtension.ELEMENT_NAME + "s";
+
+    /**
      * The name of the JSON pair which specifies the value of the
      * <tt>namespace</tt> property of <tt>IceUdpTransportPacketExtension</tt>.
      */
