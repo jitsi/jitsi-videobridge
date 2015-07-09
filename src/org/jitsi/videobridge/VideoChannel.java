@@ -1271,7 +1271,21 @@ public class VideoChannel
             }
         }
 
-        if (!lostPackets.isEmpty())
+        // If retransmission requests are enabled, videobridge assumes the
+        // responsibility of requesting missing packets (which happens in
+        // RetransmissionRequester).
+        if (!lostPackets.isEmpty()
+                && transformEngine.retransmissionsRequestsEnabled()
+                && logger.isDebugEnabled())
+        {
+            logger.debug("Packets missing from the cache. Ignoring, because"
+                    + " retransmission requests are enabled.");
+        }
+
+        // Otherwise, if retransmission requests are disabled, we forward the
+        // NACK packet (but exclude the packets answered from our cache).
+        if (!lostPackets.isEmpty()
+                && !transformEngine.retransmissionsRequestsEnabled())
         {
             // The remaining lostPackets are not in the cache. We will request
             // them from the actual sender via a new NACK packet which we

@@ -46,6 +46,13 @@ public class RtpChannelTransformEngine
         = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
+     * The name of the property used to disable retransmission requests from
+     * the bridge.
+     */
+    private static final String DISABLE_RETRANSMISSION_REQUESTS
+        = "org.jitsi.videobridge.DISABLE_RETRANSMISSION_REQUESTS";
+
+    /**
      * The <tt>Logger</tt> used by the <tt>RtpChannelTransformEngine</tt> class
      * and its instances to print debug information.
      */
@@ -85,6 +92,12 @@ public class RtpChannelTransformEngine
     private AbsSendTimeEngine absSendTime;
 
     /**
+     * The <tt>RetransmissionRequester</tt> instance, if any, used by the
+     * <tt>RtpChannel</tt>.
+     */
+    private RetransmissionRequester retransmissionRequester;
+
+    /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
@@ -102,8 +115,24 @@ public class RtpChannelTransformEngine
      */
     private TransformEngine[] createChain()
     {
+        Conference conference = channel.getContent().getConference();
+        ConfigurationService cfg
+                = conference.getVideobridge().getConfigurationService();
+
         List<TransformEngine> transformerList
             = new LinkedList<TransformEngine>();
+
+        if (cfg == null
+                || !cfg.getBoolean(DISABLE_RETRANSMISSION_REQUESTS, false))
+        {
+            retransmissionRequester = new RetransmissionRequester(channel);
+            transformerList.add(retransmissionRequester);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Enabling retransmission requests for channel"
+                                     + channel.getID());
+            }
+        }
 
         redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
         transformerList.add(redFilter);
@@ -112,11 +141,8 @@ public class RtpChannelTransformEngine
         transformerList.add(absSendTime);
 
         boolean enableNackTermination = true;
-        Conference conference = channel.getContent().getConference();
         if (conference != null)
         {
-            ConfigurationService cfg
-                    = conference.getVideobridge().getConfigurationService();
             if (cfg != null)
                 enableNackTermination
                     = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
@@ -177,4 +203,14 @@ public class RtpChannelTransformEngine
         return cache;
     }
 
+    /**
+     * Checks whether retransmission requests are enabled for the
+     * <tt>RtpChannel</tt>.
+     * @return <tt>true</tt> if retransmission requests are enabled for the
+     * <tt>RtpChannel</tt>.
+     */
+    public boolean retransmissionsRequestsEnabled()
+    {
+        return retransmissionRequester != null;
+    }
 }

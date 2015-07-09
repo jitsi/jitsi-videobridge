@@ -642,7 +642,7 @@ public class Content
      * @return the local synchronization source identifier (SSRC) associated
      * with this <tt>Content</tt>,
      */
-    long getInitialLocalSSRC()
+    public long getInitialLocalSSRC()
     {
         return initialLocalSSRC;
     }
