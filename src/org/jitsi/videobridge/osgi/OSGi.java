@@ -26,6 +26,7 @@ import org.jitsi.impl.osgi.framework.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.transform.*;
 import org.osgi.framework.*;
 import java.io.*;
 
@@ -198,6 +199,11 @@ public class OSGi
         // If DTMF handling is enabled, DTMF packets will be read and swallowed.
         // We want them forwarded as normal packets.
         defaults.put(AudioMediaStream.DISABLE_DTMF_HANDLING_PNAME, true_);
+
+        // This will eventually be enabled by default, but keep it off until
+        // more testing.
+        defaults.put(RtpChannelTransformEngine.DISABLE_RETRANSMISSION_REQUESTS,
+                     true_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed

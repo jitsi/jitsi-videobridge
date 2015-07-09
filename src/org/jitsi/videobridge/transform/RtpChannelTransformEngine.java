@@ -49,7 +49,7 @@ public class RtpChannelTransformEngine
      * The name of the property used to disable retransmission requests from
      * the bridge.
      */
-    private static final String DISABLE_RETRANSMISSION_REQUESTS
+    public static final String DISABLE_RETRANSMISSION_REQUESTS
         = "org.jitsi.videobridge.DISABLE_RETRANSMISSION_REQUESTS";
 
     /**
