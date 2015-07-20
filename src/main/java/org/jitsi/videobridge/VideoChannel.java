@@ -1257,16 +1257,13 @@ public class VideoChannel
         if (payloadTypes == null || payloadTypes.size() == 0)
             return;
 
-        if (payloadTypes != null)
+        for (PayloadTypePacketExtension payloadTypePacketExtension
+            : payloadTypes)
         {
-            for (PayloadTypePacketExtension payloadTypePacketExtension
-                : payloadTypes)
+            if (Constants.RED.equals(payloadTypePacketExtension.getName()))
             {
-                if (Constants.RED.equals(payloadTypePacketExtension.getName()))
-                {
-                    enableRedFilter = false;
-                    break;
-                }
+                enableRedFilter = false;
+                break;
             }
         }
 
