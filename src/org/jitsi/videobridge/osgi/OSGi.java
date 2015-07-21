@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.osgi;
 
+import java.io.*;
 import java.util.*;
 
 import org.ice4j.*;
@@ -28,7 +29,6 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.transform.*;
 import org.osgi.framework.*;
-import java.io.*;
 
 /**
  * Represents the entry point of the OSGi environment of the Jitsi Videobridge
