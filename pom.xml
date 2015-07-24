@@ -149,6 +149,72 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>assembly-linux-x64-bin-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptor>src/assembly/linux-x64-bin-archive.xml</descriptor>
+              <finalName>${project.artifactId}-linux-x64-${project.version}</finalName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>assembly-linux-x86-bin-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptor>src/assembly/linux-x86-bin-archive.xml</descriptor>
+              <finalName>${project.artifactId}-linux-x86-${project.version}</finalName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>assembly-macosx-bin-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptor>src/assembly/macosx-bin-archive.xml</descriptor>
+              <finalName>${project.artifactId}-macosx-${project.version}</finalName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>assembly-windows-x64-bin-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptor>src/assembly/windows-x64-bin-archive.xml</descriptor>
+              <finalName>${project.artifactId}-windows-x64-${project.version}</finalName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>assembly-windows-x86-bin-archive</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptor>src/assembly/windows-x86-bin-archive.xml</descriptor>
+              <finalName>${project.artifactId}-windows-x86-${project.version}</finalName>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <includes>
