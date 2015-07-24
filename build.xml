@@ -2,8 +2,8 @@
 <project name="jitsi-videobridge">
 
     <property file="local.properties" />
-    <property name="src" value="src" />
-    <property name="src.test" value="test" />
+    <property name="src" value="src/main/java" />
+    <property name="src.test" value="src/test/java" />
     <property name="output" value="classes" />
     <property name="output.test" value="test-classes" />
     <property name="run.arg.line" value="" />
@@ -298,7 +298,7 @@
     </target>
 
     <target name="dist.src" depends="make">
-        <zip destfile="${dist}/${src}/${packname.src}.zip">
+        <zip destfile="${dist}/src/${packname.src}.zip">
             <zipfileset dir="." prefix="${packname.src}">
                 <exclude name="classes/"/>
                 <exclude name="dist/"/>
