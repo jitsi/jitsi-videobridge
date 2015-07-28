@@ -81,6 +81,12 @@ case "$1" in
             mkdir -p /usr/share/jitsi-videobridge
         fi
 
+        CONFIG_DIR=$(dirname $CONFIG)
+        if ! dpkg-statoverride --list "$CONFIG_DIR" >/dev/null; then
+                chown root:jitsi "$CONFIG_DIR"
+                chmod 750 "$CONFIG_DIR"
+        fi
+
         # we claim the home folder of jvb in case it is owned by someone else
         OWNER=$(stat -c '%U' /usr/share/jitsi-videobridge)
         GROUP=$(stat -c '%G' /usr/share/jitsi-videobridge)
