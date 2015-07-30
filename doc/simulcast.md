@@ -361,7 +361,7 @@ then the bridge fires the `NextSimulcastLayerStopped` event.
 `MAX_NEXT_SEEN` packets of the `next` stream. You can assign
 its value in the sip-communicator.properties file like this:
 
-    org.jitsi.videobridge.simulcast.SimulcastReceiver.MAX_NEXT_SEEN=N
+    org.jitsi.videobridge.simulcast.SimulcastSender.MAX_NEXT_SEEN=N
 
 The `MAX_NEXT_SEEN` constant can be used to enable or disable the aforementioned
 functionality. `{N; N < 1}` are valid values that force the bridge to

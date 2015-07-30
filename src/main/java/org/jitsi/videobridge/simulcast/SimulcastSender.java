@@ -34,24 +34,24 @@ import org.jitsi.videobridge.simulcast.messages.*;
 /**
  * @author George Politis
  */
-class SimulcastReceiver
+class SimulcastSender
     implements PropertyChangeListener
 {
     /**
-     * The <tt>SimulcastReceiverOptions</tt> to use when creating a new
-     * <tt>SimulcastReceiver</tt>.
+     * The <tt>SimulcastSenderOptions</tt> to use when creating a new
+     * <tt>SimulcastSender</tt>.
      */
-    protected static final SimulcastReceiverOptions initOptions;
+    protected static final SimulcastSenderOptions initOptions;
 
     /**
      * The <tt>Logger</tt> used by the <tt>ReceivingLayers</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(SimulcastReceiver.class);
+        = Logger.getLogger(SimulcastSender.class);
 
     /**
-     * Helper object that <tt>SimulcastReceiver</tt> instances use to build
+     * Helper object that <tt>SimulcastSender</tt> instances use to build
      * JSON messages.
      */
     private final static SimulcastMessagesMapper mapper
@@ -70,14 +70,14 @@ class SimulcastReceiver
      * <tt>MAX_NEXT_SEEN</tt> constant.
      */
     private static final String MAX_NEXT_SEEN_PNAME =
-        SimulcastReceiver.class.getName() + ".MAX_NEXT_SEEN";
+        SimulcastSender.class.getName() + ".MAX_NEXT_SEEN";
 
     static
     {
         // Static initialization is performed once per class-loader. So, this
         // method can be considered thread safe for our purposes.
 
-        initOptions = new SimulcastReceiverOptions();
+        initOptions = new SimulcastSenderOptions();
         initOptions.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
         // options.setUrgent(false);
         // options.setHardSwitch(false);
@@ -144,7 +144,7 @@ class SimulcastReceiver
      * @param mySM
      * @param peerSM
      */
-    public SimulcastReceiver(SimulcastManager mySM, SimulcastManager peerSM)
+    public SimulcastSender(SimulcastManager mySM, SimulcastManager peerSM)
     {
         this.weakPeerSM = new WeakReference<SimulcastManager>(peerSM);
         this.mySM = mySM;
@@ -164,7 +164,7 @@ class SimulcastReceiver
 
     private void initializeConfiguration()
     {
-        synchronized (SimulcastReceiver.class)
+        synchronized (SimulcastSender.class)
         {
             if (configurationInitialized)
             {
@@ -320,7 +320,7 @@ class SimulcastReceiver
             map.put("layer", layer);
             StringCompiler sc = new StringCompiler(map);
 
-            logger.debug(sc.c("The simulcast receiver of {self.id} for " +
+            logger.debug(sc.c("The simulcast sender of {self.id} for " +
                     "{peer.id} has asked for a key frame for layer " +
                     "{layer.order} ({layer.primarySSRC})."));
         }
@@ -332,7 +332,7 @@ class SimulcastReceiver
      *
      * @param options
      */
-    protected void configure(SimulcastReceiverOptions options)
+    protected void configure(SimulcastSenderOptions options)
     {
         synchronized (receiveLayersSyncRoot)
         {
@@ -477,7 +477,7 @@ class SimulcastReceiver
         return self;
     }
 
-    private void maybeConfigureNext(SimulcastReceiverOptions options)
+    private void maybeConfigureNext(SimulcastSenderOptions options)
     {
         if (options == null)
         {
@@ -557,7 +557,7 @@ class SimulcastReceiver
                     map.put("next", next);
                     StringCompiler sc = new StringCompiler(map);
 
-                    logger.debug(sc.c("The simulcast receiver of {self.id} for " +
+                    logger.debug(sc.c("The simulcast sender of {self.id} for " +
                             "{peer.id} already receives layer {next.order} " +
                             "({next.primarySSRC})."));
                 }
@@ -587,7 +587,7 @@ class SimulcastReceiver
                             map.put("self", getSelf());
                             map.put("peer", getPeer());
                             StringCompiler sc = new StringCompiler(map);
-                            logger.debug(sc.c("The simulcast receiver of " +
+                            logger.debug(sc.c("The simulcast sender of " +
                                     "{self.id} for {peer.id} skipped a key " +
                                     "frame request because an override is " +
                                     "set."));
@@ -611,7 +611,7 @@ class SimulcastReceiver
                         map.put("self", getSelf());
                         map.put("peer", getPeer());
                         StringCompiler sc = new StringCompiler(map);
-                        logger.debug(sc.c("The simulcast receiver of " +
+                        logger.debug(sc.c("The simulcast sender of " +
                                 "{self.id} for {peer.id} skipped a " +
                                 "changed event because an override is " +
                                 "set."));
@@ -634,7 +634,7 @@ class SimulcastReceiver
                                 ? "urgently" : "");
                         StringCompiler sc = new StringCompiler(map);
 
-                        logger.debug(sc.c("The simulcast receiver " +
+                        logger.debug(sc.c("The simulcast sender " +
                                 "of {self.id} for {peer.id} has {urgently} " +
                                 "switched to layer {next.order} " +
                                 "({next.primarySSRC}).").toString()
@@ -655,7 +655,7 @@ class SimulcastReceiver
                         map.put("self", getSelf());
                         map.put("peer", getPeer());
                         StringCompiler sc = new StringCompiler(map);
-                        logger.debug(sc.c("The simulcast receiver of " +
+                        logger.debug(sc.c("The simulcast sender of " +
                                 "{self.id} for {peer.id} skipped a " +
                                 "changing event because an override is " +
                                 "set."));
@@ -679,7 +679,7 @@ class SimulcastReceiver
                         map.put("next", next);
                         StringCompiler sc = new StringCompiler(map);
 
-                        logger.debug(sc.c("The simulcast receiver of " +
+                        logger.debug(sc.c("The simulcast sender of " +
                                 "{self.id} for {peer.id} is going to switch " +
                                 "to layer {next.order} ({next.primarySSRC}) " +
                                 "in a few moments.."));
@@ -689,7 +689,7 @@ class SimulcastReceiver
         }
     }
 
-    private void maybeConfigureOverride(SimulcastReceiverOptions options)
+    private void maybeConfigureOverride(SimulcastSenderOptions options)
     {
         if (options == null)
         {
@@ -737,7 +737,7 @@ class SimulcastReceiver
                 map.put("peer", getPeer());
                 StringCompiler sc = new StringCompiler(map);
 
-                logger.debug(sc.c("The simulcast receiver of {self.id} " +
+                logger.debug(sc.c("The simulcast sender of {self.id} " +
                         "for {peer.id} is no longer overriding the " +
                         "receiving layer."));
             }
@@ -768,7 +768,7 @@ class SimulcastReceiver
                         map.put("override", override);
                         StringCompiler sc = new StringCompiler(map);
 
-                        logger.debug(sc.c("The simulcast receiver of " +
+                        logger.debug(sc.c("The simulcast sender of " +
                                 "{self.id} for {peer.id} is now configured " +
                                 "to override the receiving layer with the " +
                                 "{override.order}-order layer " +
@@ -803,12 +803,12 @@ class SimulcastReceiver
     }
 
     /**
-     * Configures this <tt>SimulcastReceiver</tt> to receive the high quality
+     * Configures this <tt>SimulcastSender</tt> to receive the high quality
      * stream from the associated sender.
      */
     private void receiveHigh()
     {
-        SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+        SimulcastSenderOptions options = new SimulcastSenderOptions();
 
         options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
         options.setHardSwitch(true);
@@ -818,12 +818,12 @@ class SimulcastReceiver
     }
 
     /**
-     * Configures this <tt>SimulcastReceiver</tt> to receive the low quality
+     * Configures this <tt>SimulcastSender</tt> to receive the low quality
      * stream from the associated sender.
      */
     private void receiveLow()
     {
-        SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+        SimulcastSenderOptions options = new SimulcastSenderOptions();
 
         options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
         options.setHardSwitch(true);
@@ -834,7 +834,8 @@ class SimulcastReceiver
 
     /**
      * Maybe send a data channel command to the associated simulcast sender to
-     * make it start streaming its hq stream, if it's being watched by some receiver.
+     * make it start streaming its hq stream, if it's being watched by some
+     * participant.
      */
     private void maybeSendStartHighQualityStreamCommand()
     {
@@ -935,7 +936,7 @@ class SimulcastReceiver
     /**
      * Maybe send a data channel command to he associated simulcast sender to
      * make it stop streaming its hq stream, if it's not being watched by any
-     * receiver.
+     * participant.
      */
     private void maybeSendStopHighQualityStreamCommand()
     {
@@ -1048,7 +1049,7 @@ class SimulcastReceiver
                             map.put("self", getSelf());
                             map.put("peer", getPeer());
                             StringCompiler sc = new StringCompiler(map);
-                            logger.debug(sc.c("The simulcast receiver of " +
+                            logger.debug(sc.c("The simulcast sender of " +
                                     "{self.id} for {peer.id} skipped a " +
                                     "changed event because an override is " +
                                     "set."));
@@ -1066,7 +1067,7 @@ class SimulcastReceiver
                         map.put("next", next);
                         StringCompiler sc = new StringCompiler(map);
 
-                        logger.debug(sc.c("The simulcast receiver of " +
+                        logger.debug(sc.c("The simulcast sender of " +
                                 "{self.id} for {peer.id} has now switched to " +
                                 "the next layer of order {next.order} " +
                                 "({next.primarySSRC})."));
@@ -1104,7 +1105,7 @@ class SimulcastReceiver
         {
             // HQ stream has stopped, switch to a lower quality stream.
 
-            SimulcastReceiverOptions options = new SimulcastReceiverOptions();
+            SimulcastSenderOptions options = new SimulcastSenderOptions();
 
             options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
             options.setHardSwitch(true);
@@ -1122,8 +1123,8 @@ class SimulcastReceiver
             if (peer != null && self != null &&
                         peer == self.getEffectivelySelectedEndpoint())
             {
-                SimulcastReceiverOptions options
-                        = new SimulcastReceiverOptions();
+                SimulcastSenderOptions options
+                        = new SimulcastSenderOptions();
 
                 options.setNextOrder(
                         SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
@@ -1148,7 +1149,7 @@ class SimulcastReceiver
             // normally getPeer() == peerSM.getVideoChannel().getEndpoint()
             // holds.
 
-            // Initialize the receiver.
+            // Initialize the sender.
             configure(initOptions);
 
             if (logger.isDebugEnabled())
@@ -1175,7 +1176,7 @@ class SimulcastReceiver
                 this.receiveHigh();
 
                 // Rule 1.1: if the new endpoint is being watched by any of the
-                // receivers, the bridge tells it to start streaming its hq
+                // participants, the bridge tells it to start streaming its hq
                 // stream.
                 this.maybeSendStartHighQualityStreamCommand();
             }
@@ -1186,7 +1187,7 @@ class SimulcastReceiver
             {
                 this.receiveLow();
                 // Rule 2.1: if the old endpoint is not being watched by any of
-                // the receivers, the bridge tells it to stop streaming its hq
+                // the participants, the bridge tells it to stop streaming its hq
                 // stream.
                 this.maybeSendStopHighQualityStreamCommand();
             }

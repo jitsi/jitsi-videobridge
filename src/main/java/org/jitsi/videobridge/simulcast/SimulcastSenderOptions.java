@@ -18,7 +18,7 @@ package org.jitsi.videobridge.simulcast;
 /**
 * Created by gp on 16/10/14.
 */
-public class SimulcastReceiverOptions
+public class SimulcastSenderOptions
 {
 
     private Integer nextOrder;

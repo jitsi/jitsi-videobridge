@@ -29,7 +29,7 @@ import org.jitsi.videobridge.simulcast.messages.*;
 /**
  * The simulcast manager of a <tt>VideoChannel</tt>.
  *
- * TODO(gp) Add a SimulcastSender that will hold the SimulcastLayers.
+ * TODO(gp) Add a SimulcastReceiver that will hold the SimulcastLayers.
  *
  * @author George Politis
  */
@@ -84,10 +84,10 @@ public class SimulcastManager
      * automatically be removed when its key is no longer in ordinary use.
      *
      * TODO(gp) must associate <tt>SimulcastSender</tt>s to
-     * <tt>SimulcastReceiver</tt>s
+     * <tt>SimulcastSender</tt>s
      */
-    private final Map<SimulcastManager, SimulcastReceiver> simulcastReceivers
-        = new WeakHashMap<SimulcastManager, SimulcastReceiver>();
+    private final Map<SimulcastManager, SimulcastSender> simulcastSenders
+        = new WeakHashMap<SimulcastManager, SimulcastSender>();
 
     /**
      * The associated <tt>VideoChannel</tt> of this simulcast manager.
@@ -148,7 +148,7 @@ public class SimulcastManager
                 && (peerSM = peerVC.getSimulcastManager()) != null
                 && peerSM.hasLayers())
         {
-            SimulcastReceiver sr = getOrCreateSimulcastReceiver(peerSM);
+            SimulcastSender sr = getOrCreateSimulcastSender(peerSM);
 
             if (sr != null)
                 accept = sr.accept(ssrc);
@@ -245,7 +245,7 @@ public class SimulcastManager
             return bitrate;
         }
 
-        SimulcastReceiver sr = getOrCreateSimulcastReceiver(peerSM);
+        SimulcastSender sr = getOrCreateSimulcastSender(peerSM);
         if (sr != null)
         {
             bitrate = sr.getIncomingBitrate(noOverride);
@@ -261,25 +261,25 @@ public class SimulcastManager
      * @param srcVideoChannel
      * @return
      */
-    private SimulcastReceiver getOrCreateSimulcastReceiver(
+    private SimulcastSender getOrCreateSimulcastSender(
             SimulcastManager peerSM)
     {
-        SimulcastReceiver sr = null;
+        SimulcastSender sr = null;
 
         if (peerSM != null && peerSM.hasLayers())
         {
-            synchronized (simulcastReceivers)
+            synchronized (simulcastSenders)
             {
-                if (!simulcastReceivers.containsKey(peerSM))
+                if (!simulcastSenders.containsKey(peerSM))
                 {
                     // Create a new receiver.
-                    sr = new SimulcastReceiver(this, peerSM);
-                    simulcastReceivers.put(peerSM, sr);
+                    sr = new SimulcastSender(this, peerSM);
+                    simulcastSenders.put(peerSM, sr);
                 }
                 else
                 {
                     // Get the receiver that handles this peer simulcast manager
-                    sr = simulcastReceivers.get(peerSM);
+                    sr = simulcastSenders.get(peerSM);
                 }
             }
         }
@@ -340,23 +340,23 @@ public class SimulcastManager
 
     public boolean override(int overrideOrder)
     {
-        synchronized (simulcastReceivers)
+        synchronized (simulcastSenders)
         {
             Integer oldOverrideOrder
-                = SimulcastReceiver.initOptions.getOverrideOrder();
+                = SimulcastSender.initOptions.getOverrideOrder();
 
             if (oldOverrideOrder == null
                     || oldOverrideOrder.intValue() != overrideOrder)
             {
-                SimulcastReceiver.initOptions.setOverrideOrder(overrideOrder);
+                SimulcastSender.initOptions.setOverrideOrder(overrideOrder);
 
-                if (!simulcastReceivers.isEmpty())
+                if (!simulcastSenders.isEmpty())
                 {
-                    SimulcastReceiverOptions options
-                        = new SimulcastReceiverOptions();
+                    SimulcastSenderOptions options
+                        = new SimulcastSenderOptions();
 
                     options.setOverrideOrder(overrideOrder);
-                    for (SimulcastReceiver sr : simulcastReceivers.values())
+                    for (SimulcastSender sr : simulcastSenders.values())
                     {
                         sr.configure(options);
                     }
