@@ -23,6 +23,7 @@ import java.text.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.configuration.*;
@@ -386,7 +387,7 @@ public class Conference
         if (isRecording())
         {
             ColibriConferenceIQ.Recording recordingIQ
-                = new ColibriConferenceIQ.Recording(true);
+                = new ColibriConferenceIQ.Recording(State.ON.toString());
             recordingIQ.setDirectory(getRecordingDirectory());
             iq.setRecording(recordingIQ);
         }

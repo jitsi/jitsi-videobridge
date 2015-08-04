@@ -625,13 +625,8 @@ final class JSONDeserializer
         if (state == null)
             return;
 
-        Boolean b
-                = (state instanceof Boolean)
-                ? (Boolean) state
-                : Boolean.valueOf(state.toString());
-
         ColibriConferenceIQ.Recording recordingIQ
-                = new ColibriConferenceIQ.Recording(b);
+                = new ColibriConferenceIQ.Recording(state.toString());
 
         Object token
             = recording.get(ColibriConferenceIQ.Recording.TOKEN_ATTR_NAME);

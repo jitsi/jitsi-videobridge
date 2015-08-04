@@ -20,6 +20,7 @@ import java.util.regex.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
@@ -650,10 +651,15 @@ public class Videobridge
 
                     if (tokenIQ.equals(tokenConfig))
                     {
-                        boolean recording
-                            = conference.setRecording(recordingIQ.getState());
+
+                        State recState = recordingIQ.getState();
+
+                        boolean recording = conference.setRecording(
+                            (recState.equals(State.ON)
+                                || recState.equals(State.PENDING))
+                                ? true : false);
                         ColibriConferenceIQ.Recording responseRecordingIq
-                                = new ColibriConferenceIQ.Recording(recording);
+                                = new ColibriConferenceIQ.Recording(recState);
 
                         if (recording)
                         {
