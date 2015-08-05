@@ -1181,7 +1181,7 @@ public class RtpChannel
                                 newReceiveSSRCs, i,
                                 newReceiveSSRCs.length - i);
                     }
-
+                    receiveSSRCs = newReceiveSSRCs;
                     removed = true;
                     break;
                 }
