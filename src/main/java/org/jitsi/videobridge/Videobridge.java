@@ -651,7 +651,6 @@ public class Videobridge
 
                     if (tokenIQ.equals(tokenConfig))
                     {
-
                         State recState = recordingIQ.getState();
 
                         boolean recording = conference.setRecording(

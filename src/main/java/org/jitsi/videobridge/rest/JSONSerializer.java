@@ -655,7 +655,7 @@ final class JSONSerializer
     {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(ColibriConferenceIQ.Recording.STATE_ATTR_NAME,
-                       recording.getState());
+                       recording.getState().toString());
 
         String token = recording.getToken();
         if (token != null)
