@@ -37,17 +37,16 @@ public class VersionServiceImpl
     /**
      * The pattern that will parse strings to version object.
      */
-    private static final Pattern PARSE_VERSION_STRING_PATTERN =
-        Pattern.compile("(\\d+)\\.(\\d+)\\.([\\d\\.]+)");
+    private static final Pattern PARSE_VERSION_STRING_PATTERN
+        = Pattern.compile("(\\d+)\\.(\\d+)\\.([\\d\\.]+)");
 
     /**
-     * Returns a Version instance corresponding to the <tt>version</tt>
-     * string.
+     * Returns a Version instance corresponding to the <tt>version</tt> string.
      *
      * @param version a version String that we have obtained by calling a
-     *   <tt>Version.toString()</tt> method.
-     * @return the <tt>Version</tt> object corresponding to the
-     *   <tt>version</tt> string. Or null if we cannot parse the string.
+     * <tt>Version.toString()</tt> method.
+     * @return the <tt>Version</tt> object corresponding to the <tt>version</tt>
+     * string. Or null if we cannot parse the string.
      */
     public Version parseVersionString(String version)
     {
@@ -65,11 +64,11 @@ public class VersionServiceImpl
     }
 
     /**
-     * Returns a <tt>Version</tt> object containing version details of the
-     * Jitsi Videobridge version that we're currently running.
+     * Returns a <tt>Version</tt> object containing version details of the Jitsi
+     * Videobridge version that we're currently running.
      *
-     * @return a <tt>Version</tt> object containing version details of the
-     *   Jitsi Videobridge version that we're currently running.
+     * @return a <tt>Version</tt> object containing version details of the Jitsi
+     * Videobridge version that we're currently running.
      */
     public Version getCurrentVersion()
     {

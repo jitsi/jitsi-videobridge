@@ -22,8 +22,8 @@ import org.jitsi.service.version.Version;
 import org.osgi.framework.*;
 
 /**
- * The entry point to the Version Service Implementation. We register the
- * VersionServiceImpl instance on the OSGi BUS.
+ * The entry point to the {@code VersionService} implementation. We register the
+ * {@code VersionServiceImpl} instance on the OSGi bus.
  *
  * @author Emil Ivov
  * @author George Politis
@@ -48,9 +48,9 @@ public class VersionActivator
      *
      * @param context The execution context of the bundle being started.
      * @throws Exception If this method throws an exception, this bundle is
-     *   marked as stopped and the Framework will remove this bundle's
-     *   listeners, unregister all services registered by this bundle, and
-     *   release all services used by this bundle.
+     * marked as stopped and the Framework will remove this bundle's listeners,
+     * unregister all services registered by this bundle, and release all
+     * services used by this bundle.
      */
     public void start(BundleContext context) throws Exception
     {
@@ -74,7 +74,8 @@ public class VersionActivator
         if (logger.isInfoEnabled())
         {
             logger.info(
-                    "Jitsi Videobridge Version: " + applicationName + " " + versionString);
+                    "Jitsi Videobridge Version: " + applicationName + " "
+                        + versionString);
         }
 
         //register properties for those that would like to use them
@@ -85,9 +86,9 @@ public class VersionActivator
     }
 
     /**
-     * Gets a <tt>ConfigurationService</tt> implementation currently
-     * registered in the <tt>BundleContext</tt> in which this bundle has been
-     * started or <tt>null</tt> if no such implementation was found.
+     * Gets a <tt>ConfigurationService</tt> implementation currently registered
+     * in the <tt>BundleContext</tt> in which this bundle has been started or
+     * <tt>null</tt> if no such implementation was found.
      *
      * @return a <tt>ConfigurationService</tt> implementation currently
      * registered in the <tt>BundleContext</tt> in which this bundle has been
@@ -116,10 +117,10 @@ public class VersionActivator
      * bundle-specific activities necessary to stop the bundle.
      *
      * @param context The execution context of the bundle being stopped.
-     * @throws Exception If this method throws an exception, the bundle is
-     *   still marked as stopped, and the Framework will remove the bundle's
-     *   listeners, unregister all services registered by the bundle, and
-     *   release all services used by the bundle.
+     * @throws Exception If this method throws an exception, the bundle is still
+     * marked as stopped, and the Framework will remove the bundle's listeners,
+     * unregister all services registered by the bundle, and release all
+     * services used by the bundle.
      */
     public void stop(BundleContext context) throws Exception
     {
