@@ -224,7 +224,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(String focus)
+    public Conference createConference(String focus, String name)
     {
         Conference conference = null;
 
@@ -236,7 +236,7 @@ public class Videobridge
             {
                 if (!conferences.containsKey(id))
                 {
-                    conference = new Conference(this, id, focus);
+                    conference = new Conference(this, id, focus, name);
                     conferences.put(id, conference);
                 }
             }
@@ -602,7 +602,7 @@ public class Videobridge
             {
                 if (!isShutdownInProgress())
                 {
-                    conference = createConference(focus);
+                    conference = createConference(focus, conferenceIQ.getName());
                 }
                 else
                 {
@@ -611,7 +611,11 @@ public class Videobridge
                 }
             }
             else
+            {
                 conference = getConference(id, focus);
+
+                conference.setName(conferenceIQ.getName());
+            }
 
             if (conference != null)
                 conference.setLastKnownFocus(conferenceIQ.getFrom());

@@ -99,6 +99,11 @@ public class Conference
     private final String id;
 
     /**
+     * The world readable name of this instance if any.
+     */
+    private String name;
+
+    /**
      * The time in milliseconds of the last activity related to this
      * <tt>Conference</tt>. In the time interval between the last activity and
      * now, this <tt>Conference</tt> is considered inactive.
@@ -195,7 +200,8 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      String focus)
+                      String focus,
+                      String name)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -206,6 +212,7 @@ public class Conference
         this.id = id;
         this.focus = focus;
         this.lastKnownFocus = focus;
+        this.name = name;
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
@@ -1046,7 +1053,8 @@ public class Conference
         if (this.recordingDirectory == null) {
             SimpleDateFormat dateFormat
                     = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.");
-            this.recordingDirectory = dateFormat.format(new Date()) + getID();
+            this.recordingDirectory = dateFormat.format(new Date()) + getID()
+                + ((name != null) ? "_" + name : "");
         }
 
         return this.recordingDirectory;
@@ -1635,5 +1643,14 @@ public class Conference
                 }
             }
         }
+    }
+
+    /**
+     * Sets the conference name.
+     * @param name the new name.
+     */
+    public void setName(String name)
+    {
+        this.name = name;
     }
 }
