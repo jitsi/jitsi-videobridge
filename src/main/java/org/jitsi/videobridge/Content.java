@@ -684,7 +684,6 @@ public class Content
         return mediaType;
     }
 
-
     /**
      * Gets the <tt>MediaDevice</tt> which mixes the media received by the
      * <tt>Channels</tt>  of this <tt>Content</tt> which use a mixer as their

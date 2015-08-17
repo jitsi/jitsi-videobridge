@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.version;
 
 import org.jitsi.service.version.*;
-import org.jitsi.service.version.util.*;
 
 import java.util.regex.*;
 

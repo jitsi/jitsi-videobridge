@@ -191,12 +191,6 @@ class HandlerImpl
     private static final String DEFAULT_COLIBRI_TARGET = "/colibri/";
 
     /**
-     * The HTTP resource which returns the JSON representation of the
-     * <tt>Version</tt> of the <tt>Videobridge</tt>.
-     */
-    private static final String VERSION_TARGET = "/version";
-
-    /**
      * The default suffix/extension of the HTTP resources which provide access
      * to JSON representations of COLIBRI-related entities of
      * <tt>Videobridge</tt>.
@@ -254,6 +248,39 @@ class HandlerImpl
     private static final String STATISTICS = "stats";
 
     /**
+     * The HTTP resource which returns the JSON representation of the
+     * <tt>Version</tt> of the <tt>Videobridge</tt>.
+     */
+    private static final String VERSION_TARGET = "/version";
+
+    /**
+     * Analyzes response IQ returned by {@link Videobridge}'s {@code handle}
+     * method(s) and translates XMPP error into HTTP status code.
+     *
+     * @param responseIQ the IQ that is not {@link ColibriConferenceIQ} from
+     * which XMPP error will be extracted.
+     * @return HTTP status code
+     */
+    private static int getHttpStatusCodeForResultIq(IQ responseIQ)
+    {
+        String condition = responseIQ.getError().getCondition();
+
+        if (XMPPError.Condition.not_authorized.toString().equals(condition))
+        {
+            return HttpServletResponse.SC_UNAUTHORIZED;
+        }
+        else if (XMPPError.Condition.service_unavailable.toString().equals(
+                condition))
+        {
+            return HttpServletResponse.SC_SERVICE_UNAVAILABLE;
+        }
+        else
+        {
+            return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+        }
+    }
+
+    /**
      * The <tt>BundleContext</tt> within which this instance is initialized.
      */
     private final BundleContext bundleContext;
@@ -298,6 +325,28 @@ class HandlerImpl
             jsonTarget = "." + jsonTarget;
 
         shutdownEnabled = enableShutdown;
+    }
+
+    /**
+     * Begins an {@link HttpServletResponse} the handling of which appears to
+     * have chances of success.
+     * 
+     * @param target
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @param contentType
+     */
+    private void beginResponse(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String contentType)
+    {
+        response.setContentType(contentType);
+        // Cross-origin resource sharing (CORS)
+        response.setHeader("Access-Control-Allow-Origin", "*");
     }
 
     /**
@@ -465,48 +514,6 @@ class HandlerImpl
     }
 
     /**
-     * Gets a JSON representation of the <tt>Version</tt> of (the associated)
-     * <tt>Videobridge</tt>.
-     *
-     * @param response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetVersionJSON(
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        BundleContext bundleContext = getBundleContext();
-        if (bundleContext != null)
-        {
-            VersionService versionService
-                = ServiceUtils.getService(bundleContext, VersionService.class);
-
-            if (versionService != null)
-            {
-                org.jitsi.service.version.Version currentVersion
-                    = versionService.getCurrentVersion();
-                JSONObject versionJSONObject = new JSONObject();
-
-                versionJSONObject.put(
-                    "name", currentVersion.getApplicationName());
-                versionJSONObject.put("version", currentVersion.toString());
-                versionJSONObject.put("os", System.getProperty("os.name"));
-
-                Writer writer = response.getWriter();
-
-                response.setStatus(HttpServletResponse.SC_OK);
-                versionJSONObject.writeJSONString(writer);
-
-                return;
-            }
-        }
-
-        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    }
-
-    /**
      * Gets a JSON representation of the <tt>VideobridgeStatistics</tt> of (the
      * associated) <tt>Videobridge</tt>.
      *
@@ -548,6 +555,50 @@ class HandlerImpl
                     writer.write("null");
                 else
                     statisticsJSONObject.writeJSONString(writer);
+
+                return;
+            }
+        }
+
+        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * Gets a JSON representation of the <tt>Version</tt> of (the associated)
+     * <tt>Videobridge</tt>.
+     *
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
+    private void doGetVersionJSON(
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        BundleContext bundleContext = getBundleContext();
+
+        if (bundleContext != null)
+        {
+            VersionService versionService
+                = ServiceUtils.getService(bundleContext, VersionService.class);
+
+            if (versionService != null)
+            {
+                org.jitsi.service.version.Version version
+                    = versionService.getCurrentVersion();
+                JSONObject versionJSONObject = new JSONObject();
+
+                versionJSONObject.put(
+                        "name",
+                        version.getApplicationName());
+                versionJSONObject.put("version", version.toString());
+                versionJSONObject.put("os", System.getProperty("os.name"));
+
+                Writer writer = response.getWriter();
+
+                response.setStatus(HttpServletResponse.SC_OK);
+                versionJSONObject.writeJSONString(writer);
 
                 return;
             }
@@ -859,6 +910,31 @@ class HandlerImpl
     }
 
     /**
+     * Ends an {@link HttpServletResponse}.
+     *
+     * @param target
+     * @param baseRequest
+     * @param request
+     * @param response
+     */
+    private void endResponse(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+    {
+        if (!baseRequest.isHandled())
+        {
+            if (response.getStatus() == 0)
+            {
+                response.setStatus(
+                        HttpServletResponse.SC_NOT_FOUND);
+            }
+            baseRequest.setHandled(true);
+        }
+    }
+
+    /**
      * Gets the <tt>BundleContext</tt> in which this Jetty <tt>Handler</tt> has
      * been started.
      *
@@ -869,32 +945,6 @@ class HandlerImpl
     public BundleContext getBundleContext()
     {
         return bundleContext;
-    }
-
-    /**
-     * Analyzes response IQ returned by videobridge handle method and
-     * translates XMPP error into HTTP status code.
-     * @param responseIQ the IQ that is not {@link ColibriConferenceIQ} from
-     *                   which XMPP error will be extracted.
-     * @return HTTP status code
-     */
-    private static int getHttpStatusCodeForResultIq(IQ responseIQ)
-    {
-        XMPPError error = responseIQ.getError();
-        if (XMPPError.Condition.not_authorized.toString()
-            .equals(error.getCondition()))
-        {
-            return HttpServletResponse.SC_UNAUTHORIZED;
-        }
-        else if (XMPPError.Condition.service_unavailable
-            .toString().equals(error.getCondition()))
-        {
-            return HttpServletResponse.SC_SERVICE_UNAVAILABLE;
-        }
-        else
-        {
-            return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-        }
     }
 
     /**
@@ -934,11 +984,8 @@ class HandlerImpl
         throws IOException,
                ServletException
     {
-        // The target starts with "/colibri/".
-        if ((target != null) && target.startsWith(colibriTarget))
+        if (target != null)
         {
-            target = target.substring(colibriTarget.length());
-
             // The target ends with ".json".
             int jsonTargetLength
                 = (jsonTarget == null) ? 0 : jsonTarget.length();
@@ -948,41 +995,35 @@ class HandlerImpl
                 target
                     = target.substring(0, target.length() - jsonTargetLength);
 
-                // All responses to requests for resources under the base
-                // /colibri/ are in JSON format.
-                response.setContentType(JSON_CONTENT_TYPE_WITH_CHARSET);
-                // Cross-origin resource sharing (CORS)
-                response.setHeader("Access-Control-Allow-Origin", "*");
-
-                handleColibriJSON(target, baseRequest, request, response);
-
-                if (!baseRequest.isHandled())
+                // The target starts with "/colibri/".
+                if (target.startsWith(colibriTarget))
                 {
-                    if (response.getStatus() == 0)
-                        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                    baseRequest.setHandled(true);
+                    target = target.substring(colibriTarget.length());
+
+                    // All responses to requests for resources under the base
+                    // /colibri/ are in JSON format.
+                    beginResponse(
+                            target,
+                            baseRequest,
+                            request,
+                            response,
+                            JSON_CONTENT_TYPE_WITH_CHARSET);
+                    handleColibriJSON(target, baseRequest, request, response);
+                    endResponse(target, baseRequest, request, response);
                 }
-            }
-        }
-        else if ((target != null) && VERSION_TARGET.equals(target))
-        {
-            if (GET_HTTP_METHOD.equals(request.getMethod()))
-            {
-                response.setContentType(JSON_CONTENT_TYPE_WITH_CHARSET);
-                response.setHeader("Access-Control-Allow-Origin", "*");
+                else if (VERSION_TARGET.equals(target))
+                {
+                    target = target.substring(VERSION_TARGET.length());
 
-                doGetVersionJSON(response);
-            }
-            else
-            {
-                response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-            }
-
-            if (!baseRequest.isHandled())
-            {
-                if (response.getStatus() == 0)
-                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                baseRequest.setHandled(true);
+                    beginResponse(
+                            target,
+                            baseRequest,
+                            request,
+                            response,
+                            JSON_CONTENT_TYPE_WITH_CHARSET);
+                    handleVersionJSON(target, baseRequest, request, response);
+                    endResponse(target, baseRequest, request, response);
+                }
             }
         }
     }
@@ -1100,6 +1141,30 @@ class HandlerImpl
                 response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             }
         }
+    }
+
+    /**
+     * Handles an HTTP request for a {@link #VERSION_TARGET}-related resource.
+     *
+     * @param target
+     * @param baseRequest
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws ServletException
+     */
+    private void handleVersionJSON(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        if (GET_HTTP_METHOD.equals(request.getMethod()))
+            doGetVersionJSON(response);
+        else
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
     }
 
     /**

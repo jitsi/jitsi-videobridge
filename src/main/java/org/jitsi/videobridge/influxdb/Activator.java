@@ -99,8 +99,8 @@ public class Activator
             = cfg.getString(
                     LOGGING_HANDLER_CLASS_PNAME,
                     LoggingHandler.class.getCanonicalName());
-        Class clazz = Class.forName(className);
-        Constructor constructor
+        Class<?> clazz = Class.forName(className);
+        Constructor<?> constructor
             = clazz.getConstructor(ConfigurationService.class);
 
         return (LoggingHandler) constructor.newInstance(cfg);
