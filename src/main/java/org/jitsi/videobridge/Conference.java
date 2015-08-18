@@ -1533,6 +1533,9 @@ public class Conference
                 endpoints = speechActivity.getEndpoints();
                 for (Channel channel : content.getChannels())
                 {
+                    if (!(channel instanceof RtpChannel))
+                        continue;
+
                     RtpChannel rtpChannel = (RtpChannel) channel;
                     List<Endpoint> channelEndpointsToAskForKeyframes
                         = rtpChannel.speechActivityEndpointsChanged(endpoints);

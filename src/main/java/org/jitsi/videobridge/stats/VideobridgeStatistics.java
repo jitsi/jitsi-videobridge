@@ -271,20 +271,24 @@ public class VideobridgeStatistics
                                 bytesReceived
                                     += rtpChannel.getNBReceivedBytes();
                                 bytesSent += rtpChannel.getNBSentBytes();
-                            }
-                            if (channel instanceof VideoChannel)
-                            {
-                                VideoChannel videoChannel
+
+                                if (channel instanceof VideoChannel)
+                                {
+                                    VideoChannel videoChannel
                                         = (VideoChannel) channel;
 
-                                //assume we're receiving a stream
-                                int channelStreams = 1;
-                                int lastN = videoChannel.getLastN();
-                                channelStreams += lastN == -1
-                                    ? contentChannelCount - 1
-                                    : Math.min(lastN, contentChannelCount - 1);
+                                    //assume we're receiving a stream
+                                    int channelStreams = 1;
+                                    int lastN = videoChannel.getLastN();
+                                    channelStreams
+                                        += (lastN == -1)
+                                            ? (contentChannelCount - 1)
+                                            : Math.min(
+                                                    lastN,
+                                                    contentChannelCount - 1);
 
-                                videoStreams += channelStreams;
+                                    videoStreams += channelStreams;
+                                }
                             }
                         }
                     }

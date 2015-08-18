@@ -77,18 +77,21 @@ public class VideoChannel
 
         for (Channel channel : channels)
         {
-            try
+            if (channel instanceof VideoChannel)
             {
-                ((VideoChannel) channel).updateInLastN(channels);
-            }
-            catch (Throwable t)
-            {
-                if (t instanceof InterruptedException)
-                    Thread.currentThread().interrupt();
-                else if (t instanceof ThreadDeath)
-                    throw (ThreadDeath) t;
-                else
-                    logger.error(t);
+                try
+                {
+                    ((VideoChannel) channel).updateInLastN(channels);
+                }
+                catch (Throwable t)
+                {
+                    if (t instanceof InterruptedException)
+                        Thread.currentThread().interrupt();
+                    else if (t instanceof ThreadDeath)
+                        throw (ThreadDeath) t;
+                    else
+                        logger.error(t);
+                }
             }
         }
     }
