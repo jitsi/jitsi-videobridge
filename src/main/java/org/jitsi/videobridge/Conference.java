@@ -200,8 +200,7 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      String focus,
-                      String name)
+                      String focus)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -212,7 +211,6 @@ public class Conference
         this.id = id;
         this.focus = focus;
         this.lastKnownFocus = focus;
-        this.name = name;
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
@@ -442,6 +440,7 @@ public class Conference
     public void describeShallow(ColibriConferenceIQ iq)
     {
         iq.setID(getID());
+        iq.setName(getName());
     }
 
 
@@ -1655,5 +1654,13 @@ public class Conference
     public void setName(String name)
     {
         this.name = name;
+    }
+
+    /**
+     * Gets the conference name.
+     */
+    public String getName()
+    {
+        return name;
     }
 }
