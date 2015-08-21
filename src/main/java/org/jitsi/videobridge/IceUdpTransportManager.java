@@ -189,6 +189,11 @@ public class IceUdpTransportManager
     private Channel channelForDtls = null;
 
     /**
+     *  Used to synchronize access to {@link #channelForDtls}.
+     */
+    private final Object channelForDtlsLock = new Object();
+
+    /**
      * Whether this <tt>TransportManager</tt> has been closed.
      */
     private boolean closed = false;
@@ -391,65 +396,67 @@ public class IceUdpTransportManager
         if (closed)
             return false;
 
-        if (channel instanceof SctpConnection
-                && sctpConnection != null
-                && sctpConnection != channel)
+        synchronized (channelForDtlsLock)
         {
-            logd("Not adding a second SctpConnection to TransportManager.");
-            return false;
-        }
-
-        if (!super.addChannel(channel))
-            return false;
-
-        if (channel instanceof SctpConnection)
-        {
-            // When an SctpConnection is added, it automatically replaces
-            // channelForDtls, because it needs DTLS packets for the application
-            // data inside them.
-            sctpConnection = (SctpConnection) channel;
-            if (channelForDtls != null)
+            if (channel instanceof SctpConnection
+                    && sctpConnection != null
+                    && sctpConnection != channel)
             {
-                /*
-                 * channelForDtls is necessarily an RtpChannel, because we don't
-                 * add more than one SctpConnection. The SctpConnection socket
-                 * will automatically accept DTLS.
-                 */
-                RtpChannel rtpChannelForDtls = (RtpChannel) channelForDtls;
-
-                rtpChannelForDtls.getDatagramFilter(false).setAcceptNonRtp(
-                        false);
-                rtpChannelForDtls.getDatagramFilter(true).setAcceptNonRtp(
-                        false);
+                logd("Not adding a second SctpConnection to TransportManager.");
+                return false;
             }
-            channelForDtls = sctpConnection;
+
+            if (!super.addChannel(channel))
+                return false;
+
+            if (channel instanceof SctpConnection)
+            {
+                // When an SctpConnection is added, it automatically replaces
+                // channelForDtls, because it needs DTLS packets for the application
+                // data inside them.
+                sctpConnection = (SctpConnection) channel;
+                if (channelForDtls != null)
+                {
+                    /*
+                     * channelForDtls is necessarily an RtpChannel, because we don't
+                     * add more than one SctpConnection. The SctpConnection socket
+                     * will automatically accept DTLS.
+                     */
+                    RtpChannel rtpChannelForDtls = (RtpChannel) channelForDtls;
+
+                    rtpChannelForDtls.getDatagramFilter(false).setAcceptNonRtp(
+                            false);
+                    rtpChannelForDtls.getDatagramFilter(true).setAcceptNonRtp(
+                            false);
+                }
+                channelForDtls = sctpConnection;
+            }
+            else if (channelForDtls == null)
+            {
+                channelForDtls = channel;
+
+                RtpChannel rtpChannel = (RtpChannel) channel;
+
+                // The new channelForDtls will always accept DTLS packets on its
+                // RTP socket.
+                rtpChannel.getDatagramFilter(false).setAcceptNonRtp(true);
+                // If we use rtcpmux, we don't want to accept DTLS packets on the
+                // RTCP socket, because they will be duplicated from the RTP socket,
+                // because both sockets are actually filters on the same underlying
+                // socket.
+                rtpChannel.getDatagramFilter(true).setAcceptNonRtp(!rtcpmux);
+            }
+
+            if (iceConnected)
+                channel.transportConnected();
+
+            EventAdmin eventAdmin
+                    = conference.getVideobridge().getEventAdmin();
+            if (eventAdmin != null)
+            {
+                eventAdmin.sendEvent(EventFactory.transportChannelAdded(channel));
+            }
         }
-        else if (channelForDtls == null)
-        {
-            channelForDtls = channel;
-
-            RtpChannel rtpChannel = (RtpChannel) channel;
-
-            // The new channelForDtls will always accept DTLS packets on its
-            // RTP socket.
-            rtpChannel.getDatagramFilter(false).setAcceptNonRtp(true);
-            // If we use rtcpmux, we don't want to accept DTLS packets on the
-            // RTCP socket, because they will be duplicated from the RTP socket,
-            // because both sockets are actually filters on the same underlying
-            // socket.
-            rtpChannel.getDatagramFilter(true).setAcceptNonRtp(!rtcpmux);
-        }
-
-        if (iceConnected)
-            channel.transportConnected();
-
-        EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
-        if (eventAdmin != null)
-        {
-            eventAdmin.sendEvent(EventFactory.transportChannelAdded(channel));
-        }
-
         return true;
     }
 
@@ -682,42 +689,45 @@ public class IceUdpTransportManager
 
         if (removed)
         {
-            if (channel == sctpConnection)
+            synchronized (channelForDtlsLock)
             {
-                sctpConnection = null;
-            }
-
-            if (channel == channelForDtls)
-            {
-                if (sctpConnection != null)
+                if (channel == sctpConnection)
                 {
-                    channelForDtls = sctpConnection;
-                }
-                else if (channel instanceof RtpChannel)
-                {
-                    RtpChannel newChannelForDtls = null;
-
-                    for (Channel c : getChannels())
-                    {
-                        if (c instanceof RtpChannel)
-                            newChannelForDtls = (RtpChannel) c;
-                    }
-                    if (newChannelForDtls != null)
-                    {
-                        newChannelForDtls.getDatagramFilter(false)
-                                .setAcceptNonRtp(true);
-                        newChannelForDtls.getDatagramFilter(true)
-                                .setAcceptNonRtp(!rtcpmux);
-                    }
-                    channelForDtls = newChannelForDtls;
+                    sctpConnection = null;
                 }
 
-                if (channel instanceof RtpChannel)
+                if (channel == channelForDtls)
                 {
-                    RtpChannel rtpChannel = (RtpChannel) channel;
+                    if (sctpConnection != null)
+                    {
+                        channelForDtls = sctpConnection;
+                    }
+                    else if (channel instanceof RtpChannel)
+                    {
+                        RtpChannel newChannelForDtls = null;
 
-                    rtpChannel.getDatagramFilter(false).setAcceptNonRtp(false);
-                    rtpChannel.getDatagramFilter(true).setAcceptNonRtp(false);
+                        for (Channel c : getChannels())
+                        {
+                            if (c instanceof RtpChannel)
+                                newChannelForDtls = (RtpChannel) c;
+                        }
+                        if (newChannelForDtls != null)
+                        {
+                            newChannelForDtls.getDatagramFilter(false)
+                                    .setAcceptNonRtp(true);
+                            newChannelForDtls.getDatagramFilter(true)
+                                    .setAcceptNonRtp(!rtcpmux);
+                        }
+                        channelForDtls = newChannelForDtls;
+                    }
+
+                    if (channel instanceof RtpChannel)
+                    {
+                        RtpChannel rtpChannel = (RtpChannel) channel;
+
+                        rtpChannel.getDatagramFilter(false).setAcceptNonRtp(false);
+                        rtpChannel.getDatagramFilter(true).setAcceptNonRtp(false);
+                    }
                 }
             }
 
