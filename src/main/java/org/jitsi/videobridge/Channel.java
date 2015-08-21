@@ -277,16 +277,12 @@ public abstract class Channel
         iq.setExpire(getExpire());
         iq.setInitiator(isInitiator());
 
-        // If a channel is part of a bundle, its transport will be described
-        // in the channel-bundle itself
+        // If a channel is part of a bundle, its transport will be described in
+        // the channel-bundle itself.
         if (channelBundleId != null)
-        {
             iq.setChannelBundleId(channelBundleId);
-        }
         else
-        {
             describeTransportManager(iq);
-        }
     }
 
     /**
@@ -299,7 +295,7 @@ public abstract class Channel
      */
     private void describeTransportManager(ColibriConferenceIQ.ChannelCommon iq)
     {
-        TransportManager  transportManager = getTransportManager();
+        TransportManager transportManager = getTransportManager();
 
         if (transportManager != null)
             transportManager.describe(iq);
@@ -424,17 +420,19 @@ public abstract class Channel
     /**
      * Child classes should implement this method and return
      * <tt>DtlsControl</tt> instance if they are willing to use DTLS transport.
-     * Otherwise <tt>null</tt> should be returned.
+     * Otherwise, <tt>null</tt> should be returned.
      *
      * @return <tt>DtlsControl</tt> if this instance supports DTLS transport or
-     *         <tt>null</tt> otherwise.
+     * <tt>null</tt> otherwise.
      */
     protected DtlsControl getDtlsControl()
     {
         TransportManager transportManager = getTransportManager();
-        return transportManager != null
-            ? transportManager.getDtlsControl(this)
-            : null;
+
+        return
+            (transportManager == null)
+                ? null
+                : transportManager.getDtlsControl(this);
     }
 
     /**

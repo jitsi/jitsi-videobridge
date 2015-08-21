@@ -943,8 +943,8 @@ public class IceUdpTransportManager
         String hash = dtlsControl.getLocalFingerprintHashFunction();
 
         DtlsFingerprintPacketExtension fingerprintPE
-                = transportPE.getFirstChildOfType(
-                DtlsFingerprintPacketExtension.class);
+            = transportPE.getFirstChildOfType(
+                    DtlsFingerprintPacketExtension.class);
 
         if (fingerprintPE == null)
         {

@@ -606,23 +606,21 @@ public class RtpChannel
      * may be thought of as a description of this instance.
      *
      * @param commonIq the <tt>ColibriConferenceIQ.ChannelCommon</tt> on which
-     *                 to set the values of the properties of this instance.
+     * to set the values of the properties of this instance.
      */
     @Override
     public void describe(ColibriConferenceIQ.ChannelCommon commonIq)
     {
         ColibriConferenceIQ.Channel iq = (ColibriConferenceIQ.Channel) commonIq;
 
-        /*
-         * FIXME The attribute rtp-level-relay-type/Channel property
-         * rtpLevelRelayType is pretty much the most important given that Jitsi
-         * Videobridge implements an RTP-level relay. Unfortunately, we do not
-         * currently support switching between the different types of RTP-level
-         * relays. The following is a hack/workaround making sure that the
-         * attribute/property in question has a value as soon as necessary and
-         * before this Channel is made available to the conference focus for
-         * consumption.
-         */
+        // FIXME The attribute rtp-level-relay-type/Channel property
+        // rtpLevelRelayType is pretty much the most important given that Jitsi
+        // Videobridge implements an RTP-level relay. Unfortunately, we do not
+        // currently support switching between the different types of RTP-level
+        // relays. The following is a hack/workaround making sure that the
+        // attribute/property in question has a value as soon as necessary and
+        // before this Channel is made available to the conference focus for
+        // consumption.
         iq.setRTPLevelRelayType(getRTPLevelRelayType());
 
         super.describe(iq);
@@ -900,10 +898,11 @@ public class RtpChannel
 
         synchronized (streamSyncRoot)
         {
-            stream = mediaService.createMediaStream(
-                    null,
-                    mediaType,
-                    getDtlsControl());
+            stream
+                = mediaService.createMediaStream(
+                        null,
+                        mediaType,
+                        getDtlsControl());
 
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes

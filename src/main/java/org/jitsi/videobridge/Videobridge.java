@@ -116,7 +116,7 @@ public class Videobridge
      * {@link Conference} and {@link Channel} IDs in order to minimize busy
      * waiting for the value of {@link System#currentTimeMillis()} to change.
      */
-    static final Random RANDOM = new Random();
+    public static final Random RANDOM = new Random();
 
     /**
      * The REST-like HTTP/JSON API of Jitsi Videobridge.

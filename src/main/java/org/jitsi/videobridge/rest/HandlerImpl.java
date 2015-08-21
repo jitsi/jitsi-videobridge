@@ -211,6 +211,11 @@ class HandlerImpl
     private static final String GET_HTTP_METHOD = "GET";
 
     /**
+     * The HTTP resource which checks the health of {@code Videobridge}.
+     */
+    private static final String HEALTH_TARGET = "/health";
+
+    /**
      * The MIME type of HTTP content in JSON format.
      */
     private static final String JSON_CONTENT_TYPE = "application/json";
@@ -242,7 +247,7 @@ class HandlerImpl
     private static final String SHUTDOWN = "shutdown";
 
     /**
-     * The HTTP resource which list the JSON representation of the
+     * The HTTP resource which lists the JSON representation of the
      * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
      */
     private static final String STATISTICS = "stats";
@@ -330,12 +335,15 @@ class HandlerImpl
     /**
      * Begins an {@link HttpServletResponse} the handling of which appears to
      * have chances of success.
-     * 
-     * @param target
-     * @param baseRequest
-     * @param request
-     * @param response
-     * @param contentType
+     *
+     * @param target the target of the request
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
+     * @param contentType the MIME type of the content to be set on
+     * {@code response}
      */
     private void beginResponse(
             String target,
@@ -355,9 +363,11 @@ class HandlerImpl
      *
      * @param target the ID of the <tt>Conference</tt> of (the associated)
      * <tt>Videobridge</tt> to represent in JSON format
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -434,9 +444,11 @@ class HandlerImpl
     /**
      * Lists the <tt>Conference</tt>s of (the associated) <tt>Videobridge</tt>.
      *
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -482,9 +494,11 @@ class HandlerImpl
      * Retrieves a JSON representation of the
      * <tt>DominantSpeakerIdentification</tt> of a specific <tt>Conference</tt>.
      *
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -499,7 +513,11 @@ class HandlerImpl
         ConferenceSpeechActivity conferenceSpeechActivity
             = conference.getSpeechActivity();
 
-        if (conferenceSpeechActivity != null)
+        if (conferenceSpeechActivity == null)
+        {
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        }
+        else
         {
             JSONObject jsonObject
                 = conferenceSpeechActivity
@@ -514,12 +532,45 @@ class HandlerImpl
     }
 
     /**
+     * Gets a JSON representation of the health (status) of (the associated)
+     * {@code Videobridge}.
+     *
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
+     * @throws IOException
+     * @throws ServletException
+     */
+    private void doGetHealthJSON(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        Videobridge videobridge = getVideobridge();
+
+        if (videobridge == null)
+        {
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        }
+        else
+        {
+            Health.getJSON(videobridge, baseRequest, request, response);
+        }
+    }
+
+    /**
      * Gets a JSON representation of the <tt>VideobridgeStatistics</tt> of (the
      * associated) <tt>Videobridge</tt>.
      *
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -567,11 +618,17 @@ class HandlerImpl
      * Gets a JSON representation of the <tt>Version</tt> of (the associated)
      * <tt>Videobridge</tt>.
      *
-     * @param response
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
     private void doGetVersionJSON(
+            Request baseRequest,
+            HttpServletRequest request,
             HttpServletResponse response)
         throws IOException,
                ServletException
@@ -613,9 +670,11 @@ class HandlerImpl
      *
      * @param target the ID of the <tt>Conference</tt> to modify in (the
      * associated) <tt>Videobridge</tt>
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -729,9 +788,11 @@ class HandlerImpl
      * Creates a new <tt>Conference</tt> in (the associated)
      * <tt>Videobridge</tt>.
      *
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -912,10 +973,12 @@ class HandlerImpl
     /**
      * Ends an {@link HttpServletResponse}.
      *
-     * @param target
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param target the target of the request
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      */
     private void endResponse(
             String target,
@@ -1011,6 +1074,19 @@ class HandlerImpl
                     handleColibriJSON(target, baseRequest, request, response);
                     endResponse(target, baseRequest, request, response);
                 }
+                else if (HEALTH_TARGET.equals(target))
+                {
+                    target = target.substring(HEALTH_TARGET.length());
+
+                    beginResponse(
+                            target,
+                            baseRequest,
+                            request,
+                            response,
+                            JSON_CONTENT_TYPE_WITH_CHARSET);
+                    handleHealthJSON(target, baseRequest, request, response);
+                    endResponse(target, baseRequest, request, response);
+                }
                 else if (VERSION_TARGET.equals(target))
                 {
                     target = target.substring(VERSION_TARGET.length());
@@ -1033,10 +1109,12 @@ class HandlerImpl
      * <tt>Conference</tt>, <tt>Content</tt>, and <tt>Channel</tt>) represented
      * in JSON format.
      *
-     * @param target
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param target the target of the request
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -1109,9 +1187,7 @@ class HandlerImpl
         }
         else if (target.equals(STATISTICS))
         {
-            String requestMethod = request.getMethod();
-
-            if (GET_HTTP_METHOD.equals(requestMethod))
+            if (GET_HTTP_METHOD.equals(request.getMethod()))
             {
                 // Get the VideobridgeStatistics of Videobridge.
                 doGetStatisticsJSON(baseRequest, request, response);
@@ -1129,9 +1205,7 @@ class HandlerImpl
                 return;
             }
 
-            String requestMethod = request.getMethod();
-
-            if (POST_HTTP_METHOD.equals(requestMethod))
+            if (POST_HTTP_METHOD.equals(request.getMethod()))
             {
                 // Get the VideobridgeStatistics of Videobridge.
                 doPostShutdownJSON(baseRequest, request, response);
@@ -1144,12 +1218,45 @@ class HandlerImpl
     }
 
     /**
+     * Handles an HTTP request for a {@link #HEALTH_TARGET}-related resource.
+     *
+     * @param target the target of the request
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
+     * @throws IOException
+     * @throws ServletException
+     */
+    private void handleHealthJSON(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        if (GET_HTTP_METHOD.equals(request.getMethod()))
+        {
+            // Check/get the health (status) of Videobridge.
+            doGetHealthJSON(baseRequest, request, response);
+        }
+        else
+        {
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+        }
+    }
+
+    /**
      * Handles an HTTP request for a {@link #VERSION_TARGET}-related resource.
      *
-     * @param target
-     * @param baseRequest
-     * @param request
-     * @param response
+     * @param target the target of the request
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
      * @throws IOException
      * @throws ServletException
      */
@@ -1162,9 +1269,14 @@ class HandlerImpl
                ServletException
     {
         if (GET_HTTP_METHOD.equals(request.getMethod()))
-            doGetVersionJSON(response);
+        {
+            // Get the Version of Videobridge.
+            doGetVersionJSON(baseRequest, request, response);
+        }
         else
+        {
             response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+        }
     }
 
     /**

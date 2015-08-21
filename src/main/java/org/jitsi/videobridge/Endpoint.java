@@ -354,22 +354,22 @@ public class Endpoint
      */
     public Endpoint getPinnedEndpoint()
     {
-        WeakReference<Endpoint> wr = this.weakPinnedEndpoint;
-        Endpoint e = wr == null ? null : wr.get();
+        WeakReference<Endpoint> wr = weakPinnedEndpoint;
+        Endpoint e = (wr == null) ? null : wr.get();
 
         return e == null || e.expired ? null : e;
     }
 
     /**
-     * Gets the <tt>Conference</tt> to which this <tt>Endpoint</tt> belongs to.
+     * Gets the <tt>Conference</tt> to which this <tt>Endpoint</tt> belongs.
      *
-     * @return the <tt>Conference</tt> to which this <tt>Endpoint</tt> belongs
-     * to.
+     * @return the <tt>Conference</tt> to which this <tt>Endpoint</tt> belongs.
      */
     public Conference getConference()
     {
         WeakReference<Conference> wr = weakConference;
-        return wr == null ? null : wr.get();
+
+        return (wr == null) ? null : wr.get();
     }
 
     /**
