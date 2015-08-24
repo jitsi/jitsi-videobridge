@@ -216,6 +216,7 @@ final class JSONSerializer
             List<SourceGroupPacketExtension> sourceGroups
                 = channel.getSourceGroups();
             int[] ssrcs = channel.getSSRCs();
+            SimulcastMode simulcastMode = channel.getSimulcastMode();
 
             jsonObject = serializeChannelCommon(channel);
             // direction
@@ -236,6 +237,13 @@ final class JSONSerializer
                 jsonObject.put(
                         ColibriConferenceIQ.Channel.LAST_N_ATTR_NAME,
                         lastN);
+            }
+            // simulcastMode
+            if (simulcastMode != null)
+            {
+                jsonObject.put(
+                        ColibriConferenceIQ.Channel.SIMULCAST_MODE_ATTR_NAME,
+                        simulcastMode.getText());
             }
             // receiving simulcast layer
             if (lastN != null)
