@@ -56,7 +56,7 @@ final class IQUtils
             org.jivesoftware.smack.packet.IQ smackIQ)
         throws Exception
     {
-        String xml = smackIQ.getChildElementXML();
+        String xml = smackIQ.toXML();
         Element element = null;
 
         if ((xml != null) && (xml.length() != 0))
