@@ -103,6 +103,29 @@ public class FocusControlTest
         OSGi.stop(activator);
     }
 
+    private static void expectResult(ColibriConferenceIQ confIq)
+        throws Exception
+    {
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq);
+
+        assertEquals(IQ.Type.RESULT, respIq.getType());
+        assertTrue(respIq instanceof ColibriConferenceIQ);
+    }
+
+    private static void expectNotAuthorized(ColibriConferenceIQ confIq)
+        throws Exception
+    {
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq);
+
+        Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
+
+        assertNotNull(respIq);
+        assertEquals(IQ.Type.ERROR, respIq.getType());
+        assertEquals(
+            XMPPError.Condition.not_authorized.toString(),
+            respIq.getError().getCondition());
+    }
+
     /**
      * Tests if the conference can be accessed only by the peer that has created
      * the conference.
@@ -133,12 +156,8 @@ public class FocusControlTest
         // Expect 'not_authorized' error when no focus is provided
         // with default options
         confIq.setFrom(null);
-        IQ notAuthorizedError = bridge.handleColibriConferenceIQ(confIq);
 
-        assertNotNull(notAuthorizedError);
-        assertEquals(IQ.Type.ERROR, notAuthorizedError.getType());
-        assertEquals(XMPPError.Condition.not_authorized.toString(),
-                     notAuthorizedError.getError().getCondition());
+        expectNotAuthorized(confIq);
     }
 
     /**
@@ -202,5 +221,29 @@ public class FocusControlTest
         assertNotNull(bridge.handleColibriConferenceIQ(confIq, options));
         confIq.setFrom("focus3");
         assertNotNull(bridge.handleColibriConferenceIQ(confIq, options));
+    }
+
+    @Test
+    public void authorizedSourceTest()
+        throws Exception
+    {
+        String authorizedRegExpr = "^focus@auth.domain.com/.*$";
+        bridge.setAuthorizedSourceRegExp(authorizedRegExpr);
+
+        expectResult(
+            ColibriUtilities.createConferenceIq(
+                "focus@auth.domain.com/focus8969386508643465"));
+
+        expectResult(
+            ColibriUtilities.createConferenceIq(
+                "focus@auth.domain.com/fdsfwetg"));
+
+        expectNotAuthorized(
+            ColibriUtilities.createConferenceIq(
+                "focus@auth2.domain.com/res1"));
+
+        expectNotAuthorized(
+            ColibriUtilities.createConferenceIq(
+                "fdfsgv1@auth.domain23.com/pc3"));
     }
 }
