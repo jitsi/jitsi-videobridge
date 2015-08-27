@@ -415,13 +415,8 @@ public class IceUdpTransportManager
                 // channelForDtls, because it needs DTLS packets for the application
                 // data inside them.
                 sctpConnection = (SctpConnection) channel;
-                if (channelForDtls != null)
+                if (channelForDtls != null && channelForDtls instanceof RtpChannel)
                 {
-                    /*
-                     * channelForDtls is necessarily an RtpChannel, because we don't
-                     * add more than one SctpConnection. The SctpConnection socket
-                     * will automatically accept DTLS.
-                     */
                     RtpChannel rtpChannelForDtls = (RtpChannel) channelForDtls;
 
                     rtpChannelForDtls.getDatagramFilter(false).setAcceptNonRtp(
