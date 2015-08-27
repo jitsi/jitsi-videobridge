@@ -174,7 +174,7 @@ public class RtpChannel
     /**
      * Whether {@link #stream} has been closed.
      */
-    private boolean streamClosed = false;
+    private final AtomicBoolean streamClosed = new AtomicBoolean(false);
 
     /**
      * The <tt>PropertyChangeListener</tt> which listens to changes of the
@@ -589,13 +589,11 @@ public class RtpChannel
     @Override
     protected void closeStream()
     {
-        if (!streamClosed)
+        if (!streamClosed.compareAndSet(false, true))
         {
             stream.setProperty(Channel.class.getName(), null);
             removeStreamListeners();
             stream.close();
-
-            streamClosed = true;
         }
     }
 
