@@ -15,12 +15,12 @@
  */
 package org.jitsi.videobridge.rewriting;
 
-import net.sf.fmj.media.rtp.*;
-import net.sf.fmj.media.rtp.util.*;
-import org.jitsi.service.neomedia.rtp.*;
+import java.util.*;
+
 import org.jitsi.util.*;
 
-import java.util.*;
+import net.sf.fmj.media.rtp.*;
+import net.sf.fmj.media.rtp.util.*;
 
 /**
  * Rewrites SSRCs and sequence numbers of all SSRCs of a given
@@ -28,11 +28,8 @@ import java.util.*;
  */
 public class SsrcRewriter
 {
-    private static final Logger logger
-            = Logger.getLogger(SsrcRewriter.class);
-    /**
-     *
-     */
+    private static final Logger logger = Logger.getLogger(SsrcRewriter.class);
+
     private static final long REWRITE_SSRC_NO_REWRITE_SSRC = -1;
 
     /**
@@ -40,7 +37,7 @@ public class SsrcRewriter
      * <tt>PeerSsrcEngine</tt>.
      */
     private Map<Integer, PeerSsrcEngine> peerSsrcEngines
-            = new HashMap<Integer, PeerSsrcEngine>();
+        = new HashMap<Integer, PeerSsrcEngine>();
 
     /**
      * The sequence number is 16 bits it increments by one for each RTP data
