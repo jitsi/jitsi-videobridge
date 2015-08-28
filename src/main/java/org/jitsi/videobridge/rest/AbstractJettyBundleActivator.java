@@ -1,0 +1,609 @@
+/*
+ * Copyright @ 2015 Atlassian Pty Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jitsi.videobridge.rest;
+
+import java.io.*;
+import java.lang.reflect.*;
+import java.util.*;
+
+import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.handler.*;
+import org.eclipse.jetty.util.ssl.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.util.*;
+import org.osgi.framework.*;
+
+import net.java.sip.communicator.util.*;
+import net.java.sip.communicator.util.Logger;
+
+/**
+ * Implements an abstract {@code BundleActivator} which starts and stops a Jetty
+ * HTTP(S) server instance within OSGi.
+ *
+ * @author Lyubomir Marinov
+ */
+public abstract class AbstractJettyBundleActivator
+    implements BundleActivator
+{
+    /**
+     * The name of the {@code ConfigurationService} and/or {@code System}
+     * property which specifies the Jetty HTTP server host.
+     */
+    private static final String JETTY_HOST_PNAME = ".jetty.host";
+
+    /**
+     * The name of the {@code ConfigurationService} and/or {@code System}
+     * property which specifies the Jetty HTTP server port. The default value is
+     * {@code 8080}.
+     */
+    private static final String JETTY_PORT_PNAME = ".jetty.port";
+
+    /**
+     * The name of the {@code ConfigurationService} and/or {@code System}
+     * property which specifies the keystore password to be utilized by
+     * {@code SslContextFactory} when Jetty serves over HTTPS.
+     */
+    private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD
+        = ".jetty.sslContextFactory.keyStorePassword";
+
+    /**
+     * The name of the {@code ConfigurationService} and/or {@code System}
+     * property which specifies the keystore path to be utilized by
+     * {@code SslContextFactory} when Jetty serves over HTTPS.
+     */
+    private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH
+        = ".jetty.sslContextFactory.keyStorePath";
+
+    /**
+     * The name of the {@code ConfigurationService} and/or {@code System}
+     * property which specifies whether client certificate authentication is to
+     * be required by {@code SslContextFactory} when Jetty serves over HTTPS.
+     */
+    private static final String JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH
+        = ".jetty.sslContextFactory.needClientAuth";
+
+    /**
+     * The name of the {@code ConfigurationService} and/or {@code System}
+     * property which specifies the Jetty HTTPS server port. The default value
+     * is {@code 8443}.
+     */
+    private static final String JETTY_TLS_PORT_PNAME = ".jetty.tls.port";
+
+    /**
+     * The {@code Logger} used by the {@code AbstractJettyBundleActivator} class
+     * and its instances to print debug information.
+     */
+    private static final Logger logger
+        = Logger.getLogger(AbstractJettyBundleActivator.class);
+
+    /**
+     * Initializes a new {@code Handler} which handles HTTP requests by
+     * delegating to a specific (consecutive) list of {@code Handler}s.
+     *
+     * @param handlers the (consecutive) list of {@code Handler}s to which the
+     * new instance is to delegate
+     * @return a new {@code Handler} which will handle HTTP requests by
+     * delegating to the specified {@code handlers}
+     */
+    protected static Handler initializeHandlerList(List<Handler> handlers)
+    {
+        int handlerCount = handlers.size();
+
+        if (handlerCount == 1)
+        {
+            return handlers.get(0);
+        }
+        else
+        {
+            HandlerList handlerList = new HandlerList();
+
+            handlerList.setHandlers(
+                    handlers.toArray(new Handler[handlerCount]));
+            return handlerList;
+        }
+    }
+
+    /**
+     * The {@code ConfigurationService} which looks up values of configuration
+     * properties.
+     */
+    protected ConfigurationService cfg;
+
+    /**
+     * The prefix of the names of {@code ConfigurationService} and/or
+     * {@code System} properties to be utilized by this instance.
+     */
+    protected final String propertyPrefix;
+
+    /**
+     * The Jetty {@code Server} which provides an HTTP(S) interface.
+     */
+    protected Server server;
+
+    /**
+     * Initializes a new {@code AbstractJettyBundleActivator} instance.
+     *
+     * @param propertyPrefix the prefix of the names of
+     * {@code ConfigurationService} and/or {@code System} properties to be
+     * utilized by the new instance
+     */
+    protected AbstractJettyBundleActivator(String propertyPrefix)
+    {
+        this.propertyPrefix = propertyPrefix;
+    }
+
+    /**
+     * Notifies this {@code AbstractJettyBundleActivator} that a new Jetty
+     * {@code Server} instance was initialized and started in a specific
+     * {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code BundleActivator} was started and initialized and started a new
+     * Jetty {@code Server} instance
+     * @throws Exception
+     */
+    protected void didStart(BundleContext bundleContext)
+        throws Exception
+    {
+    }
+
+    /**
+     * Notifies this {@code AbstractJettyBundleActivator} that the Jetty
+     * {@code Server} instance associated with this instance was stopped and
+     * released for garbage collection in a specific {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code BundleActivator} was stopped
+     * @throws Exception 
+     */
+    protected void didStop(BundleContext bundleContext)
+        throws Exception
+    {
+    }
+
+    /**
+     * Initializes and starts a new Jetty {@code Server} instance in a specific
+     * {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code BundleActivator} is started and to initialize and start a new
+     * Jetty {@code Server} instance
+     * @throws Exception
+     */
+    protected void doStart(BundleContext bundleContext)
+        throws Exception
+    {
+        try
+        {
+            Server server = initializeServer(bundleContext);
+
+            // The server will start a non-daemon background Thread which will
+            // keep the application running on success.
+            server.start();
+
+            this.server = server;
+        }
+        catch (Throwable t)
+        {
+            // Log any Throwable for debugging purposes and rethrow.
+            logger.error(
+                    "Failed to initialize and/or start a new Jetty HTTP(S)"
+                        + " server instance.",
+                    t);
+            if (t instanceof Error)
+                throw (Error) t;
+            else if (t instanceof Exception)
+                throw (Exception) t;
+            else
+                throw new UndeclaredThrowableException(t);
+        }
+    }
+
+    /**
+     * Stops and releases for garbage collection the Jetty {@code Server}
+     * instance associated with this instance in a specific
+     * {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code BundleActivator} is stopped
+     * @throws Exception 
+     */
+    protected void doStop(BundleContext bundleContext)
+        throws Exception
+    {
+        if (server != null)
+        {
+            server.stop();
+            server = null;
+        }
+    }
+
+    /**
+     * Returns the value of a specific {@code boolean}
+     * {@code ConfigurationService} or {@code System} property.
+     *
+     * @param property the name of the property
+     * @param defaultValue the value to be returned if {@code property} does not
+     * have any value assigned in either {@code ConfigurationService} or
+     * {@code System}
+     * @return the value of {@code property} in {@code ConfigurationService} or
+     * {@code System}
+     */
+    protected boolean getCfgBoolean(String property, boolean defaultValue)
+    {
+        property = prefixProperty(property);
+
+        ConfigurationService cfg = this.cfg;
+        boolean b;
+
+        if (cfg == null)
+        {
+            String s = System.getProperty(property);
+
+            b
+                = (s == null || s.length() == 0)
+                    ? defaultValue
+                    : Boolean.parseBoolean(s);
+        }
+        else
+        {
+            b = cfg.getBoolean(property, defaultValue);
+        }
+        return b;
+    }
+
+    /**
+     * Returns the value of a specific {@code int} {@code ConfigurationService}
+     * or {@code System} property.
+     *
+     * @param property the name of the property
+     * @param defaultValue the value to be returned if {@code property} does not
+     * have any value assigned in either {@code ConfigurationService} or
+     * {@code System}
+     * @return the value of {@code property} in {@code ConfigurationService} or
+     * {@code System}
+     */
+    protected int getCfgInt(String property, int defaultValue)
+    {
+        property = prefixProperty(property);
+
+        ConfigurationService cfg = this.cfg;
+        int i;
+
+        if (cfg == null)
+        {
+            String s = System.getProperty(property);
+
+            if (s == null || s.length() == 0)
+            {
+                i = defaultValue;
+            }
+            else
+            {
+                try
+                {
+                    i = Integer.parseInt(s);
+                }
+                catch (NumberFormatException nfe)
+                {
+                    i = defaultValue;
+                }
+            }
+        }
+        else
+        {
+            i = cfg.getInt(property, defaultValue);
+        }
+        return i;
+    }
+
+    /**
+     * Returns the value of a specific {@code String}
+     * {@code ConfigurationService} or {@code System} property.
+     *
+     * @param property the name of the property
+     * @param defaultValue the value to be returned if {@code property} does not
+     * have any value assigned in either {@code ConfigurationService} or
+     * {@code System}
+     * @return the value of {@code property} in {@code ConfigurationService} or
+     * {@code System}
+     */
+    protected String getCfgString(String property, String defaultValue)
+    {
+        property = prefixProperty(property);
+
+        ConfigurationService cfg = this.cfg;
+        String s;
+
+        if (cfg == null)
+            s = System.getProperty(property, defaultValue);
+        else
+            s = cfg.getString(property, defaultValue);
+        return s;
+    }
+
+    /**
+     * Gets the port on which the Jetty server is to listen for HTTP requests by
+     * default in the absence of a user specification through
+     * {@link #JETTY_PORT_PNAME}.
+     *
+     * @return the port on which the Jetty server is to listen for HTTP requests
+     * by default
+     */
+    protected int getDefaultPort()
+    {
+        return 8080;
+    }
+
+    /**
+     * Gets the port on which the Jetty server is to listen for HTTPS requests
+     * by default in the absence of a user specification through
+     * {@link #JETTY_TLS_PORT_PNAME}.
+     *
+     * @return the port on which the Jetty server is to listen for HTTPS
+     * requests by default
+     */
+    protected int getDefaultTlsPort()
+    {
+        return 8443;
+    }
+
+    /**
+     * Initializes a new {@link Handler} instance to be set on a specific
+     * {@code Server} instance. The default implementation delegates to
+     * {@link #initializeHandlerList(BundleContext, Server)}.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} on which the new instance will be set
+     * @return the new {code Handler} instance to be set on {@code server}
+     * @throws Exception
+     */
+    protected Handler initializeHandler(
+            BundleContext bundleContext,
+            Server server)
+        throws Exception
+    {
+        return initializeHandlerList(bundleContext, server);
+    }
+
+    /**
+     * Initializes a new {@link HandlerList} instance to be set on a specific
+     * {@code Server} instance.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} on which the new instance will be set
+     * @return the new {code HandlerList} instance to be set on {@code server}
+     * @throws Exception
+     */
+    protected abstract Handler initializeHandlerList(
+            BundleContext bundleContext,
+            Server server)
+        throws Exception;
+
+    protected Server initializeServer(BundleContext bundleContext)
+        throws Exception
+    {
+        Server server = new Server();
+        HttpConfiguration httpCfg = new HttpConfiguration();
+        int tlsPort = getCfgInt(JETTY_TLS_PORT_PNAME, getDefaultTlsPort());
+
+        httpCfg.setSecurePort(tlsPort);
+        httpCfg.setSecureScheme("https");
+
+        String sslContextFactoryKeyStorePath
+            = getCfgString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH, null);
+        ServerConnector connector;
+
+        // If HTTPS is not enabled, serve over HTTP.
+        if (sslContextFactoryKeyStorePath == null)
+        {
+            // HTTP
+            connector
+                = new MuxServerConnector(
+                        server,
+                        new HttpConnectionFactory(httpCfg));
+            connector.setPort(getCfgInt(JETTY_PORT_PNAME, getDefaultPort()));
+        }
+        else
+        {
+            // HTTPS
+            File sslContextFactoryKeyStoreFile
+                = ConfigUtils.getAbsoluteFile(
+                        sslContextFactoryKeyStorePath,
+                        cfg);
+            SslContextFactory sslContextFactory = new SslContextFactory();
+            String sslContextFactoryKeyStorePassword
+                = getCfgString(
+                        JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD,
+                        null);
+            boolean sslContextFactoryNeedClientAuth
+                = getCfgBoolean(
+                    JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH,
+                    false);
+
+            sslContextFactory.setExcludeCipherSuites(
+                    "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                    "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                    "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA",
+                    ".*NULL.*",
+                    ".*RC4.*",
+                    ".*MD5.*",
+                    ".*DES.*",
+                    ".*DSS.*");
+            sslContextFactory.setIncludeCipherSuites(
+                    "TLS_DHE_RSA.*",
+                    "TLS_ECDHE.*");
+            sslContextFactory.setExcludeProtocols("SSLv3");
+            sslContextFactory.setRenegotiationAllowed(false);
+            if (sslContextFactoryKeyStorePassword != null)
+            {
+                sslContextFactory.setKeyStorePassword(
+                        sslContextFactoryKeyStorePassword);
+            }
+            sslContextFactory.setKeyStorePath(
+                    sslContextFactoryKeyStoreFile.getPath());
+            sslContextFactory.setNeedClientAuth(
+                    sslContextFactoryNeedClientAuth);
+
+            HttpConfiguration httpsCfg = new HttpConfiguration(httpCfg);
+
+            httpsCfg.addCustomizer(new SecureRequestCustomizer());
+
+            connector
+                = new MuxServerConnector(
+                        server,
+                        new SslConnectionFactory(sslContextFactory, "http/1.1"),
+                        new HttpConnectionFactory(httpsCfg));
+            connector.setPort(tlsPort);
+        }
+
+        String host = getCfgString(JETTY_HOST_PNAME, null);
+
+        if (host != null)
+            connector.setHost(host);
+        server.addConnector(connector);
+
+        Handler handler = initializeHandler(bundleContext, server);
+
+        if (handler != null)
+            server.setHandler(handler);
+
+        return server;
+    }
+
+    /**
+     * Prefixes a specific {@code ConfigurationService} and/or {@code System}
+     * property name with {@link #propertyPrefix} if the property name in
+     * question is incomplete (i.e. starts with a dot).
+     *
+     * @param property the {@code ConfigurationService} and/or {@code System}
+     * property name to prefix
+     * @return a complete {@code ConfigurationService} and/or {@code System}
+     * property name equal to {@code property} if {@code property} is complete
+     * or derived from {@code property} by prefixing if {@code property} is
+     * incomplete
+     */
+    protected String prefixProperty(String property)
+    {
+        if (propertyPrefix != null
+                && property != null
+                && property.startsWith("."))
+        {
+            property = propertyPrefix + property;
+        }
+        return property;
+    }
+
+    /**
+     * Starts this OSGi bundle in a specific {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this OSGi bundle
+     * is starting
+     * @throws Exception if an error occurs while starting this OSGi bundle in
+     * {@code bundleContext}
+     */
+    @Override
+    public void start(BundleContext bundleContext)
+        throws Exception
+    {
+        cfg
+            = ServiceUtils.getService(
+                    bundleContext,
+                    ConfigurationService.class);
+
+        boolean started = false;
+
+        try
+        {
+            if (willStart(bundleContext))
+            {
+                doStart(bundleContext);
+                didStart(bundleContext);
+                started = true;
+            }
+        }
+        finally
+        {
+            if (!started)
+                cfg = null;
+        }
+    }
+
+    /**
+     * Stops this OSGi bundle in a specific {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this OSGi bundle
+     * is stopping
+     * @throws Exception if an error occurs while stopping this OSGi bundle in
+     * {@code bundleContext}
+     */
+    @Override
+    public void stop(BundleContext bundleContext)
+        throws Exception
+    {
+        try
+        {
+            if (willStop(bundleContext))
+            {
+                doStop(bundleContext);
+                didStop(bundleContext);
+            }
+        }
+        finally
+        {
+            cfg = null;
+        }
+    }
+
+    /**
+     * Notifies this {@code AbstractJettyBundleActivator} that a new Jetty
+     * {@code Server} instance is to be initialized and started in a specific
+     * {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code BundleActivator} is started and to initialize and start a new
+     * Jetty {@code Server} instance
+     * @return {@code true} if this {@code AbstractJettyBundleActivator} is to
+     * continue and initialize and start a new Jetty {@code Server} instance;
+     * otherwise, {@code false}
+     * @throws Exception
+     */
+    protected boolean willStart(BundleContext bundleContext)
+        throws Exception
+    {
+        return true;
+    }
+
+    /**
+     * Notifies this {@code AbstractJettyBundleActivator} that the Jetty
+     * {@code Server} instance associated with this instance is to be stopped
+     * and released for garbage collection in a specific {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code BundleActivator} is stopped
+     * @return {@code true} if this {@code AbstractJettyBundleActivator} is to
+     * continue and stop the Jetty {@code Server} instance associated with this
+     * instance; otherwise, {@code false}
+     * @throws Exception 
+     */
+    protected boolean willStop(BundleContext bundleContext)
+        throws Exception
+    {
+        return true;
+    }
+}
