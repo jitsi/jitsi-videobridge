@@ -245,27 +245,31 @@ public class RESTBundleActivator
             BundleContext bundleContext,
             Server server)
     {
-        return new ResourceHandler()
-        {
-            /**
-             * Checks whether there is configured alias/link for the path
-             * and if there is use the configured value as resource to return.
-             * @param path the path to check
-             * @return the resource to server.
-             * @throws MalformedURLException
-             */
-            public Resource getResource(String path)
-                throws MalformedURLException
+        return
+            new ResourceHandler()
             {
-                String value = getCfgString(
-                    JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "." + path, null);
+                /**
+                 * Checks whether there is configured alias/link for the path
+                 * and, if there is, uses the configured value as resource to
+                 * return.
+                 *
+                 * @param path the path to check
+                 * @return the resource to server.
+                 * @throws MalformedURLException
+                 */
+                @Override
+                public Resource getResource(String path)
+                    throws MalformedURLException
+                {
+                    String value
+                        = getCfgString(
+                                JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "."
+                                    + path,
+                                null);
 
-                if(value == null)
-                    return null;
-
-                return Resource.newResource(value);
-            }
-        };
+                    return (value == null) ? null : Resource.newResource(value);
+                }
+            };
     }
 
     /**
