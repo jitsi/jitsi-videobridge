@@ -213,7 +213,7 @@ class HandlerImpl
     /**
      * The HTTP resource which checks the health of {@code Videobridge}.
      */
-    private static final String HEALTH_TARGET = "/health";
+    private static final String HEALTH_TARGET = "/about/health";
 
     /**
      * The MIME type of HTTP content in JSON format.
@@ -256,7 +256,7 @@ class HandlerImpl
      * The HTTP resource which returns the JSON representation of the
      * <tt>Version</tt> of the <tt>Videobridge</tt>.
      */
-    private static final String VERSION_TARGET = "/version";
+    private static final String VERSION_TARGET = "/about/version";
 
     /**
      * Analyzes response IQ returned by {@link Videobridge}'s {@code handle}
@@ -310,13 +310,13 @@ class HandlerImpl
     private final boolean shutdownEnabled;
 
     /**
-     * Initializes a new <tt>HandlerImpl</tt> instance within a specific
-     * <tt>BundleContext</tt>.
+     * Initializes a new {@code HandlerImpl} instance within a specific
+     * {@code BundleContext}.
      *
-     * @param bundleContext the <tt>BundleContext</tt> within which the new
+     * @param bundleContext the {@code BundleContext} within which the new
      * instance is to be initialized
-     * @param enableShutdown <tt>true</tt> if graceful shutdown should be
-     *                       enabled
+     * @param enableShutdown {@code true} if graceful shutdown is to be
+     * enabled; otherwise, {@code false}
      */
     public HandlerImpl(BundleContext bundleContext, boolean enableShutdown)
     {
@@ -326,7 +326,7 @@ class HandlerImpl
         if (!colibriTarget.endsWith("/"))
             colibriTarget += "/";
         jsonTarget = DEFAULT_JSON_TARGET;
-        if ((jsonTarget != null) && !jsonTarget.startsWith("."))
+        if (jsonTarget != null && !jsonTarget.startsWith("."))
             jsonTarget = "." + jsonTarget;
 
         shutdownEnabled = enableShutdown;
@@ -1087,18 +1087,33 @@ class HandlerImpl
                     handleHealthJSON(target, baseRequest, request, response);
                     endResponse(target, baseRequest, request, response);
                 }
-                else if (VERSION_TARGET.equals(target))
+                else
                 {
-                    target = target.substring(VERSION_TARGET.length());
+                    // Initially, we had VERSION_TARGET equal to /version. But
+                    // such an HTTP resource could be rewritten by Meet. In
+                    // order to decrease the risk of rewriting, we moved the
+                    // VERSION_TARGET to /about/version. For the sake of
+                    // compatiblity though, we are preserving /version.
+                    String versionTarget;
 
-                    beginResponse(
-                            target,
-                            baseRequest,
-                            request,
-                            response,
-                            JSON_CONTENT_TYPE_WITH_CHARSET);
-                    handleVersionJSON(target, baseRequest, request, response);
-                    endResponse(target, baseRequest, request, response);
+                    if ((versionTarget = VERSION_TARGET).equals(target)
+                            || (versionTarget = "/version").equals(target))
+                    {
+                        target = target.substring(versionTarget.length());
+
+                        beginResponse(
+                                target,
+                                baseRequest,
+                                request,
+                                response,
+                                JSON_CONTENT_TYPE_WITH_CHARSET);
+                        handleVersionJSON(
+                                target,
+                                baseRequest,
+                                request,
+                                response);
+                        endResponse(target, baseRequest, request, response);
+                    }
                 }
             }
         }
