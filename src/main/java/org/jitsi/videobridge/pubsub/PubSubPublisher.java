@@ -205,7 +205,8 @@ public class PubSubPublisher
         final String packetID = IQ.nextID();
 
         pubsub.setPacketID(packetID);
-        pubsub.addExtension(new FormNode(FormNodeType.CONFIGURE_OWNER, cfg));
+        pubsub.addExtension(
+            new FormNode(FormNodeType.CONFIGURE_OWNER, nodeName ,cfg));
         try
         {
             send(pubsub);
