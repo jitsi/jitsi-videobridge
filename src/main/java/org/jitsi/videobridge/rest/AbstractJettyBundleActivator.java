@@ -49,14 +49,14 @@ public abstract class AbstractJettyBundleActivator
      * property which specifies the Jetty HTTP server port. The default value is
      * {@code 8080}.
      */
-    private static final String JETTY_PORT_PNAME = ".jetty.port";
+    static final String JETTY_PORT_PNAME = ".jetty.port";
 
     /**
      * The name of the {@code ConfigurationService} and/or {@code System}
      * property which specifies the keystore password to be utilized by
      * {@code SslContextFactory} when Jetty serves over HTTPS.
      */
-    private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD
+    static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD
         = ".jetty.sslContextFactory.keyStorePassword";
 
     /**
@@ -64,7 +64,7 @@ public abstract class AbstractJettyBundleActivator
      * property which specifies the keystore path to be utilized by
      * {@code SslContextFactory} when Jetty serves over HTTPS.
      */
-    private static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH
+    static final String JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH
         = ".jetty.sslContextFactory.keyStorePath";
 
     /**
@@ -72,7 +72,7 @@ public abstract class AbstractJettyBundleActivator
      * property which specifies whether client certificate authentication is to
      * be required by {@code SslContextFactory} when Jetty serves over HTTPS.
      */
-    private static final String JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH
+    static final String JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH
         = ".jetty.sslContextFactory.needClientAuth";
 
     /**
@@ -80,7 +80,7 @@ public abstract class AbstractJettyBundleActivator
      * property which specifies the Jetty HTTPS server port. The default value
      * is {@code 8443}.
      */
-    private static final String JETTY_TLS_PORT_PNAME = ".jetty.tls.port";
+    static final String JETTY_TLS_PORT_PNAME = ".jetty.tls.port";
 
     /**
      * The {@code Logger} used by the {@code AbstractJettyBundleActivator} class
@@ -362,6 +362,58 @@ public abstract class AbstractJettyBundleActivator
     }
 
     /**
+     * Initializes a new {@code Connector} instance to be added to a specific
+     * {@code Server} which is to be started in a specific
+     * {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which {@code server} is
+     * to be started
+     * @param server the {@code Server} to which the new {@code Connector}
+     * instance is to be added
+     * @return a new {@code Connector} instance which is to be added to
+     * {@code server}
+     * @throws Exception 
+     */
+    protected Connector initializeConnector(
+            BundleContext bundleContext,
+            Server server)
+        throws Exception
+    {
+        // Detect whether we are running on Jetty 9. If not, fall back to Jetty
+        // 8.
+        String className;
+
+        try
+        {
+            // The detection of Jetty 9 could be as simple/complex as necessary.
+            Class.forName("org.eclipse.jetty.server.ConnectionFactory");
+            className = "9";
+        }
+        catch (ClassNotFoundException cnfex)
+        {
+            // It appears that we are not running on Jetty 9. Fall back to Jetty
+            // 8 then.
+            className = "8";
+        }
+
+        ConnectorFactory factory
+            = (ConnectorFactory)
+                Class
+                    .forName("Jetty" + className + "ConnectorFactory")
+                        .newInstance();
+        Connector connector
+            = factory.initializeConnector(bundleContext, server);
+
+        // host        
+        String host = getCfgString(JETTY_HOST_PNAME, null);
+
+        if (host != null)
+            setHost(connector, host);
+
+        return connector;
+    }
+
+    /**
      * Initializes a new {@link Handler} instance to be set on a specific
      * {@code Server} instance. The default implementation delegates to
      * {@link #initializeHandlerList(BundleContext, Server)}.
@@ -395,87 +447,22 @@ public abstract class AbstractJettyBundleActivator
             Server server)
         throws Exception;
 
+    /**
+     * Initializes a new {@code Server} instance to be started in a specific
+     * {@code BundleContext}.
+     *
+     * @param bundleContext the {@code BundleContext} in which the new
+     * {@code Server} instance is to be started
+     * @return a new {@code Server} instance to be started in
+     * {@code bundleContext}
+     * @throws Exception 
+     */
     protected Server initializeServer(BundleContext bundleContext)
         throws Exception
     {
         Server server = new Server();
-        HttpConfiguration httpCfg = new HttpConfiguration();
-        int tlsPort = getCfgInt(JETTY_TLS_PORT_PNAME, getDefaultTlsPort());
+        Connector connector = initializeConnector(bundleContext, server);
 
-        httpCfg.setSecurePort(tlsPort);
-        httpCfg.setSecureScheme("https");
-
-        String sslContextFactoryKeyStorePath
-            = getCfgString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH, null);
-        ServerConnector connector;
-
-        // If HTTPS is not enabled, serve over HTTP.
-        if (sslContextFactoryKeyStorePath == null)
-        {
-            // HTTP
-            connector
-                = new MuxServerConnector(
-                        server,
-                        new HttpConnectionFactory(httpCfg));
-            connector.setPort(getCfgInt(JETTY_PORT_PNAME, getDefaultPort()));
-        }
-        else
-        {
-            // HTTPS
-            File sslContextFactoryKeyStoreFile
-                = ConfigUtils.getAbsoluteFile(
-                        sslContextFactoryKeyStorePath,
-                        cfg);
-            SslContextFactory sslContextFactory = new SslContextFactory();
-            String sslContextFactoryKeyStorePassword
-                = getCfgString(
-                        JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD,
-                        null);
-            boolean sslContextFactoryNeedClientAuth
-                = getCfgBoolean(
-                    JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH,
-                    false);
-
-            sslContextFactory.setExcludeCipherSuites(
-                    "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA",
-                    "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
-                    "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA",
-                    ".*NULL.*",
-                    ".*RC4.*",
-                    ".*MD5.*",
-                    ".*DES.*",
-                    ".*DSS.*");
-            sslContextFactory.setIncludeCipherSuites(
-                    "TLS_DHE_RSA.*",
-                    "TLS_ECDHE.*");
-            sslContextFactory.setExcludeProtocols("SSLv3");
-            sslContextFactory.setRenegotiationAllowed(false);
-            if (sslContextFactoryKeyStorePassword != null)
-            {
-                sslContextFactory.setKeyStorePassword(
-                        sslContextFactoryKeyStorePassword);
-            }
-            sslContextFactory.setKeyStorePath(
-                    sslContextFactoryKeyStoreFile.getPath());
-            sslContextFactory.setNeedClientAuth(
-                    sslContextFactoryNeedClientAuth);
-
-            HttpConfiguration httpsCfg = new HttpConfiguration(httpCfg);
-
-            httpsCfg.addCustomizer(new SecureRequestCustomizer());
-
-            connector
-                = new MuxServerConnector(
-                        server,
-                        new SslConnectionFactory(sslContextFactory, "http/1.1"),
-                        new HttpConnectionFactory(httpsCfg));
-            connector.setPort(tlsPort);
-        }
-
-        String host = getCfgString(JETTY_HOST_PNAME, null);
-
-        if (host != null)
-            connector.setHost(host);
         server.addConnector(connector);
 
         Handler handler = initializeHandler(bundleContext, server);
@@ -507,6 +494,48 @@ public abstract class AbstractJettyBundleActivator
             property = propertyPrefix + property;
         }
         return property;
+    }
+
+    /**
+     * Sets the host on which a specific {@code Connector} is to listen for
+     * incoming network connections.
+     *
+     * @param connector the {@code Connector} to set {@code host} on
+     * @param host the host on which {@code connector} is to listen for incoming
+     * network connections
+     * @throws Exception
+     */
+    protected void setHost(Connector connector, String host)
+        throws Exception
+    {
+        // Provide compatibility with Jetty 8 and invoke the method
+        // setHost(String) using reflection because it is in different
+        // interfaces/classes in Jetty 8 and 9.
+        connector
+            .getClass()
+                .getMethod("setHost", String.class)
+                    .invoke(connector, host);
+    }
+
+    /**
+     * Sets the port on which a specific {@code Connector} is to listen for
+     * incoming network connections.
+     *
+     * @param connector the {@code Connector} to set {@code port} on
+     * @param port the port on which {@code connector} is to listen for incoming
+     * network connections
+     * @throws Exception
+     */
+    protected void setPort(Connector connector, int port)
+        throws Exception
+    {
+        // Provide compatibility with Jetty 8 and invoke the method setPort(int)
+        // using reflection because it is in different interfaces/classes in
+        // Jetty 8 and 9.
+        connector
+            .getClass()
+                .getMethod("setPort", int.class)
+                    .invoke(connector, port);
     }
 
     /**
@@ -605,5 +634,164 @@ public abstract class AbstractJettyBundleActivator
         throws Exception
     {
         return true;
+    }
+
+    /**
+     * Defines the application programming interface (API) of factories of
+     * {@link Connecctor}s.
+     */
+    private interface ConnectorFactory
+    {
+        /**
+         * Initializes a new {@code Connector} instance to be added to a
+         * specific {@code Server} which is to be started in a specific
+         * {@code BundleContext}.
+         *
+         * @param bundleContext the {@code BundleContext} in which
+         * {@code server} is to be started
+         * @param server the {@code Server} to which the new {@code Connector}
+         * instance is to be added
+         * @return a new {@code Connector} instance which is to be added to
+         * {@code server}
+         * @throws Exception 
+         */
+        Connector initializeConnector(
+                BundleContext bundleContext,
+                Server server)
+            throws Exception;
+    }
+
+    /**
+     * Implements {@link ConnectorFactory} for Jetty 8.
+     */
+    private class Jetty8ConnectorFactory
+        implements ConnectorFactory
+    {
+        /**
+         * {@inheritDoc}
+         *
+         * The implementation utilizes Jetty 8 application programming interface
+         * (API) and is not (necessarily) compatible with Jetty 9.
+         */
+        @Override
+        public Connector initializeConnector(
+                BundleContext bundleContext,
+                Server server)
+            throws Exception
+        {
+            // The source code is compiled in the environment of Jetty 9. Unless
+            // the Jetty 8 application programming interface (API) is available
+            // in Jetty 9 as well, it is to be invoked through reflection.
+            String className
+                = "org.eclipse.jetty.server.nio.SelectChannelConnector";
+            Class<?> clazz = Class.forName(className);
+            Connector connector = (Connector) clazz.newInstance();
+
+            // port
+            setPort(connector, getCfgInt(JETTY_PORT_PNAME, getDefaultPort()));
+
+            return connector;
+        }
+    }
+
+    /**
+     * Implements {@link ConnectorFactory} for Jetty 9.
+     */
+    private class Jetty9ConnectorFactory
+        implements ConnectorFactory
+    {
+        /**
+         * {@inheritDoc}
+         *
+         * The implementation utilizes Jetty 9 application programming interface
+         * (API) and is not (necessarily) compatible with Jetty 8.
+         */
+        @Override
+        public Connector initializeConnector(
+                BundleContext bundleContext,
+                Server server)
+            throws Exception
+        {
+            HttpConfiguration httpCfg = new HttpConfiguration();
+            int tlsPort = getCfgInt(JETTY_TLS_PORT_PNAME, getDefaultTlsPort());
+
+            httpCfg.setSecurePort(tlsPort);
+            httpCfg.setSecureScheme("https");
+
+            String sslContextFactoryKeyStorePath
+                = getCfgString(JETTY_SSLCONTEXTFACTORY_KEYSTOREPATH, null);
+            Connector connector;
+            int port;
+
+            // If HTTPS is not enabled, serve over HTTP.
+            if (sslContextFactoryKeyStorePath == null)
+            {
+                // HTTP
+                connector
+                    = new MuxServerConnector(
+                            server,
+                            new HttpConnectionFactory(httpCfg));
+                port = getCfgInt(JETTY_PORT_PNAME, getDefaultPort());
+            }
+            else
+            {
+                // HTTPS
+                File sslContextFactoryKeyStoreFile
+                    = ConfigUtils.getAbsoluteFile(
+                            sslContextFactoryKeyStorePath,
+                            cfg);
+                SslContextFactory sslContextFactory = new SslContextFactory();
+                String sslContextFactoryKeyStorePassword
+                    = getCfgString(
+                            JETTY_SSLCONTEXTFACTORY_KEYSTOREPASSWORD,
+                            null);
+                boolean sslContextFactoryNeedClientAuth
+                    = getCfgBoolean(
+                            JETTY_SSLCONTEXTFACTORY_NEEDCLIENTAUTH,
+                            false);
+
+                sslContextFactory.setExcludeCipherSuites(
+                        "SSL_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                        "SSL_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
+                        "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA",
+                        ".*NULL.*",
+                        ".*RC4.*",
+                        ".*MD5.*",
+                        ".*DES.*",
+                        ".*DSS.*");
+                sslContextFactory.setIncludeCipherSuites(
+                        "TLS_DHE_RSA.*",
+                        "TLS_ECDHE.*");
+                sslContextFactory.setExcludeProtocols("SSLv3");
+                sslContextFactory.setRenegotiationAllowed(false);
+                if (sslContextFactoryKeyStorePassword != null)
+                {
+                    sslContextFactory.setKeyStorePassword(
+                            sslContextFactoryKeyStorePassword);
+                }
+                sslContextFactory.setKeyStorePath(
+                        sslContextFactoryKeyStoreFile.getPath());
+                sslContextFactory.setNeedClientAuth(
+                        sslContextFactoryNeedClientAuth);
+
+                HttpConfiguration httpsCfg = new HttpConfiguration(httpCfg);
+
+                httpsCfg.addCustomizer(new SecureRequestCustomizer());
+
+                connector
+                    = new MuxServerConnector(
+                            server,
+                            new SslConnectionFactory(
+                                    sslContextFactory,
+                                    "http/1.1"),
+                            new HttpConnectionFactory(httpsCfg));
+                port = tlsPort;
+            }
+
+            // port
+            setPort(connector, port);
+
+            return connector;
+        }
     }
 }
