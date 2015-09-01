@@ -19,10 +19,14 @@ import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.util.*;
 
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.osgi.*;
+import org.jitsi.xmpp.component.*;
+import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.osgi.framework.*;
 import org.xmpp.component.*;
@@ -37,7 +41,7 @@ import org.xmpp.packet.Packet;
  * @author Lyubomir Marinov
  */
 public class ComponentImpl
-    extends AbstractComponent
+    extends ComponentBase
     implements BundleActivator
 {
     private static final org.jitsi.util.Logger logger
@@ -616,6 +620,17 @@ public class ComponentImpl
 
         if (!components.contains(this))
             bundleContext.registerService(ComponentImpl.class, this, null);
+
+        // Schedule ping task
+        // note: the task if stopped automatically on component shutdown
+        ConfigurationService config
+            = ServiceUtils.getService(
+                    bundleContext, ConfigurationService.class);
+
+        loadConfig(config, "org.jitsi.videobridge");
+
+        if (!isPingTaskStarted())
+            startPingTask();
     }
 
     /**

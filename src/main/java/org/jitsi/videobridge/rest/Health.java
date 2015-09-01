@@ -24,6 +24,7 @@ import javax.servlet.http.*;
 import org.eclipse.jetty.server.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.xmpp.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -150,6 +151,25 @@ public class Health
                 conference.expire();
             }
         }
+    }
+
+    /**
+     * Checks if given {@link Videobridge} has valid connection to XMPP server.
+     *
+     * @param videobridge the {@code Videobridge} to check the XMPP connection
+     *                    status of
+     * @return <tt>true</tt> if given videobridge has valid XMPP connection,
+     *         also if it's not using XMPP api at all(does not have
+     *         ComponentImpl). Otherwise <tt>false</tt> will be returned.
+     */
+    private static boolean checkXmppConnection(Videobridge videobridge)
+    {
+        for(ComponentImpl component : videobridge.getComponents())
+        {
+            if(!component.isConnectionAlive())
+                return false;
+        }
+        return true;
     }
 
     /**
@@ -283,8 +303,17 @@ public class Health
 
         try
         {
-            check(videobridge);
-            status = HttpServletResponse.SC_OK;
+            // Check XMPP connection status first
+            if (checkXmppConnection(videobridge))
+            {
+                // Check if the videobridge is functional
+                check(videobridge);
+                status = HttpServletResponse.SC_OK;
+            }
+            else
+            {
+                status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+            }
         }
         catch (Exception ex)
         {
