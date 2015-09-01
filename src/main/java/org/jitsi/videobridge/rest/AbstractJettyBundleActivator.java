@@ -396,11 +396,18 @@ public abstract class AbstractJettyBundleActivator
             className = "8";
         }
 
+        Class<?> outerClass = AbstractJettyBundleActivator.class;
+        Class<?> innerClass
+            = Class.forName(
+                    outerClass.getName() + "$Jetty" + className
+                        + "ConnectorFactory");
+        Constructor<?> constructor
+            = innerClass.getDeclaredConstructor(outerClass);
+
+        constructor.setAccessible(true);
+
         ConnectorFactory factory
-            = (ConnectorFactory)
-                Class
-                    .forName("Jetty" + className + "ConnectorFactory")
-                        .newInstance();
+            = (ConnectorFactory) constructor.newInstance(this);
         Connector connector
             = factory.initializeConnector(bundleContext, server);
 
