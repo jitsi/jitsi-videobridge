@@ -67,7 +67,7 @@ final class IQUtils
             element = document.getRootElement();
         }
 
-        org.xmpp.packet.IQ iq = new org.xmpp.packet.IQ();
+        org.xmpp.packet.IQ iq = new org.xmpp.packet.IQ(element);
 
         String from = smackIQ.getFrom();
 
@@ -80,9 +80,6 @@ final class IQUtils
         if ((to != null) && (to.length() != 0))
             iq.setTo(new JID(to));
         iq.setType(convert(smackIQ.getType()));
-
-        if (element != null)
-            iq.setChildElement(element);
 
         return iq;
     }
