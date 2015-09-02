@@ -91,10 +91,6 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-libjitsi</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-netaddr</artifactId>
     </dependency>
     <dependency>
@@ -124,6 +120,10 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>libjitsi</artifactId>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

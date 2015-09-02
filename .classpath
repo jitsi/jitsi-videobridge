@@ -25,7 +25,7 @@
 	<classpathentry kind="lib" path="lib/jna.jar"/>
 	<classpathentry kind="lib" path="lib/json.jar"/>
 	<classpathentry kind="lib" path="lib/libidn.jar"/>
-	<classpathentry kind="lib" path="lib/libjitsi.jar"/>
+	<classpathentry kind="lib" path="lib/libjitsi-1.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="lib/netaddr.jar"/>
 	<classpathentry kind="lib" path="lib/osgi.core.jar"/>
 	<classpathentry kind="lib" path="lib/packetlogging.jar"/>
