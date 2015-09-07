@@ -1,4 +1,5 @@
 debian/usr/share/jitsi-videobridge/jitsi-videobridge.jar
+debian/usr/share/jitsi-videobridge/lib/agafua-syslog.jar
 debian/usr/share/jitsi-videobridge/lib/bccontrib.jar
 debian/usr/share/jitsi-videobridge/lib/bouncycastle.jar
 debian/usr/share/jitsi-videobridge/lib/concurrentlinkedhashmap-lru.jar
