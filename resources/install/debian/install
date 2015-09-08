@@ -1,1 +1,2 @@
 debian/usr/share/jitsi-videobridge/*	/usr/share/jitsi-videobridge/
+debian/etc/jitsi/videobridge/logging.properties	/etc/jitsi/videobridge/
