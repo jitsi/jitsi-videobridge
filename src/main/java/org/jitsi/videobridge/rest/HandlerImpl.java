@@ -198,11 +198,6 @@ class HandlerImpl
         = "dominant-speaker-identification";
 
     /**
-     * The HTTP resource which checks the health of {@code Videobridge}.
-     */
-    private static final String HEALTH_TARGET = "/about/health";
-
-    /**
      * The logger instance used by REST handler.
      */
     private static final Logger logger = Logger.getLogger(HandlerImpl.class);
@@ -217,12 +212,6 @@ class HandlerImpl
      * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
      */
     private static final String STATISTICS = "stats";
-
-    /**
-     * The HTTP resource which returns the JSON representation of the
-     * <tt>Version</tt> of the <tt>Videobridge</tt>.
-     */
-    private static final String VERSION_TARGET = "/about/version";
 
     /**
      * The base HTTP resource of COLIBRI-related JSON representations of
@@ -432,24 +421,18 @@ class HandlerImpl
     }
 
     /**
-     * Gets a JSON representation of the health (status) of (the associated)
-     * {@code Videobridge}.
-     *
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
+     * {@inheritDoc}
      */
-    private void doGetHealthJSON(
+    @Override
+    protected void doGetHealthJSON(
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
         throws IOException,
                ServletException
     {
+        beginResponse(/* target */ null, baseRequest, request, response);
+
         Videobridge videobridge = getVideobridge();
 
         if (videobridge == null)
@@ -460,6 +443,8 @@ class HandlerImpl
         {
             Health.getJSON(videobridge, baseRequest, request, response);
         }
+
+        endResponse(/* target */ null, baseRequest, request, response);
     }
 
     /**
@@ -506,56 +491,6 @@ class HandlerImpl
                     writer.write("null");
                 else
                     statisticsJSONObject.writeJSONString(writer);
-
-                return;
-            }
-        }
-
-        response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-    }
-
-    /**
-     * Gets a JSON representation of the <tt>Version</tt> of (the associated)
-     * <tt>Videobridge</tt>.
-     *
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void doGetVersionJSON(
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        BundleContext bundleContext = getBundleContext();
-
-        if (bundleContext != null)
-        {
-            VersionService versionService
-                = ServiceUtils.getService(bundleContext, VersionService.class);
-
-            if (versionService != null)
-            {
-                org.jitsi.service.version.Version version
-                    = versionService.getCurrentVersion();
-                JSONObject versionJSONObject = new JSONObject();
-
-                versionJSONObject.put(
-                        "name",
-                        version.getApplicationName());
-                versionJSONObject.put("version", version.toString());
-                versionJSONObject.put("os", System.getProperty("os.name"));
-
-                Writer writer = response.getWriter();
-
-                response.setStatus(HttpServletResponse.SC_OK);
-                versionJSONObject.writeJSONString(writer);
 
                 return;
             }
@@ -997,37 +932,6 @@ class HandlerImpl
     }
 
     /**
-     * Handles an HTTP request for a {@link #HEALTH_TARGET}-related resource.
-     *
-     * @param target the target of the request
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void handleHealthJSON(
-            String target,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        if (GET_HTTP_METHOD.equals(request.getMethod()))
-        {
-            // Check/get the health (status) of Videobridge.
-            doGetHealthJSON(baseRequest, request, response);
-        }
-        else
-        {
-            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -1039,6 +943,11 @@ class HandlerImpl
         throws IOException,
                ServletException
     {
+        super.handleJSON(target, baseRequest, request, response);
+
+        if (baseRequest.isHandled())
+            return; // The super implementation has handled the request.
+
         // The target starts with "/colibri/".
         if (target.startsWith(colibriTarget))
         {
@@ -1050,14 +959,6 @@ class HandlerImpl
             handleColibriJSON(target, baseRequest, request, response);
             endResponse(target, baseRequest, request, response);
         }
-        else if (HEALTH_TARGET.equals(target))
-        {
-            target = target.substring(HEALTH_TARGET.length());
-
-            beginResponse(target, baseRequest, request, response);
-            handleHealthJSON(target, baseRequest, request, response);
-            endResponse(target, baseRequest, request, response);
-        }
         else
         {
             // Initially, we had VERSION_TARGET equal to /version. But such an
@@ -1065,48 +966,14 @@ class HandlerImpl
             // the risk of rewriting, we moved the VERSION_TARGET to
             // /about/version. For the sake of compatiblity though, we are
             // preserving /version.
-            String versionTarget;
+            String versionTarget = "/version";
 
-            if ((versionTarget = VERSION_TARGET).equals(target)
-                    || (versionTarget = "/version").equals(target))
+            if (versionTarget.equals(target))
             {
                 target = target.substring(versionTarget.length());
 
-                beginResponse(target, baseRequest, request, response);
                 handleVersionJSON(target, baseRequest, request, response);
-                endResponse(target, baseRequest, request, response);
             }
-        }
-    }
-
-    /**
-     * Handles an HTTP request for a {@link #VERSION_TARGET}-related resource.
-     *
-     * @param target the target of the request
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @throws IOException
-     * @throws ServletException
-     */
-    private void handleVersionJSON(
-            String target,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        if (GET_HTTP_METHOD.equals(request.getMethod()))
-        {
-            // Get the Version of Videobridge.
-            doGetVersionJSON(baseRequest, request, response);
-        }
-        else
-        {
-            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
         }
     }
 }

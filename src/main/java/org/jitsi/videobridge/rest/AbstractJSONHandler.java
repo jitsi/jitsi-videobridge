@@ -21,7 +21,9 @@ import javax.servlet.http.*;
 import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
+import org.jitsi.service.version.VersionService;
 import org.jivesoftware.smack.packet.*;
+import org.json.simple.JSONObject;
 import org.osgi.framework.*;
 
 /**
@@ -45,6 +47,13 @@ public abstract class AbstractJSONHandler
     protected static final String GET_HTTP_METHOD = "GET";
 
     /**
+     * The HTTP resource which checks the health of the server/service exposed
+     * through {@code AbstractJSONHandler}. Explicitly defined as an attempt to
+     * encourage consistency among the extenders.
+     */
+    private static final String HEALTH_TARGET = "/about/health";
+
+    /**
      * The MIME type of HTTP content in JSON format.
      */
     private static final String JSON_CONTENT_TYPE = "application/json";
@@ -64,6 +73,14 @@ public abstract class AbstractJSONHandler
      * The HTTP POST method.
      */
     protected static final String POST_HTTP_METHOD = "POST";
+
+    /**
+     * The HTTP resource which returns the JSON representation of the
+     * {@code Version} of the server/service exposed through
+     * {@code AbstractJSONHandler}. Explicitly defined as an attempt to
+     * encourage consistency among the extenders.
+     */
+    private static final String VERSION_TARGET = "/about/version";
 
     /**
      * Analyzes response IQ returned by {@link Videobridge}'s {@code handle}
@@ -173,6 +190,82 @@ public abstract class AbstractJSONHandler
     }
 
     /**
+     * Gets a JSON representation of the health (status) of the associated
+     * server/service. The default implementation does nothing because it serves
+     * as a placeholder for extenders.
+     *
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
+     * @throws IOException
+     * @throws ServletException
+     */
+    protected void doGetHealthJSON(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+    }
+
+    /**
+     * Gets a JSON representation of the {@code Version} of the associated
+     * server/service.
+     *
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
+     * @throws IOException
+     * @throws ServletException
+     */
+    protected void doGetVersionJSON(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        beginResponse(/*target*/ null, baseRequest, request, response);
+
+        BundleContext bundleContext = getBundleContext();
+        int status = HttpServletResponse.SC_SERVICE_UNAVAILABLE;
+
+        if (bundleContext != null)
+        {
+            VersionService versionService
+                = ServiceUtils.getService(bundleContext, VersionService.class);
+
+            if (versionService != null)
+            {
+                org.jitsi.service.version.Version version
+                    = versionService.getCurrentVersion();
+                JSONObject versionJSONObject = new JSONObject();
+
+                versionJSONObject.put(
+                        "name",
+                        version.getApplicationName());
+                versionJSONObject.put("version", version.toString());
+                versionJSONObject.put("os", System.getProperty("os.name"));
+
+                Writer writer = response.getWriter();
+
+                response.setStatus(status = HttpServletResponse.SC_OK);
+                versionJSONObject.writeJSONString(writer);
+            }
+        }
+
+        if (response.getStatus() != status)
+            response.setStatus(status);
+
+        endResponse(/*target*/ null, baseRequest, request, response);
+    }
+
+    /**
      * Ends an {@link HttpServletResponse}.
      *
      * @param target the target of the request
@@ -259,6 +352,37 @@ public abstract class AbstractJSONHandler
     }
 
     /**
+     * Handles an HTTP request for a {@link #HEALTH_TARGET}-related resource.
+     *
+     * @param target the target of the request
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
+     * @throws IOException
+     * @throws ServletException
+     */
+    protected void handleHealthJSON(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        if (GET_HTTP_METHOD.equals(request.getMethod()))
+        {
+            // Check/get the health (status) of the associated server/service.
+            doGetHealthJSON(baseRequest, request, response);
+        }
+        else
+        {
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+        }
+    }
+
+    /**
      * Handles a specific HTTP request for JSON content.
      *
      * @param target
@@ -268,13 +392,58 @@ public abstract class AbstractJSONHandler
      * @throws IOException
      * @throws ServletException 
      */
-    protected abstract void handleJSON(
+    protected void handleJSON(
             String target,
             Request baseRequest,
             HttpServletRequest request,
             HttpServletResponse response)
         throws IOException,
-               ServletException;
+               ServletException
+    {
+        if (HEALTH_TARGET.equals(target))
+        {
+            target = target.substring(HEALTH_TARGET.length());
+
+            handleHealthJSON(target, baseRequest, request, response);
+        }
+        else if (VERSION_TARGET.equals(target))
+        {
+            target = target.substring(VERSION_TARGET.length());
+
+            handleVersionJSON(target, baseRequest, request, response);
+        }
+    }
+
+    /**
+     * Handles an HTTP request for a {@link #VERSION_TARGET}-related resource.
+     *
+     * @param target the target of the request
+     * @param baseRequest the original unwrapped {@link Request} object
+     * @param request the request either as the {@code Request} object or a
+     * wrapper of that request
+     * @param response the response either as the {@code Response} object or a
+     * wrapper of that response
+     * @throws IOException
+     * @throws ServletException
+     */
+    protected void handleVersionJSON(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        if (GET_HTTP_METHOD.equals(request.getMethod()))
+        {
+            // Get the Version of the associated server/service.
+            doGetVersionJSON(baseRequest, request, response);
+        }
+        else
+        {
+            response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+        }
+    }
 
     /**
      * Determines whether a specific MIME type of HTTP content specifies a JSON
