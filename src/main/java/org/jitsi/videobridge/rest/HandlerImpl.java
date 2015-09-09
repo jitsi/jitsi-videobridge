@@ -25,7 +25,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
 import org.eclipse.jetty.server.*;
-import org.eclipse.jetty.server.handler.*;
 import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.stats.*;
@@ -176,7 +175,7 @@ import org.osgi.framework.*;
  * @author Pawel Domas
  */
 class HandlerImpl
-    extends AbstractHandler
+    extends AbstractJSONHandler
 {
     /**
      * The HTTP resource which lists the JSON representation of the
@@ -191,13 +190,6 @@ class HandlerImpl
     private static final String DEFAULT_COLIBRI_TARGET = "/colibri/";
 
     /**
-     * The default suffix/extension of the HTTP resources which provide access
-     * to JSON representations of COLIBRI-related entities of
-     * <tt>Videobridge</tt>.
-     */
-    private static final String DEFAULT_JSON_TARGET = null;
-
-    /**
      * The HTTP resource which retrieves a JSON representation of the
      * <tt>DominantSpeakerIdentification</tt> of a <tt>Conference</tt> of
      * <tt>Videobridge</tt>.
@@ -206,40 +198,14 @@ class HandlerImpl
         = "dominant-speaker-identification";
 
     /**
-     * The HTTP GET method.
-     */
-    private static final String GET_HTTP_METHOD = "GET";
-
-    /**
      * The HTTP resource which checks the health of {@code Videobridge}.
      */
     private static final String HEALTH_TARGET = "/about/health";
 
     /**
-     * The MIME type of HTTP content in JSON format.
-     */
-    private static final String JSON_CONTENT_TYPE = "application/json";
-
-    /**
-     * The MIME type of HTTP content in JSON format with a charset.
-     */
-    private static final String JSON_CONTENT_TYPE_WITH_CHARSET
-        = JSON_CONTENT_TYPE + ";charset=UTF-8";
-
-    /**
      * The logger instance used by REST handler.
      */
     private static final Logger logger = Logger.getLogger(HandlerImpl.class);
-
-    /**
-     * The HTTP PATCH method.
-     */
-    private static final String PATCH_HTTP_METHOD = "PATCH";
-
-    /**
-     * The HTTP POST method.
-     */
-    private static final String POST_HTTP_METHOD = "POST";
 
     /**
      * The HTTP resource which is used to trigger graceful shutdown.
@@ -259,48 +225,10 @@ class HandlerImpl
     private static final String VERSION_TARGET = "/about/version";
 
     /**
-     * Analyzes response IQ returned by {@link Videobridge}'s {@code handle}
-     * method(s) and translates XMPP error into HTTP status code.
-     *
-     * @param responseIQ the IQ that is not {@link ColibriConferenceIQ} from
-     * which XMPP error will be extracted.
-     * @return HTTP status code
-     */
-    private static int getHttpStatusCodeForResultIq(IQ responseIQ)
-    {
-        String condition = responseIQ.getError().getCondition();
-
-        if (XMPPError.Condition.not_authorized.toString().equals(condition))
-        {
-            return HttpServletResponse.SC_UNAUTHORIZED;
-        }
-        else if (XMPPError.Condition.service_unavailable.toString().equals(
-                condition))
-        {
-            return HttpServletResponse.SC_SERVICE_UNAVAILABLE;
-        }
-        else
-        {
-            return HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-        }
-    }
-
-    /**
-     * The <tt>BundleContext</tt> within which this instance is initialized.
-     */
-    private final BundleContext bundleContext;
-
-    /**
      * The base HTTP resource of COLIBRI-related JSON representations of
      * <tt>Videobridge</tt>.
      */
     private String colibriTarget;
-
-    /**
-     * The suffix/extension of the HTTP resources which provide access to JSON
-     * representations of COLIBRI-related entities of <tt>Videobridge</tt>.
-     */
-    private String jsonTarget;
 
     /**
      * Indicates if graceful shutdown mode is enabled. If not then
@@ -320,41 +248,13 @@ class HandlerImpl
      */
     public HandlerImpl(BundleContext bundleContext, boolean enableShutdown)
     {
-        this.bundleContext = bundleContext;
+        super(bundleContext);
 
         colibriTarget = DEFAULT_COLIBRI_TARGET;
         if (!colibriTarget.endsWith("/"))
             colibriTarget += "/";
-        jsonTarget = DEFAULT_JSON_TARGET;
-        if (jsonTarget != null && !jsonTarget.startsWith("."))
-            jsonTarget = "." + jsonTarget;
 
         shutdownEnabled = enableShutdown;
-    }
-
-    /**
-     * Begins an {@link HttpServletResponse} the handling of which appears to
-     * have chances of success.
-     *
-     * @param target the target of the request
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     * @param contentType the MIME type of the content to be set on
-     * {@code response}
-     */
-    private void beginResponse(
-            String target,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response,
-            String contentType)
-    {
-        response.setContentType(contentType);
-        // Cross-origin resource sharing (CORS)
-        response.setHeader("Access-Control-Allow-Origin", "*");
     }
 
     /**
@@ -971,152 +871,16 @@ class HandlerImpl
     }
 
     /**
-     * Ends an {@link HttpServletResponse}.
+     * Gets the {@code Videobridge} instance available to this Jetty
+     * {@code Handler}.
      *
-     * @param target the target of the request
-     * @param baseRequest the original unwrapped {@link Request} object
-     * @param request the request either as the {@code Request} object or a
-     * wrapper of that request
-     * @param response the response either as the {@code Response} object or a
-     * wrapper of that response
-     */
-    private void endResponse(
-            String target,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-    {
-        if (!baseRequest.isHandled())
-        {
-            if (response.getStatus() == 0)
-            {
-                response.setStatus(
-                        HttpServletResponse.SC_NOT_FOUND);
-            }
-            baseRequest.setHandled(true);
-        }
-    }
-
-    /**
-     * Gets the <tt>BundleContext</tt> in which this Jetty <tt>Handler</tt> has
-     * been started.
-     *
-     * @return the <tt>BundleContext</tt> in which this Jetty <tt>Handler</tt>
-     * has been started or <tt>null</tt> if this Jetty <tt>Handler</tt> has not
-     * been started in a <tt>BundleContext</tt>
-     */
-    public BundleContext getBundleContext()
-    {
-        return bundleContext;
-    }
-
-    /**
-     * Gets the <tt>Videobridge</tt> instance available to this Jetty
-     * <tt>Handler</tt>.
-     *
-     * @return the <tt>Videobridge</tt> instance available to this Jetty
-     * <tt>Handler</tt> or <tt>null</tt> if no <tt>Videobridge</tt> instance is
-     * available to this Jetty <tt>Handler</tt>
+     * @return the {@code Videobridge} instance available to this Jetty
+     * {@code Handler} or {@code null} if no {@code Videobridge} instance is
+     * available to this Jetty {@code Handler}
      */
     public Videobridge getVideobridge()
     {
-        BundleContext bundleContext = getBundleContext();
-        Videobridge videobridge;
-
-        if (bundleContext == null)
-        {
-            videobridge = null;
-        }
-        else
-        {
-            videobridge
-                = ServiceUtils.getService(bundleContext, Videobridge.class);
-        }
-        return videobridge;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void handle(
-            String target,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
-        throws IOException,
-               ServletException
-    {
-        if (target != null)
-        {
-            // The target ends with ".json".
-            int jsonTargetLength
-                = (jsonTarget == null) ? 0 : jsonTarget.length();
-
-            if ((jsonTargetLength == 0) || target.endsWith(jsonTarget))
-            {
-                target
-                    = target.substring(0, target.length() - jsonTargetLength);
-
-                // The target starts with "/colibri/".
-                if (target.startsWith(colibriTarget))
-                {
-                    target = target.substring(colibriTarget.length());
-
-                    // All responses to requests for resources under the base
-                    // /colibri/ are in JSON format.
-                    beginResponse(
-                            target,
-                            baseRequest,
-                            request,
-                            response,
-                            JSON_CONTENT_TYPE_WITH_CHARSET);
-                    handleColibriJSON(target, baseRequest, request, response);
-                    endResponse(target, baseRequest, request, response);
-                }
-                else if (HEALTH_TARGET.equals(target))
-                {
-                    target = target.substring(HEALTH_TARGET.length());
-
-                    beginResponse(
-                            target,
-                            baseRequest,
-                            request,
-                            response,
-                            JSON_CONTENT_TYPE_WITH_CHARSET);
-                    handleHealthJSON(target, baseRequest, request, response);
-                    endResponse(target, baseRequest, request, response);
-                }
-                else
-                {
-                    // Initially, we had VERSION_TARGET equal to /version. But
-                    // such an HTTP resource could be rewritten by Meet. In
-                    // order to decrease the risk of rewriting, we moved the
-                    // VERSION_TARGET to /about/version. For the sake of
-                    // compatiblity though, we are preserving /version.
-                    String versionTarget;
-
-                    if ((versionTarget = VERSION_TARGET).equals(target)
-                            || (versionTarget = "/version").equals(target))
-                    {
-                        target = target.substring(versionTarget.length());
-
-                        beginResponse(
-                                target,
-                                baseRequest,
-                                request,
-                                response,
-                                JSON_CONTENT_TYPE_WITH_CHARSET);
-                        handleVersionJSON(
-                                target,
-                                baseRequest,
-                                request,
-                                response);
-                        endResponse(target, baseRequest, request, response);
-                    }
-                }
-            }
-        }
+        return getService(Videobridge.class);
     }
 
     /**
@@ -1264,6 +1028,58 @@ class HandlerImpl
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void handleJSON(
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        // The target starts with "/colibri/".
+        if (target.startsWith(colibriTarget))
+        {
+            target = target.substring(colibriTarget.length());
+
+            // All responses to requests for resources under the base /colibri/
+            // are in JSON format.
+            beginResponse(target, baseRequest, request, response);
+            handleColibriJSON(target, baseRequest, request, response);
+            endResponse(target, baseRequest, request, response);
+        }
+        else if (HEALTH_TARGET.equals(target))
+        {
+            target = target.substring(HEALTH_TARGET.length());
+
+            beginResponse(target, baseRequest, request, response);
+            handleHealthJSON(target, baseRequest, request, response);
+            endResponse(target, baseRequest, request, response);
+        }
+        else
+        {
+            // Initially, we had VERSION_TARGET equal to /version. But such an
+            // HTTP resource could be rewritten by Meet. In order to decrease
+            // the risk of rewriting, we moved the VERSION_TARGET to
+            // /about/version. For the sake of compatiblity though, we are
+            // preserving /version.
+            String versionTarget;
+
+            if ((versionTarget = VERSION_TARGET).equals(target)
+                    || (versionTarget = "/version").equals(target))
+            {
+                target = target.substring(versionTarget.length());
+
+                beginResponse(target, baseRequest, request, response);
+                handleVersionJSON(target, baseRequest, request, response);
+                endResponse(target, baseRequest, request, response);
+            }
+        }
+    }
+
+    /**
      * Handles an HTTP request for a {@link #VERSION_TARGET}-related resource.
      *
      * @param target the target of the request
@@ -1292,22 +1108,5 @@ class HandlerImpl
         {
             response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
         }
-    }
-
-    /**
-     * Determines whether a specific MIME type of HTTP content specifies a JSON
-     * representation.
-     *
-     * @param contentType the MIME type of HTTP content to determine whether it
-     * specifies a JSON representation
-     * @return <tt>true</tt> if <tt>contentType</tt> stands for a MIME type of
-     * HTTP content which specifies a JSON representation; otherwise,
-     * <tt>false</tt>
-     */
-    private boolean isJSONContentType(String contentType)
-    {
-        return
-            JSON_CONTENT_TYPE.equals(contentType)
-                || JSON_CONTENT_TYPE_WITH_CHARSET.equals(contentType);
     }
 }
