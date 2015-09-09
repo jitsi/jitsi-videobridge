@@ -208,23 +208,23 @@ public class RESTBundleActivator
     {
         String resourceBase
             = getCfgString(JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME, null);
-        ResourceHandler resourceHandler;
+        ContextHandler contextHandler;
 
         if (resourceBase == null || resourceBase.length() == 0)
         {
-            resourceHandler = null;
+            contextHandler = null;
         }
         else
         {
-            resourceHandler = new ResourceHandler();
-            resourceHandler.setResourceBase(resourceBase);
-        }
+            ResourceHandler resourceHandler = new ResourceHandler();
 
-        // Create context handler and enable alisases, so we can handle
-        // symlinks
-        ContextHandler contextHandler=new ContextHandler();
-        contextHandler.setHandler(resourceHandler);
-        contextHandler.addAliasCheck(new ContextHandler.ApproveAliases());
+            resourceHandler.setResourceBase(resourceBase);
+
+            // Enable alisases so we can handle symlinks.
+            contextHandler = new ContextHandler();
+            contextHandler.setHandler(resourceHandler);
+            contextHandler.addAliasCheck(new ContextHandler.ApproveAliases());
+        }
 
         return contextHandler;
     }
