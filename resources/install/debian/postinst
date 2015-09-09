@@ -89,7 +89,7 @@ case "$1" in
 
         # let's check whether there is a setting in the $CONFIG
         # for home folder and logging props file, if missing add it
-        if [ -z $JAVA_SYS_PROPS ]; then
+        if [ ! -n "$JAVA_SYS_PROPS" ]; then
             echo >> $CONFIG
             echo '# adds java system props that are passed to jvb (default are for home and logging config file)' >> $CONFIG
             echo "JAVA_SYS_PROPS=\"-Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=/etc/jitsi\
