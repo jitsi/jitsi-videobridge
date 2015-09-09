@@ -23,9 +23,13 @@ libs="$SCRIPT_DIR/lib/native/linux"
 logging_config="$SCRIPT_DIR/lib/logging.properties"
 videobridge_rc="$SCRIPT_DIR/lib/videobridge.rc"
 
+# if there is a logging config file in lib folder use it (running from source)
+if [ -f $logging_config ]; then
+    LOGGING_CONFIG_PARAM="-Djava.util.logging.config.file=$logging_config"
+fi
+
 if [ -f $videobridge_rc  ]; then
         source $videobridge_rc
 fi
 
-
-java $VIDEOBRIDGE_DEBUG_OPTIONS -Djava.library.path=$libs -Djava.util.logging.config.file=$logging_config -cp $cp $mainClass $@
+java $VIDEOBRIDGE_DEBUG_OPTIONS -Djava.library.path=$libs $LOGGING_CONFIG_PARAM $JAVA_SYS_PROPS -cp $cp $mainClass $@

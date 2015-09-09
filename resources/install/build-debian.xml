@@ -110,10 +110,6 @@
         <copy file="resources/install/${include-dir}/jvb.sh"
               todir="${debian.dir}/usr/share/jitsi-videobridge"
               overwrite="true"/>
-        <replace file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
-                 token="$SCRIPT_DIR/lib/logging.properties">
-            <replacevalue>/etc/jitsi/videobridge/logging.properties</replacevalue>
-        </replace>
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
                perm="755"/>
 
@@ -206,15 +202,6 @@
         <replace file="${debian.release}/resources/install/linux-64/jvb.sh"
                  token="$SCRIPT_DIR/lib/native/linux-64">
             <replacevalue>/usr/lib/jni</replacevalue>
-        </replace>
-        <!-- logging.properties -->
-        <replace file="${debian.release}/resources/install/linux/jvb.sh"
-                 token="$SCRIPT_DIR/lib/logging.properties">
-            <replacevalue>/etc/jitsi/videobridge/logging.properties</replacevalue>
-        </replace>
-        <replace file="${debian.release}/resources/install/linux-64/jvb.sh"
-                 token="$SCRIPT_DIR/lib/logging.properties">
-            <replacevalue>/etc/jitsi/videobridge/logging.properties</replacevalue>
         </replace>
         <copy todir="${debian.release}">
             <fileset dir="resources/install/">

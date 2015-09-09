@@ -67,7 +67,7 @@ start() {
         exit 1
     fi
     echo -n "Starting $DESC: "
-    DAEMON_START_CMD="exec $DAEMON $DAEMON_OPTS < /dev/null >> $LOGFILE 2>&1"
+    DAEMON_START_CMD="JAVA_SYS_PROPS=\"$JAVA_SYS_PROPS\" exec $DAEMON $DAEMON_OPTS < /dev/null >> $LOGFILE 2>&1"
     AUTHBIND_CMD=""
     if [ "$AUTHBIND" = "yes" ]; then
         AUTHBIND_CMD="/usr/bin/authbind --deep /bin/bash -c "
