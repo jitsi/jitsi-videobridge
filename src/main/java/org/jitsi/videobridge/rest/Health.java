@@ -269,7 +269,7 @@ public class Health
      * Generates a pseudo-random {@code Endpoint} ID which is not guaranteed to
      * be unique.
      *
-     * @return a pseudo-ramdom {@code Endpoint} ID which is not guaranteed to be
+     * @return a pseudo-random {@code Endpoint} ID which is not guaranteed to be
      * unique
      */
     private static String generateEndpointID()
