@@ -65,7 +65,8 @@ We implemented that in the following way :
 - libjitsi and/or other parts of the video bridge can override the
   default RTCP report generation behavior by parametrizing the RTP
   session manager (in FMJ) with an implementation of the
-  `RTCPReportBuilder` interface.
+  `RTCPReportBuilder` interface. Keep in mind that in the JVB each content
+  has its own RTP translator.
   
 - Created an interface called `RTCPPacketTransformer` whose purpose is
   to inspect and/or modify and/or eliminate incoming RTCP packets. It

@@ -131,20 +131,6 @@ public class Videobridge
         = "org.jitsi.videobridge." + REST_API;
 
     /**
-     * The name of the property which specifies the FQN name of the RTCP
-     * strategy to use when there are less than 3 participants.
-     */
-    static final String RTCP_TERMINATION_FALLBACK_STRATEGY_PNAME
-            = "org.jitsi.videobridge.rtcp.fallbackStrategy";
-
-    /**
-     * The name of the property which specifies the FQN name of the RTCP
-     * strategy to use by default.
-     */
-    static final String RTCP_TERMINATION_STRATEGY_PNAME
-            = "org.jitsi.videobridge.rtcp.strategy";
-
-    /**
      * The property that specifies allowed entities for turning on graceful
      * shutdown mode. For XMPP API this is "from" JID. In case of REST
      * the source IP is being copied into the "from" field of the IQ.
@@ -698,26 +684,7 @@ public class Videobridge
                 }
             }
 
-            // Get the RTCP termination strategy.
-            ColibriConferenceIQ.RTCPTerminationStrategy strategyIQ
-                = conferenceIQ.getRTCPTerminationStrategy();
-            String strategyFQN;
-
-            if (strategyIQ == null)
-            {
-                strategyFQN = null;
-            }
-            else
-            {
-                strategyFQN = strategyIQ.getName();
-                if (strategyFQN != null)
-                {
-                    strategyFQN = strategyFQN.trim();
-                    if (strategyFQN.length() == 0)
-                        strategyFQN = null;
-                }
-            }
-
+            // TODO(gp) Remove ColibriConferenceIQ.RTCPTerminationStrategy
             for (ColibriConferenceIQ.Content contentIQ
                     : conferenceIQ.getContents())
             {
@@ -735,10 +702,6 @@ public class Videobridge
                 }
                 else
                 {
-                    // Set the RTCP termination strategy.
-                    if (strategyFQN != null)
-                        content.setRTCPTerminationStrategyFQN(strategyFQN);
-
                     ColibriConferenceIQ.Content responseContentIQ
                         = new ColibriConferenceIQ.Content(content.getName());
 

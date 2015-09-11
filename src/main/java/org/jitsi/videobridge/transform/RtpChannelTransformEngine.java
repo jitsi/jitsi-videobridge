@@ -17,7 +17,6 @@ package org.jitsi.videobridge.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rewriting.*;
@@ -77,15 +76,16 @@ public class RtpChannelTransformEngine
     private CachingTransformer cache;
 
     /**
-     * The transformer which parses incoming RTCP packets.
-     */
-    private RTCPTransformEngine rtcpTransformEngine;
-
-    /**
      * The transformer which intercepts NACK packets and passes them on to the
      * channel logic.
      */
     private NACKNotifier nackNotifier;
+
+    /**
+     * The transformer which intercepts REMB packets and passes them on to the
+     * channel logic.
+     */
+    private REMBNotifier rembNotifier;
 
     /**
      * The transformer which replaces the timestamp in an abs-send-time RTP
@@ -162,23 +162,15 @@ public class RtpChannelTransformEngine
             cache = new CachingTransformer();
             transformerList.add(cache);
 
-            // Note: we use a separate RTCPTransformer here, instead of using
-            // the RTCPTerminationStrategy, because interpreting RTCP NACK
-            // packets should happen in the context of a specific channel, and
-            // the RTCPTermination strategy is a single instance for a
-            // conference. The current intention/idea is to eventually move
-            // the RTCP parsing code from the RTCPTerminationStrategy here, so
-            // that we only parse RTCP once, and so that the REMB/RR code
-            // doesn't have to find the source Channel by SSRC.
             nackNotifier = new NACKNotifier((NACKHandler) channel);
-            rtcpTransformEngine
-                    = new RTCPTransformEngine(new Transformer[] {nackNotifier});
-            transformerList.add(rtcpTransformEngine);
+            transformerList.add(nackNotifier);
         }
 
         if (channel instanceof VideoChannel)
         {
             VideoChannel videoChannel = (VideoChannel) channel;
+            rembNotifier = new REMBNotifier(videoChannel);
+            transformerList.add(rembNotifier);
             ssrcRewritingEngine = new SsrcRewritingEngine(videoChannel);
             transformerList.add(ssrcRewritingEngine);
         }

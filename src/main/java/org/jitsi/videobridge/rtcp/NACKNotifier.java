@@ -16,8 +16,11 @@
 package org.jitsi.videobridge.rtcp;
 
 import net.sf.fmj.media.rtp.*;
+import net.sf.fmj.media.rtp.util.*;
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.service.neomedia.*;
+import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.util.function.*;
 
 import java.util.*;
 
@@ -28,7 +31,8 @@ import java.util.*;
  * @author Boris Grozev
  */
 public class NACKNotifier
-        implements Transformer<RTCPCompoundPacket>
+    extends SinglePacketTransformer
+    implements TransformEngine
 {
     /**
      * The handler to use for intercepted NACK packets.
@@ -41,6 +45,18 @@ public class NACKNotifier
     private boolean enabled = true;
 
     /**
+     * The <tt>Function</tt> that generates <tt>RTCPCompoundPacket</tt>s from
+     * <tt>RawPacket</tt>s.
+     */
+    private RTCPPacketParserEx parser = new RTCPPacketParserEx();
+
+    /**
+     * The <tt>Function</tt> that generates <tt>RawPacket</tt>s from
+     * <tt>RTCPCompoundPacket</tt>s.
+     */
+    private RTCPGenerator generator = new RTCPGenerator();
+
+    /**
      * Initializes a new <tt>NACKNotifier</tt> which is to use a specific
      * <tt>NACKHandler</tt> instalce.
      * @param handler the <tt>NACKHandler</tt> instance to use.
@@ -50,21 +66,45 @@ public class NACKNotifier
         this.handler = handler;
     }
 
+    @Override
+    public RawPacket transform(RawPacket pkt)
+    {
+        return pkt;
+    }
+
     /**
      * Looks for RTCP NACK packets contained in the compound packet
      * <tt>inPacket</tt>, passes them on the the handler and removes them from
      * the resulting compount packet.
-     * @param inPacket the input RTCP compound packet.
+     * @param pkt the input RTCP compound packet.
      * @return a packet which consists of the packets from <tt>inPacket</tt>,
      * with NACK packets removed.
      */
     @Override
-    public RTCPCompoundPacket reverseTransform(RTCPCompoundPacket inPacket)
+    public RawPacket reverseTransform(RawPacket pkt)
     {
-        if (!enabled || inPacket == null || inPacket.packets == null
-                || inPacket.packets.length == 0)
+        if (!enabled)
         {
-            return inPacket;
+            return pkt;
+        }
+
+        RTCPCompoundPacket inPacket;
+        try
+        {
+            inPacket = (RTCPCompoundPacket) parser.parse(
+                pkt.getBuffer(),
+                pkt.getOffset(),
+                pkt.getLength());
+        }
+        catch (BadFormatException e)
+        {
+            return null;
+        }
+
+        if (inPacket == null || inPacket.packets == null
+            || inPacket.packets.length == 0)
+        {
+            return pkt;
         }
 
         List<RTCPPacket> outPackets = new LinkedList<RTCPPacket>();
@@ -91,33 +131,30 @@ public class NACKNotifier
         if (removed)
         {
             if (outPackets.size() > 0)
-                return new RTCPCompoundPacket(outPackets.toArray(
+            {
+                RTCPCompoundPacket outPacket
+                    = new RTCPCompoundPacket(outPackets.toArray(
                         new RTCPPacket[outPackets.size()]));
+
+                return generator.apply(outPacket);
+            }
             else
                 return null;
         }
         else
         {
-            return inPacket;
+            return pkt;
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void close()
+    public PacketTransformer getRTPTransformer()
     {
-        // nothing to be done here
+        return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
+    public PacketTransformer getRTCPTransformer()
     {
-        return inPacket;
+        return this;
     }
 }
 
