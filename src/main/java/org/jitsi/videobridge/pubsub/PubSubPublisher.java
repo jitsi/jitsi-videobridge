@@ -448,10 +448,12 @@ public class PubSubPublisher
      * Publishes items to a given PubSub node.
      *
      * @param nodeName the PubSub node.
+     * @param itemId the ID of the item to be published. If <tt>null</tt> the
+     *               XMPP server will generate random ID by itself.
      * @param ext the item to be send.
      * @throws Exception if fail to send the item or the node is not created.
      */
-    public void publish(String nodeName, PacketExtension ext)
+    public void publish(String nodeName, String itemId, PacketExtension ext)
         throws Exception
     {
         if(!nodes.contains(nodeName))
@@ -467,7 +469,7 @@ public class PubSubPublisher
         packet.setPacketID(packetID);
 
         PayloadItem<PacketExtension> item
-            = new PayloadItem<PacketExtension>(ext);
+            = new PayloadItem<PacketExtension>(itemId, ext);
 
         packet.addExtension(
             new PublishItem<PayloadItem<PacketExtension>>(nodeName, item));

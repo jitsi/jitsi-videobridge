@@ -42,6 +42,13 @@ public class PubSubStatsTransport
         = Logger.getLogger(PubSubStatsTransport.class);
 
     /**
+     * The ID of PubSub item which stores bridge statistics.
+     * As a value the JID of first currently registered <tt>ComponentImpl</tt>
+     * service will be used.
+     */
+    private String itemId;
+
+    /**
      * The name of the PubSub node.
      */
     private final String nodeName;
@@ -127,6 +134,15 @@ public class PubSubStatsTransport
     {
         if (publisher == null)
         {
+            // We're using JID as PubSub item ID of the first
+            // registered ComponentImpl service
+            Iterator<ComponentImpl> components
+                = ComponentImpl.getComponents(getBundleContext()).iterator();
+            if (components.hasNext())
+            {
+                itemId = components.next().getJID().toString();
+            }
+
             publisher = PubSubPublisher.getPubsubManager(serviceName);
             publisher.addResponseListener(this);
             try
@@ -259,7 +275,7 @@ public class PubSubStatsTransport
         {
             try
             {
-                publisher.publish(nodeName, Statistics.toXMPP(stats));
+                publisher.publish(nodeName, itemId, Statistics.toXMPP(stats));
             }
             catch (Exception e)
             {
