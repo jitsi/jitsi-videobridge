@@ -16,67 +16,106 @@
 package org.jitsi.videobridge.rtcp;
 
 import net.sf.fmj.media.rtp.*;
+import net.sf.fmj.media.rtp.util.*;
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.service.neomedia.*;
+import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.videobridge.*;
 
+import java.lang.ref.*;
+
 /**
+ * Intercepts REMBs and passes them down to the VideoChannel logic.
+ *
  * @author George Politis
  */
-class REMBNotifier implements Transformer<RTCPCompoundPacket>
+public class REMBNotifier
+    implements TransformEngine
 {
-    private AbstractBridgeRTCPTerminationStrategy strategy;
+    /**
+     *
+     */
+    private final WeakReference<VideoChannel> weakVideoChannel;
 
-    public REMBNotifier(AbstractBridgeRTCPTerminationStrategy strategy)
+    /**
+     *
+     */
+    private final RTCPPacketParserEx parserEx = new RTCPPacketParserEx();
+
+    /**
+     * Ctor.
+     *
+     * @param videoChannel
+     */
+    public REMBNotifier(VideoChannel videoChannel)
     {
-        this.strategy = strategy;
+        this.weakVideoChannel = new WeakReference<VideoChannel>(videoChannel);
     }
 
-    @Override
-    public RTCPCompoundPacket reverseTransform(RTCPCompoundPacket inPacket)
+    public PacketTransformer getRTPTransformer()
     {
-        // Intercept REMBs and forward them to the VideoChannel logic
-        for (RTCPPacket p : inPacket.packets)
+        return null;
+    }
+
+    public PacketTransformer getRTCPTransformer()
+    {
+        return new SinglePacketTransformer()
         {
-            if (p != null && p.type == RTCPFBPacket.PSFB)
+            @Override
+            public RawPacket transform(RawPacket pkt)
             {
-                RTCPFBPacket psfb = (RTCPFBPacket) p;
-                if (psfb.fmt == RTCPREMBPacket.FMT)
+                return pkt;
+            }
+
+            @Override
+            public RawPacket reverseTransform(RawPacket pkt)
+            {
+                if (pkt == null)
                 {
-                    RTCPREMBPacket remb = (RTCPREMBPacket) psfb;
-                    Conference conference = strategy.getConference();
-                    if (conference != null)
+                    return pkt;
+                }
+
+                RTCPCompoundPacket inPacket;
+                try
+                {
+                    inPacket = (RTCPCompoundPacket) parserEx.parse(
+                        pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
+                }
+                catch (BadFormatException ex)
+                {
+                   return pkt;
+                }
+
+                if (inPacket == null)
+                {
+                    return pkt;
+                }
+
+                // Intercept REMBs and forward them to the VideoChannel logic
+                for (RTCPPacket p : inPacket.packets)
+                {
+                    if (p != null && p.type == RTCPFBPacket.PSFB)
                     {
-                        Channel channel
-                                = conference.findChannelByReceiveSSRC(remb.senderSSRC,
-                                MediaType.VIDEO);
-                        if (channel != null && channel instanceof VideoChannel)
+                        RTCPFBPacket psfb = (RTCPFBPacket) p;
+                        if (psfb.fmt == RTCPREMBPacket.FMT)
                         {
-                            ((VideoChannel) channel).receivedREMB(remb.getBitrate());
+                            RTCPREMBPacket remb = (RTCPREMBPacket) psfb;
+
+                            WeakReference<VideoChannel> wc = weakVideoChannel;
+                            VideoChannel videoChannel = wc == null
+                                ? null
+                                : wc.get();
+
+                            if (videoChannel != null)
+                            {
+                                videoChannel.receivedREMB(remb.getBitrate());
+                            }
                         }
                     }
                 }
+
+                return pkt;
             }
-        }
-
-        return inPacket;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void close()
-    {
-        // nothing to be done here
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public RTCPCompoundPacket transform(RTCPCompoundPacket inPacket)
-    {
-        return inPacket;
+        };
     }
 }

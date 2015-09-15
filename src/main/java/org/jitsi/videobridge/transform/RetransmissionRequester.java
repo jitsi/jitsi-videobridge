@@ -230,7 +230,15 @@ public class RetransmissionRequester
                     }
 
                     if (pkt != null)
+                    try
+                    {
                         mediaStream.injectPacket(pkt, false, true);
+                    }
+                    catch (TransmissionFailedException ex)
+                    {
+                        logger.warn("Failed to inject packet in MediaStream: "
+                            + ex);
+                    }
                 }
             }
 
