@@ -382,6 +382,35 @@ public class Endpoint
     }
 
     /**
+     * Notifies this {@code Endpoint} that a {@code ClientHello} has been
+     * received by the associated {@code SctpConnection}.
+     *
+     * @param src the {@code WebRtcDataStream} by which {@code jsonObject} has
+     * been received
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code ClientHello} which has been received by the associated
+     * {@code SctpConnection}
+     */
+    private void onClientHello(WebRtcDataStream src, JSONObject jsonObject)
+    {
+        // ClientHello was introduced for (functional) testing purposes. It
+        // triggers a ServerHello (response) from Videobridge. The exchange
+        // reveals (to the client) that the WebRTC data channel between the
+        // (remote) endpoint and the Videobridge is operational.
+        try
+        {
+            src.sendString("{\"colibriClass\":\"ServerHello\"}");
+        }
+        catch (IOException ioex)
+        {
+            logger.error(
+                    "Failed to respond to a ClientHello over the WebRTC data"
+                        + " channel of endpoint " + getID() + "!",
+                    ioex);
+        }
+    }
+
+    /**
      * Notifies this {@code Endpoint} that a specific JSON object has been
      * received by the associated {@code SctpConnection}.
      *
@@ -401,6 +430,8 @@ public class Endpoint
             onSelectedEndpointChangedEvent(src, jsonObject);
         else if ("PinnedEndpointChangedEvent".equals(colibriClass))
             onPinnedEndpointChangedEvent(src, jsonObject);
+        else if ("ClientHello".equals(colibriClass))
+            onClientHello(src, jsonObject);
     }
 
     /**
