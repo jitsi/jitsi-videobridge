@@ -51,6 +51,14 @@ public class Endpoint
     private static final Logger logger = Logger.getLogger(Endpoint.class);
 
     /**
+     * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
+     * specifies the JID of the currently pinned <tt>Endpoint</tt> of this
+     * <tt>Endpoint</tt>.
+     */
+    public static final String PINNED_ENDPOINT_PROPERTY_NAME
+        = Endpoint.class.getName() + ".pinnedEndpoint";
+
+    /**
      * The name of the <tt>Endpoint</tt> property <tt>sctpConnection</tt> which
      * specifies the <tt>SctpConnection</tt> associated with the
      * <tt>Endpoint</tt>.
@@ -67,24 +75,15 @@ public class Endpoint
         = Endpoint.class.getName() + ".selectedEndpoint";
 
     /**
-     * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt>
-     * which specifies the JID of the currently pinned <tt>Endpoint</tt> of
-     * this <tt>Endpoint</tt>.
-     */
-    public static final String PINNED_ENDPOINT_PROPERTY_NAME
-            = Endpoint.class.getName() + ".pinnedEndpoint";
-
-    /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
     private final List<WeakReference<RtpChannel>> channels
         = new LinkedList<WeakReference<RtpChannel>>();
 
     /**
-     * A weak reference to the <tt>Conference</tt> this <tt>Endpoint</tt>
-     * belongs to.
+     * The (human readable) display name of this <tt>Endpoint</tt>.
      */
-    private final WeakReference<Conference> weakConference;
+    private String displayName;
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -93,15 +92,15 @@ public class Endpoint
     private boolean expired = false;
 
     /**
-     * The (human readable) display name of this <tt>Endpoint</tt>.
-     */
-    private String displayName;
-
-    /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
      */
     private final String id;
+
+    /**
+     * The <tt>pinnedEndpointID</tt> SyncRoot.
+     */
+    private final Object pinnedEndpointSyncRoot = new Object();
 
     /**
      * SCTP connection bound to this endpoint.
@@ -110,15 +109,15 @@ public class Endpoint
         = new WeakReference<SctpConnection>(null);
 
     /**
-     * A weak reference to the currently selected <tt>Endpoint</tt> at this
-     * <tt>Endpoint</tt>.
-     */
-    private WeakReference<Endpoint> weakSelectedEndpoint;
-
-    /**
      * The <tt>selectedEndpointID</tt> SyncRoot.
      */
     private final Object selectedEndpointSyncRoot = new Object();
+
+    /**
+     * A weak reference to the <tt>Conference</tt> this <tt>Endpoint</tt>
+     * belongs to.
+     */
+    private final WeakReference<Conference> weakConference;
 
     /**
      * A weak reference to the currently pinned <tt>Endpoint</tt> at this
@@ -127,9 +126,10 @@ public class Endpoint
     private WeakReference<Endpoint> weakPinnedEndpoint;
 
     /**
-     * The <tt>pinnedEndpointID</tt> SyncRoot.
+     * A weak reference to the currently selected <tt>Endpoint</tt> at this
+     * <tt>Endpoint</tt>.
      */
-    private final Object pinnedEndpointSyncRoot = new Object();
+    private WeakReference<Endpoint> weakSelectedEndpoint;
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -137,6 +137,7 @@ public class Endpoint
      *
      * @param id the identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt> with which the new instance is to be initialized
+     * @param conference
      */
     public Endpoint(String id, Conference conference)
     {
@@ -380,182 +381,226 @@ public class Endpoint
     {
     }
 
-    @Override
-    public void onStringData(WebRtcDataStream src, String msg)
+    /**
+     * Notifies this {@code Endpoint} that a specific JSON object has been
+     * received by the associated {@code SctpConnection}.
+     *
+     * @param src the {@code WebRtcDataStream} by which the specified
+     * {@code jsonObject} has been received
+     * @param jsonObject the JSON data received by {@code src}
+     * @param colibriClass the non-{@code null} value of the mandatory JSON
+     * property {@link Videobridge#COLIBRI_CLASS} required of all JSON objects
+     * received by the associated {@code SctpConnection}
+     */
+    private void onJSONData(
+            WebRtcDataStream src,
+            JSONObject jsonObject,
+            Object colibriClass)
     {
-        // JSONParser is NOT thread-safe.
-        JSONParser parser = new JSONParser();
-        JSONObject jsonObject;
+        if ("SelectedEndpointChangedEvent".equals(colibriClass))
+            onSelectedEndpointChangedEvent(src, jsonObject);
+        else if ("PinnedEndpointChangedEvent".equals(colibriClass))
+            onPinnedEndpointChangedEvent(src, jsonObject);
+    }
 
-        try
+    /**
+     * Notifies this {@code Endpoint} that a {@code PinnedEndpointChangedEvent}
+     * has been received by the associated {@code SctpConnection}.
+     *
+     * @param src the {@code WebRtcDataStream} by which {@code jsonObject} has
+     * been received
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code PinnedEndpointChangedEvent} which has been received by the
+     * associated {@code SctpConnection}
+     */
+    private void onPinnedEndpointChangedEvent(
+            WebRtcDataStream src,
+            JSONObject jsonObject)
+    {
+        // Find the new pinned endpoint.
+        String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
+
+        if (logger.isDebugEnabled())
         {
-            Object obj = parser.parse(msg);
-
-            // We utilize JSONObjects only.
-            if (obj instanceof JSONObject)
-                jsonObject = (JSONObject) obj;
-            else
-                return;
+            StringCompiler sc = new StringCompiler();
+            sc.bind("pinnedId", newPinnedEndpointID);
+            sc.bind("this", this);
+            logger.debug(sc.c(
+                    "Endpoint {this.id} notified us that it has pinned"
+                        + " {pinnedId}."));
         }
-        catch (ParseException e)
+
+        Conference conference = weakConference.get();
+
+        Endpoint newPinnedEndpoint;
+        if (!StringUtils.isNullOrEmpty(newPinnedEndpointID)
+                && conference != null)
         {
-            logger.warn("Malformed JSON received from endpoint " + getID(), e);
-            return;
-        }
-
-        // We utilize JSONObjects with colibriClass only.
-        Object colibriClass = jsonObject.get(Videobridge.COLIBRI_CLASS);
-
-        if (colibriClass != null)
-        {
-            if ("SelectedEndpointChangedEvent".equals(colibriClass))
-            {
-                String newSelectedEndpointID
-                    = (String) jsonObject.get("selectedEndpoint");
-
-                if (logger.isDebugEnabled())
-                {
-                    StringCompiler sc = new StringCompiler();
-                    sc.bind("selectedId", newSelectedEndpointID);
-                    sc.bind("this", this);
-                    logger.debug(sc.c(
-                        "Endpoint {this.id} notified us that its big screen" +
-                            " displays endpoint {selectedId}."));
-                }
-
-
-                Conference conference = weakConference.get();
-
-                Endpoint newSelectedEndpoint;
-                if (!StringUtils.isNullOrEmpty(newSelectedEndpointID)
-                    && conference != null)
-                {
-                    newSelectedEndpoint
-                        = conference.getEndpoint(newSelectedEndpointID);
-                }
-                else
-                {
-                    newSelectedEndpoint = null;
-                }
-
-                boolean changed;
-                Endpoint oldSelectedEndpoint = this.getSelectedEndpoint();
-                synchronized (selectedEndpointSyncRoot)
-                {
-                    changed = newSelectedEndpoint != oldSelectedEndpoint;
-                    if (changed)
-                    {
-                        if (newSelectedEndpoint == null)
-                        {
-                            this.weakSelectedEndpoint = null;
-                        }
-                        else
-                        {
-                            this.weakSelectedEndpoint
-                                = new WeakReference<Endpoint>(newSelectedEndpoint);
-                        }
-                    }
-                }
-
-                // NOTE(gp) This won't guarantee that property change events are
-                // fired in the correct order. We should probably call the
-                // firePropertyChange() method from inside the synchronized
-                // _and_ the underlying PropertyChangeNotifier should have a
-                // dedicated events queue and a thread for firing
-                // PropertyChangeEvents from the queue.
-
-                if (changed)
-                {
-                    if (logger.isDebugEnabled())
-                    {
-                        StringCompiler sc = new StringCompiler();
-                        sc.bind("selected", newSelectedEndpoint);
-                        sc.bind("this", this);
-                        logger.debug(sc.c(
-                            "Endpoint {this.id} selected {selected.id}."));
-                    }
-                    firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
-                        oldSelectedEndpoint, newSelectedEndpoint);
-                }
-            }
-            else if ("PinnedEndpointChangedEvent".equals(colibriClass))
-            {
-                // Find the new pinned endpoint.
-                String newPinnedEndpointID
-                    = (String) jsonObject.get("pinnedEndpoint");
-
-                if (logger.isDebugEnabled())
-                {
-                    StringCompiler sc = new StringCompiler();
-                    sc.bind("pinnedId", newPinnedEndpointID);
-                    sc.bind("this", this);
-                    logger.debug(sc.c("Endpoint {this.id} notified us that" +
-                        " it has pinned {pinnedId}."));
-                }
-
-                Conference conference = weakConference.get();
-
-                Endpoint newPinnedEndpoint;
-                if (!StringUtils.isNullOrEmpty(newPinnedEndpointID)
-                    && conference != null)
-                {
-                    newPinnedEndpoint
-                        = conference.getEndpoint(newPinnedEndpointID);
-                }
-                else
-                {
-                    newPinnedEndpoint = null;
-                }
-
-                // Check if that's different to what we think the pinned
-                // endpoint is.
-                boolean changed;
-                Endpoint oldPinnedEndpoint = this.getPinnedEndpoint();
-                synchronized (pinnedEndpointSyncRoot)
-                {
-                    changed = newPinnedEndpoint != oldPinnedEndpoint;
-                    if (changed)
-                    {
-                        if (newPinnedEndpoint == null)
-                        {
-                            this.weakPinnedEndpoint = null;
-                        }
-                        else
-                        {
-                            this.weakPinnedEndpoint
-                                = new WeakReference<Endpoint>(newPinnedEndpoint);
-                        }
-                    }
-                }
-
-                // NOTE(gp) This won't guarantee that property change events are
-                // fired in the correct order. We should probably call the
-                // firePropertyChange() method from inside the synchronized
-                // _and_ the underlying PropertyChangeNotifier should have a
-                // dedicated events queue and a thread for firing
-                // PropertyChangeEvents from the queue.
-
-                if (changed)
-                {
-                    if (logger.isDebugEnabled())
-                    {
-                        StringCompiler sc = new StringCompiler();
-                        sc.bind("pinned", newPinnedEndpoint);
-                        sc.bind("this", this);
-                        logger.debug(sc.c(
-                                "Endpoint {this.id} pinned {pinned.id}."));
-                    }
-                    firePropertyChange(PINNED_ENDPOINT_PROPERTY_NAME,
-                            oldPinnedEndpoint, newPinnedEndpoint);
-                }
-            }
+            newPinnedEndpoint = conference.getEndpoint(newPinnedEndpointID);
         }
         else
         {
-            logger.warn(
-                    "Malformed JSON received from endpoint " + getID()
-                        + ". JSON object does not contain the colibriClass"
-                        + " field.");
+            newPinnedEndpoint = null;
+        }
+
+        // Check if that's different to what we think the pinned endpoint is.
+        boolean changed;
+        Endpoint oldPinnedEndpoint = this.getPinnedEndpoint();
+        synchronized (pinnedEndpointSyncRoot)
+        {
+            changed = newPinnedEndpoint != oldPinnedEndpoint;
+            if (changed)
+            {
+                if (newPinnedEndpoint == null)
+                {
+                    this.weakPinnedEndpoint = null;
+                }
+                else
+                {
+                    this.weakPinnedEndpoint
+                        = new WeakReference<Endpoint>(newPinnedEndpoint);
+                }
+            }
+        }
+
+        // NOTE(gp) This won't guarantee that property change events are fired
+        // in the correct order. We should probably call the
+        // firePropertyChange() method from inside the synchronized _and_ the
+        // underlying PropertyChangeNotifier should have a dedicated events
+        // queue and a thread for firing PropertyChangeEvents from the queue.
+
+        if (changed)
+        {
+            if (logger.isDebugEnabled())
+            {
+                StringCompiler sc = new StringCompiler();
+                sc.bind("pinned", newPinnedEndpoint);
+                sc.bind("this", this);
+                logger.debug(sc.c("Endpoint {this.id} pinned {pinned.id}."));
+            }
+            firePropertyChange(PINNED_ENDPOINT_PROPERTY_NAME,
+                    oldPinnedEndpoint, newPinnedEndpoint);
+        }
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a
+     * {@code SelectedEndpointChangedEvent} has been received by the associated
+     * {@code SctpConnection}.
+     *
+     * @param src the {@code WebRtcDataStream} by which {@code jsonObject} has
+     * been received
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code SelectedEndpointChangedEvent} which has been received by the
+     * associated {@code SctpConnection}
+     */
+    private void onSelectedEndpointChangedEvent(
+            WebRtcDataStream src,
+            JSONObject jsonObject)
+    {
+        String newSelectedEndpointID
+            = (String) jsonObject.get("selectedEndpoint");
+
+        if (logger.isDebugEnabled())
+        {
+            StringCompiler sc = new StringCompiler();
+            sc.bind("selectedId", newSelectedEndpointID);
+            sc.bind("this", this);
+            logger.debug(sc.c(
+                    "Endpoint {this.id} notified us that its big screen"
+                        + " displays endpoint {selectedId}."));
+        }
+
+        Conference conference = weakConference.get();
+
+        Endpoint newSelectedEndpoint;
+        if (!StringUtils.isNullOrEmpty(newSelectedEndpointID)
+                && conference != null)
+        {
+            newSelectedEndpoint = conference.getEndpoint(newSelectedEndpointID);
+        }
+        else
+        {
+            newSelectedEndpoint = null;
+        }
+
+        boolean changed;
+        Endpoint oldSelectedEndpoint = this.getSelectedEndpoint();
+        synchronized (selectedEndpointSyncRoot)
+        {
+            changed = newSelectedEndpoint != oldSelectedEndpoint;
+            if (changed)
+            {
+                if (newSelectedEndpoint == null)
+                {
+                    this.weakSelectedEndpoint = null;
+                }
+                else
+                {
+                    this.weakSelectedEndpoint
+                        = new WeakReference<Endpoint>(newSelectedEndpoint);
+                }
+            }
+        }
+
+        // NOTE(gp) This won't guarantee that property change events are fired
+        // in the correct order. We should probably call the
+        // firePropertyChange() method from inside the synchronized _and_ the
+        // underlying PropertyChangeNotifier should have a dedicated events
+        // queue and a thread for firing PropertyChangeEvents from the queue.
+
+        if (changed)
+        {
+            if (logger.isDebugEnabled())
+            {
+                StringCompiler sc = new StringCompiler();
+                sc.bind("selected", newSelectedEndpoint);
+                sc.bind("this", this);
+                logger.debug(sc.c(
+                        "Endpoint {this.id} selected {selected.id}."));
+            }
+            firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
+                oldSelectedEndpoint, newSelectedEndpoint);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void onStringData(WebRtcDataStream src, String msg)
+    {
+        Object obj;
+        JSONParser parser = new JSONParser(); // JSONParser is NOT thread-safe.
+
+        try
+        {
+            obj = parser.parse(msg);
+        }
+        catch (ParseException ex)
+        {
+            logger.warn("Malformed JSON received from endpoint " + getID(), ex);
+            obj = null;
+        }
+
+        // We utilize JSONObjects only.
+        if (obj instanceof JSONObject)
+        {
+            JSONObject jsonObject = (JSONObject) obj;
+            // We utilize JSONObjects with colibriClass only.
+            Object colibriClass = jsonObject.get(Videobridge.COLIBRI_CLASS);
+
+            if (colibriClass != null)
+            {
+                onJSONData(src, jsonObject, colibriClass);
+            }
+            else
+            {
+                logger.warn(
+                        "Malformed JSON received from endpoint " + getID()
+                            + ". JSON object does not contain the colibriClass"
+                            + " field.");
+            }
         }
     }
 
@@ -633,9 +678,10 @@ public class Endpoint
      * this <tt>Endpoint</tt>.
      *
      * @param msg message text to send.
+     * @throws IOException
      */
     public void sendMessageOnDataChannel(String msg)
-            throws IOException
+        throws IOException
     {
         SctpConnection sctpConnection = getSctpConnection();
         String endpointId = getID();
