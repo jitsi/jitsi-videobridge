@@ -233,10 +233,5 @@ public class FallbackingRTCPTerminationStrategy
         return getActiveRTCPTerminationStrategy().getRTCPTransformer();
     }
 
-    public RawPacket report()
-    {
-        return getActiveRTCPTerminationStrategy().report();
-    }
-
     //#endregion
 }
