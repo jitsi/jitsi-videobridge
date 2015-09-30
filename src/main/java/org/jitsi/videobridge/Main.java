@@ -279,7 +279,16 @@ public class Main
     
             Component component = new ComponentImpl();
 
-            componentManager.addComponent(subdomain, component);
+            try
+            {
+                componentManager.addComponent(subdomain, component);
+            }
+            catch (ComponentException e)
+            {
+                logger.error(
+                    e.getMessage() + ", host:" + host + ", port:" + port, e);
+                throw e;
+            }
 
             /*
              * The application has nothing more to do but wait for ComponentImpl
