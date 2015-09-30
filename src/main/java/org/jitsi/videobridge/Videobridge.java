@@ -958,9 +958,12 @@ public class Videobridge
                             if (sctpConn == null && expire == 0)
                                 continue;
                             // endpoint
-                            if (endpointID != null)
+                            if (endpointID != null && sctpConn != null)
                                 sctpConn.setEndpoint(endpointID);
                         }
+
+                        if (sctpConn == null)
+                            continue;
 
                         // expire
                         if (expire
