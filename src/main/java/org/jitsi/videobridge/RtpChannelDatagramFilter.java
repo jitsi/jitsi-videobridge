@@ -23,12 +23,12 @@ import org.jitsi.util.*;
 
 /**
  * Filters RTP or RTCP packet for a specific <tt>RtpChannel</tt>.
+ *
  * @author Boris Grozev
  */
 class RtpChannelDatagramFilter
     implements DatagramPacketFilter
 {
-
     /**
      * The <tt>Logger</tt> used by the <tt>RtpChannelDatagramFilter</tt> class
      * and its instances to print debug information.
@@ -37,7 +37,7 @@ class RtpChannelDatagramFilter
         = Logger.getLogger(RtpChannelDatagramFilter.class);
 
      /**
-     * Whether to accept non-RTP and non-RTCP packets (DTLS, STUN, ZRTP)
+     * Whether to accept non-RTP/RTCP packets (e.g. DTLS, STUN, ZRTP).
      */
     private boolean acceptNonRtp = false;
 
@@ -60,6 +60,7 @@ class RtpChannelDatagramFilter
 
     /**
      * Initializes an <tt>RtpChannelDatagramFilter</tt>.
+     *
      * @param channel the channel for which to work.
      * @param rtcp whether to accept RTP or RTCP packets.
      */
@@ -69,11 +70,12 @@ class RtpChannelDatagramFilter
     }
 
     /**
-     * Initializes an <tt>RtpChannelDatagramFilter</tt>.
+     * Initializes a new {@code RtpChannelDatagramFilter} instance.
+     *
      * @param channel the channel for which to work.
      * @param rtcp whether to accept RTP or RTCP packets.
-     * @param acceptNonRtp whether to accept packets which are neither RTP
-     * nor RTCP (e.g. DTLS, STUN, ZRTP).
+     * @param acceptNonRtp {@code true} to accept packets which are neither RTP
+     * nor RTCP (e.g. DTLS, STUN, ZRTP); otherwise, {@code false}.
      */
     RtpChannelDatagramFilter(RtpChannel channel,
                              boolean rtcp,
@@ -97,7 +99,7 @@ class RtpChannelDatagramFilter
             byte[] data = p.getData();
             int off = p.getOffset();
 
-            if (((data[off + 0] & 0xc0) >> 6) == 2) //RTP/RTCP version field
+            if (((data[off + 0] & 0xc0) >> 6) == 2) // RTP/RTCP version field
             {
                 int pt = data[off + 1] & 0xff;
 
@@ -118,10 +120,9 @@ class RtpChannelDatagramFilter
     /**
      * Returns <tt>true</tt> if this <tt>RtpChannelDatagramFilter</tt> should
      * accept an RTCP packet described by <tt>data</tt>, <tt>off</tt>, and
-     * <tt>len</tt>.
+     * <tt>len</tt>. Checks whether the SSRC of the packet sender is an SSRC
+     * received on the <tt>channel</tt>.
      *
-     * Checks whether the SSRC of the packet sender is an SSRC received on the
-     * <tt>channel</tt>.
      * @param data
      * @param len
      * @param off
@@ -145,15 +146,15 @@ class RtpChannelDatagramFilter
     }
 
     /**
-     * Returns true if this <tt>RtpChannelDatagramFilter</tt> should accept an
-     * RTP packet with a payload type number <tt>pt</tt>.
-     *
-     * Checks whether <tt>pt</tt> is a payload type configured for the
+     * Returns <tt>true</tt> if this <tt>RtpChannelDatagramFilter</tt> should
+     * accept an RTP packet with a payload type number <tt>pt</tt>. Checks
+     * whether <tt>pt</tt> is a payload type configured for the
      * <tt>channel</tt>.
      *
      * @param pt the payload type number of the packet.
-     * @return true if this <tt>RtpChannelDatagramFilter</tt> should accept an
-     * RTP packet with a payload type number <tt>pt</tt>.
+     * @return <tt>true</tt> if this <tt>RtpChannelDatagramFilter</tt> should
+     * accept an RTP packet with a payload type number <tt>pt</tt>; otherwise,
+     * <tt>false</tt>.
      */
     private boolean acceptRTP(int pt)
     {
@@ -178,10 +179,11 @@ class RtpChannelDatagramFilter
                 if (!missingPtsWarningLogged)
                 {
                     missingPtsWarningLogged = true;
-                    logger.warn("No payload-types specified for channel "
-                                        + channel.getID()
-                                        + " while bundle is in use. Packets"
-                                        + " are dropped.");
+                    logger.warn(
+                            "No payload-types specified for channel "
+                                + channel.getID()
+                                + " while bundle is in use."
+                                + " Packets are dropped.");
                 }
 
                 return false;
@@ -197,7 +199,8 @@ class RtpChannelDatagramFilter
     }
 
     /**
-     * Sets the flag which controls whether to accept non-rtp/rtcp packets.
+     * Sets the flag which controls whether to accept non-RTP/RTCP packets.
+     *
      * @param acceptNonRtp the value to set.
      */
     public void setAcceptNonRtp(boolean acceptNonRtp)

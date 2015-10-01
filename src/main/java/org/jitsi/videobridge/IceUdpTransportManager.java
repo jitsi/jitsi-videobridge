@@ -1261,6 +1261,7 @@ public class IceUdpTransportManager
     /**
      * Gets the <tt>IceSocketWrapper</tt> from the selected pair (if any)
      * from a specific {@link org.ice4j.ice.Component}.
+     *
      * @param component the <tt>Component</tt> from which to get a socket.
      * @return the <tt>IceSocketWrapper</tt> from the selected pair (if any)
      * from a specific {@link org.ice4j.ice.Component}.
@@ -1269,11 +1270,8 @@ public class IceUdpTransportManager
     {
         CandidatePair selectedPair = component.getSelectedPair();
 
-        if (selectedPair != null)
-        {
-            return selectedPair.getIceSocketWrapper();
-        }
-        return null;
+        return
+            (selectedPair == null) ? null : selectedPair.getIceSocketWrapper();
     }
 
     /**
@@ -1380,16 +1378,18 @@ public class IceUdpTransportManager
      */
     private IceSocketWrapper[] getStreamConnectorSockets()
     {
-        IceSocketWrapper[] streamConnectorSockets
-                = new IceSocketWrapper[2];
+        IceSocketWrapper[] streamConnectorSockets = new IceSocketWrapper[2];
 
+        // RTP
         Component rtpComponent = iceStream.getComponent(Component.RTP);
+
         if (rtpComponent != null)
         {
             streamConnectorSockets[0 /* RTP */]
                 = getSocketForComponent(rtpComponent);
         }
 
+        // RTCP
         if (numComponents > 1 && !rtcpmux)
         {
             Component rtcpComponent = iceStream.getComponent(Component.RTCP);
@@ -1399,6 +1399,7 @@ public class IceUdpTransportManager
                    = getSocketForComponent(rtcpComponent);
             }
         }
+
         return streamConnectorSockets;
     }
 
