@@ -26,7 +26,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.service.protocol.*;
-import net.java.sip.communicator.service.protocol.media.*;
 import net.java.sip.communicator.util.*;
 
 import org.ice4j.*;
@@ -337,8 +336,6 @@ public class IceUdpTransportManager
                                   String iceStreamName)
         throws IOException
     {
-        super();
-
         this.conference = conference;
         this.numComponents = numComponents;
         this.rtcpmux = numComponents == 1;
@@ -352,12 +349,9 @@ public class IceUdpTransportManager
         iceStream = iceAgent.getStream(iceStreamName);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
-        EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
         if (eventAdmin != null)
-        {
             eventAdmin.sendEvent(EventFactory.transportCreated(this));
-        }
     }
 
     /**
@@ -443,12 +437,9 @@ public class IceUdpTransportManager
         if (iceConnected)
             channel.transportConnected();
 
-        EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
         if (eventAdmin != null)
-        {
             eventAdmin.sendEvent(EventFactory.transportChannelAdded(channel));
-        }
 
         return true;
     }
@@ -589,9 +580,10 @@ public class IceUdpTransportManager
 
     /**
      * {@inheritDoc}
-     * TODO: in the case of multiple <tt>Channel</tt>s in one TransportManager
-     * it is not clear how to handle changes to the 'initiator' property
-     * from individual channels.
+     *
+     * TODO: In the case of multiple {@code Channel}s in one
+     * {@code TransportManager} it is unclear how to handle changes to the
+     * {@code initiator} property from individual channels.
      */
     @Override
     protected void channelPropertyChange(PropertyChangeEvent ev)
@@ -600,7 +592,7 @@ public class IceUdpTransportManager
 
         /*
         if (Channel.INITIATOR_PROPERTY.equals(ev.getPropertyName())
-                && (iceAgent != null))
+                && iceAgent != null)
         {
             Channel channel = (Channel) ev.getSource();
 
@@ -636,7 +628,8 @@ public class IceUdpTransportManager
                 rtpConnector = null;
             }
 
-            //DatagramSocket[] datagramSockets = getStreamConnectorSockets();
+//            DatagramSocket[] datagramSockets = getStreamConnectorSockets();
+
             if (iceStream != null)
             {
                 iceStream.removePairStateChangeListener(
@@ -650,7 +643,8 @@ public class IceUdpTransportManager
             }
 
             /*
-             * It seems that the ICE agent takes care of closing these
+             * It seems that the ICE agent takes care of closing these.
+             *
             if (datagramSockets != null)
             {
                 if (datagramSockets[0] != null)
@@ -746,17 +740,14 @@ public class IceUdpTransportManager
             }
             catch (IOException ioe)
             {
-                logd(
-                        "Failed to close sockets when closing a channel:"
-                            + ioe);
+                logd("Failed to close sockets when closing a channel:" + ioe);
             }
 
-            EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+            EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
             if (eventAdmin != null)
             {
                 eventAdmin.sendEvent(
-                    EventFactory.transportChannelRemoved(channel));
+                        EventFactory.transportChannelRemoved(channel));
             }
 
             channel.transportClosed();
@@ -785,8 +776,9 @@ public class IceUdpTransportManager
             throws IOException
     {
         NetworkAddressManagerService nams
-                = ServiceUtils.getService(
-                getBundleContext(), NetworkAddressManagerService.class);
+            = ServiceUtils.getService(
+                    getBundleContext(),
+                    NetworkAddressManagerService.class);
         Agent iceAgent = nams.createIceAgent();
 
         //add videobridge specific harvesters such as a mapping and an Amazon
@@ -795,16 +787,15 @@ public class IceUdpTransportManager
         iceAgent.setControlling(isControlling);
         iceAgent.setPerformConsentFreshness(true);
 
-        PortTracker portTracker
-                = JitsiTransportManager.getPortTracker(null);
+        PortTracker portTracker = JitsiTransportManager.getPortTracker(null);
         int portBase = portTracker.getPort();
 
         IceMediaStream iceStream
-                = nams.createIceStream(
-                numComponents,
-                portBase,
-                iceStreamName,
-                iceAgent);
+            = nams.createIceStream(
+                    numComponents,
+                    portBase,
+                    iceStreamName,
+                    iceAgent);
 
         // Attempt to minimize subsequent bind retries.
         try
@@ -844,14 +835,14 @@ public class IceUdpTransportManager
                 List<LocalCandidate> candidates
                         = component.getLocalCandidates();
 
-                if ((candidates != null) && !candidates.isEmpty())
+                if (candidates != null && !candidates.isEmpty())
                 {
                     for (LocalCandidate candidate : candidates)
                     {
                         if (candidate.getTransport() == Transport.TCP
                               && tcpHostHarvesterMappedPort != -1
-                              && (candidate.getTransportAddress().getPort()
-                                   != tcpHostHarvesterMappedPort))
+                              && candidate.getTransportAddress().getPort()
+                                   != tcpHostHarvesterMappedPort)
                         {
                             // In case we use a mapped port with the TCP
                             // harvester, do not advertise the candidates with
@@ -898,8 +889,7 @@ public class IceUdpTransportManager
         // Advertise 'tcp' candidates for which SSL is enabled as 'ssltcp'
         // (although internally their transport protocol remains "tcp")
         Transport transport = candidate.getTransport();
-        if (transport == Transport.TCP
-                && candidate.isSSL())
+        if (transport == Transport.TCP && candidate.isSSL())
         {
             transport = Transport.SSLTCP;
         }
@@ -997,7 +987,7 @@ public class IceUdpTransportManager
 
         IceProcessingState state = iceAgent.getState();
         if (IceProcessingState.COMPLETED.equals(state)
-            || IceProcessingState.TERMINATED.equals(state))
+                || IceProcessingState.TERMINATED.equals(state))
         {
             // Adding candidates to a completed Agent is unnecessary and has
             // been observed to cause problems.
@@ -1031,10 +1021,10 @@ public class IceUdpTransportManager
             iceStream.setRemotePassword(password);
 
         List<CandidatePacketExtension> candidates
-                = transport.getChildExtensionsOfType(
-                CandidatePacketExtension.class);
+            = transport.getChildExtensionsOfType(
+                    CandidatePacketExtension.class);
 
-        if (iceAgentStateIsRunning && (candidates.size() == 0))
+        if (iceAgentStateIsRunning && candidates.isEmpty())
             return;
 
         // Sort the remote candidates (host < reflexive < relayed) in order
@@ -1730,14 +1720,14 @@ public class IceUdpTransportManager
                 return;
             staticHarvestersInitialized = true;
 
-            ConfigurationService cfg =
-                    conference.getVideobridge().getConfigurationService();
+            ConfigurationService cfg
+                = conference.getVideobridge().getConfigurationService();
 
             int singlePort = -1;
             if ((singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT, -1)) != -1)
             {
                 singlePortHarvesters
-                        = SinglePortUdpHarvester.createHarvesters(singlePort);
+                    = SinglePortUdpHarvester.createHarvesters(singlePort);
                 if (singlePortHarvesters.isEmpty())
                 {
                     singlePortHarvesters = null;
@@ -1833,9 +1823,9 @@ public class IceUdpTransportManager
                 if (AwsCandidateHarvester.smellsLikeAnEC2())
                 {
                     TransportAddress localAddress
-                            = AwsCandidateHarvester.getFace();
+                        = AwsCandidateHarvester.getFace();
                     TransportAddress publicAddress
-                            = AwsCandidateHarvester.getMask();
+                        = AwsCandidateHarvester.getMask();
 
                     if (localAddress != null && publicAddress != null)
                     {
@@ -1863,9 +1853,7 @@ public class IceUdpTransportManager
             eventAdmin.sendEvent(EventFactory.transportConnected(this));
 
         for (Channel channel : getChannels())
-        {
             channel.transportConnected();
-        }
     }
 
     /**
@@ -1904,7 +1892,7 @@ public class IceUdpTransportManager
 
                         IceProcessingState state = iceAgent.getState();
                         if (IceProcessingState.COMPLETED.equals(state)
-                            || IceProcessingState.TERMINATED.equals(state))
+                                || IceProcessingState.TERMINATED.equals(state))
                         {
                             startDtls();
                             onIceConnected();
@@ -2096,129 +2084,5 @@ public class IceUdpTransportManager
     public boolean isConnected()
     {
         return iceConnected;
-    }
-
-    /**
-     * Extends
-     * <tt>net.java.sip.communicator.service.protocol.media.TransportManager</tt>
-     * in order to get access to certain protected static methods and thus avoid
-     * duplicating their implementations here.
-     *
-     * @author Lyubomir Marinov
-     */
-    private static class JitsiTransportManager
-        extends
-            net.java.sip.communicator.service.protocol.media.TransportManager
-                <MediaAwareCallPeer<?,?,?>>
-    {
-        public static PortTracker getPortTracker(MediaType mediaType)
-        {
-            return
-                net.java.sip.communicator.service.protocol.media.TransportManager
-                    .getPortTracker(mediaType);
-        }
-
-        public static void initializePortNumbers()
-        {
-            net.java.sip.communicator.service.protocol.media.TransportManager
-                .initializePortNumbers();
-        }
-
-        private JitsiTransportManager(MediaAwareCallPeer<?,?,?> callPeer)
-        {
-            super(callPeer);
-        }
-
-        @Override
-        public long getHarvestingTime(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public String getICECandidateExtendedType(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public InetSocketAddress getICELocalHostAddress(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public InetSocketAddress getICELocalReflexiveAddress(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public InetSocketAddress getICELocalRelayedAddress(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public InetSocketAddress getICERemoteHostAddress(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public InetSocketAddress getICERemoteReflexiveAddress(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public InetSocketAddress getICERemoteRelayedAddress(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public String getICEState()
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        protected InetAddress getIntendedDestination(
-                MediaAwareCallPeer<?,?,?> arg0)
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public int getNbHarvesting()
-        {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public int getNbHarvesting(String arg0)
-        {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public long getTotalHarvestingTime()
-        {
-            // TODO Auto-generated method stub
-            return 0;
-        }
     }
 }
