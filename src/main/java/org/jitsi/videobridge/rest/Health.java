@@ -164,7 +164,15 @@ public class Health
      */
     private static boolean checkXmppConnection(Videobridge videobridge)
     {
-        for(ComponentImpl component : videobridge.getComponents())
+        // If XMPP API was requested, but there isn't any XMPP component
+        // registered we shall return false(no valid XMPP connection)
+        Collection<ComponentImpl> components = videobridge.getComponents();
+        if (videobridge.isXmppApiEnabled() && components.size() == 0)
+        {
+            return false;
+        }
+
+        for(ComponentImpl component : components)
         {
             if(!component.isConnectionAlive())
                 return false;

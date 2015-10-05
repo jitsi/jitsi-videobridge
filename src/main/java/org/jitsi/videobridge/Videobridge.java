@@ -1099,6 +1099,19 @@ public class Videobridge
     }
 
     /**
+     * Returns <tt>true</tt> if XMPP API has been enabled or <tt>false</tt>
+     * otherwise.
+     */
+    public boolean isXmppApiEnabled()
+    {
+        ConfigurationService config
+            = ServiceUtils.getService(
+                getBundleContext(), ConfigurationService.class);
+
+        return config.getBoolean(Videobridge.XMPP_API_PNAME, false);
+    }
+
+    /**
      * Triggers the shutdown given that we're in graceful shutdown mode and
      * there are no conferences currently in progress.
      */
