@@ -19,7 +19,6 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.rewriting.*;
 import org.jitsi.videobridge.rtcp.*;
 
 import java.util.*;
@@ -100,12 +99,6 @@ public class RtpChannelTransformEngine
     private RetransmissionRequester retransmissionRequester;
 
     /**
-     * The transformer which handles SSRC rewriting.
-     */
-    private org.jitsi.videobridge.rewriting.SsrcRewritingEngine
-        ssrcRewritingEngine;
-
-    /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
@@ -172,9 +165,6 @@ public class RtpChannelTransformEngine
             VideoChannel videoChannel = (VideoChannel) channel;
             rembNotifier = new REMBNotifier(videoChannel);
             transformerList.add(rembNotifier);
-            ssrcRewritingEngine = new org.jitsi.videobridge.rewriting
-                .SsrcRewritingEngine(videoChannel);
-            transformerList.add(ssrcRewritingEngine);
         }
 
         return
@@ -212,17 +202,6 @@ public class RtpChannelTransformEngine
     }
 
     /**
-     * Enables SSRC re-writing.
-     *
-     * @param enabled whether to enable or disable.
-     */
-    public void enableSsrcRewriting(boolean enabled)
-    {
-        if (ssrcRewritingEngine != null)
-            ssrcRewritingEngine.setEnabled(enabled);
-    }
-
-    /**
      * Checks whether retransmission requests are enabled for the
      * <tt>RtpChannel</tt>.
      * @return <tt>true</tt> if retransmission requests are enabled for the
@@ -231,17 +210,5 @@ public class RtpChannelTransformEngine
     public boolean retransmissionsRequestsEnabled()
     {
         return retransmissionRequester != null;
-    }
-
-    /**
-     * Gets a boolean value indicating whether SSRC re-writing is enabled or
-     * not.
-     *
-     * @return a boolean value indicating whether SSRC re-writing is enabled or
-     * not.
-     */
-    public boolean isSsrcRewritingEnabled()
-    {
-        return ssrcRewritingEngine.isEnabled();
     }
 }
