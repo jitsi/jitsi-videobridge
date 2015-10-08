@@ -15,12 +15,13 @@
  */
 package org.jitsi.videobridge;
 
-import java.util.*;
-
 import net.java.sip.communicator.service.protocol.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.cmd.*;
+import org.jitsi.impl.configuration.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -50,13 +51,13 @@ public class Main
      * The name of the command-line argument which specifies the application
      * programming interfaces (APIs) to enable for Jitsi Videobridge.
      */
-    private static final String APIS_ARG_NAME = "--apis=";
+    private static final String APIS_ARG_NAME = "--apis";
 
     /**
      * The name of the command-line argument which specifies the XMPP domain
      * to use.
      */
-    private static final String DOMAIN_ARG_NAME = "--domain=";
+    private static final String DOMAIN_ARG_NAME = "--domain";
 
     /**
      * The <tt>Object</tt> which synchronizes the access to the state related to
@@ -69,7 +70,7 @@ public class Main
      * The name of the command-line argument which specifies the IP address or
      * the name of the XMPP host to connect to.
      */
-    private static final String HOST_ARG_NAME = "--host=";
+    private static final String HOST_ARG_NAME = "--host";
 
     /**
      * The default value of the {@link #HOST_ARG_NAME} command-line argument if
@@ -87,33 +88,33 @@ public class Main
      * <tt>System</tt> property
      * {@link DefaultStreamConnector#MAX_PORT_NUMBER_PROPERTY_NAME}.
      */
-    private static final String MAX_PORT_ARG_NAME = "--max-port=";
+    private static final String MAX_PORT_ARG_NAME = "--max-port";
 
     /**
      * The default value of the {@link #MAX_PORT_ARG_NAME} command-line argument
      * if it is not explicitly provided.
      */
-    private static final String MAX_PORT_ARG_VALUE = "20000";
+    private static final int MAX_PORT_ARG_VALUE = 20000;
 
     /**
      * The name of the command-line argument which specifies the value of the
      * <tt>System</tt> property
      * {@link DefaultStreamConnector#MIN_PORT_NUMBER_PROPERTY_NAME}.
      */
-    private static final String MIN_PORT_ARG_NAME = "--min-port=";
+    private static final String MIN_PORT_ARG_NAME = "--min-port";
 
     /**
      * The default value of the {@link #MIN_PORT_ARG_NAME} command-line argument
      * if
      * it is not explicitly provided.
      */
-    private static final String MIN_PORT_ARG_VALUE = "10000";
+    private static final int MIN_PORT_ARG_VALUE = 10000;
 
     /**
      * The name of the command-line argument which specifies the port of the
      * XMPP host to connect on.
      */
-    private static final String PORT_ARG_NAME = "--port=";
+    private static final String PORT_ARG_NAME = "--port";
 
     /**
      * The default value of the {@link #PORT_ARG_NAME} command-line argument if
@@ -126,13 +127,13 @@ public class Main
      * the sub-domain of the Jabber component implemented by this application
      * with which it is to authenticate to the XMPP server to connect to.
      */
-    private static final String SECRET_ARG_NAME = "--secret=";
+    private static final String SECRET_ARG_NAME = "--secret";
 
     /**
      * The name of the command-line argument which specifies sub-domain name for
      * the videobridge component.
      */
-    private static final String SUBDOMAIN_ARG_NAME = "--subdomain=";
+    private static final String SUBDOMAIN_ARG_NAME = "--subdomain";
 
     /**
      * Represents the <tt>main</tt> entry point of the Jitsi Videobridge
@@ -145,65 +146,37 @@ public class Main
     public static void main(String[] args)
         throws Exception
     {
+        CmdLine cmdLine = new CmdLine();
+
+        cmdLine.parse(args);
+
         // Parse the command-line arguments.
-        List<String> apis = new LinkedList<String>();
-        String host = null;
-        String maxPort = MAX_PORT_ARG_VALUE;
-        String minPort = MIN_PORT_ARG_VALUE;
-        int port = PORT_ARG_VALUE;
-        String secret = "";
-        String domain = null;
-        String subdomain = ComponentImpl.SUBDOMAIN;
+        int maxPort
+            = cmdLine.getIntOptionValue(
+                    MAX_PORT_ARG_NAME, MAX_PORT_ARG_VALUE);
 
-        for (String arg : args)
-        {
-            if (arg.startsWith(APIS_ARG_NAME))
-            {
-                for (String api
-                        : arg.substring(APIS_ARG_NAME.length()).split(","))
-                {
-                    if ((api != null)
-                            && (api.length() != 0)
-                            && !apis.contains(api))
-                    {
-                        apis.add(api);
-                    }
-                }
-            }
-            else if (arg.startsWith(DOMAIN_ARG_NAME))
-            {
-                domain = arg.substring(DOMAIN_ARG_NAME.length());
-            }
-            else if (arg.startsWith(HOST_ARG_NAME))
-            {
-                host = arg.substring(HOST_ARG_NAME.length());
-            }
-            else if (arg.startsWith(MAX_PORT_ARG_NAME))
-            {
-                maxPort = arg.substring(MAX_PORT_ARG_NAME.length());
-            }
-            else if (arg.startsWith(MIN_PORT_ARG_NAME))
-            {
-                minPort = arg.substring(MIN_PORT_ARG_NAME.length());
-            }
-            else if (arg.startsWith(PORT_ARG_NAME))
-            {
-                port = Integer.parseInt(arg.substring(PORT_ARG_NAME.length()));
-            }
-            else if (arg.startsWith(SECRET_ARG_NAME))
-            {
-                secret = arg.substring(SECRET_ARG_NAME.length());
-            }
-            else if (arg.startsWith(SUBDOMAIN_ARG_NAME))
-            {
-                subdomain = arg.substring(SUBDOMAIN_ARG_NAME.length());
-            }
-        }
+        int minPort
+            = cmdLine.getIntOptionValue(
+                    MIN_PORT_ARG_NAME, MIN_PORT_ARG_VALUE);
 
-        if (apis.isEmpty())
-            apis.add(Videobridge.XMPP_API);
-        if (host == null)
-            host = (domain == null) ? HOST_ARG_VALUE : domain;
+        int port = cmdLine.getIntOptionValue(PORT_ARG_NAME, PORT_ARG_VALUE);
+
+        String secret = cmdLine.getOptionValue(SECRET_ARG_NAME, "");
+
+        String domain = cmdLine.getOptionValue(DOMAIN_ARG_NAME, null);
+
+        String subdomain
+            = cmdLine.getOptionValue(
+                    SUBDOMAIN_ARG_NAME, ComponentImpl.SUBDOMAIN);
+
+        String apis
+            = cmdLine.getOptionValue(
+                    APIS_ARG_NAME, Videobridge.XMPP_API);
+
+        String host
+            = cmdLine.getOptionValue(
+                    HOST_ARG_NAME,
+                    domain == null ? HOST_ARG_VALUE : domain);
 
         /*
          * Before initializing the application programming interfaces (APIs) of
@@ -216,30 +189,30 @@ public class Main
         System.setProperty(
                 Videobridge.XMPP_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.XMPP_API)));
-        if ((maxPort != null) && (maxPort.length() != 0))
-        {
-            // Jingle Raw UDP transport
-            System.setProperty(
-                    DefaultStreamConnector.MAX_PORT_NUMBER_PROPERTY_NAME,
-                    maxPort);
-            // Jingle ICE-UDP transport
-            System.setProperty(
-                    OperationSetBasicTelephony
-                        .MAX_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                    maxPort);
-        }
-        if ((minPort != null) && (minPort.length() != 0))
-        {
-            // Jingle Raw UDP transport
-            System.setProperty(
-                    DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
-                    minPort);
-            // Jingle ICE-UDP transport
-            System.setProperty(
-                    OperationSetBasicTelephony
-                        .MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                    minPort);
-        }
+
+        // Min port and Max port properties
+
+        // Jingle Raw UDP transport
+        System.setProperty(
+                DefaultStreamConnector.MAX_PORT_NUMBER_PROPERTY_NAME,
+                String.valueOf(maxPort));
+        // Jingle ICE-UDP transport
+        System.setProperty(
+                OperationSetBasicTelephony.MAX_MEDIA_PORT_NUMBER_PROPERTY_NAME,
+                String.valueOf(maxPort));
+        // Jingle Raw UDP transport
+        System.setProperty(
+                DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
+                String.valueOf(minPort));
+        // Jingle ICE-UDP transport
+        System.setProperty(
+                OperationSetBasicTelephony.MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
+                String.valueOf(minPort));
+
+        // Make sure that passwords are not printed by ConfigurationService
+        // on startup by setting password regExpr and cmd line args list
+        ConfigurationServiceImpl.PASSWORD_SYS_PROPS = "pass";
+        ConfigurationServiceImpl.PASSWORD_CMD_LINE_ARGS = "secret";
 
         /*
          * Start OSGi. It will invoke the application programming interfaces
@@ -256,6 +229,12 @@ public class Main
                         // TODO Auto-generated method stub
                         registerShutdownService(
                             bundleContext, Thread.currentThread(), this);
+
+                        // Log config properties(hide password values)
+                        ServiceUtils.getService(
+                            bundleContext,
+                            ConfigurationService.class)
+                                .logConfigurationProperties("(pass)|(secret)");
                     }
 
                     @Override

@@ -113,14 +113,6 @@ public class OSGi
                  * push.
                  */
                 "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
-            },
-            {
-                /*
-                 * Started last and in its own start level because its purpose
-                 * is to let the application know that everything OSGi-related
-                 * has been started.
-                 */
-                "org/jitsi/videobridge/osgi/OSGiBundleActivator"
             }
         };
 
