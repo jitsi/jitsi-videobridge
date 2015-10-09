@@ -432,6 +432,44 @@ public class Endpoint
             onPinnedEndpointChangedEvent(src, jsonObject);
         else if ("ClientHello".equals(colibriClass))
             onClientHello(src, jsonObject);
+        else if ("EndpointMessage".equals(colibriClass))
+            onClientEndpointMessage(src, jsonObject);
+    }
+
+    private void onClientEndpointMessage(
+            WebRtcDataStream src,
+            JSONObject jsonObject)
+    {
+        String to = (String)jsonObject.get("to");
+        String msgPayload = ((JSONObject)jsonObject.get("msgPayload")).toString();
+        Conference conf = getConference();
+        if ("broadcast".equals(to))
+        {
+            // "broadcast" from an endpoint's perspective means
+            // 'send to everyone else in the conference except for me'
+            List<Endpoint> endpointSubset = new ArrayList<Endpoint>();
+            for (Endpoint endpoint : conf.getEndpoints()) {
+                if (!endpoint.getID().equalsIgnoreCase(getID()))
+                {
+                    endpointSubset.add(endpoint);
+                }
+            }
+            conf.sendMessageOnDataChannels(msgPayload, endpointSubset);
+        }
+        else
+        {
+            Endpoint ep = conf.getEndpoint(to);
+            if (ep != null)
+            {
+                List<Endpoint> endpointSubset = new ArrayList<Endpoint>();
+                endpointSubset.add(conf.getEndpoint(to));
+                conf.sendMessageOnDataChannels(msgPayload, endpointSubset);
+            }
+            else
+            {
+                logger.warn("Unable to find endpoint " + to + " to send EndpointMessage");
+            }
+        }
     }
 
     /**
