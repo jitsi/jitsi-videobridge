@@ -87,6 +87,92 @@ public abstract class Statistics
     }
 
     /**
+     * Gets the value of a specific piece of statistic as a {@code float} value.
+     *
+     * @param stat the name of the piece of statistics to return
+     * @return the value of {@code stat} as a {@code float} value
+     */
+    public float getStatAsFloat(String stat)
+    {
+        Object o = getStat(stat);
+        float f;
+        float defaultValue = 0.0f;
+
+        if (o == null)
+        {
+            f = defaultValue;
+        }
+        else if (o instanceof Number)
+        {
+            f = ((Number) o).floatValue();
+        }
+        else
+        {
+            String s = o.toString();
+
+            if (s == null || s.length() == 0)
+            {
+                f = defaultValue;
+            }
+            else
+            {
+                try
+                {
+                    f = Float.parseFloat(s);
+                }
+                catch (NumberFormatException nfe)
+                {
+                    f = defaultValue;
+                }
+            }
+        }
+        return f;
+    }
+
+    /**
+     * Gets the value of a specific piece of statistic as an {@code int} value.
+     *
+     * @param stat the name of the piece of statistics to return
+     * @return the value of {@code stat} as an {@code int} value
+     */
+    public int getStatAsInt(String stat)
+    {
+        Object o = getStat(stat);
+        int i;
+        int defaultValue = 0;
+
+        if (o == null)
+        {
+            i = defaultValue;
+        }
+        else if (o instanceof Number)
+        {
+            i = ((Number) o).intValue();
+        }
+        else
+        {
+            String s = o.toString();
+
+            if (s == null || s.length() == 0)
+            {
+                i = defaultValue;
+            }
+            else
+            {
+                try
+                {
+                    i = Integer.parseInt(s);
+                }
+                catch (NumberFormatException nfe)
+                {
+                    i = defaultValue;
+                }
+            }
+        }
+        return i;
+    }
+
+    /**
      * Returns the map with the names of the statistics and their values.
      *
      * @return the map with the names of the statistics and their values.

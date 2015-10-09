@@ -16,8 +16,9 @@
 package org.jitsi.videobridge.stats;
 
 import net.java.sip.communicator.util.*;
-
+import net.java.sip.communicator.util.Logger;
 import org.jitsi.service.configuration.*;
+import org.jitsi.util.*;
 import org.osgi.framework.*;
 
 /**
@@ -82,6 +83,11 @@ public class StatsManagerBundleActivator
         = "org.jitsi.videobridge.PUBSUB_SERVICE";
 
     /**
+     * The value for callstats.io statistics transport.
+     */
+    private static final String STAT_TRANSPORT_CALLSTATS_IO = "callstats.io";
+
+    /**
      * The value for COLIBRI statistics transport.
      */
     private static final String STAT_TRANSPORT_COLIBRI = "colibri";
@@ -125,12 +131,83 @@ public class StatsManagerBundleActivator
     private ServiceRegistration<StatsManager> serviceRegistration;
 
     /**
+     * Populates a specific {@code StatsManager} with newly-initialized
+     * {@code StatTransport}s as selected through {@code ConfigurationService}
+     * and/or {@code System} properties.
+     *
+     * @param statsMgr the {@code StatsManager} to populate with new
+     * {@code StatsTransport}s
+     * @param cfg the {@code ConfigurationService} to read property values from
+     * or {@code null} to read the property values from {@code System}
+     * @param interval the interval/period in milliseconds at which the
+     * newly-initialized and added {@code StatsTransport}s to repeatedly send
+     * {@code Statistics}
+     */
+    private void addTransports(
+            StatsManager statsMgr,
+            ConfigurationService cfg,
+            long interval)
+    {
+        String transports
+            = ConfigUtils.getString(
+                    cfg,
+                    STATISTICS_TRANSPORT_PNAME,
+                    DEFAULT_STAT_TRANSPORT);
+
+        if (transports == null || transports.length() == 0)
+        {
+            // It is OK to have the statistics enabled without explicitly
+            // choosing transports because the statistics may be exposed through
+            // the REST API as well.
+            return;
+        }
+
+        // Allow multiple transports.
+        for (String transport : transports.split(","))
+        {
+            if (STAT_TRANSPORT_CALLSTATS_IO.equalsIgnoreCase(transport))
+            {
+                statsMgr.addTransport(new CallStatsIOTransport(), interval);
+            }
+            else if (STAT_TRANSPORT_COLIBRI.equalsIgnoreCase(transport))
+            {
+                statsMgr.addTransport(new ColibriStatsTransport(), interval);
+            }
+            else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(transport))
+            {
+                String service = cfg.getString(PUBSUB_SERVICE_PNAME);
+                String node = cfg.getString(PUBSUB_NODE_PNAME);
+
+                if(service != null && node != null)
+                {
+                    statsMgr.addTransport(
+                            new PubSubStatsTransport(service, node),
+                            interval);
+                }
+                else
+                {
+                    logger.error(
+                            "No configuration properties for PubSub service"
+                                + " and/or node found.");
+                }
+            }
+            else if (transport != null && transport.length() != 0)
+            {
+                logger.error(
+                        "Unknown/unsupported statistics transport: "
+                            + transport);
+            }
+        }
+    }
+
+    /**
      * Starts the <tt>StatsManager</tt> OSGi bundle in a <tt>BundleContext</tt>.
      * Initializes and starts a new <tt>StatsManager</tt> instance and registers
      * it as an OSGi service in the specified <tt>bundleContext</tt>.
      *
      * @param bundleContext the <tt>BundleContext</tt> in which the
      * <tt>StatsManager</tt> OSGi bundle is to start
+     * @throws Exception
      */
     @Override
     public void start(BundleContext bundleContext)
@@ -180,42 +257,14 @@ public class StatsManagerBundleActivator
         throws Exception
     {
         StatsManager statsMgr = new StatsManager();
+        int interval
+            = ConfigUtils.getInt(
+                    cfg,
+                    STATISTICS_INTERVAL_PNAME,
+                    DEFAULT_STAT_INTERVAL);
 
         // Add StatsTransports to StatsManager.
-        String transport = DEFAULT_STAT_TRANSPORT;
-        int interval = DEFAULT_STAT_INTERVAL;
-
-        if (cfg != null)
-        {
-            transport = cfg.getString(STATISTICS_TRANSPORT_PNAME, transport);
-            interval = cfg.getInt(STATISTICS_INTERVAL_PNAME, interval);
-        }
-        if (STAT_TRANSPORT_COLIBRI.equals(transport))
-        {
-            statsMgr.addTransport(new ColibriStatsTransport(), interval);
-        }
-        else if (STAT_TRANSPORT_PUBSUB.equals(transport))
-        {
-            String service = cfg.getString(PUBSUB_SERVICE_PNAME);
-            String node = cfg.getString(PUBSUB_NODE_PNAME);
-
-            if(service != null && node != null)
-            {
-                statsMgr.addTransport(
-                        new PubSubStatsTransport(service, node),
-                        interval);
-            }
-            else
-            {
-                logger.error(
-                        "No configuration options for PubSub service and/or"
-                            + " node found.");
-            }
-        }
-        else if (transport != null)
-        {
-            logger.error("Unknown statistics transport: " + transport);
-        }
+        addTransports(statsMgr, cfg, interval);
 
         // Add Statistics to StatsManager.
         statsMgr.addStatistics(new VideobridgeStatistics(), interval);
@@ -246,8 +295,9 @@ public class StatsManagerBundleActivator
      * <tt>BundleContext</tt> if such an instance has been registered and
      * started.
      *
-     * @param the <tt>BundleContext</tt> in which the <tt>StatsManager</tt> OSGi
-     * bundle is to stop
+     * @param bundleContext the <tt>BundleContext</tt> in which the
+     * <tt>StatsManager</tt> OSGi bundle is to stop
+     * @throws Exception
      */
     @Override
     public void stop(BundleContext bundleContext)

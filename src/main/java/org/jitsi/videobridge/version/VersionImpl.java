@@ -17,6 +17,7 @@ package org.jitsi.videobridge.version;
 
 import net.java.sip.communicator.util.*;
 import org.jitsi.service.resources.*;
+import org.jitsi.service.version.Version;
 import org.jitsi.service.version.util.*;
 
 /**
@@ -207,7 +208,16 @@ public class VersionImpl
             finally
             {
                 if (applicationName == null)
-                    applicationName = DEFAULT_APPLICATION_NAME;
+                {
+                    // Allow the application name to be overridden by the user.
+                    applicationName
+                        = System.getProperty(Version.PNAME_APPLICATION_NAME);
+                    if (applicationName == null
+                            || applicationName.length() == 0)
+                    {
+                        applicationName = DEFAULT_APPLICATION_NAME;
+                    }
+                }
             }
         }
         return applicationName;

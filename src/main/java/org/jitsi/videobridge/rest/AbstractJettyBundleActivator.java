@@ -244,25 +244,8 @@ public abstract class AbstractJettyBundleActivator
      */
     protected boolean getCfgBoolean(String property, boolean defaultValue)
     {
-        property = prefixProperty(property);
-
-        ConfigurationService cfg = this.cfg;
-        boolean b;
-
-        if (cfg == null)
-        {
-            String s = System.getProperty(property);
-
-            b
-                = (s == null || s.length() == 0)
-                    ? defaultValue
-                    : Boolean.parseBoolean(s);
-        }
-        else
-        {
-            b = cfg.getBoolean(property, defaultValue);
-        }
-        return b;
+        return
+            ConfigUtils.getBoolean(cfg, prefixProperty(property), defaultValue);
     }
 
     /**
@@ -278,36 +261,7 @@ public abstract class AbstractJettyBundleActivator
      */
     protected int getCfgInt(String property, int defaultValue)
     {
-        property = prefixProperty(property);
-
-        ConfigurationService cfg = this.cfg;
-        int i;
-
-        if (cfg == null)
-        {
-            String s = System.getProperty(property);
-
-            if (s == null || s.length() == 0)
-            {
-                i = defaultValue;
-            }
-            else
-            {
-                try
-                {
-                    i = Integer.parseInt(s);
-                }
-                catch (NumberFormatException nfe)
-                {
-                    i = defaultValue;
-                }
-            }
-        }
-        else
-        {
-            i = cfg.getInt(property, defaultValue);
-        }
-        return i;
+        return ConfigUtils.getInt(cfg, prefixProperty(property), defaultValue);
     }
 
     /**
@@ -323,16 +277,8 @@ public abstract class AbstractJettyBundleActivator
      */
     protected String getCfgString(String property, String defaultValue)
     {
-        property = prefixProperty(property);
-
-        ConfigurationService cfg = this.cfg;
-        String s;
-
-        if (cfg == null)
-            s = System.getProperty(property, defaultValue);
-        else
-            s = cfg.getString(property, defaultValue);
-        return s;
+        return
+            ConfigUtils.getString(cfg, prefixProperty(property), defaultValue);
     }
 
     /**
