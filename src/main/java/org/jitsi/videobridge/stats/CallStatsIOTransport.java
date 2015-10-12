@@ -247,27 +247,28 @@ public class CallStatsIOTransport
             BridgeStatusInfoBuilder bsib,
             Statistics s)
     {
-        bsib.audioChannelsCount(
+        bsib.audioFabricCount(
                 s.getStatAsInt(VideobridgeStatistics.AUDIOCHANNELS));
         // TODO avgIntervalJitter
         // TODO avgIntervalRtt
         bsib.conferenceCount(s.getStatAsInt(VideobridgeStatistics.CONFERENCES));
         bsib.cpuUsage(s.getStatAsFloat(VideobridgeStatistics.CPU_USAGE));
-        bsib.downloadBitRate(
+        bsib.intervalDownloadBitRate(
                 s.getStatAsInt(VideobridgeStatistics.BITRATE_DOWNLOAD));
-        // TODO intervalLoss
+        // TODO intervalReceivedBytes
+        bsib.intervalRtpFractionLoss(
+                s.getStatAsFloat(VideobridgeStatistics.RTP_LOSS));
+        // TODO intervalSentBytes
+        bsib.intervalUploadBitRate(
+                s.getStatAsInt(VideobridgeStatistics.BITRATE_UPLOAD));
+        // TODO measurementInterval
         bsib.memoryUsage(s.getStatAsFloat(VideobridgeStatistics.USED_MEMORY));
         bsib.participantsCount(
                 s.getStatAsInt(VideobridgeStatistics.NUMBEROFPARTICIPANTS));
-        // TODO receivedBytes
-        bsib.rtpLoss(s.getStatAsFloat(VideobridgeStatistics.RTP_LOSS));
-        // TODO sentBytes
         bsib.threadCount(s.getStatAsInt(VideobridgeStatistics.NUMBEROFTHREADS));
         // TODO totalLoss
         bsib.totalMemory(s.getStatAsFloat(VideobridgeStatistics.TOTAL_MEMORY));
-        bsib.uploadBitRate(
-                s.getStatAsInt(VideobridgeStatistics.BITRATE_UPLOAD));
-        bsib.videoChannelsCount(
+        bsib.videoFabricCount(
                 s.getStatAsInt(VideobridgeStatistics.VIDEOCHANNELS));
     }
 
@@ -286,7 +287,8 @@ public class CallStatsIOTransport
             populateBridgeStatusInfoBuilderWithStatistics(
                     bridgeStatusInfoBuilder,
                     statistics);
-            callStats.sendCallStatsBridgeEvent(bridgeStatusInfoBuilder.build());
+            callStats.sendCallStatsBridgeStatusUpdate(
+                    bridgeStatusInfoBuilder.build());
         }
     }
 }
