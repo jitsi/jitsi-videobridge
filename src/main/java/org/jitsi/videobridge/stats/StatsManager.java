@@ -341,15 +341,22 @@ public class StatsManager
 
                     for (TimeInfo<StatsTransport> timeInfo : transports)
                     {
-                        timeInfo.lastInvocationTime
-                            = System.currentTimeMillis();
+                        long now = System.currentTimeMillis();
+                        long measurementInterval
+                            = now - timeInfo.lastInvocationTime;
+
+                        timeInfo.lastInvocationTime = now;
 
                         StatsTransport transport = timeInfo.o;
 
                         try
                         {
                             for (Statistics s : ss)
-                                transport.publishStatistics(s);
+                            {
+                                transport.publishStatistics(
+                                        s,
+                                        measurementInterval);
+                            }
                         }
                         catch (Throwable t)
                         {

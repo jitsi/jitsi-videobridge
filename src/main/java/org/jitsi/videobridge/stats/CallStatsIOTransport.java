@@ -242,10 +242,13 @@ public class CallStatsIOTransport
      * {@code statistics} is to be written
      * @param s the {@code Statistics} from which data is to be read and written
      * into {@code bridgeStatusInfoBuilder}
+     * @param measurementInterval the interval of time in milliseconds covered
+     * by the measurements carried by the specified {@code statistics}
      */
     private void populateBridgeStatusInfoBuilderWithStatistics(
             BridgeStatusInfoBuilder bsib,
-            Statistics s)
+            Statistics s,
+            long measurementInterval)
     {
         bsib.audioFabricCount(
                 s.getStatAsInt(VideobridgeStatistics.AUDIOCHANNELS));
@@ -261,7 +264,7 @@ public class CallStatsIOTransport
         // TODO intervalSentBytes
         bsib.intervalUploadBitRate(
                 s.getStatAsInt(VideobridgeStatistics.BITRATE_UPLOAD));
-        // TODO measurementInterval
+        bsib.measurementInterval((int) measurementInterval);
         bsib.memoryUsage(s.getStatAsFloat(VideobridgeStatistics.USED_MEMORY));
         bsib.participantsCount(
                 s.getStatAsInt(VideobridgeStatistics.NUMBEROFPARTICIPANTS));
@@ -274,9 +277,23 @@ public class CallStatsIOTransport
 
     /**
      * {@inheritDoc}
+     *
+     * {@code CallStatsIOTransport} overrides
+     * {@link #publishStatistics(Statistics, long)} so it does not have to do
+     * anything in its implementation of {@link #publishStatistics(Statistics)}.
      */
     @Override
     public void publishStatistics(Statistics statistics)
+    {
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void publishStatistics(
+            Statistics statistics,
+            long measurementInterval)
     {
         // Queuing is not implemented by CallStats at the time of this writing.
         if (callStats.isInitialized())
@@ -286,7 +303,8 @@ public class CallStatsIOTransport
 
             populateBridgeStatusInfoBuilderWithStatistics(
                     bridgeStatusInfoBuilder,
-                    statistics);
+                    statistics,
+                    measurementInterval);
             callStats.sendCallStatsBridgeStatusUpdate(
                     bridgeStatusInfoBuilder.build());
         }
