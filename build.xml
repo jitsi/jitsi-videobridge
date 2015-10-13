@@ -336,7 +336,7 @@
         3. in openfire build folder (openfire_src_X.X.X/build) execute:
             $ ant plugin -Dplugin=jitsiVideobridge
     -->
-    <target name="dist.openfire" depends="jar">
+    <target name="dist.openfire" depends="copy-runtime-dependencies-from-maven,jar">
         <copy todir="${dist}/openfire/jitsiVideobridge">
             <fileset dir="openfire"/>
         </copy>
