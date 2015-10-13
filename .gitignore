@@ -1,7 +1,7 @@
 *.class
 /classes/
 /dist/
-/jitsi-videobridge.jar
+*.jar
 /junit-reports/
 *.swp
 /target/

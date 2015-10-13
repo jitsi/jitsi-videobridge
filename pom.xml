@@ -115,6 +115,16 @@
       <artifactId>jitsi-fileaccess</artifactId>
     </dependency>
     <dependency>
+      <!--
+        The libjitsi Maven artifact optionally depends on the
+        jitsi-lgpl-dependencies Maven artifact and the jitsi-videobridge project
+        may require the latter at runtime (e.g. for legacy purposes such as
+        audio mixing).
+      -->
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jitsi-lgpl-dependencies</artifactId>
+    </dependency>
+    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-netaddr</artifactId>
     </dependency>
@@ -165,6 +175,12 @@
     <dependency>
       <groupId>xpp3</groupId>
       <artifactId>xpp3</artifactId>
+    </dependency>
+    <!-- runtime -->
+    <dependency>
+      <groupId>rusv</groupId>
+      <artifactId>agafua-syslog</artifactId>
+      <scope>runtime</scope>
     </dependency>
     <!-- test -->
     <dependency>
