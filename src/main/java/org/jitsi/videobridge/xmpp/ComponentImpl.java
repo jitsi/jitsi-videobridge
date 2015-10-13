@@ -21,6 +21,7 @@ import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.meet.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
@@ -108,9 +109,23 @@ public class ComponentImpl
 
     /**
      * Initializes a new <tt>ComponentImpl</tt> instance.
+     * @param host the hostname or IP address to which this component will be
+     *             connected.
+     * @param port the port of XMPP server to which this component will connect.
+     * @param domain the name of main XMPP domain on which this component will
+     *               be served.
+     * @param subDomain the name of subdomain on which this component will be
+     *                  available.
+     * @param secret the password used by the component to authenticate with
+     *               XMPP server.
      */
-    public ComponentImpl()
+    public ComponentImpl(String          host,
+                         int             port,
+                         String        domain,
+                         String     subDomain,
+                         String        secret)
     {
+        super(host, port, domain, subDomain, secret);
     }
 
     /**

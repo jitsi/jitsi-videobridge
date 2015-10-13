@@ -18,13 +18,11 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
-import org.jitsi.videobridge.osgi.*;
 import org.jivesoftware.smack.packet.*;
 import org.junit.*;
 import org.junit.Test;
 import org.junit.runner.*;
 import org.junit.runners.*;
-import org.osgi.framework.*;
 
 import static org.junit.Assert.*;
 
@@ -39,19 +37,11 @@ public class FocusControlTest
 {
 
     /**
-     * OSGi bundle context instance.
-     */
-    private static BundleContext bc;
-
-    /**
      * Tested <tt>Videobridge</tt> instance.
      */
     private static Videobridge bridge;
 
-    /**
-     * Bundle activator used to start OSGi(stored for shutdown purpose)
-     */
-    private static BundleActivator activator;
+    private static OSGiHandler osgiHandler = new OSGiHandler();
 
     /**
      * Initializes OSGi and the videobridge.
@@ -60,38 +50,9 @@ public class FocusControlTest
     public static void setUp()
         throws InterruptedException
     {
-        activator =
-            new BundleActivator()
-            {
-                @Override
-                public void start(BundleContext bundleContext)
-                    throws Exception
-                {
-                    FocusControlTest.bc = bundleContext;
-                    synchronized (FocusControlTest.class)
-                    {
-                        FocusControlTest.class.notify();
-                    }
-                }
+        osgiHandler.start();
 
-                @Override
-                public void stop(BundleContext bundleContext)
-                    throws Exception
-                {
-
-                }
-            };
-
-        OSGi.start(activator);
-
-        synchronized (FocusControlTest.class)
-        {
-            FocusControlTest.class.wait(5000);
-            if(bc == null)
-                throw new RuntimeException("Failed to start OSGI");
-        }
-
-        bridge = ServiceUtils.getService(bc, Videobridge.class);
+        bridge = osgiHandler.getService(Videobridge.class);
     }
 
     /**
@@ -99,8 +60,9 @@ public class FocusControlTest
      */
     @AfterClass
     public static void tearDown()
+        throws InterruptedException
     {
-        OSGi.stop(activator);
+        osgiHandler.stop();
     }
 
     private static void expectResult(ColibriConferenceIQ confIq)

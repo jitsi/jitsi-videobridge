@@ -311,6 +311,10 @@ public class StatsManagerBundleActivator
 
         StatsManager statsMgr = null;
 
+        // It means that either stats are not enabled or we have failed to start
+        if (serviceRegistration == null)
+            return;
+
         try
         {
             statsMgr

@@ -16,18 +16,12 @@
 package org.jitsi.videobridge;
 
 import net.java.sip.communicator.service.protocol.*;
-import net.java.sip.communicator.service.shutdown.*;
-import net.java.sip.communicator.util.*;
 
 import org.jitsi.cmd.*;
-import org.jitsi.impl.configuration.*;
-import org.jitsi.service.configuration.*;
+import org.jitsi.meet.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.osgi.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jivesoftware.whack.*;
-import org.osgi.framework.*;
-import org.xmpp.component.*;
 
 /**
  * Provides the <tt>main</tt> entry point of the Jitsi Videobridge application
@@ -60,13 +54,6 @@ public class Main
     private static final String DOMAIN_ARG_NAME = "--domain";
 
     /**
-     * The <tt>Object</tt> which synchronizes the access to the state related to
-     * the decision whether the application is to exit. At the time of this
-     * writing, the application just runs until it is killed.
-     */
-    private static final Object exitSyncRoot = new Object();
-
-    /**
      * The name of the command-line argument which specifies the IP address or
      * the name of the XMPP host to connect to.
      */
@@ -77,11 +64,6 @@ public class Main
      * it is not explicitly provided.
      */
     private static final String HOST_ARG_VALUE = "localhost";
-
-    /**
-     * The logger instance used.
-     */
-    private static Logger logger = Logger.getLogger(Main.class);
 
     /**
      * The name of the command-line argument which specifies the value of the
@@ -209,137 +191,25 @@ public class Main
                 OperationSetBasicTelephony.MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
                 String.valueOf(minPort));
 
-        // Make sure that passwords are not printed by ConfigurationService
-        // on startup by setting password regExpr and cmd line args list
-        ConfigurationServiceImpl.PASSWORD_SYS_PROPS = "pass";
-        ConfigurationServiceImpl.PASSWORD_CMD_LINE_ARGS = "secret";
-
-        /*
-         * Start OSGi. It will invoke the application programming interfaces
-         * (APIs) of Jitsi Videobridge. Each of them will keep the application
-         * alive. 
-         */
-        OSGi.start(
-                new BundleActivator()
-                {
-                    @Override
-                    public void start(BundleContext bundleContext)
-                        throws Exception
-                    {
-                        // TODO Auto-generated method stub
-                        registerShutdownService(
-                            bundleContext, Thread.currentThread(), this);
-
-                        // Log config properties(hide password values)
-                        ServiceUtils.getService(
-                            bundleContext,
-                            ConfigurationService.class)
-                                .logConfigurationProperties("(pass)|(secret)");
-                    }
-
-                    @Override
-                    public void stop(BundleContext bundleContext)
-                        throws Exception
-                    {
-                        // TODO Auto-generated method stub
-                    }
-                });
+        ComponentMain main = new ComponentMain();
+        JvbBundleConfig osgiBundles = new JvbBundleConfig();
 
         // Start Jitsi Videobridge as an external Jabber component.
         if (apis.contains(Videobridge.XMPP_API))
         {
-            ExternalComponentManager componentManager
-                = new ExternalComponentManager(host, port);
+            ComponentImpl component
+                = new ComponentImpl(
+                        host,
+                        port,
+                        domain,
+                        subdomain,
+                        secret);
 
-            componentManager.setMultipleAllowed(subdomain, true);
-            componentManager.setSecretKey(subdomain, secret);
-            if (domain != null)
-                componentManager.setServerName(domain);
-    
-            Component component = new ComponentImpl();
-
-            try
-            {
-                componentManager.addComponent(subdomain, component);
-            }
-            catch (ComponentException e)
-            {
-                logger.error(
-                    e.getMessage() + ", host:" + host + ", port:" + port, e);
-                throw e;
-            }
-
-            /*
-             * The application has nothing more to do but wait for ComponentImpl
-             * to perform its duties. Presently, there is no specific shutdown
-             * procedure and the application just gets killed.
-             */
-            do
-            {
-                synchronized (exitSyncRoot)
-                {
-                    try
-                    {
-                        exitSyncRoot.wait();
-                    }
-                    catch (InterruptedException ie)
-                    {
-                        break;
-                    }
-                }
-            }
-            while (true);
-
-            try
-            {
-                componentManager.removeComponent(subdomain);
-            }
-            catch (ComponentException e)
-            {
-                logger.error(e, e);
-            }
+            main.runMainProgramLoop(component, osgiBundles);
         }
-    }
-
-    /**
-     * Registers {@link ShutdownService} implementation for videobridge
-     * application.
-     * @param bundleContext the OSGi context
-     * @param mainThread main application thread
-     * @param mainBundleActivator main bundle activator that will be used for
-     *                            stopping the OSGi.
-     */
-    private static void registerShutdownService(
-            BundleContext bundleContext,
-            final Thread mainThread,
-            final BundleActivator mainBundleActivator)
-    {
-        bundleContext.registerService(
-            ShutdownService.class,
-            new ShutdownService()
-            {
-                private boolean shutdownStarted = false;
-
-                @Override
-                public void beginShutdown()
-                {
-                    if (shutdownStarted)
-                        return;
-
-                    shutdownStarted = true;
-
-                    new Thread(new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            mainThread.interrupt();
-
-                            OSGi.stop(mainBundleActivator);
-                        }
-                    }, "JVB-Shutdown-Thread").start();
-                }
-            }, null
-        );
+        else
+        {
+            main.runMainProgramLoop(osgiBundles);
+        }
     }
 }

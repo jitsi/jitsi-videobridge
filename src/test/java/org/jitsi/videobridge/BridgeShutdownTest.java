@@ -17,18 +17,14 @@ package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.service.shutdown.*;
-import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.neomedia.*;
-import org.jitsi.videobridge.osgi.*;
 
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.util.*;
 
 import org.junit.*;
-
-import org.osgi.framework.*;
 
 import org.xmlpull.v1.*;
 
@@ -44,14 +40,11 @@ import static org.junit.Assert.*;
 public class BridgeShutdownTest
 {
     /**
-     * OSGi bundle context instance.
-     */
-    private static BundleContext bc;
-
-    /**
      * Tested <tt>Videobridge</tt> instance.
      */
     private static Videobridge bridge;
+
+    private static OSGiHandler osgiHandler = new OSGiHandler();
 
     /**
      * Initializes OSGi and the videobridge.
@@ -65,37 +58,18 @@ public class BridgeShutdownTest
             Videobridge.SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME,
             "focus.*");
 
-        OSGi.start(
-            new BundleActivator()
-            {
-                @Override
-                public void start(BundleContext bundleContext)
-                    throws Exception
-                {
-                    BridgeShutdownTest.bc = bundleContext;
-                    synchronized (BridgeShutdownTest.class)
-                    {
-                        BridgeShutdownTest.class.notify();
-                    }
-                }
+        osgiHandler.start();
 
-                @Override
-                public void stop(BundleContext bundleContext)
-                    throws Exception
-                {
+        bridge = osgiHandler.getService(Videobridge.class);
+    }
 
-                }
-            }
-        );
+    @AfterClass
+    public static void tearDown()
+        throws InterruptedException
+    {
+        osgiHandler.stop();
 
-        synchronized (FocusControlTest.class)
-        {
-            FocusControlTest.class.wait(5000);
-            if(bc == null)
-                throw new RuntimeException("Failed to start OSGI");
-        }
-
-        bridge = ServiceUtils.getService(bc, Videobridge.class);
+        bridge = null;
     }
 
     /**
