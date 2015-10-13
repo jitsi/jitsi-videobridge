@@ -149,6 +149,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi-protocol</artifactId>
+      <!--
+        Temporarily pin the libjitsi-protocol Maven artifact to a specific
+        version because the latest one at the time of this writing causes
+        compile-time errors.
+      -->
+      <version>1.0-20150901.181427-1</version>
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
