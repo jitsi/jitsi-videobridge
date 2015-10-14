@@ -23,6 +23,7 @@ import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.util.resource.*;
+import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
 import org.osgi.framework.*;
 
