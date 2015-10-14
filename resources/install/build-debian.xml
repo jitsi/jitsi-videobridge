@@ -81,7 +81,7 @@
 
     <!-- Builds the debian package. -->
     <target name="make-deb"
-            depends="make,dpkg-build-warning,deb-bump-version">
+            depends="copy-runtime-dependencies-from-maven,make,dpkg-build-warning,deb-bump-version">
 
         <copy todir="${debian.dir}" includeEmptyDirs="Yes">
             <fileset dir="resources/install/debian">
