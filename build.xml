@@ -382,6 +382,9 @@
     </target>
 
     <target name="copy-runtime-dependencies-from-maven">
+        <delete failonerror="false" includeemptydirs="true">
+            <fileset file="lib/*.jar" />
+        </delete>
         <copy todir="lib">
             <fileset refid="runtime.fileset" />
             <mapper type="flatten" />
