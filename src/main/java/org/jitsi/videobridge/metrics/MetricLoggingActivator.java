@@ -17,9 +17,9 @@ package org.jitsi.videobridge.metrics;
 
 import java.util.*;
 
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.videobridge.eventadmin.*;
-import org.jitsi.videobridge.osgi.*;
+import org.jitsi.eventadmin.*;
 import org.osgi.framework.*;
 
 /**

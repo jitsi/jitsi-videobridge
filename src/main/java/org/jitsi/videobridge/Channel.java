@@ -20,7 +20,7 @@ import java.io.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.eventadmin.*;
+import org.jitsi.eventadmin.*;
 import org.osgi.framework.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;

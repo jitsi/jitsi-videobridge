@@ -22,10 +22,10 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.meet.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.version.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.osgi.*;
 import org.jitsi.xmpp.component.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;

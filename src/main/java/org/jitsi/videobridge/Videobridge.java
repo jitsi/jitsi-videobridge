@@ -27,12 +27,12 @@ import net.java.sip.communicator.util.*;
 
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.eventadmin.*;
-import org.jitsi.videobridge.osgi.*;
+import org.jitsi.eventadmin.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.xmpp.*;

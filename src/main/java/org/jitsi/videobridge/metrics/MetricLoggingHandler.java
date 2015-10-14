@@ -20,7 +20,7 @@ import java.util.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.eventadmin.*;
+import org.jitsi.eventadmin.*;
 
 /**
  * A generic service interface to push metrics to cloud based collector servers.

@@ -46,7 +46,7 @@ public class JvbBundleConfig
     private static final String[][] BUNDLES
         = {
         {
-            "org/jitsi/videobridge/eventadmin/Activator"
+            "org/jitsi/eventadmin/Activator"
         },
         {
             "org/jitsi/service/libjitsi/LibJitsiActivator"

@@ -18,7 +18,7 @@ package org.jitsi.videobridge;
 import java.util.*;
 
 import org.ice4j.ice.*;
-import org.jitsi.videobridge.eventadmin.*;
+import org.jitsi.eventadmin.*;
 
 /**
  * A utility class with static methods which initialize <tt>Event</tt> instances

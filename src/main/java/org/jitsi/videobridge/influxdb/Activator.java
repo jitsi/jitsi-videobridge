@@ -15,10 +15,10 @@
  */
 package org.jitsi.videobridge.influxdb;
 
+import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.eventadmin.*;
-import org.jitsi.videobridge.osgi.*;
+import org.jitsi.eventadmin.*;
 import org.osgi.framework.*;
 
 import java.lang.reflect.*;
