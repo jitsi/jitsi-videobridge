@@ -32,6 +32,15 @@
         <artifactId>httpcore</artifactId>
         <version>4.4</version>
       </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk15on</artifactId>
+        <!--
+        jitsi-videobridge requires a patched version of ours from the branch
+        r1rv51-patched of gpolitis/bc-java (at GitHub).
+        -->
+        <version>1.51-jitsi-1</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -99,10 +108,10 @@
     </dependency>
     <dependency>
       <!--
-        The libjitsi Maven artifact optionally depends on the
-        jitsi-lgpl-dependencies Maven artifact and the jitsi-videobridge project
-        may require the latter at runtime (e.g. for legacy purposes such as
-        audio mixing).
+      The libjitsi Maven artifact optionally depends on the
+      jitsi-lgpl-dependencies Maven artifact and the jitsi-videobridge project
+      may require the latter at runtime (e.g. for legacy purposes such as audio
+      mixing).
       -->
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-lgpl-dependencies</artifactId>
