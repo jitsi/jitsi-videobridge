@@ -15,109 +15,24 @@
  */
 package org.jitsi.videobridge.influxdb;
 
-import org.jitsi.osgi.*;
+import org.jitsi.influxdb.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
-import org.jitsi.eventadmin.*;
-import org.osgi.framework.*;
-
-import java.lang.reflect.*;
-import java.util.*;
 
 /**
- * Implements a <tt>BundleActivator</tt> for <tt>LoggingService</tt>.
+ * InfluxDb bundle activator for JVB implementation.
  *
- * @author Boris Grozev
- * @author George Politis
+ * @author Pawel Domas
  */
 public class Activator
-        implements BundleActivator
+    extends AbstractActivator
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>Activator</tt> class
-     * and its instances to print debug information.
-     */
-    private static final Logger logger = Logger.getLogger(LoggingHandler.class);
-
-    /**
-     * The name of the property which configured the class to use as
-     * <tt>LoggingHandler</tt> implementation.
-     */
-    public static final String LOGGING_HANDLER_CLASS_PNAME
-        = "org.jitsi.videobridge.influxdb.LOGGING_HANDLER";
-
-    private ServiceRegistration<EventHandler> serviceRegistration;
-
-    /**
-     * Initializes a <tt>LoggingService</tt>.
-     *
-     * @param bundleContext the <tt>bundleContext</tt> to use.
-     * @throws Exception
+     * Creates and returns an implementation of <tt>LoggingHandler</tt>.
      */
     @Override
-    public void start(BundleContext bundleContext)
+    protected AbstractLoggingHandler createHandler(ConfigurationService cfg)
         throws Exception
     {
-        ConfigurationService cfg =
-            ServiceUtils2.getService(bundleContext, ConfigurationService.class);
-
-        if (cfg.getBoolean(LoggingHandler.ENABLED_PNAME, false))
-        {
-            LoggingHandler handler;
-
-            try
-            {
-                handler = getHandlerInstance(cfg);
-            }
-            catch (Exception e)
-            {
-                logger.warn("Failed to instantiate LoggingHandler: " + e);
-                return;
-            }
-
-            Dictionary props = new Hashtable();
-            String[] topics = { "org/jitsi/*" };
-
-            props.put(EventConstants.EVENT_TOPIC, topics);
-
-            serviceRegistration
-                = bundleContext.registerService(
-                        EventHandler.class,
-                        handler,
-                        props);
-        }
-    }
-
-    /**
-     * Creates and returns an implementation of <tt>LoggingHandler</tt>. The
-     * exact class to instantiate is taken from <tt>cfg</tt>.
-     */
-    private LoggingHandler getHandlerInstance(ConfigurationService cfg)
-        throws Exception
-    {
-        String className
-            = cfg.getString(
-                    LOGGING_HANDLER_CLASS_PNAME,
-                    LoggingHandler.class.getCanonicalName());
-        Class<?> clazz = Class.forName(className);
-        Constructor<?> constructor
-            = clazz.getConstructor(ConfigurationService.class);
-
-        return (LoggingHandler) constructor.newInstance(cfg);
-    }
-
-    /**
-     * Removes the previously initialized <tt>LoggingService</tt> instance from
-     * <tt>bundleContext</tt>.
-     *
-     * @param bundleContext the <tt>bundleContext</tt> to use.
-     * @throws Exception
-     */
-    @Override
-    public void stop(BundleContext bundleContext)
-        throws Exception
-    {
-        if (serviceRegistration != null)
-            serviceRegistration.unregister();
+        return new LoggingHandler(cfg);
     }
 }

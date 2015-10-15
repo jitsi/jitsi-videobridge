@@ -19,6 +19,7 @@ import java.util.*;
 
 import org.ice4j.ice.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.influxdb.*;
 
 /**
  * A utility class with static methods which initialize <tt>Event</tt> instances
@@ -28,6 +29,7 @@ import org.jitsi.eventadmin.*;
  * @author George Politis
  */
 public class EventFactory
+    extends AbstractEventFactory
 {
     /**
      * The name of the topic of a "channel created" event.
@@ -70,14 +72,6 @@ public class EventFactory
      */
     public static final String ENDPOINT_CREATED_TOPIC
         = "org/jitsi/videobridge/Endpoint/CREATED";
-
-    /**
-     * The name of the topic of a "endpoint display name changed" event.
-     */
-    public static final String ENDPOINT_DISPLAY_NAME_CHANGED_TOPIC
-        = "org/jitsi/videobridge/Endpoint/NAME_CHANGED";
-
-    public static final String EVENT_SOURCE = "event.source";
 
     /**
      * The name of the topic of a "stream started" event.
@@ -215,14 +209,6 @@ public class EventFactory
             new Event(
                     ENDPOINT_DISPLAY_NAME_CHANGED_TOPIC,
                     makeProperties(endpoint));
-    }
-
-    protected static Dictionary makeProperties(Object source)
-    {
-        Dictionary properties = new Hashtable(1);
-
-        properties.put(EVENT_SOURCE, source);
-        return properties;
     }
 
     public static Event streamStarted(RtpChannel rtpChannel)
