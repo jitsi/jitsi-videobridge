@@ -180,19 +180,8 @@ public class SimulcastMessagesMapper
         b.append("{\"primarySSRC\":");
         b.append(Long.toString(simulcastLayer.getPrimarySSRC()));
 
-        List<Long> associatedSSRCs = simulcastLayer.getAssociatedSSRCs();
-        if (associatedSSRCs != null && associatedSSRCs.size() != 0)
-        {
-            b.append(",\"asociatedSSRCs\":[");
-            for (int i = 0; i < associatedSSRCs.size(); i++)
-            {
-                b.append(Long.toString(associatedSSRCs.get(i)));
-
-                if (i != associatedSSRCs.size() - 1)
-                    b.append(",");
-            }
-            b.append("]");
-        }
+        b.append(",\"rtxSSRC\":");
+        b.append(Long.toString(simulcastLayer.getRTXSSRC()));
         b.append("}");
     }
 }

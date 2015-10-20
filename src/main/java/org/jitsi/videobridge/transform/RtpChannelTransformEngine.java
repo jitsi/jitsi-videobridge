@@ -20,6 +20,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rtcp.*;
+import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
 
@@ -99,6 +100,12 @@ public class RtpChannelTransformEngine
     private RetransmissionRequester retransmissionRequester;
 
     /**
+     * The <tt>SimulcastEngine</tt> instance, if any, used by the
+     * <tt>RtpChannel</tt>.
+     */
+    private SimulcastEngine simulcastEngine;
+
+    /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
@@ -133,6 +140,13 @@ public class RtpChannelTransformEngine
                 logger.debug("Enabling retransmission requests for channel"
                                      + channel.getID());
             }
+        }
+
+        if (channel instanceof VideoChannel)
+        {
+            VideoChannel videoChannel = (VideoChannel) channel;
+            simulcastEngine = new SimulcastEngine(videoChannel);
+            transformerList.add(simulcastEngine);
         }
 
         redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
@@ -210,5 +224,17 @@ public class RtpChannelTransformEngine
     public boolean retransmissionsRequestsEnabled()
     {
         return retransmissionRequester != null;
+    }
+
+    /**
+     * Gets the <tt>SimulcastEngine</tt> instance, if any, used by the
+     * <tt>RtpChannel</tt>.
+     *
+     * @return the <tt>SimulcastEngine</tt> instance used by the
+     * <tt>RtpChannel</tt>, or null.
+     */
+    public SimulcastEngine getSimulcastEngine()
+    {
+        return simulcastEngine;
     }
 }

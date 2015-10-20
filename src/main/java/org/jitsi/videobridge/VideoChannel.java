@@ -36,6 +36,7 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
+import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
@@ -68,10 +69,23 @@ public class VideoChannel
         = "org.jitsi.videobridge.rtcp.strategy";
 
     /**
+     * The name of the property which specifies the simulcast mode of a
+     * <tt>VideoChannel</tt>.
+     */
+    public static final String SIMULCAST_MODE_PNAME
+        = "org.jitsi.videobridge.VideoChannel.simulcastMode";
+
+    /**
      * The <tt>Logger</tt> used by the <tt>VideoChannel</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
+
+    /**
+     * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>. The default
+     * mode is rewriting.
+     */
+    private SimulcastMode simulcastMode = SimulcastMode.REWRITING;
 
     /**
      * Updates the values of the property <tt>inLastN</tt> of all
@@ -156,11 +170,6 @@ public class VideoChannel
     private final ReadWriteLock lastNSyncRoot = new ReentrantReadWriteLock();
 
     /**
-     * The <tt>SimulcastManager</tt> of this video <tt>Channel</tt>.
-     */
-    private final SimulcastManager simulcastManager;
-
-    /**
      * Initializes a new <tt>VideoChannel</tt> instance which is to have a
      * specific ID. The initialization is to be considered requested by a
      * specific <tt>Content</tt>.
@@ -189,7 +198,6 @@ public class VideoChannel
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
 
-        simulcastManager = new SimulcastManager(this);
         setTransformEngine(new RtpChannelTransformEngine(this));
     }
 
@@ -268,13 +276,6 @@ public class VideoChannel
             // same content, with adaptive-last-n turned on), in order to not
             // waste resources.
             incomingBitrate.update(p.getLength(), System.currentTimeMillis());
-
-            // With native simulcast we don't have a notification when a stream
-            // has started/stopped. The simulcast manager implements a timeout
-            // for the high quality stream and it needs to be notified when
-            // the channel has accepted a datagram packet for the timeout to
-            // function correctly.
-            simulcastManager.acceptedDataInputStreamDatagramPacket(p);
         }
 
         return accept;
@@ -323,6 +324,10 @@ public class VideoChannel
         super.describe(iq);
 
         iq.setLastN(lastN);
+
+        SimulcastMode simulcastMode = getSimulcastMode();
+
+        iq.setSimulcastMode(simulcastMode);
     }
 
     /**
@@ -509,16 +514,6 @@ public class VideoChannel
                     throw new UnsupportedOperationException();
                 }
             };
-    }
-
-    /**
-     * Gets the <tt>SimulcastManager</tt> of this <tt>VideoChannel</tt>.
-     *
-     * @return the simulcast manager of this <tt>VideoChannel</tt>.
-     */
-    public SimulcastManager getSimulcastManager()
-    {
-        return simulcastManager;
     }
 
     /**
@@ -739,6 +734,15 @@ public class VideoChannel
                 getContent().askForKeyframes(channelEndpointsToAskForKeyframes);
             }
         }
+        else if (Content.CHANNEL_MODIFIED_PROPERTY_NAME.equals(propertyName))
+        {
+            // Another channel in this content has been modified (
+            // added/removed/modified source group, same with payload types, etc)
+            // This has implications in SSRC rewriting, we need to update our
+            // engine.
+            VideoChannel videoChannel = (VideoChannel) ev.getNewValue();
+            updateTranslatedVideoChannel(videoChannel);
+        }
     }
 
     /**
@@ -768,16 +772,8 @@ public class VideoChannel
 
         if (data && (source != null))
         {
+            // XXX(gp) we could potentially move this into a TransformEngine.
             accept = isInLastN(source);
-            if (accept && source instanceof VideoChannel)
-            {
-                VideoChannel videoChannel = (VideoChannel) source;
-
-                accept
-                    = simulcastManager.accept(
-                            buffer, offset, length,
-                            videoChannel);
-            }
         }
 
         return accept;
@@ -1428,5 +1424,235 @@ public class VideoChannel
     private RawPacket createPacketForRetransmission(RawPacket pkt)
     {
         return pkt;
+    }
+
+    public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
+    {
+        // TODO(gp) how does one clear source groups? We need a special value
+        // that indicates we need to clear the groups.
+        if (sourceGroups == null || sourceGroups.size() == 0)
+        {
+            return;
+        }
+
+        // Setup simulcast layers from source groups.
+        SimulcastEngine simulcastEngine
+            = getTransformEngine().getSimulcastEngine();
+
+        Map<Long, SimulcastLayer> ssrc2layer
+            = new HashMap<Long, SimulcastLayer>();
+
+        // Build the simulcast layers.
+        SortedSet<SimulcastLayer> layers = new TreeSet<SimulcastLayer>();
+        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+        {
+            List<SourcePacketExtension> sources = sourceGroup.getSources();
+
+            if (sources == null || sources.size() == 0
+                || !"SIM".equals(sourceGroup.getSemantics()))
+            {
+                continue;
+            }
+
+            // sources are in low to high order.
+            int order = 0;
+            for (SourcePacketExtension source : sources)
+            {
+                Long primarySSRC = source.getSSRC();
+                SimulcastLayer simulcastLayer = new SimulcastLayer(
+                    simulcastEngine.getSimulcastReceiver(),
+                    primarySSRC,
+                    order++);
+
+                // Add the layer to the reverse map.
+                ssrc2layer.put(primarySSRC, simulcastLayer);
+
+                // Add the layer to the sorted set.
+                layers.add(simulcastLayer);
+            }
+
+        }
+
+        // Append associated SSRCs from other source groups.
+        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+        {
+            List<SourcePacketExtension> sources = sourceGroup.getSources();
+
+            if (sources == null || sources.size() == 0
+                || !"FID".equals(sourceGroup.getSemantics()))
+            {
+                continue;
+            }
+
+            SimulcastLayer simulcastLayer = null;
+
+            // Find all the associated ssrcs for this group.
+            for (SourcePacketExtension source : sources)
+            {
+                Long ssrc = source.getSSRC();
+                if (ssrc2layer.containsKey(ssrc))
+                {
+                    simulcastLayer = ssrc2layer.get(ssrc);
+                    simulcastLayer.setRTXSSRC(ssrc);
+                    break;
+                }
+            }
+
+            if (simulcastLayer.getRTXSSRC() != -1)
+            {
+                break;
+            }
+        }
+
+        simulcastEngine.getSimulcastReceiver().setSimulcastLayers(layers);
+    }
+
+    /**
+     * Sets the <tt>SimulcastMode</tt> of this <tt>VideoChannel</tt>.
+     *
+     * @param newSimulcastMode the new <tt>SimulcastMode</tt> of this
+     * <tt>VideoChannel</tt>.
+     */
+    public void setSimulcastMode(SimulcastMode newSimulcastMode)
+    {
+        SimulcastMode oldSimulcastMode = getSimulcastMode();
+        if (oldSimulcastMode == newSimulcastMode)
+        {
+            return;
+        }
+
+        simulcastMode = newSimulcastMode;
+
+        // Since the simulcast mode has changed, we need to update the
+        // translated video channels, in particular the SSRC rewriting engine
+        // needs to be updated/configured to actually perform SSRC rewriting of
+        // the rewritten streams.
+
+        this.updateTranslatedVideoChannels();
+
+        firePropertyChange(
+            SIMULCAST_MODE_PNAME, oldSimulcastMode, newSimulcastMode);
+    }
+
+    /**
+     * Gets the <tt>SimulcastMode</tt> of this <tt>VideoChannel</tt>.
+     *
+     * @return The <tt>SimulcastMode</tt> of this <tt>VideoChannel</tt>.
+     */
+    public SimulcastMode getSimulcastMode()
+    {
+        return simulcastMode;
+    }
+
+    /**
+     *
+     */
+    public void updateTranslatedVideoChannels()
+    {
+        for (Channel peerVideoChannel : getContent().getChannels())
+        {
+            if (!(peerVideoChannel instanceof VideoChannel))
+            {
+                // Er, what? I Taw a Putty Tat.
+                continue;
+            }
+
+            updateTranslatedVideoChannel((VideoChannel) peerVideoChannel);
+        }
+    }
+
+    /**
+     *
+     * @param peerVideoChannel
+     */
+    public void updateTranslatedVideoChannel(VideoChannel peerVideoChannel)
+    {
+        if (peerVideoChannel == this)
+        {
+            return;
+        }
+
+        // In the same spirit as MediaStreamImpl.update() but for signaling.
+        if (simulcastMode != SimulcastMode.REWRITING)
+        {
+            logger.debug("Simulcast mode is not rewriting.");
+        }
+
+        // Update the SSRC rewriting engine from the peer simulcast engine
+        // state.
+        SimulcastEngine sim
+            = peerVideoChannel.getTransformEngine().getSimulcastEngine();
+
+        if (sim == null)
+        {
+            return;
+        }
+
+        SortedSet<SimulcastLayer> layers
+            = sim.getSimulcastReceiver().getSimulcastLayers();
+
+        if (layers == null || layers.size() == 0)
+        {
+            return;
+        }
+
+        final Set<Integer> ssrcGroup = new HashSet<Integer>();
+        final Map<Integer, Integer> rtxGroups = new HashMap<Integer, Integer>();
+
+        for (SimulcastLayer layer : layers)
+        {
+            int primarySSRC = (int) layer.getPrimarySSRC();
+            int rtxSSRC = (int) layer.getRTXSSRC();
+
+            ssrcGroup.add(primarySSRC);
+
+            if (rtxSSRC != -1)
+            {
+                rtxGroups.put(rtxSSRC, primarySSRC);
+            }
+        }
+
+        SimulcastLayer baseLayer = layers.first();
+        final Integer ssrcTargetPrimary = (int) baseLayer.getPrimarySSRC();
+        final Integer ssrcTargetRTX = (int) baseLayer.getRTXSSRC();
+
+        // Update the SSRC rewriting engine from the media stream state.
+        final Map<Integer, Byte> ssrc2fec = new HashMap<Integer, Byte>();
+        final Map<Integer, Byte> ssrc2red = new HashMap<Integer, Byte>();
+
+        for (Map.Entry<Byte, MediaFormat> entry :
+            peerVideoChannel.getStream().getDynamicRTPPayloadTypes().entrySet())
+        {
+            Byte pt = entry.getKey();
+            MediaFormat format = entry.getValue();
+            if (Constants.RED.equals(format.getEncoding()))
+            {
+                for (Integer ssrc : ssrcGroup)
+                {
+                    ssrc2red.put(ssrc, pt);
+                }
+
+                for (Integer ssrc : rtxGroups.keySet())
+                {
+                    ssrc2red.put(ssrc, pt);
+                }
+            }
+
+            if (Constants.ULPFEC.equals(entry.getValue().getEncoding()))
+            {
+                for (Integer ssrc : ssrcGroup)
+                {
+                    ssrc2fec.put(ssrc, pt);
+                }
+
+                for (Integer ssrc : rtxGroups.keySet())
+                {
+                    ssrc2fec.put(ssrc, pt);
+                }
+            }
+        }
+
+        getStream().configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
+            ssrc2fec, ssrc2red, rtxGroups, ssrcTargetRTX);
     }
 }

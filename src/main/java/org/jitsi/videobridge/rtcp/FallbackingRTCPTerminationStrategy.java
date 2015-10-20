@@ -121,6 +121,8 @@ public class FallbackingRTCPTerminationStrategy
         }
         else
         {
+            // NOTE that this will currently break the SSRC rewriting because
+            // we don't reverse rewrite RTCP.
             this.fallbackRTCPTerminationStrategy
                 = new SilentBridgeRTCPTerminationStrategy();
         }

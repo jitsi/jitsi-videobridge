@@ -149,6 +149,11 @@ public class RtpChannel
      * an even index represents a SSRC and its consecutive element at an odd
      * index specifies the time in milliseconds when the SSRC was last seen (in
      * order to enable timing out SSRCs).
+     *
+     * Note that the <tt>MediaStream</tt> has the concept of "Remote Source IDs"
+     * which is used the same way we use receive SSRCs here in the
+     * <tt>RtpChannel</tt>. So in theory we should be able to get rid of one of
+     * the two. TAG(cat4-remote-ssrc-hurricane).
      */
     long[] receiveSSRCs = NO_RECEIVE_SSRCS;
 
@@ -205,6 +210,16 @@ public class RtpChannel
     RtpChannelTransformEngine transformEngine = null;
 
     /**
+     * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     *
+     * @return The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     */
+    public RtpChannelTransformEngine getTransformEngine()
+    {
+        return this.transformEngine;
+    }
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -252,6 +267,11 @@ public class RtpChannel
              */
              conferenceSpeechActivity.addPropertyChangeListener(
                      propertyChangeListener);
+        }
+
+        if (content != null)
+        {
+            content.addPropertyChangeListener(propertyChangeListener);
         }
 
         touch();
@@ -920,6 +940,12 @@ public class RtpChannel
             stream.addPropertyChangeListener(streamPropertyChangeListener);
             stream.setName(getID());
             stream.setProperty(RtpChannel.class.getName(), this);
+            Endpoint endpoint = getEndpoint();
+            if (endpoint != null)
+            {
+                stream.setProperty(
+                    MediaStream.PNAME_RECEIVER_IDENTIFIER, endpoint.getID());
+            }
             if (transformEngine != null)
                 stream.setExternalTransformer(transformEngine);
 
@@ -1115,6 +1141,13 @@ public class RtpChannel
         {
             newValue.addChannel(this);
             newValue.addPropertyChangeListener(this);
+            stream.setProperty(
+                MediaStream.PNAME_RECEIVER_IDENTIFIER, newValue.getID());
+        }
+        else
+        {
+            stream.setProperty(
+                MediaStream.PNAME_RECEIVER_IDENTIFIER, null);
         }
     }
 
@@ -1698,6 +1731,14 @@ public class RtpChannel
         signaledSSRCs = newSignaledSSRCs;
 
         touch(); // It seems this Channel is still active.
+    }
+
+    /**
+     *
+     * @param sourceGroups
+     */
+    public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
+    {
     }
 
     /**

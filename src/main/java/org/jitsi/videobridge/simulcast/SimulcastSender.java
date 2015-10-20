@@ -16,33 +16,29 @@
 package org.jitsi.videobridge.simulcast;
 
 import java.beans.*;
-import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
-import java.util.concurrent.locks.*;
 
-import net.java.sip.communicator.util.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.simulcast.messages.*;
+import org.jitsi.videobridge.simulcast.sendmodes.*;
 
 /**
+ * The <tt>SimulcastSender</tt> is coupled with a <tt>SimulcastReceiver</tt> and
+ * it decides which packets (based on SSRC) to accept/forward from that
+ * <tt>SimulcastReceiver</tt>. It defines the rules that determine whether LQ or
+ * HQ should be forwarded. It also handles spontaneous drops in simulcast
+ * layers.
+ *
  * @author George Politis
  */
-class SimulcastSender
+public class SimulcastSender
+    extends PropertyChangeNotifier
     implements PropertyChangeListener
 {
-    /**
-     * The <tt>SimulcastSenderOptions</tt> to use when creating a new
-     * <tt>SimulcastSender</tt>.
-     */
-    protected static final SimulcastSenderOptions initOptions;
-
     /**
      * The <tt>Logger</tt> used by the <tt>ReceivingLayers</tt> class and its
      * instances to print debug information.
@@ -51,1352 +47,451 @@ class SimulcastSender
         = Logger.getLogger(SimulcastSender.class);
 
     /**
-     * Helper object that <tt>SimulcastSender</tt> instances use to build
-     * JSON messages.
+     * Defines the simulcast substream to receive, if not specified.
      */
-    private final static SimulcastMessagesMapper mapper
-        = new SimulcastMessagesMapper();
+    public static final int SIMULCAST_LAYER_ORDER_INIT
+            = SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ;
 
     /**
-     * Defines how many packets of the next layer must be seen before switching
-     * to that layer. This value is appropriate for the base layer and needs to
-     * be adjusted for use with upper layers, if one wants to achieve
-     * (approximately) the same timeout for layers of different order.
+     * The <tt>SimulcastSenderManager</tt> that owns this instance.
      */
-    private static int MAX_NEXT_SEEN = 125;
+    private final SimulcastSenderManager simulcastSenderManager;
 
     /**
-     * The name of the property which can be used to control the
-     * <tt>MAX_NEXT_SEEN</tt> constant.
+     * The <tt>SimulcastReceiver</tt> from which this <tt>SimulcastSender</tt>
+     * receives the simulcast.
      */
-    private static final String MAX_NEXT_SEEN_PNAME =
-        SimulcastSender.class.getName() + ".MAX_NEXT_SEEN";
-
-    static
-    {
-        // Static initialization is performed once per class-loader. So, this
-        // method can be considered thread safe for our purposes.
-
-        initOptions = new SimulcastSenderOptions();
-        initOptions.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
-        // options.setUrgent(false);
-        // options.setHardSwitch(false);
-    }
-
-    /**
-     * The <tt>SimulcastManager</tt> of the parent endpoint.
-     */
-    private final SimulcastManager mySM;
-
-    /**
-     * The sync root object for synchronizing access to the receive layers.
-     */
-    private final Object receiveLayersSyncRoot = new Object();
-
-    /**
-     * Holds the number of packets of the next layer have been seen so far.
-     */
-    private int seenNext;
-
-    /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that is
-     * currently being received.
-     */
-    private WeakReference<SimulcastLayer> weakCurrent;
-
-    /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that will be
-     * (possibly) received next.
-     */
-    private WeakReference<SimulcastLayer> weakNext;
-
-    /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that overrides
-     * the layer that is currently being received.
-     */
-    private WeakReference<SimulcastLayer> weakOverride;
-
-    /**
-     * The <tt>SimulcastManager</tt> of the peer endpoint.
-     */
-    private final WeakReference<SimulcastManager> weakPeerSM;
+    private final WeakReference<SimulcastReceiver> weakSimulcastReceiver;
 
     /**
      * The <tt>PropertyChangeListener</tt> implementation employed by this
      * instance to listen to changes in the values of properties of interest to
-     * this instance. For example, listens to <tt>Conference</tt> in order to
-     * notify about changes in the list of <tt>Endpoint</tt>s participating in
-     * the multipoint conference. The implementation keeps a
-     * <tt>WeakReference</tt> to this instance and automatically removes itself
-     * from <tt>PropertyChangeNotifier</tt>s.
+     * this instance.
      */
-    private final PropertyChangeListener weakPropertyChangeListener
+    private final PropertyChangeListener propertyChangeListener
         = new WeakReferencePropertyChangeListener(this);
 
     /**
-     * Whether the values for the constants have been initialized or not.
+     * The current <tt>SimulcastMode</tt> for this <tt>SimulcastSender</tt>. The
+     * default is rewriting.
      */
-    private static boolean configurationInitialized = false;
+    private SendMode sendMode;
 
     /**
+     * The simulcast target order for this <tt>SimulcastSender</tt>.
+     */
+    private int targetOrder;
+
+    /**
+     * Indicates whether this <tt>SimulcastSender</tt> has been initialized or
+     * not.
+     */
+    private boolean initialized = false;
+
+     /**
      * Ctor.
      *
-     * @param mySM
-     * @param peerSM
+     * @param simulcastSenderManager
+     * @param simulcastReceiver
      */
-    public SimulcastSender(SimulcastManager mySM, SimulcastManager peerSM)
+    public SimulcastSender(
+        SimulcastSenderManager simulcastSenderManager,
+        SimulcastReceiver simulcastReceiver)
     {
-        this.weakPeerSM = new WeakReference<SimulcastManager>(peerSM);
-        this.mySM = mySM;
+        this.simulcastSenderManager = simulcastSenderManager;
 
-        this.initializeConfiguration();
-
-        // Listen for property changes.
-        peerSM.addPropertyChangeListener(weakPropertyChangeListener);
-        onPeerLayersChanged(peerSM);
-
-        mySM.getVideoChannel()
-                .addPropertyChangeListener(weakPropertyChangeListener);
-
-        Endpoint self = getSelf();
-        onEndpointChanged(self, null);
-    }
-
-    private void initializeConfiguration()
-    {
-        synchronized (SimulcastSender.class)
-        {
-            if (configurationInitialized)
-            {
-                return;
-            }
-
-            configurationInitialized = true;
-
-            VideoChannel channel = this.mySM.getVideoChannel();
-            ConfigurationService cfg
-                = ServiceUtils.getService(
-                channel.getBundleContext(),
-                ConfigurationService.class);
-
-            if (cfg != null)
-            {
-                MAX_NEXT_SEEN = cfg.getInt(MAX_NEXT_SEEN_PNAME, MAX_NEXT_SEEN);
-            }
-        }
+        // We don't own the receiver, keep a weak reference so that it can be
+        // garbage collected.
+        this.weakSimulcastReceiver
+            = new WeakReference<SimulcastReceiver>(simulcastReceiver);
     }
 
     /**
+     * "Getter" on steroids that gets the <tt>Endpoint</tt> associated to this
+     * instance.
      *
-     * @param ssrc
-     * @return
+     * @return the <tt>Endpoint</tt> associated to this instance.
      */
-    public boolean accept(long ssrc)
-    {
-        SimulcastLayer current = getCurrent();
-        boolean accept = false;
-
-        if (current != null)
-            accept = current.accept(ssrc);
-
-        if (!accept)
-        {
-            SimulcastLayer next = getNext();
-
-            if (next != null)
-            {
-                accept = next.accept(ssrc);
-                if (accept)
-                    maybeSwitchToNext();
-            }
-        }
-
-        SimulcastLayer override = getOverride();
-
-        if (override != null)
-            accept = override.accept(ssrc);
-
-        if (!accept)
-        {
-            // For SRTP replay protection the webrtc.org implementation uses a
-            // replay database with extended range, using a rollover counter
-            // (ROC) which counts the number of times the RTP sequence number
-            // carried in the RTP packet has rolled over.
-            //
-            // In this way, the ROC extends the 16-bit RTP sequence number to a
-            // 48-bit "SRTP packet index". The ROC is not be explicitly
-            // exchanged between the SRTP endpoints because in all practical
-            // situations a rollover of the RTP sequence number can be detected
-            // unless 2^15 consecutive RTP packets are lost.
-            //
-            // For every 0x800 (2048) dropped packets (at most), send 8 packets
-            // so that the receiving endpoint can update its ROC.
-            //
-            // TODO(gp) We may want to move this code somewhere more centralized
-            // to take into account last-n etc.
-
-            Integer key = Integer.valueOf((int) ssrc);
-            CyclicCounter counter = dropped.getOrCreate(key, 0x800);
-            accept = counter.cyclicallyIncrementAndGet() < 8;
-        }
-
-        return accept;
-    }
-
-
-    static class CyclicCounter {
-
-        private final int maxVal;
-        private final AtomicInteger ai = new AtomicInteger(0);
-
-        public CyclicCounter(int maxVal) {
-            this.maxVal = maxVal;
-        }
-
-        public int cyclicallyIncrementAndGet() {
-            int curVal, newVal;
-            do {
-                curVal = this.ai.get();
-                newVal = (curVal + 1) % this.maxVal;
-                // note that this doesn't guarantee fairness
-            } while (!this.ai.compareAndSet(curVal, newVal));
-            return newVal;
-        }
-
-    }
-
-    /**
-     * Multitone pattern with Lazy Initialization.
-     */
-    static class CyclicCounters
-    {
-        private final Map<Integer, CyclicCounter> instances
-            = new ConcurrentHashMap<Integer, CyclicCounter>();
-        private Lock createLock = new ReentrantLock();
-
-        CyclicCounter getOrCreate(Integer key, int maxVal) {
-            CyclicCounter instance = instances.get(key);
-            if (instance == null) {
-                createLock.lock();
-                try {
-                    if (instance == null) {
-                        instance = new CyclicCounter(maxVal);
-                        instances.put(key, instance);
-                    }
-                } finally {
-                    createLock.unlock();
-                }
-            }
-            return instance;
-        }
-    }
-
-    private final CyclicCounters dropped = new CyclicCounters();
-
-    private void askForKeyframe(SimulcastLayer layer)
-    {
-        if (layer == null)
-        {
-            logger.warn("Requested a key frame for null layer!");
-            return;
-        }
-
-        SimulcastManager peerSM = getPeerSM();
-        if (peerSM == null)
-        {
-            logger.warn("Requested a key frame but the peer simulcast " +
-                    "manager is null!");
-            return;
-        }
-
-        peerSM.getVideoChannel().askForKeyframes(
-                new int[]{(int) layer.getPrimarySSRC()});
-
-        if (logger.isDebugEnabled())
-        {
-            Map<String, Object> map = new HashMap<String, Object>(3);
-            map.put("self", getSelf());
-            map.put("peer", getPeer());
-            map.put("layer", layer);
-            StringCompiler sc = new StringCompiler(map);
-
-            logger.debug(sc.c("The simulcast sender of {self.id} for " +
-                    "{peer.id} has asked for a key frame for layer " +
-                    "{layer.order} ({layer.primarySSRC})."));
-        }
-    }
-
-    /**
-     * Sets the receiving simulcast substream for the peers in the endpoints
-     * parameter.
-     *
-     * @param options
-     */
-    protected void configure(SimulcastSenderOptions options)
-    {
-        synchronized (receiveLayersSyncRoot)
-        {
-            this.maybeConfigureOverride(options);
-            this.maybeConfigureNext(options);
-        }
-    }
-
-    /**
-     * Gets the <tt>SimulcastLayer</tt> that is currently being received.
-     *
-     * @return
-     */
-    private SimulcastLayer getCurrent()
-    {
-        WeakReference<SimulcastLayer> wr = this.weakCurrent;
-        return (wr != null) ? wr.get() : null;
-    }
-
-    public long getIncomingBitrate(boolean noOverride)
-    {
-        long bitrate = 0;
-
-        if (!noOverride)
-        {
-            synchronized (receiveLayersSyncRoot)
-            {
-                SimulcastLayer override = getOverride();
-                if (override != null)
-                {
-                    bitrate = override.getBitrate();
-                }
-                else
-                {
-                    SimulcastLayer current = getCurrent();
-                    if (current != null)
-                    {
-                        bitrate = current.getBitrate();
-                    }
-                }
-            }
-        }
-        else
-        {
-            SimulcastLayer current = getCurrent();
-            if (current != null)
-            {
-                bitrate = current.getBitrate();
-            }
-        }
-
-        return bitrate;
-    }
-
-    /**
-     * Gets the <tt>SimulcastLayer</tt> that was previously being received.
-     *
-     * @return
-     */
-    private SimulcastLayer getNext()
-    {
-        WeakReference<SimulcastLayer> wr = this.weakNext;
-        return (wr != null) ? wr.get() : null;
-    }
-
-    /**
-     * Gets the <tt>SimulcastLayer</tt> that overrides the layer that is
-     * currently being received.
-     *
-     * @return
-     */
-    private SimulcastLayer getOverride()
-    {
-        WeakReference<SimulcastLayer> wr = this.weakOverride;
-        return (wr != null) ? wr.get() : null;
-    }
-
-    private Endpoint getPeer()
+    public Endpoint getReceiveEndpoint()
     {
         // TODO(gp) maybe add expired checks (?)
-        SimulcastManager sm;
-        VideoChannel vc;
-        Endpoint peer;
+        SimulcastEngine sendSimulcastEngine
+            = getSimulcastSenderManager().getSimulcastEngine();
 
-        peer = ((sm = getPeerSM()) != null && (vc = sm.getVideoChannel()) != null)
-                ? vc.getEndpoint() : null;
-
-        if (peer == null)
+        if (sendSimulcastEngine == null)
         {
-            logger.warn("Peer is null!");
+            return null;
+        }
+
+        VideoChannel sendVideoChannel
+            = sendSimulcastEngine.getVideoChannel();
+
+        if (sendVideoChannel == null)
+        {
+            return null;
+        }
+
+        Endpoint receiveEndpoint = sendVideoChannel.getEndpoint();
+
+        if (receiveEndpoint == null)
+        {
+            logWarn("Self is null!");
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(Arrays.toString(
-                        Thread.currentThread().getStackTrace()));
+                logDebug(Arrays.toString(
+                    Thread.currentThread().getStackTrace()));
             }
         }
 
-        return peer;
+        return receiveEndpoint;
     }
 
-    private SimulcastManager getPeerSM()
+    /**
+     * Gets the <tt>SimulcastReceiver</tt> of the peer.
+     *
+     * @return the <tt>SimulcastReceiver</tt> of the peer.
+     */
+    public SimulcastReceiver getSimulcastReceiver()
     {
-        WeakReference<SimulcastManager> wr = this.weakPeerSM;
-        SimulcastManager peerSM = (wr != null) ? wr.get() : null;
-
-        if (peerSM == null)
-        {
-            logger.warn("The peer simulcast manager is null!");
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(
-                        Arrays.toString(
-                                Thread.currentThread().getStackTrace()));
-            }
-        }
-
-        return peerSM;
+        WeakReference<SimulcastReceiver> ws = this.weakSimulcastReceiver;
+        return ws == null ? null : ws.get();
     }
 
-    private Endpoint getSelf()
+    /**
+     * Gets the <tt>SimulcastSenderManager</tt> that owns this instance.
+     *
+     * @return the <tt>SimulcastSenderManager</tt> that owns this instance.
+     */
+    public SimulcastSenderManager getSimulcastSenderManager()
+    {
+        return simulcastSenderManager;
+    }
+
+    /**
+     * "Getter" on steroids that gets the <tt>Endpoint</tt> that sends the
+     * simulcast.
+     *
+     * @return the peer <tt>Endpoint</tt>.
+     */
+    public Endpoint getSendEndpoint()
     {
         // TODO(gp) maybe add expired checks (?)
-        SimulcastManager sm = this.mySM;
-        VideoChannel vc;
-        Endpoint self;
-
-        self = (sm != null && (vc = sm.getVideoChannel()) != null)
-                ? vc.getEndpoint() : null;
-
-        if (self == null)
+        SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
+        if (simulcastReceiver == null)
         {
-            logger.warn("Self is null!");
+            return null;
+        }
 
+        SimulcastEngine receiveSimulcastEngine
+            = simulcastReceiver.getSimulcastEngine();
+
+        if (receiveSimulcastEngine == null)
+        {
+            logWarn("The peer simulcast manager is null!");
             if (logger.isDebugEnabled())
             {
-                logger.debug(Arrays.toString(
+                logDebug(
+                    Arrays.toString(
                         Thread.currentThread().getStackTrace()));
             }
+
+            return null;
         }
 
-        return self;
-    }
+        VideoChannel receiveVideoChannel
+            = receiveSimulcastEngine.getVideoChannel();
 
-    private void maybeConfigureNext(SimulcastSenderOptions options)
-    {
-        if (options == null)
+        if (receiveVideoChannel == null)
         {
-            if (logger.isWarnEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(1);
-                map.put("self", getSelf());
-                StringCompiler sc = new StringCompiler(map);
-
-                logger.warn(sc.c("{self.id} cannot configure next simulcast " +
-                        "layer because the parameter is null."));
-            }
-
-            return;
+            return null;
         }
 
-        Integer nextOrder = options.getNextOrder();
-        if (nextOrder == null)
+        Endpoint sendEndpoint = receiveVideoChannel.getEndpoint();
+        if (sendEndpoint == null)
         {
-            return;
-        }
-        SimulcastManager peerSM = this.getPeerSM();
+            logWarn("Send endpoint is null!");
 
-        if (peerSM == null || !peerSM.hasLayers())
-        {
-            if (logger.isWarnEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(1);
-                map.put("peer", getPeer());
-                StringCompiler sc = new StringCompiler(map);
-
-                logger.warn(sc.c("{peer.id} doesn't have any simulcast layers."));
-            }
-
-            return;
-        }
-
-        SimulcastLayer next
-                = peerSM.getSimulcastLayer(options.getNextOrder());
-
-        // Do NOT switch to hq if it's not streaming.
-        if (next == null
-                || (next.getOrder()
-                != SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
-                && !next.isStreaming()))
-        {
             if (logger.isDebugEnabled())
             {
-                Map<String, Object> map = new HashMap<String, Object>(1);
-                map.put("self", getSelf());
-                StringCompiler sc = new StringCompiler(map);
-
-                logger.debug(sc.c("{self.id} ignoring request to switch to " +
-                        "higher order layer because it is not currently " +
-                        "being streamed."));
+                logDebug(Arrays.toString(
+                    Thread.currentThread().getStackTrace()));
             }
-            return;
         }
 
-        synchronized (receiveLayersSyncRoot)
+        return sendEndpoint;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void propertyChange(PropertyChangeEvent propertyChangeEvent)
+    {
+        // This method implements most of, if not all, our layer switching
+        // logic.
+
+        if (SimulcastLayer.IS_STREAMING_PNAME.equals(
+            propertyChangeEvent.getPropertyName()))
         {
-            SimulcastLayer current = getCurrent();
+            // A remote simulcast layer has either started or stopped
+            // streaming; notify the current sendMode to deal with the
+            // situation.
+            SimulcastLayer layer
+                    = (SimulcastLayer) propertyChangeEvent.getSource();
 
-            // Do NOT switch to an already receiving layer.
-            if (current == next)
+            if (!layer.isStreaming())
             {
-                // and forget "previous" next, we're sticking with current.
-                this.weakNext = null;
-                this.seenNext = 0;
-
-                if (logger.isDebugEnabled())
+                if (targetOrder >= layer.getOrder())
                 {
-                    Map<String, Object> map = new HashMap<String, Object>(4);
-                    map.put("self", getSelf());
-                    map.put("peer", getPeer());
-                    map.put("current", current);
-                    map.put("next", next);
-                    StringCompiler sc = new StringCompiler(map);
-
-                    logger.debug(sc.c("The simulcast sender of {self.id} for " +
-                            "{peer.id} already receives layer {next.order} " +
-                            "({next.primarySSRC})."));
+                    logDebug("Handling layer stop.");
+                    // HQ stream has stopped streaming, switch to a lower
+                    // quality stream immediately.
+                    sendMode.receiveLow(true);
                 }
+            }
+            else if (targetOrder
+                >= SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ)
+            {
+                logDebug("Handling layer start.");
+                // The HQ stream has resumed streaming and our target is HQ,
+                // configure the mode to receive HQ.
+                sendMode.receiveHigh();
+            }
+        }
+        else if (SimulcastReceiver.SIMULCAST_LAYERS_PNAME.equals(
+            propertyChangeEvent.getPropertyName()))
+        {
+            logDebug("Handling layers change.");
+            // The simulcast layers of the peer have changed, (re)attach.
+            receiveLayersChanged();
+        }
+        else if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(
+                        propertyChangeEvent.getPropertyName())
+            || Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(
+                        propertyChangeEvent.getPropertyName()))
+        {
+            // Here we update the targetOrder value.
 
-                return;
+            Endpoint oldEndpoint = (Endpoint) propertyChangeEvent.getOldValue();
+            Endpoint newEndpoint = (Endpoint) propertyChangeEvent.getNewValue();
+
+            if (newEndpoint == null)
+            {
+                logDebug("Now I'm not watching anybody. What?!");
             }
             else
             {
-                // If current has changed, request an FIR, notify the parent
-                // endpoint and change the receiving streams.
+                logDebug("Now I'm watching " + newEndpoint.getID());
+            }
 
-                if (options.isHardSwitch() && next != getNext())
-                {
-                    // XXX(gp) run these in the event dispatcher thread?
+            if (newEndpoint == getSendEndpoint()
+                && targetOrder != SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ)
+            {
+                targetOrder = SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ;
 
-                    // Send FIR requests first.
-                    if (getOverride() == null)
-                    {
-                        this.askForKeyframe(next);
-                    }
-                    else
-                    {
-                        if (logger.isDebugEnabled())
-                        {
-                            Map<String, Object> map
-                                    = new HashMap<String, Object>(2);
-                            map.put("self", getSelf());
-                            map.put("peer", getPeer());
-                            StringCompiler sc = new StringCompiler(map);
-                            logger.debug(sc.c("The simulcast sender of " +
-                                    "{self.id} for {peer.id} skipped a key " +
-                                    "frame request because an override is " +
-                                    "set."));
-                        }
-                    }
-                }
+                // Send HQ stream for the selected endpoint.
+                sendMode.receiveHigh();
 
+                getSimulcastReceiver().maybeSendStartHighQualityStreamCommand();
+            }
 
-                if (options.isUrgent() || current == null || MAX_NEXT_SEEN < 1)
-                {
-                    // Receiving simulcast layers have brutally changed. Create
-                    // and send an event through data channels to the receiving
-                    // endpoint.
-                    if (getOverride() == null)
-                    {
-                        this.sendSimulcastLayersChangedEvent(next);
-                    }
-                    else
-                    {
-                        Map<String, Object> map = new HashMap<String, Object>(2);
-                        map.put("self", getSelf());
-                        map.put("peer", getPeer());
-                        StringCompiler sc = new StringCompiler(map);
-                        logger.debug(sc.c("The simulcast sender of " +
-                                "{self.id} for {peer.id} skipped a " +
-                                "changed event because an override is " +
-                                "set."));
-                    }
+            // Send LQ stream for the previously selected endpoint.
+            if (oldEndpoint == getSendEndpoint()
+                && targetOrder != SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ)
+            {
+                targetOrder = SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ;
 
-                    this.weakCurrent = new WeakReference<SimulcastLayer>(next);
-                    this.weakNext = null;
+                // Send LQ stream for the previously selected endpoint.
+                sendMode.receiveLow(false);
 
-                    // Since the currently received layer has changed, reset the
-                    // seenCurrent counter.
-                    this.seenNext = 0;
-
-                    if (logger.isDebugEnabled())
-                    {
-                        Map<String, Object> map = new HashMap<String, Object>(4);
-                        map.put("self", getSelf());
-                        map.put("peer", getPeer());
-                        map.put("next", next);
-                        map.put("urgently", options.isUrgent()
-                                ? "urgently" : "");
-                        StringCompiler sc = new StringCompiler(map);
-
-                        logger.debug(sc.c("The simulcast sender " +
-                                "of {self.id} for {peer.id} has {urgently} " +
-                                "switched to layer {next.order} " +
-                                "({next.primarySSRC}).").toString()
-                                .replaceAll("\\s+", " "));
-                    }
-                }
-                else
-                {
-                    // Receiving simulcast layers are changing, create and send
-                    // an event through data channels to the receiving endpoint.
-                    if (getOverride() == null)
-                    {
-                        this.sendSimulcastLayersChangingEvent(next);
-                    }
-                    else
-                    {
-                        Map<String, Object> map = new HashMap<String, Object>(2);
-                        map.put("self", getSelf());
-                        map.put("peer", getPeer());
-                        StringCompiler sc = new StringCompiler(map);
-                        logger.debug(sc.c("The simulcast sender of " +
-                                "{self.id} for {peer.id} skipped a " +
-                                "changing event because an override is " +
-                                "set."));
-                    }
-
-                    // If the layer we receive has changed (hasn't dropped),
-                    // then continue streaming the previous layer for a short
-                    // period of time while the client receives adjusts its
-                    // video.
-                    this.weakNext = new WeakReference<SimulcastLayer>(next);
-
-                    // Since the currently received layer has changed, reset the
-                    // seenCurrent counter.
-                    this.seenNext = 0;
-
-                    if (logger.isDebugEnabled())
-                    {
-                        Map<String, Object> map = new HashMap<String, Object>(3);
-                        map.put("self", getSelf());
-                        map.put("peer", getPeer());
-                        map.put("next", next);
-                        StringCompiler sc = new StringCompiler(map);
-
-                        logger.debug(sc.c("The simulcast sender of " +
-                                "{self.id} for {peer.id} is going to switch " +
-                                "to layer {next.order} ({next.primarySSRC}) " +
-                                "in a few moments.."));
-                    }
-                }
+                getSimulcastReceiver().maybeSendStopHighQualityStreamCommand();
             }
         }
-    }
-
-    private void maybeConfigureOverride(SimulcastSenderOptions options)
-    {
-        if (options == null)
+        else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(
+            propertyChangeEvent.getPropertyName()))
         {
-            if (logger.isWarnEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(1);
-                map.put("self", getSelf());
-                StringCompiler sc = new StringCompiler(map);
+            logDebug("The simulcast mode has changed.");
+            SimulcastMode oldMode
+                = (SimulcastMode) propertyChangeEvent.getOldValue();
+            SimulcastMode newMode
+                = (SimulcastMode) propertyChangeEvent.getNewValue();
 
-                logger.warn(sc.c("{self.id} cannot configure override" +
-                        " simulcast layer because the parameter is null."));
-            }
-
-            return;
+            sendModeChanged(newMode, oldMode);
         }
-
-        Integer overrideOrder = options.getOverrideOrder();
-        if (overrideOrder == null)
+        else if (VideoChannel.ENDPOINT_PROPERTY_NAME.equals(
+            propertyChangeEvent.getPropertyName()))
         {
-            return;
-        }
+            logDebug("The endpoint owner has changed.");
+            // Listen for property changes from self.
+            Endpoint newValue = (Endpoint) propertyChangeEvent.getNewValue();
+            Endpoint oldValue = (Endpoint) propertyChangeEvent.getOldValue();
 
-        SimulcastManager peerSM = this.getPeerSM();
-
-        if (peerSM == null || !peerSM.hasLayers())
-        {
-            if (logger.isWarnEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(1);
-                map.put("peer", getPeer());
-                StringCompiler sc = new StringCompiler(map);
-
-                logger.warn(sc.c("{peer.id} doesn't have any simulcast layers."));
-            }
-
-            return;
-        }
-
-        if (overrideOrder == SimulcastManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
-        {
-            if (logger.isDebugEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(2);
-                map.put("self", getSelf());
-                map.put("peer", getPeer());
-                StringCompiler sc = new StringCompiler(map);
-
-                logger.debug(sc.c("The simulcast sender of {self.id} " +
-                        "for {peer.id} is no longer overriding the " +
-                        "receiving layer."));
-            }
-
-            synchronized (receiveLayersSyncRoot)
-            {
-                this.weakOverride = null;
-                SimulcastLayer current = getCurrent();
-                if (current != null)
-                {
-                    this.askForKeyframe(current);
-                    this.sendSimulcastLayersChangedEvent(current);
-                }
-            }
-        }
-        else
-        {
-            if (peerSM != null)
-            {
-                SimulcastLayer override = peerSM.getSimulcastLayer(overrideOrder);
-                if (override != null)
-                {
-                    if (logger.isDebugEnabled())
-                    {
-                        Map<String, Object> map = new HashMap<String, Object>(3);
-                        map.put("self", getSelf());
-                        map.put("peer", getPeer());
-                        map.put("override", override);
-                        StringCompiler sc = new StringCompiler(map);
-
-                        logger.debug(sc.c("The simulcast sender of " +
-                                "{self.id} for {peer.id} is now configured " +
-                                "to override the receiving layer with the " +
-                                "{override.order}-order layer " +
-                                "{override.primarySSRC}."));
-                    }
-
-                    synchronized (receiveLayersSyncRoot)
-                    {
-                        this.weakOverride
-                                = new WeakReference<SimulcastLayer>(override);
-                        this.askForKeyframe(override);
-                        this.sendSimulcastLayersChangedEvent(override);
-                    }
-                }
-            }
-
-        }
-    }
-
-    private void maybeForgetNext()
-    {
-        synchronized (receiveLayersSyncRoot)
-        {
-            SimulcastLayer next = getNext();
-            if (next != null && !next.isStreaming())
-            {
-                this.weakNext = null;
-                this.seenNext = 0;
-                sendNextSimulcastLayerStoppedEvent(next);
-            }
+            receiveEndpointChanged(newValue, oldValue);
         }
     }
 
     /**
-     * Configures this <tt>SimulcastSender</tt> to receive the high quality
-     * stream from the associated sender.
-     */
-    private void receiveHigh()
-    {
-        SimulcastSenderOptions options = new SimulcastSenderOptions();
-
-        options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
-        options.setHardSwitch(true);
-        // options.setUrgent(false);
-
-        configure(options);
-    }
-
-    /**
-     * Configures this <tt>SimulcastSender</tt> to receive the low quality
-     * stream from the associated sender.
-     */
-    private void receiveLow()
-    {
-        SimulcastSenderOptions options = new SimulcastSenderOptions();
-
-        options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
-        options.setHardSwitch(true);
-        // options.setUrgent(false);
-
-        configure(options);
-    }
-
-    /**
-     * Maybe send a data channel command to the associated simulcast sender to
-     * make it start streaming its hq stream, if it's being watched by some
-     * participant.
-     */
-    private void maybeSendStartHighQualityStreamCommand()
-    {
-        Endpoint newEndpoint = getPeer();
-        SortedSet<SimulcastLayer> newSimulcastLayers = null;
-
-        SimulcastManager peerSM = getPeerSM();
-        if (peerSM != null)
-        {
-            newSimulcastLayers = peerSM.getSimulcastLayers();
-        }
-
-        SctpConnection sctpConnection;
-        if (newSimulcastLayers != null
-                && newSimulcastLayers.size() > 1
-                /* newEndpoint != null is implied */
-                && (sctpConnection = newEndpoint.getSctpConnection()) != null
-                && sctpConnection.isReady()
-                && !sctpConnection.isExpired())
-        {
-            // we have a new endpoint and it has an SCTP connection that is
-            // ready and not expired. if somebody else is watching the new
-            // endpoint, start its hq stream.
-
-            boolean startHighQualityStream = false;
-
-            for (Endpoint e
-                    : mySM.getVideoChannel().getContent().getConference()
-                        .getEndpoints())
-            {
-                // TODO(gp) need some synchronization here. What if the
-                // selected endpoint changes while we're in the loop?
-
-                if (e == newEndpoint)
-                    continue;
-
-                Endpoint eSelectedEndpoint = e.getEffectivelySelectedEndpoint();
-
-                if (newEndpoint == eSelectedEndpoint
-                        || (SimulcastManager.SIMULCAST_LAYER_ORDER_INIT > SimulcastManager.SIMULCAST_LAYER_ORDER_LQ
-                                && eSelectedEndpoint == null))
-                {
-                    // somebody is watching the new endpoint or somebody has not
-                    // yet signaled its selected endpoint to the bridge, start
-                    // the hq stream.
-
-                    if (logger.isDebugEnabled())
-                    {
-                        Map<String,Object> map = new HashMap<String,Object>(3);
-
-                        map.put("e", e);
-                        map.put("newEndpoint", newEndpoint);
-                        map.put("maybe", eSelectedEndpoint == null ? "(maybe) "
-                                    : "");
-
-                        StringCompiler sc
-                            = new StringCompiler(map)
-                                .c("{e.id} is {maybe} watching {newEndpoint.id}.");
-
-                        logger.debug(
-                                sc.toString().replaceAll("\\s+", " "));
-                    }
-
-                    startHighQualityStream = true;
-                    break;
-                }
-            }
-
-            if (startHighQualityStream)
-            {
-                // TODO(gp) this assumes only a single hq stream.
-
-                logger.debug(
-                        mySM.getVideoChannel().getEndpoint().getID()
-                            + " notifies " + newEndpoint.getID()
-                            + " to start its HQ stream.");
-
-                SimulcastLayer hqLayer = newSimulcastLayers.last();
-                StartSimulcastLayerCommand command
-                    = new StartSimulcastLayerCommand(hqLayer);
-                String json = mapper.toJson(command);
-
-                try
-                {
-                    newEndpoint.sendMessageOnDataChannel(json);
-                }
-                catch (IOException e)
-                {
-                    logger.error(
-                            newEndpoint.getID()
-                                + " failed to send message on data channel.",
-                            e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Maybe send a data channel command to he associated simulcast sender to
-     * make it stop streaming its hq stream, if it's not being watched by any
-     * participant.
-     */
-    private void maybeSendStopHighQualityStreamCommand()
-    {
-        Endpoint oldEndpoint = getPeer();
-        SortedSet<SimulcastLayer> oldSimulcastLayers = null;
-
-        SimulcastManager peerSM = getPeerSM();
-        if (peerSM != null)
-        {
-            oldSimulcastLayers = peerSM.getSimulcastLayers();
-        }
-
-        SctpConnection sctpConnection;
-        if (oldSimulcastLayers != null
-                && oldSimulcastLayers.size() > 1
-                /* oldEndpoint != null is implied*/
-                && (sctpConnection = oldEndpoint.getSctpConnection()) != null
-                && sctpConnection.isReady()
-                && !sctpConnection.isExpired())
-        {
-            // we have an old endpoint and it has an SCTP connection that is
-            // ready and not expired. if nobody else is watching the old
-            // endpoint, stop its hq stream.
-
-            boolean stopHighQualityStream = true;
-            for (Endpoint e : this.mySM.getVideoChannel()
-                    .getContent().getConference().getEndpoints())
-            {
-                // TODO(gp) need some synchronization here. What if the selected
-                // endpoint changes while we're in the loop?
-
-                if (oldEndpoint != e
-                        && (oldEndpoint == e.getEffectivelySelectedEndpoint())
-                        || e.getEffectivelySelectedEndpoint() == null)
-                {
-                    // somebody is watching the old endpoint or somebody has not
-                    // yet signaled its selected endpoint to the bridge, don't
-                    // stop the hq stream.
-                    stopHighQualityStream = false;
-                    break;
-                }
-            }
-
-            if (stopHighQualityStream)
-            {
-                // TODO(gp) this assumes only a single hq stream.
-
-                logger.debug(this.mySM.getVideoChannel().getEndpoint().getID() +
-                        " notifies " + oldEndpoint.getID() + " to stop " +
-                        "its HQ stream.");
-
-                SimulcastLayer hqLayer = oldSimulcastLayers.last();
-
-                StopSimulcastLayerCommand command
-                        = new StopSimulcastLayerCommand(hqLayer);
-
-                String json = mapper.toJson(command);
-
-                try
-                {
-                    oldEndpoint.sendMessageOnDataChannel(json);
-                }
-                catch (IOException e1)
-                {
-                    logger.error(oldEndpoint.getID() + " failed to send " +
-                            "message on data channel.", e1);
-                }
-            }
-        }
-    }
-
-    /**
+     * Returns a boolean indicating whether the caller must drop, or accept, the
+     * packet passed in as a parameter.
      *
+     * @param pkt the <tt>RawPacket</tt> that needs to be accepted or dropped.
+     * @return true if the packet is to be accepted, false otherwise.
      */
-    private void maybeSwitchToNext()
+    public boolean accept(RawPacket pkt)
     {
-        synchronized (receiveLayersSyncRoot)
+        if (pkt == null)
         {
-            SimulcastLayer next = getNext();
+            return false;
+        }
 
-            // If there is a previous layer to timeout, and we have received
-            // "enough" packets from the current layer, expire the previous
-            // layer.
-            if (next != null)
-            {
-                seenNext++;
+        this.assertInitialized();
 
-                // NOTE(gp) not unexpectedly we have observed that 250 high
-                // quality packets make 5 seconds to arrive (approx), then 250
-                // low quality packets will make 10 seconds to arrive (approx),
-                // If we don't take that fact into account, then the immediate
-                // lower layer makes twice as much to expire.
-                //
-                // Assuming that each upper layer doubles the number of packets
-                // it sends in a given interval, we normalize the MAX_NEXT_SEEN
-                // to reflect the different relative rates of incoming packets
-                // of the different simulcast layers we receive.
+        if (sendMode == null)
+        {
+            logDebug("sendMode is null.");
+        }
 
-                if (seenNext > MAX_NEXT_SEEN * Math.pow(2, next.getOrder()))
-                {
-                    if (getOverride() == null)
-                    {
-                        this.sendSimulcastLayersChangedEvent(next);
-                    }
-                    else
-                    {
-                        if (logger.isDebugEnabled())
-                        {
-                            Map<String, Object> map = new HashMap<String, Object>(2);
-                            map.put("self", getSelf());
-                            map.put("peer", getPeer());
-                            StringCompiler sc = new StringCompiler(map);
-                            logger.debug(sc.c("The simulcast sender of " +
-                                    "{self.id} for {peer.id} skipped a " +
-                                    "changed event because an override is " +
-                                    "set."));
-                        }
-                    }
+        return (sendMode != null) ? sendMode.accept(pkt) : null;
+    }
 
-                    this.weakCurrent = weakNext;
-                    this.weakNext = null;
+    /**
+     * Initializes this <tt>SimulcastSender</tt>.
+     */
+    private void assertInitialized()
+    {
+        if (initialized)
+        {
+            return;
+        }
 
-                    if (logger.isDebugEnabled())
-                    {
-                        Map<String, Object> map = new HashMap<String, Object>(3);
-                        map.put("self", getSelf());
-                        map.put("peer", getPeer());
-                        map.put("next", next);
-                        StringCompiler sc = new StringCompiler(map);
+        initialized = true;
 
-                        logger.debug(sc.c("The simulcast sender of " +
-                                "{self.id} for {peer.id} has now switched to " +
-                                "the next layer of order {next.order} " +
-                                "({next.primarySSRC})."));
-                    }
-                }
-            }
+        SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
+
+        // We want to be notified when the simulcast layers of the sending
+        // endpoint change. It will wall the {#receiveLayersChanged()} method.
+        simulcastReceiver.addPropertyChangeListener(propertyChangeListener);
+
+        // Manually trigger the {#receiveLayersChanged()} method so that w
+        receiveLayersChanged();
+
+        VideoChannel sendVideoChannel = getSimulcastSenderManager()
+            .getSimulcastEngine().getVideoChannel();
+        // We want to be notified and react when the simulcast mode of the
+        // send-<tt>VideoChannel</tt> changes.
+        sendVideoChannel.addPropertyChangeListener(propertyChangeListener);
+
+        // We want to be notified and react when the selected endpoint has
+        // changed at the client.
+        Endpoint receiveEndpoint = getReceiveEndpoint();
+        receiveEndpointChanged(receiveEndpoint, null);
+    }
+
+    /**
+     * Notifies this instance about a change in the simulcast mode of the
+     * sending <tt>VideoChannel</tt>. We keep this in a separate method for
+     * readability and re-usability.
+     *
+     * @param newMode
+     * @param oldMode
+     */
+    private void sendModeChanged(
+        SimulcastMode newMode, SimulcastMode oldMode)
+    {
+        if (newMode == null)
+        {
+            // Now, what would you want to do that?
+            sendMode = null;
+        }
+        else if (newMode == SimulcastMode.REWRITING)
+        {
+            sendMode = new RewritingSendMode(this);
+        }
+        else if (newMode == SimulcastMode.SWITCHING)
+        {
+            sendMode = new SwitchingSendMode(this);
+        }
+
+        if (sendMode != null)
+        {
+            sendMode.receiveLow(false);
         }
     }
 
-    private void onEndpointChanged(Endpoint newValue, Endpoint oldValue)
+    /**
+     * Notifies this instance about a change in the simulcast layers of the
+     * associated peer. We keep this in a separate method for readability and
+     * re-usability.
+     */
+    private void receiveLayersChanged()
+    {
+        SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
+        if (simulcastReceiver == null || !simulcastReceiver.hasLayers())
+        {
+            return;
+        }
+
+        for (SimulcastLayer layer : simulcastReceiver.getSimulcastLayers())
+        {
+            // Add listener from the current receiving simulcast layers.
+            layer.addPropertyChangeListener(propertyChangeListener);
+        }
+
+        // Initialize the send mode.
+        SimulcastMode simulcastMode = getSimulcastSenderManager()
+            .getSimulcastEngine().getVideoChannel().getSimulcastMode();
+
+        sendModeChanged(simulcastMode, null);
+    }
+
+    /**
+     * Notifies this instance that the <tt>Endpoint</tt> that receives the
+     * simulcast has changed. We keep this in a separate method for readability
+     * and re-usability.
+     *
+     * @param newValue
+     * @param oldValue
+     */
+    private void receiveEndpointChanged(Endpoint newValue, Endpoint oldValue)
     {
         if (newValue != null)
         {
-            newValue.addPropertyChangeListener(weakPropertyChangeListener);
+            newValue.addPropertyChangeListener(propertyChangeListener);
         }
         else
         {
-            logger.warn("Cannot listen on self, it's null!");
+            logWarn("Cannot listen on self, it's null!");
             if (logger.isDebugEnabled())
             {
-                logger.debug(Arrays.toString(
-                        Thread.currentThread().getStackTrace()));
+                logDebug(Arrays.toString(
+                    Thread.currentThread().getStackTrace()));
             }
         }
 
         if (oldValue != null)
         {
-            oldValue.removePropertyChangeListener(weakPropertyChangeListener);
+            // Not strictly necessary since we're using a
+            // WeakReferencePropertyChangeListener but why not.
+            oldValue.removePropertyChangeListener(propertyChangeListener);
         }
     }
 
-    private void onPeerLayerChanged(SimulcastLayer layer)
+    private void logDebug(String msg)
     {
-        if (!layer.isStreaming())
+        if (logger.isDebugEnabled())
         {
-            // HQ stream has stopped, switch to a lower quality stream.
-
-            SimulcastSenderOptions options = new SimulcastSenderOptions();
-
-            options.setNextOrder(SimulcastManager.SIMULCAST_LAYER_ORDER_LQ);
-            options.setHardSwitch(true);
-            options.setUrgent(true);
-
-            configure(options);
-
-            maybeForgetNext();
-        }
-        else
-        {
-            Endpoint self = getSelf();
-            Endpoint peer = getPeer();
-
-            if (peer != null && self != null &&
-                        peer == self.getEffectivelySelectedEndpoint())
-            {
-                SimulcastSenderOptions options
-                        = new SimulcastSenderOptions();
-
-                options.setNextOrder(
-                        SimulcastManager.SIMULCAST_LAYER_ORDER_HQ);
-                // options.setHardSwitch(false);
-                // options.setUrgent(false);
-
-                configure(options);
-            }
+            msg = getReceiveEndpoint().getID() + ": " + msg;
+            logger.debug(msg);
         }
     }
 
-    private void onPeerLayersChanged(SimulcastManager peerSM)
+    private void logWarn(String msg)
     {
-        if (peerSM != null && peerSM.hasLayers())
+        if (logger.isWarnEnabled())
         {
-            for (SimulcastLayer layer : peerSM.getSimulcastLayers())
-            {
-                // Add listener from the current receiving simulcast layers.
-                layer.addPropertyChangeListener(weakPropertyChangeListener);
-            }
-
-            // normally getPeer() == peerSM.getVideoChannel().getEndpoint()
-            // holds.
-
-            // Initialize the sender.
-            configure(initOptions);
-
-            if (logger.isDebugEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(2);
-                map.put("self", getSelf());
-                map.put("peer", getPeer());
-                StringCompiler sc = new StringCompiler(map);
-
-                logger.debug(sc.c("{self.id} listens on layer changes from " +
-                        "{peer.id}."));
-            }
-        }
-    }
-
-    private void onSelectedEndpointChanged(
-            Endpoint oldEndpoint, Endpoint newEndpoint)
-    {
-        synchronized (receiveLayersSyncRoot)
-        {
-            // Rule 1: send an hq stream only for the selected endpoint.
-            if (newEndpoint == getPeer())
-            {
-                this.receiveHigh();
-
-                // Rule 1.1: if the new endpoint is being watched by any of the
-                // participants, the bridge tells it to start streaming its hq
-                // stream.
-                this.maybeSendStartHighQualityStreamCommand();
-            }
-
-            // Rule 2: send an lq stream only for the previously selected
-            // endpoint.
-            if (oldEndpoint == getPeer())
-            {
-                this.receiveLow();
-                // Rule 2.1: if the old endpoint is not being watched by any of
-                // the participants, the bridge tells it to stop streaming its hq
-                // stream.
-                this.maybeSendStopHighQualityStreamCommand();
-            }
-        }
-    }
-
-    @Override
-    public void propertyChange(PropertyChangeEvent propertyChangeEvent)
-    {
-        if (SimulcastLayer.IS_STREAMING_PROPERTY
-                .equals(propertyChangeEvent.getPropertyName()))
-        {
-            // A remote simulcast layer has either started or stopped
-            // streaming. Deal with it.
-            SimulcastLayer layer
-                    = (SimulcastLayer) propertyChangeEvent.getSource();
-
-            onPeerLayerChanged(layer);
-        }
-        else if (Endpoint
-                .SELECTED_ENDPOINT_PROPERTY_NAME.equals(
-                        propertyChangeEvent.getPropertyName()) ||
-                Endpoint
-                .PINNED_ENDPOINT_PROPERTY_NAME.equals(
-                        propertyChangeEvent.getPropertyName()))
-        {
-            // endpoint == this.manager.getVideoChannel().getEndpoint() is
-            // implied.
-
-            Endpoint oldValue = (Endpoint) propertyChangeEvent.getOldValue();
-            Endpoint newValue = (Endpoint) propertyChangeEvent.getNewValue();
-
-            onSelectedEndpointChanged(oldValue, newValue);
-        }
-        else if (VideoChannel.ENDPOINT_PROPERTY_NAME.equals(
-                propertyChangeEvent.getPropertyName()))
-        {
-            // Listen for property changes from self.
-            Endpoint newValue = (Endpoint) propertyChangeEvent.getNewValue();
-            Endpoint oldValue = (Endpoint) propertyChangeEvent.getOldValue();
-
-            onEndpointChanged(newValue, oldValue);
-        }
-        else if (SimulcastManager.SIMULCAST_LAYERS_PROPERTY.equals(
-                propertyChangeEvent.getPropertyName()))
-        {
-            // The simulcast layers of the peer have changed, (re)attach.
-            SimulcastManager peerSM
-                    = (SimulcastManager) propertyChangeEvent.getSource();
-
-            onPeerLayersChanged(peerSM);
-        }
-    }
-
-    private void sendNextSimulcastLayerStoppedEvent(SimulcastLayer layer)
-    {
-        if (layer == null)
-        {
-            logger.warn("Requested to send a next simulcast layer stopped " +
-                "event but layer is null!");
-            return;
-        }
-
-        Endpoint self, peer;
-
-        if ((self = getSelf()) != null && (peer = getPeer()) != null)
-        {
-            logger.debug("Sending a next simulcast layer stopped event to "
-                + self.getID() + ".");
-
-            // XXX(gp) it'd be nice if we could remove the
-            // SimulcastLayersChangedEvent event. Ideally, receivers should
-            // listen for MediaStreamTrackActivity instead. Unfortunately,
-            // such an event does not exist in WebRTC.
-
-            // Receiving simulcast layers changed, create and send
-            // an event through data channels to the receiving endpoint.
-            NextSimulcastLayerStoppedEvent ev
-                = new NextSimulcastLayerStoppedEvent();
-
-            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
-                new EndpointSimulcastLayer(peer.getID(), layer)
-            };
-
-            String json = mapper.toJson(ev);
-            try
-            {
-                // FIXME(gp) sendMessageOnDataChannel may silently fail to
-                // send a data message. We want to be able to handle those
-                // errors ourselves.
-                self.sendMessageOnDataChannel(json);
-            }
-            catch (IOException e)
-            {
-                logger.error(self.getID() + " failed to send message on " +
-                    "data channel.", e);
-            }
-        }
-        else
-        {
-            logger.warn("Didn't send simulcast layers changed event " +
-                "because self == null || peer == null " +
-                "|| current == null");
-        }
-    }
-
-    private void sendSimulcastLayersChangedEvent(SimulcastLayer layer)
-    {
-        if (layer == null)
-        {
-            logger.warn("Requested to send a simulcast layers changed event" +
-                    "but layer is null!");
-            return;
-        }
-
-        Endpoint self, peer;
-
-        if ((self = getSelf()) != null && (peer = getPeer()) != null)
-        {
-            logger.debug("Sending a simulcast layers changed event to "
-                    + self.getID() + ".");
-
-            // XXX(gp) it'd be nice if we could remove the
-            // SimulcastLayersChangedEvent event. Ideally, receivers should
-            // listen for MediaStreamTrackActivity instead. Unfortunately,
-            // such an event does not exist in WebRTC.
-
-            // Receiving simulcast layers changed, create and send
-            // an event through data channels to the receiving endpoint.
-            SimulcastLayersChangedEvent ev
-                    = new SimulcastLayersChangedEvent();
-
-            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
-                    new EndpointSimulcastLayer(peer.getID(), layer)
-            };
-
-            String json = mapper.toJson(ev);
-            try
-            {
-                // FIXME(gp) sendMessageOnDataChannel may silently fail to
-                // send a data message. We want to be able to handle those
-                // errors ourselves.
-                self.sendMessageOnDataChannel(json);
-            }
-            catch (IOException e)
-            {
-                logger.error(self.getID() + " failed to send message on " +
-                        "data channel.", e);
-            }
-        }
-        else
-        {
-            logger.warn("Didn't send simulcast layers changed event " +
-                    "because self == null || peer == null " +
-                    "|| current == null");
-        }
-
-    }
-
-    private void sendSimulcastLayersChangingEvent(SimulcastLayer layer)
-    {
-        if (layer == null)
-        {
-            logger.warn("Requested to send a simulcast layers changing event" +
-                    "but layer is null!");
-            return;
-        }
-
-        Endpoint self, peer;
-
-        if ((self = getSelf()) != null && (peer = getPeer()) != null)
-        {
-            logger.debug("Sending a simulcast layers changing event to "
-                    + self.getID() + ".");
-
-            // XXX(gp) it'd be nice if we could remove the
-            // SimulcastLayersChangedEvent event. Ideally, receivers should
-            // listen for MediaStreamTrackActivity instead. Unfortunately,
-            // such an event does not exist in WebRTC.
-
-            // Receiving simulcast layers changed, create and send
-            // an event through data channels to the receiving
-            // endpoint.
-            SimulcastLayersChangingEvent ev
-                    = new SimulcastLayersChangingEvent();
-
-            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
-                    new EndpointSimulcastLayer(peer.getID(), layer)
-            };
-
-            String json = mapper.toJson(ev);
-            try
-            {
-                // FIXME(gp) sendMessageOnDataChannel may silently fail to
-                // send a data message. We want to be able to handle those
-                // errors ourselves.
-                self.sendMessageOnDataChannel(json);
-            }
-            catch (IOException e)
-            {
-                logger.error(self.getID() + " failed to send message on " +
-                        "data channel.", e);
-            }
-        }
-        else
-        {
-            logger.warn("Didn't send simulcast layers changing event " +
-                    "because self == null || peer == null " +
-                    "|| current == null");
+            msg = getReceiveEndpoint().getID() + ": " + msg;
+            logger.warn(msg);
         }
     }
 }

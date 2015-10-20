@@ -26,7 +26,8 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
-import org.jitsi.eventadmin.*;
+import org.jitsi.util.event.*;
+import org.jitsi.videobridge.eventadmin.*;
 import org.osgi.framework.*;
 
 /**
@@ -36,6 +37,7 @@ import org.osgi.framework.*;
  * @author Boris Grozev
  */
 public class Content
+    extends PropertyChangeNotifier
     implements RTPTranslator.WriteFilter
 {
     /**
@@ -43,6 +45,13 @@ public class Content
      * to print debug information.
      */
     private static final Logger logger = Logger.getLogger(Content.class);
+
+    /**
+     * The name of the property which specifies an event that a
+     * <tt>VideoChannel</tt> of this <tt>Content</tt> has changed.
+     */
+    public static final String CHANNEL_MODIFIED_PROPERTY_NAME
+        = "org.jitsi.videobridge.VideoChannel.mod";
 
     /**
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
@@ -465,6 +474,8 @@ public class Content
      */
     public Channel findChannel(long ssrc)
     {
+        // TODO we need to optimize the performance of this. We could use a
+        // simple Map as a Cache for this loop.
         for (Channel channel : getChannels())
         {
             if (channel instanceof RtpChannel)
@@ -921,6 +932,15 @@ public class Content
             if (getLastActivityTime() < now)
                 lastActivityTime = now;
         }
+    }
+
+    /**
+     *
+     * @param channel
+     */
+    public void fireChannelChanged(RtpChannel channel)
+    {
+        firePropertyChange(CHANNEL_MODIFIED_PROPERTY_NAME, channel, channel);
     }
 
     private static class RTPTranslatorWriteFilter
