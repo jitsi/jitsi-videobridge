@@ -220,6 +220,12 @@ public class RtpChannel
     }
 
     /**
+     * The FID (flow ID) groupings used by the remote side of this
+     * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
+     */
+    protected Map<Long,Long> fidSourceGroups = new HashMap<Long, Long>();
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -1734,11 +1740,52 @@ public class RtpChannel
     }
 
     /**
-     *
+     * Sets the SSRC groupings for this <tt>RtpChannel</tt>.
      * @param sourceGroups
      */
     public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
     {
+        if (sourceGroups == null || sourceGroups.isEmpty())
+            return;
+
+        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+        {
+            List<SourcePacketExtension> sources = sourceGroup.getSources();
+            if (sources != null && !sources.isEmpty() &&
+                    SourceGroupPacketExtension.SEMANTICS_FID
+                        .equalsIgnoreCase(sourceGroup.getSemantics()))
+            {
+                Long first = null, second = null;
+                for (SourcePacketExtension source : sources)
+                {
+                    if (first == null)
+                    {
+                        first = source.getSSRC();
+                    }
+                    else if (second == null)
+                    {
+                        second = source.getSSRC();
+                    }
+                    else
+                    {
+                        logger.warn("Received a FID sourceGroup with more " +
+                                    " than two sources: " + sourceGroup.toXML());
+                    }
+                }
+
+                if (first == null || second == null)
+                {
+                    logger.warn("Received a FID sourceGroup with less " +
+                                " than two sources: " + sourceGroup.toXML());
+                    continue;
+                }
+
+                // Here we assume that the first source in the group is the
+                // SSRC for the media stream, and the second source is the
+                // one for the RTX stream.
+                fidSourceGroups.put(first, second);
+            }
+        }
     }
 
     /**

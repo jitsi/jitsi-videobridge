@@ -1426,8 +1426,14 @@ public class VideoChannel
         return pkt;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
     {
+        super.setSourceGroups(sourceGroups);
+
         // TODO(gp) how does one clear source groups? We need a special value
         // that indicates we need to clear the groups.
         if (sourceGroups == null || sourceGroups.size() == 0)
@@ -1448,8 +1454,9 @@ public class VideoChannel
         {
             List<SourcePacketExtension> sources = sourceGroup.getSources();
 
-            if (sources == null || sources.size() == 0
-                || !"SIM".equals(sourceGroup.getSemantics()))
+            if (sources == null || sources.isEmpty()
+                || !SourceGroupPacketExtension.SEMANTICS_SIMULCAST
+                        .equalsIgnoreCase(sourceGroup.getSemantics()))
             {
                 continue;
             }
@@ -1473,35 +1480,12 @@ public class VideoChannel
 
         }
 
-        // Append associated SSRCs from other source groups.
-        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+        // FID groups have been saved in RtpChannel. Make sure any changes are
+        // propagated to the appropriate SimulcastLayer-s.
+        for (Map.Entry<Long, Long> entry : this.fidSourceGroups.entrySet())
         {
-            List<SourcePacketExtension> sources = sourceGroup.getSources();
-
-            if (sources == null || sources.size() == 0
-                || !"FID".equals(sourceGroup.getSemantics()))
-            {
-                continue;
-            }
-
-            SimulcastLayer simulcastLayer = null;
-
-            // Find all the associated ssrcs for this group.
-            for (SourcePacketExtension source : sources)
-            {
-                Long ssrc = source.getSSRC();
-                if (ssrc2layer.containsKey(ssrc))
-                {
-                    simulcastLayer = ssrc2layer.get(ssrc);
-                    simulcastLayer.setRTXSSRC(ssrc);
-                    break;
-                }
-            }
-
-            if (simulcastLayer.getRTXSSRC() != -1)
-            {
-                break;
-            }
+            SimulcastLayer simulcastLayer = ssrc2layer.get(entry.getKey());
+            simulcastLayer.setRTXSSRC(entry.getValue());
         }
 
         simulcastEngine.getSimulcastReceiver().setSimulcastLayers(layers);
