@@ -42,7 +42,7 @@ public class CachingTransformer
      * Packets added to the cache more than <tt>SIZE_MILLIS</tt> ago might be
      * cleared from the cache.
      */
-    private static int SIZE_MILLIS = 300;
+    private static int SIZE_MILLIS = 500;
 
     /**
      * Assumed rate of the RTP clock.
@@ -58,7 +58,7 @@ public class CachingTransformer
     /**
      * The maximum number of different SSRCs for which a cache will be created.
      */
-    private static int MAX_SSRC_COUNT = 10;
+    private static int MAX_SSRC_COUNT = 50;
 
     /**
      * The maximum number of packets cached for each SSRC.
@@ -151,7 +151,8 @@ public class CachingTransformer
     private final Map<Long, Cache> caches = new HashMap<Long, Cache>();
 
     /**
-     * The thread which monitors
+     * The thread which monitors {@link #getCache(long, boolean)} for instances
+     * which should be expired.
      */
     private final CleanerThread cleanerThread = new CleanerThread();
 
