@@ -33,4 +33,10 @@ public interface RawPacketCache
      * cache. If no such packet is found, returns <tt>null</tt>.
      */
     public RawPacket get(long ssrc, int seq);
+
+    /**
+     * Saves a packet in the cache.
+     * @param pkt the packet to save.
+     */
+    public void cachePacket(RawPacket pkt);
 }

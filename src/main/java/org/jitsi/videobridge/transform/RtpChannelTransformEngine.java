@@ -106,6 +106,12 @@ public class RtpChannelTransformEngine
     private SimulcastEngine simulcastEngine;
 
     /**
+     * The transformer which handles outgoing rtx (RFC-4588) packets for this
+     * channel.
+     */
+    private RtxTransformer rtxTransformer;
+
+    /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
@@ -129,6 +135,9 @@ public class RtpChannelTransformEngine
 
         List<TransformEngine> transformerList
             = new LinkedList<TransformEngine>();
+
+        rtxTransformer = new RtxTransformer(channel);
+        transformerList.add(rtxTransformer);
 
         if (cfg == null
                 || !cfg.getBoolean(DISABLE_RETRANSMISSION_REQUESTS, false))
@@ -156,18 +165,15 @@ public class RtpChannelTransformEngine
         transformerList.add(absSendTime);
 
         boolean enableNackTermination = true;
-        if (conference != null)
-        {
-            if (cfg != null)
-                enableNackTermination
-                    = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
-        }
+        if (cfg != null)
+            enableNackTermination
+                = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
 
         if (enableNackTermination && channel instanceof NACKHandler)
         {
             logger.info("Enabling NACK termination for channel "
                                 + channel.getID());
-            cache = new CachingTransformer();
+            cache = new CachingTransformer(channel);
             transformerList.add(cache);
 
             nackNotifier = new NACKNotifier((NACKHandler) channel);
@@ -236,5 +242,10 @@ public class RtpChannelTransformEngine
     public SimulcastEngine getSimulcastEngine()
     {
         return simulcastEngine;
+    }
+
+    public RtxTransformer getRtxTransformer()
+    {
+        return rtxTransformer;
     }
 }

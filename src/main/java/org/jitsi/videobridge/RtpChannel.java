@@ -29,6 +29,7 @@ import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 
+import org.eclipse.jetty.http.*;
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
@@ -224,6 +225,17 @@ public class RtpChannel
      * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
      */
     protected Map<Long,Long> fidSourceGroups = new HashMap<Long, Long>();
+
+    /**
+     * The payload type number configured for RTX (RFC-4588) for this channel,
+     * or -1 if none is configured (the other end does not support rtx).
+     */
+    private byte rtxPayloadType = -1;
+
+    /**
+     * The "associated payload type" number for RTX on this channel.
+     */
+    private byte rtxAssociatedPayloadType = -1;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -1416,6 +1428,22 @@ public class RtpChannel
                 {
                     transportManager.payloadTypesChanged(this);
                 }
+
+                rtxPayloadType = -1;
+                for (PayloadTypePacketExtension ext : payloadTypes)
+                {
+                    if ("rtx".equalsIgnoreCase(ext.getName()))
+                    {
+                        rtxPayloadType = (byte) ext.getID();
+                        for (ParameterPacketExtension ppe : ext.getParameters())
+                        {
+                            if ("apt".equalsIgnoreCase(ppe.getName()))
+                                rtxAssociatedPayloadType
+                                        = Byte.valueOf(ppe.getValue());
+
+                        }
+                    }
+                }
             }
         }
 
@@ -1841,5 +1869,50 @@ public class RtpChannel
         }
 
         super.expire();
+    }
+
+    /*
+     * Returns the payload type number for the RTX payload type (RFC-4588) for
+     * this channel.
+     * @return the payload type number for the RTX payload type (RFC-4588) for
+     * this channel.
+     */
+    public byte getRtxPayloadType()
+    {
+        return rtxPayloadType;
+    }
+
+    /**
+     * Returns the payload type number associated with RTX for this channel.
+     * @return the payload type number associated with RTX for this channel.
+     */
+    public byte getRtxAssociatedPayloadType()
+    {
+        return rtxAssociatedPayloadType;
+    }
+
+    /**
+     * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
+     * any. If none is found, returns -1.
+     *
+     * @return the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
+     * any. If none is found, returns -1.
+     */
+    public long getFidPairedSsrc(long ssrc)
+    {
+        Long paired = fidSourceGroups.get(ssrc);
+        if (paired != null)
+        {
+            return paired;
+        }
+
+        // Maybe 'ssrc' is one of the values.
+        for (Map.Entry<Long, Long> entry : fidSourceGroups.entrySet())
+        {
+            if (entry.getValue() == ssrc)
+                return entry.getKey();
+        }
+
+        return -1;
     }
 }

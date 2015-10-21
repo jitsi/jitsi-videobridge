@@ -18,6 +18,7 @@ package org.jitsi.videobridge.transform;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -157,10 +158,16 @@ public class CachingTransformer
     private final CleanerThread cleanerThread = new CleanerThread();
 
     /**
+     * The {@code RtpChannel} which owns this transformer.
+     */
+    private final RtpChannel channel;
+
+    /**
      * Initializes a new <tt>CachingTransformer</tt> instance.
      */
-    public CachingTransformer()
+    public CachingTransformer(RtpChannel channel)
     {
+        this.channel = channel;
         cleanerThread.start();
     }
 
@@ -173,7 +180,11 @@ public class CachingTransformer
     public RawPacket transform(RawPacket pkt)
     {
         if (!closed && pkt != null && pkt.getVersion() == 2)
-            cachePacket(pkt);
+        {
+            byte rtxPt = channel.getRtxPayloadType();
+            if (rtxPt == -1 || pkt.getPayloadType() != rtxPt)
+                cachePacket(pkt);
+        }
         return pkt;
     }
 
@@ -270,10 +281,10 @@ public class CachingTransformer
     }
 
     /**
-     * Saves a packet in the cache.
-     * @param pkt the packet to save.
+     * {@inheritDoc}
      */
-    private void cachePacket(RawPacket pkt)
+    @Override
+    public void cachePacket(RawPacket pkt)
     {
         Cache cache = getCache(pkt.getSSRC() & 0xffffffffL, true);
 
