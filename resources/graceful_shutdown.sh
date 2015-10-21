@@ -61,6 +61,8 @@ function jsonval {
 function getConferenceCount {
 	stats=$(curl -s "$hostUrl/colibri/stats")
 	echo `jsonval "conferences" $stats`
+	#stats=$(curl -s "$hostUrl/colibri/stats"| jq ". conferences")
+	#echo $stats
 }
 
 # Prints info messages
@@ -81,7 +83,7 @@ if [ "$shutdownStatus" == "200" ]
 then
 	printInfo "Graceful shutdown started"
 	confCount=`getConferenceCount`
-	while [ $confCount -gt 0 ] ; do
+	while [[ $confCount -gt 0 ]] ; do
 		printInfo "There are still $confCount conferences"
 		sleep 10
 		confCount=`getConferenceCount`
