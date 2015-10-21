@@ -262,8 +262,10 @@ public class RtxTransformer
      * the RTX format, the packet will be encapsulated in RTX, otherwise, the
      * packet will be retransmitted as-is.
      * @param pkt the packet to retransmit.
+     * @return {@code true} if the packet was successfully retransmitted,
+     * {@code false} otherwise.
      */
-    public void retransmit(RawPacket pkt)
+    public boolean retransmit(RawPacket pkt)
     {
         boolean destinationSupportsRtx = channel.getRtxPayloadType() != -1;
         boolean retransmitPlain = !destinationSupportsRtx;
@@ -278,7 +280,7 @@ public class RtxTransformer
             }
             else
             {
-                encapsulateInRtxAndTransmit(pkt, rtxSsrc);
+                retransmitPlain = !encapsulateInRtxAndTransmit(pkt, rtxSsrc);
             }
         }
 
@@ -294,9 +296,12 @@ public class RtxTransformer
                 catch (TransmissionFailedException tfe)
                 {
                     logger.warn("Failed to retransmit a packet.");
+                    return false;
                 }
             }
         }
+
+        return true;
     }
 
     /**
@@ -305,8 +310,10 @@ public class RtxTransformer
      * {@code MediaStream}.
      * @param pkt the packet to transmit.
      * @param rtxSsrc the SSRC for the RTX stream.
+     * @return {@code true} if the packet was successfully retransmitted,
+     * {@code false} otherwise.
      */
-    private void encapsulateInRtxAndTransmit(RawPacket pkt, long rtxSsrc)
+    private boolean encapsulateInRtxAndTransmit(RawPacket pkt, long rtxSsrc)
     {
         byte[] buf = pkt.getBuffer();
         int len = pkt.getLength();
@@ -339,7 +346,10 @@ public class RtxTransformer
             catch (TransmissionFailedException tfe)
             {
                 logger.warn("Failed to transmit an RTX packet.");
+                return false;
             }
         }
+
+        return true;
     }
 }

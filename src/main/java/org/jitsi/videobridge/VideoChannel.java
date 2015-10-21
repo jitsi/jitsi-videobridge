@@ -1277,9 +1277,7 @@ public class VideoChannel
      * Implements
      * {@link org.jitsi.videobridge.rtcp.NACKHandler#handleNACK(org.jitsi.impl.neomedia.rtcp.NACKPacket)}
      *
-     *
-     * TODO: consider doing this in a separate thread, as it might slow down
-     * the receiving RTCP thread.
+     * Handles an incoming RTCP NACK packet from a receiver.
      */
     @Override
     public void handleNACK(NACKPacket nackPacket)
@@ -1296,9 +1294,9 @@ public class VideoChannel
                                  + lostPackets);
         }
 
-
         RawPacketCache cache = transformEngine.getCache();
-        if (cache != null)
+        RtxTransformer rtxTransformer = transformEngine.getRtxTransformer();
+        if (cache != null && rtxTransformer != null)
         {
             Iterator<Integer> iter = lostPackets.iterator();
             while (iter.hasNext())
@@ -1312,19 +1310,11 @@ public class VideoChannel
                         logger.debug("Retransmitting packet from cache. SSRC "
                                              + ssrc + " seq " + seq);
                     }
-                    try
+
+                    if (rtxTransformer.retransmit(pkt))
                     {
-                        getStream().injectPacket(
-                                createPacketForRetransmission(pkt),
-                                true,
-                                true);
+                        iter.remove();
                     }
-                    catch (TransmissionFailedException e)
-                    {
-                        logger.warn("Failed to inject packet in MediaStream: "
-                            + e);
-                    }
-                    iter.remove();
                 }
             }
         }
@@ -1349,10 +1339,11 @@ public class VideoChannel
             // them from the actual sender via a new NACK packet which we
             // construct below.
 
-            // When we add transformers which change the sequence numbers and/or
-            // SSRC of packets for this endpoint, we will need here to translate
-            // the seq/SSRC back.
-
+            // Note: this does not execute when SSRC rewriting is in use,
+            // because the latter depends on retransmission requests being
+            // enabled. So we can send a NACK with the original SSRC and
+            // sequence numbers without worrying about them not matching what
+            // the sender sent.
             NACKPacket newNack
                     = new NACKPacket(nackPacket.senderSSRC, ssrc, lostPackets);
             RawPacket pkt = null;
