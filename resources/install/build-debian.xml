@@ -112,6 +112,16 @@
               overwrite="true"/>
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
                perm="755"/>
+        <copy file="resources/graceful_shutdown.sh"
+              todir="${debian.dir}/usr/share/jitsi-videobridge"
+              overwrite="true"/>
+        <chmod file="${debian.dir}/usr/share/jitsi-videobridge/graceful_shutdown.sh"
+               perm="755"/>
+        <copy file="resources/collect-dump-logs.sh"
+              todir="${debian.dir}/usr/share/jitsi-videobridge"
+              overwrite="true"/>
+        <chmod file="${debian.dir}/usr/share/jitsi-videobridge/collect-dump-logs.sh"
+               perm="755"/>
 
         <!-- creating a debian archive file
         <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz"
