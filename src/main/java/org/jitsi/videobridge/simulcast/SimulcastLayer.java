@@ -305,13 +305,7 @@ public class SimulcastLayer
                     " stopped.").toString());
         }
 
-        executorService.execute(new Runnable()
-        {
-            public void run()
-            {
-                firePropertyChange(IS_STREAMING_PNAME, true, false);
-            }
-        });
+        asynchronouslyFirePropertyChange(IS_STREAMING_PNAME, true, false);
     }
 
     /**
@@ -423,13 +417,7 @@ public class SimulcastLayer
                     "({self.primarySSRC}) resumed.").toString());
         }
 
-        executorService.execute(new Runnable()
-        {
-            public void run()
-            {
-                firePropertyChange(IS_STREAMING_PNAME, false, true);
-            }
-        });
+        asynchronouslyFirePropertyChange(IS_STREAMING_PNAME, false, true);
     }
 
     /**
@@ -479,5 +467,35 @@ public class SimulcastLayer
                 .getEndpoint().getID() + ": " + msg;
             logger.warn(msg);
         }
+    }
+
+    /**
+     * Asynchronously fires a new {@code PropertyChangeEvent} to the
+     * {@code PropertyChangeListener}s registered with this
+     * {@code PropertyChangeNotifier} in order to notify about a change in the
+     * value of a specific property which had its old value modified to a
+     * specific new value.
+     *
+     * @param property the name of the property of this
+     * {@code PropertyChangeNotifier} which had its value changed
+     * @param oldValue the value of the property with the specified name before
+     * the change
+     * @param newValue the value of the property with the specified name after
+     * the change
+     */
+    private void asynchronouslyFirePropertyChange(
+            final String property,
+            final Object oldValue,
+            final Object newValue)
+    {
+        executorService.execute(
+                new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        firePropertyChange(property, oldValue, newValue);
+                    }
+                });
     }
 }
