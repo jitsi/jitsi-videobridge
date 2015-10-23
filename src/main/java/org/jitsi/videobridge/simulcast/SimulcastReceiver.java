@@ -34,6 +34,7 @@ import java.util.concurrent.*;
  * This class is thread safe.
  *
  * @author George Politis
+ * @author Lyubomir Marinov
  */
 public class SimulcastReceiver
         extends PropertyChangeNotifier
@@ -51,6 +52,14 @@ public class SimulcastReceiver
      */
     public static final String SIMULCAST_LAYERS_PNAME
             = SimulcastReceiver.class.getName() + ".simulcastLayers";
+
+    /**
+     * The number of (video) frames which defines the interval of time
+     * (indirectly) during which a {@code SimulcastLayer} needs to receive data
+     * from its remote peer or it will be declared paused/stopped/not streaming
+     * by its {@code SimulcastReceiver}.
+     */
+    private static final int TIMEOUT_ON_FRAME_COUNT = 5;
 
     /**
      * The pool of threads utilized by this class.
@@ -93,6 +102,14 @@ public class SimulcastReceiver
      * browsers that don't support native simulcast (Temasys).
      */
     private boolean nativeSimulcast = true;
+
+    /**
+     * The history of the order/sequence of receipt of (video) frames by
+     * {@link #simulcastLayers}. Used in an attempt to speed up the detection of
+     * paused/stopped {@code SimulcastLayer}s by counting (video) frames.
+     */
+    private final List<SimulcastLayer> simulcastLayerFrameHistory
+        = new LinkedList<SimulcastLayer>();
 
     /**
      * Ctor.
@@ -204,6 +221,10 @@ public class SimulcastReceiver
                 firePropertyChange(SIMULCAST_LAYERS_PNAME, null, null);
             }
         });
+
+        // TODO If simulcastLayers has changed, then simulcastLayerFrameHistory
+        // has very likely become irrelevant. In other words, clear
+        // simulcastLayerFrameHistory.
     }
 
     /**
@@ -252,8 +273,15 @@ public class SimulcastReceiver
         // NOTE(gp) we expect the base layer to be always on, so we never
         // touch it or starve it.
 
+        // XXX Refer to the implementation of
+        // SimulcastLayer#touch(boolean, RawPacket) for an explanation of why we
+        // chose to use a return value.
+        boolean frameStarted;
+
         if (acceptedLayer == layers.first())
         {
+            frameStarted = acceptedLayer.touch(/* base */ true, pkt);
+
             // We have accepted a base layer packet, starve the higher
             // quality layers.
             for (SimulcastLayer layer : layers)
@@ -268,8 +296,10 @@ public class SimulcastReceiver
         {
             // We have accepted a non-base layer packet, touch the accepted
             // layer.
-            acceptedLayer.touch();
+            frameStarted = acceptedLayer.touch(/* base */ false, pkt);
         }
+        if (frameStarted)
+            simulcastLayerFrameStarted(acceptedLayer, layers);
     }
 
     /**
@@ -490,6 +520,140 @@ public class SimulcastReceiver
             msg = getSimulcastEngine().getVideoChannel()
                 .getEndpoint().getID() + ": " + msg;
             logger.info(msg);
+        }
+    }
+
+    /**
+     * Notifies this {@code SimulcastReceiver} that a specific
+     * {@code SimulcastReceiver} has detected the start of a new video frame in
+     * the RTP stream that it represents. Determines whether any of
+     * {@link #simulcastLayers} other than {@code source} have been
+     * paused/stopped by the remote peer. The determination is based on counting
+     * (video) frames.
+     *
+     * @param source the {@code SimulcastLayer} which is the source of the event
+     * i.e. which has detected the start of a new video frame in the RTP stream
+     * that it represents
+     * @param layers the set of {@code SimulcastLayer}s managed by this
+     * {@code SimulcastReceiver}. Explicitly provided to the method in order to
+     * avoid invocations of {@link #getSimulcastLayers()} because the latter
+     * makes a copy at the time of this writing.
+     */
+    private void simulcastLayerFrameStarted(
+            SimulcastLayer source,
+            SortedSet<SimulcastLayer> layers)
+    {
+        // Timeouts in layers caused by source may occur only based on the span
+        // (of time or received frames) during which source has received
+        // TIMEOUT_ON_FRAME_COUNT number of frames. The current method
+        // invocation signals the receipt of 1 frame by source.
+        int indexOfLastSourceOccurrenceInHistory = -1;
+        int sourceFrameCount = 0;
+        int ix = 0;
+
+        for (Iterator<SimulcastLayer> it
+                    = simulcastLayerFrameHistory.iterator();
+                it.hasNext();
+                ++ix)
+        {
+            if (it.next() == source)
+            {
+                if (indexOfLastSourceOccurrenceInHistory != -1)
+                {
+                    // Prune simulcastLayerFrameHistory so that it does not
+                    // become unnecessarily long.
+                    it.remove();
+                }
+                else if (++sourceFrameCount >= TIMEOUT_ON_FRAME_COUNT - 1)
+                {
+                    // The span of TIMEOUT_ON_FRAME_COUNT number of frames
+                    // received by source only is to be examined for the
+                    // purposes of timeouts. The current method invocations
+                    // signals the receipt of 1 frame by source so
+                    // TIMEOUT_ON_FRAME_COUNT - 1 occurrences of source in
+                    // simulcastLayerFrameHistory is enough.
+                    indexOfLastSourceOccurrenceInHistory = ix;
+                }
+            }
+        }
+
+        if (indexOfLastSourceOccurrenceInHistory != -1)
+        {
+            // Presumably, if a SimulcastLayer is active, all SimulcastLayers
+            // before it (according to SimulcastLayer's order) are active as
+            // well. Consequently, timeouts may occur in SimulcastLayers which
+            // are after source.
+            boolean maybeTimeout = false;
+
+            for (SimulcastLayer layer : layers)
+            {
+                if (maybeTimeout)
+                {
+                    // There's no point in timing layer out if it's timed out
+                    // already.
+                    if (layer.isStreaming())
+                    {
+                        maybeTimeout(
+                                source,
+                                layer,
+                                indexOfLastSourceOccurrenceInHistory);
+                    }
+                }
+                else if (layer == source)
+                {
+                    maybeTimeout = true;
+                }
+            }
+        }
+
+        // As previously stated, the current method invocation signals the
+        // receipt of 1 frame by source.
+        simulcastLayerFrameHistory.add(0, source);
+        // TODO Prune simulcastLayerFrameHistory by forgetting so that it does
+        // not become too long.
+    }
+
+    /**
+     * Determines whether {@code effect} has been paused/stopped by the remote
+     * peer. The determination is based on counting frames and is triggered by
+     * the receipt of (a piece of) a new (video) frame by {@code cause}.
+     *
+     * @param cause the {@code SimulcastLayer} which has received (a piece of) a
+     * new (video) frame and has thus triggered a check on {@code effect}
+     * @param effect the {@code SimulcastLayer} which is to be checked whether
+     * it looks like it has been paused/stopped by the remote peer
+     */
+    private void maybeTimeout(
+            SimulcastLayer cause,
+            SimulcastLayer effect,
+            int endIndexInSimulcastLayerFrameHistory)
+    {
+        Iterator<SimulcastLayer> it = simulcastLayerFrameHistory.iterator();
+        boolean timeout = true;
+
+        for (int ix = 0;
+                it.hasNext() && ix < endIndexInSimulcastLayerFrameHistory;
+                ++ix)
+        {
+            if (it.next() == effect)
+            {
+                timeout = false;
+                break;
+            }
+        }
+        if (timeout)
+        {
+            // Since effect has been determined to have been paused/stopped by
+            // the remote peer, its possible presence in
+            // simulcastLayerFrameHistory is irrelevant now. In other words,
+            // remove effect from simulcastLayerFrameHistory.
+            while (it.hasNext())
+            {
+                if (it.next() == effect)
+                    it.remove();
+            }
+
+            effect.timeout();
         }
     }
 }

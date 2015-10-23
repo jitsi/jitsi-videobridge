@@ -32,6 +32,7 @@ import org.jitsi.util.event.*;
  * This class is thread safe.
  *
  * @author George Politis
+ * @author Lyubomir Marinov
  */
 public class SimulcastLayer
     extends PropertyChangeNotifier
@@ -130,6 +131,17 @@ public class SimulcastLayer
      * to somehow change. TAG(arbitrary-sim-layers)
      */
     private int seenBase = 0;
+
+    /**
+     * The {@code timestamp} of the last {@code RawPacket} seen by this
+     * {@code SimulcastLayer}. Technically, the order of the receipt of RTP
+     * packets may be disturbed by the network transport (e.g. UDP) and/or RTP
+     * packet retransmissions so the value of {@code lastPktTimestamp} may not
+     * come from the last received {@code RawPacket} but from a received
+     * {@code RawPacket} which would have been the last received if there were
+     * no network transport and RTP packet retransmission abberations.
+     */
+    private long lastPktTimestamp = -1;
 
     /**
      * Ctor.
@@ -270,35 +282,124 @@ public class SimulcastLayer
 
         if (this.isStreaming && this.seenHigh == 0)
         {
-            this.isStreaming = false;
-
-            if (logger.isDebugEnabled())
-            {
-                Map<String, Object> map = new HashMap<String, Object>(1);
-                map.put("self", this);
-                StringCompiler sc = new StringCompiler(map);
-
-                logDebug(sc.c("order-{self.order} layer " +
-                        "({self.primarySSRC}) stopped.").toString());
-            }
-
-            executorService.execute(new Runnable()
-            {
-                public void run()
-                {
-                    firePropertyChange(IS_STREAMING_PNAME, true, false);
-                }
-            });
+            timeout();
         }
 
         this.seenHigh = 0;
     }
 
     /**
+     * Marks this {@code SimulcastLayer} as stopped and fires an event.
+     */
+    synchronized void timeout()
+    {
+        this.isStreaming = false;
+
+        if (logger.isDebugEnabled())
+        {
+            Map<String, Object> map = new HashMap<String, Object>(1);
+            map.put("self", this);
+            StringCompiler sc = new StringCompiler(map);
+
+            logDebug(sc.c("order-{self.order} layer ({self.primarySSRC})" +
+                    " stopped.").toString());
+        }
+
+        executorService.execute(new Runnable()
+        {
+            public void run()
+            {
+                firePropertyChange(IS_STREAMING_PNAME, true, false);
+            }
+        });
+    }
+
+    /**
      * Increases the number of packets of this layer that we've seen, and
      * potentially marks this layer as started and fires an event.
+     *
+     * @param base {@code true} if this {@code SimulcastLayer} is the base
+     * ({@code SimulcastLayer}) of {@link #simulcastReceiver}; otherwise,
+     * {@code false}
+     * @param pkt the {@code RawPacket} which has been received by the local
+     * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
+     * the RTP stream represented by this {@code SimulcastLayer}, and has caused
+     * the method invocation
+     * @return {@code true} if {@code pkt} signals the receipt of (a piece of) a
+     * new (i.e. unobserved until now) frame; otherwise, {@code false}
      */
-    public synchronized void touch()
+    public synchronized boolean touch(boolean base, RawPacket pkt)
+    {
+        // Attempt to speed up the detection of paused simulcast layers by
+        // counting (video) frames instead of or in addition to counting
+        // packets. The reasoning for why counting frames may be an optimization
+        // is that (1) frames may span varying number of packets and (2) the
+        // webrtc.org implementation consecutively (from low quality to high
+        // quality) sends frames for all sent (i.e. non-paused) simulcast
+        // layers. RTP packets which transport pieces of one and the same frame
+        // have one and the same timestamp and the last RTP packet has the
+        // marker bit set. Since the RTP packet with the set marker bit may get
+        // lost, it sounds more reliably to distinguish frames by looking at the
+        // timestamps of the RTP packets.
+        long pktTimestamp = pkt.readUnsignedIntAsLong(4);
+        boolean frameStarted;
+
+        if (lastPktTimestamp < pktTimestamp)
+        {
+            // The current pkt signals the receit of a piece of a new (i.e.
+            // unobserved until now) frame.
+            lastPktTimestamp = pktTimestamp;
+            frameStarted = true;
+        }
+        else
+        {
+            frameStarted = false;
+        }
+
+        if (base)
+            touchBase(pkt);
+        else
+            touchNonBase(pkt);
+
+        // XXX (1) We didn't go with a full-blown observer/listener pattern
+        // implementation because that would have required much more effort to
+        // optimize. (2) We didn't go with a direct methon invocation on
+        // simulcastReceiver because that would have executed in the
+        // synchronization block of this method.
+        return frameStarted;
+    }
+
+    /**
+     * Notifies this {@code SimulcastLayer} that a specific {@code RawPacket}
+     * has been received (over the network from the remote peer) which is part
+     * of (the flow of) the RTP stream represented by this
+     * {@code SimulcastLayer}. This {@code SimulcastLayer} is the base
+     * ({@code SimulcastLayer}) of {@link #simulcastReceiver}.
+     *
+     * @param pkt the {@code RawPacket} which has been received by the local
+     * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
+     * the RTP stream represented by this {@code SimulcastLayer}, and has caused
+     * the method invocation
+     */
+    private void touchBase(RawPacket pkt)
+    {
+        // We do not have anything specific to touching the base SimulcastLayer
+        // at the time of this writing.
+    }
+
+    /**
+     * Notifies this {@code SimulcastLayer} that a specific {@code RawPacket}
+     * has been received (over the network from the remote peer) which is part
+     * of (the flow of) the RTP stream represented by this
+     * {@code SimulcastLayer}. This {@code SimulcastLayer} is NOT the base
+     * ({@code SimulcastLayer}) of {@link #simulcastReceiver}.
+     *
+     * @param pkt the {@code RawPacket} which has been received by the local
+     * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
+     * the RTP stream represented by this {@code SimulcastLayer}, and has caused
+     * the method invocation
+     */
+    private void touchNonBase(RawPacket pkt)
     {
         this.seenHigh++;
 
