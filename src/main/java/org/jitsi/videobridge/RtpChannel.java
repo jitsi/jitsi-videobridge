@@ -32,6 +32,7 @@ import net.sf.fmj.media.rtp.RTPHeader;
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
@@ -1723,5 +1724,34 @@ public class RtpChannel
             if (stream != null)
                 stream.setExternalTransformer(transformEngine);
         }
+    }
+
+    /**
+     * Closes {@link #transformEngine}. Normally this would be done by
+     * {@link #stream} when it is being closed, but we have observed cases (e.g.
+     * when running health checks) where it doesn't happen, and since
+     * {@link #transformEngine} is part of this {@code RtpChannel}, the latter
+     * assumes the responsibility of releasing its resources.
+     */
+    @Override
+    public void expire()
+    {
+        TransformEngine transformEngine = this.transformEngine;
+        if (transformEngine != null)
+        {
+            PacketTransformer t = transformEngine.getRTPTransformer();
+            if (t != null)
+            {
+                t.close();
+            }
+
+            t = transformEngine.getRTCPTransformer();
+            if (t != null)
+            {
+                t.close();
+            }
+        }
+
+        super.expire();
     }
 }
