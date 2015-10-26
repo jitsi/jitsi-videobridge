@@ -157,6 +157,15 @@ public class RetransmissionRequester
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close()
+    {
+        closed = true;
+    }
+
+    /**
      * Runs a loop which checks for any pending requests to be sent, sends them
      * and then waits until another request is available or due.
      */
@@ -181,8 +190,11 @@ public class RetransmissionRequester
                 {
                     for (Requester requester : requesters.values())
                         if (requester.nextRequestAt != -1)
-                            if (nextRequestAt == -1 || nextRequestAt > requester.nextRequestAt)
+                            if (nextRequestAt == -1
+                                    || nextRequestAt > requester.nextRequestAt)
+                            {
                                 nextRequestAt = requester.nextRequestAt;
+                            }
                 }
 
                 long now = System.currentTimeMillis();
