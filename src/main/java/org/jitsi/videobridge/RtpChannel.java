@@ -59,7 +59,7 @@ public class RtpChannel
      * replacement of the timestamps in the abs-send-time RTP header extension.
      */
     private static final String DISABLE_ABS_SEND_TIME_PNAME
-            = "org.jitsi.videobridge.DISABLE_ABS_SEND_TIME";
+        = "org.jitsi.videobridge.DISABLE_ABS_SEND_TIME";
 
     /**
      * The <tt>Logger</tt> used by the <tt>RtpChannel</tt> class and its
@@ -96,12 +96,12 @@ public class RtpChannel
     protected final ConferenceSpeechActivity conferenceSpeechActivity;
 
     /**
-     * Holds the <tt>RtpChannelDatagramFilter</tt> instances (if any) used by
-     * this channel. The filter for RTP is at index 0, the filter for RTCP at
-     * index 1.
+     * Holds the {@code RtpChannelDatagramFilter} instances (if any) used by
+     * this channel. The filter for RTP is at index {@code 0}, the filter for
+     * RTCP at index {@code 1}.
      */
     private final RtpChannelDatagramFilter[] datagramFilters
-            = new RtpChannelDatagramFilter[2];
+        = new RtpChannelDatagramFilter[2];
 
     /**
      * The local synchronization source identifier (SSRC) to be pre-announced.
@@ -216,15 +216,20 @@ public class RtpChannel
      * @param channelBundleId the ID of the channel-bundle this
      * <tt>RtpChannel</tt> is to be a part of (or <tt>null</tt> if no it is
      * not to be a part of a channel-bundle).
+     * @param transportNamespace the namespace of the transport to be used by
+     * the new instance. Can be either
+     * {@link IceUdpTransportPacketExtension#NAMESPACE} or
+     * {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public RtpChannel(Content content,
-                      String id,
-                      String channelBundleId,
-                      String transportNamespace,
-                      Boolean initiator)
+    public RtpChannel(
+            Content content,
+            String id,
+            String channelBundleId,
+            String transportNamespace,
+            Boolean initiator)
         throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
@@ -561,8 +566,7 @@ public class RtpChannel
      */
     void askForKeyframes()
     {
-        int[] receiveSSRCs = getReceiveSSRCs();
-        askForKeyframes(receiveSSRCs);
+        askForKeyframes(getReceiveSSRCs());
     }
 
     /**
@@ -825,7 +829,9 @@ public class RtpChannel
         final int length = this.receiveSSRCs.length;
 
         if (length == 0)
+        {
             return ColibriConferenceIQ.NO_SSRCS;
+        }
         else
         {
             int[] receiveSSRCs = new int[length / 2];
@@ -871,11 +877,14 @@ public class RtpChannel
     }
 
     /**
-     * Returns the <tt>SessionAddress</tt> which is or is to be the
-     * <tt>target</tt> of {@link #stream}. When <tt>DatagramPacket</tt>s are
-     * received through the <tt>DatagramSocket</tt>s of this <tt>Channel</tt>,
+     * Returns the {@code SessionAddress} which is or is to be the
+     * {@code target} of {@link #stream}. When {@code DatagramPacket}s are
+     * received through the {@code DatagramSocket}s of this {@code Channel},
      * their first RTP and RTCP sources will determine, respectively, the RTP
      * and RTCP targets.
+     *
+     * @return the {@code SessionAddress} which is or is to be the
+     * {@code target} of {@link #stream}
      */
     public SessionAddress getStreamTarget()
     {
@@ -889,7 +898,7 @@ public class RtpChannel
      */
     @Override
     public void initialize()
-            throws IOException
+        throws IOException
     {
         super.initialize();
 
@@ -932,7 +941,7 @@ public class RtpChannel
      * this <tt>Channel</tt>.
      *
      * @param channel the <tt>Channel</tt> to be checked whether it is within
-     * the set of <tt>Channel<tt>s limited by <tt>lastN</tt> i.e. whether its
+     * the set of <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether its
      * RTP streams are to be sent to the remote endpoint of this
      * <tt>Channel</tt>
      * @return <tt>true</tt> if the RTP streams of <tt>channel</tt> are to be
@@ -1078,10 +1087,8 @@ public class RtpChannel
             }
             catch (Throwable t)
             {
-                /*
-                 * A telephony conference will still function, albeit with reduced
-                 * SSRC-dependent functionality such as audio levels.
-                 */
+                // A telephony conference will still function, albeit with
+                // reduced SSRC-dependent functionality such as audio levels.
                 if (t instanceof InterruptedException)
                     Thread.currentThread().interrupt();
                 else if (t instanceof ThreadDeath)
@@ -1409,27 +1416,29 @@ public class RtpChannel
         URI uri = rtpHdrExtPacketExtension.getURI();
         if (uri == null)
         {
-            logger.warn("Failed to add an RTP header extension with an invalid"
-                        + " URI: " + rtpHdrExtPacketExtension.getAttribute(
-                    RTPHdrExtPacketExtension.URI_ATTR_NAME));
+            logger.warn(
+                    "Failed to add an RTP header extension with an invalid"
+                        + " URI: "
+                        + rtpHdrExtPacketExtension.getAttribute(
+                                RTPHdrExtPacketExtension.URI_ATTR_NAME));
             return;
         }
 
         Byte id = Byte.valueOf(rtpHdrExtPacketExtension.getID());
         if (id == null)
         {
-            logger.warn("Failed to add an RTP header extension with an invalid"
-                        + " ID: " + rtpHdrExtPacketExtension.getID());
+            logger.warn(
+                    "Failed to add an RTP header extension with an invalid ID: "
+                        + rtpHdrExtPacketExtension.getID());
             return;
         }
 
-        if (RTPExtension.ABS_SEND_TIME_URN
-                .equals(uri.toString()))
+        if (RTPExtension.ABS_SEND_TIME_URN.equals(uri.toString()))
         {
             ConfigurationService cfg
-                    = ServiceUtils.getService(
-                    getBundleContext(),
-                    ConfigurationService.class);
+                = ServiceUtils.getService(
+                        getBundleContext(),
+                        ConfigurationService.class);
 
             if (cfg != null
                     && cfg.getBoolean(DISABLE_ABS_SEND_TIME_PNAME, false))

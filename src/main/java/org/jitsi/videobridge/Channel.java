@@ -147,15 +147,20 @@ public abstract class Channel
      * @param channelBundleId the ID of the channel-bundle this
      * <tt>AudioChannel</tt> is to be a part of (or <tt>null</tt> if no it is
      * not to be a part of a channel-bundle).
-     * @param transportNamespace the namespace of transport used by this
-     * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
-     * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
+     * @param transportNamespace the namespace of the transport to be used by
+     * the new instance. Can be either
+     * {@link IceUdpTransportPacketExtension#NAMESPACE} or
+     * {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public Channel(Content content, String id, String channelBundleId,
-                   String transportNamespace, Boolean initiator)
+    public Channel(
+            Content content,
+            String id,
+            String channelBundleId,
+            String transportNamespace,
+            Boolean initiator)
         throws Exception
     {
         if (content == null)
@@ -183,8 +188,11 @@ public abstract class Channel
     }
 
     /**
-     * Called when <tt>Channel</tt> is being expired. Derived class should close
+     * Called when this {@code Channel} is being expired. Extenders should close
      * any open streams.
+     *
+     * @throws IOException if an I/O error occurs while closing any open
+     * streams. The exception will be logged and ignored.
      */
     protected abstract void closeStream()
         throws IOException;
@@ -200,9 +208,10 @@ public abstract class Channel
     protected StreamConnector createStreamConnector()
     {
         TransportManager transportManager = getTransportManager();
-        return transportManager != null
-            ? transportManager.getStreamConnector(this)
-            : null;
+        return
+            transportManager != null
+                ? transportManager.getStreamConnector(this)
+                : null;
     }
 
     /**
@@ -215,9 +224,10 @@ public abstract class Channel
     protected MediaStreamTarget createStreamTarget()
     {
         TransportManager transportManager = getTransportManager();
-        return transportManager != null
-            ? transportManager.getStreamTarget(this)
-            : null;
+        return
+            transportManager != null
+                ? transportManager.getStreamTarget(this)
+                : null;
     }
 
     /**
@@ -713,10 +723,15 @@ public abstract class Channel
         {
             TransportManager transportManager = getTransportManager();
             if (transportManager != null)
+            {
                 transportManager.startConnectivityEstablishment(transport);
+            }
             else
-                logger.warn("Failed to start connectivity establishment: "
+            {
+                logger.warn(
+                        "Failed to start connectivity establishment: "
                             + "transport manager is null.");
+            }
         }
 
         touch(); // It seems this Channel is still active.

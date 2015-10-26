@@ -20,7 +20,6 @@ import java.util.regex.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
@@ -466,13 +465,17 @@ public class Videobridge
     {
         BundleContext bundleContext = getBundleContext();
 
-        if (bundleContext != null)
+        if (bundleContext == null)
         {
-            return ServiceUtils2.getService(bundleContext,
-                                           ConfigurationService.class);
+            return null;
         }
-
-        return null;
+        else
+        {
+            return
+                ServiceUtils2.getService(
+                        bundleContext,
+                        ConfigurationService.class);
+        }
     }
 
     /**
@@ -529,13 +532,10 @@ public class Videobridge
     {
         BundleContext bundleContext = getBundleContext();
 
-        if (bundleContext != null)
-        {
-            return ServiceUtils2.getService(bundleContext,
-                                            EventAdmin.class);
-        }
-
-        return null;
+        if (bundleContext == null)
+            return null;
+        else
+            return ServiceUtils2.getService(bundleContext, EventAdmin.class);
     }
 
     /**
@@ -665,12 +665,14 @@ public class Videobridge
 
                     if (tokenIQ.equals(tokenConfig))
                     {
-                        State recState = recordingIQ.getState();
-
-                        boolean recording = conference.setRecording(
-                            (recState.equals(State.ON)
-                                || recState.equals(State.PENDING))
-                                ? true : false);
+                        ColibriConferenceIQ.Recording.State recState
+                            = recordingIQ.getState();
+                        boolean recording
+                            = conference.setRecording(
+                                    ColibriConferenceIQ.Recording.State.ON
+                                            .equals(recState)
+                                        || ColibriConferenceIQ.Recording.State
+                                                .PENDING.equals(recState));
                         ColibriConferenceIQ.Recording responseRecordingIq
                                 = new ColibriConferenceIQ.Recording(recState);
 
@@ -1090,8 +1092,10 @@ public class Videobridge
     }
 
     /**
-     * Returns <tt>true</tt> if this instance has entered graceful shutdown
-     * mode.
+     * Returns {@code true} if this instance has entered graceful shutdown mode.
+     *
+     * @return {@code true} if this instance has entered graceful shutdown mode;
+     * otherwise, {@code false}
      */
     public boolean isShutdownInProgress()
     {
@@ -1099,8 +1103,10 @@ public class Videobridge
     }
 
     /**
-     * Returns <tt>true</tt> if XMPP API has been enabled or <tt>false</tt>
-     * otherwise.
+     * Returns {@code true} if XMPP API has been enabled.
+     *
+     * @return {@code true} if XMPP API has been enabled; otherwise,
+     * {@code false}
      */
     public boolean isXmppApiEnabled()
     {
@@ -1122,15 +1128,14 @@ public class Videobridge
 
         synchronized (conferences)
         {
-            if (conferences.size() == 0)
+            if (conferences.isEmpty())
             {
                 ShutdownService shutdownService
                     = ServiceUtils.getService(
-                    bundleContext,
-                    ShutdownService.class);
+                            bundleContext,
+                            ShutdownService.class);
 
                 logger.info("Videobridge is shutting down NOW");
-
                 shutdownService.beginShutdown();
             }
         }
@@ -1362,9 +1367,9 @@ public class Videobridge
      */
     String getConferenceCountString()
     {
+        Conference[] conferences = getConferences();
         int conferenceCount = 0, channelCount = 0, streamCount = 0;
 
-        Conference[] conferences = getConferences();
         if (conferences != null && conferences.length != 0)
         {
             for (Conference conference : conferences)
@@ -1378,13 +1383,14 @@ public class Videobridge
                         if (content != null && !content.isExpired())
                         {
                             int contentChannelCount = content.getChannelCount();
-                            channelCount += contentChannelCount;
 
+                            channelCount += contentChannelCount;
                             if (MediaType.VIDEO.equals(content.getMediaType()))
                             {
-                                streamCount +=
-                                    getContentStreamCount(content,
-                                                          contentChannelCount);
+                                streamCount
+                                    += getContentStreamCount(
+                                            content,
+                                            contentChannelCount);
                             }
                         }
                     }
@@ -1392,9 +1398,10 @@ public class Videobridge
             }
         }
 
-        return "The total number of conferences is now " + conferenceCount
-                + ", channels " + channelCount
-                + ", video streams " + streamCount + ".";
+        return
+            "The total number of conferences is now " + conferenceCount
+                + ", channels " + channelCount + ", video streams "
+                + streamCount + ".";
     }
 
     /**
