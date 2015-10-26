@@ -43,6 +43,69 @@ public class REMBNotifier
     private final RTCPPacketParserEx parserEx = new RTCPPacketParserEx();
 
     /**
+     * The {@link PacketTransformer} we use for RTCP packets.
+     */
+    private final SinglePacketTransformer rtcpTransformer
+            = new SinglePacketTransformer()
+    {
+        @Override
+        public RawPacket transform(RawPacket pkt)
+        {
+            return pkt;
+        }
+
+        @Override
+        public RawPacket reverseTransform(RawPacket pkt)
+        {
+            if (pkt == null)
+            {
+                return pkt;
+            }
+
+            RTCPCompoundPacket inPacket;
+            try
+            {
+                inPacket = (RTCPCompoundPacket) parserEx.parse(
+                        pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
+            }
+            catch (BadFormatException ex)
+            {
+                return pkt;
+            }
+
+            if (inPacket == null)
+            {
+                return pkt;
+            }
+
+            // Intercept REMBs and forward them to the VideoChannel logic
+            for (RTCPPacket p : inPacket.packets)
+            {
+                if (p != null && p.type == RTCPFBPacket.PSFB)
+                {
+                    RTCPFBPacket psfb = (RTCPFBPacket) p;
+                    if (psfb.fmt == RTCPREMBPacket.FMT)
+                    {
+                        RTCPREMBPacket remb = (RTCPREMBPacket) psfb;
+
+                        WeakReference<VideoChannel> wc = weakVideoChannel;
+                        VideoChannel videoChannel = wc == null
+                                ? null
+                                : wc.get();
+
+                        if (videoChannel != null)
+                        {
+                            videoChannel.receivedREMB(remb.getBitrate());
+                        }
+                    }
+                }
+            }
+
+            return pkt;
+        }
+    };
+
+    /**
      * Ctor.
      *
      * @param videoChannel
@@ -52,70 +115,22 @@ public class REMBNotifier
         this.weakVideoChannel = new WeakReference<VideoChannel>(videoChannel);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public PacketTransformer getRTPTransformer()
     {
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public PacketTransformer getRTCPTransformer()
     {
-        return new SinglePacketTransformer()
-        {
-            @Override
-            public RawPacket transform(RawPacket pkt)
-            {
-                return pkt;
-            }
-
-            @Override
-            public RawPacket reverseTransform(RawPacket pkt)
-            {
-                if (pkt == null)
-                {
-                    return pkt;
-                }
-
-                RTCPCompoundPacket inPacket;
-                try
-                {
-                    inPacket = (RTCPCompoundPacket) parserEx.parse(
-                        pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
-                }
-                catch (BadFormatException ex)
-                {
-                   return pkt;
-                }
-
-                if (inPacket == null)
-                {
-                    return pkt;
-                }
-
-                // Intercept REMBs and forward them to the VideoChannel logic
-                for (RTCPPacket p : inPacket.packets)
-                {
-                    if (p != null && p.type == RTCPFBPacket.PSFB)
-                    {
-                        RTCPFBPacket psfb = (RTCPFBPacket) p;
-                        if (psfb.fmt == RTCPREMBPacket.FMT)
-                        {
-                            RTCPREMBPacket remb = (RTCPREMBPacket) psfb;
-
-                            WeakReference<VideoChannel> wc = weakVideoChannel;
-                            VideoChannel videoChannel = wc == null
-                                ? null
-                                : wc.get();
-
-                            if (videoChannel != null)
-                            {
-                                videoChannel.receivedREMB(remb.getBitrate());
-                            }
-                        }
-                    }
-                }
-
-                return pkt;
-            }
-        };
+        return rtcpTransformer;
     }
 }
+
