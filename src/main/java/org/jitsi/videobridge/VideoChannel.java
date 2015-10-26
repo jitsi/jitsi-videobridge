@@ -1319,99 +1319,99 @@ public class VideoChannel
             }
         }
 
-        // If retransmission requests are enabled, videobridge assumes the
-        // responsibility of requesting missing packets (which happens in
-        // RetransmissionRequester).
-        if (!lostPackets.isEmpty()
-                && transformEngine.retransmissionsRequestsEnabled()
-                && logger.isDebugEnabled())
+        if (!lostPackets.isEmpty())
         {
-            logger.debug("Packets missing from the cache. Ignoring, because"
-                    + " retransmission requests are enabled.");
-        }
-
-        // Otherwise, if retransmission requests are disabled, we forward the
-        // NACK packet (but exclude the packets answered from our cache).
-        if (!lostPackets.isEmpty()
-                && !transformEngine.retransmissionsRequestsEnabled())
-        {
-            // The remaining lostPackets are not in the cache. We will request
-            // them from the actual sender via a new NACK packet which we
-            // construct below.
-
-            // Note: this does not execute when SSRC rewriting is in use,
-            // because the latter depends on retransmission requests being
-            // enabled. So we can send a NACK with the original SSRC and
-            // sequence numbers without worrying about them not matching what
-            // the sender sent.
-            NACKPacket newNack
-                    = new NACKPacket(nackPacket.senderSSRC, ssrc, lostPackets);
-            RawPacket pkt = null;
-            try
+            if (transformEngine.retransmissionsRequestsEnabled())
             {
-                pkt = newNack.toRawPacket();
+                // If retransmission requests are enabled, videobridge assumes
+                // the responsibility of requesting missing packets (which
+                // happens in RetransmissionRequester).
+                logger.debug("Packets missing from the cache. Ignoring, because"
+                                     + " retransmission requests are enabled.");
             }
-            catch (IOException ioe)
+            else
             {
-                logger.warn("Failed to create NACK packet: " + ioe);
-            }
-
-            if (pkt != null)
-            {
-                Set<RtpChannel> channelsToSendTo = new HashSet<RtpChannel>();
-                Channel channel = getContent().findChannelByReceiveSSRC(ssrc);
-                if (channel != null && channel instanceof RtpChannel)
-                {
-                    channelsToSendTo.add((RtpChannel) channel);
-                }
-                else
-                {
-                    // If searching by SSRC fails, we transmit the NACK on all
-                    // other channels.
-                    // TODO: We might want to *always* send these to all channels,
-                    // in order to not prevent the mechanism for avoidance of
-                    // retransmission of multiple RTCP FB defined in AVPF:
-                    // https://tools.ietf.org/html/rfc4585#section-3.2
-                    // This is, unless/until we implement some mechanism of our
-                    // own.
-                    for (Channel c : getContent().getChannels())
-                    {
-                        if (c != null && c instanceof RtpChannel && c != this)
-                            channelsToSendTo.add((RtpChannel) c);
-                    }
-                }
-
-                for (RtpChannel c : channelsToSendTo)
-                {
-                    if (logger.isDebugEnabled())
-                    {
-                        logger.debug("Sending a NACK for SSRC " + ssrc
-                                             + " , packets " + lostPackets
-                                             + " on channel " + c.getID());
-                    }
-
-                    try
-                    {
-                        c.getStream().injectPacket(pkt, false, true);
-                    }
-                    catch (TransmissionFailedException e)
-                    {
-                        logger.warn("Failed to inject packet in MediaStream: "
-                            + e);
-                    }
-                }
+                // Otherwise, if retransmission requests are disabled, we send
+                // a NACK packet of our own.
+                sendNack(nackPacket.senderSSRC, ssrc, lostPackets);
             }
         }
     }
 
     /**
-     * Creates an RTP packet which is to carry the retransmission of the given
-     * RTP packet. If the endpoint supports RFC4588 we may encapsulate it in
-     * that format. Currently we just retransmit the packet as-is.
+     * Creates an RTCP NACK packet with the given Packet Sender and Media Source
+     * SSRCs and the given set of sequence numbers, and sends it to the
+     * appropriate channels depending on the Media Source SSRC.
+     * @param packetSenderSsrc the SSRC to use for the Packet Sender field.
+     * @param mediaSourceSsrc the SSRC to use for the Media Source field.
+     * @param seqs the set of sequence numbers to include in the NACK packet.
      */
-    private RawPacket createPacketForRetransmission(RawPacket pkt)
+    private void sendNack(long packetSenderSsrc,
+                          long mediaSourceSsrc,
+                          Set<Integer> seqs)
     {
-        return pkt;
+        // Note: this does not execute when SSRC rewriting is in use, because
+        // the latter depends on retransmission requests being enabled. So we
+        // can send a NACK with the original SSRC and sequence numbers without
+        // worrying about them not matching what the sender actually sent.
+        NACKPacket newNack
+            = new NACKPacket(packetSenderSsrc, mediaSourceSsrc, seqs);
+        RawPacket pkt = null;
+        try
+        {
+            pkt = newNack.toRawPacket();
+        }
+        catch (IOException ioe)
+        {
+            logger.warn("Failed to create NACK packet: " + ioe);
+        }
+
+        if (pkt != null)
+        {
+            Set<RtpChannel> channelsToSendTo = new HashSet<RtpChannel>();
+            Channel channel
+                = getContent().findChannelByReceiveSSRC(mediaSourceSsrc);
+            if (channel != null && channel instanceof RtpChannel)
+            {
+                channelsToSendTo.add((RtpChannel) channel);
+            }
+            else
+            {
+                // If searching by SSRC fails, we transmit the NACK on all
+                // other channels.
+                // TODO: We might want to *always* send these to all channels,
+                // in order to not prevent the mechanism for avoidance of
+                // retransmission of multiple RTCP FB defined in AVPF:
+                // https://tools.ietf.org/html/rfc4585#section-3.2
+                // This is, unless/until we implement some mechanism of our own.
+                for (Channel c : getContent().getChannels())
+                {
+                    if (c != null && c instanceof RtpChannel && c != this)
+                    {
+                        channelsToSendTo.add((RtpChannel) c);
+                    }
+                }
+            }
+
+            for (RtpChannel c : channelsToSendTo)
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Sending a NACK for SSRC " + mediaSourceSsrc
+                                         + " , packets " + seqs
+                                         + " on channel " + c.getID());
+                }
+
+                try
+                {
+                    c.getStream().injectPacket(pkt, false, true);
+                }
+                catch (TransmissionFailedException e)
+                {
+                    logger.warn("Failed to inject packet in MediaStream: " + e);
+                }
+            }
+        }
     }
 
     /**
