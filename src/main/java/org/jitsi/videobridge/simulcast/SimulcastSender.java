@@ -224,21 +224,19 @@ public class SimulcastSender
 
     /**
      * {@inheritDoc}
+     *
+     * Implements most, if not all, of our layer switching logic.
      */
     @Override
-    public void propertyChange(PropertyChangeEvent propertyChangeEvent)
+    public void propertyChange(PropertyChangeEvent ev)
     {
-        // This method implements most of, if not all, our layer switching
-        // logic.
+        String propertyName = ev.getPropertyName();
 
-        if (SimulcastLayer.IS_STREAMING_PNAME.equals(
-            propertyChangeEvent.getPropertyName()))
+        if (SimulcastLayer.IS_STREAMING_PNAME.equals(propertyName))
         {
-            // A remote simulcast layer has either started or stopped
-            // streaming; notify the current sendMode to deal with the
-            // situation.
-            SimulcastLayer layer
-                    = (SimulcastLayer) propertyChangeEvent.getSource();
+            // A remote simulcast layer has either started or stopped streaming;
+            // notify the current sendMode to deal with the situation.
+            SimulcastLayer layer = (SimulcastLayer) ev.getSource();
 
             if (!layer.isStreaming())
             {
@@ -250,8 +248,7 @@ public class SimulcastSender
                     sendMode.receiveLow(true);
                 }
             }
-            else if (targetOrder
-                >= SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ)
+            else if (targetOrder >= SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ)
             {
                 logDebug("Handling layer start.");
                 // The HQ stream has resumed streaming and our target is HQ,
@@ -259,22 +256,19 @@ public class SimulcastSender
                 sendMode.receiveHigh();
             }
         }
-        else if (SimulcastReceiver.SIMULCAST_LAYERS_PNAME.equals(
-            propertyChangeEvent.getPropertyName()))
+        else if (SimulcastReceiver.SIMULCAST_LAYERS_PNAME.equals(propertyName))
         {
             logDebug("Handling layers change.");
             // The simulcast layers of the peer have changed, (re)attach.
             receiveLayersChanged();
         }
-        else if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(
-                        propertyChangeEvent.getPropertyName())
-            || Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(
-                        propertyChangeEvent.getPropertyName()))
+        else if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName)
+            || Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
             // Here we update the targetOrder value.
 
-            Endpoint oldEndpoint = (Endpoint) propertyChangeEvent.getOldValue();
-            Endpoint newEndpoint = (Endpoint) propertyChangeEvent.getNewValue();
+            Endpoint oldEndpoint = (Endpoint) ev.getOldValue();
+            Endpoint newEndpoint = (Endpoint) ev.getNewValue();
 
             if (newEndpoint == null)
             {
@@ -308,24 +302,22 @@ public class SimulcastSender
                 getSimulcastReceiver().maybeSendStopHighQualityStreamCommand();
             }
         }
-        else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(
-            propertyChangeEvent.getPropertyName()))
+        else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(propertyName))
         {
             logDebug("The simulcast mode has changed.");
-            SimulcastMode oldMode
-                = (SimulcastMode) propertyChangeEvent.getOldValue();
-            SimulcastMode newMode
-                = (SimulcastMode) propertyChangeEvent.getNewValue();
+
+            SimulcastMode oldMode = (SimulcastMode) ev.getOldValue();
+            SimulcastMode newMode = (SimulcastMode) ev.getNewValue();
 
             sendModeChanged(newMode, oldMode);
         }
-        else if (VideoChannel.ENDPOINT_PROPERTY_NAME.equals(
-            propertyChangeEvent.getPropertyName()))
+        else if (VideoChannel.ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
             logDebug("The endpoint owner has changed.");
+
             // Listen for property changes from self.
-            Endpoint newValue = (Endpoint) propertyChangeEvent.getNewValue();
-            Endpoint oldValue = (Endpoint) propertyChangeEvent.getOldValue();
+            Endpoint newValue = (Endpoint) ev.getNewValue();
+            Endpoint oldValue = (Endpoint) ev.getOldValue();
 
             receiveEndpointChanged(newValue, oldValue);
         }
