@@ -40,7 +40,7 @@ public class RetransmissionRequester
      * If more than <tt>MAX_MISSING</tt> consecutive packets are lost, we will
      * not request retransmissions for them, but reset our state instead.
      */
-    private static final int MAX_MISSING = 30;
+    private static final int MAX_MISSING = 100;
 
     /**
      * The maximum number of retransmission requests to be sent for a single
