@@ -18,6 +18,10 @@
   <name>jitsi-videobridge</name>
   <url>https://github.com/jitsi/jitsi-videobridge</url>
 
+  <properties>
+    <assembly.skipAssembly>false</assembly.skipAssembly>
+  </properties>
+
   <dependencyManagement>
     <dependencies>
       <!-- callstats requires httpclient 4.3+. -->
@@ -198,6 +202,7 @@
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/linux-x64-bin-archive.xml</descriptor>
               <finalName>${project.artifactId}-linux-x64-${project.version}</finalName>
+              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
           <execution>
@@ -210,6 +215,7 @@
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/linux-x86-bin-archive.xml</descriptor>
               <finalName>${project.artifactId}-linux-x86-${project.version}</finalName>
+              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
           <execution>
@@ -222,6 +228,7 @@
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/macosx-bin-archive.xml</descriptor>
               <finalName>${project.artifactId}-macosx-${project.version}</finalName>
+              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
           <execution>
@@ -234,6 +241,7 @@
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/windows-x64-bin-archive.xml</descriptor>
               <finalName>${project.artifactId}-windows-x64-${project.version}</finalName>
+              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
           <execution>
@@ -246,6 +254,7 @@
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/windows-x86-bin-archive.xml</descriptor>
               <finalName>${project.artifactId}-windows-x86-${project.version}</finalName>
+              <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
         </executions>
