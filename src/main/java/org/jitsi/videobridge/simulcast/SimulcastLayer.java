@@ -219,7 +219,9 @@ public class SimulcastLayer
     @Override
     public String toString()
     {
-        return "[ssrc: " + getPrimarySSRC() + ", order: " + getOrder() + "]";
+        return
+            "[ssrc: " + getPrimarySSRC() + ", order: " + getOrder()
+                + ", streaming: " + isStreaming() + "]";
     }
 
     /**
@@ -265,32 +267,42 @@ public class SimulcastLayer
      * Increases the number of base layer packets that we've seen, and
      * potentially marks this layer as stopped and fires an event.
      */
-    public synchronized void maybeTimeout()
+    public synchronized void maybeTimeout(boolean useFrameBasedLogic)
     {
-        if (++seenBase % MAX_SEEN_BASE != 0)
+        if (useFrameBasedLogic)
         {
+            if (this.isStreaming)
+            {
+                timeout();
+            }
+            // The (new) frame-based logic is invoked as an alternative to the
+            // (old) packet-based logic. (Anyway, both may be used in different
+            // method invocations.)
             return;
         }
 
-        // Every base layer packet we have observed 10 low quality packets.
-        //
-        // If for every MAX_SEEN_BASE base quality packets we have not seen
-        // at least one high quality packet, then the high quality layer
-        // must have been dropped (this means approximately MAX_SEEN_BASE*10
-        // packets loss).
-
-        if (this.isStreaming && this.seenHigh == 0)
+        if (++seenBase % MAX_SEEN_BASE == 0)
         {
-            timeout();
-        }
+            // Every base layer packet we have observed 10 low quality packets.
+            //
+            // If for every MAX_SEEN_BASE base quality packets we have not seen
+            // at least one high quality packet, then the high quality layer
+            // must have been dropped (this means approximately MAX_SEEN_BASE*10
+            // packets loss).
 
-        this.seenHigh = 0;
+            if (this.isStreaming && this.seenHigh == 0)
+            {
+                timeout();
+            }
+
+            this.seenHigh = 0;
+        }
     }
 
     /**
      * Marks this {@code SimulcastLayer} as stopped and fires an event.
      */
-    synchronized void timeout()
+    private synchronized void timeout()
     {
         this.isStreaming = false;
 
@@ -350,9 +362,9 @@ public class SimulcastLayer
         }
 
         if (base)
-            touchBase(pkt);
+            touchBase(pkt, frameStarted);
         else
-            touchNonBase(pkt);
+            touchNonBase(pkt, frameStarted);
 
         // XXX (1) We didn't go with a full-blown observer/listener pattern
         // implementation because that would have required much more effort to
@@ -373,8 +385,11 @@ public class SimulcastLayer
      * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
      * the RTP stream represented by this {@code SimulcastLayer}, and has caused
      * the method invocation
+     * @param frameStarted {@code true} if {@code pkt} signals the receipt of (a
+     * piece of) a new (i.e. unobserved until now) frame; otherwise,
+     * {@code false}
      */
-    private void touchBase(RawPacket pkt)
+    private void touchBase(RawPacket pkt, boolean frameStarted)
     {
         // We do not have anything specific to touching the base SimulcastLayer
         // at the time of this writing.
@@ -391,8 +406,11 @@ public class SimulcastLayer
      * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
      * the RTP stream represented by this {@code SimulcastLayer}, and has caused
      * the method invocation
+     * @param frameStarted {@code true} if {@code pkt} signals the receipt of (a
+     * piece of) a new (i.e. unobserved until now) frame; otherwise,
+     * {@code false}
      */
-    private void touchNonBase(RawPacket pkt)
+    private void touchNonBase(RawPacket pkt, boolean frameStarted)
     {
         this.seenHigh++;
 
@@ -400,6 +418,19 @@ public class SimulcastLayer
         {
             return;
         }
+
+        // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
+        // compile time) the frame-based approach to the detection of layer
+        // drops.
+
+        // If the frame-based appraoch to the detection of layer drops works
+        // (i.e. there will always be at least 1 high quality frame among
+        // SimulcastReceiver#TIMEOUT_ON_FRAME_COUNT consecutive low quality
+        // frames), then it may be argued that a late pkt (i.e. which does not
+        // start a new frame after this SimulcastLayer has been stopped) should
+        // not start this SimulcastLayer.
+        if (SimulcastReceiver.TIMEOUT_ON_FRAME_COUNT > 1 && !frameStarted)
+            return;
 
         // Do not activate the hq stream if the bitrate estimation is not
         // above 300kbps.

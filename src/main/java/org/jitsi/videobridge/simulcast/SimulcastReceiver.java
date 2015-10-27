@@ -59,7 +59,7 @@ public class SimulcastReceiver
      * from its remote peer or it will be declared paused/stopped/not streaming
      * by its {@code SimulcastReceiver}.
      */
-    private static final int TIMEOUT_ON_FRAME_COUNT = 5;
+    static final int TIMEOUT_ON_FRAME_COUNT = 5;
 
     /**
      * The pool of threads utilized by this class.
@@ -288,7 +288,7 @@ public class SimulcastReceiver
             {
                 if (acceptedLayer != layer)
                 {
-                    layer.maybeTimeout();
+                    layer.maybeTimeout(/* useFrameBasedLogic */ false);
                 }
             }
         }
@@ -543,6 +543,12 @@ public class SimulcastReceiver
             SimulcastLayer source,
             SortedSet<SimulcastLayer> layers)
     {
+        // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
+        // compile time) the frame-based approach to the detection of layer
+        // drops.
+        if (TIMEOUT_ON_FRAME_COUNT <= 1)
+            return;
+
         // Timeouts in layers caused by source may occur only based on the span
         // (of time or received frames) during which source has received
         // TIMEOUT_ON_FRAME_COUNT number of frames. The current method
@@ -643,17 +649,20 @@ public class SimulcastReceiver
         }
         if (timeout)
         {
-            // Since effect has been determined to have been paused/stopped by
-            // the remote peer, its possible presence in
-            // simulcastLayerFrameHistory is irrelevant now. In other words,
-            // remove effect from simulcastLayerFrameHistory.
-            while (it.hasNext())
-            {
-                if (it.next() == effect)
-                    it.remove();
-            }
+            effect.maybeTimeout(/* useFrameBasedLogic */ true);
 
-            effect.timeout();
+            if (!effect.isStreaming())
+            {
+                // Since effect has been determined to have been paused/stopped
+                // by the remote peer, its possible presence in
+                // simulcastLayerFrameHistory is irrelevant now. In other words,
+                // remove effect from simulcastLayerFrameHistory.
+                while (it.hasNext())
+                {
+                    if (it.next() == effect)
+                        it.remove();
+                }
+            }
         }
     }
 }
