@@ -953,11 +953,37 @@ class HandlerImpl
         {
             target = target.substring(colibriTarget.length());
 
+            // FIXME In order to not invoke beginResponse() and endResponse() in
+            // each and every one of the methods to which handleColibriJSON()
+            // delegates/forwards, we will invoke them here. However, we do not
+            // know whether handleColibriJSON() will actually handle the
+            // request. As a workaround we will mark the response with a status
+            // code that we know handleColibriJSON() does not utilize (at the
+            // time of this writing) and we will later recognize whether
+            // handleColibriJSON() has handled the request by checking whether
+            // the response is still marked with the unused status code.
+            int oldResponseStatus = response.getStatus();
+
+            response.setStatus(HttpServletResponse.SC_NOT_IMPLEMENTED);
+
             // All responses to requests for resources under the base /colibri/
             // are in JSON format.
             beginResponse(target, baseRequest, request, response);
             handleColibriJSON(target, baseRequest, request, response);
-            endResponse(target, baseRequest, request, response);
+
+            int newResponseStatus = response.getStatus();
+
+            if (newResponseStatus == HttpServletResponse.SC_NOT_IMPLEMENTED)
+            {
+                // Restore the status code which was in place before we replaced
+                // it with our workaround.
+                response.setStatus(oldResponseStatus);
+            }
+            else
+            {
+                // It looks like handleColibriJSON() indeed handled the request.
+                endResponse(target, baseRequest, request, response);
+            }
         }
         else
         {
