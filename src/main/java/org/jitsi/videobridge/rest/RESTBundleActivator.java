@@ -183,6 +183,11 @@ public class RESTBundleActivator
             handlers.add(aliasHandler);
 
         // ServletHandler to serve, for example, ProxyServlet.
+
+        // XXX ServletContextHandler and/or ServletHandler are not cool because
+        // they always mark HTTP Request as handled if it reaches a Servlet
+        // regardless of whether the Servlet actually did anything.
+        // Consequently, it is advisable to keep Servlets as the last Handler.
         Handler servletHandler
             = initializeServletHandler(bundleContext, server);
 
@@ -190,6 +195,79 @@ public class RESTBundleActivator
             handlers.add(servletHandler);
 
         return initializeHandlerList(handlers);
+    }
+
+    /**
+     * Initializes a new {@code ServletHolder} instance which is to support
+     * long polling with asynchronous HTTP request handling and adds it to a
+     * specific {@code ServletContextHandler}.
+     *
+     * @param servletContextHandler the {@code ServletContextHandler} to add the
+     * new instance to
+     * @return a new {@code ServletHolder} instance which implements support for
+     * long polling with asynchronous HTTP request handling and has been added
+     * to {@code servletContextHandler}
+     */
+    private ServletHolder initializeLongPollingServlet(
+            ServletContextHandler servletContextHandler)
+    {
+        ServletHolder holder = new ServletHolder();
+
+        holder.setServlet(new LongPollingServlet());
+
+        // The rules for mappings of the Servlet specification do not allow path
+        // matching in the middle of the path.
+        servletContextHandler.addServlet(
+                holder,
+                HandlerImpl.COLIBRI_TARGET + "*");
+
+        return holder;
+    }
+
+    /**
+     * Initializes a new {@code ServletHolder} instance which is implement
+     * {@code /http-bind} and adds it to a specific
+     * {@code ServletContextHandler}.
+     *
+     * @param servletContextHandler the {@code ServletContextHandler} to add the
+     * new instance to
+     * @return a new {@code ServletHolder} instance which implements
+     * {@code /http-bind} and has been added to {@code servletContextHandler}
+     */
+    private ServletHolder initializeProxyServlet(
+            ServletContextHandler servletContextHandler)
+    {
+        String pathSpec
+            = getCfgString(JETTY_PROXY_SERVLET_PATH_SPEC_PNAME, null);
+        ServletHolder holder = null;
+
+        if (pathSpec != null && pathSpec.length() != 0)
+        {
+            String proxyTo
+                = getCfgString(JETTY_PROXY_SERVLET_PROXY_TO_PNAME, null);
+
+            if (proxyTo != null && proxyTo.length() != 0)
+            {
+                holder = new ServletHolder();
+                holder.setHeldClass(ProxyServletImpl.class);
+                // XXX ProxyServlet will throw an IllegalStateException without
+                // maxThreads. The documentation on ProxyServlet says the
+                // default value is 256.
+                holder.setInitParameter("maxThreads", Integer.toString(256));
+                holder.setInitParameter("prefix", pathSpec);
+                holder.setInitParameter("proxyTo", proxyTo);
+
+                // hostHeader
+                String hostHeader
+                    = getCfgString(JETTY_PROXY_SERVLET_HOST_HEADER_PNAME, null);
+
+                if (hostHeader != null && hostHeader.length() != 0)
+                    holder.setInitParameter("hostHeader", hostHeader);
+
+                servletContextHandler.addServlet(holder, pathSpec);
+            }
+        }
+        return holder;
     }
 
     /**
@@ -328,44 +406,27 @@ public class RESTBundleActivator
             BundleContext bundleContext,
             Server server)
     {
-        String pathSpec
-            = getCfgString(JETTY_PROXY_SERVLET_PATH_SPEC_PNAME, null);
-        Handler handler = null;
+        ServletHolder servletHolder;
+        ServletContextHandler servletContextHandler
+            = new ServletContextHandler();
+        boolean b = false;
 
-        if (pathSpec != null && pathSpec.length() != 0)
-        {
-            String proxyTo
-                = getCfgString(JETTY_PROXY_SERVLET_PROXY_TO_PNAME, null);
+        // ProxyServletImpl i.e. http-bind.
+        servletHolder = initializeProxyServlet(servletContextHandler);
+        if (servletHolder != null)
+            b = true;
 
-            if (proxyTo != null && proxyTo.length() != 0)
-            {
-                ServletHolder holder = new ServletHolder();
+        // LongPollingServlet
+        servletHolder = initializeLongPollingServlet(servletContextHandler);
+        if (servletHolder != null)
+            b = true;
 
-                holder.setHeldClass(ProxyServletImpl.class);
-                // XXX ProxyServlet will throw an IllegalStateException without
-                // maxThreads. The documentation on ProxyServlet says the
-                // default value is 256.
-                holder.setInitParameter("maxThreads", Integer.toString(256));
-                holder.setInitParameter("prefix", pathSpec);
-                holder.setInitParameter("proxyTo", proxyTo);
+        if (b)
+            servletContextHandler.setContextPath("/");
+        else
+            servletContextHandler = null;
 
-                // hostHeader
-                String hostHeader
-                    = getCfgString(JETTY_PROXY_SERVLET_HOST_HEADER_PNAME, null);
-
-                if (hostHeader != null && hostHeader.length() != 0)
-                    holder.setInitParameter("hostHeader", hostHeader);
-
-                ServletContextHandler servletContextHandler
-                    = new ServletContextHandler();
-
-                servletContextHandler.addServlet(holder, pathSpec);
-                servletContextHandler.setContextPath("/");
-
-                handler = servletContextHandler;
-            }
-        }
-        return handler;
+        return servletContextHandler;
     }
 
     /**

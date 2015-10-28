@@ -178,6 +178,12 @@ class HandlerImpl
     extends AbstractJSONHandler
 {
     /**
+     * The base HTTP resource of COLIBRI-related JSON representations of
+     * {@code Videobridge}.
+     */
+    static final String COLIBRI_TARGET;
+
+    /**
      * The HTTP resource which lists the JSON representation of the
      * <tt>Conference</tt>s of <tt>Videobridge</tt>.
      */
@@ -213,11 +219,15 @@ class HandlerImpl
      */
     private static final String STATISTICS = "stats";
 
-    /**
-     * The base HTTP resource of COLIBRI-related JSON representations of
-     * <tt>Videobridge</tt>.
-     */
-    private String colibriTarget;
+    static
+    {
+        String colibriTarget = DEFAULT_COLIBRI_TARGET;
+
+        if (!colibriTarget.endsWith("/"))
+            colibriTarget += "/";
+
+        COLIBRI_TARGET = colibriTarget;
+    }
 
     /**
      * Indicates if graceful shutdown mode is enabled. If not then
@@ -238,10 +248,6 @@ class HandlerImpl
     public HandlerImpl(BundleContext bundleContext, boolean enableShutdown)
     {
         super(bundleContext);
-
-        colibriTarget = DEFAULT_COLIBRI_TARGET;
-        if (!colibriTarget.endsWith("/"))
-            colibriTarget += "/";
 
         shutdownEnabled = enableShutdown;
     }
@@ -949,9 +955,9 @@ class HandlerImpl
             return; // The super implementation has handled the request.
 
         // The target starts with "/colibri/".
-        if (target.startsWith(colibriTarget))
+        if (target.startsWith(COLIBRI_TARGET))
         {
-            target = target.substring(colibriTarget.length());
+            target = target.substring(COLIBRI_TARGET.length());
 
             // FIXME In order to not invoke beginResponse() and endResponse() in
             // each and every one of the methods to which handleColibriJSON()
