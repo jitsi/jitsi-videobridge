@@ -208,33 +208,34 @@ public class VideoChannel
      */
     @Override
     public void initialize()
-            throws IOException
+        throws IOException
     {
         super.initialize();
 
-        ConfigurationService configurationService
+        ConfigurationService cfg
             = getContent().getConference().getVideobridge()
                 .getConfigurationService();
 
-        if (configurationService == null)
+        if (cfg == null)
         {
             return;
         }
 
         // Initialize the RTCP termination strategy from the configuration.
-        String strategyFQN = configurationService.getString(
-            RTCP_TERMINATION_STRATEGY_PNAME, "");
+        String strategyFQN = cfg.getString(RTCP_TERMINATION_STRATEGY_PNAME, "");
 
-        RTCPTerminationStrategy strategy;
         if (StringUtils.isNullOrEmpty(strategyFQN))
         {
             return;
         }
 
+        RTCPTerminationStrategy strategy;
+
         try
         {
-            Class<?> clazz = Class.forName(strategyFQN);
-            strategy = (RTCPTerminationStrategy) clazz.newInstance();
+            strategy
+                = (RTCPTerminationStrategy)
+                    Class.forName(strategyFQN).newInstance();
         }
         catch (Exception e)
         {
@@ -245,20 +246,19 @@ public class VideoChannel
             return;
         }
 
+        MediaStream stream = getStream();
+
         // Initialize the RTCP termination strategy.
         if (strategy instanceof MediaStreamRTCPTerminationStrategy)
         {
-            ((MediaStreamRTCPTerminationStrategy) strategy)
-                .initialize(getStream());
+            ((MediaStreamRTCPTerminationStrategy) strategy).initialize(stream);
         }
-        else if (strategy
-            instanceof VideoChannelRTCPTerminationStrategy)
+        else if (strategy instanceof VideoChannelRTCPTerminationStrategy)
         {
-            ((VideoChannelRTCPTerminationStrategy) strategy)
-                .initialize(this);
+            ((VideoChannelRTCPTerminationStrategy) strategy).initialize(this);
         }
 
-        getStream().setRTCPTerminationStrategy(strategy);
+        stream.setRTCPTerminationStrategy(strategy);
     }
 
     /**
