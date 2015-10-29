@@ -21,6 +21,7 @@ import java.util.concurrent.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.impl.neomedia.codec.video.vp8.*;
 
 /**
  * The <tt>SimulcastLayer</tt> of a <tt>SimulcastReceiver</tt> represents a
@@ -29,6 +30,8 @@ import org.jitsi.util.event.*;
  * gathers bitrate statistics for the associated layer.
  *
  * This class is thread safe.
+ *
+ * Rename SimulcastLayer -> SimulcastStream
  *
  * @author George Politis
  * @author Lyubomir Marinov
@@ -457,8 +460,68 @@ public class SimulcastLayer
      */
     public boolean isKeyFrame(RawPacket pkt)
     {
-        // TODO check if we have something like that already coded.
-        return true;
+        boolean isKeyFrame = false;
+        // TODO it doesn't feel right to put this code here.
+        // FIXME We assume RED. This will NOT work when RED is not enabled.
+        // FIXME similar code can be found in the
+        // REDFilterTransformEngine and in the REDTransformEngine and
+        // in the SimulcastLayer.
+
+        byte[] buff = pkt.getBuffer();
+        int idx = pkt.getPayloadOffset(); //beginning of RTP payload
+        int pktCount = 0; //number of packets inside RED
+
+        // 0                   1                   2                   3
+        // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+        //+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //|F|   block PT  |  timestamp offset         |   block length    |
+        //+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        while ((buff[idx] & 0x80) != 0)
+        {
+            pktCount++;
+            idx += 4;
+        }
+
+        idx = pkt.getPayloadOffset(); //back to beginning of RTP payload
+
+        int payloadOffset = idx + pktCount * 4 + 1 /* RED headers */;
+
+        for (int i = 0; i <= pktCount; i++)
+        {
+            byte blockPT = (byte) (buff[idx] & 0x7f);
+            int blockLen = (buff[idx + 2] & 0x03) << 8 | (buff[idx + 3]);
+
+            if (0x64 == blockPT) // assume 100 pt is VP8, this won't work in the general case.
+            {
+                logDebug("Processing VP8 packet.");
+                // Check if this is the start of a VP8 partition in the payload
+                // descriptor.
+                if (!DePacketizer.VP8PayloadDescriptor.isValid(buff, payloadOffset))
+                {
+                    continue;
+                }
+
+                if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buff, payloadOffset))
+                {
+                    continue;
+                }
+
+                int szVP8PayloadDescriptor = DePacketizer
+                    .VP8PayloadDescriptor.getSize(buff, payloadOffset);
+
+                isKeyFrame = DePacketizer.VP8PayloadHeader.isKeyFrame(
+                        buff, payloadOffset + szVP8PayloadDescriptor);
+            }
+            else
+            {
+                logInfo("Uknown PT");
+            }
+
+            idx += 4; // next RED header
+            payloadOffset += blockLen;
+        }
+
+        return isKeyFrame;
     }
 
     /**
@@ -488,6 +551,17 @@ public class SimulcastLayer
             logger.debug(msg);
         }
     }
+
+    private void logInfo(String msg)
+    {
+        if (logger.isInfoEnabled())
+        {
+            msg = simulcastReceiver.getSimulcastEngine().getVideoChannel()
+                .getEndpoint().getID() + ": " + msg;
+            logger.info(msg);
+        }
+    }
+
 
     private void logWarn(String msg)
     {

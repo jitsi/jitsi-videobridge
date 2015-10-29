@@ -75,33 +75,27 @@ public class RewritingSendMode
     @Override
     public boolean accept(RawPacket pkt)
     {
+        if (pkt == null)
+        {
+            return false;
+        }
+        SimulcastLayer next = getNext();
+        if (next != null && next.match(pkt) && next.isKeyFrame(pkt))
+        {
+            // There's a next simulcast stream. Let's see if we can switch to
+            // it.
+            weakCurrent = new WeakReference<SimulcastLayer>(next);
+            return true;
+        }
+
         SimulcastLayer current = getCurrent();
         boolean accept = false;
-        if (current != null)
+        if (current != null && current.match(pkt))
         {
-            accept = current.match(pkt);
+            return true;
         }
 
-        if (!accept)
-        {
-            SimulcastLayer next = getNext();
-            if (next != null)
-            {
-                boolean isMatch = next.match(pkt);
-                if (isMatch)
-                {
-                    boolean isKeyFrame = next.isKeyFrame(pkt);
-                    if (isKeyFrame)
-                    {
-                        // switchToNext();
-                        accept = true;
-                    }
-                }
-            }
-        }
-
-
-        return accept;
+        return false;
     }
 
     @Override
@@ -116,7 +110,7 @@ public class RewritingSendMode
         SimulcastLayer highLayer = simulcastReceiver.getSimulcastLayer(
             SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ);
 
-        weakCurrent = new WeakReference<SimulcastLayer>(highLayer);
+        weakNext = new WeakReference<SimulcastLayer>(highLayer);
     }
 
     @Override
@@ -132,7 +126,10 @@ public class RewritingSendMode
         SimulcastLayer lowLayer = simulcastReceiver.getSimulcastLayer(
             SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ);
 
-        weakCurrent = new WeakReference<SimulcastLayer>(lowLayer);
+        if (urgent)
+            weakCurrent = new WeakReference<SimulcastLayer>(lowLayer);
+        else
+            weakNext = new WeakReference<SimulcastLayer>(lowLayer);
     }
 
     private void logDebug(String msg)
