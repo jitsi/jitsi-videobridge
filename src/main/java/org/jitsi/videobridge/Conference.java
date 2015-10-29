@@ -227,8 +227,6 @@ public class Conference
      *  see broadcastMessageOnDataChannels below
      */
     public void sendMessageOnDataChannels(String msg, List<Endpoint> endpoints) {
-        System.out.println("broadcasting message to " + endpoints.size() + " endpoints");
-        System.out.println(msg);
         for (Endpoint endpoint : endpoints) {
             try
             {

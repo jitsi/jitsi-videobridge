@@ -436,6 +436,29 @@ public class Endpoint
             onClientEndpointMessage(src, jsonObject);
     }
 
+    /**
+     * Handles an opaque essage from this {@code Endpoint} that should be forwarded
+     * to either: a) another client in this conference (1:1 message) or b) all other
+     * clients in this conference (broadcast message)
+     *
+     * @param src the {@WebRtcDataStream) by which {@code jsonObject} has been received
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS} EndpointMessage
+     * which has been received by the associated {@code SctpConnection}
+     *
+     * EndpointMessage definition:
+     * 'to': If the 'to' field contains the endpoint id of another endpoint in this conference, the
+     * message will be treated as a 1:1 message and forwarded just to that endpoint.  If the 'to'
+     * field is an empty string, the message will be treated as a broadcast and sent to all other
+     * endpoints in this conference.
+     * 'msgPayload': An opaque payload.  The bridge does not need to know or care what is contained
+     * in the 'msgPayload' field, it will just forward it blindly.
+     *
+     * NOTE: This message is designed to allow endpoints to pass their own application-specific messaging
+     * to one another without requiring the bridge to know of or understand every message type.  These
+     * messages will be forwarded by the bridge using the same DataChannel as other jitsi messages
+     * (e.g. active speaker and last-n notifications).  It is not recommended to send high-volume
+     * message traffic on this channel (e.g. file transfer), such that it may interfere with other jitsi-messages.
+     */
     private void onClientEndpointMessage(
             WebRtcDataStream src,
             JSONObject jsonObject)
@@ -443,10 +466,9 @@ public class Endpoint
         String to = (String)jsonObject.get("to");
         String msgPayload = ((JSONObject)jsonObject.get("msgPayload")).toString();
         Conference conf = getConference();
-        if ("broadcast".equals(to))
+        if ("".equals(to))
         {
-            // "broadcast" from an endpoint's perspective means
-            // 'send to everyone else in the conference except for me'
+            // Broadcast message
             List<Endpoint> endpointSubset = new ArrayList<Endpoint>();
             for (Endpoint endpoint : conf.getEndpoints()) {
                 if (!endpoint.getID().equalsIgnoreCase(getID()))
@@ -458,6 +480,7 @@ public class Endpoint
         }
         else
         {
+            // 1:1 message
             Endpoint ep = conf.getEndpoint(to);
             if (ep != null)
             {
