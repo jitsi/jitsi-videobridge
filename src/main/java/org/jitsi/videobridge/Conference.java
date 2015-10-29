@@ -247,17 +247,7 @@ public class Conference
      */
     private void broadcastMessageOnDataChannels(String msg)
     {
-        for (Endpoint endpoint : getEndpoints())
-        {
-            try
-            {
-                endpoint.sendMessageOnDataChannel(msg);
-            }
-            catch (IOException e)
-            {
-                logger.error("Failed to send message on data channel.", e);
-            }
-        }
+        sendMessageOnDataChannels(msg, getEndpoints());
     }
 
     /**
