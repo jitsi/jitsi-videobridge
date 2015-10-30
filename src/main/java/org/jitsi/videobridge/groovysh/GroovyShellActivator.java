@@ -34,6 +34,11 @@ public class GroovyShellActivator
     private static final int MAX_CLIENTS = 10;
 
     /**
+     * Where to bind.
+     */
+    private static final String SERVER_BIND_ADDR = "127.0.0.1";
+
+    /**
      * Some easy to remember prime number.
      */
     private static final int SERVER_SOCKET_PORT = 6869;
@@ -65,7 +70,8 @@ public class GroovyShellActivator
             {
                 try
                 {
-                    serverSocket = new ServerSocket(SERVER_SOCKET_PORT);
+                    InetAddress bindAddress = InetAddress.getByName(SERVER_BIND_ADDR);
+                    serverSocket = new ServerSocket(SERVER_SOCKET_PORT, 50, bindAddress);
 
                     while (true)
                     {
