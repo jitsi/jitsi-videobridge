@@ -110,7 +110,14 @@ public class RewritingSendMode
         SimulcastLayer highLayer = simulcastReceiver.getSimulcastLayer(
             SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ);
 
-        weakNext = new WeakReference<SimulcastLayer>(highLayer);
+        if (weakCurrent == null || weakCurrent.get() == null)
+        {
+            weakCurrent = new WeakReference<SimulcastLayer>(highLayer);
+        }
+        else
+        {
+            weakNext = new WeakReference<SimulcastLayer>(highLayer);
+        }
     }
 
     @Override
@@ -126,11 +133,38 @@ public class RewritingSendMode
         SimulcastLayer lowLayer = simulcastReceiver.getSimulcastLayer(
             SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ);
 
-        if (urgent)
+        if (urgent || weakCurrent == null || weakCurrent.get() == null)
+        {
             weakCurrent = new WeakReference<SimulcastLayer>(lowLayer);
+        }
         else
+        {
             weakNext = new WeakReference<SimulcastLayer>(lowLayer);
+        }
     }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        if (weakCurrent != null && weakCurrent.get() != null)
+        {
+            sb.append("current: ");
+            sb.append(weakCurrent.get().toString());
+            sb.append(",");
+        }
+
+        if (weakNext != null && weakNext.get() != null)
+        {
+            sb.append("next: ");
+            sb.append(weakNext.get().toString());
+        }
+
+        sb.append("]");
+        return sb.toString();
+    }
+
 
     private void logDebug(String msg)
     {
