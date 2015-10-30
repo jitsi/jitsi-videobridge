@@ -102,7 +102,8 @@ public class RtpChannelTransformEngine
     /**
      * The transformer which handles SSRC rewriting.
      */
-    private SsrcRewritingEngine ssrcRewritingEngine;
+    private org.jitsi.videobridge.rewriting.SsrcRewritingEngine
+        ssrcRewritingEngine;
 
     /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
@@ -171,7 +172,8 @@ public class RtpChannelTransformEngine
             VideoChannel videoChannel = (VideoChannel) channel;
             rembNotifier = new REMBNotifier(videoChannel);
             transformerList.add(rembNotifier);
-            ssrcRewritingEngine = new SsrcRewritingEngine(videoChannel);
+            ssrcRewritingEngine = new org.jitsi.videobridge.rewriting
+                .SsrcRewritingEngine(videoChannel);
             transformerList.add(ssrcRewritingEngine);
         }
 
