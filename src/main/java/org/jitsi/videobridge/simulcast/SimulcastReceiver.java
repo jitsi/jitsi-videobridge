@@ -486,6 +486,12 @@ public class SimulcastReceiver
         }
     }
 
+    @Override
+    public String toString()
+    {
+        return simulcastLayers.toString();
+    }
+
     private void logDebug(String msg)
     {
         if (logger.isDebugEnabled())

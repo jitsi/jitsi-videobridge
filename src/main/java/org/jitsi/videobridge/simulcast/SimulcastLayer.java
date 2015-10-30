@@ -521,6 +521,11 @@ public class SimulcastLayer
             payloadOffset += blockLen;
         }
 
+        if (isKeyFrame)
+        {
+            logDebug("Saw a keyframe.");
+        }
+
         return isKeyFrame;
     }
 

@@ -347,6 +347,12 @@ public class SimulcastSender
         return (sendMode != null) ? sendMode.accept(pkt) : null;
     }
 
+    @Override
+    public String toString()
+    {
+        return sendMode.toString();
+    }
+
     /**
      * Initializes this <tt>SimulcastSender</tt>.
      */
