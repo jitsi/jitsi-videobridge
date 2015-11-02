@@ -18,7 +18,7 @@ package org.jitsi.videobridge.simulcast.messages;
 import org.jitsi.videobridge.simulcast.*;
 
 /**
-* Created by gp on 14/10/14.
+* @author George Politis
 */
 public class StartSimulcastLayerCommand
 {

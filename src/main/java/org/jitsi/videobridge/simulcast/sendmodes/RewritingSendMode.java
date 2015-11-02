@@ -17,7 +17,9 @@ package org.jitsi.videobridge.simulcast.sendmodes;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
+import org.jitsi.videobridge.simulcast.messages.*;
 
 import java.lang.ref.*;
 
@@ -33,6 +35,13 @@ import java.lang.ref.*;
 public class RewritingSendMode
     extends SendMode
 {
+    /**
+     * Helper object that <tt>SwitchingSimulcastSender</tt> instances use to
+     * build JSON messages.
+     */
+    private final static SimulcastMessagesMapper mapper
+        = new SimulcastMessagesMapper();
+
     /**
      * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that is
      * currently being received.
@@ -85,6 +94,7 @@ public class RewritingSendMode
             // There's a next simulcast stream. Let's see if we can switch to
             // it.
             weakCurrent = new WeakReference<SimulcastLayer>(next);
+            weakNext = null;
             return true;
         }
 
@@ -146,23 +156,7 @@ public class RewritingSendMode
     @Override
     public String toString()
     {
-        StringBuilder sb = new StringBuilder();
-        sb.append("[");
-        if (weakCurrent != null && weakCurrent.get() != null)
-        {
-            sb.append("current: ");
-            sb.append(weakCurrent.get().toString());
-            sb.append(",");
-        }
-
-        if (weakNext != null && weakNext.get() != null)
-        {
-            sb.append("next: ");
-            sb.append(weakNext.get().toString());
-        }
-
-        sb.append("]");
-        return sb.toString();
+        return mapper.toJson(this);
     }
 
 
@@ -191,7 +185,7 @@ public class RewritingSendMode
      *
      * @return
      */
-    private SimulcastLayer getCurrent()
+    public SimulcastLayer getCurrent()
     {
         WeakReference<SimulcastLayer> wr = this.weakCurrent;
         return (wr != null) ? wr.get() : null;
@@ -202,7 +196,7 @@ public class RewritingSendMode
      *
      * @return
      */
-    private SimulcastLayer getNext()
+    public SimulcastLayer getNext()
     {
         WeakReference<SimulcastLayer> wr = this.weakNext;
         return (wr != null) ? wr.get() : null;

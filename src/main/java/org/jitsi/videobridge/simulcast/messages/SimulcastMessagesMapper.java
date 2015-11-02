@@ -16,13 +16,17 @@
 package org.jitsi.videobridge.simulcast.messages;
 
 import org.jitsi.videobridge.simulcast.*;
+import org.jitsi.videobridge.simulcast.messages.*;
+import org.jitsi.videobridge.simulcast.sendmodes.*;
 import org.json.simple.*;
 
 import java.util.*;
 
 /**
-* Created by gp on 14/10/14.
-*/
+ * Poor man's object mapper.
+ *
+ * @author George Politis
+ */
 public class SimulcastMessagesMapper
 {
     public String toJson(StartSimulcastLayerCommand command)
@@ -182,6 +186,38 @@ public class SimulcastMessagesMapper
 
         b.append(",\"rtxSSRC\":");
         b.append(Long.toString(simulcastLayer.getRTXSSRC()));
+
+        b.append(",\"isStreaming\":");
+        b.append(Boolean.toString(simulcastLayer.isStreaming()));
         b.append("}");
+    }
+
+    public String toJson(RewritingSendMode rewritingSendMode)
+    {
+        if (rewritingSendMode == null)
+        {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+
+        SimulcastLayer current = rewritingSendMode.getCurrent();
+        if (current != null)
+        {
+            sb.append("current: ");
+            toJson(sb, current);
+            sb.append(", ");
+        }
+
+        SimulcastLayer next = rewritingSendMode.getNext();
+        if (next != null)
+        {
+            sb.append("next: ");
+            toJson(sb, next);
+        }
+
+        sb.append("}");
+        return sb.toString();
     }
 }

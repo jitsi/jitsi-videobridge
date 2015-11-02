@@ -66,7 +66,7 @@ public class SwitchingSendMode
      * Helper object that <tt>SwitchingSimulcastSender</tt> instances use to
      * build JSON messages.
      */
-    private final static SimulcastMessagesMapper mapper
+    private static final SimulcastMessagesMapper mapper
         = new SimulcastMessagesMapper();
 
     /**

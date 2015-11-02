@@ -489,7 +489,7 @@ public class SimulcastReceiver
     @Override
     public String toString()
     {
-        return simulcastLayers.toString();
+        return mapper.toJson(simulcastLayers);
     }
 
     private void logDebug(String msg)
