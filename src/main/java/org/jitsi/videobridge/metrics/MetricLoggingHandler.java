@@ -47,7 +47,8 @@ public class MetricLoggingHandler
     implements EventHandler
 {
 
-    private static final Logger logger = Logger.getLogger(MetricLoggingHandler.class);
+    private static final Logger logger
+        = Logger.getLogger(MetricLoggingHandler.class);
     private List<MetricServicePublisher> publishers;
 
     public static final String METRIC_CONFERENCES = "Conferences";
@@ -215,7 +216,8 @@ public class MetricLoggingHandler
         {
             try
             {
-                publisher.startMeasuredTransaction(transactionType, transactionId);
+                publisher.startMeasuredTransaction(
+                    transactionType, transactionId);
             }
             catch (UnsupportedOperationException e)
             {
@@ -245,7 +247,8 @@ public class MetricLoggingHandler
         {
             try
             {
-                publisher.endMeasuredTransaction(transactionType, transactionId);
+                publisher.endMeasuredTransaction(
+                    transactionType, transactionId);
             }
             catch (UnsupportedOperationException e)
             {
@@ -324,8 +327,11 @@ public class MetricLoggingHandler
                 return;
             }
 
+            // the conferences created event is fired in the moment of the
+            // creation, before adding it to the list of conferences
+            // so we add one as it will be added, just after current call
             publishNumericMetric(
-                METRIC_CONFERENCES, videobridge.getConferenceCount());
+                METRIC_CONFERENCES, videobridge.getConferenceCount() + 1);
 
             startMeasuredTransaction(METRIC_CONFERENCELENGTH,
                 conference.getID());
@@ -344,8 +350,12 @@ public class MetricLoggingHandler
                 return;
             }
 
+            // the conferences expired event is fired in the moment of the
+            // expiration, before removing it from the list of conferences
+            // so we subtract one as it will be removed,
+            // just after current execution
             publishNumericMetric(
-                METRIC_CONFERENCES, videobridge.getConferenceCount());
+                METRIC_CONFERENCES, videobridge.getConferenceCount() - 1);
 
             endMeasuredTransaction(METRIC_CONFERENCELENGTH, conference.getID());
         }
