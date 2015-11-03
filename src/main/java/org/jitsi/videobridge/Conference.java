@@ -221,14 +221,13 @@ public class Conference
     }
 
     /**
-     * Broadcasts string message to al participants over default data channel.
-     *
-     * @param msg the message to be advertised across conference peers.
+     * Used to send a message to a subset of endpoints in the call, primary use case
+     *  being a message that has originated from an endpoint (as opposed to a message
+     *  originating from the bridge and being sent to all endpoints in the call, for that
+     *  see broadcastMessageOnDataChannels below
      */
-    private void broadcastMessageOnDataChannels(String msg)
-    {
-        for (Endpoint endpoint : getEndpoints())
-        {
+    public void sendMessageOnDataChannels(String msg, List<Endpoint> endpoints) {
+        for (Endpoint endpoint : endpoints) {
             try
             {
                 endpoint.sendMessageOnDataChannel(msg);
@@ -238,6 +237,17 @@ public class Conference
                 logger.error("Failed to send message on data channel.", e);
             }
         }
+    }
+
+
+    /**
+     * Broadcasts string message to al participants over default data channel.
+     *
+     * @param msg the message to be advertised across conference peers.
+     */
+    private void broadcastMessageOnDataChannels(String msg)
+    {
+        sendMessageOnDataChannels(msg, getEndpoints());
     }
 
     /**
