@@ -240,7 +240,8 @@ public class VideoChannel
         catch (Exception e)
         {
             logger.error(
-                "Failed to configure the video channel RTCP termination strategy",
+                "Failed to configure the video channel RTCP termination"
+                    + " strategy.",
                 e);
 
             return;
@@ -249,11 +250,7 @@ public class VideoChannel
         MediaStream stream = getStream();
 
         // Initialize the RTCP termination strategy.
-        if (strategy instanceof MediaStreamRTCPTerminationStrategy)
-        {
-            ((MediaStreamRTCPTerminationStrategy) strategy).initialize(stream);
-        }
-        else if (strategy instanceof VideoChannelRTCPTerminationStrategy)
+        if (strategy instanceof VideoChannelRTCPTerminationStrategy)
         {
             ((VideoChannelRTCPTerminationStrategy) strategy).initialize(this);
         }
