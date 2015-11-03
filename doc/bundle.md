@@ -5,7 +5,15 @@ used with the WebRTC "bundle" -- "m=" lines from the same bundle group go to
 COLIBRI channels in the same 'channel-bundle'.
 
 Received packets are demultiplexed between the channels in a channel-bundle
-based on the rules defined for WebRTC. See 
+based on the rules defined for WebRTC. Namely for RTP packets the Payload Type is used, while for RTCP packets the Packet Sender SSRC is used.
+
+This list of SSRCs for a given channel, used to decide whether to accept an RTCP packet or not, is populated in two ways:
+* Through COLIBRI (with "source" elements)
+* When RTP packets with a new SSRC are received
+
+This means that the SSRCs used by receive-only endpoints in RTCP packets need to be signalled to videobridge using COLIBRI. If they are not, RTCP coming from these endpoints will be dropped.
+
+See 
 [http://tools.ietf.org/html/draft-ietf-rtcweb-rtp-usage]() and 
 [https://tools.ietf.org/html/draft-holmberg-mmusic-sdp-bundle-negotiation]()
 
