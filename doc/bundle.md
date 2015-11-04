@@ -99,7 +99,7 @@ Transport elements are not included for bundled channels, but are instead placed
 </conference>
 ```
 
-## Adding remote candidates for a signle channel-bundle:
+## Adding remote candidates for a single channel-bundle:
 Transport elements carrying the candidates are placed in "channel-bundle" child elements of "conference".
 ```
 <conference xmlns=" http://jitsi.org/protocol/colibri" id="16c43f4c4d3b658">
@@ -115,7 +115,7 @@ Transport elements carrying the candidates are placed in "channel-bundle" child 
   <channel-bundle id="52865510">
     <transport xmlns="urn:xmpp:jingle:transports:ice-udp:1">
       <rtcp-mux/>
-        <candidate type="host" protocol="udp" id="id97de092a" ip="10.0.0.250" component="1" port="49312" foundation="3338013213" generation="0" priority="2122260223" network="1"/>
+      <candidate type="host" protocol="udp" id="id97de092a" ip="10.0.0.250" component="1" port="49312" foundation="3338013213" generation="0" priority="2122260223" network="1"/>
     </transport>
   </channel-bundle>
 </conference>
