@@ -493,7 +493,6 @@ public class SimulcastLayer
 
             if (0x64 == blockPT) // assume 100 pt is VP8, this won't work in the general case.
             {
-                logDebug("Processing VP8 packet.");
                 // Check if this is the start of a VP8 partition in the payload
                 // descriptor.
                 if (!DePacketizer.VP8PayloadDescriptor.isValid(buff, payloadOffset))
