@@ -69,6 +69,9 @@ case "$1" in
             echo >> $CONFIG
             echo '# extra options to pass to the JVB daemon' >> $CONFIG
             echo "JVB_OPTS=\"\"" >> $CONFIG
+            echo >> $CONFIG
+            echo '# extra jvm params' >> $CONFIG
+            echo "#JVB_EXTRA_JVM_PARAMS=\"-javaagent:/usr/share/newrelic/newrelic.jar -Dnewrelic.config.file=/etc/jitsi/videobridge/newrelic.yml\"" >> $CONFIG
 
         fi
 
@@ -92,7 +95,7 @@ case "$1" in
         if [ ! -n "$JAVA_SYS_PROPS" ]; then
             echo >> $CONFIG
             echo '# adds java system props that are passed to jvb (default are for home and logging config file)' >> $CONFIG
-            echo "JAVA_SYS_PROPS=\"-Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=/etc/jitsi\
+            echo "JAVA_SYS_PROPS=\"$JVB_EXTRA_JVM_PARAMS -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=/etc/jitsi\
  -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=videobridge\
  -Dnet.java.sip.communicator.SC_LOG_DIR_LOCATION=/var/log/jitsi\
  -Djava.util.logging.config.file=/etc/jitsi/videobridge/logging.properties\"" >> $CONFIG

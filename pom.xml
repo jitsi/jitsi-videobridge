@@ -161,6 +161,11 @@
       <artifactId>libjitsi-protocol</artifactId>
     </dependency>
     <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>newrelic-api-stub</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
     </dependency>

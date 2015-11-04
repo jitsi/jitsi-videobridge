@@ -32,6 +32,14 @@ public interface MetricServicePublisher
     public void publishNumericMetric(String metricName, long metricValue);
 
     /**
+     * Method to publish numeric type metrics
+     *
+     * @param metricName Name of the metric
+     * @param metricValue Value of the metric
+     */
+    public void publishNumericMetric(String metricName, float metricValue);
+
+    /**
      * Method to publish string type metrics
      *
      * @param metricName Name of the metric

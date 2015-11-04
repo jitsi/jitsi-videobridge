@@ -18,6 +18,7 @@ package org.jitsi.videobridge.metrics;
 import java.util.*;
 
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.eventadmin.*;
@@ -42,6 +43,7 @@ import org.jitsi.eventadmin.*;
  *
  * @author zbettenbuk
  * @author George Politis
+ * @author Damian Minkov
  */
 public class MetricLoggingHandler
     implements EventHandler
@@ -55,6 +57,62 @@ public class MetricLoggingHandler
     public static final String METRIC_CHANNELS = "Channels";
     public static final String METRIC_CONFERENCELENGTH = "Conference length";
     public static final String METRIC_CHANNELSTART_POSTFIX = " start";
+
+    /**
+     * The number of RTP packets sent by the remote side, but not
+     * received by us.
+     */
+    public static final String METRIC_DOWNLOAD_PACKET_LOSS
+        = "Nb download packet loss";
+
+    /**
+     * The number of RTP packets sent by us, but not
+     * received by the remote side.
+     */
+    public static final String METRIC_UPLOAD_PACKET_LOSS
+        = "Nb upload packet loss";
+
+    /**
+     * The minimum RTP jitter value reported by us in an RTCP report, in
+     * millisecond.
+     */
+    public static final String METRIC_DOWNLOAD_MIN_JITTER
+        = "Min download jitter";
+
+    /**
+     * The maximum RTP jitter value reported by us in an RTCP report, in
+     * milliseconds.
+     */
+    public static final String METRIC_DOWNLOAD_MAX_JITTER
+        = "Max download jitter";
+
+    /**
+     * The average of the RTP jitter values reported to us in RTCP reports,
+     * in milliseconds
+     */
+    public static final String METRIC_DOWNLOAD_AVG_JITTER
+        = "Avg download jitter";
+
+    /**
+     * The minimum RTP jitter value reported to us in an RTCP report, in
+     * milliseconds.
+     */
+    public static final String METRIC_UPLOAD_MIN_JITTER
+        = "Min upload jitter";
+
+    /**
+     * The maximum RTP jitter value reported to us in an RTCP report, in
+     * milliseconds.
+     */
+    public static final String METRIC_UPLOAD_MAX_JITTER
+        = "Max upload jitter";
+
+    /**
+     * The average of the RTP jitter values reported to us in RTCP reports,
+     * in milliseconds.
+     */
+    public static final String METRIC_UPLOAD_AVG_JITTER
+        = "Avg upload jitter";
 
     public MetricLoggingHandler(ConfigurationService config)
     {
@@ -93,7 +151,36 @@ public class MetricLoggingHandler
      * @param metricName Name of the metric
      * @param metricValue Value of the metric
      */
-    private void publishNumericMetric(String metricName, int metricValue)
+    private void publishNumericMetric(String metricName, long metricValue)
+    {
+        for (MetricServicePublisher publisher : this.publishers)
+        {
+            try
+            {
+                publisher.publishNumericMetric(metricName, metricValue);
+            }
+            catch (UnsupportedOperationException e)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(publisher.getName()
+                        + " publisher doesn't support numeric metric: "
+                        + metricName);
+            }
+            catch (Throwable t)
+            {
+                logger.error("Error publishing metric \"" + metricName
+                             + "\" with publisher: " + publisher.getName(), t);
+            }
+        }
+    }
+
+    /**
+     * Method to publish numeric type metrics
+     *
+     * @param metricName Name of the metric
+     * @param metricValue Value of the metric
+     */
+    private void publishNumericMetric(String metricName, float metricValue)
     {
         for (MetricServicePublisher publisher : this.publishers)
         {
@@ -312,6 +399,43 @@ public class MetricLoggingHandler
 
             publishNumericMetric(
                 METRIC_CHANNELS, videobridge.getChannelCount());
+
+            if(EventFactory.CHANNEL_EXPIRED_TOPIC.equals(event.getTopic()))
+            {
+                // the channel has expired lets record its stats
+                MediaStreamStats stats = null;
+                if (channel instanceof RtpChannel)
+                {
+                    RtpChannel rtpChannel = (RtpChannel) channel;
+                    MediaStream stream = rtpChannel.getStream();
+                    if (stream != null)
+                    {
+                        stats = stream.getMediaStreamStats();
+                    }
+                }
+
+                if (stats != null)
+                {
+                    publishNumericMetric(METRIC_DOWNLOAD_PACKET_LOSS,
+                        stats.getDownloadNbPacketLost());
+                    publishNumericMetric(METRIC_UPLOAD_PACKET_LOSS,
+                        stats.getUploadNbPacketLost());
+
+                    publishNumericMetric(METRIC_DOWNLOAD_MIN_JITTER,
+                        (float)stats.getMinDownloadJitterMs());
+                    publishNumericMetric(METRIC_DOWNLOAD_MAX_JITTER,
+                        (float)stats.getMaxDownloadJitterMs());
+                    publishNumericMetric(METRIC_DOWNLOAD_AVG_JITTER,
+                        (float)stats.getAvgDownloadJitterMs());
+
+                    publishNumericMetric(METRIC_UPLOAD_MIN_JITTER,
+                        (float)stats.getMinUploadJitterMs());
+                    publishNumericMetric(METRIC_UPLOAD_MAX_JITTER,
+                        (float)stats.getMaxUploadJitterMs());
+                    publishNumericMetric(METRIC_UPLOAD_AVG_JITTER,
+                        (float)stats.getAvgUploadJitterMs());
+                }
+            }
         }
         else if (
             EventFactory.CONFERENCE_CREATED_TOPIC.equals(event.getTopic()))
