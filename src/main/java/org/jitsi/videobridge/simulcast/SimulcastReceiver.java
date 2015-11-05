@@ -270,8 +270,30 @@ public class SimulcastReceiver
             return;
         }
 
-        // NOTE(gp) we expect the base layer to be always on, so we never
-        // touch it or starve it.
+        // There are sequences of packets with increasing timestamps but without
+        // the marker bit set. Supposedly, they are probes to detect whether the
+        // bandwidth may increase. We think that they should cause neither the
+        // start nor the stop of any SimulcastLayer.
+
+        // XXX There's RawPacket#getPayloadLength() but the implementation
+        // includes pkt.paddingSize at the time of this writing and we do not
+        // know whether that's going to stay that way.
+        int pktPayloadLength = pkt.getLength() - pkt.getHeaderLength();
+        int pktPaddingSize = pkt.getPaddingSize();
+
+        if (pktPayloadLength <= pktPaddingSize)
+        {
+            if (logger.isTraceEnabled())
+            {
+                logger.trace(
+                        "pkt.payloadLength= " + pktPayloadLength
+                            + " <= pkt.paddingSize= " + pktPaddingSize);
+            }
+            return;
+        }
+
+        // NOTE(gp) we expect the base layer to be always on, so we never touch
+        // it or starve it.
 
         // XXX Refer to the implementation of
         // SimulcastLayer#touch(boolean, RawPacket) for an explanation of why we
@@ -282,8 +304,8 @@ public class SimulcastReceiver
         {
             frameStarted = acceptedLayer.touch(/* base */ true, pkt);
 
-            // We have accepted a base layer packet, starve the higher
-            // quality layers.
+            // We have accepted a base layer packet, starve the higher quality
+            // layers.
             for (SimulcastLayer layer : layers)
             {
                 if (acceptedLayer != layer)

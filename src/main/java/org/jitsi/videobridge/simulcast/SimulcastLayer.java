@@ -434,17 +434,17 @@ public class SimulcastLayer
 
                     // XXX Sequences of packets have been observed with
                     // increasing RTP timestamps but without the marker bit set.
-                    // It is unknown at the time of this writing whether these
-                    // signal new frames but they may cause a SimulcastLayer
+                    // Supposedly, they are probes to detect whether the
+                    // bandwidth may increase. They may cause a SimulcastLayer
                     // (other than this, of course) to time out. As a
                     // workaround, we will consider them to not signal new
                     // frames.
                     if (frameStarted && lastPktMarker != null && !lastPktMarker)
                     {
                         frameStarted = false;
-                        if (logger.isDebugEnabled())
+                        if (logger.isTraceEnabled())
                         {
-                            logDebug(
+                            logger.trace(
                                     "order-" + getOrder() + " layer ("
                                         + getPrimarySSRC()
                                         + ") detected an alien pkt: seqnum "
@@ -453,6 +453,11 @@ public class SimulcastLayer
                                         + (pkt.isPacketMarked()
                                                 ? "marker, "
                                                 : "")
+                                        + "payload "
+                                        + (pkt.getLength()
+                                                - pkt.getHeaderLength()
+                                                - pkt.getPaddingSize())
+                                        + " bytes, "
                                         + (isKeyFrame(pkt) ? "key" : "delta")
                                         + " frame.");
                         }
