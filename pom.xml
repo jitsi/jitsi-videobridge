@@ -67,6 +67,11 @@
       <artifactId>jetty-rewrite</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-continuation</artifactId>
+      <version>9.3.5.v20151012</version>
+    </dependency>
+    <dependency>
       <groupId>org.fusesource</groupId>
       <artifactId>sigar</artifactId>
     </dependency>

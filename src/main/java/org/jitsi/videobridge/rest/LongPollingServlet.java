@@ -19,6 +19,19 @@ import java.io.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 
+import org.json.simple.*;
+import org.osgi.framework.*;
+
+import org.jitsi.videobridge.*;
+import org.jitsi.osgi.*;
+import org.eclipse.jetty.continuation.*;
+
+
+//TEMP
+import java.util.concurrent.*;
+import java.util.*;
+import java.text.SimpleDateFormat;
+
 /**
  * Implements a {@code Servlet} which enables long polling with asynchronous
  * HTTP request handling.
@@ -28,6 +41,14 @@ import javax.servlet.http.*;
 class LongPollingServlet
     extends HttpServlet
 {
+
+    BlockingQueue<JSONObject> queue = new LinkedBlockingQueue();
+    BundleContext bundleContext;
+
+    public LongPollingServlet(BundleContext bundleContext)
+    {
+      this.bundleContext = bundleContext;
+    }
     /**
      * {@inheritDoc}
      */
@@ -38,7 +59,55 @@ class LongPollingServlet
         throws IOException,
                ServletException
     {
-        // TODO Auto-generated method stub
-        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        System.out.println("BB: IN LONG POLLING");
+        Continuation continuation = ContinuationSupport.getContinuation(request);
+        
+        // We don't get the target here (TODO: is that something that could
+        //  be fixed?), so we need to do a bit more work to extract the bits of the path
+        //  we're interested in.
+        // The stuff we're interested in starts after the /colibri/
+        String colibriPath = request.getRequestURL().toString().split("colibri/")[1];
+        String target = colibriPath.split("/")[0];
+
+        continuation.suspend();
+        Videobridge videobridge = getVideobridge();
+        System.out.println("got target: " + target);
+        if (target.equals("subscribeToEvents")) 
+        {
+          String confId = colibriPath.split("/")[1];
+          System.out.println("BB: subscribing to conference events for conference " + confId);
+          Conference conference = videobridge.getConference(confId, null);
+          if (conference == null)
+          {
+            System.out.println("Couldn't find conference " + confId);
+          }
+          else
+          {
+            System.out.println("found conf object");
+            System.out.println("Waiting for event");
+            try
+            {
+              JSONObject pushEvent = conference.getPushEvent();
+              pushEvent.writeJSONString(response.getWriter());
+              continuation.complete();
+            }
+            catch (InterruptedException e)
+            {
+            }
+          }
+        }
+    }
+
+    /**
+     * Gets the {@code Videobridge} instance available to this Jetty
+     * {@code Handler}.
+     *
+     * @return the {@code Videobridge} instance available to this Jetty
+     * {@code Handler} or {@code null} if no {@code Videobridge} instance is
+     * available to this Jetty {@code Handler}
+     */
+    public Videobridge getVideobridge()
+    {
+        return ServiceUtils2.getService(this.bundleContext, Videobridge.class);
     }
 }
