@@ -31,7 +31,7 @@ import org.jitsi.impl.neomedia.codec.*;
  *
  * This class is thread safe.
  *
- * TODO Rename SimulcastLayer -> SimulcastStream to be consistent with
+ * TODO Rename SimulcastLayer -&gt; SimulcastStream to be consistent with
  * the webrtc.org codebase.
  *
  * @author George Politis
@@ -140,6 +140,28 @@ public class SimulcastLayer
      * to somehow change. TAG(arbitrary-sim-layers)
      */
     private int seenBase = 0;
+
+    /**
+     * The value of the RTP marker (bit) of the last {@code RawPacket} seen by
+     * this {@code SimulcastLayer}. Technically, the order of the receipt of RTP
+     * packets may be disturbed by the network transport (e.g. UDP) and/or RTP
+     * packet retransmissions so the value of {@code lastPktMarker} may not come
+     * from the last received {@code RawPacket} but from a received
+     * {@code RawPacket} which would have been the last received if there were
+     * no network transport and RTP packet retransmission abberations.
+     */
+    private Boolean lastPktMarker;
+
+    /**
+     * The {@code sequenceNumber} of the last {@code RawPacket} seen by this
+     * {@code SimulcastLayer}. Technically, the order of the receipt of RTP
+     * packets may be disturbed by the network transport (e.g. UDP) and/or RTP
+     * packet retransmissions so the value of {@code lastPktSequenceNumber} may
+     * not come from the last received {@code RawPacket} but from a received
+     * {@code RawPacket} which would have been the last received if there were
+     * no network transport and RTP packet retransmission abberations.
+     */
+    private int lastPktSequenceNumber = -1;
 
     /**
      * The {@code timestamp} of the last {@code RawPacket} seen by this
@@ -312,7 +334,12 @@ public class SimulcastLayer
             // must have been dropped (this means approximately MAX_SEEN_BASE*10
             // packets loss).
 
-            if (this.isStreaming && this.seenHigh == 0)
+            if (this.isStreaming && this.seenHigh == 0
+                    // XXX If the (new) frame-based logic is active, the (old)
+                    // packet-based logic could declare this SimulcastLayer
+                    // non-streaming while the (new) frame-based logic considers
+                    // it streaming.
+                    && SimulcastReceiver.TIMEOUT_ON_FRAME_COUNT <= 1)
             {
                 timeout(pkt);
             }
@@ -377,18 +404,76 @@ public class SimulcastLayer
         // lost, it sounds more reliably to distinguish frames by looking at the
         // timestamps of the RTP packets.
         long pktTimestamp = pkt.readUnsignedIntAsLong(4);
-        boolean frameStarted;
+        boolean frameStarted = false;
 
-        if (lastPktTimestamp < pktTimestamp)
+        if (lastPktTimestamp <= pktTimestamp)
         {
-            // The current pkt signals the receit of a piece of a new (i.e.
-            // unobserved until now) frame.
-            lastPktTimestamp = pktTimestamp;
-            frameStarted = true;
-        }
-        else
-        {
-            frameStarted = false;
+            if (lastPktTimestamp < pktTimestamp)
+            {
+                // The current pkt signals the receit of a piece of a new (i.e.
+                // unobserved until now) frame.
+                lastPktTimestamp = pktTimestamp;
+                frameStarted = true;
+            }
+
+            int pktSequenceNumber = pkt.getSequenceNumber();
+            boolean pktSequenceNumberIsInOrder = true;
+
+            if (lastPktSequenceNumber != -1)
+            {
+                int expectedPktSequenceNumber = lastPktSequenceNumber + 1;
+
+                // sequence number: 16 bits
+                if (expectedPktSequenceNumber > 0xFFFF)
+                    expectedPktSequenceNumber = 0;
+
+                if (pktSequenceNumber == expectedPktSequenceNumber)
+                {
+                    // It appears no pkt was lost (or delayed). We can rely on
+                    // lastPktMarker.
+
+                    // XXX Sequences of packets have been observed with
+                    // increasing RTP timestamps but without the marker bit set.
+                    // It is unknown at the time of this writing whether these
+                    // signal new frames but they may cause a SimulcastLayer
+                    // (other than this, of course) to time out. As a
+                    // workaround, we will consider them to not signal new
+                    // frames.
+                    if (frameStarted && lastPktMarker != null && !lastPktMarker)
+                    {
+                        frameStarted = false;
+                        if (logger.isDebugEnabled())
+                        {
+                            logDebug(
+                                    "order-" + getOrder() + " layer ("
+                                        + getPrimarySSRC()
+                                        + ") detected an alien pkt: seqnum "
+                                        + pkt.getSequenceNumber() + ", ts "
+                                        + pktTimestamp + ", "
+                                        + (pkt.isPacketMarked()
+                                                ? "marker, "
+                                                : "")
+                                        + (isKeyFrame(pkt) ? "key" : "delta")
+                                        + " frame.");
+                        }
+                    }
+                }
+                else if (pktSequenceNumber > lastPktSequenceNumber)
+                {
+                    // It looks like at least one pkt was lost (or delayed). We
+                    // cannot rely on lastPktMarker.
+                }
+                else
+                {
+                    pktSequenceNumberIsInOrder = false;
+                }
+            }
+            if (pktSequenceNumberIsInOrder)
+            {
+                lastPktMarker
+                    = pkt.isPacketMarked() ? Boolean.TRUE : Boolean.FALSE;
+                lastPktSequenceNumber = pktSequenceNumber;
+            }
         }
 
         if (base)
@@ -453,7 +538,7 @@ public class SimulcastLayer
         // compile time) the frame-based approach to the detection of layer
         // drops.
 
-        // If the frame-based appraoch to the detection of layer drops works
+        // If the frame-based approach to the detection of layer drops works
         // (i.e. there will always be at least 1 high quality frame among
         // SimulcastReceiver#TIMEOUT_ON_FRAME_COUNT consecutive low quality
         // frames), then it may be argued that a late pkt (i.e. which does not
@@ -528,7 +613,6 @@ public class SimulcastLayer
             logger.info(msg);
         }
     }
-
 
     private void logWarn(String msg)
     {
