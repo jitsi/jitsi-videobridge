@@ -14,6 +14,9 @@
 #   "-t"("25" by default) number of second we we for the bridge to shutdown
 #       gracefully after conference count drops to 0
 #   "-s"(disabled by default) enable silent mode - no info output
+#
+#   NOTE: script depends on the tool jq, used to parse json
+#
 
 # Initialize arguments
 hostUrl="http://localhost:8080"
@@ -46,23 +49,11 @@ if ! [[ $pid =~ $re ]] ; then
    echo "error: PID is not a number" >&2; exit 1
 fi
 
-# Function parses given text in JSON format and extracts given parameter value
-# First argument is the name of JSON parameter to be extracted, the second
-# argument is JSON text to be parsed.
-function jsonval {
-	json=$2
-	prop=$1
-    temp=`echo $json | sed 's/\\\\\//\//g' | sed 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed 's/\"\:\"/\|/g' | sed 's/[\,]/ /g' | sed 's/\"//g' | grep -w $prop`
-    echo ${temp##*:}
-}
-
 # Returns conference count by calling JVB REST statistics API and extracting
 # conference count from JSON stats text returned.
 function getConferenceCount {
-	stats=$(curl -s "$hostUrl/colibri/stats")
-	echo `jsonval "conferences" $stats`
-	#stats=$(curl -s "$hostUrl/colibri/stats"| jq ". conferences")
-	#echo $stats
+    stats=$(curl -s "$hostUrl/colibri/stats"| jq ". conferences")
+    echo $stats
 }
 
 # Prints info messages
