@@ -288,7 +288,7 @@ public class SimulcastReceiver
             {
                 if (acceptedLayer != layer)
                 {
-                    layer.maybeTimeout(/* useFrameBasedLogic */ false);
+                    layer.maybeTimeout(/* useFrameBasedLogic */ false, pkt);
                 }
             }
         }
@@ -299,7 +299,7 @@ public class SimulcastReceiver
             frameStarted = acceptedLayer.touch(/* base */ false, pkt);
         }
         if (frameStarted)
-            simulcastLayerFrameStarted(acceptedLayer, layers);
+            simulcastLayerFrameStarted(acceptedLayer, pkt, layers);
     }
 
     /**
@@ -534,6 +534,9 @@ public class SimulcastReceiver
      * @param source the {@code SimulcastLayer} which is the source of the event
      * i.e. which has detected the start of a new video frame in the RTP stream
      * that it represents
+     * @param pkt the {@code RawPacket} which was received by {@code source} and
+     * possibly influenced the decision that a new view frame was started in the
+     * RTP stream represented by {@code source}
      * @param layers the set of {@code SimulcastLayer}s managed by this
      * {@code SimulcastReceiver}. Explicitly provided to the method in order to
      * avoid invocations of {@link #getSimulcastLayers()} because the latter
@@ -541,6 +544,7 @@ public class SimulcastReceiver
      */
     private void simulcastLayerFrameStarted(
             SimulcastLayer source,
+            RawPacket pkt,
             SortedSet<SimulcastLayer> layers)
     {
         // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
@@ -601,6 +605,7 @@ public class SimulcastReceiver
                     {
                         maybeTimeout(
                                 source,
+                                pkt,
                                 layer,
                                 indexOfLastSourceOccurrenceInHistory);
                     }
@@ -626,11 +631,15 @@ public class SimulcastReceiver
      *
      * @param cause the {@code SimulcastLayer} which has received (a piece of) a
      * new (video) frame and has thus triggered a check on {@code effect}
+     * @param pkt the {@code RawPacket} which was received by {@code cause} and
+     * possibly influenced the decision to trigger a check on {@code effect}
      * @param effect the {@code SimulcastLayer} which is to be checked whether
      * it looks like it has been paused/stopped by the remote peer
+     * @param endIndexInSimulcastLayerFrameHistory
      */
     private void maybeTimeout(
             SimulcastLayer cause,
+            RawPacket pkt,
             SimulcastLayer effect,
             int endIndexInSimulcastLayerFrameHistory)
     {
@@ -649,7 +658,7 @@ public class SimulcastReceiver
         }
         if (timeout)
         {
-            effect.maybeTimeout(/* useFrameBasedLogic */ true);
+            effect.maybeTimeout(/* useFrameBasedLogic */ true, pkt);
 
             if (!effect.isStreaming())
             {

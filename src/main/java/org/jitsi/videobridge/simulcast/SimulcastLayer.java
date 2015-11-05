@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.simulcast;
 
-import java.util.*;
 import java.util.concurrent.*;
 
 import org.jitsi.impl.neomedia.*;
@@ -279,14 +278,24 @@ public class SimulcastLayer
     /**
      * Increases the number of base layer packets that we've seen, and
      * potentially marks this layer as stopped and fires an event.
+     *
+     * @param useFrameBasedLogic {@code true} to use the (new) frame-based logic
+     * for automagic {@code SimulcastLayer} drop detection instead of the (old)
+     * packet-based logic; otherwise, {@code false}
+     * @param pkt the {@code RawPacket} which possibly influenced the decision
+     * to trigger a check on this {@code SimulcastLayer}. Most likely,
+     * {@code pkt} is not part of the RTP stream represented by this
+     * {@code SimulcastLayer}.
      */
-    public synchronized void maybeTimeout(boolean useFrameBasedLogic)
+    public synchronized void maybeTimeout(
+            boolean useFrameBasedLogic,
+            RawPacket pkt)
     {
         if (useFrameBasedLogic)
         {
             if (this.isStreaming)
             {
-                timeout();
+                timeout(pkt);
             }
             // The (new) frame-based logic is invoked as an alternative to the
             // (old) packet-based logic. (Anyway, both may be used in different
@@ -305,7 +314,7 @@ public class SimulcastLayer
 
             if (this.isStreaming && this.seenHigh == 0)
             {
-                timeout();
+                timeout(pkt);
             }
 
             this.seenHigh = 0;
@@ -314,19 +323,21 @@ public class SimulcastLayer
 
     /**
      * Marks this {@code SimulcastLayer} as stopped and fires an event.
+     *
+     * @param pkt the {@code RawPacket} which possibly influenced the decision
+     * to time this {@code SimulcastLayer} out. Most likely, {@code pkt} is not
+     * part of the RTP stream represented by this {@code SimulcastLayer}.
      */
-    private synchronized void timeout()
+    private synchronized void timeout(RawPacket pkt)
     {
         this.isStreaming = false;
 
         if (logger.isDebugEnabled())
         {
-            Map<String, Object> map = new HashMap<String, Object>(1);
-            map.put("self", this);
-            StringCompiler sc = new StringCompiler(map);
-
-            logDebug(sc.c("order-{self.order} layer ({self.primarySSRC})" +
-                    " stopped.").toString());
+            logDebug(
+                    "order-" + getOrder() + " layer (" + getPrimarySSRC()
+                        + ") stopped on seqnum " + pkt.getSequenceNumber()
+                        + ".");
         }
 
         // XXX(gp) One could try to ask for a key frame now, if the packet that
@@ -458,12 +469,11 @@ public class SimulcastLayer
 
         if (logger.isDebugEnabled())
         {
-            Map<String, Object> map = new HashMap<String, Object>(1);
-            map.put("self", this);
-            StringCompiler sc = new StringCompiler(map);
-
-            logDebug(sc.c("order-{self.order} layer " +
-                    "({self.primarySSRC}) resumed.").toString());
+            logDebug(
+                    "order-" + getOrder() + " layer (" + getPrimarySSRC()
+                        + ") resumed on seqnum " + pkt.getSequenceNumber()
+                        + ", " + (isKeyFrame(pkt) ? "key" : "delta")
+                        + " frame.");
         }
 
         firePropertyChange(IS_STREAMING_PNAME, false, true);
