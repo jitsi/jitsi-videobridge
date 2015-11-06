@@ -16,6 +16,8 @@
 package org.jitsi.videobridge.stats;
 
 import io.callstats.sdk.*;
+import io.callstats.sdk.data.*;
+import io.callstats.sdk.listeners.*;
 import net.java.sip.communicator.util.*;
 import net.java.sip.communicator.util.Logger;
 import org.jitsi.service.configuration.*;
@@ -255,22 +257,29 @@ public class CallStatsIOTransport
         // TODO avgIntervalJitter
         // TODO avgIntervalRtt
         bsib.conferenceCount(s.getStatAsInt(VideobridgeStatistics.CONFERENCES));
-        bsib.cpuUsage(s.getStatAsFloat(VideobridgeStatistics.CPU_USAGE));
+        bsib.cpuUsage(
+                (float) s.getStatAsDouble(VideobridgeStatistics.CPU_USAGE));
         bsib.intervalDownloadBitRate(
-                s.getStatAsInt(VideobridgeStatistics.BITRATE_DOWNLOAD));
+                (int)
+                    Math.round(
+                            s.getStatAsDouble(
+                                    VideobridgeStatistics.BITRATE_DOWNLOAD)));
         // TODO intervalReceivedBytes
         bsib.intervalRtpFractionLoss(
-                s.getStatAsFloat(VideobridgeStatistics.RTP_LOSS));
+                (float) s.getStatAsDouble(VideobridgeStatistics.RTP_LOSS));
         // TODO intervalSentBytes
         bsib.intervalUploadBitRate(
-                s.getStatAsInt(VideobridgeStatistics.BITRATE_UPLOAD));
+                (int)
+                    Math.round(
+                            s.getStatAsDouble(
+                                    VideobridgeStatistics.BITRATE_UPLOAD)));
         bsib.measurementInterval((int) measurementInterval);
-        bsib.memoryUsage(s.getStatAsFloat(VideobridgeStatistics.USED_MEMORY));
+        bsib.memoryUsage(s.getStatAsInt(VideobridgeStatistics.USED_MEMORY));
         bsib.participantsCount(
                 s.getStatAsInt(VideobridgeStatistics.NUMBEROFPARTICIPANTS));
         bsib.threadCount(s.getStatAsInt(VideobridgeStatistics.NUMBEROFTHREADS));
         // TODO totalLoss
-        bsib.totalMemory(s.getStatAsFloat(VideobridgeStatistics.TOTAL_MEMORY));
+        bsib.totalMemory(s.getStatAsInt(VideobridgeStatistics.TOTAL_MEMORY));
         bsib.videoFabricCount(
                 s.getStatAsInt(VideobridgeStatistics.VIDEOCHANNELS));
     }

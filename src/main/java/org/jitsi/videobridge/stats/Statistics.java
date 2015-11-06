@@ -87,6 +87,50 @@ public abstract class Statistics
     }
 
     /**
+     * Gets the value of a specific piece of statistic as a {@code double}
+     * value.
+     *
+     * @param stat the name of the piece of statistics to return
+     * @return the value of {@code stat} as a {@code double} value
+     */
+    public double getStatAsDouble(String stat)
+    {
+        Object o = getStat(stat);
+        double d;
+        double defaultValue = 0.0d;
+
+        if (o == null)
+        {
+            d = defaultValue;
+        }
+        else if (o instanceof Number)
+        {
+            d = ((Number) o).floatValue();
+        }
+        else
+        {
+            String s = o.toString();
+
+            if (s == null || s.length() == 0)
+            {
+                d = defaultValue;
+            }
+            else
+            {
+                try
+                {
+                    d = Double.parseDouble(s);
+                }
+                catch (NumberFormatException nfe)
+                {
+                    d = defaultValue;
+                }
+            }
+        }
+        return d;
+    }
+
+    /**
      * Gets the value of a specific piece of statistic as a {@code float} value.
      *
      * @param stat the name of the piece of statistics to return

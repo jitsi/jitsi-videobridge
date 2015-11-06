@@ -34,27 +34,32 @@ public class VideobridgeStatistics
     extends Statistics
 {
     /**
-     * The name of the number of audio channels statistic.
+     * The name of the number of audio channels statistic. Its runtime type is
+     * {@code Integer}.
      */
     public static final String AUDIOCHANNELS = "audiochannels";
 
     /**
-     * The name of the bit rate statistic for download.
+     * The name of the bit rate statistic for download. Its runtime type is
+     * {@code String} and the value represents a {@code double} value.
      */
     public static final String BITRATE_DOWNLOAD = "bit_rate_download";
 
     /**
-     * The name of the bit rate statistic for upload.
+     * The name of the bit rate statistic for upload. Its runtime type is
+     * {@code String} and the value represents a {@code double} value.
      */
     public static final String BITRATE_UPLOAD = "bit_rate_upload";
 
     /**
-     * The name of the number of conferences statistic.
+     * The name of the number of conferences statistic. Its runtime type is
+     * {@code Integer}.
      */
     public static final String CONFERENCES = "conferences";
 
     /**
-     * The name of the CPU usage statistic.
+     * The name of the CPU usage statistic. Its runtime type is {@code String}
+     * and the value represents a {@code double} value.
      */
     public static final String CPU_USAGE = "cpu_usage";
 
@@ -68,48 +73,55 @@ public class VideobridgeStatistics
         = new DecimalFormat("#.#####");
 
     /**
-     * The name of the number of participants statistic.
+     * The name of the number of participants statistic. Its runtime type is
+     * {@code Integer}.
      */
     public static final String NUMBEROFPARTICIPANTS = "participants";
 
     /**
-     * The name of the number of threads statistic.
+     * The name of the number of threads statistic. Its runtime type is
+     * {@code Integer}.
      */
     public static final String NUMBEROFTHREADS = "threads";
 
     /**
-     * The name of the RTP loss statistic.
+     * The name of the RTP loss statistic. Its runtime type is {@code String}
+     * and the value represents a {@code double} value.
      */
     public static final String RTP_LOSS = "rtp_loss";
 
     /**
      * The name of the stat that indicates the bridge has entered graceful
-     * shutdown mode.
+     * shutdown mode. Its runtime type is {@code Boolean}.
      */
     public static final String SHUTDOWN_IN_PROGRESS = "graceful_shutdown";
 
     /**
-     * The name of the number of conferences statistic.
+     * The name of the piece of statistic which specifies the date and time at
+     * which the associated set of statistics was generated. Its runtime type is
+     * {@code String} and the value represents a {@code Date} value.
      */
     public static final String TIMESTAMP = "current_timestamp";
 
     /**
-     * The name of total memory statistic.
+     * The name of total memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String TOTAL_MEMORY = "total_memory";
 
     /**
-     * The name of used memory statistic.
+     * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
 
     /**
-     * The name of the number of video channels statistic.
+     * The name of the number of video channels statistic. Its runtime type is
+     * {@code Integer}.
      */
     public static final String VIDEOCHANNELS = "videochannels";
 
     /**
-     * The name of the number of video streams statistic.
+     * The name of the number of video streams statistic. Its runtime type is
+     * {@code Integer}.
      */
     public static final String VIDEOSTREAMS = "videostreams";
 
