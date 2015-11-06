@@ -1349,23 +1349,12 @@ public class Videobridge
     }
 
     /**
-     * Returns a short string that contains the total number of
-     * conferences/channels/video streams, for the purposes of logging.
-     *
-     * The metric "video streams" is an estimation of the total number of
-     * video streams received or sent. It may not be exactly accurate, because
-     * we assume, for example, that all endpoints are sending video. It is a
-     * better representation of the level of usage of the bridge than simply
-     * the number of channels, because it takes into account the size of each
-     * conference.
-     *
-     * The calculations are performed ad-hoc to avoid looping through all
-     * components multiple times.
-     *
-     * @return a short string that contains the total number of
-     * conferences/channels/video streams, for the purposes of logging.
+     * Returns an array that contains the total number of
+     * conferences/channels/video streams.
+     * @return an array that contains the total number of
+     * conferences/channels/video streams.
      */
-    String getConferenceCountString()
+    public int[] getConferenceMetrics()
     {
         Conference[] conferences = getConferences();
         int conferenceCount = 0, channelCount = 0, streamCount = 0;
@@ -1398,10 +1387,34 @@ public class Videobridge
             }
         }
 
+        return new int[]{conferenceCount, channelCount, streamCount};
+    }
+
+    /**
+     * Returns a short string that contains the total number of
+     * conferences/channels/video streams, for the purposes of logging.
+     *
+     * The metric "video streams" is an estimation of the total number of
+     * video streams received or sent. It may not be exactly accurate, because
+     * we assume, for example, that all endpoints are sending video. It is a
+     * better representation of the level of usage of the bridge than simply
+     * the number of channels, because it takes into account the size of each
+     * conference.
+     *
+     * The calculations are performed ad-hoc to avoid looping through all
+     * components multiple times.
+     *
+     * @return a short string that contains the total number of
+     * conferences/channels/video streams, for the purposes of logging.
+     */
+    String getConferenceCountString()
+    {
+        int[] metrics = getConferenceMetrics();
+
         return
-            "The total number of conferences is now " + conferenceCount
-                + ", channels " + channelCount + ", video streams "
-                + streamCount + ".";
+            "The total number of conferences is now " + metrics[0]
+                + ", channels " + metrics[1] + ", video streams "
+                + metrics[1] + ".";
     }
 
     /**

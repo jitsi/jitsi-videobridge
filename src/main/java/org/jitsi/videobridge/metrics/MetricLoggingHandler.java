@@ -59,6 +59,11 @@ public class MetricLoggingHandler
     public static final String METRIC_CHANNELSTART_POSTFIX = " start";
 
     /**
+     * The video streams metric name.
+     */
+    public static final String METRIC_VIDEO_STREAMS = "Video Streams";
+
+    /**
      * The number of RTP packets sent by the remote side, but not
      * received by us.
      */
@@ -436,6 +441,9 @@ public class MetricLoggingHandler
                         (float)stats.getAvgUploadJitterMs());
                 }
             }
+
+            publishNumericMetric(
+                METRIC_VIDEO_STREAMS, videobridge.getConferenceMetrics()[1]);
         }
         else if (
             EventFactory.CONFERENCE_CREATED_TOPIC.equals(event.getTopic()))
