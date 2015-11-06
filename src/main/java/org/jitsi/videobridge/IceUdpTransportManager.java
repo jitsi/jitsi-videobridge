@@ -57,15 +57,8 @@ public class IceUdpTransportManager
     private static final String DEFAULT_ICE_STREAM_NAME = "stream";
 
     /**
-     * Contains the name of the property flag that may indicate that AWS address
-     * harvesting should be explicitly disabled.
-     */
-    private static final String DISABLE_AWS_HARVESTER
-        = "org.jitsi.videobridge.DISABLE_AWS_HARVESTER";
-
-    /**
      * The name of the property which disables the use of a
-     * <tt>MultiplexingTcpHostHarvester</tt>.
+     * <tt>TcpHarvester</tt>.
      */
     private static final String DISABLE_TCP_HARVESTER
         = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
@@ -78,13 +71,6 @@ public class IceUdpTransportManager
             = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
 
     /**
-     * Contains the name of the property flag that may indicate that AWS address
-     * harvesting should be forced without first trying to auto detect it.
-     */
-    private static final String FORCE_AWS_HARVESTER
-        = "org.jitsi.videobridge.FORCE_AWS_HARVESTER";
-
-    /**
      * The <tt>Logger</tt> used by the <tt>IceUdpTransportManager</tt> class and
      * its instances to print debug information.
      */
@@ -92,29 +78,13 @@ public class IceUdpTransportManager
         = Logger.getLogger(IceUdpTransportManager.class);
 
     /**
-     * Contains the name of the property that would tell us if we should use
-     * address mapping as one of our NAT traversal options as well as the local
-     * address that we should be mapping.
-     */
-    private static final String NAT_HARVESTER_LOCAL_ADDRESS
-        = "org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS";
-
-    /**
-     * Contains the name of the property that would tell us if we should use
-     * address mapping as one of our NAT traversal options as well as the public
-     * address that we should be using in addition to our local one.
-     */
-    private static final String NAT_HARVESTER_PUBLIC_ADDRESS
-        = "org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS";
-
-    /**
-     * The default port that the <tt>MultiplexingTcpHostHarvester</tt> will
+     * The default port that the <tt>TcpHarvester</tt> will
      * bind to.
      */
     private static final int TCP_DEFAULT_PORT = 443;
 
     /**
-     * The port on which the <tt>MultiplexingTcpHostHarvester</tt> will bind to
+     * The port on which the <tt>TcpHarvester</tt> will bind to
      * if no port is specifically configured, and binding to
      * <tt>DEFAULT_TCP_PORT</tt> fails (for example, if the process doesn't have
      * the required privileges to bind to a port below 1024).
@@ -130,14 +100,14 @@ public class IceUdpTransportManager
 
     /**
      * The name of the property which controls the port to which the
-     * <tt>MultiplexingTcpHostHarvester</tt> will bind.
+     * <tt>TcpHarvester</tt> will bind.
      */
     private static final String TCP_HARVESTER_PORT
         = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
 
     /**
      * The name of the property which controls the use of ssltcp candidates by
-     * <tt>MultiplexingTcpHostHarvester</tt>.
+     * <tt>TcpHarvester</tt>.
      */
     private static final String TCP_HARVESTER_SSLTCP
         = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
@@ -148,10 +118,10 @@ public class IceUdpTransportManager
     private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
 
     /**
-     * The single <tt>MultiplexingTcpHostHarvester</tt> instance for the
+     * The single <tt>TcpHarvester</tt> instance for the
      * application.
      */
-    private static MultiplexingTcpHostHarvester tcpHostHarvester = null;
+    private static TcpHarvester tcpHostHarvester = null;
 
     /**
      * The <tt>SinglePortUdpHarvester</tt>s which will be appended to ICE
@@ -477,11 +447,6 @@ public class IceUdpTransportManager
         // Use dynamic ports iff we're not sing "single port".
         iceAgent.setUseHostHarvester(enableDynamicHostHarvester);
 
-        AwsCandidateHarvester awsHarvester = null;
-        //does this look like an Amazon AWS EC2 machine?
-        if(AwsCandidateHarvester.smellsLikeAnEC2())
-            awsHarvester = new AwsCandidateHarvester();
-
         ConfigurationService cfg
             = ServiceUtils.getService(
                     getBundleContext(),
@@ -495,60 +460,28 @@ public class IceUdpTransportManager
             return;
         }
 
-        //now that we have a conf service, check if AWS use is forced and
-        //comply if necessary.
-        if (awsHarvester == null
-                && cfg.getBoolean(FORCE_AWS_HARVESTER, false))
+        HarvesterConfiguration addressesConfig
+            = HarvesterConfiguration.getInstance(cfg);
+
+        MappingCandidateHarvester mappingHarvester
+            = addressesConfig.getCandidateHarvester();
+        //append the mapping harvester
+        if( mappingHarvester != null)
         {
-            //ok. this doesn't look like an EC2 machine but since you
-            //insist ... we'll behave as if it is.
-            logger.info("Forcing use of AWS candidate harvesting.");
-            awsHarvester = new AwsCandidateHarvester();
+            iceAgent.addCandidateHarvester(mappingHarvester);
         }
 
-
-        //append the AWS harvester for AWS machines.
-        if( awsHarvester != null
-                && !cfg.getBoolean(DISABLE_AWS_HARVESTER, false))
+        if(addressesConfig.getPublicAddress() != null
+            && addressesConfig.getLocalAddress() != null)
         {
-            logger.info("Appending an AWS harvester to the ICE agent.");
-            iceAgent.addCandidateHarvester(awsHarvester);
+            //if configured, append a mapping harvester.
+            MappingCandidateHarvester natHarvester
+                = new MappingCandidateHarvester(
+                addressesConfig.getPublicAddress(),
+                addressesConfig.getLocalAddress());
+
+            iceAgent.addCandidateHarvester(natHarvester);
         }
-
-        //if configured, append a mapping harvester.
-        String localAddressStr = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
-        String publicAddressStr = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
-
-        if (localAddressStr == null || publicAddressStr == null)
-            return;
-
-        TransportAddress localAddress;
-        TransportAddress publicAddress;
-
-        try
-        {
-            // port 9 is "discard", but the number here seems to be ignored.
-            localAddress
-                = new TransportAddress(localAddressStr, 9, Transport.UDP);
-            publicAddress
-                = new TransportAddress(publicAddressStr, 9, Transport.UDP);
-
-            logger.info("Will append a NAT harvester for " +
-                                localAddress + "=>" + publicAddress);
-
-        }
-        catch(Exception exc)
-        {
-            logger.info("Failed to create a NAT harvester for"
-                                + " local address=" + localAddressStr
-                                + " and public address=" + publicAddressStr);
-            return;
-        }
-
-        MappingCandidateHarvester natHarvester
-            = new MappingCandidateHarvester(publicAddress, localAddress);
-
-        iceAgent.addCandidateHarvester(natHarvester);
     }
 
     /**
@@ -1752,7 +1685,7 @@ public class IceUdpTransportManager
                 try
                 {
                     tcpHostHarvester
-                        = new MultiplexingTcpHostHarvester(port, ssltcp);
+                        = new TcpHarvester(port, ssltcp);
                 }
                 catch (IOException ioe)
                 {
@@ -1777,7 +1710,7 @@ public class IceUdpTransportManager
                     try
                     {
                         tcpHostHarvester
-                            = new MultiplexingTcpHostHarvester(port, ssltcp);
+                            = new TcpHarvester(port, ssltcp);
                     }
                     catch (IOException ioe)
                     {
@@ -1794,24 +1727,16 @@ public class IceUdpTransportManager
                                         + ", using SSLTCP:" + ssltcp);
                 }
 
-                String localAddressStr
-                    = cfg.getString(NAT_HARVESTER_LOCAL_ADDRESS);
-                String publicAddressStr
-                    = cfg.getString(NAT_HARVESTER_PUBLIC_ADDRESS);
-                if (localAddressStr != null && publicAddressStr != null)
+                HarvesterConfiguration addressesConfig
+                    = HarvesterConfiguration.getInstance(cfg);
+                // if there is mapping addresses configured or discovered
+                // use them
+                if(addressesConfig.getPublicAddress() != null
+                    && addressesConfig.getLocalAddress() != null)
                 {
-                    try
-                    {
-                        tcpHostHarvester.addMappedAddress(
-                                InetAddress.getByName(publicAddressStr),
-                                InetAddress.getByName(localAddressStr));
-                    }
-                    catch (UnknownHostException uhe)
-                    {
-                        logger.warn("Failed to add mapped address for "
-                            + publicAddressStr + " -> " + localAddressStr
-                            + ": " + uhe);
-                    }
+                    tcpHostHarvester.addMappedAddress(
+                        addressesConfig.getPublicAddress().getAddress(),
+                        addressesConfig.getLocalAddress().getAddress());
                 }
 
                 int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
@@ -1819,21 +1744,6 @@ public class IceUdpTransportManager
                 {
                     tcpHostHarvesterMappedPort = mappedPort;
                     tcpHostHarvester.addMappedPort(mappedPort);
-                }
-
-                if (AwsCandidateHarvester.smellsLikeAnEC2())
-                {
-                    TransportAddress localAddress
-                        = AwsCandidateHarvester.getFace();
-                    TransportAddress publicAddress
-                        = AwsCandidateHarvester.getMask();
-
-                    if (localAddress != null && publicAddress != null)
-                    {
-                        tcpHostHarvester.addMappedAddress(
-                                publicAddress.getAddress(),
-                                localAddress.getAddress());
-                    }
                 }
             }
         }
