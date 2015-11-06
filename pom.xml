@@ -19,7 +19,7 @@
   <url>https://github.com/jitsi/jitsi-videobridge</url>
 
   <properties>
-    <assembly.skipAssembly>false</assembly.skipAssembly>
+    <assembly.skipAssembly>true</assembly.skipAssembly>
   </properties>
 
   <dependencyManagement>
