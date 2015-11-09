@@ -451,7 +451,8 @@ public class PubSubPublisher
      * @param itemId the ID of the item to be published. If <tt>null</tt> the
      *               XMPP server will generate random ID by itself.
      * @param ext the item to be send.
-     * @throws Exception if fail to send the item or the node is not created.
+     * @throws IllegalArgumentException if the node does not exist.
+     * @throws Exception if fail to send the item.
      */
     public void publish(String nodeName, String itemId, PacketExtension ext)
         throws Exception

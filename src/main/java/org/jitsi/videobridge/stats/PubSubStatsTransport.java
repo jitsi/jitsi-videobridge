@@ -277,9 +277,16 @@ public class PubSubStatsTransport
             {
                 publisher.publish(nodeName, itemId, Statistics.toXMPP(stats));
             }
+            catch (IllegalArgumentException e)
+            {
+                logger.error(
+                    "Failed to publish to PubSub node: " + nodeName +
+                        " - it does not exist yet");
+            }
             catch (Exception e)
             {
-                logger.error("Failed to publish to PubSub node: " + nodeName);
+                logger.error(
+                    "Failed to publish to PubSub node: " + nodeName, e);
                 dispose();
             }
         }
