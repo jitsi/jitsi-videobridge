@@ -76,16 +76,10 @@ public class RtpChannelTransformEngine
     private CachingTransformer cache;
 
     /**
-     * The transformer which intercepts NACK packets and passes them on to the
+     * The transformer which intercepts RTCP packets and passes them on to the
      * channel logic.
      */
-    private NACKNotifier nackNotifier;
-
-    /**
-     * The transformer which intercepts REMB packets and passes them on to the
-     * channel logic.
-     */
-    private REMBNotifier rembNotifier;
+    private RTCPNotifier rtcpNotifier;
 
     /**
      * The transformer which replaces the timestamp in an abs-send-time RTP
@@ -133,59 +127,66 @@ public class RtpChannelTransformEngine
         ConfigurationService cfg
                 = conference.getVideobridge().getConfigurationService();
 
+        boolean video = (channel instanceof VideoChannel);
+        boolean enableNackTermination = video;
+        boolean enableRetransmissionsRequests = video;
+
+        if (cfg != null)
+        {
+            enableNackTermination
+                &= !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
+            enableRetransmissionsRequests
+                &= !cfg.getBoolean(DISABLE_RETRANSMISSION_REQUESTS, false);
+        }
+
+        // Bridge-end (the first transformer in the list executes first for
+        // packets from the bridge, and last for packets to the bridge)
         List<TransformEngine> transformerList
             = new LinkedList<TransformEngine>();
 
-        rtxTransformer = new RtxTransformer(channel);
-        transformerList.add(rtxTransformer);
-
-        if (cfg == null
-                || !cfg.getBoolean(DISABLE_RETRANSMISSION_REQUESTS, false))
+        if (video)
         {
-            retransmissionRequester = new RetransmissionRequester(channel);
-            transformerList.add(retransmissionRequester);
-            if (logger.isDebugEnabled())
+            rtcpNotifier = new RTCPNotifier(channel);
+            rtcpNotifier.setDropNackPackets(enableNackTermination);
+            transformerList.add(rtcpNotifier);
+
+            rtxTransformer = new RtxTransformer(channel);
+            transformerList.add(rtxTransformer);
+
+            if (enableRetransmissionsRequests)
             {
-                logger.debug("Enabling retransmission requests for channel"
+                retransmissionRequester = new RetransmissionRequester(channel);
+                transformerList.add(retransmissionRequester);
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Enabling retransmission requests for channel"
                                      + channel.getID());
+                }
             }
-        }
 
-        if (channel instanceof VideoChannel)
-        {
             VideoChannel videoChannel = (VideoChannel) channel;
             simulcastEngine = new SimulcastEngine(videoChannel);
             transformerList.add(simulcastEngine);
-        }
 
-        redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
-        transformerList.add(redFilter);
+            redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
+            transformerList.add(redFilter);
+        }
 
         absSendTime = new AbsSendTimeEngine();
         transformerList.add(absSendTime);
 
-        boolean enableNackTermination = true;
-        if (cfg != null)
-            enableNackTermination
-                = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
-
-        if (enableNackTermination && channel instanceof NACKHandler)
+        // The only purpose of the cache is to allow us to respond to NACK
+        // packets.
+        if (enableNackTermination)
         {
-            logger.info("Enabling NACK termination for channel "
+            logger.info("Enabling caching outgoing packets for channel"
                                 + channel.getID());
             cache = new CachingTransformer(channel);
             transformerList.add(cache);
-
-            nackNotifier = new NACKNotifier((NACKHandler) channel);
-            transformerList.add(nackNotifier);
         }
 
-        if (channel instanceof VideoChannel)
-        {
-            VideoChannel videoChannel = (VideoChannel) channel;
-            rembNotifier = new REMBNotifier(videoChannel);
-            transformerList.add(rembNotifier);
-        }
+        // Endpoint-end (the last transformer in the list executes last for
+        // packets from the bridge, and first for packets to the bridge)
 
         return
             transformerList.toArray(new TransformEngine[transformerList.size()]);

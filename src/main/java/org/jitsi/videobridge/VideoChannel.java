@@ -30,7 +30,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
@@ -52,7 +51,7 @@ import org.json.simple.*;
  */
 public class VideoChannel
     extends RtpChannel
-    implements NACKHandler
+    implements NACKHandler, REMBHandler, RRHandler
 {
     /**
      * The length in milliseconds of the interval for which the average incoming
@@ -272,6 +271,8 @@ public class VideoChannel
             // (currently this means when there is another channel in the
             // same content, with adaptive-last-n turned on), in order to not
             // waste resources.
+            // XXX should we also count bytes received for RTCP towards the
+            // incoming bitrate?
             incomingBitrate.update(p.getLength(), System.currentTimeMillis());
         }
 
@@ -744,16 +745,17 @@ public class VideoChannel
 
     /**
      * Notifies this <tt>VideoChannel</tt> that an RTCP REMB packet with a
-     * bitrate value of <tt>remb</tt> bits per second was received.
+     * bitrate value of <tt>bitrateBps</tt> bits per second was received.
      *
-     * @param remb the bitrate of the received REMB packet in bits per second.
+     * @param bitrateBps the bitrate of the received REMB packet in bits per
+     * second.
      */
-    public void receivedREMB(long remb)
+    public void handleREMB(long bitrateBps)
     {
         BitrateController bc = getBitrateController();
 
         if (bc != null)
-            bc.receivedREMB(remb);
+            bc.receivedREMB(bitrateBps);
     }
 
     /**
@@ -1623,5 +1625,14 @@ public class VideoChannel
 
         getStream().configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
             ssrc2fec, ssrc2red, rtxGroups, ssrcTargetRTX);
+    }
+
+    /**
+     * Stub. Temporary.
+     */
+    @Override
+    public void handleRR()
+    {
+
     }
 }
