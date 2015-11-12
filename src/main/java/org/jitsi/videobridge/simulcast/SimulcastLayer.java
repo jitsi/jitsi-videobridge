@@ -22,6 +22,7 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
+import org.jitsi.impl.neomedia.codec.*;
 
 /**
  * The <tt>SimulcastLayer</tt> of a <tt>SimulcastReceiver</tt> represents a
@@ -31,7 +32,8 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
  *
  * This class is thread safe.
  *
- * Rename SimulcastLayer -> SimulcastStream
+ * TODO Rename SimulcastLayer -> SimulcastStream to be consistent with
+ * the webrtc.org codebase.
  *
  * @author George Politis
  * @author Lyubomir Marinov
@@ -84,6 +86,12 @@ public class SimulcastLayer
         .newCachedThreadPool(true, SimulcastLayer.class.getName());
 
     /**
+     * The <tt>Runnable</tt> that requests key frames.
+     */
+    private final KeyFrameRequestRunnable keyFrameRequestRunnable
+        = new KeyFrameRequestRunnable();
+
+    /**
      * The <tt>SimulcastReceiver</tt> that owns this layer.
      */
     private final SimulcastReceiver simulcastReceiver;
@@ -102,7 +110,7 @@ public class SimulcastLayer
      * The FEC SSRC for this simulcast layer.
      *
      * XXX This isn't currently used anywhere because Chrome doens't use a
-     * separete SSRC for FEC.
+     * separate SSRC for FEC.
      */
     private long fecSSRC;
 
@@ -219,14 +227,6 @@ public class SimulcastLayer
         return order;
     }
 
-    @Override
-    public String toString()
-    {
-        return
-            "[ssrc: " + getPrimarySSRC() + ", order: " + getOrder()
-                + ", streaming: " + isStreaming() + "]";
-    }
-
     /**
      * Determines whether a packet belongs to this simulcast layer or not and
      * returns a boolean to the caller indicating that.
@@ -237,6 +237,11 @@ public class SimulcastLayer
      */
     public boolean match(RawPacket pkt)
     {
+        if (pkt == null)
+        {
+            return false;
+        }
+
         long ssrc = pkt.getSSRC() & 0xffffffffl;
         return ssrc == primarySSRC || ssrc == rtxSSRC || ssrc == fecSSRC;
     }
@@ -249,6 +254,11 @@ public class SimulcastLayer
      */
     public int compareTo(SimulcastLayer o)
     {
+        if (o == null)
+        {
+            return 1;
+        }
+
         return order - o.order;
     }
 
@@ -319,7 +329,13 @@ public class SimulcastLayer
                     " stopped.").toString());
         }
 
-        asynchronouslyFirePropertyChange(IS_STREAMING_PNAME, true, false);
+        // XXX(gp) One could try to ask for a key frame now, if the packet that
+        // caused the resuming of the high quality stream isn't a key frame; But
+        // the correct approach is to handle  this with the SimulcastSender
+        // because layer switches happen not only when a stream resumes or drops
+        // but also when the selected endpoint at a given receiving endpoint
+        // changes, for example.
+        firePropertyChange(IS_STREAMING_PNAME, true, false);
     }
 
     /**
@@ -450,100 +466,37 @@ public class SimulcastLayer
                     "({self.primarySSRC}) resumed.").toString());
         }
 
-        asynchronouslyFirePropertyChange(IS_STREAMING_PNAME, false, true);
+        firePropertyChange(IS_STREAMING_PNAME, false, true);
     }
 
-    /**
-     *
-     * @param pkt the packet to check
-     * @return true if the pkt is a keyframe, false otherwise
-     */
     public boolean isKeyFrame(RawPacket pkt)
     {
-        boolean isKeyFrame = false;
-        // TODO it doesn't feel right to put this code here.
-        // FIXME We assume RED. This will NOT work when RED is not enabled.
-        // FIXME similar code can be found in the
-        // REDFilterTransformEngine and in the REDTransformEngine and
-        // in the SimulcastLayer.
+        // FIXME What if we don't have RED?
+        REDBlockIterator.REDBlock block
+            = REDBlockIterator.getPrimaryBlock(pkt);
 
-        byte[] buff = pkt.getBuffer();
-        int idx = pkt.getPayloadOffset(); //beginning of RTP payload
-        int pktCount = 0; //number of packets inside RED
-
-        // 0                   1                   2                   3
-        // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-        //+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        //|F|   block PT  |  timestamp offset         |   block length    |
-        //+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        while ((buff[idx] & 0x80) != 0)
+        if (block == null)
         {
-            pktCount++;
-            idx += 4;
+            logger.debug("Primary block was not found.");
+            return false;
         }
 
-        idx = pkt.getPayloadOffset(); //back to beginning of RTP payload
-
-        int payloadOffset = idx + pktCount * 4 + 1 /* RED headers */;
-
-        for (int i = 0; i <= pktCount; i++)
-        {
-            byte blockPT = (byte) (buff[idx] & 0x7f);
-            int blockLen = (buff[idx + 2] & 0x03) << 8 | (buff[idx + 3]);
-
-            if (0x64 == blockPT) // assume 100 pt is VP8, this won't work in the general case.
-            {
-                // Check if this is the start of a VP8 partition in the payload
-                // descriptor.
-                if (!DePacketizer.VP8PayloadDescriptor.isValid(buff, payloadOffset))
-                {
-                    continue;
-                }
-
-                if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buff, payloadOffset))
-                {
-                    continue;
-                }
-
-                int szVP8PayloadDescriptor = DePacketizer
-                    .VP8PayloadDescriptor.getSize(buff, payloadOffset);
-
-                isKeyFrame = DePacketizer.VP8PayloadHeader.isKeyFrame(
-                        buff, payloadOffset + szVP8PayloadDescriptor);
-            }
-            else
-            {
-                logInfo("Uknown PT");
-            }
-
-            idx += 4; // next RED header
-            payloadOffset += blockLen;
-        }
-
-        if (isKeyFrame)
-        {
-            logDebug("Saw a keyframe.");
-        }
-
-        return isKeyFrame;
+        // FIXME What if we're not using VP8?
+        return DePacketizer.isKeyFrame(
+                                pkt.getBuffer(),
+                                block.getBlockOffset(),
+                                block.getBlockLength());
     }
 
     /**
      * Utility method that asks for a keyframe for a specific simulcast layer.
-     * This is typically done when switching layers.
+     * This is typically done when switching layers. This method is executed in
+     * the same thread that processes incoming packets. We must not block packet
+     * reading so we request the key frame on a newly spawned thread.
      */
     public void askForKeyframe()
     {
-        SimulcastEngine peerSM = simulcastReceiver.getSimulcastEngine();
-        if (peerSM == null)
-        {
-            logWarn("Requested a key frame but the peer simulcast " +
-                    "manager is null!");
-            return;
-        }
-
-        peerSM.getVideoChannel().askForKeyframes(
-                new int[]{(int) getPrimarySSRC()});
+        executorService.execute(keyFrameRequestRunnable);
     }
 
     private void logDebug(String msg)
@@ -578,32 +531,24 @@ public class SimulcastLayer
     }
 
     /**
-     * Asynchronously fires a new {@code PropertyChangeEvent} to the
-     * {@code PropertyChangeListener}s registered with this
-     * {@code PropertyChangeNotifier} in order to notify about a change in the
-     * value of a specific property which had its old value modified to a
-     * specific new value.
-     *
-     * @param property the name of the property of this
-     * {@code PropertyChangeNotifier} which had its value changed
-     * @param oldValue the value of the property with the specified name before
-     * the change
-     * @param newValue the value of the property with the specified name after
-     * the change
+     * The <tt>Runnable</tt> that requests key frames for this instance.
      */
-    private void asynchronouslyFirePropertyChange(
-            final String property,
-            final Object oldValue,
-            final Object newValue)
+    class KeyFrameRequestRunnable implements Runnable
     {
-        executorService.execute(
-                new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        firePropertyChange(property, oldValue, newValue);
-                    }
-                });
+        @Override
+        public void run()
+        {
+            SimulcastEngine peerSM
+                = simulcastReceiver.getSimulcastEngine();
+            if (peerSM == null)
+            {
+                logWarn("Requested a key frame but the peer simulcast " +
+                        "manager is null!");
+                return;
+            }
+
+            peerSM.getVideoChannel().askForKeyframes(
+                    new int[]{(int) getPrimarySSRC()});
+        }
     }
 }
