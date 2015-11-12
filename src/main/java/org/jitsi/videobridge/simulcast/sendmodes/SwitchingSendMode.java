@@ -342,8 +342,8 @@ public class SwitchingSendMode
             return;
         }
 
-        SimulcastLayer next = simulcastReceiver == null
-            ? null : simulcastReceiver.getSimulcastLayer(options.getNextOrder());
+        SimulcastLayer next = simulcastReceiver == null ? null
+            : simulcastReceiver.getSimulcastLayer(options.getNextOrder());
 
         // Do NOT switch to hq if it's not streaming.
         if (next == null
@@ -490,7 +490,8 @@ public class SwitchingSendMode
 
         Endpoint self, peer;
 
-        if ((self = getSimulcastSender().getReceiveEndpoint()) != null && (peer = getSimulcastSender().getSendEndpoint()) != null)
+        if ((self = getSimulcastSender().getReceiveEndpoint()) != null
+                && (peer = getSimulcastSender().getSendEndpoint()) != null)
         {
             logger.debug("Sending a next simulcast layer stopped event to "
                 + self.getID() + ".");
@@ -546,7 +547,8 @@ public class SwitchingSendMode
 
         Endpoint self, peer;
 
-        if ((self = getSimulcastSender().getReceiveEndpoint()) != null && (peer = getSimulcastSender().getSendEndpoint()) != null)
+        if ((self = getSimulcastSender().getReceiveEndpoint()) != null
+                && (peer = getSimulcastSender().getSendEndpoint()) != null)
         {
             logger.debug("Sending a simulcast layers changed event to "
                     + self.getID() + ".");
@@ -664,14 +666,16 @@ public class SwitchingSendMode
             return;
         }
 
-        SimulcastReceiver simulcastReceiver = this.getSimulcastSender().getSimulcastReceiver();
+        SimulcastReceiver simulcastReceiver
+            = this.getSimulcastSender().getSimulcastReceiver();
 
         if (simulcastReceiver == null || !simulcastReceiver.hasLayers())
         {
             return;
         }
 
-        if (overrideOrder == SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
+        if (overrideOrder
+                == SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
         {
             synchronized (sendLayersSyncRoot)
             {
@@ -686,7 +690,8 @@ public class SwitchingSendMode
         }
         else
         {
-            SimulcastLayer override = simulcastReceiver == null ? null : simulcastReceiver.getSimulcastLayer(overrideOrder);
+            SimulcastLayer override = simulcastReceiver == null ? null
+                : simulcastReceiver.getSimulcastLayer(overrideOrder);
             if (override != null)
             {
                 synchronized (sendLayersSyncRoot)
