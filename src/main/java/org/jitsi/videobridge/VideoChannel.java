@@ -51,7 +51,7 @@ import org.json.simple.*;
  */
 public class VideoChannel
     extends RtpChannel
-    implements NACKHandler, REMBHandler, RRHandler
+    implements NACKHandler, REMBHandler
 {
     /**
      * The length in milliseconds of the interval for which the average incoming
@@ -1625,14 +1625,5 @@ public class VideoChannel
 
         getStream().configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
             ssrc2fec, ssrc2red, rtxGroups, ssrcTargetRTX);
-    }
-
-    /**
-     * Stub. Temporary.
-     */
-    @Override
-    public void handleRR()
-    {
-
     }
 }

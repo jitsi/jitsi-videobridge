@@ -45,12 +45,7 @@ public class RTCPNotifier
      */
     private final REMBHandler rembHandler;
 
-    /**
-     * The handler to use for intercepted Receiver Report packets.
-     */
-    private final RRHandler rrHandler;
-
-    /**
+   /**
      * Whether this transformer is enabled or not.
      */
     private boolean enabled = true;
@@ -85,10 +80,8 @@ public class RTCPNotifier
                 = (object instanceof NACKHandler) ? (NACKHandler) object : null;
         rembHandler
                 = (object instanceof REMBHandler) ? (REMBHandler) object : null;
-        rrHandler
-                = (object instanceof RRHandler) ? (RRHandler) object : null;
 
-        if (nackHandler == null && rembHandler == null && rrHandler == null)
+        if (nackHandler == null && rembHandler == null)
         {
             enabled = false;
         }
@@ -136,7 +129,6 @@ public class RTCPNotifier
         }
 
         List<RTCPPacket> outRtcps = new LinkedList<>();
-        List<RTCPReportBlock> reportBlocks = new LinkedList<>();
         boolean removed = false;
 
         for (RTCPPacket rtcp : compound.packets)
@@ -160,15 +152,6 @@ public class RTCPNotifier
                 RTCPREMBPacket remb = (RTCPREMBPacket) rtcp;
                 rembHandler.handleREMB(remb.getBitrate());
             }
-            else if (rrHandler != null
-                && (rtcp.type == RTCPPacket.RR || rtcp.type == RTCPFBPacket.SR))
-            {
-                RTCPReportBlock[] reportBlocksArray
-                        = (rtcp.type == RTCPFBPacket.RR)
-                        ? ((RTCPRRPacket) rtcp).reports
-                        : ((RTCPSRPacket) rtcp).reports;
-                Collections.addAll(reportBlocks, reportBlocksArray);
-            }
 
             if (dropNack && rtcp instanceof NACKPacket)
             {
@@ -178,11 +161,6 @@ public class RTCPNotifier
             {
                 outRtcps.add(rtcp);
             }
-        }
-
-        if (rrHandler != null && !reportBlocks.isEmpty())
-        {
-            processReportBlocks(reportBlocks);
         }
 
         if (removed)
@@ -202,13 +180,6 @@ public class RTCPNotifier
         {
             return pkt;
         }
-    }
-
-    //TODO
-    private void processReportBlocks(List<RTCPReportBlock> reportBlocks)
-    {
-        //aggregate #packets, fraction lost, possibly jitter
-        rrHandler.handleRR();
     }
 
     /**
