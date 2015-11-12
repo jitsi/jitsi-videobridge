@@ -19,7 +19,6 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
-import org.jitsi.videobridge.simulcast.messages.*;
 
 import java.lang.ref.*;
 
@@ -36,13 +35,6 @@ public class RewritingSendMode
     extends SendMode
 {
     /**
-     * Helper object that <tt>SwitchingSimulcastSender</tt> instances use to
-     * build JSON messages.
-     */
-    private final static SimulcastMessagesMapper mapper
-        = new SimulcastMessagesMapper();
-
-    /**
      * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that is
      * currently being received.
      */
@@ -53,13 +45,6 @@ public class RewritingSendMode
      * (possibly) received next.
      */
     private WeakReference<SimulcastLayer> weakNext;
-
-    /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that overrides
-     * the layer that is currently being received. Originally introduced for
-     * adaptive bitrate control and the <tt>SimulcastAdaptor</tt>.
-     */
-    private WeakReference<SimulcastLayer> weakOverride;
 
     /**
      * The <tt>Logger</tt> used by the <tt>ReceivingLayers</tt> class and its
@@ -88,6 +73,7 @@ public class RewritingSendMode
         {
             return false;
         }
+
         SimulcastLayer next = getNext();
         if (next != null && next.match(pkt) && next.isKeyFrame(pkt))
         {
@@ -111,16 +97,34 @@ public class RewritingSendMode
     @Override
     public void receiveHigh()
     {
-        logDebug("Targeting high from " + getSimulcastSender()
-            .getSimulcastReceiver().getSimulcastEngine().getVideoChannel()
-            .getEndpoint().getID() + ".");
+        SimulcastLayer current = getCurrent();
+        SimulcastLayer next = getNext();
+
         SimulcastReceiver simulcastReceiver
             = getSimulcastSender().getSimulcastReceiver();
 
         SimulcastLayer highLayer = simulcastReceiver.getSimulcastLayer(
             SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ);
 
-        if (weakCurrent == null || weakCurrent.get() == null)
+        if (current == highLayer || next == highLayer)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logDebug("High is already the target.");
+            }
+
+            return;
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logDebug("Targeting high from " + getSimulcastSender()
+                    .getSimulcastReceiver().getSimulcastEngine()
+                    .getVideoChannel().getEndpoint().getID() + ".");
+        }
+
+        highLayer.askForKeyframe();
+        if (current == null)
         {
             weakCurrent = new WeakReference<SimulcastLayer>(highLayer);
         }
@@ -133,9 +137,8 @@ public class RewritingSendMode
     @Override
     public void receiveLow(boolean urgent)
     {
-        logDebug("Targeting low (urgent:" + urgent + ") from " +
-            getSimulcastSender().getSimulcastReceiver().getSimulcastEngine()
-                .getVideoChannel().getEndpoint().getID() + ".");
+        SimulcastLayer current = getCurrent();
+        SimulcastLayer next = getNext();
 
         SimulcastReceiver simulcastReceiver
             = getSimulcastSender().getSimulcastReceiver();
@@ -143,7 +146,26 @@ public class RewritingSendMode
         SimulcastLayer lowLayer = simulcastReceiver.getSimulcastLayer(
             SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ);
 
-        if (urgent || weakCurrent == null || weakCurrent.get() == null)
+        if (current == lowLayer || next == lowLayer)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logDebug("Low is already the target.");
+            }
+
+            return;
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logDebug("Targeting low (urgent:" + urgent + ") from " +
+                    getSimulcastSender().getSimulcastReceiver()
+                    .getSimulcastEngine()
+                    .getVideoChannel().getEndpoint().getID() + ".");
+        }
+
+        lowLayer.askForKeyframe();
+        if (urgent || current == null)
         {
             weakCurrent = new WeakReference<SimulcastLayer>(lowLayer);
         }
@@ -152,13 +174,6 @@ public class RewritingSendMode
             weakNext = new WeakReference<SimulcastLayer>(lowLayer);
         }
     }
-
-    @Override
-    public String toString()
-    {
-        return mapper.toJson(this);
-    }
-
 
     private void logDebug(String msg)
     {
@@ -199,19 +214,6 @@ public class RewritingSendMode
     public SimulcastLayer getNext()
     {
         WeakReference<SimulcastLayer> wr = this.weakNext;
-        return (wr != null) ? wr.get() : null;
-    }
-
-    /**
-     * Gets the <tt>SimulcastLayer</tt> that overrides the layer that is
-     * currently being received. Originally introduced for the
-     * <tt>SimulcastAdaptor</tt>.
-     *
-     * @return
-     */
-    private SimulcastLayer getOverride()
-    {
-        WeakReference<SimulcastLayer> wr = this.weakOverride;
         return (wr != null) ? wr.get() : null;
     }
 }
