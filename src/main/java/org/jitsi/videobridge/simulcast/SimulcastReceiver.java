@@ -486,12 +486,6 @@ public class SimulcastReceiver
         }
     }
 
-    @Override
-    public String toString()
-    {
-        return mapper.toJson(simulcastLayers);
-    }
-
     private void logDebug(String msg)
     {
         if (logger.isDebugEnabled())

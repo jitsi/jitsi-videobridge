@@ -91,8 +91,9 @@ public class SimulcastSender
      /**
      * Ctor.
      *
-     * @param simulcastSenderManager
-     * @param simulcastReceiver
+     * @param simulcastSenderManager the <tt>SimulcastSender</tt> that owns this
+     * instance.
+     * @param simulcastReceiver the associated <tt>SimulcastReceiver</tt>.
      */
     public SimulcastSender(
         SimulcastSenderManager simulcastSenderManager,
@@ -345,12 +346,6 @@ public class SimulcastSender
         }
 
         return (sendMode != null) ? sendMode.accept(pkt) : null;
-    }
-
-    @Override
-    public String toString()
-    {
-        return sendMode.toString();
     }
 
     /**
