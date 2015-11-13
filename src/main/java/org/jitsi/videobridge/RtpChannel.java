@@ -1512,9 +1512,6 @@ public class RtpChannel
             {
                 return;
             }
-
-            if (transformEngine != null)
-                transformEngine.enableAbsSendTime(id);
         }
 
         // It is safe to just add it, MediaStream will take care of duplicates.

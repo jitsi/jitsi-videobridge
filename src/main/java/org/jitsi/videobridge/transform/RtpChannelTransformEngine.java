@@ -82,12 +82,6 @@ public class RtpChannelTransformEngine
     private RTCPNotifier rtcpNotifier;
 
     /**
-     * The transformer which replaces the timestamp in an abs-send-time RTP
-     * header extension.
-     */
-    private AbsSendTimeEngine absSendTime;
-
-    /**
      * The <tt>RetransmissionRequester</tt> instance, if any, used by the
      * <tt>RtpChannel</tt>.
      */
@@ -172,9 +166,6 @@ public class RtpChannelTransformEngine
             transformerList.add(redFilter);
         }
 
-        absSendTime = new AbsSendTimeEngine();
-        transformerList.add(absSendTime);
-
         // The only purpose of the cache is to allow us to respond to NACK
         // packets.
         if (enableNackTermination)
@@ -190,17 +181,6 @@ public class RtpChannelTransformEngine
 
         return
             transformerList.toArray(new TransformEngine[transformerList.size()]);
-    }
-
-    /**
-     * Enables replacement of the timestamp in abs-send-time RTP header
-     * extensions with the given extension ID.
-     * @param extensionID the ID of the RTP header extension.
-     */
-    public void enableAbsSendTime(int extensionID)
-    {
-        if (absSendTime != null)
-            absSendTime.setExtensionID(extensionID);
     }
 
     /**
