@@ -46,14 +46,8 @@ public class REMBNotifier
      * The {@link PacketTransformer} we use for RTCP packets.
      */
     private final SinglePacketTransformer rtcpTransformer
-            = new SinglePacketTransformer()
+            = new SinglePacketTransformerAdapter()
     {
-        @Override
-        public RawPacket transform(RawPacket pkt)
-        {
-            return pkt;
-        }
-
         @Override
         public RawPacket reverseTransform(RawPacket pkt)
         {

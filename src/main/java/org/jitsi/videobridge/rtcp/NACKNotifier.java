@@ -31,7 +31,7 @@ import java.util.*;
  * @author Boris Grozev
  */
 public class NACKNotifier
-    extends SinglePacketTransformer
+    extends SinglePacketTransformerAdapter
     implements TransformEngine
 {
     /**
@@ -64,12 +64,6 @@ public class NACKNotifier
     public NACKNotifier(NACKHandler handler)
     {
         this.handler = handler;
-    }
-
-    @Override
-    public RawPacket transform(RawPacket pkt)
-    {
-        return pkt;
     }
 
     /**

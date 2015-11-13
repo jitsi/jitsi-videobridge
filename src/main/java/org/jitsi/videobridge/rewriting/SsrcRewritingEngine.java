@@ -61,7 +61,7 @@ public class SsrcRewritingEngine implements TransformEngine
      * this <tt>TransformEngine</tt>.
      */
     private final SinglePacketTransformer rtpTransformer
-            = new SinglePacketTransformer()
+            = new SinglePacketTransformerAdapter()
     {
         @Override
         public RawPacket transform(RawPacket pkt)
@@ -108,13 +108,6 @@ public class SsrcRewritingEngine implements TransformEngine
 
             RTPGenerator generator = new RTPGenerator();
             return generator.apply(rtpPacket);
-        }
-
-        @Override
-        public RawPacket reverseTransform(RawPacket pkt)
-        {
-            // Pass through, nothing to do here.
-            return pkt;
         }
     };
 

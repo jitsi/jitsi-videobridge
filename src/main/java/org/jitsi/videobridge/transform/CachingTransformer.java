@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.*;
  * @author Boris Grozev
  */
 public class CachingTransformer
-    extends SinglePacketTransformer
+    extends SinglePacketTransformerAdapter
     implements RawPacketCache, TransformEngine
 {
     /**
@@ -173,16 +173,6 @@ public class CachingTransformer
     {
         if (!closed && pkt != null && pkt.getVersion() == 2)
             cachePacket(pkt);
-        return pkt;
-    }
-
-    /**
-     * {@inheritDoc}
-     * Transforms an incoming packet.
-     */
-    @Override
-    public RawPacket reverseTransform(RawPacket pkt)
-    {
         return pkt;
     }
 

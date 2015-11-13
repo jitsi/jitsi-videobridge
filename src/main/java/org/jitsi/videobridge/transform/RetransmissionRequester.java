@@ -33,7 +33,7 @@ import java.util.*;
  * @author Boris Grozev
  */
 public class RetransmissionRequester
-    extends SinglePacketTransformer
+    extends SinglePacketTransformerAdapter
     implements TransformEngine
 {
     /**
@@ -119,17 +119,6 @@ public class RetransmissionRequester
         thread.setName(RetransmissionRequester.class.getName());
 
         thread.start();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Implements {@link SinglePacketTransformer#transform(RawPacket)}.
-     */
-    @Override
-    public RawPacket transform(RawPacket pkt)
-    {
-        return pkt;
     }
 
     /**
