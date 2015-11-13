@@ -75,6 +75,12 @@ public class VideoChannel
         = "org.jitsi.videobridge.VideoChannel.simulcastMode";
 
     /**
+     * The name of the property used to disable NACK termination.
+     */
+    public static final String DISABLE_NACK_TERMINATION_PNAME
+            = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
+
+    /**
      * The <tt>Logger</tt> used by the <tt>VideoChannel</tt> class and its
      * instances to print debug information.
      */
@@ -255,6 +261,22 @@ public class VideoChannel
         }
 
         stream.setRTCPTerminationStrategy(strategy);
+
+        boolean enableNackTermination
+                = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
+        if (enableNackTermination)
+        {
+            RawPacketCache cache = stream.getPacketCache();
+            if (cache != null)
+            {
+                cache.setEnabled(true);
+            }
+            else
+            {
+                logger.warn("NACK termination is enabled, but we don't have" +
+                                    " a packet cache.");
+            }
+        }
     }
 
     /**
@@ -1293,7 +1315,7 @@ public class VideoChannel
                                  + lostPackets);
         }
 
-        RawPacketCache cache = transformEngine.getCache();
+        RawPacketCache cache = getStream().getPacketCache();
         RtxTransformer rtxTransformer = transformEngine.getRtxTransformer();
         if (cache != null && rtxTransformer != null)
         {

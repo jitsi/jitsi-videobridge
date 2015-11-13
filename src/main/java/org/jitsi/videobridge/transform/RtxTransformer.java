@@ -95,7 +95,7 @@ public class RtxTransformer
 
         if (mediaPacket != null)
         {
-            RawPacketCache cache = channel.getTransformEngine().getCache();
+            RawPacketCache cache = channel.getStream().getPacketCache();
             if (cache != null)
             {
                 cache.cachePacket(mediaPacket);

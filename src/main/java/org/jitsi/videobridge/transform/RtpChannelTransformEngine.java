@@ -41,12 +41,6 @@ public class RtpChannelTransformEngine
     private static final byte RED_PAYLOAD_TYPE = 116;
 
     /**
-     * The name of the property used to disable NACK termination.
-     */
-    private static final String DISABLE_NACK_TERMINATION_PNAME
-        = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
-
-    /**
      * The name of the property used to disable retransmission requests from
      * the bridge.
      */
@@ -69,11 +63,6 @@ public class RtpChannelTransformEngine
      * The transformer which strips RED encapsulation.
      */
     private REDFilterTransformEngine redFilter;
-
-    /**
-     * The transformer which caches outgoing RTP packets.
-     */
-    private CachingTransformer cache;
 
     /**
      * The transformer which intercepts RTCP packets and passes them on to the
@@ -128,7 +117,8 @@ public class RtpChannelTransformEngine
         if (cfg != null)
         {
             enableNackTermination
-                &= !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
+                &= !cfg.getBoolean(VideoChannel.DISABLE_NACK_TERMINATION_PNAME,
+                                   false);
             enableRetransmissionsRequests
                 &= !cfg.getBoolean(DISABLE_RETRANSMISSION_REQUESTS, false);
         }
@@ -166,16 +156,6 @@ public class RtpChannelTransformEngine
             transformerList.add(redFilter);
         }
 
-        // The only purpose of the cache is to allow us to respond to NACK
-        // packets.
-        if (enableNackTermination)
-        {
-            logger.info("Enabling caching outgoing packets for channel"
-                                + channel.getID());
-            cache = new CachingTransformer(channel);
-            transformerList.add(cache);
-        }
-
         // Endpoint-end (the last transformer in the list executes last for
         // packets from the bridge, and first for packets to the bridge)
 
@@ -191,15 +171,6 @@ public class RtpChannelTransformEngine
     {
         if (redFilter != null)
             redFilter.setEnabled(enabled);
-    }
-
-    /**
-     * Returns the cache of outgoing packets.
-     * @return the cache of outgoing packets.
-     */
-    public RawPacketCache getCache()
-    {
-        return cache;
     }
 
     /**
