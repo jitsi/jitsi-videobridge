@@ -329,29 +329,30 @@ public class LoggingHandler
             }
         */
 
+        boolean multipoint = false;
+        int pointCount = 1;
         final String[] columns = e.getColumns();
         final Object[] values = e.getValues();
 
-        final JSONObject fieldsObject = new JSONObject();
-        for (int i = 0; i < columns.length; ++i) {
-            if (values[i] instanceof Object[]) {
-                logger.warn("value for column \"" + columns[i] +
-                        "\" is an unsupported multipoint array, skipping column");
-                continue;
-            }
-            fieldsObject.put(columns[i], values[i]);
+        if (values[0] instanceof Object[])
+        {
+            multipoint = true;
+            pointCount = values.length;
         }
-
-        final JSONObject pointsObject = new JSONObject();
-        pointsObject.put("measurement", e.getName());
-        if (e.useLocalTime()) { // TODO: We may require a different timestamp format, possibly from a different clock.
-            pointsObject.put("timestamp", System.currentTimeMillis());
-            pointsObject.put("precision", "ms"); // specify millisecond precision
-        }
-        pointsObject.put("fields", fieldsObject);
 
         final JSONArray pointsArray = new JSONArray();
-        pointsArray.add(pointsObject);
+        if (multipoint)
+        {
+            for (int i = 0; i < pointCount; i++) {
+                if (!(values[i] instanceof Object[]))
+                    continue;
+
+                pointsArray.add(createPoint(e, columns, (Object[])values[i]));
+            }
+        }
+        else {
+            pointsArray.add(createPoint(e, columns, values));
+        }
 
         final JSONObject queryData = new JSONObject();
         queryData.put("database", databaseName);
@@ -370,6 +371,37 @@ public class LoggingHandler
                 sendPost(jsonString);
             }
         });
+    }
+
+    private JSONObject createPoint(InfluxDBEvent e, String[] columns, Object[] values) {
+        final JSONObject fieldsObject = new JSONObject();
+        long pointTime = -1;
+        for (int i = 0; i < columns.length; ++i) {
+            if(columns[i] != null && columns[i].equals("time")) {
+                pointTime = Long.parseLong(values[i].toString());
+            }
+
+            if (values[i] instanceof Object[]) {
+                logger.warn("value for column \"" + columns[i] + "\" is an unsupported multipoint array, skipping column");
+                continue;
+            } else {
+                fieldsObject.put(columns[i], values[i]);
+            }
+        }
+
+        final JSONObject pointObject = new JSONObject();
+        pointObject.put("measurement", e.getName());
+        if (e.useLocalTime()) { // TODO: We may require a different timestamp format, possibly from a different clock.
+            pointObject.put("timestamp", System.currentTimeMillis());
+            pointObject.put("precision", "ms"); // specify millisecond precision
+        } else if(values[i] == null) {
+            fieldsObject.put(columns[i], "null"); //This is to prevent crashing influxdb with null values
+        } else if(pointTime > 0) {
+            pointObject.put("timestamp", pointTime);
+        }
+        pointObject.put("fields", fieldsObject);
+
+        return pointObject;
     }
 
     /**
