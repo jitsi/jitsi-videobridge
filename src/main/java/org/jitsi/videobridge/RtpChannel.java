@@ -286,10 +286,7 @@ public class RtpChannel
                      propertyChangeListener);
         }
 
-        if (content != null)
-        {
-            content.addPropertyChangeListener(propertyChangeListener);
-        }
+        content.addPropertyChangeListener(propertyChangeListener);
 
         touch();
     }
