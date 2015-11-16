@@ -51,7 +51,7 @@ import org.json.simple.*;
  */
 public class VideoChannel
     extends RtpChannel
-    implements NACKHandler, REMBHandler
+    implements NACKListener
 {
     /**
      * The length in milliseconds of the interval for which the average incoming
@@ -289,6 +289,8 @@ public class VideoChannel
                 logger.warn("NACK termination is enabled, but we don't have" +
                                     " a packet cache.");
             }
+
+            stream.getMediaStreamStats().addNackListener(this);
         }
     }
 
@@ -1308,15 +1310,14 @@ public class VideoChannel
     }
 
     /**
-     * Implements
-     * {@link org.jitsi.videobridge.rtcp.NACKHandler#handleNACK(org.jitsi.impl.neomedia.rtcp.NACKPacket)}
+     * Implements {@link NACKListener#nackReceived(NACKPacket)}.
      *
      * Handles an incoming RTCP NACK packet from a receiver.
      */
     @Override
-    public void handleNACK(NACKPacket nackPacket)
+    public void nackReceived(NACKPacket nackPacket)
     {
-        Set<Integer> lostPackets = new HashSet<Integer>();
+        Set<Integer> lostPackets = new HashSet<>();
         lostPackets.addAll(nackPacket.getLostPackets());
 
         long ssrc = nackPacket.sourceSSRC;

@@ -58,12 +58,6 @@ public class RtpChannelTransformEngine
     private REDFilterTransformEngine redFilter;
 
     /**
-     * The transformer which intercepts RTCP packets and passes them on to the
-     * channel logic.
-     */
-    private RTCPNotifier rtcpNotifier;
-
-    /**
      * The <tt>SimulcastEngine</tt> instance, if any, used by the
      * <tt>RtpChannel</tt>.
      */
@@ -93,40 +87,23 @@ public class RtpChannelTransformEngine
      */
     private TransformEngine[] createChain()
     {
-        Conference conference = channel.getContent().getConference();
-        ConfigurationService cfg
-                = conference.getVideobridge().getConfigurationService();
-
         boolean video = (channel instanceof VideoChannel);
-        boolean enableNackTermination = video;
-
-        if (cfg != null)
-        {
-            enableNackTermination
-                &= !cfg.getBoolean(VideoChannel.DISABLE_NACK_TERMINATION_PNAME,
-                                   false);
-        }
 
         // Bridge-end (the first transformer in the list executes first for
         // packets from the bridge, and last for packets to the bridge)
-        List<TransformEngine> transformerList
-            = new LinkedList<TransformEngine>();
+        List<TransformEngine> transformerList = new LinkedList<>();
 
         if (video)
         {
-            rtcpNotifier = new RTCPNotifier(channel);
-            rtcpNotifier.setDropNackPackets(enableNackTermination);
-            transformerList.add(rtcpNotifier);
-
-            rtxTransformer = new RtxTransformer(channel);
-            transformerList.add(rtxTransformer);
-
             VideoChannel videoChannel = (VideoChannel) channel;
             simulcastEngine = new SimulcastEngine(videoChannel);
             transformerList.add(simulcastEngine);
 
             redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
             transformerList.add(redFilter);
+
+            rtxTransformer = new RtxTransformer(channel);
+            transformerList.add(rtxTransformer);
         }
 
         // Endpoint-end (the last transformer in the list executes last for
