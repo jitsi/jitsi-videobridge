@@ -175,6 +175,12 @@ public class VideoChannel
     private final ReadWriteLock lastNSyncRoot = new ReentrantReadWriteLock();
 
     /**
+     * Whether the bridge should request retransmissions for missing packets
+     * on this channel.
+     */
+    private final boolean requestRetransmissions;
+
+    /**
      * Initializes a new <tt>VideoChannel</tt> instance which is to have a
      * specific ID. The initialization is to be considered requested by a
      * specific <tt>Content</tt>.
@@ -204,6 +210,13 @@ public class VideoChannel
         super(content, id, channelBundleId, transportNamespace, initiator);
 
         setTransformEngine(new RtpChannelTransformEngine(this));
+
+        ConfigurationService cfg
+            = content.getConference().getVideobridge()
+                        .getConfigurationService();
+        requestRetransmissions
+            = (cfg != null && cfg.getBoolean(
+                        VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false));
     }
 
     /**
@@ -1342,11 +1355,10 @@ public class VideoChannel
 
         if (!lostPackets.isEmpty())
         {
-            if (transformEngine.retransmissionsRequestsEnabled())
+            if (requestRetransmissions)
             {
                 // If retransmission requests are enabled, videobridge assumes
-                // the responsibility of requesting missing packets (which
-                // happens in RetransmissionRequester).
+                // the responsibility of requesting missing packets.
                 logger.debug("Packets missing from the cache. Ignoring, because"
                                      + " retransmission requests are enabled.");
             }

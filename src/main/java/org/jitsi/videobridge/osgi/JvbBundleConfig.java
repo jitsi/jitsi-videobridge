@@ -151,8 +151,8 @@ public class JvbBundleConfig
 
         // This will eventually be enabled by default, but keep it off until
         // more testing.
-        defaults.put(RtpChannelTransformEngine.DISABLE_RETRANSMISSION_REQUESTS,
-            true_);
+        defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME,
+            false_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed

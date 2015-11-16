@@ -41,13 +41,6 @@ public class RtpChannelTransformEngine
     private static final byte RED_PAYLOAD_TYPE = 116;
 
     /**
-     * The name of the property used to disable retransmission requests from
-     * the bridge.
-     */
-    public static final String DISABLE_RETRANSMISSION_REQUESTS
-        = "org.jitsi.videobridge.DISABLE_RETRANSMISSION_REQUESTS";
-
-    /**
      * The <tt>Logger</tt> used by the <tt>RtpChannelTransformEngine</tt> class
      * and its instances to print debug information.
      */
@@ -69,12 +62,6 @@ public class RtpChannelTransformEngine
      * channel logic.
      */
     private RTCPNotifier rtcpNotifier;
-
-    /**
-     * The <tt>RetransmissionRequester</tt> instance, if any, used by the
-     * <tt>RtpChannel</tt>.
-     */
-    private RetransmissionRequester retransmissionRequester;
 
     /**
      * The <tt>SimulcastEngine</tt> instance, if any, used by the
@@ -112,15 +99,12 @@ public class RtpChannelTransformEngine
 
         boolean video = (channel instanceof VideoChannel);
         boolean enableNackTermination = video;
-        boolean enableRetransmissionsRequests = video;
 
         if (cfg != null)
         {
             enableNackTermination
                 &= !cfg.getBoolean(VideoChannel.DISABLE_NACK_TERMINATION_PNAME,
                                    false);
-            enableRetransmissionsRequests
-                &= !cfg.getBoolean(DISABLE_RETRANSMISSION_REQUESTS, false);
         }
 
         // Bridge-end (the first transformer in the list executes first for
@@ -136,17 +120,6 @@ public class RtpChannelTransformEngine
 
             rtxTransformer = new RtxTransformer(channel);
             transformerList.add(rtxTransformer);
-
-            if (enableRetransmissionsRequests)
-            {
-                retransmissionRequester = new RetransmissionRequester(channel);
-                transformerList.add(retransmissionRequester);
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Enabling retransmission requests for channel"
-                                     + channel.getID());
-                }
-            }
 
             VideoChannel videoChannel = (VideoChannel) channel;
             simulcastEngine = new SimulcastEngine(videoChannel);
@@ -171,17 +144,6 @@ public class RtpChannelTransformEngine
     {
         if (redFilter != null)
             redFilter.setEnabled(enabled);
-    }
-
-    /**
-     * Checks whether retransmission requests are enabled for the
-     * <tt>RtpChannel</tt>.
-     * @return <tt>true</tt> if retransmission requests are enabled for the
-     * <tt>RtpChannel</tt>.
-     */
-    public boolean retransmissionsRequestsEnabled()
-    {
-        return retransmissionRequester != null;
     }
 
     /**
