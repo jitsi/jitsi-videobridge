@@ -41,6 +41,7 @@ import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.transform.*;
+import org.jitsi.videobridge.transform.RawPacketCache;
 import org.json.simple.*;
 
 /**
