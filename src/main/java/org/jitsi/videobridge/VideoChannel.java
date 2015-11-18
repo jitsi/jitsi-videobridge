@@ -775,6 +775,7 @@ public class VideoChannel
             // added/removed/modified source group, same with payload types, etc)
             // This has implications in SSRC rewriting, we need to update our
             // engine.
+            logDebug("Handling CHANNEL_MODIFIED_PROPERTY_NAME");
             VideoChannel videoChannel = (VideoChannel) ev.getNewValue();
             updateTranslatedVideoChannel(videoChannel);
         }
@@ -1324,7 +1325,7 @@ public class VideoChannel
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("Received NACK on channel " + getID() +" for SSRC "
+            logDebug("Received NACK on channel " + getID() +" for SSRC "
                                  + ssrc + ". Packets reported lost: "
                                  + lostPackets);
         }
@@ -1342,7 +1343,7 @@ public class VideoChannel
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug("Retransmitting packet from cache. SSRC "
+                        logDebug("Retransmitting packet from cache. SSRC "
                                              + ssrc + " seq " + seq);
                     }
 
@@ -1360,7 +1361,7 @@ public class VideoChannel
             {
                 // If retransmission requests are enabled, videobridge assumes
                 // the responsibility of requesting missing packets.
-                logger.debug("Packets missing from the cache. Ignoring, because"
+                logDebug("Packets missing from the cache. Ignoring, because"
                                      + " retransmission requests are enabled.");
             }
             else
@@ -1397,7 +1398,7 @@ public class VideoChannel
         }
         catch (IOException ioe)
         {
-            logger.warn("Failed to create NACK packet: " + ioe);
+            logWarn("Failed to create NACK packet: " + ioe);
         }
 
         if (pkt != null)
@@ -1431,7 +1432,7 @@ public class VideoChannel
             {
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Sending a NACK for SSRC " + mediaSourceSsrc
+                    logDebug("Sending a NACK for SSRC " + mediaSourceSsrc
                                          + " , packets " + seqs
                                          + " on channel " + c.getID());
                 }
@@ -1442,7 +1443,7 @@ public class VideoChannel
                 }
                 catch (TransmissionFailedException e)
                 {
-                    logger.warn("Failed to inject packet in MediaStream: " + e);
+                    logWarn("Failed to inject packet in MediaStream: " + e);
                 }
             }
         }
@@ -1527,6 +1528,11 @@ public class VideoChannel
             return;
         }
 
+        if (logger.isDebugEnabled())
+        {
+            logDebug("Setting simulcast mode to " + newSimulcastMode);
+        }
+
         simulcastMode = newSimulcastMode;
 
         // Since the simulcast mode has changed, we need to update the
@@ -1551,15 +1557,17 @@ public class VideoChannel
     }
 
     /**
-     *
+     * Updates the view that this <tt>VideoChanel</tt> has of all the translated
+     * <tt>VideoChannel</tt>s.
      */
     public void updateTranslatedVideoChannels()
     {
+        logDebug("Updating the translated channels.");
         for (Channel peerVideoChannel : getContent().getChannels())
         {
             if (!(peerVideoChannel instanceof VideoChannel))
             {
-                // Er, what? I Taw a Putty Tat.
+                logWarn("Er, what? I Taw a Putty Tat.");
                 continue;
             }
 
@@ -1568,11 +1576,20 @@ public class VideoChannel
     }
 
     /**
+     * Updates the view that this <tt>VideoChannel</tt> has of the translated
+     * peer <tt>VideoChannel</tt>.
      *
      * @param peerVideoChannel
      */
     public void updateTranslatedVideoChannel(VideoChannel peerVideoChannel)
     {
+        if (peerVideoChannel == null)
+        {
+            logWarn("Can't update our view of the peer video channel because " +
+                    "the peerVideoChannel is null.");
+            return;
+        }
+
         if (peerVideoChannel == this)
         {
             return;
@@ -1581,7 +1598,7 @@ public class VideoChannel
         // In the same spirit as MediaStreamImpl.update() but for signaling.
         if (simulcastMode != SimulcastMode.REWRITING)
         {
-            logger.debug("Simulcast mode is not rewriting.");
+            logDebug("Simulcast mode is not rewriting.");
         }
 
         // Update the SSRC rewriting engine from the peer simulcast engine
@@ -1591,6 +1608,8 @@ public class VideoChannel
 
         if (sim == null)
         {
+            logDebug("Can't update our view of the peer video channel because" +
+                    " peerSimulcastEngine is null.");
             return;
         }
 
@@ -1599,9 +1618,12 @@ public class VideoChannel
 
         if (layers == null || layers.size() == 0)
         {
+            logDebug("Can't update our view of the peer video channel because" +
+                    " the peer doesn't have any simulcast layers.");
             return;
         }
 
+        logDebug("Updating our view of the peer video channel.");
         final Set<Integer> ssrcGroup = new HashSet<Integer>();
         final Map<Integer, Integer> rtxGroups = new HashMap<Integer, Integer>();
 
@@ -1661,4 +1683,23 @@ public class VideoChannel
         getStream().configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
             ssrc2fec, ssrc2red, rtxGroups, ssrcTargetRTX);
     }
+
+    private void logDebug(String msg)
+    {
+        if (logger.isDebugEnabled())
+        {
+            msg = getEndpoint().getID() + ": " + msg;
+            logger.debug(msg);
+        }
+    }
+
+    private void logWarn(String msg)
+    {
+        if (logger.isWarnEnabled())
+        {
+            msg = getEndpoint().getID() + ": " + msg;
+            logger.warn(msg);
+        }
+    }
+
 }
