@@ -99,12 +99,12 @@ public class SimulcastLayer
     /**
      * The primary SSRC for this simulcast layer.
      */
-    private final long primarySSRC;
+    private long primarySSRC = -1; // FIXME We need an INVALID_SSRC cnt.
 
     /**
      * The RTX SSRC for this simulcast layer.
      */
-    private long rtxSSRC;
+    private long rtxSSRC = -1; // FIXME We need an INVALID_SSRC cnt.
 
     /**
      * The FEC SSRC for this simulcast layer.
@@ -112,7 +112,7 @@ public class SimulcastLayer
      * XXX This isn't currently used anywhere because Chrome doens't use a
      * separate SSRC for FEC.
      */
-    private long fecSSRC;
+    private long fecSSRC = -1; // FIXME We need an INVALID_SSRC cnt.
 
     /**
      * The order of this simulcast layer.
