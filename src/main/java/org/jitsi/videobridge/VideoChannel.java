@@ -87,10 +87,9 @@ public class VideoChannel
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
 
     /**
-     * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>. The default
-     * mode is rewriting.
+     * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>.
      */
-    private SimulcastMode simulcastMode = SimulcastMode.REWRITING;
+    private SimulcastMode simulcastMode;
 
     /**
      * Updates the values of the property <tt>inLastN</tt> of all
@@ -1592,6 +1591,16 @@ public class VideoChannel
 
         if (peerVideoChannel == this)
         {
+            logDebug("Won't update our view of the peer video channel because" +
+                    " peerVideoChannel is this.");
+            return;
+        }
+
+        if (simulcastMode == null)
+        {
+            // FIXME Instead we should do something like this.
+            // setSimulcastMode(SimulcastMode.REWRITING);
+            logWarn("Aborting: simulcast mode is not set, but it is required.");
             return;
         }
 
