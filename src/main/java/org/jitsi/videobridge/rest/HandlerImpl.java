@@ -250,6 +250,9 @@ class HandlerImpl
         super(bundleContext);
 
         shutdownEnabled = enableShutdown;
+
+        if (shutdownEnabled)
+            logger.info("Graceful shutdown over REST is enabled");
     }
 
     /**
@@ -541,7 +544,7 @@ class HandlerImpl
             {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
-            else if (isJSONContentType(request.getContentType()))
+            else if (RESTUtil.isJSONContentType(request.getContentType()))
             {
                 Object requestJSONObject = null;
                 int status = 0;
@@ -650,7 +653,7 @@ class HandlerImpl
         {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
         }
-        else if (isJSONContentType(request.getContentType()))
+        else if (RESTUtil.isJSONContentType(request.getContentType()))
         {
             Object requestJSONObject = null;
             int status = 0;
@@ -741,7 +744,7 @@ class HandlerImpl
             return;
         }
 
-        if (!isJSONContentType(request.getContentType()))
+        if (!RESTUtil.isJSONContentType(request.getContentType()))
         {
             response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
             return;
