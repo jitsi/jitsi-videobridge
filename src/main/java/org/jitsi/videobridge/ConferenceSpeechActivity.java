@@ -124,7 +124,7 @@ public class ConferenceSpeechActivity
      * <tt>Endpoint</tt> ID is to be associated
      */
     @SuppressWarnings("unchecked")
-    private void resolveSSRCAsEndpoint(
+    private static void resolveSSRCAsEndpoint(
             JSONObject jsonObject,
             String ssrcKey,
             Conference conference,
