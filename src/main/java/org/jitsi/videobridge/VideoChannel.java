@@ -1324,13 +1324,13 @@ public class VideoChannel
                     {
                         getStream().injectPacket(
                                 createPacketForRetransmission(pkt),
-                                true,
-                                true);
+                                /* data */ true,
+                                /* after */ null);
                     }
                     catch (TransmissionFailedException e)
                     {
-                        logger.warn("Failed to inject packet in MediaStream: "
-                            + e);
+                        logger.warn(
+                                "Failed to inject packet in MediaStream: " + e);
                     }
                     iter.remove();
                 }
@@ -1393,7 +1393,7 @@ public class VideoChannel
                     // own.
                     for (Channel c : getContent().getChannels())
                     {
-                        if (c != null && c instanceof RtpChannel && c != this)
+                        if (c != null && c != this && c instanceof RtpChannel)
                             channelsToSendTo.add((RtpChannel) c);
                     }
                 }
@@ -1409,12 +1409,15 @@ public class VideoChannel
 
                     try
                     {
-                        c.getStream().injectPacket(pkt, false, true);
+                        c.getStream().injectPacket(
+                                pkt,
+                                /* data */ false,
+                                /* after */ null);
                     }
                     catch (TransmissionFailedException e)
                     {
-                        logger.warn("Failed to inject packet in MediaStream: "
-                            + e);
+                        logger.warn(
+                                "Failed to inject packet in MediaStream: " + e);
                     }
                 }
             }
