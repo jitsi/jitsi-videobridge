@@ -52,6 +52,12 @@
     <dependency>
       <groupId>callstats</groupId>
       <artifactId>callstats</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
