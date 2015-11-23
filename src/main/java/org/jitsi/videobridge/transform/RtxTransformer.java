@@ -15,15 +15,13 @@
  */
 package org.jitsi.videobridge.transform;
 
+import java.util.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-
-import java.util.*;
-
 
 /**
  * Intercepts and handles outgoing RTX (RFC-4588) packets for an
@@ -36,7 +34,7 @@ import java.util.*;
  * @author Boris Grozev
  */
 public class RtxTransformer
-    extends SinglePacketTransformer
+    extends SinglePacketTransformerAdapter
     implements TransformEngine
 {
     /**
@@ -172,15 +170,6 @@ public class RtxTransformer
     }
 
     /**
-     * Implements {@link SinglePacketTransformer#reverseTransform(RawPacket)}.
-     */
-    @Override
-    public RawPacket reverseTransform(RawPacket pkt)
-    {
-        return pkt;
-    }
-
-    /**
      * Implements {@link TransformEngine#getRTPTransformer()}.
      */
     @Override
@@ -292,7 +281,10 @@ public class RtxTransformer
             {
                 try
                 {
-                    mediaStream.injectPacket(pkt, true, true);
+                    mediaStream.injectPacket(
+                            pkt,
+                            /* data */ true,
+                            /* after */ null);
                 }
                 catch (TransmissionFailedException tfe)
                 {
@@ -342,7 +334,10 @@ public class RtxTransformer
             pkt.setSequenceNumber(getNextRtxSequenceNumber(rtxSsrc));
             try
             {
-                mediaStream.injectPacket(pkt, true, true);
+                mediaStream.injectPacket(
+                        pkt,
+                        /* data */ true,
+                        /* after */ null);
             }
             catch (TransmissionFailedException tfe)
             {

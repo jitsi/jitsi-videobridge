@@ -1439,7 +1439,10 @@ public class VideoChannel
 
                 try
                 {
-                    c.getStream().injectPacket(pkt, false, true);
+                    c.getStream().injectPacket(
+                            pkt,
+                            /* data */ false,
+                            /* after */ null);
                 }
                 catch (TransmissionFailedException e)
                 {
