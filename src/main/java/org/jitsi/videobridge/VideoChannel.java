@@ -1475,7 +1475,7 @@ public class VideoChannel
             = new HashMap<Long, SimulcastLayer>();
 
         // Build the simulcast layers.
-        SortedSet<SimulcastLayer> layers = new TreeSet<SimulcastLayer>();
+        SimulcastLayer[] layers = null;
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
         {
             List<SourcePacketExtension> sources = sourceGroup.getSources();
@@ -1488,20 +1488,19 @@ public class VideoChannel
             }
 
             // sources are in low to high order.
-            int order = 0;
-            for (SourcePacketExtension source : sources)
+            layers = new SimulcastLayer[sources.size()];
+            for (int i = 0; i < sources.size(); i++)
             {
+                SourcePacketExtension source = sources.get(i);
                 Long primarySSRC = source.getSSRC();
                 SimulcastLayer simulcastLayer = new SimulcastLayer(
-                    simulcastEngine.getSimulcastReceiver(),
-                    primarySSRC,
-                    order++);
+                    simulcastEngine.getSimulcastReceiver(), primarySSRC, i);
 
                 // Add the layer to the reverse map.
                 ssrc2layer.put(primarySSRC, simulcastLayer);
 
                 // Add the layer to the sorted set.
-                layers.add(simulcastLayer);
+                layers[i] = simulcastLayer;
             }
 
         }
@@ -1626,10 +1625,10 @@ public class VideoChannel
             return;
         }
 
-        SortedSet<SimulcastLayer> layers
+        SimulcastLayer[] layers
             = sim.getSimulcastReceiver().getSimulcastLayers();
 
-        if (layers == null || layers.size() == 0)
+        if (layers == null || layers.length == 0)
         {
             logDebug("Can't update our view of the peer video channel because" +
                     " the peer doesn't have any simulcast layers.");
@@ -1653,7 +1652,7 @@ public class VideoChannel
             }
         }
 
-        SimulcastLayer baseLayer = layers.first();
+        SimulcastLayer baseLayer = layers[0];
         final Integer ssrcTargetPrimary = (int) baseLayer.getPrimarySSRC();
         final Integer ssrcTargetRTX = (int) baseLayer.getRTXSSRC();
 

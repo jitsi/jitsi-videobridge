@@ -62,16 +62,15 @@ public abstract class SendMode
     public abstract boolean accept(RawPacket pkt);
 
     /**
-     * Configures this mode to receive the high quality stream. Going up is
-     * never urgent.
-     */
-    public abstract void receiveHigh();
-
-    /**
      * Configures this mode to receive the low quality stream.
      *
      * @param urgent if urgent is true, switch immediately and don't wait for a
      * keyframe of the low quality stream.
      */
-    public abstract void receiveLow(boolean urgent);
+    public abstract void receive(SimulcastLayer layer, boolean urgent);
+
+    /**
+     * Gets the simulcast stream that is currently being received.
+     */
+    public abstract SimulcastLayer getCurrent();
 }

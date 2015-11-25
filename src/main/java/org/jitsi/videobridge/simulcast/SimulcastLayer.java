@@ -22,6 +22,7 @@ import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.impl.neomedia.codec.*;
+import org.jitsi.impl.neomedia.codec.video.*;
 
 /**
  * The <tt>SimulcastLayer</tt> of a <tt>SimulcastReceiver</tt> represents a
@@ -59,12 +60,7 @@ public class SimulcastLayer
     /**
      * Base layer quality order.
      */
-    public static final int SIMULCAST_LAYER_ORDER_LQ = 0;
-
-    /**
-     * High quality layer order.
-     */
-    public static final int SIMULCAST_LAYER_ORDER_HQ = 1;
+    public static final int SIMULCAST_LAYER_ORDER_BASE = 0;
 
     /**
      * The number of packets of the base layer that we must see before marking
@@ -78,6 +74,9 @@ public class SimulcastLayer
      */
     private static final int MAX_SEEN_BASE = 25;
 
+    private static final byte REDPT = 0x74;
+
+    private static final byte VP8PT = 0x64;
     /**
      * The pool of threads utilized by <tt>SimulcastReceiver</tt>.
      */
@@ -122,24 +121,6 @@ public class SimulcastLayer
      * Holds a boolean indicating whether or not this layer is streaming.
      */
     private boolean isStreaming = false;
-
-    /**
-     * How many high quality packets have we seen for this layer. We increase
-     * this in the touch method.
-     *
-     * XXX once we support arbitrary number of simulcast layers this will have
-     * to somehow change. TAG(arbitrary-sim-layers)
-     */
-    private int seenHigh = -1;
-
-    /**
-     * How many low quality packets have we seen for the base layer. We increase
-     * this in the maybeTimeout method.
-     *
-     * XXX once we support arbitrary number of simulcast layers this will have
-     * to somehow change. TAG(arbitrary-sim-layers)
-     */
-    private int seenBase = 0;
 
     /**
      * The value of the RTP marker (bit) of the last {@code RawPacket} seen by
@@ -310,41 +291,11 @@ public class SimulcastLayer
      * {@code SimulcastLayer}.
      */
     public synchronized void maybeTimeout(
-            boolean useFrameBasedLogic,
             RawPacket pkt)
     {
-        if (useFrameBasedLogic)
+        if (this.isStreaming)
         {
-            if (this.isStreaming)
-            {
-                timeout(pkt);
-            }
-            // The (new) frame-based logic is invoked as an alternative to the
-            // (old) packet-based logic. (Anyway, both may be used in different
-            // method invocations.)
-            return;
-        }
-
-        if (++seenBase % MAX_SEEN_BASE == 0)
-        {
-            // Every base layer packet we have observed 10 low quality packets.
-            //
-            // If for every MAX_SEEN_BASE base quality packets we have not seen
-            // at least one high quality packet, then the high quality layer
-            // must have been dropped (this means approximately MAX_SEEN_BASE*10
-            // packets loss).
-
-            if (this.isStreaming && this.seenHigh == 0
-                    // XXX If the (new) frame-based logic is active, the (old)
-                    // packet-based logic could declare this SimulcastLayer
-                    // non-streaming while the (new) frame-based logic considers
-                    // it streaming.
-                    && SimulcastReceiver.TIMEOUT_ON_FRAME_COUNT <= 1)
-            {
-                timeout(pkt);
-            }
-
-            this.seenHigh = 0;
+            timeout(pkt);
         }
     }
 
@@ -380,9 +331,6 @@ public class SimulcastLayer
      * Increases the number of packets of this layer that we've seen, and
      * potentially marks this layer as started and fires an event.
      *
-     * @param base {@code true} if this {@code SimulcastLayer} is the base
-     * ({@code SimulcastLayer}) of {@link #simulcastReceiver}; otherwise,
-     * {@code false}
      * @param pkt the {@code RawPacket} which has been received by the local
      * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
      * the RTP stream represented by this {@code SimulcastLayer}, and has caused
@@ -390,7 +338,7 @@ public class SimulcastLayer
      * @return {@code true} if {@code pkt} signals the receipt of (a piece of) a
      * new (i.e. unobserved until now) frame; otherwise, {@code false}
      */
-    public synchronized boolean touch(boolean base, RawPacket pkt)
+    public synchronized boolean touch(RawPacket pkt)
     {
         // Attempt to speed up the detection of paused simulcast layers by
         // counting (video) frames instead of or in addition to counting
@@ -481,9 +429,8 @@ public class SimulcastLayer
             }
         }
 
-        if (base)
-            touchBase(pkt, frameStarted);
-        else
+        boolean base = order == 0;
+        if (!base)
             touchNonBase(pkt, frameStarted);
 
         // XXX (1) We didn't go with a full-blown observer/listener pattern
@@ -492,27 +439,6 @@ public class SimulcastLayer
         // simulcastReceiver because that would have executed in the
         // synchronization block of this method.
         return frameStarted;
-    }
-
-    /**
-     * Notifies this {@code SimulcastLayer} that a specific {@code RawPacket}
-     * has been received (over the network from the remote peer) which is part
-     * of (the flow of) the RTP stream represented by this
-     * {@code SimulcastLayer}. This {@code SimulcastLayer} is the base
-     * ({@code SimulcastLayer}) of {@link #simulcastReceiver}.
-     *
-     * @param pkt the {@code RawPacket} which has been received by the local
-     * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
-     * the RTP stream represented by this {@code SimulcastLayer}, and has caused
-     * the method invocation
-     * @param frameStarted {@code true} if {@code pkt} signals the receipt of (a
-     * piece of) a new (i.e. unobserved until now) frame; otherwise,
-     * {@code false}
-     */
-    private void touchBase(RawPacket pkt, boolean frameStarted)
-    {
-        // We do not have anything specific to touching the base SimulcastLayer
-        // at the time of this writing.
     }
 
     /**
@@ -532,8 +458,6 @@ public class SimulcastLayer
      */
     private void touchNonBase(RawPacket pkt, boolean frameStarted)
     {
-        this.seenHigh++;
-
         if (this.isStreaming)
         {
             return;
@@ -571,21 +495,7 @@ public class SimulcastLayer
 
     public boolean isKeyFrame(RawPacket pkt)
     {
-        // FIXME What if we don't have RED?
-        REDBlockIterator.REDBlock block
-            = REDBlockIterator.getPrimaryBlock(pkt);
-
-        if (block == null)
-        {
-            logger.debug("Primary block was not found.");
-            return false;
-        }
-
-        // FIXME What if we're not using VP8?
-        return DePacketizer.isKeyFrame(
-                                pkt.getBuffer(),
-                                block.getBlockOffset(),
-                                block.getBlockLength());
+        return Utils.isKeyFrame(pkt, REDPT, VP8PT);
     }
 
     /**

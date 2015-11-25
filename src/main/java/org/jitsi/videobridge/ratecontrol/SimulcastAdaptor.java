@@ -83,10 +83,10 @@ public class SimulcastAdaptor
     {
         VideoChannel channel = bitrateController.getChannel();
         SimulcastEngine simulcastEngine = channel.getTransformEngine().getSimulcastEngine();
-        if (simulcastEngine != null && simulcastEngine.getSimulcastSenderManager().getOverrideOrder() != SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ)
+        if (simulcastEngine != null && simulcastEngine.getSimulcastSenderManager().getOverrideOrder() != SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE)
         {
             simulcastEngine.getSimulcastSenderManager().setOverrideOrder(
-                SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ);
+                SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE);
 
             if (logger.isDebugEnabled())
             {

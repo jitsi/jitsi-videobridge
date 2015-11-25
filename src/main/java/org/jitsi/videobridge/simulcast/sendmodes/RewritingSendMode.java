@@ -95,7 +95,7 @@ public class RewritingSendMode
     }
 
     @Override
-    public void receiveHigh()
+    public void receive(SimulcastLayer simStream, boolean urgent)
     {
         SimulcastLayer current = getCurrent();
         SimulcastLayer next = getNext();
@@ -103,14 +103,12 @@ public class RewritingSendMode
         SimulcastReceiver simulcastReceiver
             = getSimulcastSender().getSimulcastReceiver();
 
-        SimulcastLayer highLayer = simulcastReceiver.getSimulcastLayer(
-            SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ);
-
-        if (current == highLayer || next == highLayer)
+        if (current == simStream || next == simStream)
         {
             if (logger.isDebugEnabled())
             {
-                logDebug("High is already the target.");
+                logDebug("order-" + simStream.getOrder()
+                        + " layer is already the target.");
             }
 
             return;
@@ -118,60 +116,21 @@ public class RewritingSendMode
 
         if (logger.isDebugEnabled())
         {
-            logDebug("Targeting high from " + getSimulcastSender()
-                    .getSimulcastReceiver().getSimulcastEngine()
-                    .getVideoChannel().getEndpoint().getID() + ".");
-        }
-
-        highLayer.askForKeyframe();
-        if (current == null)
-        {
-            weakCurrent = new WeakReference<SimulcastLayer>(highLayer);
-        }
-        else
-        {
-            weakNext = new WeakReference<SimulcastLayer>(highLayer);
-        }
-    }
-
-    @Override
-    public void receiveLow(boolean urgent)
-    {
-        SimulcastLayer current = getCurrent();
-        SimulcastLayer next = getNext();
-
-        SimulcastReceiver simulcastReceiver
-            = getSimulcastSender().getSimulcastReceiver();
-
-        SimulcastLayer lowLayer = simulcastReceiver.getSimulcastLayer(
-            SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ);
-
-        if (current == lowLayer || next == lowLayer)
-        {
-            if (logger.isDebugEnabled())
-            {
-                logDebug("Low is already the target.");
-            }
-
-            return;
-        }
-
-        if (logger.isDebugEnabled())
-        {
-            logDebug("Targeting low (urgent:" + urgent + ") from " +
+            logDebug("order-" + simStream.getOrder()
+                    + " is the target (urgent:" + urgent + ") from " +
                     getSimulcastSender().getSimulcastReceiver()
                     .getSimulcastEngine()
                     .getVideoChannel().getEndpoint().getID() + ".");
         }
 
-        lowLayer.askForKeyframe();
+        simStream.askForKeyframe();
         if (urgent || current == null)
         {
-            weakCurrent = new WeakReference<SimulcastLayer>(lowLayer);
+            weakCurrent = new WeakReference<SimulcastLayer>(simStream);
         }
         else
         {
-            weakNext = new WeakReference<SimulcastLayer>(lowLayer);
+            weakNext = new WeakReference<SimulcastLayer>(simStream);
         }
     }
 

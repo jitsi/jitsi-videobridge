@@ -82,7 +82,7 @@ public class SimulcastReceiver
     /**
      * The simulcast layers of this <tt>VideoChannel</tt>.
      */
-    private SortedSet<SimulcastLayer> simulcastLayers;
+    private SimulcastLayer[] simulcastLayers;
 
     /**
      * Indicates whether we're receiving native or non-native simulcast from the
@@ -140,8 +140,8 @@ public class SimulcastReceiver
      */
     public boolean hasLayers()
     {
-        SortedSet<SimulcastLayer> sl = simulcastLayers;
-        return sl != null && sl.size() > 1;
+        SimulcastLayer[] sl = simulcastLayers;
+        return sl != null && sl.length != 0;
     }
 
     /**
@@ -154,23 +154,23 @@ public class SimulcastReceiver
      */
     public SimulcastLayer getSimulcastLayer(int targetOrder)
     {
-        SortedSet<SimulcastLayer> layers = getSimulcastLayers();
-        if (layers == null || layers.isEmpty())
+        SimulcastLayer[] layers = getSimulcastLayers();
+        if (layers == null || layers.length == 0)
         {
             return null;
         }
 
         // Iterate through the simulcast layers that we own and return the one
         // that matches best the targetOrder parameter.
-        SimulcastLayer next = null;
-
-        Iterator<SimulcastLayer> it = layers.iterator();
-
-        int currentLayer = SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ;
-        while (it.hasNext()
-            && currentLayer++ <= targetOrder)
+        SimulcastLayer next = layers[0];
+        for (int i = 1; i < Math.min(targetOrder + 1, layers.length); i++)
         {
-            next = it.next();
+            if (!layers[i].isStreaming())
+            {
+                break;
+            }
+
+            next = layers[i];
         }
 
         return next;
@@ -184,10 +184,9 @@ public class SimulcastReceiver
      * @return the simulcast layers of this receiver in a new sorted set if
      * simulcast is signaled, or null.
      */
-    public SortedSet<SimulcastLayer> getSimulcastLayers()
+    public SimulcastLayer[]  getSimulcastLayers()
     {
-        SortedSet<SimulcastLayer> sl = simulcastLayers;
-        return (sl == null) ? null : new TreeSet<SimulcastLayer>(sl);
+        return simulcastLayers;
     }
 
     /**
@@ -195,7 +194,7 @@ public class SimulcastReceiver
      *
      * @param simulcastLayers the simulcast layers for this receiver.
      */
-    public void setSimulcastLayers(SortedSet<SimulcastLayer> simulcastLayers)
+    public void setSimulcastLayers(SimulcastLayer[] simulcastLayers)
     {
         this.simulcastLayers = simulcastLayers;
 
@@ -249,7 +248,7 @@ public class SimulcastReceiver
 
         // Find the layer that corresponds to this packet.
         int acceptedSSRC = pkt.getSSRC();
-        SortedSet<SimulcastLayer> layers = getSimulcastLayers();
+        SimulcastLayer[] layers = getSimulcastLayers();
         SimulcastLayer acceptedLayer = null;
         for (SimulcastLayer layer : layers)
         {
@@ -283,12 +282,12 @@ public class SimulcastReceiver
 
         if (pktPayloadLength <= pktPaddingSize)
         {
-            if (logger.isTraceEnabled())
+            /*if (logger.isTraceEnabled())
             {
                 logger.trace(
                         "pkt.payloadLength= " + pktPayloadLength
                             + " <= pkt.paddingSize= " + pktPaddingSize);
-            }
+            }*/
             return;
         }
 
@@ -298,28 +297,7 @@ public class SimulcastReceiver
         // XXX Refer to the implementation of
         // SimulcastLayer#touch(boolean, RawPacket) for an explanation of why we
         // chose to use a return value.
-        boolean frameStarted;
-
-        if (acceptedLayer == layers.first())
-        {
-            frameStarted = acceptedLayer.touch(/* base */ true, pkt);
-
-            // We have accepted a base layer packet, starve the higher quality
-            // layers.
-            for (SimulcastLayer layer : layers)
-            {
-                if (acceptedLayer != layer)
-                {
-                    layer.maybeTimeout(/* useFrameBasedLogic */ false, pkt);
-                }
-            }
-        }
-        else
-        {
-            // We have accepted a non-base layer packet, touch the accepted
-            // layer.
-            frameStarted = acceptedLayer.touch(/* base */ false, pkt);
-        }
+        boolean frameStarted = acceptedLayer.touch(pkt);
         if (frameStarted)
             simulcastLayerFrameStarted(acceptedLayer, pkt, layers);
     }
@@ -341,11 +319,11 @@ public class SimulcastReceiver
 
         Endpoint newEndpoint
             = getSimulcastEngine().getVideoChannel().getEndpoint();
-        SortedSet<SimulcastLayer> newSimulcastLayers = getSimulcastLayers();
+        SimulcastLayer[] newSimulcastLayers = getSimulcastLayers();
 
         SctpConnection sctpConnection;
         if (newSimulcastLayers == null
-            || newSimulcastLayers.size() <= 1
+            || newSimulcastLayers.length <= 1
                 /* newEndpoint != null is implied */
             || (sctpConnection = newEndpoint.getSctpConnection()) == null
             || !sctpConnection.isReady()
@@ -371,9 +349,7 @@ public class SimulcastReceiver
 
             Endpoint eSelectedEndpoint = e.getEffectivelySelectedEndpoint();
 
-            if (newEndpoint == eSelectedEndpoint
-                    || (SimulcastSender.SIMULCAST_LAYER_ORDER_INIT > SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ
-                    && eSelectedEndpoint == null))
+            if (newEndpoint == eSelectedEndpoint)
             {
                 // somebody is watching the new endpoint or somebody has not
                 // yet signaled its selected endpoint to the bridge, start
@@ -410,7 +386,8 @@ public class SimulcastReceiver
                     + " notifies " + newEndpoint.getID()
                     + " to start its HQ stream.");
 
-            SimulcastLayer hqLayer = newSimulcastLayers.last();
+            SimulcastLayer hqLayer
+                = newSimulcastLayers[newSimulcastLayers.length - 1];;
             StartSimulcastLayerCommand command
                 = new StartSimulcastLayerCommand(hqLayer);
             String json = mapper.toJson(command);
@@ -447,11 +424,11 @@ public class SimulcastReceiver
         Endpoint oldEndpoint
             = getSimulcastEngine().getVideoChannel().getEndpoint();
 
-        SortedSet<SimulcastLayer> oldSimulcastLayers = getSimulcastLayers();
+        SimulcastLayer[] oldSimulcastLayers = getSimulcastLayers();
 
         SctpConnection sctpConnection;
         if (oldSimulcastLayers != null
-            && oldSimulcastLayers.size() > 1
+            && oldSimulcastLayers.length > 1
                 /* oldEndpoint != null is implied*/
             && (sctpConnection = oldEndpoint.getSctpConnection()) != null
             && sctpConnection.isReady()
@@ -488,7 +465,8 @@ public class SimulcastReceiver
                     " notifies " + oldEndpoint.getID() + " to stop " +
                     "its HQ stream.");
 
-                SimulcastLayer hqLayer = oldSimulcastLayers.last();
+                SimulcastLayer hqLayer
+                    = oldSimulcastLayers[oldSimulcastLayers.length - 1];
 
                 StopSimulcastLayerCommand command
                     = new StopSimulcastLayerCommand(hqLayer);
@@ -567,7 +545,7 @@ public class SimulcastReceiver
     private void simulcastLayerFrameStarted(
             SimulcastLayer source,
             RawPacket pkt,
-            SortedSet<SimulcastLayer> layers)
+            SimulcastLayer[] layers)
     {
         // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
         // compile time) the frame-based approach to the detection of layer
@@ -680,7 +658,7 @@ public class SimulcastReceiver
         }
         if (timeout)
         {
-            effect.maybeTimeout(/* useFrameBasedLogic */ true, pkt);
+            effect.maybeTimeout(pkt);
 
             if (!effect.isStreaming())
             {

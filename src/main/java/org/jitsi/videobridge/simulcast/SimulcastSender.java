@@ -47,12 +47,6 @@ public class SimulcastSender
         = Logger.getLogger(SimulcastSender.class);
 
     /**
-     * Defines the simulcast substream to receive, if not specified.
-     */
-    public static final int SIMULCAST_LAYER_ORDER_INIT
-            = SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ;
-
-    /**
      * The <tt>SimulcastSenderManager</tt> that owns this instance.
      */
     private final SimulcastSenderManager simulcastSenderManager;
@@ -223,6 +217,14 @@ public class SimulcastSender
         return sendEndpoint;
     }
 
+    private void react(boolean urgent)
+    {
+        SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
+        SimulcastLayer closestMatch
+            = simulcastReceiver.getSimulcastLayer(targetOrder);
+        sendMode.receive(closestMatch, urgent);
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -235,27 +237,9 @@ public class SimulcastSender
 
         if (SimulcastLayer.IS_STREAMING_PNAME.equals(propertyName))
         {
-            // A remote simulcast layer has either started or stopped streaming;
-            // notify the current sendMode to deal with the situation.
-            SimulcastLayer layer = (SimulcastLayer) ev.getSource();
-
-            if (!layer.isStreaming())
-            {
-                if (targetOrder >= layer.getOrder())
-                {
-                    logDebug("Handling layer stop.");
-                    // HQ stream has stopped streaming, switch to a lower
-                    // quality stream immediately.
-                    sendMode.receiveLow(true);
-                }
-            }
-            else if (targetOrder >= SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ)
-            {
-                logDebug("Handling layer start.");
-                // The HQ stream has resumed streaming and our target is HQ,
-                // configure the mode to receive HQ.
-                sendMode.receiveHigh();
-            }
+            SimulcastLayer l = (SimulcastLayer) ev.getSource();
+            boolean isUrgent = l == sendMode.getCurrent() && !l.isStreaming();
+            react(isUrgent);
         }
         else if (SimulcastReceiver.SIMULCAST_LAYERS_PNAME.equals(propertyName))
         {
@@ -280,26 +264,21 @@ public class SimulcastSender
                 logDebug("Now I'm watching " + newEndpoint.getID());
             }
 
-            if (newEndpoint == getSendEndpoint()
-                && targetOrder != SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ)
+            int hqOrder
+                = getSimulcastReceiver().getSimulcastLayers().length - 1;
+            if (newEndpoint == getSendEndpoint() && targetOrder != hqOrder)
             {
-                targetOrder = SimulcastLayer.SIMULCAST_LAYER_ORDER_HQ;
-
-                // Send HQ stream for the selected endpoint.
-                sendMode.receiveHigh();
-
+                targetOrder = hqOrder;
+                react(false);
                 getSimulcastReceiver().maybeSendStartHighQualityStreamCommand();
             }
 
             // Send LQ stream for the previously selected endpoint.
             if (oldEndpoint == getSendEndpoint()
-                && targetOrder != SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ)
+                && targetOrder != SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE)
             {
-                targetOrder = SimulcastLayer.SIMULCAST_LAYER_ORDER_LQ;
-
-                // Send LQ stream for the previously selected endpoint.
-                sendMode.receiveLow(false);
-
+                targetOrder = SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE;
+                react(false);
                 getSimulcastReceiver().maybeSendStopHighQualityStreamCommand();
             }
         }
@@ -403,12 +382,12 @@ public class SimulcastSender
         }
         else if (newMode == SimulcastMode.SWITCHING)
         {
-            sendMode = new SwitchingSendMode(this);
+            // sendMode = new SwitchingSendMode(this);
         }
 
         if (sendMode != null)
         {
-            sendMode.receiveLow(false);
+            react(false);
         }
     }
 
