@@ -80,8 +80,10 @@ public class SimulcastLayer
     /**
      * The pool of threads utilized by <tt>SimulcastReceiver</tt>.
      */
-    private static final ExecutorService executorService = ExecutorUtils
-        .newCachedThreadPool(true, SimulcastLayer.class.getName());
+    private static final ExecutorService executorService
+        = ExecutorUtils.newCachedThreadPool(
+                true,
+                SimulcastLayer.class.getName());
 
     /**
      * The <tt>Runnable</tt> that requests key frames.
@@ -158,11 +160,14 @@ public class SimulcastLayer
     /**
      * Ctor.
      *
+     * @param simulcastReicever
      * @param primarySSRC
      * @param order
      */
     public SimulcastLayer(
-        SimulcastReceiver simulcastReicever, long primarySSRC, int order)
+            SimulcastReceiver simulcastReicever,
+            long primarySSRC,
+            int order)
     {
         this.simulcastReceiver = simulcastReicever;
         this.primarySSRC = primarySSRC;
@@ -254,14 +259,10 @@ public class SimulcastLayer
      * @param o
      * @return
      */
+    @Override
     public int compareTo(SimulcastLayer o)
     {
-        if (o == null)
-        {
-            return 1;
-        }
-
-        return order - o.order;
+        return (o == null) ? 1 : (order - o.order);
     }
 
     /**
