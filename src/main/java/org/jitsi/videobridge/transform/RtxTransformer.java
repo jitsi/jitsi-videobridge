@@ -258,11 +258,12 @@ public class RtxTransformer
     public boolean retransmit(RawPacket pkt)
     {
         boolean destinationSupportsRtx = channel.getRtxPayloadType() != -1;
-        boolean retransmitPlain = !destinationSupportsRtx;
+        boolean retransmitPlain;
 
         if (destinationSupportsRtx)
         {
             long rtxSsrc = getPairedSsrc(pkt.getSSRC());
+
             if (rtxSsrc == -1)
             {
                 logger.warn("Cannot find SSRC for RTX, retransmitting plain.");
@@ -273,10 +274,15 @@ public class RtxTransformer
                 retransmitPlain = !encapsulateInRtxAndTransmit(pkt, rtxSsrc);
             }
         }
+        else
+        {
+            retransmitPlain = true;
+        }
 
         if (retransmitPlain)
         {
             MediaStream mediaStream = channel.getStream();
+
             if (mediaStream != null)
             {
                 try

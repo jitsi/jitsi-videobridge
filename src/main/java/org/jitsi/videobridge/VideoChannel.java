@@ -145,7 +145,7 @@ public class VideoChannel
      * The instance which will be computing the incoming bitrate for this
      * <tt>VideoChannel</tt>.
      */
-    private RateStatistics incomingBitrate
+    private final RateStatistics incomingBitrate
         = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
 
     /**
@@ -258,9 +258,9 @@ public class VideoChannel
         catch (Exception e)
         {
             logger.error(
-                "Failed to configure the video channel RTCP termination"
-                    + " strategy.",
-                e);
+                    "Failed to configure the video channel RTCP termination"
+                        + " strategy.",
+                    e);
 
             return;
         }
@@ -359,10 +359,7 @@ public class VideoChannel
         super.describe(iq);
 
         iq.setLastN(lastN);
-
-        SimulcastMode simulcastMode = getSimulcastMode();
-
-        iq.setSimulcastMode(simulcastMode);
+        iq.setSimulcastMode(getSimulcastMode());
     }
 
     /**
@@ -449,7 +446,7 @@ public class VideoChannel
             }
             else
             {
-                endpoints = new ArrayList<Endpoint>(lastNEndpoints.size());
+                endpoints = new ArrayList<>(lastNEndpoints.size());
                 for (WeakReference<Endpoint> wr : lastNEndpoints)
                 {
                     Endpoint endpoint = wr.get();
@@ -472,9 +469,13 @@ public class VideoChannel
         // For the purposes of LastN, we consider that the user has no pinned
         // participant if he/she has pinned himself/herself.
         Endpoint thisEndpoint = getEndpoint();
+
+        if (thisEndpoint == null)
+            return null;
+
         Endpoint pinnedEndpoint = thisEndpoint.getPinnedEndpoint();
-        return thisEndpoint != null && !thisEndpoint.equals(pinnedEndpoint)
-            ? pinnedEndpoint : null;
+
+        return thisEndpoint.equals(pinnedEndpoint) ? null : pinnedEndpoint;
     }
 
     public int getReceivingEndpointCount()
@@ -864,7 +865,7 @@ public class VideoChannel
         List<Endpoint> effectiveEndpointsEnteringLastN = endpointsEnteringLastN;
 
         if (effectiveEndpointsEnteringLastN == null)
-            effectiveEndpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
+            effectiveEndpointsEnteringLastN = new ArrayList<>(lastN);
 
         // The pinned endpoint is always in the last N set, if last N > 0.
         Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
@@ -941,8 +942,7 @@ public class VideoChannel
         // we will pretend that all lastNEndpoints are entering if no explicit
         // endpointsEnteringLastN is specified.
         endpointsEnteringLastN = effectiveEndpointsEnteringLastN;
-        if ((endpointsEnteringLastN != null)
-                && !endpointsEnteringLastN.isEmpty())
+        if (!endpointsEnteringLastN.isEmpty())
         {
             StringBuilder endpointsEnteringLastNStr = new StringBuilder();
 
@@ -1007,7 +1007,7 @@ public class VideoChannel
         boolean askForKeyframes = this.lastN == null;
 
         Lock writeLock = lastNSyncRoot.writeLock();
-        List<Endpoint> endpointsEnteringLastN = new LinkedList<Endpoint>();
+        List<Endpoint> endpointsEnteringLastN = new LinkedList<>();
 
         writeLock.lock();
         try
@@ -1092,8 +1092,7 @@ public class VideoChannel
 
         if (askForKeyframes)
         {
-            getContent().askForKeyframes(
-                    new HashSet<Endpoint>(endpointsEnteringLastN));
+            getContent().askForKeyframes(new HashSet<>(endpointsEnteringLastN));
         }
 
         touch(); // It seems this Channel is still active.
@@ -1130,7 +1129,7 @@ public class VideoChannel
                 Endpoint thisEndpoint = getEndpoint();
 
                 // At most the first lastN are entering the list of lastN.
-                endpointsEnteringLastN = new ArrayList<Endpoint>(lastN);
+                endpointsEnteringLastN = new ArrayList<>(lastN);
 
                 // The pinned endpoint is always in the last N set, if
                 // last N > 0.
@@ -1180,10 +1179,9 @@ public class VideoChannel
             }
 
             // Remember the Endpoints for the purposes of lastN.
-            lastNEndpoints
-                = new ArrayList<WeakReference<Endpoint>>(endpoints.size());
+            lastNEndpoints = new ArrayList<>(endpoints.size());
             for (Endpoint endpoint : endpoints)
-                lastNEndpoints.add(new WeakReference<Endpoint>(endpoint));
+                lastNEndpoints.add(new WeakReference<>(endpoint));
         }
         finally
         {
@@ -1291,13 +1289,12 @@ public class VideoChannel
 
         // If we're not given any PTs at all, assume that we shouldn't touch
         // RED.
-        if (payloadTypes == null || payloadTypes.size() == 0)
+        if (payloadTypes == null || payloadTypes.isEmpty())
             return;
 
-        for (PayloadTypePacketExtension payloadTypePacketExtension
-            : payloadTypes)
+        for (PayloadTypePacketExtension payloadType : payloadTypes)
         {
-            if (Constants.RED.equals(payloadTypePacketExtension.getName()))
+            if (Constants.RED.equals(payloadType.getName()))
             {
                 enableRedFilter = false;
                 break;
@@ -1318,38 +1315,39 @@ public class VideoChannel
     @Override
     public void nackReceived(NACKPacket nackPacket)
     {
-        Set<Integer> lostPackets = new HashSet<>();
-        lostPackets.addAll(nackPacket.getLostPackets());
-
         long ssrc = nackPacket.sourceSSRC;
+        Set<Integer> lostPackets = new TreeSet<>(nackPacket.getLostPackets());
 
         if (logger.isDebugEnabled())
         {
-            logDebug("Received NACK on channel " + getID() +" for SSRC "
-                                 + ssrc + ". Packets reported lost: "
-                                 + lostPackets);
+            logDebug(
+                    "Received NACK on channel " + getID() +" for SSRC " + ssrc
+                        + ". Packets reported lost: " + lostPackets);
         }
 
-        RawPacketCache cache = getStream().getPacketCache();
-        RtxTransformer rtxTransformer = transformEngine.getRtxTransformer();
-        if (cache != null && rtxTransformer != null)
+        RawPacketCache cache;
+        RtxTransformer rtxTransformer;
+
+        if ((cache = getStream().getPacketCache()) != null
+                && (rtxTransformer = transformEngine.getRtxTransformer())
+                        != null)
         {
-            Iterator<Integer> iter = lostPackets.iterator();
-            while (iter.hasNext())
+            for (Iterator<Integer> i = lostPackets.iterator(); i.hasNext();)
             {
-                int seq = iter.next();
+                int seq = i.next();
                 RawPacket pkt = cache.get(ssrc, seq);
+
                 if (pkt != null)
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logDebug("Retransmitting packet from cache. SSRC "
-                                             + ssrc + " seq " + seq);
+                        logDebug(
+                                "Retransmitting packet from cache. SSRC " + ssrc
+                                    + " seq " + seq);
                     }
-
                     if (rtxTransformer.retransmit(pkt))
                     {
-                        iter.remove();
+                        i.remove();
                     }
                 }
             }
@@ -1403,7 +1401,7 @@ public class VideoChannel
 
         if (pkt != null)
         {
-            Set<RtpChannel> channelsToSendTo = new HashSet<RtpChannel>();
+            Set<RtpChannel> channelsToSendTo = new HashSet<>();
             Channel channel
                 = getContent().findChannelByReceiveSSRC(mediaSourceSsrc);
             if (channel != null && channel instanceof RtpChannel)
@@ -1462,7 +1460,7 @@ public class VideoChannel
 
         // TODO(gp) how does one clear source groups? We need a special value
         // that indicates we need to clear the groups.
-        if (sourceGroups == null || sourceGroups.size() == 0)
+        if (sourceGroups == null || sourceGroups.isEmpty())
         {
             return;
         }
@@ -1471,8 +1469,7 @@ public class VideoChannel
         SimulcastEngine simulcastEngine
             = getTransformEngine().getSimulcastEngine();
 
-        Map<Long, SimulcastLayer> ssrc2layer
-            = new HashMap<Long, SimulcastLayer>();
+        Map<Long, SimulcastLayer> ssrc2layer = new HashMap<>();
 
         // Build the simulcast layers.
         SimulcastLayer[] layers = null;
@@ -1636,8 +1633,8 @@ public class VideoChannel
         }
 
         logDebug("Updating our view of the peer video channel.");
-        final Set<Integer> ssrcGroup = new HashSet<Integer>();
-        final Map<Integer, Integer> rtxGroups = new HashMap<Integer, Integer>();
+        final Set<Integer> ssrcGroup = new HashSet<>();
+        final Map<Integer, Integer> rtxGroups = new HashMap<>();
 
         for (SimulcastLayer layer : layers)
         {
@@ -1657,8 +1654,8 @@ public class VideoChannel
         final Integer ssrcTargetRTX = (int) baseLayer.getRTXSSRC();
 
         // Update the SSRC rewriting engine from the media stream state.
-        final Map<Integer, Byte> ssrc2fec = new HashMap<Integer, Byte>();
-        final Map<Integer, Byte> ssrc2red = new HashMap<Integer, Byte>();
+        final Map<Integer, Byte> ssrc2fec = new HashMap<>();
+        final Map<Integer, Byte> ssrc2red = new HashMap<>();
 
         for (Map.Entry<Byte, MediaFormat> entry :
             peerVideoChannel.getStream().getDynamicRTPPayloadTypes().entrySet())
