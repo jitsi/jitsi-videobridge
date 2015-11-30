@@ -16,10 +16,8 @@
 package org.jitsi.videobridge.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
@@ -34,18 +32,18 @@ public class RtpChannelTransformEngine
     extends TransformEngineChain
 {
     /**
-     * The payload type number for RED packets. We should set this dynamically
-     * but it is not clear exactly how to do it, because it isn't used on this
-     * <tt>RtpChannel</tt>, but on other channels from the <tt>Content</tt>.
-     */
-    private static final byte RED_PAYLOAD_TYPE = 116;
-
-    /**
      * The <tt>Logger</tt> used by the <tt>RtpChannelTransformEngine</tt> class
      * and its instances to print debug information.
      */
     private static final Logger logger
         = Logger.getLogger(RtpChannelTransformEngine.class);
+
+    /**
+     * The payload type number for RED packets. We should set this dynamically
+     * but it is not clear exactly how to do it, because it isn't used on this
+     * <tt>RtpChannel</tt>, but on other channels from the <tt>Content</tt>.
+     */
+    private static final byte RED_PAYLOAD_TYPE = 116;
 
     /**
      * The <tt>RtpChannel</tt> associated with this transformer.
@@ -58,16 +56,16 @@ public class RtpChannelTransformEngine
     private REDFilterTransformEngine redFilter;
 
     /**
-     * The <tt>SimulcastEngine</tt> instance, if any, used by the
-     * <tt>RtpChannel</tt>.
-     */
-    private SimulcastEngine simulcastEngine;
-
-    /**
      * The transformer which handles outgoing rtx (RFC-4588) packets for this
      * channel.
      */
     private RtxTransformer rtxTransformer;
+
+    /**
+     * The <tt>SimulcastEngine</tt> instance, if any, used by the
+     * <tt>RtpChannel</tt>.
+     */
+    private SimulcastEngine simulcastEngine;
 
     /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
@@ -78,7 +76,7 @@ public class RtpChannelTransformEngine
     {
         this.channel = channel;
 
-        this.engineChain = createChain();
+        engineChain = createChain();
     }
 
     /**
@@ -91,11 +89,14 @@ public class RtpChannelTransformEngine
 
         // Bridge-end (the first transformer in the list executes first for
         // packets from the bridge, and last for packets to the bridge)
-        List<TransformEngine> transformerList = new LinkedList<>();
+        List<TransformEngine> transformerList;
 
         if (video)
         {
             VideoChannel videoChannel = (VideoChannel) channel;
+
+            transformerList = new LinkedList<>();
+
             simulcastEngine = new SimulcastEngine(videoChannel);
             transformerList.add(simulcastEngine);
 
@@ -105,12 +106,17 @@ public class RtpChannelTransformEngine
             rtxTransformer = new RtxTransformer(channel);
             transformerList.add(rtxTransformer);
         }
+        else
+        {
+            transformerList = Collections.emptyList();
+        }
 
         // Endpoint-end (the last transformer in the list executes last for
         // packets from the bridge, and first for packets to the bridge)
 
         return
-            transformerList.toArray(new TransformEngine[transformerList.size()]);
+            transformerList.toArray(
+                    new TransformEngine[transformerList.size()]);
     }
 
     /**
@@ -124,19 +130,25 @@ public class RtpChannelTransformEngine
     }
 
     /**
+     * Gets the {@code RtxTransformer}, if any, used by the {@code RtpChannel}.
+     *
+     * @return the {@code RtxTransformer} used by the {@code RtpChannel} or
+     * {@code null}
+     */
+    public RtxTransformer getRtxTransformer()
+    {
+        return rtxTransformer;
+    }
+
+    /**
      * Gets the <tt>SimulcastEngine</tt> instance, if any, used by the
      * <tt>RtpChannel</tt>.
      *
      * @return the <tt>SimulcastEngine</tt> instance used by the
-     * <tt>RtpChannel</tt>, or null.
+     * <tt>RtpChannel</tt>, or <tt>null</tt>.
      */
     public SimulcastEngine getSimulcastEngine()
     {
         return simulcastEngine;
-    }
-
-    public RtxTransformer getRtxTransformer()
-    {
-        return rtxTransformer;
     }
 }

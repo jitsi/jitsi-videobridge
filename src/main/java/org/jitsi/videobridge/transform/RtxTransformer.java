@@ -103,8 +103,10 @@ public class RtxTransformer
 
         if (destinationSupportsRtx)
         {
-            pkt.setSequenceNumber(getNextRtxSequenceNumber(
-                    pkt.getSSRC() & 0xffffffffL, pkt.getSequenceNumber()));
+            pkt.setSequenceNumber(
+                    getNextRtxSequenceNumber(
+                            pkt.getSSRC() & 0xffffffffL,
+                            pkt.getSequenceNumber()));
         }
         else
         {
@@ -251,11 +253,15 @@ public class RtxTransformer
      * Retransmits a packet to {@link #channel}. If the destination supports
      * the RTX format, the packet will be encapsulated in RTX, otherwise, the
      * packet will be retransmitted as-is.
+     *
      * @param pkt the packet to retransmit.
+     * @param after the {@code TransformEngine} in the chain of
+     * {@code TransformEngine}s of the associated {@code MediaStream} after
+     * which the injection of {@code pkt} is to begin
      * @return {@code true} if the packet was successfully retransmitted,
      * {@code false} otherwise.
      */
-    public boolean retransmit(RawPacket pkt)
+    public boolean retransmit(RawPacket pkt, TransformEngine after)
     {
         boolean destinationSupportsRtx = channel.getRtxPayloadType() != -1;
         boolean retransmitPlain;
@@ -287,10 +293,7 @@ public class RtxTransformer
             {
                 try
                 {
-                    mediaStream.injectPacket(
-                            pkt,
-                            /* data */ true,
-                            /* after */ null);
+                    mediaStream.injectPacket(pkt, /* data */ true, after);
                 }
                 catch (TransmissionFailedException tfe)
                 {

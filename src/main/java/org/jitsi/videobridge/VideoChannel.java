@@ -1332,6 +1332,16 @@ public class VideoChannel
                 && (rtxTransformer = transformEngine.getRtxTransformer())
                         != null)
         {
+            // XXX The retransmission of packets MUST take into account SSRC
+            // rewriting. Which it may do by injecting retransmitted packets
+            // AFTER the SsrcRewritingEngine. Since the retransmitted packets
+            // have been cached by cache and cache is a TransformEngine, the
+            // injection may as well happen after cache.
+            TransformEngine after
+                = (cache instanceof TransformEngine)
+                    ? (TransformEngine) cache
+                    : null;
+
             for (Iterator<Integer> i = lostPackets.iterator(); i.hasNext();)
             {
                 int seq = i.next();
@@ -1345,7 +1355,7 @@ public class VideoChannel
                                 "Retransmitting packet from cache. SSRC " + ssrc
                                     + " seq " + seq);
                     }
-                    if (rtxTransformer.retransmit(pkt))
+                    if (rtxTransformer.retransmit(pkt, after))
                     {
                         i.remove();
                     }
