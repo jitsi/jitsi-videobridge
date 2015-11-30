@@ -319,22 +319,30 @@ public class RtxTransformer
         int off = pkt.getOffset();
         byte[] newBuf = buf;
         if (buf.length < len + 2)
+        {
+            // FIXME The byte array newly allocated and assigned to newBuf must
+            // be made known to pkt eventually.
             newBuf = new byte[len + 2];
+        }
 
         int osn = pkt.getSequenceNumber();
         int headerLength = pkt.getHeaderLength();
         int payloadLength = len - headerLength;
         System.arraycopy(buf, off, newBuf, 0, headerLength);
+        // FIXME If newBuf is actually buf, then we will override the first two
+        // bytes of the payload bellow.
         newBuf[headerLength] = (byte) ((osn >> 8) & 0xff);
         newBuf[headerLength + 1] = (byte) (osn & 0xff);
         System.arraycopy(buf, off + headerLength,
                          newBuf, headerLength + 2,
                          payloadLength );
-        pkt.setSSRC((int) rtxSsrc);
+        // FIXME We tried to extend the payload of pkt by two bytes above but
+        // we never told pkt that its length has increased by these two bytes.
 
         MediaStream mediaStream = channel.getStream();
         if (mediaStream != null)
         {
+            pkt.setSSRC((int) rtxSsrc);
             // Only call getNextRtxSequenceNumber() when we're sure we're going
             // to transmit a packet, because it consumes a sequence number.
             pkt.setSequenceNumber(getNextRtxSequenceNumber(rtxSsrc));
