@@ -382,7 +382,7 @@ public class SimulcastSender
         }
         else if (newMode == SimulcastMode.SWITCHING)
         {
-            // sendMode = new SwitchingSendMode(this);
+            sendMode = new SwitchingSendMode(this);
         }
 
         if (sendMode != null)
