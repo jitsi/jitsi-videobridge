@@ -393,7 +393,7 @@ public class SimulcastLayer
                         frameStarted = false;
                         if (logger.isTraceEnabled())
                         {
-                            logger.trace(
+                            logTrace(
                                     "order-" + getOrder() + " layer ("
                                         + getPrimarySSRC()
                                         + ") detected an alien pkt: seqnum "
@@ -540,6 +540,18 @@ public class SimulcastLayer
         }
     }
 
+    private void logTrace(String msg)
+    {
+        if (!logger.isTraceEnabled())
+        {
+            return;
+        }
+
+        msg = simulcastReceiver.getSimulcastEngine().getVideoChannel()
+            .getEndpoint().getID() + ": " + msg;
+        logger.trace(msg);
+    }
+
     /**
      * The <tt>Runnable</tt> that requests key frames for this instance.
      */
@@ -555,6 +567,10 @@ public class SimulcastLayer
                 logWarn("Requested a key frame but the peer simulcast " +
                         "manager is null!");
                 return;
+            }
+            else
+            {
+                logDebug("Asking for a key frame for " + primarySSRC);
             }
 
             peerSM.getVideoChannel().askForKeyframes(

@@ -71,6 +71,12 @@ public class IceUdpTransportManager
             = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
 
     /**
+     * The default value of the port to be used for
+     * {@code SinglePortUdpHarvester}.
+     */
+    private static final int SINGLE_PORT_DEFAULT_VALUE = 10000;
+
+    /**
      * The <tt>Logger</tt> used by the <tt>IceUdpTransportManager</tt> class and
      * its instances to print debug information.
      */
@@ -1657,8 +1663,9 @@ public class IceUdpTransportManager
             ConfigurationService cfg
                 = conference.getVideobridge().getConfigurationService();
 
-            int singlePort = -1;
-            if ((singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT, -1)) != -1)
+            int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
+                                        SINGLE_PORT_DEFAULT_VALUE);
+            if (singlePort != -1)
             {
                 singlePortHarvesters
                     = SinglePortUdpHarvester.createHarvesters(singlePort);

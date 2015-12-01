@@ -87,10 +87,9 @@ public class Main
 
     /**
      * The default value of the {@link #MIN_PORT_ARG_NAME} command-line argument
-     * if
-     * it is not explicitly provided.
+     * if it is not explicitly provided.
      */
-    private static final int MIN_PORT_ARG_VALUE = 10000;
+    private static final int MIN_PORT_ARG_VALUE = 10001;
 
     /**
      * The name of the command-line argument which specifies the port of the

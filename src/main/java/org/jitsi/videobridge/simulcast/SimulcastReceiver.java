@@ -282,12 +282,13 @@ public class SimulcastReceiver
 
         if (pktPayloadLength <= pktPaddingSize)
         {
-            /*if (logger.isTraceEnabled())
+            if (logger.isTraceEnabled())
             {
                 logger.trace(
                         "pkt.payloadLength= " + pktPayloadLength
-                            + " <= pkt.paddingSize= " + pktPaddingSize);
-            }*/
+                            + " <= pkt.paddingSize= " + pktPaddingSize + "("
+                            + pkt.getSequenceNumber() + ")");
+            }
             return;
         }
 

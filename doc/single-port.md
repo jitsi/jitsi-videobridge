@@ -9,12 +9,12 @@ automatically fallback to using the dynamically allocated ports (configurable
 using the --min-port and --max-port arguments to jvb.sh).
 
 #Configuration
-To enable the single port mode, the following property needs to be set to
-the port number to be used:
+Single port mode is enabled by default, with the port number being 10000. To
+change the port, set the following property (set to -1 to disable):
 
 ### *org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT=1234*
 Type: integer
-Default: none
+Default: 10000
 
 
 
