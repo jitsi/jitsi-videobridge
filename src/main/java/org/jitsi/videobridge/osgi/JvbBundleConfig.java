@@ -104,9 +104,6 @@ public class JvbBundleConfig
                  * push.
                  */
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
-        },
-        {
-            "org/jitsi/videobridge/groovysh/GroovyShellActivator"
         }
     };
 
