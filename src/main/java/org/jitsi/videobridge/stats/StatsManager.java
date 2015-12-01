@@ -37,7 +37,7 @@ public class StatsManager
         = new LinkedList<TimeInfo<Statistics>>();
 
     /**
-     * The backgroud/daemon <tt>Thread</tt> in which this <tt>StatsManager</tt>
+     * The background/daemon <tt>Thread</tt> in which this <tt>StatsManager</tt>
      * generates {@link #statistics} and sends them through {@link #transports}.
      */
     private Thread thread;

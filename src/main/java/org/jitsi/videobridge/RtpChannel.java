@@ -149,6 +149,11 @@ public class RtpChannel
      * an even index represents a SSRC and its consecutive element at an odd
      * index specifies the time in milliseconds when the SSRC was last seen (in
      * order to enable timing out SSRCs).
+     *
+     * Note that the <tt>MediaStream</tt> has the concept of "Remote Source IDs"
+     * which is used the same way we use receive SSRCs here in the
+     * <tt>RtpChannel</tt>. So in theory we should be able to get rid of one of
+     * the two. TAG(cat4-remote-ssrc-hurricane).
      */
     long[] receiveSSRCs = NO_RECEIVE_SSRCS;
 
@@ -205,6 +210,33 @@ public class RtpChannel
     RtpChannelTransformEngine transformEngine = null;
 
     /**
+     * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     *
+     * @return The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     */
+    public RtpChannelTransformEngine getTransformEngine()
+    {
+        return this.transformEngine;
+    }
+
+    /**
+     * The FID (flow ID) groupings used by the remote side of this
+     * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
+     */
+    protected Map<Long,Long> fidSourceGroups = new HashMap<Long, Long>();
+
+    /**
+     * The payload type number configured for RTX (RFC-4588) for this channel,
+     * or -1 if none is configured (the other end does not support rtx).
+     */
+    private byte rtxPayloadType = -1;
+
+    /**
+     * The "associated payload type" number for RTX on this channel.
+     */
+    private byte rtxAssociatedPayloadType = -1;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -253,6 +285,8 @@ public class RtpChannel
              conferenceSpeechActivity.addPropertyChangeListener(
                      propertyChangeListener);
         }
+
+        content.addPropertyChangeListener(propertyChangeListener);
 
         touch();
     }
@@ -920,6 +954,12 @@ public class RtpChannel
             stream.addPropertyChangeListener(streamPropertyChangeListener);
             stream.setName(getID());
             stream.setProperty(RtpChannel.class.getName(), this);
+            Endpoint endpoint = getEndpoint();
+            if (endpoint != null)
+            {
+                stream.setProperty(
+                    MediaStream.PNAME_RECEIVER_IDENTIFIER, endpoint.getID());
+            }
             if (transformEngine != null)
                 stream.setExternalTransformer(transformEngine);
 
@@ -1115,6 +1155,13 @@ public class RtpChannel
         {
             newValue.addChannel(this);
             newValue.addPropertyChangeListener(this);
+            stream.setProperty(
+                MediaStream.PNAME_RECEIVER_IDENTIFIER, newValue.getID());
+        }
+        else
+        {
+            stream.setProperty(
+                MediaStream.PNAME_RECEIVER_IDENTIFIER, null);
         }
     }
 
@@ -1377,6 +1424,22 @@ public class RtpChannel
                 {
                     transportManager.payloadTypesChanged(this);
                 }
+
+                rtxPayloadType = -1;
+                for (PayloadTypePacketExtension ext : payloadTypes)
+                {
+                    if ("rtx".equalsIgnoreCase(ext.getName()))
+                    {
+                        rtxPayloadType = (byte) ext.getID();
+                        for (ParameterPacketExtension ppe : ext.getParameters())
+                        {
+                            if ("apt".equalsIgnoreCase(ppe.getName()))
+                                rtxAssociatedPayloadType
+                                        = Byte.valueOf(ppe.getValue());
+
+                        }
+                    }
+                }
             }
         }
 
@@ -1446,9 +1509,6 @@ public class RtpChannel
             {
                 return;
             }
-
-            if (transformEngine != null)
-                transformEngine.enableAbsSendTime(id);
         }
 
         // It is safe to just add it, MediaStream will take care of duplicates.
@@ -1701,6 +1761,55 @@ public class RtpChannel
     }
 
     /**
+     * Sets the SSRC groupings for this <tt>RtpChannel</tt>.
+     * @param sourceGroups
+     */
+    public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
+    {
+        if (sourceGroups == null || sourceGroups.isEmpty())
+            return;
+
+        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+        {
+            List<SourcePacketExtension> sources = sourceGroup.getSources();
+            if (sources != null && !sources.isEmpty() &&
+                    SourceGroupPacketExtension.SEMANTICS_FID
+                        .equalsIgnoreCase(sourceGroup.getSemantics()))
+            {
+                Long first = null, second = null;
+                for (SourcePacketExtension source : sources)
+                {
+                    if (first == null)
+                    {
+                        first = source.getSSRC();
+                    }
+                    else if (second == null)
+                    {
+                        second = source.getSSRC();
+                    }
+                    else
+                    {
+                        logger.warn("Received a FID sourceGroup with more " +
+                                    " than two sources: " + sourceGroup.toXML());
+                    }
+                }
+
+                if (first == null || second == null)
+                {
+                    logger.warn("Received a FID sourceGroup with less " +
+                                " than two sources: " + sourceGroup.toXML());
+                    continue;
+                }
+
+                // Here we assume that the first source in the group is the
+                // SSRC for the media stream, and the second source is the
+                // one for the RTX stream.
+                fidSourceGroups.put(first, second);
+            }
+        }
+    }
+
+    /**
      * Returns the RTP Payload Type numbers which this channel is configured
      * to receive.
      * @return the RTP Payload Type numbers which this channel is configured
@@ -1753,5 +1862,50 @@ public class RtpChannel
         }
 
         super.expire();
+    }
+
+    /*
+     * Returns the payload type number for the RTX payload type (RFC-4588) for
+     * this channel.
+     * @return the payload type number for the RTX payload type (RFC-4588) for
+     * this channel.
+     */
+    public byte getRtxPayloadType()
+    {
+        return rtxPayloadType;
+    }
+
+    /**
+     * Returns the payload type number associated with RTX for this channel.
+     * @return the payload type number associated with RTX for this channel.
+     */
+    public byte getRtxAssociatedPayloadType()
+    {
+        return rtxAssociatedPayloadType;
+    }
+
+    /**
+     * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
+     * any. If none is found, returns -1.
+     *
+     * @return the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
+     * any. If none is found, returns -1.
+     */
+    public long getFidPairedSsrc(long ssrc)
+    {
+        Long paired = fidSourceGroups.get(ssrc);
+        if (paired != null)
+        {
+            return paired;
+        }
+
+        // Maybe 'ssrc' is one of the values.
+        for (Map.Entry<Long, Long> entry : fidSourceGroups.entrySet())
+        {
+            if (entry.getValue() == ssrc)
+                return entry.getKey();
+        }
+
+        return -1;
     }
 }

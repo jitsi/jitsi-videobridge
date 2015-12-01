@@ -34,84 +34,79 @@ public class SimulcastAdaptor
      * and its instances to print debug information.
      */
     private static final org.jitsi.util.Logger logger
-            = org.jitsi.util.Logger.getLogger(SimulcastAdaptor.class);
+        = org.jitsi.util.Logger.getLogger(SimulcastAdaptor.class);
 
     public SimulcastAdaptor(BitrateController bitrateController)
     {
         this.bitrateController = bitrateController;
     }
 
-    @Override
     public boolean touch()
     {
         return true;
     }
 
-    @Override
     public boolean increase()
     {
         VideoChannel channel = bitrateController.getChannel();
-        SimulcastManager mySM = channel.getSimulcastManager();
-        if (mySM != null)
+        SimulcastEngine simulcastEngine = channel.getTransformEngine().getSimulcastEngine();
+        if (simulcastEngine != null
+            && simulcastEngine.getSimulcastSenderManager().getOverrideOrder()
+            != SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
         {
-            if (mySM.override(SimulcastManager
-                    .SIMULCAST_LAYER_ORDER_NO_OVERRIDE))
+            simulcastEngine.getSimulcastSenderManager().setOverrideOrder(SimulcastSenderManager
+                .SIMULCAST_LAYER_ORDER_NO_OVERRIDE);
+            if (logger.isDebugEnabled())
             {
-                if (logger.isDebugEnabled())
-                {
-                    int numEndpointsThatFitIn
-                            = bitrateController.calcNumEndpointsThatFitIn();
-                    Endpoint self = channel.getEndpoint();
-                    Map<String, Object> map
-                            = new HashMap<String, Object>(2);
-                    map.put("self", self);
-                    map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
-                    StringCompiler sc = new StringCompiler(map);
+                int numEndpointsThatFitIn
+                    = bitrateController.calcNumEndpointsThatFitIn();
+                Endpoint self = channel.getEndpoint();
+                Map<String, Object> map
+                    = new HashMap<String, Object>(2);
+                map.put("self", self);
+                map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
+                StringCompiler sc = new StringCompiler(map);
 
-                    logger.debug(sc.c("The uplink between the " +
-                            "bridge and {self.id} can support " +
-                            "{numEndpointsThatFitIn}. Allow " +
-                            "streaming of high quality layers."));
-                }
-
-                return true;
+                logger.debug(sc.c("The uplink between the " +
+                    "bridge and {self.id} can support " +
+                    "{numEndpointsThatFitIn}. Allow " +
+                    "streaming of high quality layers."));
             }
+
+            return true;
         }
 
         return false;
     }
 
-    @Override
     public boolean decrease()
     {
         VideoChannel channel = bitrateController.getChannel();
-        SimulcastManager mySM = channel.getSimulcastManager();
-        if (mySM != null)
+        SimulcastEngine simulcastEngine = channel.getTransformEngine().getSimulcastEngine();
+        if (simulcastEngine != null && simulcastEngine.getSimulcastSenderManager().getOverrideOrder() != SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE)
         {
-            if (mySM.override(
-                    SimulcastManager.SIMULCAST_LAYER_ORDER_LQ))
+            simulcastEngine.getSimulcastSenderManager().setOverrideOrder(
+                SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE);
+
+            if (logger.isDebugEnabled())
             {
+                Endpoint self = channel.getEndpoint();
+                int numEndpointsThatFitIn
+                    = bitrateController.calcNumEndpointsThatFitIn();
+                Map<String, Object> map
+                    = new HashMap<String, Object>(2);
+                map.put("self", self);
+                map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
+                StringCompiler sc = new StringCompiler(map);
 
-                if (logger.isDebugEnabled())
-                {
-                    Endpoint self = channel.getEndpoint();
-                    int numEndpointsThatFitIn
-                            = bitrateController.calcNumEndpointsThatFitIn();
-                    Map<String, Object> map
-                            = new HashMap<String, Object>(2);
-                    map.put("self", self);
-                    map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
-                    StringCompiler sc = new StringCompiler(map);
-
-                    logger.debug(sc.c("The uplink between the " +
-                            "bridge and {self.id} can only " +
-                            "support {numEndpointsThatFitIn}. " +
-                            "Make sure we only stream low " +
-                            "quality layers."));
-                }
-
-                return true;
+                logger.debug(sc.c("The uplink between the " +
+                    "bridge and {self.id} can only " +
+                    "support {numEndpointsThatFitIn}. " +
+                    "Make sure we only stream low " +
+                    "quality layers."));
             }
+
+            return true;
         }
 
         return false;

@@ -840,36 +840,18 @@ public class Videobridge
 
                             channel.setSources(channelIQ.getSources());
 
+                            channel.setSourceGroups(
+                                channelIQ.getSourceGroups());
+
                             if (channel instanceof VideoChannel)
                             {
-                                List<SourceGroupPacketExtension> sourceGroups
-                                    = channelIQ.getSourceGroups();
-                                VideoChannel videoChannel
-                                    = (VideoChannel) channel;
+                                SimulcastMode simulcastMode
+                                    = channelIQ.getSimulcastMode();
 
-                                if (sourceGroups != null)
+                                if (simulcastMode != null)
                                 {
-                                    SimulcastManager manager
-                                        = videoChannel.getSimulcastManager();
-                                    SortedSet<SimulcastLayer> layers
-                                        = SimulcastLayersFactory
-                                            .fromSourceGroups(
-                                                    sourceGroups,
-                                                    manager);
-
-                                    manager.setSimulcastLayers(layers);
-                                }
-
-                                Integer receivingSimulcastLayer
-                                    = channelIQ.getReceivingSimulcastLayer();
-
-                                if (receivingSimulcastLayer != null)
-                                {
-                                    // TODO(gp) remove the receiving simulcast
-                                    // layer attribute from the COLIBRI stanza.
-                                    // It was introduced in the very early
-                                    // stages of simulcast development and it is
-                                    // no longer required.
+                                    ((VideoChannel)channel)
+                                        .setSimulcastMode(simulcastMode);
                                 }
                             }
 
@@ -905,6 +887,10 @@ public class Videobridge
                                     EventFactory.channelCreated(channel));
                             }
 
+                            // XXX we might want to fire more precise events,
+                            // like sourceGroupsChanged or PayloadTypesChanged,
+                            // etc.
+                            content.fireChannelChanged(channel);
                         }
 
                         if (responseConferenceIQ == null)

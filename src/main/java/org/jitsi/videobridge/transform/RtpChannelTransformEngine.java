@@ -16,11 +16,9 @@
 package org.jitsi.videobridge.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.rewriting.*;
-import org.jitsi.videobridge.rtcp.*;
+import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
 
@@ -34,31 +32,18 @@ public class RtpChannelTransformEngine
     extends TransformEngineChain
 {
     /**
-     * The payload type number for RED packets. We should set this dynamically
-     * but it is not clear exactly how to do it, because it isn't used on this
-     * <tt>RtpChannel</tt>, but on other channels from the <tt>Content</tt>.
-     */
-    private static final byte RED_PAYLOAD_TYPE = 116;
-
-    /**
-     * The name of the property used to disable NACK termination.
-     */
-    private static final String DISABLE_NACK_TERMINATION_PNAME
-        = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
-
-    /**
-     * The name of the property used to disable retransmission requests from
-     * the bridge.
-     */
-    public static final String DISABLE_RETRANSMISSION_REQUESTS
-        = "org.jitsi.videobridge.DISABLE_RETRANSMISSION_REQUESTS";
-
-    /**
      * The <tt>Logger</tt> used by the <tt>RtpChannelTransformEngine</tt> class
      * and its instances to print debug information.
      */
     private static final Logger logger
         = Logger.getLogger(RtpChannelTransformEngine.class);
+
+    /**
+     * The payload type number for RED packets. We should set this dynamically
+     * but it is not clear exactly how to do it, because it isn't used on this
+     * <tt>RtpChannel</tt>, but on other channels from the <tt>Content</tt>.
+     */
+    private static final byte RED_PAYLOAD_TYPE = 116;
 
     /**
      * The <tt>RtpChannel</tt> associated with this transformer.
@@ -71,39 +56,16 @@ public class RtpChannelTransformEngine
     private REDFilterTransformEngine redFilter;
 
     /**
-     * The transformer which caches outgoing RTP packets.
+     * The transformer which handles outgoing rtx (RFC-4588) packets for this
+     * channel.
      */
-    private CachingTransformer cache;
+    private RtxTransformer rtxTransformer;
 
     /**
-     * The transformer which intercepts NACK packets and passes them on to the
-     * channel logic.
-     */
-    private NACKNotifier nackNotifier;
-
-    /**
-     * The transformer which intercepts REMB packets and passes them on to the
-     * channel logic.
-     */
-    private REMBNotifier rembNotifier;
-
-    /**
-     * The transformer which replaces the timestamp in an abs-send-time RTP
-     * header extension.
-     */
-    private AbsSendTimeEngine absSendTime;
-
-    /**
-     * The <tt>RetransmissionRequester</tt> instance, if any, used by the
+     * The <tt>SimulcastEngine</tt> instance, if any, used by the
      * <tt>RtpChannel</tt>.
      */
-    private RetransmissionRequester retransmissionRequester;
-
-    /**
-     * The transformer which handles SSRC rewriting.
-     */
-    private org.jitsi.videobridge.rewriting.SsrcRewritingEngine
-        ssrcRewritingEngine;
+    private SimulcastEngine simulcastEngine;
 
     /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
@@ -114,7 +76,7 @@ public class RtpChannelTransformEngine
     {
         this.channel = channel;
 
-        this.engineChain = createChain();
+        engineChain = createChain();
     }
 
     /**
@@ -123,73 +85,38 @@ public class RtpChannelTransformEngine
      */
     private TransformEngine[] createChain()
     {
-        Conference conference = channel.getContent().getConference();
-        ConfigurationService cfg
-                = conference.getVideobridge().getConfigurationService();
+        boolean video = (channel instanceof VideoChannel);
 
-        List<TransformEngine> transformerList
-            = new LinkedList<TransformEngine>();
+        // Bridge-end (the first transformer in the list executes first for
+        // packets from the bridge, and last for packets to the bridge)
+        List<TransformEngine> transformerList;
 
-        if (cfg == null
-                || !cfg.getBoolean(DISABLE_RETRANSMISSION_REQUESTS, false))
-        {
-            retransmissionRequester = new RetransmissionRequester(channel);
-            transformerList.add(retransmissionRequester);
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Enabling retransmission requests for channel"
-                                     + channel.getID());
-            }
-        }
-
-        redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
-        transformerList.add(redFilter);
-
-        absSendTime = new AbsSendTimeEngine();
-        transformerList.add(absSendTime);
-
-        boolean enableNackTermination = true;
-        if (conference != null)
-        {
-            if (cfg != null)
-                enableNackTermination
-                    = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
-        }
-
-        if (enableNackTermination && channel instanceof NACKHandler)
-        {
-            logger.info("Enabling NACK termination for channel "
-                                + channel.getID());
-            cache = new CachingTransformer();
-            transformerList.add(cache);
-
-            nackNotifier = new NACKNotifier((NACKHandler) channel);
-            transformerList.add(nackNotifier);
-        }
-
-        if (channel instanceof VideoChannel)
+        if (video)
         {
             VideoChannel videoChannel = (VideoChannel) channel;
-            rembNotifier = new REMBNotifier(videoChannel);
-            transformerList.add(rembNotifier);
-            ssrcRewritingEngine = new org.jitsi.videobridge.rewriting
-                .SsrcRewritingEngine(videoChannel);
-            transformerList.add(ssrcRewritingEngine);
+
+            transformerList = new LinkedList<>();
+
+            simulcastEngine = new SimulcastEngine(videoChannel);
+            transformerList.add(simulcastEngine);
+
+            redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
+            transformerList.add(redFilter);
+
+            rtxTransformer = new RtxTransformer(channel);
+            transformerList.add(rtxTransformer);
+        }
+        else
+        {
+            transformerList = Collections.emptyList();
         }
 
-        return
-            transformerList.toArray(new TransformEngine[transformerList.size()]);
-    }
+        // Endpoint-end (the last transformer in the list executes last for
+        // packets from the bridge, and first for packets to the bridge)
 
-    /**
-     * Enables replacement of the timestamp in abs-send-time RTP header
-     * extensions with the given extension ID.
-     * @param extensionID the ID of the RTP header extension.
-     */
-    public void enableAbsSendTime(int extensionID)
-    {
-        if (absSendTime != null)
-            absSendTime.setExtensionID(extensionID);
+        return
+            transformerList.toArray(
+                    new TransformEngine[transformerList.size()]);
     }
 
     /**
@@ -203,45 +130,25 @@ public class RtpChannelTransformEngine
     }
 
     /**
-     * Returns the cache of outgoing packets.
-     * @return the cache of outgoing packets.
-     */
-    public RawPacketCache getCache()
-    {
-        return cache;
-    }
-
-    /**
-     * Enables SSRC re-writing.
+     * Gets the {@code RtxTransformer}, if any, used by the {@code RtpChannel}.
      *
-     * @param enabled whether to enable or disable.
+     * @return the {@code RtxTransformer} used by the {@code RtpChannel} or
+     * {@code null}
      */
-    public void enableSsrcRewriting(boolean enabled)
+    public RtxTransformer getRtxTransformer()
     {
-        if (ssrcRewritingEngine != null)
-            ssrcRewritingEngine.setEnabled(enabled);
+        return rtxTransformer;
     }
 
     /**
-     * Checks whether retransmission requests are enabled for the
+     * Gets the <tt>SimulcastEngine</tt> instance, if any, used by the
      * <tt>RtpChannel</tt>.
-     * @return <tt>true</tt> if retransmission requests are enabled for the
-     * <tt>RtpChannel</tt>.
-     */
-    public boolean retransmissionsRequestsEnabled()
-    {
-        return retransmissionRequester != null;
-    }
-
-    /**
-     * Gets a boolean value indicating whether SSRC re-writing is enabled or
-     * not.
      *
-     * @return a boolean value indicating whether SSRC re-writing is enabled or
-     * not.
+     * @return the <tt>SimulcastEngine</tt> instance used by the
+     * <tt>RtpChannel</tt>, or <tt>null</tt>.
      */
-    public boolean isSsrcRewritingEnabled()
+    public SimulcastEngine getSimulcastEngine()
     {
-        return ssrcRewritingEngine.isEnabled();
+        return simulcastEngine;
     }
 }

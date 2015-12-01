@@ -259,7 +259,8 @@ public class BitrateController
      */
     private long getEndpointBitrate(Endpoint endpoint)
     {
-        SimulcastManager mySM = this.channel.getSimulcastManager();
+        SimulcastEngine mySM
+            = this.channel.getTransformEngine().getSimulcastEngine();
         long bitrate = 0;
 
         for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
@@ -267,10 +268,12 @@ public class BitrateController
             if (channel != null && channel instanceof VideoChannel)
             {
                 VideoChannel vc = (VideoChannel) channel;
-                SimulcastManager peerSM = vc.getSimulcastManager();
-                if (mySM != null && peerSM != null && peerSM.hasLayers())
+                SimulcastEngine simulcastEngine
+                    = vc.getTransformEngine().getSimulcastEngine();
+                if (mySM != null && simulcastEngine != null
+                        && simulcastEngine.getSimulcastReceiver().hasLayers())
                 {
-                    bitrate += mySM.getIncomingBitrate(peerSM, true);
+                    // TODO we need a more general way for this
                 }
                 else
                 {
