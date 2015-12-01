@@ -16,7 +16,7 @@ some code to display or modify the application’s state, call functions,
 create objects, etc. Here's how one can use it:
 
 ```
-gp@nu:~$ nc localhost 6869
+gp@nu:~$ nc localhost 6263
 Groovy Shell (2.3.7, JVM: 1.7.0_65)
 Type ':help' or ':h' for help.
 -------------------------------------------------------------------------------
@@ -30,19 +30,6 @@ groovy:000> videobridge = context.getService(refs[0])
 
 groovy:000> videobridge.getConferenceCount()
 ===> 3
-```
-
-Alternatively, you can use socat like this
-
-```
-socat -,raw,echo=0,opost TCP:127.0.0.1:6869
-```
-
-There are some sample scripts in the `scripts` directory that you can run like
-this:
-
-```
-nc localhost 6869 < scripts/selected_endpoints.groovy
 ```
 
 Groovy is licensed under the Apache 2 license. The additional
