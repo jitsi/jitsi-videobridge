@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.impl.protocol.jabber.*;
+import net.java.sip.communicator.service.protocol.jabber.*;
 import org.osgi.framework.*;
 
 /**
@@ -50,6 +52,10 @@ public class VideobridgeBundleActivator
     public void start(BundleContext bundleContext)
         throws Exception
     {
+        AbstractSmackInteroperabilityLayer
+            .setImplementationClass(
+                    SmackV3InteroperabilityLayer.class);
+
         Videobridge videobridge = new Videobridge();
 
         videobridge.start(bundleContext);
