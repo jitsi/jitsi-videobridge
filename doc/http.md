@@ -3,7 +3,7 @@ To configure jitsi-videobridge to serve meet:
 1. Add prosody certificates to java keystore
 2. Configure authbind to allow jvb to use port 443
 3. And configure jvb itself in
-/usr/share/jitsi-videobridge/.sip-communicator/sip-communicator.properties
+/etc/jitsi/videobridge/sip-communicator.properties if installed from package, or in $HOME/.sip-communicator/sip-communicator.properties if running from source.
 ```
 org.jitsi.videobridge.rest.jetty.host=::
 org.jitsi.videobridge.rest.jetty.port=443
