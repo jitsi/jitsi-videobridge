@@ -281,7 +281,7 @@ public class VideoChannel
                 = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
         if (enableNackTermination)
         {
-            logger.debug("Inizializing NACK termination.");
+            logger.debug("Initializing NACK termination.");
             MediaStream stream = getStream();
             RawPacketCache cache = stream.getPacketCache();
             if (cache != null)
