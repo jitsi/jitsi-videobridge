@@ -28,7 +28,7 @@ See below for details.
 
 The following properties can be set in 
 $HOME/.sip-communicator/sip-communicator.properties to control 
-the TCP-related functionality.
+the TCP-related functionality, if running from source. If installed from a package the file is /etc/jitsi/videobridge/sip-communicator.properties.
 
 
 ### *org.jitsi.videobridge.DISABLE_TCP_HARVESTER*
