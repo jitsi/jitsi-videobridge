@@ -282,6 +282,7 @@ public class VideoChannel
         if (enableNackTermination)
         {
             logger.debug("Inizializing NACK termination.");
+            MediaStream stream = getStream();
             RawPacketCache cache = stream.getPacketCache();
             if (cache != null)
             {
