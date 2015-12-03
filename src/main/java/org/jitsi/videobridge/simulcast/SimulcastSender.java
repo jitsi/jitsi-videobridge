@@ -264,8 +264,23 @@ public class SimulcastSender
                 logDebug("Now I'm watching " + newEndpoint.getID());
             }
 
-            int hqOrder
-                = getSimulcastReceiver().getSimulcastLayers().length - 1;
+            SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
+            if (simulcastReceiver == null)
+            {
+                logWarn("The simulcastReceiver has been garbage collected. " +
+                        "This simulcastSender is now defunkt.");
+                return;
+            }
+
+            SimulcastLayer[] layers = simulcastReceiver.getSimulcastLayers();
+            if (layers == null || layers.length != 0)
+            {
+                logWarn("The remote endpoint hasn't signaled simulcast. " +
+                        "This simulcastSender is now disabled.");
+                return;
+            }
+
+            int hqOrder = layers.length - 1;
             if (newEndpoint == getSendEndpoint() && targetOrder != hqOrder)
             {
                 targetOrder = hqOrder;
