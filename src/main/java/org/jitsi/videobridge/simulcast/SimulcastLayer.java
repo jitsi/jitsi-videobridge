@@ -20,8 +20,6 @@ import java.util.concurrent.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.jitsi.impl.neomedia.codec.video.vp8.*;
-import org.jitsi.impl.neomedia.codec.*;
 import org.jitsi.impl.neomedia.codec.video.*;
 
 /**
@@ -61,18 +59,6 @@ public class SimulcastLayer
      * Base layer quality order.
      */
     public static final int SIMULCAST_LAYER_ORDER_BASE = 0;
-
-    /**
-     * The number of packets of the base layer that we must see before marking
-     * this substream as stopped.
-     *
-     * XXX we expect that this needs to take into account not the base layer,
-     * but the previous layer (order-1) in the sorted set of simulcast layers.
-     * TAG(simulcast-assumption,arbitrary-sim-layers). We can easily get the
-     * previous item in a treeset, so it might be a good idea to bake a
-     * structure instead of using the stock one.
-     */
-    private static final int MAX_SEEN_BASE = 25;
 
     private static final byte REDPT = 0x74;
 

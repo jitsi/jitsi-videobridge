@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.rtcp;
 
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;

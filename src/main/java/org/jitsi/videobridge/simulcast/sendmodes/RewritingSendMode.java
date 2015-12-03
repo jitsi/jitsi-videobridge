@@ -17,7 +17,6 @@ package org.jitsi.videobridge.simulcast.sendmodes;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.lang.ref.*;
@@ -85,7 +84,6 @@ public class RewritingSendMode
         }
 
         SimulcastLayer current = getCurrent();
-        boolean accept = false;
         if (current != null && current.match(pkt))
         {
             return true;
@@ -99,9 +97,6 @@ public class RewritingSendMode
     {
         SimulcastLayer current = getCurrent();
         SimulcastLayer next = getNext();
-
-        SimulcastReceiver simulcastReceiver
-            = getSimulcastSender().getSimulcastReceiver();
 
         if (current == simStream || next == simStream)
         {

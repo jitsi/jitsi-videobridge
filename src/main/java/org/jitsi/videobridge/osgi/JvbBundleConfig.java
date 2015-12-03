@@ -22,7 +22,6 @@ import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.meet.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.videobridge.transform.*;
 
 import java.util.*;
 

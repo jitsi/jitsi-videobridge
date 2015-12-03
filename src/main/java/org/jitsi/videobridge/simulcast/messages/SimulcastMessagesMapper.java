@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.simulcast.messages;
 
 import org.jitsi.videobridge.simulcast.*;
-import org.jitsi.videobridge.simulcast.messages.*;
 import org.jitsi.videobridge.simulcast.sendmodes.*;
 import org.json.simple.*;
 

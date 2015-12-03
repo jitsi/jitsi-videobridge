@@ -18,8 +18,6 @@ package org.jitsi.videobridge.simulcast.sendmodes;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.videobridge.simulcast.*;
 
-import java.beans.*;
-
 /**
  * Is configured to accept a target layer and tries its best to accept (only)
  * that simulcast layer.
