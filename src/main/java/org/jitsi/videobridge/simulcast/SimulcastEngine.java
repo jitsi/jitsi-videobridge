@@ -244,7 +244,7 @@ public class SimulcastEngine
         @Override
         public RawPacket transform(RawPacket pkt)
         {
-            if (pkt == null)
+            if (pkt == null || pkt.getVersion() != RTPHeader.VERSION)
             {
                 return pkt;
             }
@@ -273,7 +273,7 @@ public class SimulcastEngine
             // Pass the received <tt>RawPacket</tt> down to the
             // <tt>SimulcastReceiver</tt> and let it do its thing (updates the
             // <tt>SimulcastLayer</tt>s that we receive).
-            if (p != null)
+            if (p != null && p.getVersion() == RTPHeader.VERSION)
             {
                 simulcastReceiver.accepted(p);
             }
@@ -303,7 +303,7 @@ public class SimulcastEngine
         public RawPacket transform(RawPacket pkt)
         {
             // Update octets and packets sent in SRs.
-            if (pkt == null)
+            if (pkt == null || pkt.getVersion() != RTCPHeader.VERSION)
             {
                 return pkt;
             }
