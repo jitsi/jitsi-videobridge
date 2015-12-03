@@ -869,6 +869,12 @@ public class Endpoint
      */
     public void expire()
     {
+        System.out.println("ENDPOINT " + getID() + " EXPIRING");
         this.expired = true;
+        Conference conference = getConference();
+        JSONObject endpointExpirationEvent = new JSONObject();
+        endpointExpirationEvent.put("type", "expiration");
+        endpointExpirationEvent.put("endpoint_id", getID());
+        conference.addPushEvent(endpointExpirationEvent);
     }
 }

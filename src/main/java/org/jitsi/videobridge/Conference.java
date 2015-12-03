@@ -21,6 +21,7 @@ import java.lang.ref.*;
 import java.lang.reflect.*;
 import java.text.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
@@ -159,6 +160,14 @@ public class Conference
      */
     private final Map<String, IceUdpTransportManager> transportManagers
         = new HashMap<String, IceUdpTransportManager>();
+
+    /**
+     * Queue to which any push events are added.  These events will be pulled by another
+     *  object who will send them out.
+     * NOTE: this sucks.  this should use whatever mechanism is used to push events out
+     *  the xmpp channel.
+     */
+    private final BlockingQueue<JSONObject> pushEventQueue = new LinkedBlockingQueue();
 
     /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
@@ -1672,5 +1681,23 @@ public class Conference
     public String getName()
     {
         return name;
+    }
+
+    public void addPushEvent(JSONObject event)
+    {
+      System.out.println("CONF ADDING PUSH EVENT");
+      try {
+        pushEventQueue.put(event);
+      } 
+      catch (InterruptedException e)
+      {
+        logger.error("Conference " + getID() + " failed to add push event to queue: " + event.toString());
+      }
+    }
+
+    public JSONObject getPushEvent() throws InterruptedException
+    {
+      System.out.println("CONF GETTING PUSH EVENT");
+      return pushEventQueue.take();
     }
 }
