@@ -215,8 +215,9 @@ public class VideoChannel
             = content.getConference().getVideobridge()
                         .getConfigurationService();
         requestRetransmissions
-            = (cfg != null && cfg.getBoolean(
-                        VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false));
+            = cfg != null
+                && cfg.getBoolean(
+                        VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false);
     }
 
     /**
@@ -1002,16 +1003,24 @@ public class VideoChannel
     @Override
     public void setLastN(Integer lastN)
     {
-        if (this.lastN == lastN)
+        // XXX Comparing Integer references may not be enough to short-circuit
+        // so a more complex comaprison for equality is implemented bellow.
+        if (this.lastN == null)
+        {
+            if (lastN == null)
+                return;
+        }
+        else if (lastN != null && this.lastN.intValue() == lastN.intValue())
+        {
             return;
+        }
 
+        Lock writeLock = lastNSyncRoot.writeLock();
+        List<Endpoint> endpointsEnteringLastN = new LinkedList<>();
         // If the old value was null, even though we may detect endpoints
         // "entering" lastN, they are already being received and so no keyframes
         // are necessary.
         boolean askForKeyframes = this.lastN == null;
-
-        Lock writeLock = lastNSyncRoot.writeLock();
-        List<Endpoint> endpointsEnteringLastN = new LinkedList<>();
 
         writeLock.lock();
         try
@@ -1019,68 +1028,60 @@ public class VideoChannel
             // XXX(gp) question to the lastN guru : if this.lastN == null or
             // this.lastN < 0, do we really want to call lastNEndpointsChanged
             // with an empty (but not null!!) list of endpoints?
-            if (this.lastN != null && this.lastN >= 0)
+            if (this.lastN != null && this.lastN >= 0 && lastN > this.lastN)
             {
-                if (lastN > this.lastN)
+                Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
+                // The pinned endpoint is always in the last N set, if
+                // last N > 0; Count it here.
+                int n = (pinnedEndpoint != null) ? 1 : 0;
+                Endpoint thisEndpoint = getEndpoint();
+
+                // We do not hold any lock on lastNSyncRoot here because it
+                // should be OK for multiple threads to check whether
+                // lastNEndpoints is null and invoke the method to populate it
+                // because (1) the method to populate lastNEndpoints will
+                // acquire the necessary locks to ensure preserving the
+                // correctness of the state of this instance under the
+                // conditions of concurrent access and (2) we do not want to
+                // hold a write lock on lastNSyncRoot while invoking the method
+                // to populate lastNEndpoints because the latter might fire an
+                // event.
+                if (lastNEndpoints == null)
                 {
-                    Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
-                    // The pinned endpoint is always in the last N set, if
-                    // last N > 0; Count it here.
-                    int n = (pinnedEndpoint != null) ? 1 : 0;
-                    Endpoint thisEndpoint = getEndpoint();
+                    // Pretend that the ordered list of Endpoints maintained by
+                    // conferenceSpeechActivity has changed in order to populate
+                    // lastNEndpoints.
+                    speechActivityEndpointsChanged(null);
+                }
 
-                    // We do not hold any lock on lastNSyncRoot here because it
-                    // should be OK for multiple threads to check whether
-                    // lastNEndpoints is null and invoke the method to populate
-                    // it because (1) the method to populate lastNEndpoints will
-                    // acquire the necessary locks to ensure preserving the
-                    // correctness of the state of this instance under the
-                    // conditions of concurrent access and (2) we do not want
-                    // to hold a write lock on lastNSyncRoot while invoking the
-                    // method to populate lastNEndpoints because the latter
-                    // might fire an event.
-                    if (lastNEndpoints == null)
+                if (lastNEndpoints != null)
+                {
+                    for (WeakReference<Endpoint> wr : lastNEndpoints)
                     {
-                        // Pretend that the ordered list of Endpoints maintained
-                        // by conferenceSpeechActivity has changed in order to
-                        // populate lastNEndpoints.
-                        speechActivityEndpointsChanged(null);
-                    }
+                        if (n >= lastN)
+                            break;
 
-                    if (lastNEndpoints != null)
-                    {
-                        for (WeakReference<Endpoint> wr : lastNEndpoints)
+                        Endpoint endpoint = wr.get();
+
+                        if (endpoint != null)
                         {
-                            if (n >= lastN)
-                                break;
+                            if (endpoint.equals(thisEndpoint))
+                                continue;
 
-                            Endpoint endpoint = wr.get();
-
-                            if (endpoint != null)
-                            {
-                                if (endpoint.equals(thisEndpoint))
-                                    continue;
-
-                                // We've already signaled to the client the fact
-                                // that the pinned endpoint has entered the
-                                // lastN set when we handled the
-                                //
-                                //     PINNED_ENDPOINT_PROPERTY_NAME
-                                //
-                                // property change event.
-                                //
-                                // Also, we've already counted it above. So, we
-                                // don't want to either add it in the
-                                // endpointsEnteringLastN or count it here.
-
-                                if (endpoint.equals(pinnedEndpoint))
-                                    continue;
-                            }
-
-                            ++n;
-                            if (n > this.lastN && endpoint != null)
-                                endpointsEnteringLastN.add(endpoint);
+                            // We've already signaled to the client the fact
+                            // that the pinned endpoint has entered the lastN
+                            // set when we handled the
+                            // PINNED_ENDPOINT_PROPERTY_NAME property change
+                            // event. Also, we've already counted it above. So,
+                            // we don't want to either add it in the
+                            // endpointsEnteringLastN or count it here.
+                            if (endpoint.equals(pinnedEndpoint))
+                                continue;
                         }
+
+                        ++n;
+                        if (n > this.lastN && endpoint != null)
+                            endpointsEnteringLastN.add(endpoint);
                     }
                 }
             }
@@ -1094,10 +1095,8 @@ public class VideoChannel
 
         lastNEndpointsChanged(endpointsEnteringLastN);
 
-        if (askForKeyframes)
-        {
+        if (askForKeyframes && !endpointsEnteringLastN.isEmpty())
             getContent().askForKeyframes(new HashSet<>(endpointsEnteringLastN));
-        }
 
         touch(); // It seems this Channel is still active.
     }
@@ -1724,5 +1723,4 @@ public class VideoChannel
             logger.warn(msg);
         }
     }
-
 }

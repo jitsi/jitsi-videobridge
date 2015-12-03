@@ -77,8 +77,7 @@ public class Endpoint
     /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
-    private final List<WeakReference<RtpChannel>> channels
-        = new LinkedList<WeakReference<RtpChannel>>();
+    private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -106,7 +105,7 @@ public class Endpoint
      * SCTP connection bound to this endpoint.
      */
     private WeakReference<SctpConnection> sctpConnection
-        = new WeakReference<SctpConnection>(null);
+        = new WeakReference<>(null);
 
     /**
      * The <tt>selectedEndpointID</tt> SyncRoot.
@@ -144,7 +143,7 @@ public class Endpoint
         if (id == null)
             throw new NullPointerException("id");
 
-        this.weakConference = new WeakReference<Conference>(conference);
+        this.weakConference = new WeakReference<>(conference);
         this.id = id;
     }
 
@@ -197,7 +196,7 @@ public class Endpoint
             }
             if (add)
             {
-                channels.add(new WeakReference<RtpChannel>(channel));
+                channels.add(new WeakReference<>(channel));
                 added = true;
             }
         }
@@ -251,7 +250,7 @@ public class Endpoint
     public List<RtpChannel> getChannels(MediaType mediaType)
     {
         boolean removed = false;
-        List<RtpChannel> channels = new LinkedList<RtpChannel>();
+        List<RtpChannel> channels = new LinkedList<>();
 
         synchronized (this.channels)
         {
@@ -476,7 +475,7 @@ public class Endpoint
         if ("".equals(to))
         {
             // Broadcast message
-            List<Endpoint> endpointSubset = new ArrayList<Endpoint>();
+            List<Endpoint> endpointSubset = new ArrayList<>();
             for (Endpoint endpoint : conf.getEndpoints()) {
                 if (!endpoint.getID().equalsIgnoreCase(getID()))
                 {
@@ -491,7 +490,7 @@ public class Endpoint
             Endpoint ep = conf.getEndpoint(to);
             if (ep != null)
             {
-                List<Endpoint> endpointSubset = new ArrayList<Endpoint>();
+                List<Endpoint> endpointSubset = new ArrayList<>();
                 endpointSubset.add(conf.getEndpoint(to));
                 conf.sendMessageOnDataChannels(msgPayload, endpointSubset);
             }
@@ -557,7 +556,7 @@ public class Endpoint
                 else
                 {
                     this.weakPinnedEndpoint
-                        = new WeakReference<Endpoint>(newPinnedEndpoint);
+                        = new WeakReference<>(newPinnedEndpoint);
                 }
             }
         }
@@ -637,7 +636,7 @@ public class Endpoint
                 else
                 {
                     this.weakSelectedEndpoint
-                        = new WeakReference<Endpoint>(newSelectedEndpoint);
+                        = new WeakReference<>(newSelectedEndpoint);
                 }
             }
         }
@@ -846,8 +845,7 @@ public class Endpoint
                 ? (oldValue != null)
                 : !sctpConnection.equals(oldValue))
         {
-            this.sctpConnection
-                = new WeakReference<SctpConnection>(sctpConnection);
+            this.sctpConnection = new WeakReference<>(sctpConnection);
 
             firePropertyChange(
                     SCTP_CONNECTION_PROPERTY_NAME,

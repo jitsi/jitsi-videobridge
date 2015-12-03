@@ -78,7 +78,7 @@ public class ConferenceSpeechActivity
      */
     private static long parseSSRC(Object obj)
     {
-        long l = -1L;
+        long l;
 
         if (obj == null)
         {
@@ -255,7 +255,7 @@ public class ConferenceSpeechActivity
      */
     public ConferenceSpeechActivity(Conference conference)
     {
-        this.conference = new WeakReference<Conference>(conference);
+        this.conference = new WeakReference<>(conference);
 
         /*
          * The PropertyChangeListener will weakly reference this instance and
@@ -306,8 +306,7 @@ public class ConferenceSpeechActivity
 
                     if (!endpoint.equals(dominantEndpoint))
                     {
-                        this.dominantEndpoint
-                            = new WeakReference<Endpoint>(endpoint);
+                        this.dominantEndpoint = new WeakReference<>(endpoint);
                         maybeStartEventDispatcher = true;
                     }
                 }
@@ -604,23 +603,21 @@ public class ConferenceSpeechActivity
 
                 if (conference == null)
                 {
-                    endpoints = new ArrayList<WeakReference<Endpoint>>();
+                    endpoints = new ArrayList<>();
                 }
                 else
                 {
                     List<Endpoint> conferenceEndpoints
                         = conference.getEndpoints();
 
-                    endpoints
-                        = new ArrayList<WeakReference<Endpoint>>(
-                                conferenceEndpoints.size());
+                    endpoints = new ArrayList<>(conferenceEndpoints.size());
                     for (Endpoint endpoint : conferenceEndpoints)
-                        endpoints.add(new WeakReference<Endpoint>(endpoint));
+                        endpoints.add(new WeakReference<>(endpoint));
                 }
             }
 
             // The return value is the list of Endpoints of this instance.
-            ret = new ArrayList<Endpoint>(endpoints.size());
+            ret = new ArrayList<>(endpoints.size());
             for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
                     i.hasNext();)
             {
@@ -808,12 +805,10 @@ public class ConferenceSpeechActivity
 
             if (endpoints == null)
             {
-                endpoints
-                    = new ArrayList<WeakReference<Endpoint>>(
-                            conferenceEndpoints.size());
+                endpoints = new ArrayList<>(conferenceEndpoints.size());
                 for (Endpoint endpoint : conferenceEndpoints)
                 {
-                    endpoints.add(new WeakReference<Endpoint>(endpoint));
+                    endpoints.add(new WeakReference<>(endpoint));
                 }
                 endpointsChanged = true;
             }
@@ -847,11 +842,11 @@ public class ConferenceSpeechActivity
                  * Add the Endpoints of the conference which are not in this
                  * instance yet.
                  */
-                if (conferenceEndpoints.size() != 0)
+                if (!conferenceEndpoints.isEmpty())
                 {
                     for (Endpoint endpoint : conferenceEndpoints)
                     {
-                        endpoints.add(new WeakReference<Endpoint>(endpoint));
+                        endpoints.add(new WeakReference<>(endpoint));
                     }
                     endpointsChanged = true;
                 }
@@ -936,7 +931,7 @@ public class ConferenceSpeechActivity
          */
         public EventDispatcher(ConferenceSpeechActivity owner)
         {
-            this.owner = new WeakReference<ConferenceSpeechActivity>(owner);
+            this.owner = new WeakReference<>(owner);
         }
 
         /**

@@ -33,7 +33,6 @@ import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.eventadmin.*;
 import org.jitsi.videobridge.pubsub.*;
-import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
@@ -179,8 +178,7 @@ public class Videobridge
      * The <tt>Conference</tt>s of this <tt>Videobridge</tt> mapped by their
      * IDs.
      */
-    private final Map<String, Conference> conferences
-        = new HashMap<String, Conference>();
+    private final Map<String, Conference> conferences = new HashMap<>();
 
     /**
      * Default options passed as second argument to
@@ -1236,19 +1234,17 @@ public class Videobridge
         providerManager.addExtensionProvider(
                 IceUdpTransportPacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider
-                    <IceUdpTransportPacketExtension>(
+                new DefaultPacketExtensionProvider<>(
                         IceUdpTransportPacketExtension.class));
         // Raw UDP <transport>
         providerManager.addExtensionProvider(
                 RawUdpTransportPacketExtension.ELEMENT_NAME,
                 RawUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider
-                    <RawUdpTransportPacketExtension>(
+                new DefaultPacketExtensionProvider<>(
                         RawUdpTransportPacketExtension.class));
 
         PacketExtensionProvider candidatePacketExtensionProvider
-            = new DefaultPacketExtensionProvider<CandidatePacketExtension>(
+            = new DefaultPacketExtensionProvider<>(
                     CandidatePacketExtension.class);
 
         // ICE-UDP <candidate>
@@ -1264,15 +1260,14 @@ public class Videobridge
         providerManager.addExtensionProvider(
                 RtcpmuxPacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<RtcpmuxPacketExtension>(
+                new DefaultPacketExtensionProvider<>(
                         RtcpmuxPacketExtension.class));
 
         // DTLS-SRTP <fingerprint>
         providerManager.addExtensionProvider(
                 DtlsFingerprintPacketExtension.ELEMENT_NAME,
                 DtlsFingerprintPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider
-                    <DtlsFingerprintPacketExtension>(
+                new DefaultPacketExtensionProvider<>(
                         DtlsFingerprintPacketExtension.class));
 
         // PubSub

@@ -65,7 +65,7 @@ public class Conference
     /**
      * The <tt>Content</tt>s of this <tt>Conference</tt>.
      */
-    private final List<Content> contents = new LinkedList<Content>();
+    private final List<Content> contents = new LinkedList<>();
 
     /**
      * An instance used to save information about the endpoints of this
@@ -76,8 +76,7 @@ public class Conference
     /**
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
-    private final List<WeakReference<Endpoint>> endpoints
-        = new LinkedList<WeakReference<Endpoint>>();
+    private final List<WeakReference<Endpoint>> endpoints = new LinkedList<>();
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -158,7 +157,7 @@ public class Conference
      * responsible for its transport.
      */
     private final Map<String, IceUdpTransportManager> transportManagers
-        = new HashMap<String, IceUdpTransportManager>();
+        = new HashMap<>();
 
     /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
@@ -221,13 +220,18 @@ public class Conference
     }
 
     /**
-     * Used to send a message to a subset of endpoints in the call, primary use case
-     *  being a message that has originated from an endpoint (as opposed to a message
-     *  originating from the bridge and being sent to all endpoints in the call, for that
-     *  see broadcastMessageOnDataChannels below
+     * Used to send a message to a subset of endpoints in the call, primary use
+     * case being a message that has originated from an endpoint (as opposed to
+     * a message originating from the bridge and being sent to all endpoints in
+     * the call, for that see broadcastMessageOnDataChannels below
+     *
+     * @param msg
+     * @param endpoints
      */
-    public void sendMessageOnDataChannels(String msg, List<Endpoint> endpoints) {
-        for (Endpoint endpoint : endpoints) {
+    public void sendMessageOnDataChannels(String msg, List<Endpoint> endpoints)
+    {
+        for (Endpoint endpoint : endpoints)
+        {
             try
             {
                 endpoint.sendMessageOnDataChannel(msg);
@@ -241,7 +245,7 @@ public class Conference
 
 
     /**
-     * Broadcasts string message to al participants over default data channel.
+     * Broadcasts string message to all participants over default data channel.
      *
      * @param msg the message to be advertised across conference peers.
      */
@@ -797,7 +801,7 @@ public class Conference
                 // Conference and will unregister itself from the endpoint
                 // sooner or later.
                 endpoint.addPropertyChangeListener(propertyChangeListener);
-                endpoints.add(new WeakReference<Endpoint>(endpoint));
+                endpoints.add(new WeakReference<>(endpoint));
                 changed = true;
 
                 EventAdmin eventAdmin = videobridge.getEventAdmin();
@@ -861,8 +865,7 @@ public class Conference
 
         synchronized (this.endpoints)
         {
-            endpoints = new ArrayList<Endpoint>(this.endpoints.size());
-
+            endpoints = new ArrayList<>(this.endpoints.size());
             for (Iterator<WeakReference<Endpoint>> i
                         = this.endpoints.iterator();
                     i.hasNext();)
@@ -1554,8 +1557,7 @@ public class Conference
                     {
                         if (endpointsToAskForKeyframes == null)
                         {
-                            endpointsToAskForKeyframes
-                                = new HashSet<Endpoint>();
+                            endpointsToAskForKeyframes = new HashSet<>();
                         }
                         endpointsToAskForKeyframes.addAll(
                                 channelEndpointsToAskForKeyframes);
@@ -1659,6 +1661,7 @@ public class Conference
 
     /**
      * Sets the conference name.
+     *
      * @param name the new name.
      */
     public void setName(String name)
@@ -1668,6 +1671,8 @@ public class Conference
 
     /**
      * Gets the conference name.
+     *
+     * @return the conference name
      */
     public String getName()
     {
