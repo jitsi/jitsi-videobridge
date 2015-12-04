@@ -241,14 +241,17 @@ public class SimulcastEngine
      */
     class MyRTPTransformer extends SinglePacketTransformer
     {
+        /**
+         * Ctor.
+         */
+        public MyRTPTransformer()
+        {
+            super(RTPPacketPredicate.instance);
+        }
+
         @Override
         public RawPacket transform(RawPacket pkt)
         {
-            if (pkt == null || pkt.getVersion() != RTPHeader.VERSION)
-            {
-                return pkt;
-            }
-
             // Drops or accepts RTP packets depending on which simulcast
             // sub-stream is currently being sent. This is managed by the
             // <tt>SwitchingSimulcastSender</tt>.
@@ -273,10 +276,7 @@ public class SimulcastEngine
             // Pass the received <tt>RawPacket</tt> down to the
             // <tt>SimulcastReceiver</tt> and let it do its thing (updates the
             // <tt>SimulcastLayer</tt>s that we receive).
-            if (p != null && p.getVersion() == RTPHeader.VERSION)
-            {
-                simulcastReceiver.accepted(p);
-            }
+            simulcastReceiver.accepted(p);
 
             return p;
         }
@@ -287,6 +287,14 @@ public class SimulcastEngine
      */
     class MyRTCPTransformer extends SinglePacketTransformer
     {
+        /**
+         * Ctor.
+         */
+        public MyRTCPTransformer()
+        {
+            super(RTCPPacketPredicate.instance);
+        }
+
         /**
          * The RTCP packet parser that parses RTCP packets from
          * <tt>RawPacket</tt>s.
@@ -303,11 +311,6 @@ public class SimulcastEngine
         public RawPacket transform(RawPacket pkt)
         {
             // Update octets and packets sent in SRs.
-            if (pkt == null || pkt.getVersion() != RTCPHeader.VERSION)
-            {
-                return pkt;
-            }
-
             RTCPCompoundPacket inPacket;
             try
             {
