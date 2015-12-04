@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
-import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
 
@@ -31,13 +30,6 @@ import java.util.*;
 public class RtpChannelTransformEngine
     extends TransformEngineChain
 {
-    /**
-     * The <tt>Logger</tt> used by the <tt>RtpChannelTransformEngine</tt> class
-     * and its instances to print debug information.
-     */
-    private static final Logger logger
-        = Logger.getLogger(RtpChannelTransformEngine.class);
-
     /**
      * The payload type number for RED packets. We should set this dynamically
      * but it is not clear exactly how to do it, because it isn't used on this

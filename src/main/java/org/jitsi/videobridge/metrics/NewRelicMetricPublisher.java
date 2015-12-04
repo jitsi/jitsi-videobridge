@@ -18,8 +18,6 @@ package org.jitsi.videobridge.metrics;
 import com.newrelic.api.agent.NewRelic;
 import java.util.*;
 
-import org.jitsi.util.*;
-
 /**
  * A reference implementation of MetricServicePublisher for
  * <a href="http://www.NewRelic.com">NewRelic.com</a>
@@ -30,12 +28,6 @@ import org.jitsi.util.*;
 public class NewRelicMetricPublisher
     implements MetricServicePublisher
 {
-    /**
-     * Our logger.
-     */
-    private static final Logger logger
-        = Logger.getLogger(NewRelicMetricPublisher.class);
-
     /**
      * The transaction map.
      */
