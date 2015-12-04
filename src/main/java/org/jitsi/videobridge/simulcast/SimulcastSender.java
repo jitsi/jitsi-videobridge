@@ -273,7 +273,7 @@ public class SimulcastSender
             }
 
             SimulcastLayer[] layers = simulcastReceiver.getSimulcastLayers();
-            if (layers == null || layers.length != 0)
+            if (layers == null || layers.length == 0)
             {
                 logWarn("The remote endpoint hasn't signaled simulcast. " +
                         "This simulcastSender is now disabled.");
