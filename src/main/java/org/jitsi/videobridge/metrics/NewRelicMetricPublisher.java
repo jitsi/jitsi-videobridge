@@ -43,7 +43,7 @@ public class NewRelicMetricPublisher
      */
     public NewRelicMetricPublisher()
     {
-        this.transactions = new LinkedHashMap<String, Map<String, Long>>();
+        this.transactions = new LinkedHashMap<>();
     }
 
     /**
@@ -171,7 +171,7 @@ public class NewRelicMetricPublisher
         Map<String, Long> store = this.transactions.get(transactionType);
         if (store == null)
         {
-            store = new LinkedHashMap<String, Long>();
+            store = new LinkedHashMap<>();
             this.transactions.put(transactionType, store);
         }
         return store;

@@ -49,8 +49,7 @@ public class EndpointRecorder
      * Map between an endpoint ID and the <tt>EndpointInfo</tt> structure
      * containing information about it.
      */
-    private final Map<String, EndpointInfo> endpoints
-        = new HashMap<String, EndpointInfo>();
+    private final Map<String, EndpointInfo> endpoints = new HashMap<>();
 
     /**
      * Tries to initialize an <tt>EndpointRecorder</tt> which is to write

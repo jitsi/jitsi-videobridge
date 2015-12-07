@@ -148,8 +148,7 @@ public class VideoChannelLastNAdaptor
 
             if (logger.isDebugEnabled())
             {
-                Map<String, Object> map
-                        = new HashMap<String, Object>(4);
+                Map<String, Object> map = new HashMap<>(4);
                 map.put("self", thisEndpoint);
                 map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
                 map.put("lastN", lastN);
@@ -199,8 +198,7 @@ public class VideoChannelLastNAdaptor
         {
             if (logger.isDebugEnabled())
             {
-                Map<String, Object> map
-                        = new HashMap<String, Object>(4);
+                Map<String, Object> map = new HashMap<>(4);
                 map.put("self", thisEndpoint);
                 map.put("numEndpointsThatFitIn", numEndpointsThatFitIn);
                 map.put("lastN", lastN);

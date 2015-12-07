@@ -78,7 +78,7 @@ public class RewritingSendMode
         {
             // There's a next simulcast stream. Let's see if we can switch to
             // it.
-            weakCurrent = new WeakReference<SimulcastStream>(next);
+            weakCurrent = new WeakReference<>(next);
             weakNext = null;
             return true;
         }
@@ -121,11 +121,11 @@ public class RewritingSendMode
         simStream.askForKeyframe();
         if (urgent || current == null)
         {
-            weakCurrent = new WeakReference<SimulcastStream>(simStream);
+            weakCurrent = new WeakReference<>(simStream);
         }
         else
         {
-            weakNext = new WeakReference<SimulcastStream>(simStream);
+            weakNext = new WeakReference<>(simStream);
         }
     }
 

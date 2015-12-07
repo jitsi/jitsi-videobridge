@@ -149,8 +149,7 @@ public class SctpConnection
     /**
      * Data channels mapped by SCTP stream identified(sid).
      */
-    private final Map<Integer,WebRtcDataStream> channels
-        = new HashMap<Integer,WebRtcDataStream>();
+    private final Map<Integer,WebRtcDataStream> channels = new HashMap<>();
 
     /**
      * Debug ID used to distinguish SCTP sockets in packet logs.
@@ -165,7 +164,7 @@ public class SctpConnection
      * accord with the time it takes to expire a <tt>Channel</tt>.
      */
     private final AsyncExecutor<Runnable> eventDispatcher
-        = new AsyncExecutor<Runnable>(15, TimeUnit.MILLISECONDS);
+        = new AsyncExecutor<>(15, TimeUnit.MILLISECONDS);
 
     /**
      * Datagram socket for ICE/UDP layer.
@@ -176,8 +175,7 @@ public class SctpConnection
      * List of <tt>WebRtcDataStreamListener</tt>s that will be notified whenever
      * new WebRTC data channel is opened.
      */
-    private final List<WebRtcDataStreamListener> listeners
-        = new ArrayList<WebRtcDataStreamListener>();
+    private final List<WebRtcDataStreamListener> listeners = new ArrayList<>();
 
     /**
      * Remote SCTP port.

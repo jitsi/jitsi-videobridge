@@ -97,8 +97,7 @@ public class SimulcastSender
 
         // We don't own the receiver, keep a weak reference so that it can be
         // garbage collected.
-        this.weakSimulcastReceiver
-            = new WeakReference<SimulcastReceiver>(simulcastReceiver);
+        this.weakSimulcastReceiver = new WeakReference<>(simulcastReceiver);
     }
 
     /**

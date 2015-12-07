@@ -52,7 +52,7 @@ class VideobridgeExpireThread
      */
     public VideobridgeExpireThread(Videobridge videobridge)
     {
-        this.videobridge = new WeakReference<Videobridge>(videobridge);
+        this.videobridge = new WeakReference<>(videobridge);
 
         setDaemon(true);
         setName(getClass().getName());

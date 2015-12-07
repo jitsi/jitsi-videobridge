@@ -51,7 +51,6 @@ final class JSONDeserializer
             JSONObject jsonObject,
             AbstractPacketExtension abstractPacketExtension)
     {
-        @SuppressWarnings("unchecked")
         Iterator<Map.Entry<Object,Object>> i = jsonObject.entrySet().iterator();
 
         while (i.hasNext())
@@ -515,7 +514,6 @@ final class JSONDeserializer
     {
         if (parameters != null)
         {
-            @SuppressWarnings("unchecked")
             Iterator<Map.Entry<Object,Object>> i
                 = parameters.entrySet().iterator();
 
@@ -792,7 +790,7 @@ final class JSONDeserializer
                 {
                     JSONArray sourcesJSONArray = (JSONArray) sourcesObject;
                     List<SourcePacketExtension> sourcePacketExtensions
-                            = new ArrayList<SourcePacketExtension>();
+                        = new ArrayList<>();
 
                     for (Object source : sourcesJSONArray)
                     {

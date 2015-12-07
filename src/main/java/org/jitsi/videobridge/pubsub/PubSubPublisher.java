@@ -40,7 +40,7 @@ public class PubSubPublisher
      * <tt>PubSubPublisher</tt> instance responsible for it.
      */
     private static final Map<String, PubSubPublisher> instances
-        = new HashMap<String, PubSubPublisher>();
+        = new HashMap<>();
 
     /**
      * The <tt>Logger</tt> used by the <tt>PubSubPublisher</tt> class and its
@@ -125,31 +125,27 @@ public class PubSubPublisher
     /**
      * Listeners for response events.
      */
-    private List<PubSubResponseListener> listeners
-        = new LinkedList<PubSubResponseListener>();
+    private List<PubSubResponseListener> listeners = new LinkedList<>();
 
     /**
      * List of the accessible PubSub nodes.
      */
-    private List<String> nodes = new LinkedList<String>();
+    private List<String> nodes = new LinkedList<>();
 
     /**
      * Map with the requests for configuring a node.
      */
-    private Map<String, String> pendingConfigureRequests
-        = new HashMap<String, String>();
+    private Map<String, String> pendingConfigureRequests = new HashMap<>();
 
     /**
      * Map with the requests for node creation.
      */
-    private Map<String, String> pendingCreateRequests
-        = new HashMap<String, String>();
+    private Map<String, String> pendingCreateRequests = new HashMap<>();
 
     /**
      * Map with the publish requests.
      */
-    private Map<String, String> pendingPublishRequests
-        = new HashMap<String, String>();
+    private Map<String, String> pendingPublishRequests = new HashMap<>();
 
     /**
      * The name of the PubSub service.
@@ -469,11 +465,9 @@ public class PubSubPublisher
 
         packet.setPacketID(packetID);
 
-        PayloadItem<PacketExtension> item
-            = new PayloadItem<PacketExtension>(itemId, ext);
+        PayloadItem<PacketExtension> item = new PayloadItem<>(itemId, ext);
 
-        packet.addExtension(
-            new PublishItem<PayloadItem<PacketExtension>>(nodeName, item));
+        packet.addExtension(new PublishItem<>(nodeName, item));
         pendingPublishRequests.put(packetID, nodeName);
         timeoutTimer.schedule(
                 new TimerTask()

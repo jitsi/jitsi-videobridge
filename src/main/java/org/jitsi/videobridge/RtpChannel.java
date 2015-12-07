@@ -223,7 +223,7 @@ public class RtpChannel
      * The FID (flow ID) groupings used by the remote side of this
      * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
      */
-    protected Map<Long,Long> fidSourceGroups = new HashMap<Long, Long>();
+    protected Map<Long,Long> fidSourceGroups = new HashMap<>();
 
     /**
      * The payload type number configured for RTX (RFC-4588) for this channel,
@@ -1702,7 +1702,7 @@ public class RtpChannel
     /**
      * The <tt>Set</tt> of the SSRCs that this <tt>RtpChannel</tt> has signaled.
      */
-    private Set<Integer> signaledSSRCs = new HashSet<Integer>();
+    private Set<Integer> signaledSSRCs = new HashSet<>();
 
     /**
      * Sets the <tt>Set</tt> of the SSRCs that this <tt>RtpChannel</tt> has
@@ -1720,10 +1720,10 @@ public class RtpChannel
             return;
         }
 
-        Set<Integer> oldSignaledSSRCs = new HashSet<Integer>(signaledSSRCs);
+        Set<Integer> oldSignaledSSRCs = new HashSet<>(signaledSSRCs);
 
         // Build the set of the newly signaled SSRCs.
-        Set<Integer> newSignaledSSRCs = new HashSet<Integer>();
+        Set<Integer> newSignaledSSRCs = new HashSet<>();
         for (SourcePacketExtension source : sources)
         {
             int ssrc = (int) source.getSSRC();
@@ -1734,7 +1734,7 @@ public class RtpChannel
         }
 
         // Add the added SSRCs.
-        Set<Integer> addedSSRCs = new HashSet<Integer>(newSignaledSSRCs);
+        Set<Integer> addedSSRCs = new HashSet<>(newSignaledSSRCs);
         addedSSRCs.removeAll(oldSignaledSSRCs);
         if (!addedSSRCs.isEmpty())
         {

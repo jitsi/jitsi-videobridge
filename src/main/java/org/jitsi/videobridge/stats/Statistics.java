@@ -56,7 +56,7 @@ public abstract class Statistics
     /**
      * Map of the names of the statistics and their values.
      */
-    private final Map<String,Object> stats = new HashMap<String,Object>();
+    private final Map<String,Object> stats = new HashMap<>();
 
     /**
      * Generates/updates the statistics represented by this instance.
@@ -229,7 +229,7 @@ public abstract class Statistics
         lock.lock();
         try
         {
-            stats = new HashMap<String,Object>(this.stats);
+            stats = new HashMap<>(this.stats);
         }
         finally
         {

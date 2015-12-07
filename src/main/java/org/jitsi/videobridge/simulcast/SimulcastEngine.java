@@ -326,8 +326,7 @@ public class SimulcastEngine
                 return null;
             }
 
-            Tracked<RTCPCompoundPacket> trackedRTCP
-                = new Tracked<RTCPCompoundPacket>(inPacket);
+            Tracked<RTCPCompoundPacket> trackedRTCP = new Tracked<>(inPacket);
 
             srGateway.gateway(trackedRTCP);
 

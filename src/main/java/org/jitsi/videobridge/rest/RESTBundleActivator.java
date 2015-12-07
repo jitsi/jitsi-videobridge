@@ -160,7 +160,7 @@ public class RESTBundleActivator
             Server server)
         throws Exception
     {
-        List<Handler> handlers = new ArrayList<Handler>();
+        List<Handler> handlers = new ArrayList<>();
 
         // The /colibri target of the REST API.
         Handler colibriHandler

@@ -366,8 +366,7 @@ class HandlerImpl
         else
         {
             Conference[] conferences = videobridge.getConferences();
-            List<ColibriConferenceIQ> conferenceIQs
-                = new ArrayList<ColibriConferenceIQ>();
+            List<ColibriConferenceIQ> conferenceIQs = new ArrayList<>();
 
             for (Conference conference : conferences)
             {

@@ -121,7 +121,7 @@ public class MetricLoggingHandler
 
     public MetricLoggingHandler(ConfigurationService config)
     {
-        this.publishers = new LinkedList<MetricServicePublisher>();
+        this.publishers = new LinkedList<>();
         List<String> propNames
             = config.getPropertyNamesByPrefix(
                     "org.jitsi.videobridge.metricservice.",
@@ -138,8 +138,8 @@ public class MetricLoggingHandler
                     String serviceClassName = config.getString(propName);
                     Class<?> serviceClass = Class.forName(serviceClassName);
                     MetricServicePublisher publisher
-                        = (MetricServicePublisher) serviceClass.getConstructor()
-                            .newInstance();
+                        = (MetricServicePublisher)
+                            serviceClass.getConstructor().newInstance();
                     this.publishers.add(publisher);
                 }
                 catch (Throwable t)

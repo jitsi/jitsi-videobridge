@@ -62,7 +62,7 @@ public abstract class TransportManager
     /**
      * The <tt>Channel</tt> which has initialized this instance
      */
-    private final List<Channel> channels = new LinkedList<Channel>();
+    private final List<Channel> channels = new LinkedList<>();
 
     /**
      * Initializes a new <tt>TransportManager</tt> instance.

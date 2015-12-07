@@ -56,7 +56,7 @@ public class Content
     /**
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
      */
-    private final Map<String,Channel> channels = new HashMap<String,Channel>();
+    private final Map<String,Channel> channels = new HashMap<>();
 
     /**
      * The <tt>Conference</tt> which has initialized this <tt>Content</tt>.
@@ -984,10 +984,8 @@ public class Content
                 RTPTranslator rtpTranslator,
                 RTPTranslator.WriteFilter writeFilter)
         {
-            this.rtpTranslator
-                = new WeakReference<RTPTranslator>(rtpTranslator);
-            this.writeFilter
-                = new WeakReference<RTPTranslator.WriteFilter>(writeFilter);
+            this.rtpTranslator = new WeakReference<>(rtpTranslator);
+            this.writeFilter = new WeakReference<>(writeFilter);
 
             rtpTranslator.addWriteFilter(this);
         }

@@ -51,8 +51,7 @@ public class RtxTransformer
     /**
      * Maps an RTX SSRC to the last RTP sequence number sent with that SSRC.
      */
-    private final Map<Long, Integer> rtxSequenceNumbers
-            = new HashMap<Long,Integer>();
+    private final Map<Long, Integer> rtxSequenceNumbers = new HashMap<>();
 
     /**
      * Initializes a new <tt>RtxTransformer</tt> with a specific

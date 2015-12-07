@@ -48,7 +48,7 @@ public class SimulcastSenderManager
      * don't own).
      */
     private final Map<SimulcastReceiver, SimulcastSender> senders
-        = new WeakHashMap<SimulcastReceiver, SimulcastSender>();
+        = new WeakHashMap<>();
 
     /**
      * Holds the override simulcast stream order for all the senders that this

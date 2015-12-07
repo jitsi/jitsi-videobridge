@@ -388,7 +388,7 @@ public class SwitchingSendMode
                 {
                 }
 
-                this.weakCurrent = new WeakReference<SimulcastStream>(next);
+                this.weakCurrent = new WeakReference<>(next);
                 this.weakNext = null;
 
                 // Since the currently received simulcast stream has changed,
@@ -411,7 +411,7 @@ public class SwitchingSendMode
                 // dropped), then continue streaming the previous simulcast
                 // stream for a short period of time while the client receives
                 // adjusts its video.
-                this.weakNext = new WeakReference<SimulcastStream>(next);
+                this.weakNext = new WeakReference<>(next);
 
                 // Since the currently received simulcast stream has changed,
                 // reset the seenCurrent counter.
@@ -685,8 +685,7 @@ public class SwitchingSendMode
             {
                 synchronized (sendStreamsSyncRoot)
                 {
-                    this.weakOverride
-                        = new WeakReference<SimulcastStream>(override);
+                    this.weakOverride = new WeakReference<>(override);
                     override.askForKeyframe();
                     this.simulcastStreamsChanged(override);
                 }
@@ -725,7 +724,8 @@ public class SwitchingSendMode
     static class CyclicCounters
     {
         private final Map<Integer, CyclicCounter> instances
-            = new ConcurrentHashMap<Integer, CyclicCounter>();
+            = new ConcurrentHashMap<>();
+
         private Lock createLock = new ReentrantLock();
 
         CyclicCounter getOrCreate(Integer key, int maxVal) {

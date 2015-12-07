@@ -912,8 +912,7 @@ public class IceUdpTransportManager
 
         if (!dfpes.isEmpty())
         {
-            Map<String, String> remoteFingerprints
-                = new LinkedHashMap<String, String>();
+            Map<String, String> remoteFingerprints = new LinkedHashMap<>();
 
             for (DtlsFingerprintPacketExtension dfpe : dfpes)
             {

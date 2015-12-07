@@ -109,7 +109,7 @@ public class SimulcastReceiver
      * paused/stopped {@code SimulcastStream}s by counting (video) frames.
      */
     private final List<SimulcastStream> simulcastStreamFrameHistory
-        = new LinkedList<SimulcastStream>();
+        = new LinkedList<>();
 
     /**
      * Ctor.
@@ -358,7 +358,7 @@ public class SimulcastReceiver
 
                 if (logger.isDebugEnabled())
                 {
-                    Map<String,Object> map = new HashMap<String,Object>(3);
+                    Map<String,Object> map = new HashMap<>(3);
 
                     map.put("e", e);
                     map.put("newEndpoint", newEndpoint);

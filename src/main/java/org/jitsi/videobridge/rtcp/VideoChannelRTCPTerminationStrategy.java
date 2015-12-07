@@ -58,6 +58,6 @@ public abstract class VideoChannelRTCPTerminationStrategy
             return;
         }
 
-        this.weakVideoChannel = new WeakReference<VideoChannel>(vc);
+        this.weakVideoChannel = new WeakReference<>(vc);
     }
 }
