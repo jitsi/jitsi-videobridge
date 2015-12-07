@@ -1478,14 +1478,14 @@ public class VideoChannel
             return;
         }
 
-        // Setup simulcast layers from source groups.
+        // Setup simulcast streams from source groups.
         SimulcastEngine simulcastEngine
             = getTransformEngine().getSimulcastEngine();
 
-        Map<Long, SimulcastLayer> ssrc2layer = new HashMap<>();
+        Map<Long, SimulcastStream> ssrc2stream = new HashMap<>();
 
-        // Build the simulcast layers.
-        SimulcastLayer[] layers = null;
+        // Build the simulcast streams.
+        SimulcastStream[] simulcastStreams = null;
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
         {
             List<SourcePacketExtension> sources = sourceGroup.getSources();
@@ -1498,32 +1498,33 @@ public class VideoChannel
             }
 
             // sources are in low to high order.
-            layers = new SimulcastLayer[sources.size()];
+            simulcastStreams = new SimulcastStream[sources.size()];
             for (int i = 0; i < sources.size(); i++)
             {
                 SourcePacketExtension source = sources.get(i);
                 Long primarySSRC = source.getSSRC();
-                SimulcastLayer simulcastLayer = new SimulcastLayer(
+                SimulcastStream simulcastStream = new SimulcastStream(
                     simulcastEngine.getSimulcastReceiver(), primarySSRC, i);
 
-                // Add the layer to the reverse map.
-                ssrc2layer.put(primarySSRC, simulcastLayer);
+                // Add the stream to the reverse map.
+                ssrc2stream.put(primarySSRC, simulcastStream);
 
-                // Add the layer to the sorted set.
-                layers[i] = simulcastLayer;
+                // Add the stream to the sorted set.
+                simulcastStreams[i] = simulcastStream;
             }
 
         }
 
         // FID groups have been saved in RtpChannel. Make sure any changes are
-        // propagated to the appropriate SimulcastLayer-s.
+        // propagated to the appropriate SimulcastStream-s.
         for (Map.Entry<Long, Long> entry : this.fidSourceGroups.entrySet())
         {
-            SimulcastLayer simulcastLayer = ssrc2layer.get(entry.getKey());
-            simulcastLayer.setRTXSSRC(entry.getValue());
+            SimulcastStream simulcastStream = ssrc2stream.get(entry.getKey());
+            simulcastStream.setRTXSSRC(entry.getValue());
         }
 
-        simulcastEngine.getSimulcastReceiver().setSimulcastLayers(layers);
+        simulcastEngine
+            .getSimulcastReceiver().setSimulcastStreams(simulcastStreams);
     }
 
     /**
@@ -1635,13 +1636,13 @@ public class VideoChannel
             return;
         }
 
-        SimulcastLayer[] layers
-            = sim.getSimulcastReceiver().getSimulcastLayers();
+        SimulcastStream[] streams
+            = sim.getSimulcastReceiver().getSimulcastStreams();
 
-        if (layers == null || layers.length == 0)
+        if (streams == null || streams.length == 0)
         {
             logDebug("Can't update our view of the peer video channel because" +
-                    " the peer doesn't have any simulcast layers.");
+                    " the peer doesn't have any simulcast streams.");
             return;
         }
 
@@ -1649,10 +1650,10 @@ public class VideoChannel
         final Set<Integer> ssrcGroup = new HashSet<>();
         final Map<Integer, Integer> rtxGroups = new HashMap<>();
 
-        for (SimulcastLayer layer : layers)
+        for (SimulcastStream stream : streams)
         {
-            int primarySSRC = (int) layer.getPrimarySSRC();
-            int rtxSSRC = (int) layer.getRTXSSRC();
+            int primarySSRC = (int) stream.getPrimarySSRC();
+            int rtxSSRC = (int) stream.getRTXSSRC();
 
             ssrcGroup.add(primarySSRC);
 
@@ -1662,9 +1663,9 @@ public class VideoChannel
             }
         }
 
-        SimulcastLayer baseLayer = layers[0];
-        final Integer ssrcTargetPrimary = (int) baseLayer.getPrimarySSRC();
-        final Integer ssrcTargetRTX = (int) baseLayer.getRTXSSRC();
+        SimulcastStream baseStream = streams[0];
+        final Integer ssrcTargetPrimary = (int) baseStream.getPrimarySSRC();
+        final Integer ssrcTargetRTX = (int) baseStream.getRTXSSRC();
 
         // Update the SSRC rewriting engine from the media stream state.
         final Map<Integer, Byte> ssrc2fec = new HashMap<>();

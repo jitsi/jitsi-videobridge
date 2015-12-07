@@ -22,11 +22,11 @@ import org.jitsi.videobridge.simulcast.*;
 import java.lang.ref.*;
 
 /**
- * The <tt>RewritingSendMode</tt> implements the layers rewriting mode in which
+ * The <tt>RewritingSendMode</tt> implements the streams rewriting mode in which
  * the endpoint receiving the simulcast that we send it is not aware of all the
- * simulcast layer SSRCs and it does not manage the switching at the client
- * side. The receiving endpoint is not notified about changes in the layers that
- * it receives.
+ * simulcast stream SSRCs and it does not manage the switching at the client
+ * side. The receiving endpoint is not notified about changes in the streams
+ * that it receives.
  *
  * @author George Politis
  */
@@ -34,19 +34,19 @@ public class RewritingSendMode
     extends SendMode
 {
     /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that is
+     * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
      * currently being received.
      */
-    private WeakReference<SimulcastLayer> weakCurrent;
+    private WeakReference<SimulcastStream> weakCurrent;
 
     /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that will be
+     * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
      * (possibly) received next.
      */
-    private WeakReference<SimulcastLayer> weakNext;
+    private WeakReference<SimulcastStream> weakNext;
 
     /**
-     * The <tt>Logger</tt> used by the <tt>ReceivingLayers</tt> class and its
+     * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
@@ -73,17 +73,17 @@ public class RewritingSendMode
             return false;
         }
 
-        SimulcastLayer next = getNext();
+        SimulcastStream next = getNext();
         if (next != null && next.match(pkt) && next.isKeyFrame(pkt))
         {
             // There's a next simulcast stream. Let's see if we can switch to
             // it.
-            weakCurrent = new WeakReference<SimulcastLayer>(next);
+            weakCurrent = new WeakReference<SimulcastStream>(next);
             weakNext = null;
             return true;
         }
 
-        SimulcastLayer current = getCurrent();
+        SimulcastStream current = getCurrent();
         if (current != null && current.match(pkt))
         {
             return true;
@@ -93,17 +93,17 @@ public class RewritingSendMode
     }
 
     @Override
-    public void receive(SimulcastLayer simStream, boolean urgent)
+    public void receive(SimulcastStream simStream, boolean urgent)
     {
-        SimulcastLayer current = getCurrent();
-        SimulcastLayer next = getNext();
+        SimulcastStream current = getCurrent();
+        SimulcastStream next = getNext();
 
         if (current == simStream || next == simStream)
         {
             if (logger.isDebugEnabled())
             {
                 logDebug("order-" + simStream.getOrder()
-                        + " layer is already the target.");
+                        + " stream is already the target.");
             }
 
             return;
@@ -121,11 +121,11 @@ public class RewritingSendMode
         simStream.askForKeyframe();
         if (urgent || current == null)
         {
-            weakCurrent = new WeakReference<SimulcastLayer>(simStream);
+            weakCurrent = new WeakReference<SimulcastStream>(simStream);
         }
         else
         {
-            weakNext = new WeakReference<SimulcastLayer>(simStream);
+            weakNext = new WeakReference<SimulcastStream>(simStream);
         }
     }
 
@@ -150,24 +150,24 @@ public class RewritingSendMode
     }
 
     /**
-     * Gets the <tt>SimulcastLayer</tt> that is currently being received.
+     * Gets the <tt>SimulcastStream</tt> that is currently being received.
      *
      * @return
      */
-    public SimulcastLayer getCurrent()
+    public SimulcastStream getCurrent()
     {
-        WeakReference<SimulcastLayer> wr = this.weakCurrent;
+        WeakReference<SimulcastStream> wr = this.weakCurrent;
         return (wr != null) ? wr.get() : null;
     }
 
     /**
-     * Gets the <tt>SimulcastLayer</tt> that was previously being received.
+     * Gets the <tt>SimulcastStream</tt> that was previously being received.
      *
      * @return
      */
-    public SimulcastLayer getNext()
+    public SimulcastStream getNext()
     {
-        WeakReference<SimulcastLayer> wr = this.weakNext;
+        WeakReference<SimulcastStream> wr = this.weakNext;
         return (wr != null) ? wr.get() : null;
     }
 }

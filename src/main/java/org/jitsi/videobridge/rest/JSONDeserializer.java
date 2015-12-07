@@ -147,7 +147,7 @@ final class JSONDeserializer
             Object simulcastMode
                     = channel.get(
                     ColibriConferenceIQ.Channel.SIMULCAST_MODE_ATTR_NAME);
-            Object receivingSimulcastLayer
+            Object receivingSimulcastStream
                 = channel.get(
                         ColibriConferenceIQ.Channel.RECEIVING_SIMULCAST_LAYER);
             Object payloadTypes = channel.get(JSONSerializer.PAYLOAD_TYPES);
@@ -188,18 +188,18 @@ final class JSONDeserializer
                 channelIQ.setSimulcastMode(
                         SimulcastMode.fromString(simulcastMode.toString()));
             }
-            // receivingSimulcastLayer
-            if (receivingSimulcastLayer != null)
+            // receivingSimulcastStream
+            if (receivingSimulcastStream != null)
             {
                 Integer i;
 
-                if (receivingSimulcastLayer instanceof Integer)
-                    i = (Integer) receivingSimulcastLayer;
-                else if (receivingSimulcastLayer instanceof Number)
+                if (receivingSimulcastStream instanceof Integer)
+                    i = (Integer) receivingSimulcastStream;
+                else if (receivingSimulcastStream instanceof Number)
                     i = Integer.valueOf(
-                            ((Number) receivingSimulcastLayer).intValue());
+                            ((Number) receivingSimulcastStream).intValue());
                 else
-                    i = Integer.valueOf(receivingSimulcastLayer.toString());
+                    i = Integer.valueOf(receivingSimulcastStream.toString());
                 channelIQ.setReceivingSimulcastLayer(i);
             }
             // payloadTypes

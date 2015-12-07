@@ -271,7 +271,7 @@ public class BitrateController
                 SimulcastEngine simulcastEngine
                     = vc.getTransformEngine().getSimulcastEngine();
                 if (mySM != null && simulcastEngine != null
-                        && simulcastEngine.getSimulcastReceiver().hasLayers())
+                        && simulcastEngine.getSimulcastReceiver().isSimulcastSignaled())
                 {
                     // TODO we need a more general way for this
                 }

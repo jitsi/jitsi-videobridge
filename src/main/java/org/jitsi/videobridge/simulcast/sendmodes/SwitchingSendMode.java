@@ -31,11 +31,11 @@ import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.*;
 
 /**
- * The <tt>SwitchingSendMode</tt> implements the switching layers mode in which
- * the endpoint receiving the simulcast that we send it is aware of all the
- * simulcast layer SSRCs and it manages the switching at the client side. The
- * receiving endpoint is notified about changes in the layers that it receives
- * through data channel messages.
+ * The <tt>SwitchingSendMode</tt> implements the switching simulcast streams
+ * mode in which the endpoint receiving the simulcast that we send it is aware
+ * of all the simulcast stream SSRCs and it manages the switching at the
+ * client side. The receiving endpoint is notified about changes in the
+ * simulcast streams that it receives through data channel messages.
  *
  * @author George Politis
  */
@@ -43,15 +43,16 @@ public class SwitchingSendMode
     extends SendMode
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>ReceivingLayers</tt> class and its
+     * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
             = Logger.getLogger(SwitchingSendMode.class);
 
     /**
-     * Defines the default value of how many packets of the next layer must
-     * be seen before switching to that layer. Also see <tt>minNextSeen</tt>.
+     * Defines the default value of how many packets of the next simulcast
+     * stream must be seen before switching to that stream. Also see
+     * <tt>minNextSeen</tt>.
      */
     private static int MIN_NEXT_SEEN_DEFAULT = 125;
 
@@ -76,41 +77,43 @@ public class SwitchingSendMode
     private final CyclicCounters dropped = new CyclicCounters();
 
     /**
-     * The sync root object protecting the access to the simulcast layers.
+     * The sync root object protecting the access to the simulcast streams.
      */
-    private final Object sendLayersSyncRoot = new Object();
+    private final Object sendStreamsSyncRoot = new Object();
 
     /**
-     * Defines how many packets of the next layer must be seen before switching
-     * to that layer. This value is appropriate for the base layer and needs to
-     * be adjusted for use with upper layers, if one wants to achieve
-     * (approximately) the same timeout for layers of different order.
+     * Defines how many packets of the next simulcast stream must be seen before
+     * switching to that stream. This value is appropriate for the base stream
+     * and needs to be adjusted for use with upper streams, if one wants to
+     * achieve (approximately) the same timeout for simulcast streams of
+     * different order.
      */
     private int minNextSeen = MIN_NEXT_SEEN_DEFAULT;
 
     /**
-     * Holds the number of packets of the next layer have been seen so far.
+     * Holds the number of packets of the next simulcast stream that have been
+     * seen so far.
      */
     private int seenNext;
 
     /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that is
+     * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
      * currently being received.
      */
-    private WeakReference<SimulcastLayer> weakCurrent;
+    private WeakReference<SimulcastStream> weakCurrent;
 
     /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that will be
+     * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
      * (possibly) received next.
      */
-    private WeakReference<SimulcastLayer> weakNext;
+    private WeakReference<SimulcastStream> weakNext;
 
     /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastLayer</tt> that overrides
-     * the layer that is currently being received. Originally introduced for
-     * adaptive bitrate control and the <tt>SimulcastAdaptor</tt>.
+     * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that overrides
+     * the simulcast stream that is currently being received. Originally
+     * introduced for adaptive bitrate control and the <tt>SimulcastAdaptor</tt>.
      */
-    private WeakReference<SimulcastLayer> weakOverride;
+    private WeakReference<SimulcastStream> weakOverride;
 
     /**
      * Boolean indicating whether this mode has been initialized or not.
@@ -131,26 +134,26 @@ public class SwitchingSendMode
      * {@inheritDoc}
      */
     @Override
-    public void receive(SimulcastLayer layer, boolean urgent)
+    public void receive(SimulcastStream simStream, boolean urgent)
     {
         SwitchingModeOptions options = new SwitchingModeOptions();
 
-        options.setNextOrder(layer.getOrder());
+        options.setNextOrder(simStream.getOrder());
         options.setHardSwitch(true);
         options.setUrgent(urgent);
 
         configure(options);
 
-        // Forget the next layer if it has stopped streaming.
-        synchronized (sendLayersSyncRoot)
+        // Forget the next simulcast stream if it has stopped streaming.
+        synchronized (sendStreamsSyncRoot)
         {
-            SimulcastLayer next = getNext();
+            SimulcastStream next = getNext();
             if (next != null && !next.isStreaming())
             {
                 this.weakNext = null;
                 this.seenNext = 0;
 
-                nextSimulcastLayerStopped(next);
+                nextSimulcastStreamStopped(next);
             }
         }
     }
@@ -168,7 +171,7 @@ public class SwitchingSendMode
 
         this.assertInitialized();
 
-        SimulcastLayer current = getCurrent();
+        SimulcastStream current = getCurrent();
         boolean accept = false;
 
         if (current != null)
@@ -176,7 +179,7 @@ public class SwitchingSendMode
 
         if (!accept)
         {
-            SimulcastLayer next = getNext();
+            SimulcastStream next = getNext();
 
             if (next != null)
             {
@@ -186,7 +189,7 @@ public class SwitchingSendMode
             }
         }
 
-        SimulcastLayer override = getOverride();
+        SimulcastStream override = getOverride();
 
         if (override != null)
             accept = override.match(pkt);
@@ -226,37 +229,37 @@ public class SwitchingSendMode
     }
 
     /**
-     * Gets the <tt>SimulcastLayer</tt> that is currently being received.
+     * Gets the <tt>SimulcastStream</tt> that is currently being received.
      *
      * @return
      */
-    public SimulcastLayer getCurrent()
+    public SimulcastStream getCurrent()
     {
-        WeakReference<SimulcastLayer> wr = this.weakCurrent;
+        WeakReference<SimulcastStream> wr = this.weakCurrent;
         return (wr != null) ? wr.get() : null;
     }
 
     /**
-     * Gets the <tt>SimulcastLayer</tt> that was previously being received.
+     * Gets the <tt>SimulcastStream</tt> that was previously being received.
      *
      * @return
      */
-    private SimulcastLayer getNext()
+    private SimulcastStream getNext()
     {
-        WeakReference<SimulcastLayer> wr = this.weakNext;
+        WeakReference<SimulcastStream> wr = this.weakNext;
         return (wr != null) ? wr.get() : null;
     }
 
     /**
-     * Gets the <tt>SimulcastLayer</tt> that overrides the layer that is
-     * currently being received. Originally introduced for the
+     * Gets the <tt>SimulcastStream</tt> that overrides the simulcast stream
+     * that is currently being received. Originally introduced for the
      * <tt>SimulcastAdaptor</tt>.
      *
      * @return
      */
-    private SimulcastLayer getOverride()
+    private SimulcastStream getOverride()
     {
-        WeakReference<SimulcastLayer> wr = this.weakOverride;
+        WeakReference<SimulcastStream> wr = this.weakOverride;
         return (wr != null) ? wr.get() : null;
     }
 
@@ -301,7 +304,7 @@ public class SwitchingSendMode
     {
         if (options == null)
         {
-            logger.warn("cannot configure next simulcast layer because the " +
+            logger.warn("cannot configure next simulcast stream because the " +
                 "parameter is null.");
             return;
         }
@@ -312,7 +315,8 @@ public class SwitchingSendMode
             this.minNextSeen = mns;
         }
 
-        // Configures the "next" layer to receive, if one is to be configured.
+        // Configures the "next" simulcast stream to receive, if one is to be
+        // configured.
         Integer nextOrder = options.getNextOrder();
         if (nextOrder == null)
         {
@@ -321,27 +325,27 @@ public class SwitchingSendMode
 
         SimulcastReceiver simulcastReceiver
             = getSimulcastSender().getSimulcastReceiver();
-        if (simulcastReceiver == null || !simulcastReceiver.hasLayers())
+        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
         {
-            logger.warn("doesn't have any simulcast layers.");
+            logger.warn("doesn't have any simulcast streams.");
             return;
         }
 
-        SimulcastLayer next = simulcastReceiver == null ? null
-            : simulcastReceiver.getSimulcastLayer(options.getNextOrder());
+        SimulcastStream next = simulcastReceiver == null ? null
+            : simulcastReceiver.getSimulcastStream(options.getNextOrder());
 
         // Do NOT switch to hq if it's not streaming.
         if (next == null
             || (next.getOrder()
-            != SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE
+            != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
             && !next.isStreaming()))
         {
             return;
         }
 
-        SimulcastLayer current = getCurrent();
+        SimulcastStream current = getCurrent();
 
-        // Do NOT switch to an already receiving layer.
+        // Do NOT switch to an already receiving simulcast stream.
         if (current == next)
         {
             // and forget "previous" next, we're sticking with current.
@@ -373,44 +377,44 @@ public class SwitchingSendMode
             if (options.isUrgent() || current == null
                 || this.minNextSeen < 1)
             {
-                // Receiving simulcast layers have brutally changed. Create
+                // Receiving simulcast streams have brutally changed. Create
                 // and send an event through data channels to the receiving
                 // endpoint.
                 if (getOverride() == null)
                 {
-                    this.simulcastLayersChanged(next);
+                    this.simulcastStreamsChanged(next);
                 }
                 else
                 {
                 }
 
-                this.weakCurrent = new WeakReference<SimulcastLayer>(next);
+                this.weakCurrent = new WeakReference<SimulcastStream>(next);
                 this.weakNext = null;
 
-                // Since the currently received layer has changed, reset the
-                // seenCurrent counter.
+                // Since the currently received simulcast stream has changed,
+                // reset the seenCurrent counter.
                 this.seenNext = 0;
             }
             else
             {
-                // Receiving simulcast layers are changing, create and send
+                // Receiving simulcast streams are changing, create and send
                 // an event through data channels to the receiving endpoint.
                 if (getOverride() == null)
                 {
-                    this.simulcastLayersChanging(next);
+                    this.simulcastStreamsChanging(next);
                 }
                 else
                 {
                 }
 
-                // If the layer we receive has changed (hasn't dropped),
-                // then continue streaming the previous layer for a short
-                // period of time while the client receives adjusts its
-                // video.
-                this.weakNext = new WeakReference<SimulcastLayer>(next);
+                // If the simulcast streams we receive has changed (hasn't
+                // dropped), then continue streaming the previous simulcast
+                // stream for a short period of time while the client receives
+                // adjusts its video.
+                this.weakNext = new WeakReference<SimulcastStream>(next);
 
-                // Since the currently received layer has changed, reset the
-                // seenCurrent counter.
+                // Since the currently received simulcast stream has changed,
+                // reset the seenCurrent counter.
                 this.seenNext = 0;
             }
         }
@@ -421,13 +425,13 @@ public class SwitchingSendMode
      */
     private void maybeSwitchToNext()
     {
-        synchronized (sendLayersSyncRoot)
+        synchronized (sendStreamsSyncRoot)
         {
-            SimulcastLayer next = getNext();
+            SimulcastStream next = getNext();
 
-            // If there is a previous layer to timeout, and we have received
-            // "enough" packets from the current layer, expire the previous
-            // layer.
+            // If there is a previous simulcast stream to timeout, and we have
+            // received "enough" packets from the current simulcast stream,
+            // expire the previous simulcast stream.
             if (next != null)
             {
                 this.seenNext++;
@@ -436,18 +440,18 @@ public class SwitchingSendMode
                 // quality packets make 5 seconds to arrive (approx), then 250
                 // low quality packets will make 10 seconds to arrive (approx),
                 // If we don't take that fact into account, then the immediate
-                // lower layer makes twice as much to expire.
+                // lower stream makes twice as much to expire.
                 //
-                // Assuming that each upper layer doubles the number of packets
+                // Assuming that each upper stream doubles the number of packets
                 // it sends in a given interval, we normalize the MAX_NEXT_SEEN
                 // to reflect the different relative rates of incoming packets
-                // of the different simulcast layers we receive.
+                // of the different simulcast streams we receive.
 
                 if (this.seenNext > this.minNextSeen * Math.pow(2, next.getOrder()))
                 {
                     if (getOverride() == null)
                     {
-                        this.simulcastLayersChanged(next);
+                        this.simulcastStreamsChanged(next);
                     }
                     else
                     {
@@ -462,14 +466,14 @@ public class SwitchingSendMode
 
     /**
      *
-     * @param layer
+     * @param simStream
      */
-    private void nextSimulcastLayerStopped(SimulcastLayer layer)
+    private void nextSimulcastStreamStopped(SimulcastStream simStream)
     {
-        if (layer == null)
+        if (simStream == null)
         {
-            logger.warn("Requested to send a next simulcast layer stopped " +
-                "event but layer is null!");
+            logger.warn("Requested to send a next simulcast stream stopped " +
+                "event but simStream is null!");
             return;
         }
 
@@ -478,21 +482,21 @@ public class SwitchingSendMode
         if ((self = getSimulcastSender().getReceiveEndpoint()) != null
                 && (peer = getSimulcastSender().getSendEndpoint()) != null)
         {
-            logger.debug("Sending a next simulcast layer stopped event to "
+            logger.debug("Sending a next simulcast stream stopped event to "
                 + self.getID() + ".");
 
             // XXX(gp) it'd be nice if we could remove the
-            // SimulcastLayersChangedEvent event. Ideally, receivers should
+            // SimulcastStreamsChangedEvent event. Ideally, receivers should
             // listen for MediaStreamTrackActivity instead. Unfortunately,
             // such an event does not exist in WebRTC.
 
-            // Receiving simulcast layers changed, create and send
+            // Receiving simulcast streams changed, create and send
             // an event through data channels to the receiving endpoint.
-            NextSimulcastLayerStoppedEvent ev
-                = new NextSimulcastLayerStoppedEvent();
+            NextSimulcastStreamStoppedEvent ev
+                = new NextSimulcastStreamStoppedEvent();
 
-            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
-                new EndpointSimulcastLayer(peer.getID(), layer)
+            ev.endpointSimulcastStreams = new EndpointSimulcastStream[]{
+                new EndpointSimulcastStream(peer.getID(), simStream)
             };
 
             String json = mapper.toJson(ev);
@@ -511,7 +515,7 @@ public class SwitchingSendMode
         }
         else
         {
-            logger.warn("Didn't send simulcast layers changed event " +
+            logger.warn("Didn't send simulcast streams changed event " +
                 "because self == null || peer == null " +
                 "|| current == null");
         }
@@ -519,14 +523,14 @@ public class SwitchingSendMode
 
     /**
      *
-     * @param layer
+     * @param simStream
      */
-    private void simulcastLayersChanged(SimulcastLayer layer)
+    private void simulcastStreamsChanged(SimulcastStream simStream)
     {
-        if (layer == null)
+        if (simStream == null)
         {
-            logger.warn("Requested to send a simulcast layers changed event" +
-                    "but layer is null!");
+            logger.warn("Requested to send a simulcast streams changed event" +
+                    "but simStream is null!");
             return;
         }
 
@@ -535,21 +539,21 @@ public class SwitchingSendMode
         if ((self = getSimulcastSender().getReceiveEndpoint()) != null
                 && (peer = getSimulcastSender().getSendEndpoint()) != null)
         {
-            logger.debug("Sending a simulcast layers changed event to "
+            logger.debug("Sending a simulcast streams changed event to "
                     + self.getID() + ".");
 
             // XXX(gp) it'd be nice if we could remove the
-            // SimulcastLayersChangedEvent event. Ideally, receivers should
+            // SimulcastStreamsChangedEvent event. Ideally, receivers should
             // listen for MediaStreamTrackActivity instead. Unfortunately,
             // such an event does not exist in WebRTC.
 
-            // Receiving simulcast layers changed, create and send
+            // Receiving simulcast streams changed, create and send
             // an event through data channels to the receiving endpoint.
-            SimulcastLayersChangedEvent ev
-                    = new SimulcastLayersChangedEvent();
+            SimulcastStreamsChangedEvent ev
+                    = new SimulcastStreamsChangedEvent();
 
-            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
-                    new EndpointSimulcastLayer(peer.getID(), layer)
+            ev.endpointSimulcastStreams = new EndpointSimulcastStream[]{
+                    new EndpointSimulcastStream(peer.getID(), simStream)
             };
 
             String json = mapper.toJson(ev);
@@ -568,7 +572,7 @@ public class SwitchingSendMode
         }
         else
         {
-            logger.warn("Didn't send simulcast layers changed event " +
+            logger.warn("Didn't send simulcast streams changed event " +
                     "because self == null || peer == null " +
                     "|| current == null");
         }
@@ -577,14 +581,14 @@ public class SwitchingSendMode
 
     /**
      *
-     * @param layer
+     * @param simStream
      */
-    private void simulcastLayersChanging(SimulcastLayer layer)
+    private void simulcastStreamsChanging(SimulcastStream simStream)
     {
-        if (layer == null)
+        if (simStream == null)
         {
-            logger.warn("Requested to send a simulcast layers changing event" +
-                    "but layer is null!");
+            logger.warn("Requested to send a simulcast streams changing event" +
+                    "but simStream is null!");
             return;
         }
 
@@ -594,22 +598,22 @@ public class SwitchingSendMode
 
         if (self != null && peer  != null)
         {
-            logger.debug("Sending a simulcast layers changing event to "
+            logger.debug("Sending a simulcast streams changing event to "
                     + self.getID() + ".");
 
             // XXX(gp) it'd be nice if we could remove the
-            // SimulcastLayersChangedEvent event. Ideally, receivers should
+            // SimulcastStreamsChangedEvent event. Ideally, receivers should
             // listen for MediaStreamTrackActivity instead. Unfortunately,
             // such an event does not exist in WebRTC.
 
-            // Receiving simulcast layers changed, create and send
+            // Receiving simulcast streams changed, create and send
             // an event through data channels to the receiving
             // endpoint.
-            SimulcastLayersChangingEvent ev
-                    = new SimulcastLayersChangingEvent();
+            SimulcastStreamsChangingEvent ev
+                    = new SimulcastStreamsChangingEvent();
 
-            ev.endpointSimulcastLayers = new EndpointSimulcastLayer[]{
-                    new EndpointSimulcastLayer(peer.getID(), layer)
+            ev.endpointSimulcastStreams = new EndpointSimulcastStream[]{
+                    new EndpointSimulcastStream(peer.getID(), simStream)
             };
 
             String json = mapper.toJson(ev);
@@ -628,7 +632,7 @@ public class SwitchingSendMode
         }
         else
         {
-            logger.warn("Didn't send simulcast layers changing event " +
+            logger.warn("Didn't send simulcast streams changing event " +
                     "because self == null || peer == null " +
                     "|| current == null");
         }
@@ -654,7 +658,7 @@ public class SwitchingSendMode
         SimulcastReceiver simulcastReceiver
             = this.getSimulcastSender().getSimulcastReceiver();
 
-        if (simulcastReceiver == null || !simulcastReceiver.hasLayers())
+        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
         {
             return;
         }
@@ -662,29 +666,29 @@ public class SwitchingSendMode
         if (overrideOrder
                 == SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
         {
-            synchronized (sendLayersSyncRoot)
+            synchronized (sendStreamsSyncRoot)
             {
                 this.weakOverride = null;
-                SimulcastLayer current = getCurrent();
+                SimulcastStream current = getCurrent();
                 if (current != null)
                 {
                     current.askForKeyframe();
-                    this.simulcastLayersChanged(current);
+                    this.simulcastStreamsChanged(current);
                 }
             }
         }
         else
         {
-            SimulcastLayer override = simulcastReceiver == null ? null
-                : simulcastReceiver.getSimulcastLayer(overrideOrder);
+            SimulcastStream override = simulcastReceiver == null ? null
+                : simulcastReceiver.getSimulcastStream(overrideOrder);
             if (override != null)
             {
-                synchronized (sendLayersSyncRoot)
+                synchronized (sendStreamsSyncRoot)
                 {
                     this.weakOverride
-                        = new WeakReference<SimulcastLayer>(override);
+                        = new WeakReference<SimulcastStream>(override);
                     override.askForKeyframe();
-                    this.simulcastLayersChanged(override);
+                    this.simulcastStreamsChanged(override);
                 }
             }
 
@@ -759,7 +763,7 @@ public class SwitchingSendMode
         private Integer minNextSeen;
 
         /**
-         * A switch that is urgent (e.g. because of a layer drop).
+         * A switch that is urgent (e.g. because of a simulcast stream drop).
          */
         private boolean urgent;
 

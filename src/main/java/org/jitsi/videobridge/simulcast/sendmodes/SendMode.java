@@ -19,8 +19,8 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.videobridge.simulcast.*;
 
 /**
- * Is configured to accept a target layer and tries its best to accept (only)
- * that simulcast layer.
+ * Is configured to accept a target simulcast stream and tries its best to
+ * accept (only) that simulcast simulcast stream.
  *
  * @author George Politis
  */
@@ -65,10 +65,10 @@ public abstract class SendMode
      * @param urgent if urgent is true, switch immediately and don't wait for a
      * keyframe of the low quality stream.
      */
-    public abstract void receive(SimulcastLayer layer, boolean urgent);
+    public abstract void receive(SimulcastStream simStream, boolean urgent);
 
     /**
      * Gets the simulcast stream that is currently being received.
      */
-    public abstract SimulcastLayer getCurrent();
+    public abstract SimulcastStream getCurrent();
 }

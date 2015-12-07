@@ -20,14 +20,14 @@ import org.jitsi.videobridge.simulcast.*;
 /**
 * @author George Politis
 */
-public class StartSimulcastLayerCommand
+public class StopSimulcastStreamCommand
 {
-    public StartSimulcastLayerCommand(SimulcastLayer simulcastLayer)
+    public StopSimulcastStreamCommand(SimulcastStream simulcastStream)
     {
-        this.simulcastLayer = simulcastLayer;
+        this.simulcastStream = simulcastStream;
     }
 
-    // TODO(gp) rename this to StartSimulcastLayerCommand
-    final String colibriClass = "StartSimulcastLayerEvent";
-    final SimulcastLayer simulcastLayer;
+    // TODO(gp) rename this to StopSimulcastStreamCommand
+    final String colibriClass = "StopSimulcastStreamEvent";
+    final SimulcastStream simulcastStream;
 }

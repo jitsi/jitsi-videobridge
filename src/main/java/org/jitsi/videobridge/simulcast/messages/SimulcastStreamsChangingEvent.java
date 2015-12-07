@@ -15,20 +15,13 @@
  */
 package org.jitsi.videobridge.simulcast.messages;
 
-import org.jitsi.videobridge.simulcast.*;
-
 /**
- * Associates a simulcast layer with an endpoint ID.
+ * Represents a notification/event that is sent to an endpoint through data
+ * channels when there is a change in the simulcast substream the bridge is
+ * pushing to that specific endpoint.
  */
-public class EndpointSimulcastLayer
+public class SimulcastStreamsChangingEvent
 {
-    public EndpointSimulcastLayer(String endpoint,
-                                  SimulcastLayer simulcastLayer)
-    {
-        this.endpoint = endpoint;
-        this.simulcastLayer = simulcastLayer;
-    }
-
-    public final String endpoint;
-    public final SimulcastLayer simulcastLayer;
+    final String colibriClass = "SimulcastStreamsChangingEvent";
+    public EndpointSimulcastStream[] endpointSimulcastStreams;
 }

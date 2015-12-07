@@ -23,40 +23,40 @@ import org.jitsi.util.event.*;
 import org.jitsi.impl.neomedia.codec.video.*;
 
 /**
- * The <tt>SimulcastLayer</tt> of a <tt>SimulcastReceiver</tt> represents a
- * simulcast layer. It determines when a simulcast layer has been
+ * The <tt>SimulcastStream</tt> of a <tt>SimulcastReceiver</tt> represents a
+ * simulcast stream. It determines when a simulcast stream has been
  * stopped/started and fires a property change event when that happens. It also
- * gathers bitrate statistics for the associated layer.
+ * gathers bitrate statistics for the associated stream.
  *
  * This class is thread safe.
  *
- * TODO Rename SimulcastLayer -&gt; SimulcastStream to be consistent with
+ * TODO Rename SimulcastStream -&gt; SimulcastStream to be consistent with
  * the webrtc.org codebase.
  *
  * @author George Politis
  * @author Lyubomir Marinov
  */
-public class SimulcastLayer
+public class SimulcastStream
     extends PropertyChangeNotifier
-    implements Comparable<SimulcastLayer>
+    implements Comparable<SimulcastStream>
 {
 
     /**
-     * The <tt>Logger</tt> used by the <tt>SimulcastLayer</tt> class and its
+     * The <tt>Logger</tt> used by the <tt>SimulcastStream</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
-            = Logger.getLogger(SimulcastLayer.class);
+            = Logger.getLogger(SimulcastStream.class);
 
     /**
-     * The name of the property that gets fired when this layer stop or starts
+     * The name of the property that gets fired when this stream stops or starts
      * streaming.
      */
     public static final String IS_STREAMING_PNAME =
-            SimulcastLayer.class.getName() + ".isStreaming";
+            SimulcastStream.class.getName() + ".isStreaming";
 
     /**
-     * Base layer quality order.
+     * Base simlucast stream quality order.
      */
     public static final int SIMULCAST_LAYER_ORDER_BASE = 0;
 
@@ -69,7 +69,7 @@ public class SimulcastLayer
     private static final ExecutorService executorService
         = ExecutorUtils.newCachedThreadPool(
                 true,
-                SimulcastLayer.class.getName());
+                SimulcastStream.class.getName());
 
     /**
      * The <tt>Runnable</tt> that requests key frames.
@@ -78,22 +78,22 @@ public class SimulcastLayer
         = new KeyFrameRequestRunnable();
 
     /**
-     * The <tt>SimulcastReceiver</tt> that owns this layer.
+     * The <tt>SimulcastReceiver</tt> that owns this simulcast stream.
      */
     private final SimulcastReceiver simulcastReceiver;
 
     /**
-     * The primary SSRC for this simulcast layer.
+     * The primary SSRC for this simulcast stream.
      */
     private long primarySSRC = -1; // FIXME We need an INVALID_SSRC cnt.
 
     /**
-     * The RTX SSRC for this simulcast layer.
+     * The RTX SSRC for this simulcast stream.
      */
     private long rtxSSRC = -1; // FIXME We need an INVALID_SSRC cnt.
 
     /**
-     * The FEC SSRC for this simulcast layer.
+     * The FEC SSRC for this simulcast stream.
      *
      * XXX This isn't currently used anywhere because Chrome doens't use a
      * separate SSRC for FEC.
@@ -101,18 +101,19 @@ public class SimulcastLayer
     private long fecSSRC = -1; // FIXME We need an INVALID_SSRC cnt.
 
     /**
-     * The order of this simulcast layer.
+     * The order of this simulcast stream.
      */
     private final int order;
 
     /**
-     * Holds a boolean indicating whether or not this layer is streaming.
+     * Holds a boolean indicating whether or not this simulcast stream is
+     * streaming.
      */
     private boolean isStreaming = false;
 
     /**
      * The value of the RTP marker (bit) of the last {@code RawPacket} seen by
-     * this {@code SimulcastLayer}. Technically, the order of the receipt of RTP
+     * this {@code SimulcastStream}. Technically, the order of the receipt of RTP
      * packets may be disturbed by the network transport (e.g. UDP) and/or RTP
      * packet retransmissions so the value of {@code lastPktMarker} may not come
      * from the last received {@code RawPacket} but from a received
@@ -123,7 +124,7 @@ public class SimulcastLayer
 
     /**
      * The {@code sequenceNumber} of the last {@code RawPacket} seen by this
-     * {@code SimulcastLayer}. Technically, the order of the receipt of RTP
+     * {@code SimulcastStream}. Technically, the order of the receipt of RTP
      * packets may be disturbed by the network transport (e.g. UDP) and/or RTP
      * packet retransmissions so the value of {@code lastPktSequenceNumber} may
      * not come from the last received {@code RawPacket} but from a received
@@ -134,7 +135,7 @@ public class SimulcastLayer
 
     /**
      * The {@code timestamp} of the last {@code RawPacket} seen by this
-     * {@code SimulcastLayer}. Technically, the order of the receipt of RTP
+     * {@code SimulcastStream}. Technically, the order of the receipt of RTP
      * packets may be disturbed by the network transport (e.g. UDP) and/or RTP
      * packet retransmissions so the value of {@code lastPktTimestamp} may not
      * come from the last received {@code RawPacket} but from a received
@@ -150,7 +151,7 @@ public class SimulcastLayer
      * @param primarySSRC
      * @param order
      */
-    public SimulcastLayer(
+    public SimulcastStream(
             SimulcastReceiver simulcastReicever,
             long primarySSRC,
             int order)
@@ -161,9 +162,9 @@ public class SimulcastLayer
     }
 
     /**
-     * Gets the primary SSRC for this simulcast layer.
+     * Gets the primary SSRC for this simulcast stream.
      *
-     * @return the primary SSRC for this simulcast layer.
+     * @return the primary SSRC for this simulcast stream.
      */
     public long getPrimarySSRC()
     {
@@ -171,9 +172,9 @@ public class SimulcastLayer
     }
 
     /**
-     * Gets the RTX SSRC for this simulcast layer.
+     * Gets the RTX SSRC for this simulcast stream.
      *
-     * @return the RTX SSRC for this simulcast layer.
+     * @return the RTX SSRC for this simulcast stream.
      */
     public long getRTXSSRC()
     {
@@ -181,9 +182,9 @@ public class SimulcastLayer
     }
 
     /**
-     * Gets the FEC SSRC for this simulcast layer.
+     * Gets the FEC SSRC for this simulcast stream.
      *
-     * @return the FEC SSRC for this simulcast layer.
+     * @return the FEC SSRC for this simulcast stream.
      */
     public long getFECSSRC()
     {
@@ -191,9 +192,9 @@ public class SimulcastLayer
     }
 
     /**
-     * Sets the RTX SSRC for this simulcast layer.
+     * Sets the RTX SSRC for this simulcast stream.
      *
-     * @param rtxSSRC the new RTX SSRC for this simulcast layer.
+     * @param rtxSSRC the new RTX SSRC for this simulcast stream.
      */
     public void setRTXSSRC(long rtxSSRC)
     {
@@ -201,9 +202,9 @@ public class SimulcastLayer
     }
 
     /**
-     * Sets the FEC SSRC for this simulcast layer.
+     * Sets the FEC SSRC for this simulcast stream.
      *
-     * @param fecSSRC the new FEC SSRC for this simulcast layer.
+     * @param fecSSRC the new FEC SSRC for this simulcast stream.
      */
     public void setFECSSRC(long fecSSRC)
     {
@@ -211,9 +212,9 @@ public class SimulcastLayer
     }
 
     /**
-     * Gets the order of this simulcast layer.
+     * Gets the order of this simulcast stream.
      *
-     * @return the order of this simulcast layer.
+     * @return the order of this simulcast stream.
      */
     public int getOrder()
     {
@@ -221,11 +222,11 @@ public class SimulcastLayer
     }
 
     /**
-     * Determines whether a packet belongs to this simulcast layer or not and
+     * Determines whether a packet belongs to this simulcast stream or not and
      * returns a boolean to the caller indicating that.
      *
      * @param pkt
-     * @return true if the packet belongs to this simulcast layer, false
+     * @return true if the packet belongs to this simulcast stream, false
      * otherwise.
      */
     public boolean match(RawPacket pkt)
@@ -240,42 +241,43 @@ public class SimulcastLayer
     }
 
     /**
-     * Compares this simulcast layer with another, implementing an order.
+     * Compares this simulcast stream with another, implementing an order.
      *
      * @param o
      * @return
      */
     @Override
-    public int compareTo(SimulcastLayer o)
+    public int compareTo(SimulcastStream o)
     {
         return (o == null) ? 1 : (order - o.order);
     }
 
     /**
      *
-     * Gets a boolean indicating whether or not this layer is streaming.
+     * Gets a boolean indicating whether or not this simulcast stream is
+     * streaming.
      *
-     * @return true if this layer is streaming, false otherwise.
+     * @return true if this simulcast stream is streaming, false otherwise.
      */
     public boolean isStreaming()
     {
-        // NOTE(gp) we assume 1. that the base layer is always streaming, and
-        // 2. if layer N is streaming, then layers N-1 is streaming. N == order
-        // in this class TAG(simulcast-assumption,arbitrary-sim-layers).
+        // NOTE(gp) we assume 1. that the base stream is always streaming, and
+        // 2. if stream N is streaming, then stream N-1 is streaming. N == order
+        // in this class TAG(simulcast-assumption,arbitrary-sim-simStreams).
         return isStreaming ? isStreaming : order == 0;
     }
 
     /**
-     * Increases the number of base layer packets that we've seen, and
-     * potentially marks this layer as stopped and fires an event.
+     * Increases the number of base stream packets that we've seen, and
+     * potentially marks this stream as stopped and fires an event.
      *
      * @param useFrameBasedLogic {@code true} to use the (new) frame-based logic
-     * for automagic {@code SimulcastLayer} drop detection instead of the (old)
+     * for automagic {@code SimulcastStream} drop detection instead of the (old)
      * packet-based logic; otherwise, {@code false}
      * @param pkt the {@code RawPacket} which possibly influenced the decision
-     * to trigger a check on this {@code SimulcastLayer}. Most likely,
+     * to trigger a check on this {@code SimulcastStream}. Most likely,
      * {@code pkt} is not part of the RTP stream represented by this
-     * {@code SimulcastLayer}.
+     * {@code SimulcastStream}.
      */
     public synchronized void maybeTimeout(
             RawPacket pkt)
@@ -287,11 +289,11 @@ public class SimulcastLayer
     }
 
     /**
-     * Marks this {@code SimulcastLayer} as stopped and fires an event.
+     * Marks this {@code SimulcastStream} as stopped and fires an event.
      *
      * @param pkt the {@code RawPacket} which possibly influenced the decision
-     * to time this {@code SimulcastLayer} out. Most likely, {@code pkt} is not
-     * part of the RTP stream represented by this {@code SimulcastLayer}.
+     * to time this {@code SimulcastStream} out. Most likely, {@code pkt} is not
+     * part of the RTP stream represented by this {@code SimulcastStream}.
      */
     private synchronized void timeout(RawPacket pkt)
     {
@@ -300,7 +302,7 @@ public class SimulcastLayer
         if (logger.isDebugEnabled())
         {
             logDebug(
-                    "order-" + getOrder() + " layer (" + getPrimarySSRC()
+                    "order-" + getOrder() + " stream (" + getPrimarySSRC()
                         + ") stopped on seqnum " + pkt.getSequenceNumber()
                         + ".");
         }
@@ -308,32 +310,32 @@ public class SimulcastLayer
         // XXX(gp) One could try to ask for a key frame now, if the packet that
         // caused the resuming of the high quality stream isn't a key frame; But
         // the correct approach is to handle  this with the SimulcastSender
-        // because layer switches happen not only when a stream resumes or drops
+        // because stream switches happen not only when a stream resumes or drops
         // but also when the selected endpoint at a given receiving endpoint
         // changes, for example.
         firePropertyChange(IS_STREAMING_PNAME, true, false);
     }
 
     /**
-     * Increases the number of packets of this layer that we've seen, and
-     * potentially marks this layer as started and fires an event.
+     * Increases the number of packets of this stream that we've seen, and
+     * potentially marks this stream as started and fires an event.
      *
      * @param pkt the {@code RawPacket} which has been received by the local
      * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
-     * the RTP stream represented by this {@code SimulcastLayer}, and has caused
+     * the RTP stream represented by this {@code SimulcastStream}, and has caused
      * the method invocation
      * @return {@code true} if {@code pkt} signals the receipt of (a piece of) a
      * new (i.e. unobserved until now) frame; otherwise, {@code false}
      */
     public synchronized boolean touch(RawPacket pkt)
     {
-        // Attempt to speed up the detection of paused simulcast layers by
+        // Attempt to speed up the detection of paused simulcast streams by
         // counting (video) frames instead of or in addition to counting
         // packets. The reasoning for why counting frames may be an optimization
         // is that (1) frames may span varying number of packets and (2) the
         // webrtc.org implementation consecutively (from low quality to high
         // quality) sends frames for all sent (i.e. non-paused) simulcast
-        // layers. RTP packets which transport pieces of one and the same frame
+        // streams. RTP packets which transport pieces of one and the same frame
         // have one and the same timestamp and the last RTP packet has the
         // marker bit set. Since the RTP packet with the set marker bit may get
         // lost, it sounds more reliably to distinguish frames by looking at the
@@ -370,7 +372,7 @@ public class SimulcastLayer
                     // XXX Sequences of packets have been observed with
                     // increasing RTP timestamps but without the marker bit set.
                     // Supposedly, they are probes to detect whether the
-                    // bandwidth may increase. They may cause a SimulcastLayer
+                    // bandwidth may increase. They may cause a SimulcastStream
                     // (other than this, of course) to time out. As a
                     // workaround, we will consider them to not signal new
                     // frames.
@@ -380,7 +382,7 @@ public class SimulcastLayer
                         if (logger.isTraceEnabled())
                         {
                             logTrace(
-                                    "order-" + getOrder() + " layer ("
+                                    "order-" + getOrder() + " stream ("
                                         + getPrimarySSRC()
                                         + ") detected an alien pkt: seqnum "
                                         + pkt.getSequenceNumber() + ", ts "
@@ -429,15 +431,15 @@ public class SimulcastLayer
     }
 
     /**
-     * Notifies this {@code SimulcastLayer} that a specific {@code RawPacket}
+     * Notifies this {@code SimulcastStream} that a specific {@code RawPacket}
      * has been received (over the network from the remote peer) which is part
      * of (the flow of) the RTP stream represented by this
-     * {@code SimulcastLayer}. This {@code SimulcastLayer} is NOT the base
-     * ({@code SimulcastLayer}) of {@link #simulcastReceiver}.
+     * {@code SimulcastStream}. This {@code SimulcastStream} is NOT the base
+     * ({@code SimulcastStream}) of {@link #simulcastReceiver}.
      *
      * @param pkt the {@code RawPacket} which has been received by the local
      * peer (i.e. Videobridge) from the remote peer, is part of (the flow of)
-     * the RTP stream represented by this {@code SimulcastLayer}, and has caused
+     * the RTP stream represented by this {@code SimulcastStream}, and has caused
      * the method invocation
      * @param frameStarted {@code true} if {@code pkt} signals the receipt of (a
      * piece of) a new (i.e. unobserved until now) frame; otherwise,
@@ -451,15 +453,15 @@ public class SimulcastLayer
         }
 
         // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
-        // compile time) the frame-based approach to the detection of layer
+        // compile time) the frame-based approach to the detection of stream
         // drops.
 
-        // If the frame-based approach to the detection of layer drops works
+        // If the frame-based approach to the detection of stream drops works
         // (i.e. there will always be at least 1 high quality frame among
         // SimulcastReceiver#TIMEOUT_ON_FRAME_COUNT consecutive low quality
         // frames), then it may be argued that a late pkt (i.e. which does not
-        // start a new frame after this SimulcastLayer has been stopped) should
-        // not start this SimulcastLayer.
+        // start a new frame after this SimulcastStream has been stopped) should
+        // not start this SimulcastStream.
         if (SimulcastReceiver.TIMEOUT_ON_FRAME_COUNT > 1 && !frameStarted)
             return;
 
@@ -471,7 +473,7 @@ public class SimulcastLayer
         if (logger.isDebugEnabled())
         {
             logDebug(
-                    "order-" + getOrder() + " layer (" + getPrimarySSRC()
+                    "order-" + getOrder() + " stream (" + getPrimarySSRC()
                         + ") resumed on seqnum " + pkt.getSequenceNumber()
                         + ", " + (isKeyFrame(pkt) ? "key" : "delta")
                         + " frame.");
@@ -486,8 +488,8 @@ public class SimulcastLayer
     }
 
     /**
-     * Utility method that asks for a keyframe for a specific simulcast layer.
-     * This is typically done when switching layers. This method is executed in
+     * Utility method that asks for a keyframe for a specific simulcast stream.
+     * This is typically done when switching streams. This method is executed in
      * the same thread that processes incoming packets. We must not block packet
      * reading so we request the key frame on a newly spawned thread.
      */

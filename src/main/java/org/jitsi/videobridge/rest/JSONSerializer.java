@@ -208,7 +208,7 @@ final class JSONSerializer
             Integer lastN = channel.getLastN();
             List<PayloadTypePacketExtension> payloadTypes
                 = channel.getPayloadTypes();
-            Integer receivingSimulcastLayer
+            Integer receivingSimulcastStream
                 = channel.getReceivingSimulcastLayer();
             RTPLevelRelayType rtpLevelRelayType
                 = channel.getRTPLevelRelayType();
@@ -250,7 +250,7 @@ final class JSONSerializer
             {
                 jsonObject.put(
                         ColibriConferenceIQ.Channel.RECEIVING_SIMULCAST_LAYER,
-                        receivingSimulcastLayer);
+                        receivingSimulcastStream);
             }
             // payloadTypes
             if ((payloadTypes != null) && !payloadTypes.isEmpty())

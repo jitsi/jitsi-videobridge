@@ -28,8 +28,8 @@ import java.util.concurrent.*;
 /**
  * The <tt>SimulcastReceiver</tt> of a <tt>SimulcastEngine</tt> receives the
  * simulcast streams from a simulcast enabled participant and manages 1 or more
- * <tt>SimulcastLayer</tt>s. It fires a property change event whenever the
- * simulcast layers that it manages change.
+ * <tt>SimulcastStream</tt>s. It fires a property change event whenever the
+ * simulcast streams that it manages change.
  *
  * This class is thread safe.
  *
@@ -40,7 +40,7 @@ public class SimulcastReceiver
         extends PropertyChangeNotifier
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>ReceivingLayers</tt> class and its
+     * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
@@ -48,14 +48,14 @@ public class SimulcastReceiver
 
     /**
      * The name of the property that gets fired when there's a change in the
-     * simulcast layers that this receiver manages.
+     * simulcast stream that this receiver manages.
      */
     public static final String SIMULCAST_LAYERS_PNAME
-            = SimulcastReceiver.class.getName() + ".simulcastLayers";
+            = SimulcastReceiver.class.getName() + ".simulcastStreams";
 
     /**
      * The number of (video) frames which defines the interval of time
-     * (indirectly) during which a {@code SimulcastLayer} needs to receive data
+     * (indirectly) during which a {@code SimulcastStream} needs to receive data
      * from its remote peer or it will be declared paused/stopped/not streaming
      * by its {@code SimulcastReceiver}.
      */
@@ -80,9 +80,9 @@ public class SimulcastReceiver
     private final SimulcastEngine simulcastEngine;
 
     /**
-     * The simulcast layers of this <tt>VideoChannel</tt>.
+     * The simulcast stream of this <tt>VideoChannel</tt>.
      */
-    private SimulcastLayer[] simulcastLayers;
+    private SimulcastStream[] simulcastStreams;
 
     /**
      * Indicates whether we're receiving native or non-native simulcast from the
@@ -92,7 +92,7 @@ public class SimulcastReceiver
      *
      * NOTE that at the time of this writing we only support native simulcast.
      * Last time we tried non-native simulcast there was no way to limit the
-     * bitrate of lower layer streams and thus there was no point in
+     * bitrate of lower simulcast streams and thus there was no point in
      * implementing non-native simulcast.
      *
      * NOTE^2 This has changed recently with the webrtc stack automatically
@@ -105,11 +105,11 @@ public class SimulcastReceiver
 
     /**
      * The history of the order/sequence of receipt of (video) frames by
-     * {@link #simulcastLayers}. Used in an attempt to speed up the detection of
-     * paused/stopped {@code SimulcastLayer}s by counting (video) frames.
+     * {@link #simulcastStreams}. Used in an attempt to speed up the detection of
+     * paused/stopped {@code SimulcastStream}s by counting (video) frames.
      */
-    private final List<SimulcastLayer> simulcastLayerFrameHistory
-        = new LinkedList<SimulcastLayer>();
+    private final List<SimulcastStream> simulcastStreamFrameHistory
+        = new LinkedList<SimulcastStream>();
 
     /**
      * Ctor.
@@ -133,80 +133,80 @@ public class SimulcastReceiver
     }
 
     /**
-     * Returns true if the endpoint has signaled two or more simulcast layers.
+     * Returns true if the endpoint has signaled two or more simulcast streams.
      *
-     * @return true if the endpoint has signaled two or more simulcast layers,
+     * @return true if the endpoint has signaled two or more simulcast streams,
      * false otherwise.
      */
-    public boolean hasLayers()
+    public boolean isSimulcastSignaled()
     {
-        SimulcastLayer[] sl = simulcastLayers;
+        SimulcastStream[] sl = simulcastStreams;
         return sl != null && sl.length != 0;
     }
 
     /**
-     * Returns a <tt>SimulcastLayer</tt> that is the closest match to the target
+     * Returns a <tt>SimulcastStream</tt> that is the closest match to the target
      * order, or null if simulcast hasn't been configured for this receiver.
      *
-     * @param targetOrder the simulcast layer target order.
-     * @return a <tt>SimulcastLayer</tt> that is the closest match to the target
+     * @param targetOrder the simulcast stream target order.
+     * @return a <tt>SimulcastStream</tt> that is the closest match to the target
      * order, or null.
      */
-    public SimulcastLayer getSimulcastLayer(int targetOrder)
+    public SimulcastStream getSimulcastStream(int targetOrder)
     {
-        SimulcastLayer[] layers = getSimulcastLayers();
-        if (layers == null || layers.length == 0)
+        SimulcastStream[] simStreams = getSimulcastStreams();
+        if (simStreams == null || simStreams.length == 0)
         {
             return null;
         }
 
-        // Iterate through the simulcast layers that we own and return the one
+        // Iterate through the simulcast streams that we own and return the one
         // that matches best the targetOrder parameter.
-        SimulcastLayer next = layers[0];
-        for (int i = 1; i < Math.min(targetOrder + 1, layers.length); i++)
+        SimulcastStream next = simStreams[0];
+        for (int i = 1; i < Math.min(targetOrder + 1, simStreams.length); i++)
         {
-            if (!layers[i].isStreaming())
+            if (!simStreams[i].isStreaming())
             {
                 break;
             }
 
-            next = layers[i];
+            next = simStreams[i];
         }
 
         return next;
     }
 
     /**
-     * Gets the simulcast layers of this simulcast manager in a new
+     * Gets the simulcast streams of this simulcast manager in a new
      * <tt>SortedSet</tt> so that the caller won't have to worry about the
      * structure changing by some other thread.
      *
-     * @return the simulcast layers of this receiver in a new sorted set if
+     * @return the simulcast streams of this receiver in a new sorted set if
      * simulcast is signaled, or null.
      */
-    public SimulcastLayer[]  getSimulcastLayers()
+    public SimulcastStream[]  getSimulcastStreams()
     {
-        return simulcastLayers;
+        return simulcastStreams;
     }
 
     /**
-     * Sets the simulcast layers for this receiver and fires an event about it.
+     * Sets the simulcast streams for this receiver and fires an event about it.
      *
-     * @param simulcastLayers the simulcast layers for this receiver.
+     * @param simulcastStreams the simulcast streams for this receiver.
      */
-    public void setSimulcastLayers(SimulcastLayer[] simulcastLayers)
+    public void setSimulcastStreams(SimulcastStream[] simulcastStreams)
     {
-        this.simulcastLayers = simulcastLayers;
+        this.simulcastStreams = simulcastStreams;
 
         if (logger.isInfoEnabled())
         {
-            if (simulcastLayers == null)
+            if (simulcastStreams == null)
             {
                 logInfo("Simulcast disabled.");
             }
             else
             {
-                for (SimulcastLayer l : simulcastLayers)
+                for (SimulcastStream l : simulcastStreams)
                 {
                     logInfo(l.getOrder() + ": " + l.getPrimarySSRC());
                 }
@@ -221,9 +221,9 @@ public class SimulcastReceiver
             }
         });
 
-        // TODO If simulcastLayers has changed, then simulcastLayerFrameHistory
+        // TODO If simulcastStreams has changed, then simulcastStreamFrameHistory
         // has very likely become irrelevant. In other words, clear
-        // simulcastLayerFrameHistory.
+        // simulcastStreamFrameHistory.
     }
 
     /**
@@ -241,30 +241,30 @@ public class SimulcastReceiver
         // the channel has accepted a datagram packet for the timeout to
         // function correctly.
 
-        if (!hasLayers() || pkt == null)
+        if (!isSimulcastSignaled() || pkt == null)
         {
             return;
         }
 
-        // Find the layer that corresponds to this packet.
+        // Find the simulcast stream that corresponds to this packet.
         int acceptedSSRC = pkt.getSSRC();
-        SimulcastLayer[] layers = getSimulcastLayers();
-        SimulcastLayer acceptedLayer = null;
-        for (SimulcastLayer layer : layers)
+        SimulcastStream[] simStreams = getSimulcastStreams();
+        SimulcastStream acceptedStream = null;
+        for (SimulcastStream simStream : simStreams)
         {
             // We only care about the primary SSRC and not the RTX ssrc (or
             // future FEC ssrc).
-            if ((int) layer.getPrimarySSRC() == acceptedSSRC)
+            if ((int) simStream.getPrimarySSRC() == acceptedSSRC)
             {
-                acceptedLayer = layer;
+                acceptedStream = simStream;
                 break;
             }
         }
 
         // If this is not an RTP packet or if we can't find an accepted
-        // layer, log and return as it makes no sense to continue in this
-        // situation.
-        if (acceptedLayer == null)
+        // simulcast stream, log and return as it makes no sense to continue in
+        // this situation.
+        if (acceptedStream == null)
         {
             return;
         }
@@ -272,7 +272,7 @@ public class SimulcastReceiver
         // There are sequences of packets with increasing timestamps but without
         // the marker bit set. Supposedly, they are probes to detect whether the
         // bandwidth may increase. We think that they should cause neither the
-        // start nor the stop of any SimulcastLayer.
+        // start nor the stop of any SimulcastStream.
 
         // XXX There's RawPacket#getPayloadLength() but the implementation
         // includes pkt.paddingSize at the time of this writing and we do not
@@ -292,15 +292,15 @@ public class SimulcastReceiver
             return;
         }
 
-        // NOTE(gp) we expect the base layer to be always on, so we never touch
+        // NOTE(gp) we expect the base stream to be always on, so we never touch
         // it or starve it.
 
         // XXX Refer to the implementation of
-        // SimulcastLayer#touch(boolean, RawPacket) for an explanation of why we
+        // SimulcastStream#touch(boolean, RawPacket) for an explanation of why we
         // chose to use a return value.
-        boolean frameStarted = acceptedLayer.touch(pkt);
+        boolean frameStarted = acceptedStream.touch(pkt);
         if (frameStarted)
-            simulcastLayerFrameStarted(acceptedLayer, pkt, layers);
+            simulcastStreamFrameStarted(acceptedStream, pkt, simStreams);
     }
 
     /**
@@ -310,9 +310,9 @@ public class SimulcastReceiver
      */
     public void maybeSendStartHighQualityStreamCommand()
     {
-        if (nativeSimulcast || !hasLayers())
+        if (nativeSimulcast || !isSimulcastSignaled())
         {
-            // In native simulcast the client adjusts its layers autonomously so
+            // In native simulcast the client adjusts its streams autonomously so
             // we don't need (nor we can) to control it with data channel
             // messages.
             return;
@@ -320,11 +320,11 @@ public class SimulcastReceiver
 
         Endpoint newEndpoint
             = getSimulcastEngine().getVideoChannel().getEndpoint();
-        SimulcastLayer[] newSimulcastLayers = getSimulcastLayers();
+        SimulcastStream[] newSimulcastStreams = getSimulcastStreams();
 
         SctpConnection sctpConnection;
-        if (newSimulcastLayers == null
-            || newSimulcastLayers.length <= 1
+        if (newSimulcastStreams == null
+            || newSimulcastStreams.length <= 1
                 /* newEndpoint != null is implied */
             || (sctpConnection = newEndpoint.getSctpConnection()) == null
             || !sctpConnection.isReady()
@@ -387,10 +387,10 @@ public class SimulcastReceiver
                     + " notifies " + newEndpoint.getID()
                     + " to start its HQ stream.");
 
-            SimulcastLayer hqLayer
-                = newSimulcastLayers[newSimulcastLayers.length - 1];;
-            StartSimulcastLayerCommand command
-                = new StartSimulcastLayerCommand(hqLayer);
+            SimulcastStream hqStream
+                = newSimulcastStreams[newSimulcastStreams.length - 1];;
+            StartSimulcastStreamCommand command
+                = new StartSimulcastStreamCommand(hqStream);
             String json = mapper.toJson(command);
 
             try
@@ -414,9 +414,9 @@ public class SimulcastReceiver
      */
     public void maybeSendStopHighQualityStreamCommand()
     {
-        if (nativeSimulcast || !hasLayers())
+        if (nativeSimulcast || !isSimulcastSignaled())
         {
-            // In native simulcast the client adjusts its layers autonomously so
+            // In native simulcast the client adjusts its streams autonomously so
             // we don't need (nor we can) to control it with data channel
             // messages.
             return;
@@ -425,11 +425,11 @@ public class SimulcastReceiver
         Endpoint oldEndpoint
             = getSimulcastEngine().getVideoChannel().getEndpoint();
 
-        SimulcastLayer[] oldSimulcastLayers = getSimulcastLayers();
+        SimulcastStream[] oldSimulcastStreams = getSimulcastStreams();
 
         SctpConnection sctpConnection;
-        if (oldSimulcastLayers != null
-            && oldSimulcastLayers.length > 1
+        if (oldSimulcastStreams != null
+            && oldSimulcastStreams.length > 1
                 /* oldEndpoint != null is implied*/
             && (sctpConnection = oldEndpoint.getSctpConnection()) != null
             && sctpConnection.isReady()
@@ -466,11 +466,11 @@ public class SimulcastReceiver
                     " notifies " + oldEndpoint.getID() + " to stop " +
                     "its HQ stream.");
 
-                SimulcastLayer hqLayer
-                    = oldSimulcastLayers[oldSimulcastLayers.length - 1];
+                SimulcastStream hqStream
+                    = oldSimulcastStreams[oldSimulcastStreams.length - 1];
 
-                StopSimulcastLayerCommand command
-                    = new StopSimulcastLayerCommand(hqLayer);
+                StopSimulcastStreamCommand command
+                    = new StopSimulcastStreamCommand(hqStream);
 
                 String json = mapper.toJson(command);
 
@@ -528,42 +528,42 @@ public class SimulcastReceiver
      * Notifies this {@code SimulcastReceiver} that a specific
      * {@code SimulcastReceiver} has detected the start of a new video frame in
      * the RTP stream that it represents. Determines whether any of
-     * {@link #simulcastLayers} other than {@code source} have been
+     * {@link #simulcastStreams} other than {@code source} have been
      * paused/stopped by the remote peer. The determination is based on counting
      * (video) frames.
      *
-     * @param source the {@code SimulcastLayer} which is the source of the event
+     * @param source the {@code SimulcastStream} which is the source of the event
      * i.e. which has detected the start of a new video frame in the RTP stream
      * that it represents
      * @param pkt the {@code RawPacket} which was received by {@code source} and
      * possibly influenced the decision that a new view frame was started in the
      * RTP stream represented by {@code source}
-     * @param layers the set of {@code SimulcastLayer}s managed by this
+     * @param simStreams the set of {@code SimulcastStream}s managed by this
      * {@code SimulcastReceiver}. Explicitly provided to the method in order to
-     * avoid invocations of {@link #getSimulcastLayers()} because the latter
+     * avoid invocations of {@link #getSimulcastStreams()} because the latter
      * makes a copy at the time of this writing.
      */
-    private void simulcastLayerFrameStarted(
-            SimulcastLayer source,
+    private void simulcastStreamFrameStarted(
+            SimulcastStream source,
             RawPacket pkt,
-            SimulcastLayer[] layers)
+            SimulcastStream[] simStreams)
     {
         // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
-        // compile time) the frame-based approach to the detection of layer
+        // compile time) the frame-based approach to the detection of stream
         // drops.
         if (TIMEOUT_ON_FRAME_COUNT <= 1)
             return;
 
-        // Timeouts in layers caused by source may occur only based on the span
-        // (of time or received frames) during which source has received
-        // TIMEOUT_ON_FRAME_COUNT number of frames. The current method
+        // Timeouts in simulcast streams caused by source may occur only based
+        // on the span (of time or received frames) during which source has
+        // received TIMEOUT_ON_FRAME_COUNT number of frames. The current method
         // invocation signals the receipt of 1 frame by source.
         int indexOfLastSourceOccurrenceInHistory = -1;
         int sourceFrameCount = 0;
         int ix = 0;
 
-        for (Iterator<SimulcastLayer> it
-                    = simulcastLayerFrameHistory.iterator();
+        for (Iterator<SimulcastStream> it
+                    = simulcastStreamFrameHistory.iterator();
                 it.hasNext();
                 ++ix)
         {
@@ -571,7 +571,7 @@ public class SimulcastReceiver
             {
                 if (indexOfLastSourceOccurrenceInHistory != -1)
                 {
-                    // Prune simulcastLayerFrameHistory so that it does not
+                    // Prune simulcastStreamFrameHistory so that it does not
                     // become unnecessarily long.
                     it.remove();
                 }
@@ -582,7 +582,7 @@ public class SimulcastReceiver
                     // purposes of timeouts. The current method invocations
                     // signals the receipt of 1 frame by source so
                     // TIMEOUT_ON_FRAME_COUNT - 1 occurrences of source in
-                    // simulcastLayerFrameHistory is enough.
+                    // simulcastStreamFrameHistory is enough.
                     indexOfLastSourceOccurrenceInHistory = ix;
                 }
             }
@@ -590,28 +590,28 @@ public class SimulcastReceiver
 
         if (indexOfLastSourceOccurrenceInHistory != -1)
         {
-            // Presumably, if a SimulcastLayer is active, all SimulcastLayers
-            // before it (according to SimulcastLayer's order) are active as
-            // well. Consequently, timeouts may occur in SimulcastLayers which
+            // Presumably, if a SimulcastStream is active, all SimulcastStreams
+            // before it (according to SimulcastStream's order) are active as
+            // well. Consequently, timeouts may occur in SimulcastStreams which
             // are after source.
             boolean maybeTimeout = false;
 
-            for (SimulcastLayer layer : layers)
+            for (SimulcastStream simStream : simStreams)
             {
                 if (maybeTimeout)
                 {
-                    // There's no point in timing layer out if it's timed out
+                    // There's no point in timing stream out if it's timed out
                     // already.
-                    if (layer.isStreaming())
+                    if (simStream.isStreaming())
                     {
                         maybeTimeout(
                                 source,
                                 pkt,
-                                layer,
+                                simStream,
                                 indexOfLastSourceOccurrenceInHistory);
                     }
                 }
-                else if (layer == source)
+                else if (simStream == source)
                 {
                     maybeTimeout = true;
                 }
@@ -620,8 +620,8 @@ public class SimulcastReceiver
 
         // As previously stated, the current method invocation signals the
         // receipt of 1 frame by source.
-        simulcastLayerFrameHistory.add(0, source);
-        // TODO Prune simulcastLayerFrameHistory by forgetting so that it does
+        simulcastStreamFrameHistory.add(0, source);
+        // TODO Prune simulcastStreamFrameHistory by forgetting so that it does
         // not become too long.
     }
 
@@ -630,25 +630,25 @@ public class SimulcastReceiver
      * peer. The determination is based on counting frames and is triggered by
      * the receipt of (a piece of) a new (video) frame by {@code cause}.
      *
-     * @param cause the {@code SimulcastLayer} which has received (a piece of) a
+     * @param cause the {@code SimulcastStream} which has received (a piece of) a
      * new (video) frame and has thus triggered a check on {@code effect}
      * @param pkt the {@code RawPacket} which was received by {@code cause} and
      * possibly influenced the decision to trigger a check on {@code effect}
-     * @param effect the {@code SimulcastLayer} which is to be checked whether
+     * @param effect the {@code SimulcastStream} which is to be checked whether
      * it looks like it has been paused/stopped by the remote peer
-     * @param endIndexInSimulcastLayerFrameHistory
+     * @param endIndexInSimulcastStreamFrameHistory
      */
     private void maybeTimeout(
-            SimulcastLayer cause,
+            SimulcastStream cause,
             RawPacket pkt,
-            SimulcastLayer effect,
-            int endIndexInSimulcastLayerFrameHistory)
+            SimulcastStream effect,
+            int endIndexInSimulcastStreamFrameHistory)
     {
-        Iterator<SimulcastLayer> it = simulcastLayerFrameHistory.iterator();
+        Iterator<SimulcastStream> it = simulcastStreamFrameHistory.iterator();
         boolean timeout = true;
 
         for (int ix = 0;
-                it.hasNext() && ix < endIndexInSimulcastLayerFrameHistory;
+                it.hasNext() && ix < endIndexInSimulcastStreamFrameHistory;
                 ++ix)
         {
             if (it.next() == effect)
@@ -665,8 +665,8 @@ public class SimulcastReceiver
             {
                 // Since effect has been determined to have been paused/stopped
                 // by the remote peer, its possible presence in
-                // simulcastLayerFrameHistory is irrelevant now. In other words,
-                // remove effect from simulcastLayerFrameHistory.
+                // simulcastStreamFrameHistory is irrelevant now. In other words,
+                // remove effect from simulcastStreamFrameHistory.
                 while (it.hasNext())
                 {
                     if (it.next() == effect)

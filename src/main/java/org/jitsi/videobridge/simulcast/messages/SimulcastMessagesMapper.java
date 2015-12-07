@@ -28,7 +28,7 @@ import java.util.*;
  */
 public class SimulcastMessagesMapper
 {
-    public String toJson(StartSimulcastLayerCommand command)
+    public String toJson(StartSimulcastStreamCommand command)
     {
         if (command == null)
         {
@@ -36,16 +36,16 @@ public class SimulcastMessagesMapper
         }
 
         StringBuilder b = new StringBuilder(
-                "{\"colibriClass\":\"StartSimulcastLayerEvent\"");
+                "{\"colibriClass\":\"StartSimulcastStreamEvent\"");
 
-        b.append(",\"simulcastLayer\":[");
-        toJson(b, command.simulcastLayer);
+        b.append(",\"simulcastStream\":[");
+        toJson(b, command.simulcastStream);
         b.append("]}");
 
         return b.toString();
     }
 
-    public String toJson(StopSimulcastLayerCommand command)
+    public String toJson(StopSimulcastStreamCommand command)
     {
         if (command == null)
         {
@@ -53,10 +53,10 @@ public class SimulcastMessagesMapper
         }
 
         StringBuilder b = new StringBuilder(
-                "{\"colibriClass\":\"StopSimulcastLayerEvent\"");
+                "{\"colibriClass\":\"StopSimulcastStreamEvent\"");
 
-        b.append(",\"simulcastLayer\":[");
-        toJson(b, command.simulcastLayer);
+        b.append(",\"simulcastStream\":[");
+        toJson(b, command.simulcastStream);
         b.append("]}");
 
         return b.toString();
@@ -73,24 +73,24 @@ public class SimulcastMessagesMapper
     // So, basically it would work exactly like this custom encoder, but
     // without having to write a single line of code.
 
-    public String toJson(SortedSet<SimulcastLayer> simulcastLayers)
+    public String toJson(SortedSet<SimulcastStream> simulcastStreams)
     {
-        if (simulcastLayers == null || simulcastLayers.isEmpty())
+        if (simulcastStreams == null || simulcastStreams.isEmpty())
         {
             return "";
         }
 
         StringBuilder b = new StringBuilder("[");
-        for (SimulcastLayer simulcastLayer : simulcastLayers)
+        for (SimulcastStream simulcastStream : simulcastStreams)
         {
-            toJson(b, simulcastLayer);
+            toJson(b, simulcastStream);
         }
         b.append("]");
 
         return b.toString();
     }
 
-    public String toJson(SimulcastLayersChangingEvent event)
+    public String toJson(SimulcastStreamsChangingEvent event)
     {
         if (event == null)
         {
@@ -98,13 +98,13 @@ public class SimulcastMessagesMapper
         }
 
         StringBuilder b = new StringBuilder(
-                "{\"colibriClass\":\"SimulcastLayersChangingEvent\"");
+                "{\"colibriClass\":\"SimulcastStreamsChangingEvent\"");
 
-        b.append(",\"endpointSimulcastLayers\":[");
-        for (int i = 0; i < event.endpointSimulcastLayers.length; i++)
+        b.append(",\"endpointSimulcastStreams\":[");
+        for (int i = 0; i < event.endpointSimulcastStreams.length; i++)
         {
-            toJson(b, event.endpointSimulcastLayers[i]);
-            if (i != event.endpointSimulcastLayers.length - 1)
+            toJson(b, event.endpointSimulcastStreams[i]);
+            if (i != event.endpointSimulcastStreams.length - 1)
                 b.append(",");
         }
         b.append("]}");
@@ -112,7 +112,7 @@ public class SimulcastMessagesMapper
         return b.toString();
     }
 
-    public String toJson(NextSimulcastLayerStoppedEvent event)
+    public String toJson(NextSimulcastStreamStoppedEvent event)
     {
         if (event == null)
         {
@@ -120,13 +120,13 @@ public class SimulcastMessagesMapper
         }
 
         StringBuilder b = new StringBuilder(
-            "{\"colibriClass\":\"NextSimulcastLayerStoppedEvent\"");
+            "{\"colibriClass\":\"NextSimulcastStreamStoppedEvent\"");
 
-        b.append(",\"endpointSimulcastLayers\":[");
-        for (int i = 0; i < event.endpointSimulcastLayers.length; i++)
+        b.append(",\"endpointSimulcastStreams\":[");
+        for (int i = 0; i < event.endpointSimulcastStreams.length; i++)
         {
-            toJson(b, event.endpointSimulcastLayers[i]);
-            if (i != event.endpointSimulcastLayers.length - 1)
+            toJson(b, event.endpointSimulcastStreams[i]);
+            if (i != event.endpointSimulcastStreams.length - 1)
                 b.append(",");
         }
         b.append("]}");
@@ -134,7 +134,7 @@ public class SimulcastMessagesMapper
         return b.toString();
     }
 
-    public String toJson(SimulcastLayersChangedEvent event)
+    public String toJson(SimulcastStreamsChangedEvent event)
     {
         if (event == null)
         {
@@ -142,13 +142,13 @@ public class SimulcastMessagesMapper
         }
 
         StringBuilder b = new StringBuilder(
-                "{\"colibriClass\":\"SimulcastLayersChangedEvent\"");
+                "{\"colibriClass\":\"SimulcastStreamsChangedEvent\"");
 
-        b.append(",\"endpointSimulcastLayers\":[");
-        for (int i = 0; i < event.endpointSimulcastLayers.length; i++)
+        b.append(",\"endpointSimulcastStreams\":[");
+        for (int i = 0; i < event.endpointSimulcastStreams.length; i++)
         {
-            toJson(b, event.endpointSimulcastLayers[i]);
-            if (i != event.endpointSimulcastLayers.length - 1)
+            toJson(b, event.endpointSimulcastStreams[i]);
+            if (i != event.endpointSimulcastStreams.length - 1)
                 b.append(",");
         }
         b.append("]}");
@@ -157,9 +157,9 @@ public class SimulcastMessagesMapper
     }
 
     private void toJson(StringBuilder b,
-                               EndpointSimulcastLayer endpointSimulcastLayer)
+                               EndpointSimulcastStream endpointSimulcastStream)
     {
-        if (b == null || endpointSimulcastLayer == null)
+        if (b == null || endpointSimulcastStream == null)
         {
             return;
         }
@@ -167,27 +167,27 @@ public class SimulcastMessagesMapper
         b.append("{\"endpoint\":");
         // NOTE(gp) do not change this to JSONValue.escape()! It breaks JSON
         // parsing at the client!
-        b.append(JSONValue.toJSONString(endpointSimulcastLayer.endpoint));
-        b.append(",\"simulcastLayer\":");
-        toJson(b, endpointSimulcastLayer.simulcastLayer);
+        b.append(JSONValue.toJSONString(endpointSimulcastStream.endpoint));
+        b.append(",\"simulcastStream\":");
+        toJson(b, endpointSimulcastStream.simulcastStream);
         b.append("}");
     }
 
-    public void toJson(StringBuilder b, SimulcastLayer simulcastLayer)
+    public void toJson(StringBuilder b, SimulcastStream simulcastStream)
     {
-        if (b == null || simulcastLayer == null)
+        if (b == null || simulcastStream == null)
         {
             return;
         }
 
         b.append("{\"primarySSRC\":");
-        b.append(Long.toString(simulcastLayer.getPrimarySSRC()));
+        b.append(Long.toString(simulcastStream.getPrimarySSRC()));
 
         b.append(",\"rtxSSRC\":");
-        b.append(Long.toString(simulcastLayer.getRTXSSRC()));
+        b.append(Long.toString(simulcastStream.getRTXSSRC()));
 
         b.append(",\"isStreaming\":");
-        b.append(Boolean.toString(simulcastLayer.isStreaming()));
+        b.append(Boolean.toString(simulcastStream.isStreaming()));
         b.append("}");
     }
 
@@ -201,7 +201,7 @@ public class SimulcastMessagesMapper
         StringBuilder sb = new StringBuilder();
         sb.append("{");
 
-        SimulcastLayer current = rewritingSendMode.getCurrent();
+        SimulcastStream current = rewritingSendMode.getCurrent();
         if (current != null)
         {
             sb.append("current: ");
@@ -209,7 +209,7 @@ public class SimulcastMessagesMapper
             sb.append(", ");
         }
 
-        SimulcastLayer next = rewritingSendMode.getNext();
+        SimulcastStream next = rewritingSendMode.getNext();
         if (next != null)
         {
             sb.append("next: ");

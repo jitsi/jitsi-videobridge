@@ -18,8 +18,8 @@ package org.jitsi.videobridge.simulcast.messages;
 /**
  * @author George Politis
  */
-public class NextSimulcastLayerStoppedEvent
+public class NextSimulcastStreamStoppedEvent
 {
-    final String colibriClass = "NextSimulcastLayerStoppedEvent";
-    public EndpointSimulcastLayer[] endpointSimulcastLayers;
+    final String colibriClass = "NextSimulcastStreamStoppedEvent";
+    public EndpointSimulcastStream[] endpointSimulcastStreams;
 }

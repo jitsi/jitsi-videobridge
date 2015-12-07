@@ -31,7 +31,7 @@ import java.util.*;
 public class SimulcastSenderManager
 {
     /**
-     * The order when there's no override layer.
+     * The order when there's no override simulcast stream.
      */
     public static final int SIMULCAST_LAYER_ORDER_NO_OVERRIDE = -1;
 
@@ -51,8 +51,8 @@ public class SimulcastSenderManager
         = new WeakHashMap<SimulcastReceiver, SimulcastSender>();
 
     /**
-     * Holds the override layer order for all the senders that this sender
-     * manager manages.
+     * Holds the override simulcast stream order for all the senders that this
+     * sender manager manages.
      */
     private int overrideOrder = SIMULCAST_LAYER_ORDER_NO_OVERRIDE;
 
@@ -77,9 +77,9 @@ public class SimulcastSenderManager
     }
 
     /**
-     * Gets the override layer order.
+     * Gets the override simulcast stream order.
      *
-     * @return the override layer order.
+     * @return the override simulcast stream order.
      */
     public int getOverrideOrder()
     {
@@ -87,9 +87,9 @@ public class SimulcastSenderManager
     }
 
     /**
-     * Sets the override layer order.
+     * Sets the override simulcast stream order.
      *
-     * @param overrideOrder the new override layer order.
+     * @param overrideOrder the new override simulcast stream order.
      */
     public void setOverrideOrder(int overrideOrder)
     {
@@ -110,7 +110,7 @@ public class SimulcastSenderManager
         int ssrc = pkt.getSSRC();
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver(ssrc);
 
-        if (simulcastReceiver == null || !simulcastReceiver.hasLayers())
+        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
         {
             // Just forward the packet, we don't receive any simulcast from
             // the peer endpoint.
@@ -125,8 +125,8 @@ public class SimulcastSenderManager
     }
 
     /**
-     * Determines which simulcast layer from the srcVideoChannel is currently
-     * being received by this video channel.
+     * Determines which simulcast simulcast stream from the srcVideoChannel is
+     * currently being received by this video channel.
      *
      * @param simulcastReceiver
      * @return
@@ -134,7 +134,7 @@ public class SimulcastSenderManager
     private synchronized SimulcastSender getOrCreateSimulcastSender(
         SimulcastReceiver simulcastReceiver)
     {
-        if (simulcastReceiver == null || !simulcastReceiver.hasLayers())
+        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
         {
             return null;
         }

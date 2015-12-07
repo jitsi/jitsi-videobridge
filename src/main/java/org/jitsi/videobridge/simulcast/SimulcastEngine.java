@@ -27,13 +27,13 @@ import org.jitsi.videobridge.*;
 
 /**
  * The <tt>SimulcastEngine</tt> of a <tt>VideoChannel</tt> makes sure to only
- * forward one layer at any given point in time to the owner endpoint, viewed
- * as a receiver.
+ * forward one simulcast stream at any given point in time to the owner
+ * endpoint, viewed as a receiver.
  *
  * This class also takes care of "gatewaying" the RTCP SRs that sending
  * endpoints are sending. In this context "gatewaying" means updating the octet
  * and packet count information in the SRs. Such a change is necessary because
- * of the pausing/resuming of the simulcast layers that this class performs.
+ * of the pausing/resuming of the simulcast streams that this class performs.
  *
  * @author George Politis
  */
@@ -67,11 +67,11 @@ public class SimulcastEngine
         = new SimulcastSenderManager(this);
 
     /**
-     * The RTP stats map that holds RTP statistics about all the layers
-     * that this <tt>SimulcastEngine</tt> is sending. It allows to modify the
-     * packets sent count and packets octet count in the RTCP SRs, taking into
-     * account the pausing of the simulcast layers. The stats are updated in the
-     * RTP transform direction and they are used by the
+     * The RTP stats map that holds RTP statistics about all the simulcast
+     * streams that this <tt>SimulcastEngine</tt> is sending. It allows to
+     * modify the packets sent count and packets octet count in the RTCP SRs,
+     * taking into account the pausing of the simulcast streams. The stats are
+     * updated in the RTP transform direction and they are used by the
      * <tt>SenderReportGateway</tt> that is defined bellow.
      */
     private final RTPStatsMap rtpStatsMap = new RTPStatsMap();
@@ -79,7 +79,7 @@ public class SimulcastEngine
     /**
      * The <tt>SenderReportGateway</tt> responsible for gatewaying sender
      * reports i.e. modifying their octet count and packet count to reflect the
-     * pausing/resuming of the layers due to simulcast.
+     * pausing/resuming of the simulcast streams due to simulcast.
      *
      * RTCP termination, which needs to be activated for simulcast, nullifies
      * the effects of the SenderReportGateay because it generates SRs from
@@ -253,7 +253,7 @@ public class SimulcastEngine
         public RawPacket transform(RawPacket pkt)
         {
             // Drops or accepts RTP packets depending on which simulcast
-            // sub-stream is currently being sent. This is managed by the
+            // stream is currently being sent. This is managed by the
             // <tt>SwitchingSimulcastSender</tt>.
 
             boolean accept = simulcastSenderManager.accept(pkt);
@@ -275,7 +275,7 @@ public class SimulcastEngine
         {
             // Pass the received <tt>RawPacket</tt> down to the
             // <tt>SimulcastReceiver</tt> and let it do its thing (updates the
-            // <tt>SimulcastLayer</tt>s that we receive).
+            // <tt>SimulcastStream</tt>s that we receive).
             simulcastReceiver.accepted(p);
 
             return p;

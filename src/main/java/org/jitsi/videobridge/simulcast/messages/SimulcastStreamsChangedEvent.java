@@ -15,19 +15,13 @@
  */
 package org.jitsi.videobridge.simulcast.messages;
 
-import org.jitsi.videobridge.simulcast.*;
-
 /**
-* @author George Politis
-*/
-public class StopSimulcastLayerCommand
+ * Represents a notification/event that is sent to an endpoint through data
+ * channels when there is a change in the simulcast substream the bridge is
+ * pushing to that specific endpoint.
+ */
+public class SimulcastStreamsChangedEvent
 {
-    public StopSimulcastLayerCommand(SimulcastLayer simulcastLayer)
-    {
-        this.simulcastLayer = simulcastLayer;
-    }
-
-    // TODO(gp) rename this to StopSimulcastLayerCommand
-    final String colibriClass = "StopSimulcastLayerEvent";
-    final SimulcastLayer simulcastLayer;
+    final String colibriClass = "SimulcastStreamsChangedEvent";
+    public EndpointSimulcastStream[] endpointSimulcastStreams;
 }

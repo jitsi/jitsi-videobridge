@@ -31,7 +31,7 @@ import org.jitsi.videobridge.simulcast.sendmodes.*;
  * it decides which packets (based on SSRC) to accept/forward from that
  * <tt>SimulcastReceiver</tt>. It defines the rules that determine whether LQ or
  * HQ should be forwarded. It also handles spontaneous drops in simulcast
- * layers.
+ * streams.
  *
  * @author George Politis
  */
@@ -40,7 +40,7 @@ public class SimulcastSender
     implements PropertyChangeListener
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>ReceivingLayers</tt> class and its
+     * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
@@ -220,32 +220,32 @@ public class SimulcastSender
     private void react(boolean urgent)
     {
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
-        SimulcastLayer closestMatch
-            = simulcastReceiver.getSimulcastLayer(targetOrder);
+        SimulcastStream closestMatch
+            = simulcastReceiver.getSimulcastStream(targetOrder);
         sendMode.receive(closestMatch, urgent);
     }
 
     /**
      * {@inheritDoc}
      *
-     * Implements most, if not all, of our layer switching logic.
+     * Implements most, if not all, of our stream switching logic.
      */
     @Override
     public void propertyChange(PropertyChangeEvent ev)
     {
         String propertyName = ev.getPropertyName();
 
-        if (SimulcastLayer.IS_STREAMING_PNAME.equals(propertyName))
+        if (SimulcastStream.IS_STREAMING_PNAME.equals(propertyName))
         {
-            SimulcastLayer l = (SimulcastLayer) ev.getSource();
+            SimulcastStream l = (SimulcastStream) ev.getSource();
             boolean isUrgent = l == sendMode.getCurrent() && !l.isStreaming();
             react(isUrgent);
         }
         else if (SimulcastReceiver.SIMULCAST_LAYERS_PNAME.equals(propertyName))
         {
-            logDebug("Handling layers change.");
-            // The simulcast layers of the peer have changed, (re)attach.
-            receiveLayersChanged();
+            logDebug("Handling streams change.");
+            // The simulcast streams of the peer have changed, (re)attach.
+            receiveStreamsChanged();
         }
         else if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName)
             || Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
@@ -272,15 +272,15 @@ public class SimulcastSender
                 return;
             }
 
-            SimulcastLayer[] layers = simulcastReceiver.getSimulcastLayers();
-            if (layers == null || layers.length == 0)
+            SimulcastStream[] simStreams = simulcastReceiver.getSimulcastStreams();
+            if (simStreams == null || simStreams.length == 0)
             {
                 logWarn("The remote endpoint hasn't signaled simulcast. " +
                         "This simulcastSender is now disabled.");
                 return;
             }
 
-            int hqOrder = layers.length - 1;
+            int hqOrder = simStreams.length - 1;
             if (newEndpoint == getSendEndpoint() && targetOrder != hqOrder)
             {
                 targetOrder = hqOrder;
@@ -290,9 +290,9 @@ public class SimulcastSender
 
             // Send LQ stream for the previously selected endpoint.
             if (oldEndpoint == getSendEndpoint()
-                && targetOrder != SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE)
+                && targetOrder != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE)
             {
-                targetOrder = SimulcastLayer.SIMULCAST_LAYER_ORDER_BASE;
+                targetOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE;
                 react(false);
                 getSimulcastReceiver().maybeSendStopHighQualityStreamCommand();
             }
@@ -356,12 +356,12 @@ public class SimulcastSender
 
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
 
-        // We want to be notified when the simulcast layers of the sending
-        // endpoint change. It will wall the {#receiveLayersChanged()} method.
+        // We want to be notified when the simulcast streams of the sending
+        // endpoint change. It will wall the {#receiveStreamsChanged()} method.
         simulcastReceiver.addPropertyChangeListener(propertyChangeListener);
 
-        // Manually trigger the {#receiveLayersChanged()} method so that w
-        receiveLayersChanged();
+        // Manually trigger the {#receiveStreamsChanged()} method so that w
+        receiveStreamsChanged();
 
         VideoChannel sendVideoChannel = getSimulcastSenderManager()
             .getSimulcastEngine().getVideoChannel();
@@ -407,22 +407,22 @@ public class SimulcastSender
     }
 
     /**
-     * Notifies this instance about a change in the simulcast layers of the
+     * Notifies this instance about a change in the simulcast streams of the
      * associated peer. We keep this in a separate method for readability and
      * re-usability.
      */
-    private void receiveLayersChanged()
+    private void receiveStreamsChanged()
     {
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
-        if (simulcastReceiver == null || !simulcastReceiver.hasLayers())
+        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
         {
             return;
         }
 
-        for (SimulcastLayer layer : simulcastReceiver.getSimulcastLayers())
+        for (SimulcastStream simStream : simulcastReceiver.getSimulcastStreams())
         {
-            // Add listener from the current receiving simulcast layers.
-            layer.addPropertyChangeListener(propertyChangeListener);
+            // Add listener from the current receiving simulcast streams.
+            simStream.addPropertyChangeListener(propertyChangeListener);
         }
 
         // Initialize the send mode.
