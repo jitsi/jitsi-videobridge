@@ -976,26 +976,6 @@ public class RtpChannel
     }
 
     /**
-     * Determines whether a specific <tt>Channel</tt> is within the set of
-     * <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether the RTP video
-     * streams of the specified channel are to be sent to the remote endpoint of
-     * this <tt>Channel</tt>.
-     *
-     * @param channel the <tt>Channel</tt> to be checked whether it is within
-     * the set of <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether its
-     * RTP streams are to be sent to the remote endpoint of this
-     * <tt>Channel</tt>
-     * @return <tt>true</tt> if the RTP streams of <tt>channel</tt> are to be
-     * sent to the remote endpoint of this <tt>Channel</tt>; otherwise,
-     * <tt>false</tt>. The implementation of the <tt>RtpChannel</tt> class
-     * always returns <tt>true</tt>.
-     */
-    public boolean isInLastN(Channel channel)
-    {
-        return true;
-    }
-
-    /**
      * Starts {@link #stream} if it has not been started yet and if the state of
      * this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
@@ -1178,6 +1158,8 @@ public class RtpChannel
     {
         Object source = ev.getSource();
 
+        // At the time of writing this doesn't do anything (dominantSpeakerChanged
+        // is empty in all Channel implementations). Should we remove it if it is unused?
         if ((conferenceSpeechActivity == source)
                 && (conferenceSpeechActivity != null))
         {

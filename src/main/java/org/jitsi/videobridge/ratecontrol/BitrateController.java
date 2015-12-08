@@ -43,6 +43,7 @@ import org.jitsi.videobridge.simulcast.*;
  * @author George Politis
  */
 public class BitrateController
+    //implements BandwidthEstimator.Listener
 {
     /**
      * Whether the values for the constants have been initialized or not.
@@ -187,6 +188,9 @@ public class BitrateController
     public BitrateController(VideoChannel channel)
     {
         this.channel = channel;
+        // FIXME
+        //BandwidthEstimator be = ((VideoMediaStream) channel.getStream()).getOrCreateBandwidthEstimator();
+        //be.addListener(this);
 
         initializeConfiguration();
     }
@@ -210,7 +214,7 @@ public class BitrateController
         long remainingBandwidth = availableBandwidth;
         int numEndpointsThatFitIn = 0;
 
-        final Iterator<Endpoint> it = channel.getReceivingEndpoints();
+        final Iterator<Endpoint> it = null; //channel.getReceivingEndpoints();
         final Endpoint thisEndpoint = channel.getEndpoint();
 
         while (it.hasNext())
@@ -296,6 +300,7 @@ public class BitrateController
         {
             bitrateAdaptorSet = true;
 
+            /*
             if (channel.getAdaptiveLastN())
             {
                 bitrateAdaptor = new VideoChannelLastNAdaptor(this);
@@ -304,6 +309,7 @@ public class BitrateController
             {
                 bitrateAdaptor = new SimulcastAdaptor(this);
             }
+            */
         }
 
         return bitrateAdaptor;
@@ -370,19 +376,22 @@ public class BitrateController
      *
      * @param remb the bitrate of the REMB packet received.
      */
-    public void receivedREMB(long remb)
+    //@Override
+    public void bandwidthEstimationChanged(long remb)
     {
+        logger.warn("XXX new bw estimate: " + remb);
         BitrateAdaptor bitrateAdaptor = getOrCreateBitrateAdaptor();
         if (bitrateAdaptor == null)
         {
             // A bitrate adaptor is not set. It makes no sense to continue.
             return;
         }
+        logger.warn(hashCode()+" YYY new bw estimate: " + remb);
 
         long now = System.currentTimeMillis();
 
         // The number of endpoints this channel is currently receiving
-        int receivingEndpointCount = channel.getReceivingEndpointCount();
+        int receivingEndpointCount = 0;//channel.getReceivingEndpointCount();
 
         if (firstRemb == -1)
             firstRemb = now;

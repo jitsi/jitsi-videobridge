@@ -17,11 +17,9 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
-import java.lang.ref.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
-import java.util.concurrent.locks.*;
 
 import javax.media.rtp.*;
 
@@ -88,11 +86,6 @@ public class VideoChannel
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
 
     /**
-     * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>.
-     */
-    private SimulcastMode simulcastMode;
-
-    /**
      * Updates the values of the property <tt>inLastN</tt> of all
      * <tt>VideoChannel</tt>s in the <tt>Content</tt> of a specific
      * <tt>VideoChannel</tt>.
@@ -126,20 +119,22 @@ public class VideoChannel
     }
 
     /**
-     * Whether or not to use adaptive lastN.
+     * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>.
      */
-    private boolean adaptiveLastN = false;
-
-    /**
-     * Whether or not to use adaptive simulcast.
-     */
-    private boolean adaptiveSimulcast = false;
+    private SimulcastMode simulcastMode;
 
     /**
      * The <tt>BitrateController</tt> which will be controlling the
      * value of <tt>bitrate</tt> for this <tt>VideoChannel</tt>.
      */
     private BitrateController bitrateController;
+
+    /**
+     * The instance which controls which endpoints' video streams are to be
+     * forwarded on this {@link VideoChannel} (i.e. implements last-n and its
+     * extensions (pinned endpoints, adaptation).
+     */
+    private final LastNController lastNController = new LastNController(this);
 
     /**
      * The instance which will be computing the incoming bitrate for this
@@ -153,26 +148,6 @@ public class VideoChannel
      * any <tt>VideoChannel</tt>/<tt>Endpoint</tt>'s <tt>lastN</tt>.
      */
     private final AtomicBoolean inLastN = new AtomicBoolean(true);
-
-    /**
-     * The maximum number of video RTP stream to be sent from Jitsi Videobridge
-     * to the endpoint associated with this video <tt>Channel</tt>.
-     */
-    private Integer lastN;
-
-    /**
-     * The <tt>Endpoint</tt>s in the multipoint conference in which this
-     * <tt>Channel</tt> is participating ordered by
-     * {@link #conferenceSpeechActivity} and used by this <tt>Channel</tt> for
-     * the support of {@link #lastN}.
-     */
-    private List<WeakReference<Endpoint>> lastNEndpoints;
-
-    /**
-     * The <tt>Object</tt> which synchronizes the access to
-     * {@link #lastNEndpoints} and {@link #lastN}.
-     */
-    private final ReadWriteLock lastNSyncRoot = new ReentrantReadWriteLock();
 
     /**
      * Whether the bridge should request retransmissions for missing packets
@@ -297,6 +272,9 @@ public class VideoChannel
 
             stream.getMediaStreamStats().addNackListener(this);
         }
+
+        // FIXME: this shouldn't depend on cfg, and shouldn't happen here.
+        getBitrateController();
     }
 
     /**
@@ -363,34 +341,14 @@ public class VideoChannel
 
         super.describe(iq);
 
-        iq.setLastN(lastN);
+        iq.setLastN(lastNController.getLastN());
         iq.setSimulcastMode(getSimulcastMode());
-    }
-
-    /**
-     * Gets a boolean value indicating whether or not to use adaptive lastN.
-     *
-     * @return a boolean value indicating whether or not to use adaptive lastN.
-     */
-    public boolean getAdaptiveLastN()
-    {
-        return this.adaptiveLastN;
-    }
-
-    /**
-     * Gets a boolean value indicating whether or not to use adaptive simulcast.
-     *
-     * @return a boolean value indicating whether or not to use adaptive
-     * simulcast.
-     */
-    public boolean getAdaptiveSimulcast()
-    {
-        return this.adaptiveSimulcast;
     }
 
     /**
      * Returns the <tt>BitrateController</tt> for this <tt>VideoChannel</tt>,
      * creating it if necessary.
+     * TODO: move to LastNController
      *
      * @return the <tt>VideoChannelLastNAdaptor</tt> for this
      * <tt>VideoChannel</tt>, creating it if necessary.
@@ -425,136 +383,7 @@ public class VideoChannel
      */
     public int getLastN()
     {
-        Integer lastNInteger = this.lastN;
-
-        return (lastNInteger == null) ? -1 : lastNInteger.intValue();
-    }
-
-    /**
-     * Returns the list of <tt>Endpoint</tt>s for the purposes of
-     * &quot;last N&quot;.
-     *
-     * @return the list of <tt>Endpoint</tt>s for the purposes of
-     * &quot;last N&quot;
-     */
-    public List<Endpoint> getLastNEndpoints()
-    {
-        Lock readLock = lastNSyncRoot.readLock();
-        List<Endpoint> endpoints;
-
-        readLock.lock();
-        try
-        {
-            if (lastNEndpoints == null || lastNEndpoints.isEmpty())
-            {
-                endpoints = Collections.emptyList();
-            }
-            else
-            {
-                endpoints = new ArrayList<>(lastNEndpoints.size());
-                for (WeakReference<Endpoint> wr : lastNEndpoints)
-                {
-                    Endpoint endpoint = wr.get();
-
-                    if (endpoint != null)
-                        endpoints.add(endpoint);
-                }
-            }
-        }
-        finally
-        {
-            readLock.unlock();
-        }
-
-        return endpoints;
-    }
-
-    private Endpoint getEffectivePinnedEndpoint()
-    {
-        // For the purposes of LastN, we consider that the user has no pinned
-        // participant if he/she has pinned himself/herself.
-        Endpoint thisEndpoint = getEndpoint();
-
-        if (thisEndpoint == null)
-            return null;
-
-        Endpoint pinnedEndpoint = thisEndpoint.getPinnedEndpoint();
-
-        return thisEndpoint.equals(pinnedEndpoint) ? null : pinnedEndpoint;
-    }
-
-    public int getReceivingEndpointCount()
-    {
-        int receivingEndpointCount;
-
-        if (getLastN() == -1)
-        {
-            // LastN is disabled. Consequently, this endpoint receives all the
-            // other participants.
-            receivingEndpointCount
-                = getContent().getConference().getEndpointCount();
-        }
-        else
-        {
-            // LastN is enabled. Get the last N endpoints that this endpoint is
-            // receiving.
-            receivingEndpointCount = getLastNEndpoints().size();
-        }
-        return receivingEndpointCount;
-    }
-
-    /**
-     * Creates and returns an iterator of the endpoints that are currently
-     * being received by this channel.
-     *
-     * @return an iterator of the endpoints that are currently being received
-     * by this channel.
-     */
-    public Iterator<Endpoint> getReceivingEndpoints()
-    {
-        final List<Endpoint> endpoints;
-
-        if (getLastN() == -1)
-        {
-            // LastN is disabled. Consequently, this endpoint receives all the
-            // other participants.
-            endpoints = getContent().getConference().getEndpoints();
-        }
-        else
-        {
-            // LastN is enabled. Get the last N endpoints that this endpoint is
-            // receiving.
-            endpoints = getLastNEndpoints();
-        }
-
-        final int lastIx = endpoints.size() - 1;
-
-        return
-            new Iterator<Endpoint>()
-            {
-                private int ix = 0;
-
-                @Override
-                public boolean hasNext()
-                {
-                    return ix <= lastIx;
-                }
-
-                @Override
-                public Endpoint next()
-                {
-                    if (hasNext())
-                        return endpoints.get(ix++);
-                    else
-                        throw new NoSuchElementException();
-                }
-
-                @Override
-                public void remove()
-                {
-                    throw new UnsupportedOperationException();
-                }
-            };
+        return lastNController.getLastN();
     }
 
     /**
@@ -599,151 +428,23 @@ public class VideoChannel
     }
 
     /**
-     * {@inheritDoc}
+     * Determines whether a specific <tt>Channel</tt> is within the set of
+     * <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether the RTP video
+     * streams of the specified channel are to be sent to the remote endpoint of
+     * this <tt>Channel</tt>.
+     *
+     * @param channel the <tt>Channel</tt> to be checked whether it is within
+     * the set of <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether its
+     * RTP streams are to be sent to the remote endpoint of this
+     * <tt>Channel</tt>
+     * @return <tt>true</tt> if the RTP streams of <tt>channel</tt> are to be
+     * sent to the remote endpoint of this <tt>Channel</tt>; otherwise,
+     * <tt>false</tt>. The implementation of the <tt>RtpChannel</tt> class
+     * always returns <tt>true</tt>.
      */
-    @Override
     public boolean isInLastN(Channel channel)
     {
-        int lastN = getLastN();
-
-        if (lastN < 0)
-            return true;
-
-        Endpoint channelEndpoint = channel.getEndpoint();
-
-        if (channelEndpoint == null)
-            return true;
-
-        ConferenceSpeechActivity conferenceSpeechActivity
-            = this.conferenceSpeechActivity;
-
-        if (conferenceSpeechActivity == null)
-            return true;
-        if (lastN == 0)
-            return false;
-
-        // We do not hold any lock on lastNSyncRoot here because it should be OK
-        // for multiple threads to check whether lastNEndpoints is null and
-        // invoke the method to populate it because (1) the method to populate
-        // lastNEndpoints will acquire the necessary locks to ensure preserving
-        // the correctness of the state of this instance under the conditions of
-        // concurrent access and (2) we do not want to hold a write lock on
-        // lastNSyncRoot while invoking the method to populate lastNEndpoints
-        // because the latter might fire an event.
-        if (lastNEndpoints == null)
-        {
-            // Pretend that the ordered list of Endpoints maintained by
-            // conferenceSpeechActivity has changed in order to populate
-            // lastNEndpoints.
-            speechActivityEndpointsChanged(null);
-        }
-
-        Lock readLock = lastNSyncRoot.readLock();
-        boolean inLastN = false;
-
-        readLock.lock();
-        try
-        {
-            if (lastNEndpoints != null)
-            {
-                int n = 0;
-                // The pinned endpoint is always in the last N set, if
-                // last N > 0.
-                Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
-                // Keep one empty slot for the pinned endpoint.
-                int nMax = (pinnedEndpoint == null) ? lastN : (lastN - 1);
-                Endpoint thisEndpoint = getEndpoint();
-
-                for (WeakReference<Endpoint> wr : lastNEndpoints)
-                {
-                    if (n >= nMax)
-                        break;
-
-                    Endpoint e = wr.get();
-
-                    if (e != null)
-                    {
-                        if (e.equals(thisEndpoint))
-                        {
-                            continue;
-                        }
-                        else if (e.equals(channelEndpoint))
-                        {
-                            inLastN = true;
-                            break;
-                        }
-                    }
-
-                    ++n;
-                }
-
-                // FIXME(gp) move this if before the for loop (to avoid an
-                // unnecessary loop)
-                if (!inLastN && pinnedEndpoint != null)
-                    inLastN = channelEndpoint == pinnedEndpoint;
-            }
-        }
-        finally
-        {
-            readLock.unlock();
-        }
-        return inLastN;
-    }
-
-    /**
-     * Notifies this instance that the list of <tt>Endpoint</tt>s defined by
-     * {@link #lastN} has changed.
-     *
-     * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
-     * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
-     */
-    private void lastNEndpointsChanged(List<Endpoint> endpointsEnteringLastN)
-    {
-        try
-        {
-            sendLastNEndpointsChangeEventOnDataChannel(endpointsEnteringLastN);
-        }
-        finally
-        {
-            updateInLastN(this);
-        }
-    }
-
-    /**
-     * Gets the index of a specific <tt>Endpoint</tt> in a specific list of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s.
-     *
-     * @param endpoints the list of <tt>Endpoint</tt>s into which to look for
-     * <tt>endpoint</tt>
-     * @param lastN the number of <tt>Endpoint</tt>s in <tt>endpoint</tt>s to
-     * look through
-     * @param endpoint the <tt>Endpoint</tt> to find within <tt>lastN</tt>
-     * elements of <tt>endpoints</tt>
-     * @return the <tt>lastN</tt> index of <tt>endpoint</tt> in
-     * <tt>endpoints</tt> or <tt>-1</tt> if <tt>endpoint</tt> is not within the
-     * <tt>lastN</tt> elements of <tt>endpoints</tt>
-     */
-    private int lastNIndexOf(
-            List<Endpoint> endpoints,
-            int lastN,
-            Endpoint endpoint)
-    {
-        Endpoint thisEndpoint = getEndpoint();
-        int n = 0;
-
-        for (Endpoint e : endpoints)
-        {
-            if (n >= lastN)
-                break;
-
-            if (e.equals(thisEndpoint))
-                continue;
-            else if (e.equals(endpoint))
-                return n;
-
-            ++n;
-        }
-        return -1;
+        return lastNController.isForwarded(channel);
     }
 
     @Override
@@ -755,25 +456,8 @@ public class VideoChannel
 
         if (Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
-            // The pinned endpoint is always in the last N set, if last N > 0.
-            // So, it (the pinned endpoint) has changed, the lastN has changed.
-            if (this.getLastN() < 1)
-            {
-                return;
-            }
-
-            // Pretend that the ordered list of Endpoints maintained by
-            // conferenceSpeechActivity has changed in order to populate
-            // lastNEndpoints and get the channel endpoints to ask for key
-            // frames.
-            List<Endpoint> channelEndpointsToAskForKeyframes
-                    = speechActivityEndpointsChanged(null, true);
-
-            if ((channelEndpointsToAskForKeyframes != null)
-                    && !channelEndpointsToAskForKeyframes.isEmpty())
-            {
-                getContent().askForKeyframes(channelEndpointsToAskForKeyframes);
-            }
+            lastNController.setPinnedEndpoints(
+                    Collections.singleton(getEndpoint().getPinnedEndpoint()));
         }
         else if (Content.CHANNEL_MODIFIED_PROPERTY_NAME.equals(propertyName))
         {
@@ -785,21 +469,6 @@ public class VideoChannel
             VideoChannel videoChannel = (VideoChannel) ev.getNewValue();
             updateTranslatedVideoChannel(videoChannel);
         }
-    }
-
-    /**
-     * Notifies this <tt>VideoChannel</tt> that an RTCP REMB packet with a
-     * bitrate value of <tt>bitrateBps</tt> bits per second was received.
-     *
-     * @param bitrateBps the bitrate of the received REMB packet in bits per
-     * second.
-     */
-    public void handleREMB(long bitrateBps)
-    {
-        BitrateController bc = getBitrateController();
-
-        if (bc != null)
-            bc.receivedREMB(bitrateBps);
     }
 
     /**
@@ -816,7 +485,7 @@ public class VideoChannel
         if (data && (source != null))
         {
             // XXX(gp) we could potentially move this into a TransformEngine.
-            accept = isInLastN(source);
+            accept = lastNController.isForwarded(source);
         }
 
         return accept;
@@ -836,7 +505,11 @@ public class VideoChannel
         super.sctpConnectionReady(endpoint);
 
         if (endpoint.equals(getEndpoint()))
-            lastNEndpointsChanged(null);
+        {
+            // TODO:
+            // 1. Send list of endpoints to the channel
+            // 2. updateInLastN(this)
+        }
     }
 
     /**
@@ -849,126 +522,40 @@ public class VideoChannel
      * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
      */
     private void sendLastNEndpointsChangeEventOnDataChannel(
-            List<Endpoint> endpointsEnteringLastN)
+            List<String> endpointsEnteringLastN)
     {
-        int lastN = getLastN();
-
-        if (lastN < 0)
-            return;
-
         Endpoint thisEndpoint = getEndpoint();
 
         if (thisEndpoint == null)
             return;
 
-        // Represent the list of Endpoints defined by lastN in JSON format.
-        Lock readLock = lastNSyncRoot.readLock();
-        StringBuilder lastNEndpointsStr = new StringBuilder();
+        List<String> forwardedEndpoints
+                = lastNController.getForwardedEndpoints();
+
         // We want endpointsEnteringLastN to always to reported. Consequently,
         // we will pretend that all lastNEndpoints are entering if no explicit
         // endpointsEnteringLastN is specified.
-        List<Endpoint> effectiveEndpointsEnteringLastN = endpointsEnteringLastN;
+        // XXX do we really want that?
+        if (endpointsEnteringLastN == null)
+            endpointsEnteringLastN = forwardedEndpoints;
 
-        if (effectiveEndpointsEnteringLastN == null)
-            effectiveEndpointsEnteringLastN = new ArrayList<>(lastN);
-
-        // The pinned endpoint is always in the last N set, if last N > 0.
-        Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
-
-        readLock.lock();
-        try
-        {
-            if ((lastNEndpoints != null) && !lastNEndpoints.isEmpty())
-            {
-                int n = 0;
-                boolean foundPinnedEndpoint = pinnedEndpoint == null;
-
-                for (WeakReference<Endpoint> wr : lastNEndpoints)
-                {
-                    if (n >= lastN)
-                        break;
-                    Endpoint e = wr.get();
-
-                    // The pinned endpoint is always in the last N set, if
-                    // last N > 0.
-                    if (!foundPinnedEndpoint)
-                    {
-                        if (n == lastN - 1)
-                            e = pinnedEndpoint;
-                        else
-                            foundPinnedEndpoint = e == pinnedEndpoint;
-                    }
-
-                    if (e != null)
-                    {
-                        if (e.equals(thisEndpoint))
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            if (lastNEndpointsStr.length() != 0)
-                                lastNEndpointsStr.append(',');
-                            lastNEndpointsStr.append('"');
-                            lastNEndpointsStr.append(
-                                    JSONValue.escape(e.getID()));
-                            lastNEndpointsStr.append('"');
-
-                            if (effectiveEndpointsEnteringLastN
-                                    != endpointsEnteringLastN)
-                            {
-                                effectiveEndpointsEnteringLastN.add(e);
-                            }
-                        }
-                    }
-
-                    ++n;
-                }
-            }
-        }
-        finally
-        {
-            readLock.unlock();
-        }
-
+        // XXX Should we just build JSON here?
         // colibriClass
         StringBuilder msg
             = new StringBuilder(
                     "{\"colibriClass\":\"LastNEndpointsChangeEvent\"");
 
-        // lastNEndpoints
-        msg.append(",\"lastNEndpoints\":[");
-        msg.append(lastNEndpointsStr);
-        msg.append(']');
-
-        // endpointsEnteringLastN
-
-        // We want endpointsEnteringLastN to always to reported. Consequently,
-        // we will pretend that all lastNEndpoints are entering if no explicit
-        // endpointsEnteringLastN is specified.
-        endpointsEnteringLastN = effectiveEndpointsEnteringLastN;
-        if (!endpointsEnteringLastN.isEmpty())
         {
-            StringBuilder endpointsEnteringLastNStr = new StringBuilder();
+            // lastNEndpoints
+            msg.append(",\"lastNEndpoints\":");
+            msg.append(getJsonString(forwardedEndpoints));
 
-            for (Endpoint e : endpointsEnteringLastN)
-            {
-                if (endpointsEnteringLastNStr.length() != 0)
-                    endpointsEnteringLastNStr.append(',');
-                endpointsEnteringLastNStr.append('"');
-                endpointsEnteringLastNStr.append(
-                        JSONValue.escape(e.getID()));
-                endpointsEnteringLastNStr.append('"');
-            }
-            if (endpointsEnteringLastNStr.length() != 0)
-            {
-                msg.append(",\"endpointsEnteringLastN\":[");
-                msg.append(endpointsEnteringLastNStr);
-                msg.append(']');
-            }
+            // endpointsEnteringLastN
+            msg.append(",\"endpointsEnteringLastN\":");
+            msg.append(getJsonString(endpointsEnteringLastN));
         }
-
         msg.append('}');
+
         try
         {
             thisEndpoint.sendMessageOnDataChannel(msg.toString());
@@ -979,22 +566,17 @@ public class VideoChannel
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setAdaptiveLastN(boolean adaptiveLastN)
+    private String getJsonString(List<String> strings)
     {
-        this.adaptiveLastN = adaptiveLastN;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
-    {
-        this.adaptiveSimulcast = adaptiveSimulcast;
+        JSONArray array = new JSONArray();
+        if (strings != null && !strings.isEmpty())
+        {
+            for (String s : strings)
+            {
+                array.add(s);
+            }
+        }
+        return array.toString();
     }
 
     /**
@@ -1003,100 +585,7 @@ public class VideoChannel
     @Override
     public void setLastN(Integer lastN)
     {
-        // XXX Comparing Integer references may not be enough to short-circuit
-        // so a more complex comaprison for equality is implemented bellow.
-        if (this.lastN == null)
-        {
-            if (lastN == null)
-                return;
-        }
-        else if (lastN != null && this.lastN.intValue() == lastN.intValue())
-        {
-            return;
-        }
-
-        Lock writeLock = lastNSyncRoot.writeLock();
-        List<Endpoint> endpointsEnteringLastN = new LinkedList<>();
-        // If the old value was null, even though we may detect endpoints
-        // "entering" lastN, they are already being received and so no keyframes
-        // are necessary.
-        boolean askForKeyframes = this.lastN == null;
-
-        writeLock.lock();
-        try
-        {
-            // XXX(gp) question to the lastN guru : if this.lastN == null or
-            // this.lastN < 0, do we really want to call lastNEndpointsChanged
-            // with an empty (but not null!!) list of endpoints?
-            if (this.lastN != null && this.lastN >= 0 && lastN > this.lastN)
-            {
-                Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
-                // The pinned endpoint is always in the last N set, if
-                // last N > 0; Count it here.
-                int n = (pinnedEndpoint != null) ? 1 : 0;
-                Endpoint thisEndpoint = getEndpoint();
-
-                // We do not hold any lock on lastNSyncRoot here because it
-                // should be OK for multiple threads to check whether
-                // lastNEndpoints is null and invoke the method to populate it
-                // because (1) the method to populate lastNEndpoints will
-                // acquire the necessary locks to ensure preserving the
-                // correctness of the state of this instance under the
-                // conditions of concurrent access and (2) we do not want to
-                // hold a write lock on lastNSyncRoot while invoking the method
-                // to populate lastNEndpoints because the latter might fire an
-                // event.
-                if (lastNEndpoints == null)
-                {
-                    // Pretend that the ordered list of Endpoints maintained by
-                    // conferenceSpeechActivity has changed in order to populate
-                    // lastNEndpoints.
-                    speechActivityEndpointsChanged(null);
-                }
-
-                if (lastNEndpoints != null)
-                {
-                    for (WeakReference<Endpoint> wr : lastNEndpoints)
-                    {
-                        if (n >= lastN)
-                            break;
-
-                        Endpoint endpoint = wr.get();
-
-                        if (endpoint != null)
-                        {
-                            if (endpoint.equals(thisEndpoint))
-                                continue;
-
-                            // We've already signaled to the client the fact
-                            // that the pinned endpoint has entered the lastN
-                            // set when we handled the
-                            // PINNED_ENDPOINT_PROPERTY_NAME property change
-                            // event. Also, we've already counted it above. So,
-                            // we don't want to either add it in the
-                            // endpointsEnteringLastN or count it here.
-                            if (endpoint.equals(pinnedEndpoint))
-                                continue;
-                        }
-
-                        ++n;
-                        if (n > this.lastN && endpoint != null)
-                            endpointsEnteringLastN.add(endpoint);
-                    }
-                }
-            }
-
-            this.lastN = lastN;
-        }
-        finally
-        {
-            writeLock.unlock();
-        }
-
-        lastNEndpointsChanged(endpointsEnteringLastN);
-
-        if (askForKeyframes && !endpointsEnteringLastN.isEmpty())
-            getContent().askForKeyframes(new HashSet<>(endpointsEnteringLastN));
+        lastNController.setLastN(lastN);
 
         touch(); // It seems this Channel is still active.
     }
@@ -1107,102 +596,7 @@ public class VideoChannel
     @Override
     List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
-        return speechActivityEndpointsChanged(endpoints, false);
-    }
-
-    private List<Endpoint> speechActivityEndpointsChanged(
-            List<Endpoint> endpoints, boolean pinnedEndpointChanged)
-    {
-        Lock writeLock = lastNSyncRoot.writeLock();
-        List<Endpoint> endpointsEnteringLastN = null;
-        boolean lastNEndpointsChanged = pinnedEndpointChanged;
-
-        writeLock.lock();
-        try
-        {
-            // Determine which Endpoints are entering the list of lastN.
-            int lastN = getLastN();
-
-            if (endpoints == null)
-            {
-                endpoints = conferenceSpeechActivity.getEndpoints();
-            }
-            if (lastN >= 0)
-            {
-                Endpoint thisEndpoint = getEndpoint();
-
-                // At most the first lastN are entering the list of lastN.
-                endpointsEnteringLastN = new ArrayList<>(lastN);
-
-                // The pinned endpoint is always in the last N set, if
-                // last N > 0.
-                Endpoint pinnedEndpoint = getEffectivePinnedEndpoint();
-
-                if (pinnedEndpoint != null && lastN > 0)
-                    endpointsEnteringLastN.add(pinnedEndpoint);
-
-                for (Endpoint e : endpoints)
-                {
-                    if (endpointsEnteringLastN.size() >= lastN)
-                        break;
-                    if (!e.equals(thisEndpoint) && !e.equals(pinnedEndpoint))
-                        endpointsEnteringLastN.add(e);
-                }
-
-                if (lastNEndpoints != null && !lastNEndpoints.isEmpty())
-                {
-                    // Some of these first lastN are already in the list of
-                    // lastN.
-                    int n = 0;
-
-                    for (WeakReference<Endpoint> wr : lastNEndpoints)
-                    {
-                        if (n >= lastN)
-                            break;
-
-                        Endpoint e = wr.get();
-
-                        if (e != null)
-                        {
-                            if (e.equals(thisEndpoint))
-                            {
-                                continue;
-                            }
-                            else
-                            {
-                                endpointsEnteringLastN.remove(e);
-                                if (lastNIndexOf(endpoints, lastN, e) < 0)
-                                    lastNEndpointsChanged = true;
-                            }
-                        }
-
-                        ++n;
-                    }
-                }
-            }
-
-            // Remember the Endpoints for the purposes of lastN.
-            lastNEndpoints = new ArrayList<>(endpoints.size());
-            for (Endpoint endpoint : endpoints)
-                lastNEndpoints.add(new WeakReference<>(endpoint));
-        }
-        finally
-        {
-            writeLock.unlock();
-        }
-
-        if (endpointsEnteringLastN != null
-                && !endpointsEnteringLastN.isEmpty())
-        {
-            lastNEndpointsChanged = true;
-        }
-
-        // Notify about changes in the list of lastN.
-        if (lastNEndpointsChanged)
-            lastNEndpointsChanged(endpointsEnteringLastN);
-
-        // Request keyframes from the Endpoints entering the list of lastN.
-        return endpointsEnteringLastN;
+        return lastNController.speechActivityEndpointsChanged(endpoints);
     }
 
     /**

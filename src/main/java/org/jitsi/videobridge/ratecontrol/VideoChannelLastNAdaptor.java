@@ -102,6 +102,7 @@ public class VideoChannelLastNAdaptor
     {
         this.bitrateController = bitrateController;
 
+        /*
         if (bitrateController.getChannel().getAdaptiveSimulcast())
         {
             this.slaveSimulcastAdaptor
@@ -109,6 +110,7 @@ public class VideoChannelLastNAdaptor
         }
 
         this.initializeConfiguration();
+        */
     }
 
     @Override
@@ -261,11 +263,13 @@ public class VideoChannelLastNAdaptor
         Endpoint thisEndpoint = channel.getEndpoint();
         int endpointCount = 0;
 
+        /*
         for (Endpoint endpoint : channel.getLastNEndpoints())
         {
             if (endpoint != null && !endpoint.equals(thisEndpoint))
                 endpointCount += 1;
         }
+        */
 
         /*
          * We update lastN if either:
