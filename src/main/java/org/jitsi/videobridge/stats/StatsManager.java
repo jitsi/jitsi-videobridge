@@ -33,8 +33,7 @@ public class StatsManager
     /**
      * The <tt>Statistics</tt> added to this <tt>StatsManager</tt>.
      */
-    private final List<TimeInfo<Statistics>> statistics
-        = new LinkedList<TimeInfo<Statistics>>();
+    private final List<TimeInfo<Statistics>> statistics = new LinkedList<>();
 
     /**
      * The background/daemon <tt>Thread</tt> in which this <tt>StatsManager</tt>
@@ -47,7 +46,7 @@ public class StatsManager
      * transport {@link #statistics}.
      */
     private final List<TimeInfo<StatsTransport>> transports
-        = new LinkedList<TimeInfo<StatsTransport>>();
+        = new LinkedList<>();
 
     /**
      * Adds a specific (set of) <tt>Statistics</tt> to be periodically
@@ -69,7 +68,7 @@ public class StatsManager
 
         synchronized (getSyncRoot())
         {
-            this.statistics.add(new TimeInfo<Statistics>(statistics, period));
+            this.statistics.add(new TimeInfo<>(statistics, period));
             startThread();
         }
     }
@@ -95,8 +94,38 @@ public class StatsManager
 
         synchronized (getSyncRoot())
         {
-            transports.add(new TimeInfo<StatsTransport>(transport, period));
+            transports.add(new TimeInfo<>(transport, period));
         }
+    }
+
+    /**
+     * Finds the first instance of {@code Statistics} with a specific runtime
+     * type generated/updated at a specific interval/period.
+     *
+     * @param clazz the runtime type of the {@code Statistics} to be found
+     * @param period the internal/period in milliseconds at which the
+     * {@code Statistics} to be found is generated/updated by this
+     * {@code StatsManager}
+     * @return the first instance of {@code Statistics} with runtime type
+     * {@code clazz} generated/updated every {@code period} milliseconds if any;
+     * otherwise, {@code null}
+     */
+    public <T extends Statistics> T findStatistics(Class<T> clazz, long period)
+    {
+        synchronized (getSyncRoot())
+        {
+            for (TimeInfo<Statistics> ti : statistics)
+            {
+                if (ti.period == period && clazz.isInstance(ti.o))
+                {
+                    @SuppressWarnings("unchecked")
+                    T t = (T) ti.o;
+
+                    return t;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -120,9 +149,9 @@ public class StatsManager
             }
             else
             {
-                r = new ArrayList<Statistics>(count);
-                for (TimeInfo<Statistics> timeInfo : statistics)
-                    r.add(timeInfo.o);
+                r = new ArrayList<>(count);
+                for (TimeInfo<Statistics> ti : statistics)
+                    r.add(ti.o);
             }
         }
         return r;
@@ -178,7 +207,7 @@ public class StatsManager
             }
             else
             {
-                r = new ArrayList<StatsTransport>(count);
+                r = new ArrayList<>(count);
                 for (TimeInfo<StatsTransport> timeInfo : transports)
                     r.add(timeInfo.o);
             }
@@ -197,16 +226,12 @@ public class StatsManager
         try
         {
             Thread currentThread = Thread.currentThread();
-            /*
-             * XXX The ArrayLists statistics and transports are allocated once
-             * and are repeatedly filled and cleared in order to reduce the
-             * effects of garbage collection which was observed to cause
-             * noticeable delays.
-             */
-            ArrayList<TimeInfo<Statistics>> statistics
-                = new ArrayList<TimeInfo<Statistics>>();
-            ArrayList<TimeInfo<StatsTransport>> transports
-                = new ArrayList<TimeInfo<StatsTransport>>();
+            // XXX The ArrayLists statistics and transports are allocated once
+            // and are repeatedly filled and cleared in order to reduce the
+            // effects of garbage collection which was observed to cause
+            // noticeable delays.
+            ArrayList<TimeInfo<Statistics>> statistics = new ArrayList<>();
+            ArrayList<TimeInfo<StatsTransport>> transports = new ArrayList<>();
 
             do
             {
@@ -223,18 +248,16 @@ public class StatsManager
 
                     long now = System.currentTimeMillis();
 
-                    /*
-                     * Determine which Statistics are to be generated now and
-                     * how much time this Thread is to sleep until the earliest
-                     * time to generate a Statistics.
-                     */
-                    for (TimeInfo<Statistics> timeInfo : this.statistics)
+                    // Determine which Statistics are to be generated now and
+                    // how much time this Thread is to sleep until the earliest
+                    // time to generate a Statistics.
+                    for (TimeInfo<Statistics> ti : this.statistics)
                     {
-                        long elapsed = now - timeInfo.lastInvocationTime;
+                        long elapsed = now - ti.lastInvocationTime;
 
                         if (elapsed >= 0)
                         {
-                            long aTimeout = timeInfo.period - elapsed;
+                            long aTimeout = ti.period - elapsed;
 
                             if (aTimeout > 0)
                             {
@@ -243,26 +266,23 @@ public class StatsManager
                             }
                             else
                             {
-                                statistics.add(timeInfo);
+                                statistics.add(ti);
                             }
                         }
                     }
 
-                    /*
-                     * Determine which StatsTransport are to publish Statistics
-                     * now and how much time this Thread is to sleep until the
-                     * earliest time to publish Statistics.
-                     */
+                    // Determine which StatsTransport are to publish Statistics
+                    // now and how much time this Thread is to sleep until the
+                    // earliest time to publish Statistics.
                     if (!this.transports.isEmpty())
                     {
-                        for (TimeInfo<StatsTransport> timeInfo
-                                : this.transports)
+                        for (TimeInfo<StatsTransport> ti : this.transports)
                         {
-                            long elapsed = now - timeInfo.lastInvocationTime;
+                            long elapsed = now - ti.lastInvocationTime;
 
                             if (elapsed >= 0)
                             {
-                                long aTimeout = timeInfo.period - elapsed;
+                                long aTimeout = ti.period - elapsed;
 
                                 if (aTimeout > 0)
                                 {
@@ -271,29 +291,27 @@ public class StatsManager
                                 }
                                 else
                                 {
-                                    transports.add(timeInfo);
+                                    transports.add(ti);
                                 }
                             }
                         }
                     }
 
-                    if ((statistics.isEmpty()) && (transports.isEmpty()))
+                    if (statistics.isEmpty() && transports.isEmpty())
                     {
                         if (timeout < 1)
                             timeout = 1;
 
-                        /*
-                         * The timeout to wait has been computed based on the
-                         * current time at the beginning of the computation.
-                         * Take into account the duration of the computation
-                         * i.e. how much time has passed since the beginning of
-                         * the computation.
-                         */
+                        // The timeout to wait has been computed based on the
+                        // current time at the beginning of the computation.
+                        // Take into account the duration of the computation
+                        // i.e. how much time has passed since the beginning of
+                        // the computation.
                         long elapsed = System.currentTimeMillis() - now;
 
                         if (elapsed < 0)
                             elapsed = 0;
-                        if ((elapsed == 0) || (elapsed < timeout))
+                        if (elapsed == 0 || elapsed < timeout)
                         {
                             try
                             {
@@ -307,19 +325,16 @@ public class StatsManager
                     }
                 }
 
-                /*
-                 * Generate/update the (sets of) Statistics which are at or
-                 * after their respective period.
-                 */
+                // Generate/update the (sets of) Statistics which are at or
+                // after their respective period.
                 if (!statistics.isEmpty())
                 {
-                    for (TimeInfo<Statistics> timeInfo : statistics)
+                    for (TimeInfo<Statistics> ti : statistics)
                     {
-                        timeInfo.lastInvocationTime
-                            = System.currentTimeMillis();
+                        ti.lastInvocationTime = System.currentTimeMillis();
                         try
                         {
-                            timeInfo.o.generate();
+                            ti.o.generate();
                         }
                         catch (Throwable t)
                         {
@@ -331,31 +346,37 @@ public class StatsManager
                     }
                     statistics.clear();
                 }
-                /*
-                 * Send the (sets of) Statistics through the StatTransports
-                 * which are at or after their respective periods.
-                 */
+                // Send the (sets of) Statistics through the StatTransports
+                // which are at or after their respective periods.
                 if (!transports.isEmpty())
                 {
-                    Collection<Statistics> ss = getStatistics();
-
-                    for (TimeInfo<StatsTransport> timeInfo : transports)
+                    for (TimeInfo<StatsTransport> tti : transports)
                     {
                         long now = System.currentTimeMillis();
-                        long measurementInterval
-                            = now - timeInfo.lastInvocationTime;
+                        long measurementInterval = now - tti.lastInvocationTime;
 
-                        timeInfo.lastInvocationTime = now;
+                        // Eventually, the current StatsTransport may not have
+                        // any Statistics to publish. However, its time came and
+                        // we attempted to publishStatistics.
+                        tti.lastInvocationTime = now;
 
-                        StatsTransport transport = timeInfo.o;
+                        long period = tti.period;
+                        StatsTransport transport = tti.o;
 
                         try
                         {
-                            for (Statistics s : ss)
+                            for (TimeInfo<Statistics> sti : this.statistics)
                             {
-                                transport.publishStatistics(
-                                        s,
-                                        measurementInterval);
+                                // A Statistics instance is associated with an
+                                // interval/period and a StatsTransport is
+                                // associated with an interval/period. Match the
+                                // two intervals/periods.
+                                if (period == sti.period)
+                                {
+                                    transport.publishStatistics(
+                                            sti.o,
+                                            measurementInterval);
+                                }
                             }
                         }
                         catch (Throwable t)
@@ -396,10 +417,8 @@ public class StatsManager
     {
         super.start(bundleContext);
 
-        /*
-         * Start the StatTransports added to this StatsManager in the specified
-         * bundleContext.
-         */
+        // Start the StatTransports added to this StatsManager in the specified
+        // bundleContext.
         for (StatsTransport transport : getTransports())
             transport.start(bundleContext);
 
@@ -471,10 +490,8 @@ public class StatsManager
 
         stopThread();
 
-        /*
-         * Stop the StatTransports added to this StatsManager in the specified
-         * bundleContext.
-         */
+        // Stop the StatTransports added to this StatsManager in the specified
+        // bundleContext.
         for (StatsTransport transport : getTransports())
             transport.stop(bundleContext);
     }
@@ -522,7 +539,7 @@ public class StatsManager
          * The <tt>Statistics</tt> or <tt>StatsTransport</tt> which is being
          * invoked by <tt>StatsManager</tt>.
          */
-        public T o;
+        public final T o;
 
         /**
          * The interval/period in milliseconds at which {@link #o} is to be
