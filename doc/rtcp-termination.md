@@ -1,6 +1,8 @@
 Introduction
 ============
 
+NOTE: This document is outdated atm.
+
 Jitsi Videobridge by default relays all RTCP traffic end-to-end, which
 is causing endpoint adaptivity to adjust to the worst recipient.
 
