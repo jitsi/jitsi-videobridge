@@ -30,9 +30,6 @@ import org.jitsi.impl.neomedia.codec.video.*;
  *
  * This class is thread safe.
  *
- * TODO Rename SimulcastStream -&gt; SimulcastStream to be consistent with
- * the webrtc.org codebase.
- *
  * @author George Politis
  * @author Lyubomir Marinov
  */
