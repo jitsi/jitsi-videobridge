@@ -701,12 +701,13 @@ final class JSONDeserializer
         }
     }
 
-    public static GracefulShutdownIQ deserializeShutdownIQ(
+    public static ShutdownIQ deserializeShutdownIQ(
         JSONObject requestJSONObject)
     {
-        return requestJSONObject.get(
-            GracefulShutdownIQ.ELEMENT_NAME) != null
-                    ? new GracefulShutdownIQ() : null;
+        String element = (String) requestJSONObject.keySet().iterator().next();
+
+        return ShutdownIQ.isValidElementName(element) ?
+            ShutdownIQ.createShutdownIQ(element) : null;
     }
 
     public static SourcePacketExtension deserializeSource(

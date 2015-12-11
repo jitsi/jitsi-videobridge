@@ -131,11 +131,11 @@ public class BridgeShutdownTest
         confIq.setID(respConfIq.getID());
 
         // Start the shutdown
-        GracefulShutdownIQ shutdownIQ = new GracefulShutdownIQ();
+        ShutdownIQ shutdownIQ = ShutdownIQ.createGracefulShutdownIQ();
 
         shutdownIQ.setFrom(focusJid);
 
-        respIq = bridge.handleGracefulShutdownIQ(shutdownIQ);
+        respIq = bridge.handleShutdownIQ(shutdownIQ);
 
         assertEquals(IQ.Type.RESULT, respIq.getType());
         assertTrue(bridge.isShutdownInProgress());

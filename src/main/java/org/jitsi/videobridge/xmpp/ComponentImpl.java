@@ -264,18 +264,18 @@ public class ComponentImpl
     }
 
     /**
-     * Handles a <tt>GracefulShutdownIQ</tt> stanza which represents a request.
+     * Handles a <tt>ShutdownIQ</tt> stanza which represents a request.
      *
-     * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
-     * the request to handle
+     * @param shutdownIQ the <tt>ShutdownIQ</tt> stanza represents the request
+     *                   to handle
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
      * @throws Exception to reply with <tt>internal-server-error</tt> to the
      * specified request
      */
-    private org.jivesoftware.smack.packet.IQ handleGracefulShutdownIQ(
-            GracefulShutdownIQ shutdownIQ)
+    private org.jivesoftware.smack.packet.IQ handleShutdownIQ(
+            ShutdownIQ shutdownIQ)
         throws Exception
     {
         Videobridge videobridge = getVideobridge();
@@ -284,7 +284,7 @@ public class ComponentImpl
         if (videobridge == null)
             iq = null;
         else
-            iq = videobridge.handleGracefulShutdownIQ(shutdownIQ);
+            iq = videobridge.handleShutdownIQ(shutdownIQ);
         return iq;
     }
 
@@ -431,8 +431,8 @@ public class ComponentImpl
 
         if (request instanceof ColibriConferenceIQ)
             response = handleColibriConferenceIQ((ColibriConferenceIQ) request);
-        else if (request instanceof GracefulShutdownIQ)
-            response = handleGracefulShutdownIQ((GracefulShutdownIQ)request);
+        else if (request instanceof ShutdownIQ)
+            response = handleShutdownIQ((ShutdownIQ) request);
         else if (request instanceof org.jivesoftware.smackx.packet.Version)
             response = handleVersionIQ(
                 (org.jivesoftware.smackx.packet.Version) request);

@@ -768,9 +768,9 @@ class HandlerImpl
             return;
         }
 
-        GracefulShutdownIQ requestShutdownIQ
+        ShutdownIQ requestShutdownIQ
             = JSONDeserializer.deserializeShutdownIQ(
-            (JSONObject) requestJSONObject);
+                    (JSONObject) requestJSONObject);
 
         if ((requestShutdownIQ == null))
         {
@@ -791,8 +791,8 @@ class HandlerImpl
             try
             {
                 responseIQ
-                    = videobridge.handleGracefulShutdownIQ(
-                    requestShutdownIQ);
+                    = videobridge.handleShutdownIQ(
+                            requestShutdownIQ);
 
                 if (IQ.Type.RESULT.equals(responseIQ.getType()))
                 {

@@ -1039,7 +1039,7 @@ public class Videobridge
      *         the specified request or <tt>null</tt> to reply with
      *         <tt>feature-not-implemented</tt>
      */
-    public IQ handleGracefulShutdownIQ(GracefulShutdownIQ shutdownIQ)
+    public IQ handleShutdownIQ(ShutdownIQ shutdownIQ)
     {
         // Security not configured - service unavailable
         if (shutdownSourcePattern == null)
@@ -1053,9 +1053,34 @@ public class Videobridge
         if (from != null && shutdownSourcePattern.matcher(from).matches())
         {
             logger.info("Accepted shutdown request from: " + from);
-            if (!isShutdownInProgress())
+            if (shutdownIQ.isGracefulShutdown())
             {
-                enableGracefulShutdownMode();
+                if (!isShutdownInProgress())
+                {
+                    enableGracefulShutdownMode();
+                }
+            }
+            else
+            {
+                new Thread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        try
+                        {
+                            Thread.sleep(1000);
+
+                            logger.warn("JVB force shutdown - now");
+
+                            System.exit(0);
+                        }
+                        catch (InterruptedException e)
+                        {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }, "ForceShutdownThread").start();
             }
             return IQ.createResultIQ(shutdownIQ);
         }
