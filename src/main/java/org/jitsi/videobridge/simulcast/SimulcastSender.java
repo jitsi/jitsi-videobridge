@@ -284,7 +284,6 @@ public class SimulcastSender
             {
                 targetOrder = hqOrder;
                 react(false);
-                getSimulcastReceiver().maybeSendStartHighQualityStreamCommand();
             }
 
             // Send LQ stream for the previously selected endpoint.
@@ -293,7 +292,6 @@ public class SimulcastSender
             {
                 targetOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE;
                 react(false);
-                getSimulcastReceiver().maybeSendStopHighQualityStreamCommand();
             }
         }
         else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(propertyName))

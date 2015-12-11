@@ -264,7 +264,7 @@ public class SimulcastStream
         // NOTE(gp) we assume 1. that the base stream is always streaming, and
         // 2. if stream N is streaming, then stream N-1 is streaming. N == order
         // in this class TAG(simulcast-assumption,arbitrary-sim-simStreams).
-        return isStreaming ? isStreaming : order == 0;
+        return isStreaming || order == 0;
     }
 
     /**
