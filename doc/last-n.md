@@ -6,10 +6,9 @@ will be sent to the channel. The endpoints are ordered by the last time they
 were the "dominant speaker".
 
 To enable lastN and dominant speaker switching, a few things must happen. First, when allocating video channels
-for a client on the Jitsi Videobridge, the "last-n" value of the video channel must be set to a non zero number.
-Secondly, a data channel must be established between the client and the Jitsi Videobridge. Third, the focus must include
-rtp-hdrtext extension (RFC3550) in the jingle session-init stanzas sent to the
-client. The Jitsi Videobridge uses this RTP header extension data to determine the current dominant speaker.
+for a client on the Jitsi Videobridge, the "last-n" value of the video channel must >= 0.
+Secondly, a data channel must be established between the client and the Jitsi Videobridge. Third, the client must implement
+the client-to-mixer audio level RTP header extension (RFC6464) and the focus must forward them to the videobridge. The Jitsi Videobridge uses this RTP header extension data to determine the current dominant speaker.
 
 # Client Side Events
 Clients will receive events over the data channel from the Jitsi Videobridge whenever there is a change in
@@ -54,13 +53,13 @@ Note: the parameter passed to the bridge is "last-n" but elsewhere in documentat
 <iq to="jitsi-videobridge.somewhere.com" from="myfocusId@conference.somewhere.com" id="564e42fe0000155716c7e6b4" type="set">
    <conference xmlns="http://jitsi.org/protocol/colibri">
       <content name="audio">
-         <channel initiator="true" endpoint="myclient@somewhere.com/chat-1234" />
+         <channel initiator="true" endpoint="chat-1234" />
       </content>
       <content name="video">
-         <channel initiator="true" endpoint="myclient@somewhere.com/chat-1234" last-n="2" />
+         <channel initiator="true" endpoint="chat-1234" last-n="2" />
       </content>
       <content name="data">
-         <sctpconnection initiator="true" endpoint="myclient@somewhere.com/chat-1234" port="5000" />
+         <sctpconnection initiator="true" endpoint="chat-1234" port="5000" />
       </content>
    </conference>
 </iq>
@@ -70,7 +69,7 @@ Note: the parameter passed to the bridge is "last-n" but elsewhere in documentat
 Below is an example jingle session-init stanza that would be sent to the client including the audio-level hdr extension
 and the data channel needed for dominant speaker and lastN capability.
 ```xml
-<iq xmlns="jabber:client" from="myfocusId@conference.somewhere.com" id="564e3bcd00000013c9c342b6" type="set" to="myclient@somewhere.com/chat-1234">
+<iq xmlns="jabber:client" from="myfocusId@conference.somewhere.com" id="564e3bcd00000013c9c342b6" type="set" to="chat-1234">
    <jingle xmlns="urn:xmpp:jingle:1" initiator="myfocusId@conference.somewhere.com" action="session-initiate" sid="785e63ce2145b0">
       <content creator="initiator" name="audio" senders="both">
          <description xmlns="urn:xmpp:jingle:apps:rtp:1" media="audio">
