@@ -36,7 +36,7 @@ the video bridge.
 If Jitsi Videobridge is using XMPP it sends the statistics reports by COLIBRI
 protocol or by PubSub (XEP-0060).
 
-This is an example COLIBRI packet of statistics report:
+This is an example COLIBRI packet of a statistics report:
 ```xml
 <iq type='result' to='38d17cb9-0d3a-498e-b3ea-05b377845c07@ƒ/4533b58e-409f-4f6b-9268-f335b4430ba6' from='jitsi-videobridge.jitsi.net' id='u4Fc8-16' xmlns='jabber:client'>
 	<stats xmlns=' http://jitsi.org/protocol/colibri'>
@@ -136,9 +136,9 @@ Server: Jetty(9.1.5.v20140505)
 }
 ```
 
-**Connecting The Focus To The Publisher For PubSub Method**
+**Connecting An XMPP Component To The Publisher For PubSub Method**
 
-Upon start of the Jitsi Videobridge, it will send the following stanza to the focus
+Upon start of the Jitsi Videobridge, it will send the following stanza to the component
 ```xml
 <iq id="FBPU2-0" to="pubsub.jitsi-videobridge.myhost.com" from="jitsi-videobridge.myhost.com" type="set">
    <pubsub xmlns="http://jabber.org/protocol/pubsub">
@@ -146,12 +146,12 @@ Upon start of the Jitsi Videobridge, it will send the following stanza to the fo
    </pubsub>
 </iq>
 ```
-The focus should respond with
+The component should respond with
 ```xml
 <iq id="FBPU2-0" to="jitsi-videobridge.myhost.com" from="pubsub.jitsi-videobridge.myhost.com" type="result"/>
 ```
 
-The Jitsi Videobridge will then send a configure stanza to the focus
+The Jitsi Videobridge will then send a configure stanza to the component
 ```xml
 <iq id="FBPU2-1" to="pubsub.jitsi-videobridge.myhost.com" from="jitsi-videobridge.myhost.com" type="set">
    <pubsub xmlns="http://jabber.org/protocol/pubsub">
@@ -171,11 +171,11 @@ The Jitsi Videobridge will then send a configure stanza to the focus
    </pubsub>
 </iq>
 ```
-The focus should respond with
+The component should respond with
 ```xml
 <iq id="FBPU2-1" to="jitsi-videobridge.myhost.com" from="pubsub.jitsi-videobridge.myhost.com" type="result"/>
 ```
-Stats will now be published to the focus on the interval set below
+Stats will now be published to the component on the interval set below
 ```xml
 <iq id="FBPU2-3" to="pubsub.jitsi-videobridge.myhost.com" from="jitsi-videobridge.myhost.com" type="set">
    <pubsub xmlns="http://jabber.org/protocol/pubsub">
@@ -202,7 +202,7 @@ Stats will now be published to the focus on the interval set below
 </iq>
 ```
 
-The focus should respond to each stats stanza with
+The component should respond to each stats stanza with
 ```xml
 <iq id="FBPU2-3" to="jitsi-videobridge.myhost.com" from="pubsub.jitsi-videobridge.myhost.com" type="result"/>
 ```
