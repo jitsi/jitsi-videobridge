@@ -781,7 +781,7 @@ public class VideoChannel
             // added/removed/modified source group, same with payload types, etc)
             // This has implications in SSRC rewriting, we need to update our
             // engine.
-            logDebug("Handling CHANNEL_MODIFIED_PROPERTY_NAME");
+            logger.debug("Handling CHANNEL_MODIFIED_PROPERTY_NAME");
             VideoChannel videoChannel = (VideoChannel) ev.getNewValue();
             updateTranslatedVideoChannel(videoChannel);
         }
@@ -1323,7 +1323,7 @@ public class VideoChannel
 
         if (logger.isDebugEnabled())
         {
-            logDebug(
+            logger.debug(
                     "Received NACK on channel " + getID() +" for SSRC " + ssrc
                         + ". Packets reported lost: " + lostPackets);
         }
@@ -1354,7 +1354,7 @@ public class VideoChannel
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logDebug(
+                        logger.debug(
                                 "Retransmitting packet from cache. SSRC " + ssrc
                                     + " seq " + seq);
                     }
@@ -1372,7 +1372,7 @@ public class VideoChannel
             {
                 // If retransmission requests are enabled, videobridge assumes
                 // the responsibility of requesting missing packets.
-                logDebug("Packets missing from the cache. Ignoring, because"
+                logger.debug("Packets missing from the cache. Ignoring, because"
                                      + " retransmission requests are enabled.");
             }
             else
@@ -1409,7 +1409,7 @@ public class VideoChannel
         }
         catch (IOException ioe)
         {
-            logWarn("Failed to create NACK packet: " + ioe);
+            logger.warn("Failed to create NACK packet: " + ioe);
         }
 
         if (pkt != null)
@@ -1443,7 +1443,7 @@ public class VideoChannel
             {
                 if (logger.isDebugEnabled())
                 {
-                    logDebug("Sending a NACK for SSRC " + mediaSourceSsrc
+                    logger.debug("Sending a NACK for SSRC " + mediaSourceSsrc
                                          + " , packets " + seqs
                                          + " on channel " + c.getID());
                 }
@@ -1457,7 +1457,7 @@ public class VideoChannel
                 }
                 catch (TransmissionFailedException e)
                 {
-                    logWarn("Failed to inject packet in MediaStream: " + e);
+                    logger.warn("Failed to inject packet in MediaStream: " + e);
                 }
             }
         }
@@ -1543,7 +1543,7 @@ public class VideoChannel
 
         if (logger.isDebugEnabled())
         {
-            logDebug("Setting simulcast mode to " + newSimulcastMode);
+            logger.debug("Setting simulcast mode to " + newSimulcastMode);
         }
 
         simulcastMode = newSimulcastMode;
@@ -1575,12 +1575,12 @@ public class VideoChannel
      */
     public void updateTranslatedVideoChannels()
     {
-        logDebug("Updating the translated channels.");
+        logger.debug("Updating the translated channels.");
         for (Channel peerVideoChannel : getContent().getChannels())
         {
             if (!(peerVideoChannel instanceof VideoChannel))
             {
-                logWarn("Er, what? I Taw a Putty Tat.");
+                logger.warn("Er, what? I Taw a Putty Tat.");
                 continue;
             }
 
@@ -1598,14 +1598,14 @@ public class VideoChannel
     {
         if (peerVideoChannel == null)
         {
-            logWarn("Can't update our view of the peer video channel because " +
+            logger.warn("Can't update our view of the peer video channel because " +
                     "the peerVideoChannel is null.");
             return;
         }
 
         if (peerVideoChannel == this)
         {
-            logDebug("Won't update our view of the peer video channel because" +
+            logger.debug("Won't update our view of the peer video channel because" +
                     " peerVideoChannel is this.");
             return;
         }
@@ -1614,14 +1614,14 @@ public class VideoChannel
         {
             // FIXME Instead we should do something like this.
             // setSimulcastMode(SimulcastMode.REWRITING);
-            logWarn("Aborting: simulcast mode is not set, but it is required.");
+            logger.warn("Aborting: simulcast mode is not set, but it is required.");
             return;
         }
 
         // In the same spirit as MediaStreamImpl.update() but for signaling.
         if (simulcastMode != SimulcastMode.REWRITING)
         {
-            logDebug("Simulcast mode is not rewriting.");
+            logger.debug("Simulcast mode is not rewriting.");
         }
 
         // Update the SSRC rewriting engine from the peer simulcast engine
@@ -1631,7 +1631,7 @@ public class VideoChannel
 
         if (sim == null)
         {
-            logDebug("Can't update our view of the peer video channel because" +
+            logger.debug("Can't update our view of the peer video channel because" +
                     " peerSimulcastEngine is null.");
             return;
         }
@@ -1641,12 +1641,12 @@ public class VideoChannel
 
         if (streams == null || streams.length == 0)
         {
-            logDebug("Can't update our view of the peer video channel because" +
+            logger.debug("Can't update our view of the peer video channel because" +
                     " the peer doesn't have any simulcast streams.");
             return;
         }
 
-        logDebug("Updating our view of the peer video channel.");
+        logger.debug("Updating our view of the peer video channel.");
         final Set<Integer> ssrcGroup = new HashSet<>();
         final Map<Integer, Integer> rtxGroups = new HashMap<>();
 
@@ -1705,23 +1705,5 @@ public class VideoChannel
 
         getStream().configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
             ssrc2fec, ssrc2red, rtxGroups, ssrcTargetRTX);
-    }
-
-    private void logDebug(String msg)
-    {
-        if (logger.isDebugEnabled())
-        {
-            msg = getEndpoint().getID() + ": " + msg;
-            logger.debug(msg);
-        }
-    }
-
-    private void logWarn(String msg)
-    {
-        if (logger.isWarnEnabled())
-        {
-            msg = getEndpoint().getID() + ": " + msg;
-            logger.warn(msg);
-        }
     }
 }

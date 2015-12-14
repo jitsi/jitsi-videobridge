@@ -57,9 +57,12 @@ public class SimulcastStream
      */
     public static final int SIMULCAST_LAYER_ORDER_BASE = 0;
 
+    // FIXME what is this doing here?
     private static final byte REDPT = 0x74;
 
+    // FIXME what is this doing here?
     private static final byte VP8PT = 0x64;
+
     /**
      * The pool of threads utilized by <tt>SimulcastReceiver</tt>.
      */
@@ -298,7 +301,7 @@ public class SimulcastStream
 
         if (logger.isDebugEnabled())
         {
-            logDebug(
+            logger.debug(
                     "order-" + getOrder() + " stream (" + getPrimarySSRC()
                         + ") stopped on seqnum " + pkt.getSequenceNumber()
                         + ".");
@@ -378,7 +381,7 @@ public class SimulcastStream
                         frameStarted = false;
                         if (logger.isTraceEnabled())
                         {
-                            logTrace(
+                            logger.trace(
                                     "order-" + getOrder() + " stream ("
                                         + getPrimarySSRC()
                                         + ") detected an alien pkt: seqnum "
@@ -469,7 +472,7 @@ public class SimulcastStream
 
         if (logger.isDebugEnabled())
         {
-            logDebug(
+            logger.debug(
                     "order-" + getOrder() + " stream (" + getPrimarySSRC()
                         + ") resumed on seqnum " + pkt.getSequenceNumber()
                         + ", " + (isKeyFrame(pkt) ? "key" : "delta")
@@ -495,48 +498,6 @@ public class SimulcastStream
         executorService.execute(keyFrameRequestRunnable);
     }
 
-    private void logDebug(String msg)
-    {
-        if (logger.isDebugEnabled())
-        {
-            msg = simulcastReceiver.getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.debug(msg);
-        }
-    }
-
-    private void logInfo(String msg)
-    {
-        if (logger.isInfoEnabled())
-        {
-            msg = simulcastReceiver.getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.info(msg);
-        }
-    }
-
-    private void logWarn(String msg)
-    {
-        if (logger.isWarnEnabled())
-        {
-            msg = simulcastReceiver.getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.warn(msg);
-        }
-    }
-
-    private void logTrace(String msg)
-    {
-        if (!logger.isTraceEnabled())
-        {
-            return;
-        }
-
-        msg = simulcastReceiver.getSimulcastEngine().getVideoChannel()
-            .getEndpoint().getID() + ": " + msg;
-        logger.trace(msg);
-    }
-
     /**
      * The <tt>Runnable</tt> that requests key frames for this instance.
      */
@@ -549,13 +510,13 @@ public class SimulcastStream
                 = simulcastReceiver.getSimulcastEngine();
             if (peerSM == null)
             {
-                logWarn("Requested a key frame but the peer simulcast " +
+                logger.warn("Requested a key frame but the peer simulcast " +
                         "manager is null!");
                 return;
             }
             else
             {
-                logDebug("Asking for a key frame for " + primarySSRC);
+                logger.debug("Asking for a key frame for " + primarySSRC);
             }
 
             peerSM.getVideoChannel().askForKeyframes(

@@ -129,11 +129,11 @@ public class SimulcastSender
 
         if (receiveEndpoint == null)
         {
-            logWarn("Self is null!");
+            logger.warn("Self is null!");
 
             if (logger.isDebugEnabled())
             {
-                logDebug(Arrays.toString(
+                logger.debug(Arrays.toString(
                     Thread.currentThread().getStackTrace()));
             }
         }
@@ -182,10 +182,10 @@ public class SimulcastSender
 
         if (receiveSimulcastEngine == null)
         {
-            logWarn("The peer simulcast manager is null!");
+            logger.warn("The peer simulcast manager is null!");
             if (logger.isDebugEnabled())
             {
-                logDebug(
+                logger.debug(
                     Arrays.toString(
                         Thread.currentThread().getStackTrace()));
             }
@@ -204,11 +204,11 @@ public class SimulcastSender
         Endpoint sendEndpoint = receiveVideoChannel.getEndpoint();
         if (sendEndpoint == null)
         {
-            logWarn("Send endpoint is null!");
+            logger.warn("Send endpoint is null!");
 
             if (logger.isDebugEnabled())
             {
-                logDebug(Arrays.toString(
+                logger.debug(Arrays.toString(
                     Thread.currentThread().getStackTrace()));
             }
         }
@@ -242,7 +242,7 @@ public class SimulcastSender
         }
         else if (SimulcastReceiver.SIMULCAST_LAYERS_PNAME.equals(propertyName))
         {
-            logDebug("Handling streams change.");
+            logger.debug("Handling streams change.");
             // The simulcast streams of the peer have changed, (re)attach.
             receiveStreamsChanged();
         }
@@ -256,17 +256,17 @@ public class SimulcastSender
 
             if (newEndpoint == null)
             {
-                logDebug("Now I'm not watching anybody. What?!");
+                logger.debug("Now I'm not watching anybody. What?!");
             }
             else
             {
-                logDebug("Now I'm watching " + newEndpoint.getID());
+                logger.debug("Now I'm watching " + newEndpoint.getID());
             }
 
             SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
             if (simulcastReceiver == null)
             {
-                logWarn("The simulcastReceiver has been garbage collected. " +
+                logger.warn("The simulcastReceiver has been garbage collected. " +
                         "This simulcastSender is now defunkt.");
                 return;
             }
@@ -274,7 +274,7 @@ public class SimulcastSender
             SimulcastStream[] simStreams = simulcastReceiver.getSimulcastStreams();
             if (simStreams == null || simStreams.length == 0)
             {
-                logWarn("The remote endpoint hasn't signaled simulcast. " +
+                logger.warn("The remote endpoint hasn't signaled simulcast. " +
                         "This simulcastSender is now disabled.");
                 return;
             }
@@ -296,7 +296,7 @@ public class SimulcastSender
         }
         else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(propertyName))
         {
-            logDebug("The simulcast mode has changed.");
+            logger.debug("The simulcast mode has changed.");
 
             SimulcastMode oldMode = (SimulcastMode) ev.getOldValue();
             SimulcastMode newMode = (SimulcastMode) ev.getNewValue();
@@ -305,7 +305,7 @@ public class SimulcastSender
         }
         else if (VideoChannel.ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
-            logDebug("The endpoint owner has changed.");
+            logger.debug("The endpoint owner has changed.");
 
             // Listen for property changes from self.
             Endpoint newValue = (Endpoint) ev.getNewValue();
@@ -333,7 +333,7 @@ public class SimulcastSender
 
         if (sendMode == null)
         {
-            logDebug("sendMode is null.");
+            logger.debug("sendMode is null.");
         }
 
         return (sendMode != null) ? sendMode.accept(pkt) : null;
@@ -445,10 +445,10 @@ public class SimulcastSender
         }
         else
         {
-            logWarn("Cannot listen on self, it's null!");
+            logger.warn("Cannot listen on self, it's null!");
             if (logger.isDebugEnabled())
             {
-                logDebug(Arrays.toString(
+                logger.debug(Arrays.toString(
                     Thread.currentThread().getStackTrace()));
             }
         }
@@ -458,24 +458,6 @@ public class SimulcastSender
             // Not strictly necessary since we're using a
             // WeakReferencePropertyChangeListener but why not.
             oldValue.removePropertyChangeListener(propertyChangeListener);
-        }
-    }
-
-    private void logDebug(String msg)
-    {
-        if (logger.isDebugEnabled())
-        {
-            msg = getReceiveEndpoint().getID() + ": " + msg;
-            logger.debug(msg);
-        }
-    }
-
-    private void logWarn(String msg)
-    {
-        if (logger.isWarnEnabled())
-        {
-            msg = getReceiveEndpoint().getID() + ": " + msg;
-            logger.warn(msg);
         }
     }
 }

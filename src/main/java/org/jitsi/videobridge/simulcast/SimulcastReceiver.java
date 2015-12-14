@@ -176,13 +176,13 @@ public class SimulcastReceiver
         {
             if (simulcastStreams == null)
             {
-                logInfo("Simulcast disabled.");
+                logger.info("Simulcast disabled.");
             }
             else
             {
                 for (SimulcastStream l : simulcastStreams)
                 {
-                    logInfo(l.getOrder() + ": " + l.getPrimarySSRC());
+                    logger.info(l.getOrder() + ": " + l.getPrimarySSRC());
                 }
             }
         }
@@ -275,43 +275,6 @@ public class SimulcastReceiver
         boolean frameStarted = acceptedStream.touch(pkt);
         if (frameStarted)
             simulcastStreamFrameStarted(acceptedStream, pkt, simStreams);
-    }
-
-    private void logDebug(String msg)
-    {
-        if (logger.isDebugEnabled())
-        {
-            msg = getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.debug(msg);
-        }
-    }
-
-    private void logWarn(String msg)
-    {
-        if (logger.isWarnEnabled())
-        {
-            msg = getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.warn(msg);
-        }
-    }
-
-    private void logError(String msg, Throwable e)
-    {
-        msg = getSimulcastEngine().getVideoChannel()
-            .getEndpoint().getID() + ": " + msg;
-        logger.error(msg, e);
-    }
-
-    private void logInfo(String msg)
-    {
-        if (logger.isInfoEnabled())
-        {
-            msg = getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.info(msg);
-        }
     }
 
     /**
