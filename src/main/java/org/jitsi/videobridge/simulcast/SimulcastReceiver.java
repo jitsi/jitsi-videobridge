@@ -221,14 +221,14 @@ public class SimulcastReceiver
         }
 
         // Find the simulcast stream that corresponds to this packet.
-        int acceptedSSRC = pkt.getSSRC();
+        long acceptedSSRC = pkt.getSSRCAsLong();
         SimulcastStream[] simStreams = getSimulcastStreams();
         SimulcastStream acceptedStream = null;
         for (SimulcastStream simStream : simStreams)
         {
             // We only care about the primary SSRC and not the RTX ssrc (or
             // future FEC ssrc).
-            if ((int) simStream.getPrimarySSRC() == acceptedSSRC)
+            if (simStream.getPrimarySSRC() == acceptedSSRC)
             {
                 acceptedStream = simStream;
                 break;
