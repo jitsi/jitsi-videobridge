@@ -278,6 +278,48 @@ public class SimulcastReceiver
     }
 
     /**
+     * Asks for a keyframe for the <tt>SimulcastStream</tt> passed in as a
+     * param.
+     *
+     * @param simulcastStream
+     */
+    public void askForKeyframe(final SimulcastStream simulcastStream)
+    {
+        if (simulcastStream == null)
+        {
+            logger.warn("Didn't ask for key frame because the simulcastStream" +
+                    " is null!");
+            return;
+        }
+
+        executorService.execute(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                SimulcastEngine peerSM = getSimulcastEngine();
+                if (peerSM == null)
+                {
+                    logger.warn("Requested a key frame but the peer simulcast " +
+                            "manager is null!");
+                    return;
+                }
+                else
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Asking for a key frame for "
+                                + simulcastStream.getPrimarySSRC());
+                    }
+                }
+
+                peerSM.getVideoChannel().askForKeyframes(
+                        new int[]{(int) simulcastStream.getPrimarySSRC()});
+            }
+        });
+    }
+
+    /**
      * Notifies this {@code SimulcastReceiver} that a specific
      * {@code SimulcastReceiver} has detected the start of a new video frame in
      * the RTP stream that it represents. Determines whether any of

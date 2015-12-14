@@ -64,20 +64,6 @@ public class SimulcastStream
     private static final byte VP8PT = 0x64;
 
     /**
-     * The pool of threads utilized by <tt>SimulcastReceiver</tt>.
-     */
-    private static final ExecutorService executorService
-        = ExecutorUtils.newCachedThreadPool(
-                true,
-                SimulcastStream.class.getName());
-
-    /**
-     * The <tt>Runnable</tt> that requests key frames.
-     */
-    private final KeyFrameRequestRunnable keyFrameRequestRunnable
-        = new KeyFrameRequestRunnable();
-
-    /**
      * The <tt>SimulcastReceiver</tt> that owns this simulcast stream.
      */
     private final SimulcastReceiver simulcastReceiver;
@@ -495,32 +481,6 @@ public class SimulcastStream
      */
     public void askForKeyframe()
     {
-        executorService.execute(keyFrameRequestRunnable);
-    }
-
-    /**
-     * The <tt>Runnable</tt> that requests key frames for this instance.
-     */
-    class KeyFrameRequestRunnable implements Runnable
-    {
-        @Override
-        public void run()
-        {
-            SimulcastEngine peerSM
-                = simulcastReceiver.getSimulcastEngine();
-            if (peerSM == null)
-            {
-                logger.warn("Requested a key frame but the peer simulcast " +
-                        "manager is null!");
-                return;
-            }
-            else
-            {
-                logger.debug("Asking for a key frame for " + primarySSRC);
-            }
-
-            peerSM.getVideoChannel().askForKeyframes(
-                    new int[]{(int) getPrimarySSRC()});
-        }
+        simulcastReceiver.askForKeyframe(this);
     }
 }
