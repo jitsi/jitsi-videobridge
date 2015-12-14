@@ -215,14 +215,19 @@ public class SimulcastReceiver
         // the channel has accepted a datagram packet for the timeout to
         // function correctly.
 
-        if (!isSimulcastSignaled() || pkt == null)
+        if (pkt == null)
+        {
+            return;
+        }
+
+        SimulcastStream[] simStreams = getSimulcastStreams();
+        if (simStreams == null || simStreams.length == 0)
         {
             return;
         }
 
         // Find the simulcast stream that corresponds to this packet.
         long acceptedSSRC = pkt.getSSRCAsLong();
-        SimulcastStream[] simStreams = getSimulcastStreams();
         SimulcastStream acceptedStream = null;
         for (SimulcastStream simStream : simStreams)
         {
