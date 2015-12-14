@@ -264,9 +264,9 @@ public class SimulcastReceiver
             if (logger.isTraceEnabled())
             {
                 logger.trace(
-                        "pkt.payloadLength= " + pktPayloadLength
-                            + " <= pkt.paddingSize= " + pktPaddingSize + "("
-                            + pkt.getSequenceNumber() + ")");
+                    "pkt.payloadLength= " + pktPayloadLength
+                        + " <= pkt.paddingSize= " + pktPaddingSize + "("
+                        + pkt.getSequenceNumber() + ")");
             }
             return;
         }
@@ -278,8 +278,93 @@ public class SimulcastReceiver
         // SimulcastStream#touch(boolean, RawPacket) for an explanation of why we
         // chose to use a return value.
         boolean frameStarted = acceptedStream.touch(pkt);
-        if (frameStarted)
-            simulcastStreamFrameStarted(acceptedStream, pkt, simStreams);
+        if (!frameStarted)
+        {
+            return;
+        }
+
+        // Determine whether any of {@link #simulcastStreams} other than
+        // {@code acceptedStream} have been paused/stopped by the remote peer.
+        // The determination is based on counting (video) frames.
+
+        // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
+        // compile time) the frame-based approach to the detection of stream
+        // drops.
+        if (TIMEOUT_ON_FRAME_COUNT <= 1)
+            return;
+
+        // Timeouts in simulcast streams caused by source may occur only based
+        // on the span (of time or received frames) during which source has
+        // received TIMEOUT_ON_FRAME_COUNT number of frames. The current method
+        // invocation signals the receipt of 1 frame by source.
+        int indexOfLastSourceOccurrenceInHistory = -1;
+        int sourceFrameCount = 0;
+        int ix = 0;
+
+        for (Iterator<SimulcastStream> it
+             = simulcastStreamFrameHistory.iterator();
+             it.hasNext();
+             ++ix)
+        {
+            if (it.next() == acceptedStream)
+            {
+                if (indexOfLastSourceOccurrenceInHistory != -1)
+                {
+                    // Prune simulcastStreamFrameHistory so that it does not
+                    // become unnecessarily long.
+                    it.remove();
+                }
+                else if (++sourceFrameCount >= TIMEOUT_ON_FRAME_COUNT - 1)
+                {
+                    // The span of TIMEOUT_ON_FRAME_COUNT number of frames
+                    // received by source only is to be examined for the
+                    // purposes of timeouts. The current method invocations
+                    // signals the receipt of 1 frame by source so
+                    // TIMEOUT_ON_FRAME_COUNT - 1 occurrences of source in
+                    // simulcastStreamFrameHistory is enough.
+                    indexOfLastSourceOccurrenceInHistory = ix;
+                }
+            }
+        }
+
+        if (indexOfLastSourceOccurrenceInHistory == -1)
+        {
+            return;
+        }
+
+        // Presumably, if a SimulcastStream is active, all SimulcastStreams
+        // before it (according to SimulcastStream's order) are active as
+        // well. Consequently, timeouts may occur in SimulcastStreams which
+        // are after source.
+        boolean maybeTimeout = false;
+
+        for (SimulcastStream simStream : simStreams)
+        {
+            if (maybeTimeout)
+            {
+                // There's no point in timing stream out if it's timed out
+                // already.
+                if (simStream.isStreaming())
+                {
+                    maybeTimeout(
+                        acceptedStream,
+                        pkt,
+                        simStream,
+                        indexOfLastSourceOccurrenceInHistory);
+                }
+            }
+            else if (simStream == acceptedStream)
+            {
+                maybeTimeout = true;
+            }
+        }
+
+
+        // As previously stated, the current method invocation signals the
+        // receipt of 1 frame by source.
+        simulcastStreamFrameHistory.add(0, acceptedStream);
+        // TODO Prune simulcastStreamFrameHistory by forgetting so that it does
+        // not become too long.
     }
 
     /**
@@ -322,107 +407,6 @@ public class SimulcastReceiver
                         new int[]{(int) simulcastStream.getPrimarySSRC()});
             }
         });
-    }
-
-    /**
-     * Notifies this {@code SimulcastReceiver} that a specific
-     * {@code SimulcastReceiver} has detected the start of a new video frame in
-     * the RTP stream that it represents. Determines whether any of
-     * {@link #simulcastStreams} other than {@code source} have been
-     * paused/stopped by the remote peer. The determination is based on counting
-     * (video) frames.
-     *
-     * @param source the {@code SimulcastStream} which is the source of the event
-     * i.e. which has detected the start of a new video frame in the RTP stream
-     * that it represents
-     * @param pkt the {@code RawPacket} which was received by {@code source} and
-     * possibly influenced the decision that a new view frame was started in the
-     * RTP stream represented by {@code source}
-     * @param simStreams the set of {@code SimulcastStream}s managed by this
-     * {@code SimulcastReceiver}. Explicitly provided to the method in order to
-     * avoid invocations of {@link #getSimulcastStreams()} because the latter
-     * makes a copy at the time of this writing.
-     */
-    private void simulcastStreamFrameStarted(
-            SimulcastStream source,
-            RawPacket pkt,
-            SimulcastStream[] simStreams)
-    {
-        // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
-        // compile time) the frame-based approach to the detection of stream
-        // drops.
-        if (TIMEOUT_ON_FRAME_COUNT <= 1)
-            return;
-
-        // Timeouts in simulcast streams caused by source may occur only based
-        // on the span (of time or received frames) during which source has
-        // received TIMEOUT_ON_FRAME_COUNT number of frames. The current method
-        // invocation signals the receipt of 1 frame by source.
-        int indexOfLastSourceOccurrenceInHistory = -1;
-        int sourceFrameCount = 0;
-        int ix = 0;
-
-        for (Iterator<SimulcastStream> it
-                    = simulcastStreamFrameHistory.iterator();
-                it.hasNext();
-                ++ix)
-        {
-            if (it.next() == source)
-            {
-                if (indexOfLastSourceOccurrenceInHistory != -1)
-                {
-                    // Prune simulcastStreamFrameHistory so that it does not
-                    // become unnecessarily long.
-                    it.remove();
-                }
-                else if (++sourceFrameCount >= TIMEOUT_ON_FRAME_COUNT - 1)
-                {
-                    // The span of TIMEOUT_ON_FRAME_COUNT number of frames
-                    // received by source only is to be examined for the
-                    // purposes of timeouts. The current method invocations
-                    // signals the receipt of 1 frame by source so
-                    // TIMEOUT_ON_FRAME_COUNT - 1 occurrences of source in
-                    // simulcastStreamFrameHistory is enough.
-                    indexOfLastSourceOccurrenceInHistory = ix;
-                }
-            }
-        }
-
-        if (indexOfLastSourceOccurrenceInHistory != -1)
-        {
-            // Presumably, if a SimulcastStream is active, all SimulcastStreams
-            // before it (according to SimulcastStream's order) are active as
-            // well. Consequently, timeouts may occur in SimulcastStreams which
-            // are after source.
-            boolean maybeTimeout = false;
-
-            for (SimulcastStream simStream : simStreams)
-            {
-                if (maybeTimeout)
-                {
-                    // There's no point in timing stream out if it's timed out
-                    // already.
-                    if (simStream.isStreaming())
-                    {
-                        maybeTimeout(
-                                source,
-                                pkt,
-                                simStream,
-                                indexOfLastSourceOccurrenceInHistory);
-                    }
-                }
-                else if (simStream == source)
-                {
-                    maybeTimeout = true;
-                }
-            }
-        }
-
-        // As previously stated, the current method invocation signals the
-        // receipt of 1 frame by source.
-        simulcastStreamFrameHistory.add(0, source);
-        // TODO Prune simulcastStreamFrameHistory by forgetting so that it does
-        // not become too long.
     }
 
     /**
