@@ -57,12 +57,6 @@ public class SimulcastStream
      */
     public static final int SIMULCAST_LAYER_ORDER_BASE = 0;
 
-    // FIXME what is this doing here?
-    private static final byte REDPT = 0x74;
-
-    // FIXME what is this doing here?
-    private static final byte VP8PT = 0x64;
-
     /**
      * The <tt>SimulcastReceiver</tt> that owns this simulcast stream.
      */
@@ -470,7 +464,11 @@ public class SimulcastStream
 
     public boolean isKeyFrame(RawPacket pkt)
     {
-        return Utils.isKeyFrame(pkt, REDPT, VP8PT);
+        byte redPT = simulcastReceiver.getSimulcastEngine()
+            .getVideoChannel().getRedPayloadType();
+        byte vp8PT = simulcastReceiver.getSimulcastEngine()
+            .getVideoChannel().getVP8PayloadType();
+        return Utils.isKeyFrame(pkt, redPT, vp8PT);
     }
 
     /**

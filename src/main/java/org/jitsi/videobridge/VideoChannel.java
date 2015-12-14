@@ -88,6 +88,12 @@ public class VideoChannel
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
 
     /**
+     * The payload type number configured for VP8 for this channel,
+     * or -1 if none is configured (the other end does not support VP8).
+     */
+    private byte vp8PayloadType = -1;
+
+    /**
      * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>.
      */
     private SimulcastMode simulcastMode;
@@ -1295,12 +1301,18 @@ public class VideoChannel
         if (payloadTypes == null || payloadTypes.isEmpty())
             return;
 
+        vp8PayloadType = -1;
         for (PayloadTypePacketExtension payloadType : payloadTypes)
         {
             if (Constants.RED.equals(payloadType.getName()))
             {
                 enableRedFilter = false;
                 break;
+            }
+
+            if (Constants.VP8.equalsIgnoreCase(payloadType.getName()))
+            {
+                vp8PayloadType = (byte) payloadType.getID();
             }
         }
 
@@ -1557,6 +1569,17 @@ public class VideoChannel
 
         firePropertyChange(
             SIMULCAST_MODE_PNAME, oldSimulcastMode, newSimulcastMode);
+    }
+
+    /**
+     * Returns the payload type number for the VP8 payload type for
+     * this channel.
+     * @return the payload type number for the VP8 payload type for
+     * this channel.
+     */
+    public byte getVP8PayloadType()
+    {
+        return vp8PayloadType;
     }
 
     /**
