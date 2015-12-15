@@ -21,7 +21,6 @@ import java.util.concurrent.*;
 
 import java.lang.ref.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * The <tt>SimulcastReceiver</tt> of a <tt>SimulcastEngine</tt> receives the
@@ -654,7 +653,7 @@ public class SimulcastReceiver
         /**
          * Ctor.
          *
-         * @param simulcastStream the <tt>SimulcastStream</tt>s that have
+         * @param simulcastStreams the <tt>SimulcastStream</tt>s that have
          * changed.
          */
         public SimulcastStreamsChangedRunnable(
