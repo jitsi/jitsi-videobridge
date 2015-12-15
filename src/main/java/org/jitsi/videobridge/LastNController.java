@@ -109,6 +109,11 @@ public class LastNController
      */
     public void setLastN(int lastN)
     {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Setting lastN=" + lastN);
+        }
+
         List<String> endpointsToAskForKeyframe;
         synchronized (this)
         {
@@ -136,6 +141,12 @@ public class LastNController
         for (Endpoint endpoint : newPinnedEndpoints)
         {
             newPinnedEndpointIds.add(endpoint.getID());
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Setting pinned endpoints: "
+                                 + newPinnedEndpointIds.toString());
         }
 
         List<String> endpointsToAskForKeyframe;
@@ -188,6 +199,10 @@ public class LastNController
             initializeConferenceEndpoints();
         }
 
+        // This may look like a place to optimize, because we query an unordered
+        // list (in O(n)) and it executes on each video packet if lastN is
+        // enabled. However, the size of  forwardedEndpoints is restricted to
+        // lastN and so small enough that it is not worth optimizing.
         return forwardedEndpoints.contains(channelEndpoint.getID());
     }
 
@@ -226,6 +241,15 @@ public class LastNController
 
         List<String> enteringEndpointIds
             = speechActivityEndpointIdsChanged(newEndpointIdList);
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(
+                    "New list of conference endpoints: "
+                    + newEndpointIdList.toString() + "; entering endpoints: "
+                    + (enteringEndpointIds == null ? "none" :
+                        enteringEndpointIds.toString()));
+        }
 
         List<Endpoint> ret = new LinkedList<>();
         if (enteringEndpointIds != null)
@@ -274,6 +298,10 @@ public class LastNController
 
         if (!change)
         {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Conference endpoints have not changed.");
+            }
             return null;
         }
 
@@ -382,6 +410,15 @@ public class LastNController
         List<String> enteringEndpoints = new ArrayList<>(newForwardedEndpoints);
         enteringEndpoints.removeAll(forwardedEndpoints);
 
+        if (logger.isDebugEnabled())
+        {
+            logger.debug(
+                    "Forwarded endpoints (maybe) changed: "
+                    + forwardedEndpoints.toString() + " -> "
+                    + newForwardedEndpoints.toString()
+                    + ". Entering: " + enteringEndpoints.toString());
+        }
+
         forwardedEndpoints
                 = Collections.unmodifiableList(newForwardedEndpoints);
 
@@ -396,6 +433,7 @@ public class LastNController
      */
     private void askForKeyframes(List<String> endpointIds)
     {
+        // TODO: Execute asynchronously.
         channel.getContent().askForKeyframesById(endpointIds);
     }
 
@@ -424,5 +462,11 @@ public class LastNController
     {
         speechActivityEndpointsChanged(
                 channel.getConferenceSpeechActivity().getEndpoints());
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Initialized the list of endpoints: "
+                             + conferenceSpeechActivityEndpoints.toString());
+        }
     }
 }
