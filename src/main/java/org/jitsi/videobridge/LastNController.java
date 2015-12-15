@@ -22,24 +22,28 @@ public class LastNController
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
 
     /**
+     * An empty list instance.
+     */
+    private static final List<String> INITIAL_EMPTY_LIST
+            = Collections.unmodifiableList(new LinkedList<String>());
+
+    /**
      * The set of <tt>Endpoints</tt> whose video streams are currently being
      * forwarded.
      */
-    private List<String> forwardedEndpoints
-            = Collections.unmodifiableList(new LinkedList<String>());
+    private List<String> forwardedEndpoints = INITIAL_EMPTY_LIST;
 
     /**
      * The list of all <tt>Endpoint</tt>s in the conference, ordered by the
      * last time they were elected dominant speaker.
      */
-    private List<String> conferenceSpeechActivityEndpoints = new LinkedList<>();
+    private List<String> conferenceSpeechActivityEndpoints = INITIAL_EMPTY_LIST;
 
     /**
      * The list of endpoints which have been explicitly marked as 'pinned'
      * and whose video streams should always be forwarded.
      */
-    private List<String> pinnedEndpoints
-        = Collections.unmodifiableList(new LinkedList<String>());
+    private List<String> pinnedEndpoints = INITIAL_EMPTY_LIST;
 
     /**
      * The maximum number of endpoints whose video streams will be forwarded
@@ -173,7 +177,15 @@ public class LastNController
         Endpoint channelEndpoint = sourceChannel.getEndpoint();
         if (channelEndpoint == null)
         {
+            logger.warn("sourceChannel has no endpoint.");
             return false;
+        }
+
+        if (forwardedEndpoints == INITIAL_EMPTY_LIST)
+        {
+            // LastN is enabled, but we haven't yet initialized the list of
+            // endpoints in the conference.
+            initializeConferenceEndpoints();
         }
 
         return forwardedEndpoints.contains(channelEndpoint.getID());
@@ -401,5 +413,16 @@ public class LastNController
             }
         }
         return endpointId;
+    }
+
+    /**
+     * Initializes the local list of endpoints
+     * ({@link #speechActivityEndpointsChanged(List)}) with the current
+     * endpoints from the conference.
+     */
+    private synchronized void initializeConferenceEndpoints()
+    {
+        speechActivityEndpointsChanged(
+                channel.getConferenceSpeechActivity().getEndpoints());
     }
 }

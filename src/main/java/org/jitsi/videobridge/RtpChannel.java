@@ -1890,4 +1890,12 @@ public class RtpChannel
 
         return -1;
     }
+
+    /**
+     * @return the {@link ConferenceSpeechActivity} for this channel.
+     */
+    public ConferenceSpeechActivity getConferenceSpeechActivity()
+    {
+        return conferenceSpeechActivity;
+    }
 }
