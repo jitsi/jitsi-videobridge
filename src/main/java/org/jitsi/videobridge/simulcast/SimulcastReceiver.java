@@ -23,10 +23,10 @@ import java.lang.ref.*;
 import java.util.*;
 
 /**
- * The <tt>SimulcastReceiver</tt> of a <tt>SimulcastEngine</tt> receives the
- * simulcast streams from a simulcast enabled participant and manages 1 or more
- * <tt>SimulcastStream</tt>s. It fires a property change event whenever the
- * simulcast streams that it manages change.
+ * The <tt>SimulcastReceiver</tt> of a <tt>SimulcastEngine</tt> receives and
+ * manages 2 or more simulcast streams from a simulcast enabled participant.
+ * Listeners get notified whenever the simulcast streams start, stop or change
+ * all together.
  *
  * This class is thread safe.
  *
@@ -65,9 +65,10 @@ public class SimulcastReceiver
         = new CopyOnWriteArrayList<>();
 
     /**
-     * The pool of threads utilized by this class.
+     * The pool of threads utilized by this class. This could be a private
+     * static final field but we want to be able to override it for testing.
      */
-    private static final ExecutorService executorService = ExecutorUtils
+    static ExecutorService executorService = ExecutorUtils
         .newCachedThreadPool(true, SimulcastReceiver.class.getName());
 
     /**
