@@ -223,12 +223,19 @@ public class SimulcastSender
 
     private void react(boolean urgent)
     {
+        SendMode sm = sendMode;
+        if (sm == null)
+        {
+            // This should never happen.
+            return;
+        }
+
         // FIXME the urgent parameter is useless, this method can determine
         // whether or not this is an urgent switch.
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
         SimulcastStream closestMatch
             = simulcastReceiver.getSimulcastStream(targetOrder);
-        sendMode.receive(closestMatch, urgent);
+        sm.receive(closestMatch, urgent);
     }
 
     /**
@@ -329,9 +336,12 @@ public class SimulcastSender
         if (sendMode == null)
         {
             logger.debug("sendMode is null.");
+            return true;
         }
-
-        return (sendMode != null) ? sendMode.accept(pkt) : null;
+        else
+        {
+            return sendMode.accept(pkt);
+        }
     }
 
     /**
@@ -385,7 +395,7 @@ public class SimulcastSender
     {
         if (newMode == null)
         {
-            // Now, what would you want to do that?
+            // Now, why would you want to do that?
             sendMode = null;
         }
         else if (newMode == SimulcastMode.REWRITING)
@@ -397,10 +407,7 @@ public class SimulcastSender
             sendMode = new SwitchingSendMode(this);
         }
 
-        if (sendMode != null)
-        {
-            react(false);
-        }
+        react(false);
     }
 
     /**
@@ -419,12 +426,7 @@ public class SimulcastSender
         }
         else
         {
-            logger.warn("Cannot listen on self, it's null!");
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(Arrays.toString(
-                    Thread.currentThread().getStackTrace()));
-            }
+            // This is acceptable when a participant leaves.
         }
 
         if (oldValue != null)
@@ -461,15 +463,22 @@ public class SimulcastSender
                 return;
             }
 
+            SendMode sm = sendMode;
+            if (sm == null)
+            {
+                return;
+            }
+
             boolean isUrgent = false;
             for (SimulcastStream l : simulcastStreams)
             {
-                isUrgent = l == sendMode.getCurrent() && !l.isStreaming();
+                isUrgent = l == sm.getCurrent() && !l.isStreaming();
                 if (isUrgent)
                 {
                     break;
                 }
             }
+
             react(isUrgent);
         }
     }

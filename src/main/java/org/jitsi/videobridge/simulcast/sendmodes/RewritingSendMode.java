@@ -95,6 +95,14 @@ public class RewritingSendMode
     @Override
     public void receive(SimulcastStream simStream, boolean urgent)
     {
+        if (simStream == null)
+        {
+            // This is acceptable when a participant leaves.
+            weakCurrent = null;
+            weakNext = null;
+            return;
+        }
+
         SimulcastStream current = getCurrent();
         SimulcastStream next = getNext();
 
