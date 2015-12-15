@@ -36,7 +36,6 @@ import org.jitsi.videobridge.simulcast.sendmodes.*;
  * @author George Politis
  */
 public class SimulcastSender
-    extends PropertyChangeNotifier
     implements PropertyChangeListener
 {
     /**
