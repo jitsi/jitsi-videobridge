@@ -66,6 +66,12 @@ public class SimulcastSender
         = new WeakReferencePropertyChangeListener(this);
 
     /**
+     * The listener that listens for simulcast receiver changes.
+     */
+    private final SimulcastReceiver.Listener simulcastReceiverListener
+        = new SimulcastReceiverListener();
+
+    /**
      * The current <tt>SimulcastMode</tt> for this <tt>SimulcastSender</tt>. The
      * default is rewriting.
      */
@@ -218,6 +224,8 @@ public class SimulcastSender
 
     private void react(boolean urgent)
     {
+        // FIXME the urgent parameter is useless, this method can determine
+        // whether or not this is an urgent switch.
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
         SimulcastStream closestMatch
             = simulcastReceiver.getSimulcastStream(targetOrder);
@@ -234,19 +242,7 @@ public class SimulcastSender
     {
         String propertyName = ev.getPropertyName();
 
-        if (SimulcastStream.IS_STREAMING_PNAME.equals(propertyName))
-        {
-            SimulcastStream l = (SimulcastStream) ev.getSource();
-            boolean isUrgent = l == sendMode.getCurrent() && !l.isStreaming();
-            react(isUrgent);
-        }
-        else if (SimulcastReceiver.SIMULCAST_LAYERS_PNAME.equals(propertyName))
-        {
-            logger.debug("Handling streams change.");
-            // The simulcast streams of the peer have changed, (re)attach.
-            receiveStreamsChanged();
-        }
-        else if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName)
+        if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName)
             || Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
             // Here we update the targetOrder value.
@@ -355,10 +351,15 @@ public class SimulcastSender
 
         // We want to be notified when the simulcast streams of the sending
         // endpoint change. It will wall the {#receiveStreamsChanged()} method.
-        simulcastReceiver.addPropertyChangeListener(propertyChangeListener);
+        simulcastReceiver.addWeakListener(
+            new WeakReference<>(simulcastReceiverListener));
 
         // Manually trigger the {#receiveStreamsChanged()} method so that w
-        receiveStreamsChanged();
+        // Initialize the send mode.
+        SimulcastMode simulcastMode = getSimulcastSenderManager()
+            .getSimulcastEngine().getVideoChannel().getSimulcastMode();
+
+        sendModeChanged(simulcastMode, null);
 
         VideoChannel sendVideoChannel = getSimulcastSenderManager()
             .getSimulcastEngine().getVideoChannel();
@@ -404,32 +405,6 @@ public class SimulcastSender
     }
 
     /**
-     * Notifies this instance about a change in the simulcast streams of the
-     * associated peer. We keep this in a separate method for readability and
-     * re-usability.
-     */
-    private void receiveStreamsChanged()
-    {
-        SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
-        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
-        {
-            return;
-        }
-
-        for (SimulcastStream simStream : simulcastReceiver.getSimulcastStreams())
-        {
-            // Add listener from the current receiving simulcast streams.
-            simStream.addPropertyChangeListener(propertyChangeListener);
-        }
-
-        // Initialize the send mode.
-        SimulcastMode simulcastMode = getSimulcastSenderManager()
-            .getSimulcastEngine().getVideoChannel().getSimulcastMode();
-
-        sendModeChanged(simulcastMode, null);
-    }
-
-    /**
      * Notifies this instance that the <tt>Endpoint</tt> that receives the
      * simulcast has changed. We keep this in a separate method for readability
      * and re-usability.
@@ -460,4 +435,44 @@ public class SimulcastSender
             oldValue.removePropertyChangeListener(propertyChangeListener);
         }
     }
+
+    /**
+     * Implements a <tt>SimulcastReceiver.Listener</tt> to be used wit this
+     * <tt>SimulcastSender</tt>.
+     */
+    class SimulcastReceiverListener
+        implements SimulcastReceiver.Listener
+    {
+        @Override
+        public void simulcastStreamsSignaled()
+        {
+            logger.debug("Handling simulcast signaling.");
+            // Initialize the send mode.
+            SimulcastMode simulcastMode = getSimulcastSenderManager()
+                .getSimulcastEngine().getVideoChannel().getSimulcastMode();
+
+            sendModeChanged(simulcastMode, null);
+        }
+
+        @Override
+        public void simulcastStreamsChanged(SimulcastStream... simulcastStreams)
+        {
+            if (simulcastStreams == null || simulcastStreams.length == 0)
+            {
+                return;
+            }
+
+            boolean isUrgent = false;
+            for (SimulcastStream l : simulcastStreams)
+            {
+                isUrgent = l == sendMode.getCurrent() && !l.isStreaming();
+                if (isUrgent)
+                {
+                    break;
+                }
+            }
+            react(isUrgent);
+        }
+    }
+
 }
