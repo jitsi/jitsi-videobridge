@@ -381,6 +381,11 @@ public class SimulcastReceiver
             return;
         }
 
+        if (acceptedStream.isKeyFrame(pkt))
+        {
+            acceptedStream.keyFrameRequested.set(false);
+        }
+
         if (acceptedStream.getOrder() != 0 && !acceptedStream.isStreaming)
         {
             // If the frame-based approach to the detection of stream drops works
@@ -498,6 +503,12 @@ public class SimulcastReceiver
         {
             logger.warn("Didn't ask for key frame because the simulcastStream" +
                     " is null!");
+            return;
+        }
+
+        if (!simulcastStream.keyFrameRequested.compareAndSet(false, true))
+        {
+            logger.debug("Keyframe spam protection activated.");
             return;
         }
 

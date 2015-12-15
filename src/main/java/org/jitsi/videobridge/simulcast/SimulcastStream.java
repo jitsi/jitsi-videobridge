@@ -16,8 +16,9 @@
 package org.jitsi.videobridge.simulcast;
 
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.util.event.*;
 import org.jitsi.impl.neomedia.codec.video.*;
+
+import java.util.concurrent.atomic.*;
 
 /**
  * The <tt>SimulcastStream</tt> of a <tt>SimulcastReceiver</tt> represents a
@@ -29,7 +30,6 @@ import org.jitsi.impl.neomedia.codec.video.*;
  * @author Lyubomir Marinov
  */
 public class SimulcastStream
-    extends PropertyChangeNotifier
     implements Comparable<SimulcastStream>
 {
     /**
@@ -64,6 +64,12 @@ public class SimulcastStream
      * The order of this simulcast stream.
      */
     private final int order;
+
+    /**
+     * An <tt>AtomicBoolean</tt> indicating whether or not we have requested
+     * a key frame.
+     */
+    final AtomicBoolean keyFrameRequested = new AtomicBoolean(false);
 
     /**
      * Holds a boolean indicating whether or not this simulcast stream is
