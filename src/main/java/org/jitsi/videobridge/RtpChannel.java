@@ -619,6 +619,10 @@ public class RtpChannel
      */
     public void askForKeyframes(int[] receiveSSRCs)
     {
+        // XXX(gp) does it make sense to repeatedly request key frames when we
+        // haven't received a key frame for a previous request? In some cases,
+        // maybe (the key frame might have been lost for example). This should
+        // be more intelligent.
         if (receiveSSRCs != null && receiveSSRCs.length != 0)
         {
             RTCPFeedbackMessageSender rtcpFeedbackMessageSender

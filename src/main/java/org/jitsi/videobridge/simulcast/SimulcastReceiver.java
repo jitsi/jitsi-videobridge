@@ -508,7 +508,8 @@ public class SimulcastReceiver
 
         if (!simulcastStream.keyFrameRequested.compareAndSet(false, true))
         {
-            logger.debug("Keyframe spam protection activated.");
+            // TODO this should probably managed at a lower level.
+            logger.debug("Keyframe request throttling.");
             return;
         }
 
