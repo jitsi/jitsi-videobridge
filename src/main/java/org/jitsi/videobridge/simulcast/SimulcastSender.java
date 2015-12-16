@@ -252,31 +252,6 @@ public class SimulcastSender
             Endpoint newEndpoint = (Endpoint) ev.getNewValue();
             selectedEndpointChanged(oldEndpoint, newEndpoint);
         }
-        else if(Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
-        {
-            // We handle the pinned endpoint in the same way as the selected
-            // endpoint. We assume that "the" pinned endpoint is the first
-            // endpoint in the list of endpoints.
-
-            List<String> oldEndpointIds = (List<String>) ev.getOldValue();
-            List<String> newEndpointIds = (List<String>) ev.getNewValue();
-            String oldEndpointId
-                = (oldEndpointIds != null && !oldEndpointIds.isEmpty()) ?
-                    oldEndpointIds.get(0) : null;
-
-            String newEndpointId
-                    = (newEndpointIds != null && !newEndpointIds.isEmpty()) ?
-                    newEndpointIds.get(0) : null;
-
-            Conference conference
-                = simulcastSenderManager.getSimulcastEngine()
-                    .getVideoChannel().getContent().getConference();
-
-            selectedEndpointChanged(
-                    conference.getEndpoint(oldEndpointId),
-                    conference.getEndpoint(newEndpointId));
-
-        }
         else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(propertyName))
         {
             logDebug("The simulcast mode has changed.");
