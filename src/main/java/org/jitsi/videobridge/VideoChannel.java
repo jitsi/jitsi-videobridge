@@ -30,6 +30,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
+import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
@@ -1645,7 +1646,11 @@ public class VideoChannel
         if (simulcastMode != SimulcastMode.REWRITING)
         {
             logger.debug("Simulcast mode is not rewriting.");
+            return;
         }
+
+        // The rewriting mode requires SSRC rewriting, RTCP termination and NACK
+        // termination (packet caching and retransmission requests).
 
         // Update the SSRC rewriting engine from the peer simulcast engine
         // state.
@@ -1726,7 +1731,29 @@ public class VideoChannel
             }
         }
 
-        getStream().configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
+
+        MediaStream mediaStream = getStream();
+        mediaStream.configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
             ssrc2fec, ssrc2red, rtxGroups, ssrcTargetRTX);
+
+        // The rewriting mode requires RTCP termination.
+        RTCPTerminationStrategy oldStrategy
+            = mediaStream.getRTCPTerminationStrategy();
+        if (!(oldStrategy instanceof BasicRTCPTerminationStrategy))
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Setting RTCP termination strategy to " +
+                    "BasicRTCPTerminationStrategy because it is required.");
+            }
+
+            BasicRTCPTerminationStrategy
+                newStrategy = new BasicRTCPTerminationStrategy();
+            newStrategy.initialize(mediaStream);
+            mediaStream.setRTCPTerminationStrategy(newStrategy);
+        }
+
+        // FIXME Force NACK termination. Postponing because this will require a
+        // few changes here and there, and it's enabled by default anyway.
     }
 }
