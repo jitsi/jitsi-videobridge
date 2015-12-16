@@ -132,23 +132,15 @@ public class LastNController
     /**
      * Sets the list of "pinned" endpoints (i.e. endpoints for which video
      * should always be forwarded, regardless of {@code lastN}).
-     * @param newPinnedEndpoints the list of endpoints to set.
+     * @param newPinnedEndpointIds the list of endpoint IDs to set.
      */
-    public void setPinnedEndpoints(
-            Collection<Endpoint> newPinnedEndpoints)
+    public void setPinnedEndpointIds(List<String> newPinnedEndpointIds)
     {
-        List<String> newPinnedEndpointIds = new LinkedList<>();
-        for (Endpoint endpoint : newPinnedEndpoints)
-        {
-            newPinnedEndpointIds.add(endpoint.getID());
-        }
-
         if (logger.isDebugEnabled())
         {
             logger.debug("Setting pinned endpoints: "
                                  + newPinnedEndpointIds.toString());
         }
-
         List<String> endpointsToAskForKeyframe;
         synchronized (this)
         {

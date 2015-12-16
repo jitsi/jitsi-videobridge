@@ -246,53 +246,36 @@ public class SimulcastSender
             // The simulcast streams of the peer have changed, (re)attach.
             receiveStreamsChanged();
         }
-        else if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName)
-            || Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
+        else if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
-            // Here we update the targetOrder value.
-
             Endpoint oldEndpoint = (Endpoint) ev.getOldValue();
             Endpoint newEndpoint = (Endpoint) ev.getNewValue();
+            selectedEndpointChanged(oldEndpoint, newEndpoint);
+        }
+        else if(Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
+        {
+            // We handle the pinned endpoint in the same way as the selected
+            // endpoint. We assume that "the" pinned endpoint is the first
+            // endpoint in the list of endpoints.
 
-            if (newEndpoint == null)
-            {
-                logDebug("Now I'm not watching anybody. What?!");
-            }
-            else
-            {
-                logDebug("Now I'm watching " + newEndpoint.getID());
-            }
+            List<String> oldEndpointIds = (List<String>) ev.getOldValue();
+            List<String> newEndpointIds = (List<String>) ev.getNewValue();
+            String oldEndpointId
+                = (oldEndpointIds != null && !oldEndpointIds.isEmpty()) ?
+                    oldEndpointIds.get(0) : null;
 
-            SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
-            if (simulcastReceiver == null)
-            {
-                logWarn("The simulcastReceiver has been garbage collected. " +
-                        "This simulcastSender is now defunkt.");
-                return;
-            }
+            String newEndpointId
+                    = (newEndpointIds != null && !newEndpointIds.isEmpty()) ?
+                    newEndpointIds.get(0) : null;
 
-            SimulcastStream[] simStreams = simulcastReceiver.getSimulcastStreams();
-            if (simStreams == null || simStreams.length == 0)
-            {
-                logWarn("The remote endpoint hasn't signaled simulcast. " +
-                        "This simulcastSender is now disabled.");
-                return;
-            }
+            Conference conference
+                = simulcastSenderManager.getSimulcastEngine()
+                    .getVideoChannel().getContent().getConference();
 
-            int hqOrder = simStreams.length - 1;
-            if (newEndpoint == getSendEndpoint() && targetOrder != hqOrder)
-            {
-                targetOrder = hqOrder;
-                react(false);
-            }
+            selectedEndpointChanged(
+                    conference.getEndpoint(oldEndpointId),
+                    conference.getEndpoint(newEndpointId));
 
-            // Send LQ stream for the previously selected endpoint.
-            if (oldEndpoint == getSendEndpoint()
-                && targetOrder != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE)
-            {
-                targetOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE;
-                react(false);
-            }
         }
         else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(propertyName))
         {
@@ -312,6 +295,56 @@ public class SimulcastSender
             Endpoint oldValue = (Endpoint) ev.getOldValue();
 
             receiveEndpointChanged(newValue, oldValue);
+        }
+    }
+
+    /**
+     * Handles a change in the selected endpoint.
+     * @param oldEndpoint the old selected endpoint.
+     * @param newEndpoint the new selected endpoint.
+     */
+    private void selectedEndpointChanged(
+            Endpoint oldEndpoint, Endpoint newEndpoint)
+    {
+        // Here we update the targetOrder value.
+        if (newEndpoint == null)
+        {
+            logDebug("Now I'm not watching anybody. What?!");
+        }
+        else
+        {
+            logDebug("Now I'm watching " + newEndpoint.getID());
+        }
+
+        SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
+        if (simulcastReceiver == null)
+        {
+            logWarn("The simulcastReceiver has been garbage collected. " +
+                            "This simulcastSender is now defunkt.");
+            return;
+        }
+
+        SimulcastStream[] simStreams = simulcastReceiver.getSimulcastStreams();
+        if (simStreams == null || simStreams.length == 0)
+        {
+            logWarn("The remote endpoint hasn't signaled simulcast. " +
+                            "This simulcastSender is now disabled.");
+            return;
+        }
+
+        int hqOrder = simStreams.length - 1;
+        if (newEndpoint == getSendEndpoint() && targetOrder != hqOrder)
+        {
+            targetOrder = hqOrder;
+            react(false);
+        }
+
+        // Send LQ stream for the previously selected endpoint.
+        if (oldEndpoint == getSendEndpoint()
+                && targetOrder != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE)
+        {
+            targetOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE;
+            react(false);
         }
     }
 

@@ -454,10 +454,9 @@ public class VideoChannel
 
         String propertyName = ev.getPropertyName();
 
-        if (Endpoint.PINNED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
+        if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            lastNController.setPinnedEndpoints(
-                    Collections.singleton(getEndpoint().getPinnedEndpoint()));
+            lastNController.setPinnedEndpointIds((List<String>)ev.getNewValue());
         }
         else if (Content.CHANNEL_MODIFIED_PROPERTY_NAME.equals(propertyName))
         {
