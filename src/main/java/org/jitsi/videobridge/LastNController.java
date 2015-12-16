@@ -19,7 +19,8 @@ public class LastNController
      * The <tt>Logger</tt> used by the <tt>VideoChannel</tt> class and its
      * instances to print debug information.
      */
-    private static final Logger logger = Logger.getLogger(VideoChannel.class);
+    private static final Logger logger
+         = Logger.getLogger(LastNController.class);
 
     /**
      * An empty list instance.
