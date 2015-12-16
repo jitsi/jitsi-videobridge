@@ -123,6 +123,15 @@
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/collect-dump-logs.sh"
                perm="755"/>
 
+        <!-- callstats-java-sdk -->
+        <copy file="config/log4j2.xml"
+              todir="${debian.dir}/etc/jitsi/videobridge"
+              overwrite="true"/>
+        <replace file="${debian.dir}/etc/jitsi/videobridge/log4j2.xml"
+                 token="logs">
+            <replacevalue>/var/log/jitsi</replacevalue>
+        </replace>
+
         <!-- creating a debian archive file
         <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz"
              basedir="${debian.release}" includes="debian/"

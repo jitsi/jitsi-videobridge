@@ -15,15 +15,16 @@
  */
 package org.jitsi.videobridge.osgi;
 
+import java.io.*;
+import java.util.*;
 import org.ice4j.*;
-
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.meet.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
-
-import java.util.*;
+import org.jitsi.util.*;
 
 /**
  * OSGi bundles description for the Jitsi Videobridge.
@@ -35,7 +36,6 @@ import java.util.*;
 public class JvbBundleConfig
     extends OSGiBundleConfig
 {
-
     /**
      * The locations of the OSGi bundles (or rather of the class files of their
      * <tt>BundleActivator</tt> implementations) comprising Jitsi Videobridge.
@@ -85,23 +85,18 @@ public class JvbBundleConfig
             "org/jitsi/videobridge/version/VersionActivator"
         },
         {
-                /*
-                 * The HTTP/JSON API of Videobridge is started after and in a
-                 * start level separate from Videobridge because the HTTP/JSON
-                 * API is useless if Videobridge fails to start.
-                 */
+            // The HTTP/JSON API of Videobridge is started after and in a start
+            // level separate from Videobridge because the HTTP/JSON API is
+            // useless if Videobridge fails to start.
             "org/jitsi/videobridge/rest/RESTBundleActivator",
-                /*
-                 * The statistics/health reports are a non-vital, optional,
-                 * additional piece of functionality of the Videobridge.
-                 * Consequently, they do not have to be started before the
-                 * Videobridge. Besides, they employ OSGi and, hence, they
-                 * should be capable of acting as a plug-in. They do not have to
-                 * be started before the HTTP/JSON API because the HTTP/JSON API
-                 * (1) exposes the vital, non-optional, non-additional pieces of
-                 * functionality of the Videobridge and (2) it pulls, does not
-                 * push.
-                 */
+            // The statistics/health reports are a non-vital, optional,
+            // additional piece of functionality of the Videobridge.
+            // Consequently, they do not have to be started before the
+            // Videobridge. Besides, they employ OSGi and, hence, they should be
+            // capable of acting as a plug-in. They do not have to be started
+            // before the HTTP/JSON API because the HTTP/JSON API (1) exposes
+            // the vital, non-optional, non-additional pieces of functionality
+            // of the Videobridge and (2) it pulls, does not push.
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
         }
     };
@@ -112,28 +107,87 @@ public class JvbBundleConfig
         return BUNDLES;
     }
 
+    /**
+     * Sets the default {@code System} properties on which the
+     * callstats-java-sdk library depends.
+     *
+     * @param defaults the {@code Map} in which the default {@code System}
+     * properties on which the callstats-java-sdk library depends are to be
+     * defined
+     */
+    private void getCallStatsJavaSDKSystemPropertyDefaults(
+            Map<String, String> defaults)
+    {
+        // There are multiple locations in which we may have put the log4j2.xml
+        // file. The callstats-java-sdk library defaults to config/log4j2.xml in
+        // the current directory. And that is where we keep the file in our
+        // source tree so that works when running from source. Unfortunately,
+        // such a location may not work for us when we run from the .deb
+        // package.
+
+        List<File> files = new ArrayList<>();
+
+        // Look for log4j2.xml in known locations under the current working
+        // directory.
+        files.add(new File("config/log4j2.xml"));
+        files.add(new File("log4j2.xml"));
+
+        // Additionally, look for log4j2.xml in the same known locations under
+        // SC_HOME_DIR_LOCATION/SC_HOME_DIR_NAME because that is a directory
+        // known to Jitsi-derived projects.
+        String scHomeDirName
+            = System.getProperty(
+                    ConfigurationService.PNAME_SC_HOME_DIR_NAME);
+
+        if (!StringUtils.isNullOrEmpty(scHomeDirName))
+        {
+            String scHomeDirLocation
+                = System.getProperty(
+                        ConfigurationService.PNAME_SC_HOME_DIR_LOCATION);
+
+            if (!StringUtils.isNullOrEmpty(scHomeDirLocation))
+            {
+                File dir = new File(scHomeDirLocation, scHomeDirName);
+
+                if (dir.exists())
+                {
+                    for (int i = 0, end = files.size(); i < end; ++i)
+                        files.add(new File(dir, files.get(i).getPath()));
+                }
+            }
+        }
+
+        // Pick the first existing log4j2.xml from the candidates defined above.
+        for (File file : files)
+        {
+            if (file.exists())
+            {
+                defaults.put("log4j.configurationFile", file.getAbsolutePath());
+                break;
+            }
+        }
+    }
+
     @Override
     public Map<String, String> getSystemPropertyDefaults()
     {
+        // "super" is setting defaults common to all components
+        Map<String, String> defaults = super.getSystemPropertyDefaults();
+
         String true_ = Boolean.toString(true);
         String false_ = Boolean.toString(false);
 
-        // "super" is setting defaults common for all components
-        Map<String, String> defaults = super.getSystemPropertyDefaults();
-
         // It makes no sense for Jitsi Videobridge to pace its RTP output.
         defaults.put(
-            DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD,
-            Integer.toString(Integer.MAX_VALUE));
+                DeviceConfiguration.PROP_VIDEO_RTP_PACING_THRESHOLD,
+                Integer.toString(Integer.MAX_VALUE));
 
-        /*
-         * XXX Explicitly support JitMeet by default because is is the primary
-         * use case of Jitsi Videobridge right now.
-         */
+        // XXX Explicitly support Jitsi Meet by default because is is the
+        // primary use case of Jitsi Videobridge right now.
         defaults.put(
-            SsrcTransformEngine
-                .DROP_MUTED_AUDIO_SOURCE_IN_REVERSE_TRANSFORM,
-            true_);
+                SsrcTransformEngine
+                    .DROP_MUTED_AUDIO_SOURCE_IN_REVERSE_TRANSFORM,
+                true_);
         defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
 
         // In the majority of use-cases the clients which connect to Jitsi
@@ -147,22 +201,25 @@ public class JvbBundleConfig
 
         // This will eventually be enabled by default, but keep it off until
         // more testing.
-        defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME,
-            false_);
+        defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed
         // on without decryption and this leads to:
         // 1. Garbage being sent to the endpoints (or at least something they
-        //      cannot decrypt).
+        //    cannot decrypt).
         // 2. Failed attempts to parse encrypted RTCP packets (in a compound
-        //      packet, the headers of all but the first packet are encrypted).
+        //    packet, the headers of all but the first packet are encrypted).
 
         // This is currently disabled, because it makes DTLS mandatory, and
         // thus breaks communication with jigasi and jitsi.
-        //defaults.put("org.jitsi.impl.neomedia.transform.dtls."
-        //                     + "DtlsPacketTransformer.dropUnencryptedPkts",
-        //             true_);
+        //defaults.put(
+        //        "org.jitsi.impl.neomedia.transform.dtls.DtlsPacketTransformer"
+        //            + ".dropUnencryptedPkts",
+        //        true_);
+
+        // callstats-java-sdk
+        getCallStatsJavaSDKSystemPropertyDefaults(defaults);
 
         return defaults;
     }
