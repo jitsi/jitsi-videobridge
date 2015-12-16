@@ -167,6 +167,20 @@ public class SimulcastReceiver
         return simulcastStreams;
     }
 
+    public void setSimulcastStreams(long[] ssrcs)
+    {
+        SimulcastStream[] streams = null;
+        if (ssrcs != null && ssrcs.length != 0)
+        {
+            streams = new SimulcastStream[ssrcs.length];
+            for (int i = 0; i < ssrcs.length; i++)
+            {
+                streams[i] = new SimulcastStream(this, ssrcs[i], i);
+            }
+        }
+
+        setSimulcastStreams(streams);
+    }
     /**
      * Sets the simulcast streams for this receiver and fires an event about it.
      *

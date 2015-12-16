@@ -141,11 +141,7 @@ public class SimulcastReceiverTest
             new WeakReference<SimulcastReceiver.Listener>(listener));
 
         // "Signal" simulcast.
-        simulcastReceiver.setSimulcastStreams(new SimulcastStream[] {
-            new SimulcastStream(simulcastReceiver, ssrcs[0], 0),
-            new SimulcastStream(simulcastReceiver, ssrcs[1], 1),
-            new SimulcastStream(simulcastReceiver, ssrcs[2], 2)
-        });
+        simulcastReceiver.setSimulcastStreams(ssrcs);
 
         // Make sure the signaled event is fired.
         assertEquals(listener.timesSimulcastStreamsSignaled, 1);
