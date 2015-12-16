@@ -520,16 +520,14 @@ public class VideoChannel
      * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
      * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
      */
-    private void sendLastNEndpointsChangeEventOnDataChannel(
+    public void sendLastNEndpointsChangeEventOnDataChannel(
+            List<String> forwardedEndpoints,
             List<String> endpointsEnteringLastN)
     {
         Endpoint thisEndpoint = getEndpoint();
 
         if (thisEndpoint == null)
             return;
-
-        List<String> forwardedEndpoints
-                = lastNController.getForwardedEndpoints();
 
         // We want endpointsEnteringLastN to always to reported. Consequently,
         // we will pretend that all lastNEndpoints are entering if no explicit

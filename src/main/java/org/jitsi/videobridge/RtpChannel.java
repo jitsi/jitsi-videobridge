@@ -1578,7 +1578,8 @@ public class RtpChannel
      * <tt>conferenceSpeechActivity</tt>
      * @return a list of the <tt>Endpoint</tt>s which should be asked for
      * (video) keyframes because, for example, they are entering the set of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s of this <tt>Channel</tt>
+     * <tt>lastN</tt> <tt>Endpoint</tt>s of this <tt>Channel</tt>, or
+     * {@code null} if there are no such endpoints.
      */
     List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {

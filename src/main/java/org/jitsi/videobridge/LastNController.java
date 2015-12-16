@@ -115,16 +115,19 @@ public class LastNController
             logger.debug("Setting lastN=" + lastN);
         }
 
-        List<String> endpointsToAskForKeyframe;
+        List<String> endpointsToAskForKeyframe = null;
         synchronized (this)
         {
             // Since we have the lock anyway, call update() inside, so it
             // doesn't have to obtain it again. But keep the call to
             // askForKeyframes() outside.
 
-            this.lastN = lastN;
+            if (this.lastN != lastN)
+            {
+                this.lastN = lastN;
 
-            endpointsToAskForKeyframe = update();
+                endpointsToAskForKeyframe = update();
+            }
         }
 
         askForKeyframes(endpointsToAskForKeyframe);
@@ -142,16 +145,19 @@ public class LastNController
             logger.debug("Setting pinned endpoints: "
                                  + newPinnedEndpointIds.toString());
         }
-        List<String> endpointsToAskForKeyframe;
+        List<String> endpointsToAskForKeyframe = null;
         synchronized (this)
         {
             // Since we have the lock anyway, call update() inside, so it
             // doesn't have to obtain it again. But keep the call to
             // askForKeyframes() outside.
-            this.pinnedEndpoints
-                    = Collections.unmodifiableList(newPinnedEndpointIds);
+            if (!pinnedEndpoints.equals(newPinnedEndpointIds))
+            {
+                pinnedEndpoints
+                        = Collections.unmodifiableList(newPinnedEndpointIds);
 
-            endpointsToAskForKeyframe = update();
+                endpointsToAskForKeyframe = update();
+            }
         }
 
         askForKeyframes(endpointsToAskForKeyframe);
@@ -221,7 +227,7 @@ public class LastNController
      *
      * @param endpoints the new ordered list of endpoints in the conference.
      * @return the list of endpoints which were added to the list of forwarded
-     * endpoints as a result of the call.
+     * endpoints as a result of the call, or {@code null} if none were added.
      */
     public List<Endpoint> speechActivityEndpointsChanged(
             List<Endpoint> endpoints)
@@ -271,25 +277,7 @@ public class LastNController
     private synchronized List<String> speechActivityEndpointIdsChanged(
             List<String> endpointIds)
     {
-        boolean change = false;
-        if (endpointIds.size() != conferenceSpeechActivityEndpoints.size())
-        {
-            change = true;
-        }
-        else
-        {
-            for (int i = 0; i < endpointIds.size(); i++)
-            {
-                if (!(conferenceSpeechActivityEndpoints.get(i)
-                        .equals(endpointIds.get(i))))
-                {
-                    change = true;
-                    break;
-                }
-            }
-        }
-
-        if (!change)
+        if (conferenceSpeechActivityEndpoints.equals(endpointIds))
         {
             if (logger.isDebugEnabled())
             {
@@ -297,10 +285,13 @@ public class LastNController
             }
             return null;
         }
+        else
+        {
 
-        conferenceSpeechActivityEndpoints = endpointIds;
+            conferenceSpeechActivityEndpoints = endpointIds;
 
-        return update();
+            return update();
+        }
     }
 
     /**
@@ -349,7 +340,7 @@ public class LastNController
      *
      * @return the list of IDs of endpoints which were added to
      * {@link #forwardedEndpoints} (i.e. of endpoints * "entering last-n") as a
-     * result of this call.
+     * result of this call. Returns {@code null} if no endpoints were added.
      */
     private synchronized List<String> update()
     {
@@ -400,20 +391,36 @@ public class LastNController
             }
         }
 
-        List<String> enteringEndpoints = new ArrayList<>(newForwardedEndpoints);
-        enteringEndpoints.removeAll(forwardedEndpoints);
-
-        if (logger.isDebugEnabled())
+        List<String> enteringEndpoints;
+        if (forwardedEndpoints.equals(newForwardedEndpoints))
         {
-            logger.debug(
-                    "Forwarded endpoints (maybe) changed: "
-                    + forwardedEndpoints.toString() + " -> "
-                    + newForwardedEndpoints.toString()
-                    + ". Entering: " + enteringEndpoints.toString());
+            // We want forwardedEndpoints != INITIAL_EMPTY_LIST
+            forwardedEndpoints = newForwardedEndpoints;
+
+            enteringEndpoints = null;
+        }
+        else
+        {
+            enteringEndpoints = new ArrayList<>(newForwardedEndpoints);
+            enteringEndpoints.removeAll(forwardedEndpoints);
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                        "Forwarded endpoints changed: "
+                        + forwardedEndpoints.toString() + " -> "
+                        + newForwardedEndpoints.toString()
+                        + ". Entering: " + enteringEndpoints.toString());
+            }
+
+            forwardedEndpoints
+                    = Collections.unmodifiableList(newForwardedEndpoints);
+
+            // TODO: we may want to do this asynchronously.
+            channel.sendLastNEndpointsChangeEventOnDataChannel(
+                    forwardedEndpoints, enteringEndpoints);
         }
 
-        forwardedEndpoints
-                = Collections.unmodifiableList(newForwardedEndpoints);
 
         return enteringEndpoints;
     }
@@ -427,7 +434,10 @@ public class LastNController
     private void askForKeyframes(List<String> endpointIds)
     {
         // TODO: Execute asynchronously.
-        channel.getContent().askForKeyframesById(endpointIds);
+        if (endpointIds != null && !endpointIds.isEmpty())
+        {
+            channel.getContent().askForKeyframesById(endpointIds);
+        }
     }
 
     /**
