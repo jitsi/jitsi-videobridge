@@ -289,10 +289,12 @@ public class LastNController
         }
         else
         {
+            List<String> newEndpoints = new LinkedList<>(endpointIds);
+            newEndpoints.removeAll(conferenceSpeechActivityEndpoints);
 
             conferenceSpeechActivityEndpoints = endpointIds;
 
-            return update();
+            return update(newEndpoints);
         }
     }
 
@@ -346,6 +348,25 @@ public class LastNController
      */
     private synchronized List<String> update()
     {
+        return update(null);
+    }
+
+    /**
+     * Recalculates the list of forwarded endpoints based on the current values
+     * of the various parameters of this instance ({@link #lastN},
+     * {@link #conferenceSpeechActivityEndpoints}, {@link #pinnedEndpoints}).
+     *
+     * @param newConferenceEndpoints A list of endpoints which entered the
+     * conference since the last call to this method. They need not be asked
+     * for keyframes, because they were never filtered by this
+     * {@link #LastNController(VideoChannel)}.
+     *
+     * @return the list of IDs of endpoints which were added to
+     * {@link #forwardedEndpoints} (i.e. of endpoints * "entering last-n") as a
+     * result of this call. Returns {@code null} if no endpoints were added.
+     */
+    private synchronized List<String> update(List<String> newConferenceEndpoints)
+    {
         List<String> newForwardedEndpoints = new LinkedList<>();
         String ourEndpointId = getEndpointId();
 
@@ -353,6 +374,7 @@ public class LastNController
         {
             conferenceSpeechActivityEndpoints
                 = getIDs(channel.getConferenceSpeechActivity().getEndpoints());
+            newConferenceEndpoints = conferenceSpeechActivityEndpoints;
         }
 
         if (lastN < 0)
@@ -436,6 +458,13 @@ public class LastNController
             enteringEndpoints = null;
         }
 
+        if (enteringEndpoints != null && newConferenceEndpoints != null)
+        {
+            // Endpoints just entering the conference need not be asked for
+            // keyframes.
+            enteringEndpoints.removeAll(newConferenceEndpoints);
+        }
+
         return enteringEndpoints;
     }
 
@@ -487,6 +516,11 @@ public class LastNController
         }
     }
 
+    /**
+     * Extracts a list of endpoint IDs from a list of {@link Endpoint}s.
+     * @param endpoints the list of {@link Endpoint}s.
+     * @return the list of IDs of endpoints in {@code endpoints}.
+     */
     private List<String> getIDs(List<Endpoint> endpoints)
     {
         if (endpoints != null && !endpoints.isEmpty())
