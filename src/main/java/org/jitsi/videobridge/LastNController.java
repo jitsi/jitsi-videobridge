@@ -124,9 +124,16 @@ public class LastNController
 
             if (this.lastN != lastN)
             {
+                // If we're just now enabling lastN, we don't need to ask for
+                // keyframes as all streams were being forwarded already.
+                boolean update = this.lastN != -1;
+
                 this.lastN = lastN;
 
-                endpointsToAskForKeyframe = update();
+                if (update)
+                {
+                    endpointsToAskForKeyframe = update();
+                }
             }
         }
 
@@ -232,12 +239,7 @@ public class LastNController
     public List<Endpoint> speechActivityEndpointsChanged(
             List<Endpoint> endpoints)
     {
-        List<String> newEndpointIdList = new LinkedList<>();
-        for (Endpoint endpoint : endpoints)
-        {
-            newEndpointIdList.add(endpoint.getID());
-        }
-
+        List<String> newEndpointIdList = getIDs(endpoints);
         List<String> enteringEndpointIds
             = speechActivityEndpointIdsChanged(newEndpointIdList);
 
@@ -347,6 +349,12 @@ public class LastNController
         List<String> newForwardedEndpoints = new LinkedList<>();
         String ourEndpointId = getEndpointId();
 
+        if (conferenceSpeechActivityEndpoints == INITIAL_EMPTY_LIST)
+        {
+            conferenceSpeechActivityEndpoints
+                = getIDs(channel.getConferenceSpeechActivity().getEndpoints());
+        }
+
         if (lastN < 0)
         {
             // Last-N is disabled, we forward everything.
@@ -421,6 +429,12 @@ public class LastNController
                     forwardedEndpoints, enteringEndpoints);
         }
 
+        // If lastN is disabled, the endpoints entering forwardedEndpoints were
+        // never filtered, so they don't need to be asked for keyframes.
+        if (lastN < 0)
+        {
+            enteringEndpoints = null;
+        }
 
         return enteringEndpoints;
     }
@@ -471,5 +485,20 @@ public class LastNController
             logger.debug("Initialized the list of endpoints: "
                              + conferenceSpeechActivityEndpoints.toString());
         }
+    }
+
+    private List<String> getIDs(List<Endpoint> endpoints)
+    {
+        if (endpoints != null && !endpoints.isEmpty())
+        {
+            List<String> endpointIds = new LinkedList<>();
+            for (Endpoint endpoint : endpoints)
+            {
+                endpointIds.add(endpoint.getID());
+            }
+            return endpointIds;
+        }
+
+        return null;
     }
 }
