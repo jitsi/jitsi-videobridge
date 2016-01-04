@@ -40,6 +40,25 @@ This event could be used by the client to raise the UI component displaying the 
 dominant speaker and minimize UI components for participants who are not currently
 the dominant speaker.
 
+# Pinning
+Clients can "pin" specific endpoints in order to "override" the set of streams being forwarded according to LastN. For example:
+
+- LastN = 2
+- Clients Alice and Bob are speaking
+- Client Charlie is sharing his screen but not speaking
+- Client Diane wants to get Charlie's screen stream regardless of who is speaking
+
+To achieve this:
+- Client Diane sends a `PinnedEndpointChangedEvent` event over the LastN data channel with Charlie's endpoint
+- Jitsi VideoBridge begins forwarding Charlie's screen stream and either Alice's or Bob's video streams
+
+```json
+{
+    "colibriClass": "PinnedEndpointChangedEvent",
+    "pinnedEndpoint": "charlie@somewhere.com/chat-1234"
+}
+```
+
 # Signaling Example
 The following example is for a case where a focus controller is handling signaling between a jingle
 client and the Jitsi Videobridge.
@@ -136,4 +155,3 @@ and the data channel needed for dominant speaker and lastN capability.
    </jingle>
 </iq>
 ```
-
