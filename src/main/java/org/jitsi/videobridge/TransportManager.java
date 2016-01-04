@@ -244,10 +244,7 @@ public abstract class TransportManager
      */
     protected List<Channel> getChannels()
     {
-        synchronized (channels)
-        {
-            return channels;
-        }
+        return channels;
     }
 
     /**
