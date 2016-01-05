@@ -42,11 +42,11 @@ public abstract class TransportManager
      * instances to print debug information.
      */
     private static final Logger logger
-            = Logger.getLogger(TransportManager.class);
+        = Logger.getLogger(TransportManager.class);
 
     /**
      * The <tt>PropertyChangeListener</tt> which listens to changes in the
-     * values of the properties of <tt>Channel</tt>-s in {@link #channels}.
+     * values of the properties of <tt>Channel</tt>-s in {@link #_channels}.
      * Facilitates extenders.
      */
     private final PropertyChangeListener channelPropertyChangeListener
@@ -62,7 +62,12 @@ public abstract class TransportManager
     /**
      * The <tt>Channel</tt> which has initialized this instance
      */
-    private final List<Channel> channels = new LinkedList<>();
+    private List<Channel> _channels = Collections.emptyList();
+
+    /**
+     * The {@code Object} which synchronizes the access to {@link #_channels}.
+     */
+    private final Object _channelsSyncRoot = new Object();
 
     /**
      * Initializes a new <tt>TransportManager</tt> instance.
@@ -74,17 +79,25 @@ public abstract class TransportManager
     /**
      * Adds a <tt>Channel</tt> to the list of channels maintained by this
      * <tt>TransportManager</tt>.
+     *
      * @param channel the <tt>Channel</tt> to add.
      * @return <tt>true</tt> if the <tt>Channel</tt> was added, <tt>false</tt>
      * if the channel was already in the list.
      */
     public boolean addChannel(Channel channel)
     {
-        synchronized (channels)
+        synchronized (_channelsSyncRoot)
         {
-            if (!channels.contains(channel))
+            if (!_channels.contains(channel))
             {
-                channels.add(channel);
+                // Implement _channels as a copy-on-write storage in order to
+                // reduce the synchronized blocks and, thus, the risks of
+                // deadlocks.
+                List<Channel> newChannels = new LinkedList<>(_channels);
+
+                newChannels.add(channel);
+                _channels = newChannels;
+
                 channel.addPropertyChangeListener(
                         channelPropertyChangeListener);
                 return true;
@@ -95,7 +108,7 @@ public abstract class TransportManager
 
     /**
      * Notifies this <tt>TransportManager</tt> that the value of a property of a
-     * <tt>Channel</tt> from {@link #channels} has changed from a specific old
+     * <tt>Channel</tt> from {@link #_channels} has changed from a specific old
      * value to a specific new value.
      *
      * @param ev a <tt>PropertyChangeEvent</tt> which specifies the name of the
@@ -112,16 +125,14 @@ public abstract class TransportManager
      */
     public void close()
     {
-        synchronized (channels)
-        {
-            for (Channel channel : channels)
-                close(channel);
-        }
+        for (Channel channel : getChannels())
+            close(channel);
     }
 
     /**
      * Removes a <tt>Channel</tt> from the list of channels maintained by this
      * <tt>TransportManager</tt>.
+     *
      * @param channel the <tt>Channel</tt> to remove.
      * @return <tt>true</tt> if the <tt>Channel</tt> was removed, <tt>false</tt>
      * if the channel was not in the list.
@@ -133,16 +144,22 @@ public abstract class TransportManager
 
         channel.removePropertyChangeListener(channelPropertyChangeListener);
 
-        synchronized (channels)
+        synchronized (_channelsSyncRoot)
         {
-            boolean removed = channels.remove(channel);
+            List<Channel> newChannels = new LinkedList<>(_channels);
+            boolean removed = newChannels.remove(channel);
 
-            // Remove transport manager from parent conference and it's
-            // corresponding channel bundle ID description.
-            if (removed && channels.isEmpty())
+            if (removed)
             {
-                channel.getContent().getConference().closeTransportManager(
-                        this);
+                _channels = newChannels;
+
+                // Remove transport manager from parent conference and its
+                // corresponding channel bundle ID description.
+                if (getChannels().isEmpty())
+                {
+                    channel.getContent().getConference().closeTransportManager(
+                            this);
+                }
             }
             return removed;
         }
@@ -239,20 +256,19 @@ public abstract class TransportManager
     /**
      * Returns the list of <tt>Channel</tt>s maintained by this
      * <tt>TransportManager</tt>.
+     *
      * @return the list of <tt>Channel</tt>s maintained by this
      * <tt>TransportManager</tt>.
      */
     protected List<Channel> getChannels()
     {
-        synchronized (channels)
-        {
-            return channels;
-        }
+        return _channels;
     }
 
     /**
      * Returns the <tt>DtlsControl</tt> allocated by this instance for use by a
      * specific <tt>Channel</tt>.
+     *
      * @param channel the <tt>Channel</tt> for which to return the
      * <tt>DtlsControl</tt>.
      * @return the <tt>DtlsControl</tt> allocated by this instance for use by a
@@ -317,7 +333,7 @@ public abstract class TransportManager
     }
 
     /**
-     * Logs a warning if the addition of <tt>channel</tt> to <tt>channels</tt>
+     * Logs a warning if the addition of <tt>channel</tt> to <tt>_channels</tt>
      * will result in the same Payload Type number being received by more than
      * one channel (which is bound to cause issues and probably indicates a
      * problem on the signalling side).
@@ -326,32 +342,29 @@ public abstract class TransportManager
      */
     private void checkPayloadTypes(RtpChannel channel)
     {
-        synchronized (channels)
+        for (Channel c : getChannels())
         {
-            for (Channel c : channels)
-            {
-                if ( !(c instanceof RtpChannel) || c == channel)
-                    continue;
+            if (!(c instanceof RtpChannel) || c == channel)
+                continue;
 
-                // We only have a couple of PTs for each channel and this does
-                // not executes often.
-                for (int pt1 : ((RtpChannel) c).getReceivePTs())
-                    for (int pt2 : channel.getReceivePTs())
-                    {
-                        if (pt1 == pt2)
-                            logger.warn("The same PT (" + pt1 + ") used by two "
-                                            + "channels in the same bundle.");
-                    }
-            }
+            // We only have a couple of PTs for each channel and this does not
+            // execute often.
+            for (int pt1 : ((RtpChannel) c).getReceivePTs())
+                for (int pt2 : channel.getReceivePTs())
+                {
+                    if (pt1 == pt2)
+                        logger.warn(
+                                "The same PT (" + pt1 + ") used by two "
+                                    + "channels in the same bundle.");
+                }
         }
     }
 
     /**
      * Checks whether this transport manager has established connectivity.
+     *
      * @return <tt>true</tt> iff this transport manager has established
      * connectivity.
      */
     public abstract boolean isConnected();
-
 }
-
