@@ -32,12 +32,12 @@ import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.socket.*;
+import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
-import org.jitsi.eventadmin.*;
 import org.osgi.framework.*;
 
 /**
@@ -380,11 +380,9 @@ public class IceUdpTransportManager
             sctpConnection = (SctpConnection) channel;
             if (channelForDtls != null)
             {
-                /*
-                 * channelForDtls is necessarily an RtpChannel, because we don't
-                 * add more than one SctpConnection. The SctpConnection socket
-                 * will automatically accept DTLS.
-                 */
+                // channelForDtls is necessarily an RtpChannel, because we don't
+                // add more than one SctpConnection. The SctpConnection socket
+                // will automatically accept DTLS.
                 RtpChannel rtpChannelForDtls = (RtpChannel) channelForDtls;
 
                 rtpChannelForDtls.getDatagramFilter(false).setAcceptNonRtp(
@@ -932,10 +930,8 @@ public class IceUdpTransportManager
             return;
         }
 
-        /*
-         * If ICE is running already, we try to update the checklists with the
-         * candidates. Note that this is a best effort.
-         */
+        // If ICE is running already, we try to update the checklists with the
+        // candidates. Note that this is a best effort.
         boolean iceAgentStateIsRunning
             = IceProcessingState.RUNNING.equals(state);
         int remoteCandidateCount = 0;
@@ -975,10 +971,8 @@ public class IceUdpTransportManager
 
         for (CandidatePacketExtension candidate : candidates)
         {
-            /*
-             * Is the remote candidate from the current generation of the
-             * iceAgent?
-             */
+            // Is the remote candidate from the current generation of the
+            // iceAgent?
             if (candidate.getGeneration() != generation)
                 continue;
 
@@ -1021,15 +1015,13 @@ public class IceUdpTransportManager
                     candidate.getPriority(),
                     relatedCandidate);
 
-            /*
-             * XXX IceUdpTransportManager harvests host candidates only and
-             * the ICE Components utilize the UDP protocol/transport only at
-             * the time of this writing. The ice4j library will, of course,
-             * check the theoretical reachability between the local and the
-             * remote candidates. However, we would like (1) to not mess
-             * with a possibly running iceAgent and (2) to return a
-             * consistent return value.
-             */
+            // XXX IceUdpTransportManager harvests host candidates only and
+            // the ICE Components utilize the UDP protocol/transport only at
+            // the time of this writing. The ice4j library will, of course,
+            // check the theoretical reachability between the local and the
+            // remote candidates. However, we would like (1) to not mess
+            // with a possibly running iceAgent and (2) to return a
+            // consistent return value.
             if (!canReach(component, remoteCandidate))
                 continue;
 
@@ -1044,11 +1036,9 @@ public class IceUdpTransportManager
         {
             if (remoteCandidateCount == 0)
             {
-                /*
-                 * XXX Effectively, the check above but realizing that all
-                 * candidates were ignored: iceAgentStateIsRunning
-                 * && (candidates.size() == 0).
-                 */
+                // XXX Effectively, the check above but realizing that all
+                // candidates were ignored: iceAgentStateIsRunning
+                // && (candidates.size() == 0).
                 return;
             }
             else
@@ -1063,14 +1053,12 @@ public class IceUdpTransportManager
         }
         else if (remoteCandidateCount != 0)
         {
-            /*
-             * Once again because the ICE Agent does not support adding
-             * candidates after the connectivity establishment has been started
-             * and because multiple transport-info JingleIQs may be used to send
-             * the whole set of transport candidates from the remote peer to the
-             * local peer, do not really start the connectivity establishment
-             * until we have at least one remote candidate per ICE Component.
-             */
+            // Once again because the ICE Agent does not support adding
+            // candidates after the connectivity establishment has been started
+            // and because multiple transport-info JingleIQs may be used to send
+            // the whole set of transport candidates from the remote peer to the
+            // local peer, do not really start the connectivity establishment
+            // until we have at least one remote candidate per ICE Component.
             for (IceMediaStream stream : iceAgent.getStreams())
             {
                 for (Component component : stream.getComponents())
@@ -1087,16 +1075,13 @@ public class IceUdpTransportManager
             if (remoteCandidateCount != 0)
                 iceAgent.startConnectivityEstablishment();
         }
-        else
+        else if (iceStream.getRemoteUfrag() != null
+                && iceStream.getRemotePassword() != null)
         {
-            if (iceStream.getRemoteUfrag() != null &&
-                    iceStream.getRemotePassword() != null)
-            {
-                // We don't have any remote candidates, but we already know the
-                // remote ufrag and password, so we can start ICE.
-                logger.info("Starting ICE agent without remote candidates.");
-                iceAgent.startConnectivityEstablishment();
-            }
+            // We don't have any remote candidates, but we already know the
+            // remote ufrag and password, so we can start ICE.
+            logger.info("Starting ICE agent without remote candidates.");
+            iceAgent.startConnectivityEstablishment();
         }
     }
 
@@ -1580,10 +1565,8 @@ public class IceUdpTransportManager
      */
     private void iceAgentStateChange(PropertyChangeEvent ev)
     {
-        /*
-         * Log the changes in the ICE processing state of this
-         * IceUdpTransportManager for the purposes of debugging.
-         */
+        // Log the changes in the ICE processing state of this
+        // IceUdpTransportManager for the purposes of debugging.
 
         boolean interrupted = false;
 
@@ -1592,24 +1575,26 @@ public class IceUdpTransportManager
             IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
             IceProcessingState newState = (IceProcessingState) ev.getNewValue();
 
-            StringBuilder s = new StringBuilder("ICE processing state of ")
-                .append(getClass().getSimpleName()).append(" #")
-                .append(Integer.toHexString(hashCode()))
-                .append(" (for channels");
+            StringBuilder s
+                = new StringBuilder("ICE processing state of ")
+                    .append(getClass().getSimpleName()).append(" #")
+                    .append(Integer.toHexString(hashCode()))
+                    .append(" (for channels");
             for (Channel channel : getChannels())
                 s.append(" ").append(channel.getID());
             s.append(")  of conference ").append(conference.getID())
-                .append(" changed from ").append(oldState)
-                 .append(" to ").append(newState).append(".");
-
+                .append(" changed from ").append(oldState).append(" to ")
+                .append(newState).append(".");
             logd(s.toString());
 
-            EventAdmin eventAdmin
-                    = conference.getVideobridge().getEventAdmin();
+            EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
             if (eventAdmin != null)
             {
-                eventAdmin.sendEvent(EventFactory.transportStateChanged(
-                    this, oldState, newState));
+                eventAdmin.sendEvent(
+                        EventFactory.transportStateChanged(
+                                this,
+                                oldState,
+                                newState));
             }
         }
         catch (Throwable t)
@@ -1973,10 +1958,8 @@ public class IceUdpTransportManager
         if (interrupted)
             Thread.currentThread().interrupt();
 
-        /*
-         * Make sure stateChangeListener is removed from iceAgent in case its
-         * #propertyChange(PropertyChangeEvent) has never been executed.
-         */
+        // Make sure stateChangeListener is removed from iceAgent in case its
+        // #propertyChange(PropertyChangeEvent) has never been executed.
         iceAgent.removeStateChangeListener(propertyChangeListener);
 
         // Check the state of ICE processing and throw an exception if failed.

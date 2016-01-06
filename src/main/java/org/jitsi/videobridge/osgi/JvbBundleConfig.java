@@ -118,6 +118,31 @@ public class JvbBundleConfig
     private void getCallStatsJavaSDKSystemPropertyDefaults(
             Map<String, String> defaults)
     {
+        getCallStatsJavaSDKSystemPropertyDefaults(
+                "log4j2.xml",
+                defaults,
+                "log4j.configurationFile");
+        getCallStatsJavaSDKSystemPropertyDefaults(
+                "callstats-java-sdk.properties",
+                defaults,
+                "callstats.configurationFile");
+    }
+
+    /**
+     * Sets the default {@code System} properties on which the
+     * callstats-java-sdk library depends.
+     *
+     * @param fileName
+     * @param defaults the {@code Map} in which the default {@code System}
+     * properties on which the callstats-java-sdk library depends are to be
+     * defined
+     * @param propertyName
+     */
+    private void getCallStatsJavaSDKSystemPropertyDefaults(
+            String fileName,
+            Map<String, String> defaults,
+            String propertyName)
+    {
         // There are multiple locations in which we may have put the log4j2.xml
         // file. The callstats-java-sdk library defaults to config/log4j2.xml in
         // the current directory. And that is where we keep the file in our
@@ -129,8 +154,8 @@ public class JvbBundleConfig
 
         // Look for log4j2.xml in known locations under the current working
         // directory.
-        files.add(new File("config/log4j2.xml"));
-        files.add(new File("log4j2.xml"));
+        files.add(new File("config", fileName));
+        files.add(new File(fileName));
 
         // Additionally, look for log4j2.xml in the same known locations under
         // SC_HOME_DIR_LOCATION/SC_HOME_DIR_NAME because that is a directory
@@ -149,7 +174,7 @@ public class JvbBundleConfig
             {
                 File dir = new File(scHomeDirLocation, scHomeDirName);
 
-                if (dir.exists())
+                if (dir.isDirectory())
                 {
                     for (int i = 0, end = files.size(); i < end; ++i)
                         files.add(new File(dir, files.get(i).getPath()));
@@ -162,7 +187,7 @@ public class JvbBundleConfig
         {
             if (file.exists())
             {
-                defaults.put("log4j.configurationFile", file.getAbsolutePath());
+                defaults.put(propertyName, file.getAbsolutePath());
                 break;
             }
         }
