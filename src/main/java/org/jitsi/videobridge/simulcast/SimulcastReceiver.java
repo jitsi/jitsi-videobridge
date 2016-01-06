@@ -17,19 +17,16 @@ package org.jitsi.videobridge.simulcast;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
-import org.jitsi.util.event.*;
-import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.simulcast.messages.*;
-
-import java.io.*;
-import java.util.*;
 import java.util.concurrent.*;
 
+import java.lang.ref.*;
+import java.util.*;
+
 /**
- * The <tt>SimulcastReceiver</tt> of a <tt>SimulcastEngine</tt> receives the
- * simulcast streams from a simulcast enabled participant and manages 1 or more
- * <tt>SimulcastStream</tt>s. It fires a property change event whenever the
- * simulcast streams that it manages change.
+ * The <tt>SimulcastReceiver</tt> of a <tt>SimulcastEngine</tt> receives and
+ * manages 2 or more simulcast streams from a simulcast enabled participant.
+ * Listeners get notified whenever the simulcast streams start, stop or change
+ * all together.
  *
  * This class is thread safe.
  *
@@ -37,7 +34,6 @@ import java.util.concurrent.*;
  * @author Lyubomir Marinov
  */
 public class SimulcastReceiver
-        extends PropertyChangeNotifier
 {
     /**
      * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
@@ -47,24 +43,32 @@ public class SimulcastReceiver
             = Logger.getLogger(SimulcastReceiver.class);
 
     /**
-     * The name of the property that gets fired when there's a change in the
-     * simulcast stream that this receiver manages.
-     */
-    public static final String SIMULCAST_LAYERS_PNAME
-            = SimulcastReceiver.class.getName() + ".simulcastStreams";
-
-    /**
      * The number of (video) frames which defines the interval of time
      * (indirectly) during which a {@code SimulcastStream} needs to receive data
      * from its remote peer or it will be declared paused/stopped/not streaming
      * by its {@code SimulcastReceiver}.
      */
-    static final int TIMEOUT_ON_FRAME_COUNT = 5;
+    private static final int TIMEOUT_ON_FRAME_COUNT = 5;
 
     /**
-     * The pool of threads utilized by this class.
+     * The list of listeners to be notified by this receiver when a change in
+     * the simulcast reception happens.
+     *
+     * Here we're assuming that we're iterating much more than updating, thus
+     * using a lockless CopyOnWriteArrayList makes sense. Updating this list
+     * typically happens when a participant joins or leaves the conference,
+     * while iterating happens everytime there is a change in the simulcast
+     * streams. So our assumption seems to hold, without conducting any
+     * experiments though.
      */
-    private static final ExecutorService executorService = ExecutorUtils
+    private final List<WeakReference<Listener>> weakListeners
+        = new CopyOnWriteArrayList<>();
+
+    /**
+     * The pool of threads utilized by this class. This could be a private
+     * static final field but we want to be able to override it for testing.
+     */
+    static ExecutorService executorService = ExecutorUtils
         .newCachedThreadPool(true, SimulcastReceiver.class.getName());
 
     /**
@@ -163,6 +167,20 @@ public class SimulcastReceiver
         return simulcastStreams;
     }
 
+    public void setSimulcastStreams(long[] ssrcs)
+    {
+        SimulcastStream[] streams = null;
+        if (ssrcs != null && ssrcs.length != 0)
+        {
+            streams = new SimulcastStream[ssrcs.length];
+            for (int i = 0; i < ssrcs.length; i++)
+            {
+                streams[i] = new SimulcastStream(this, ssrcs[i], i);
+            }
+        }
+
+        setSimulcastStreams(streams);
+    }
     /**
      * Sets the simulcast streams for this receiver and fires an event about it.
      *
@@ -176,28 +194,36 @@ public class SimulcastReceiver
         {
             if (simulcastStreams == null)
             {
-                logInfo("Simulcast disabled.");
+                logger.info("Simulcast disabled.");
             }
             else
             {
                 for (SimulcastStream l : simulcastStreams)
                 {
-                    logInfo(l.getOrder() + ": " + l.getPrimarySSRC());
+                    logger.info(l.getOrder() + ": " + l.getPrimarySSRC());
                 }
             }
         }
 
-        executorService.execute(new Runnable()
-        {
-            public void run()
-            {
-                firePropertyChange(SIMULCAST_LAYERS_PNAME, null, null);
-            }
-        });
+       fireSimulcastStreamsSignaled();
 
         // TODO If simulcastStreams has changed, then simulcastStreamFrameHistory
         // has very likely become irrelevant. In other words, clear
         // simulcastStreamFrameHistory.
+    }
+
+    /**
+     * Adds a weak listener to the list of listeners to be notified about
+     * changes in this <tt>SimulcastReceiver</tt>.
+     *
+     * @param weakListener the weak listener to be added in the list of
+     * listeners to be notified about changes in this
+     * <tt>SimulcastReceiver</tt>.
+     */
+    public void addWeakListener(WeakReference<Listener> weakListener)
+    {
+        // Adds the listener to the list. Expensive operation.
+        weakListeners.add(weakListener);
     }
 
     /**
@@ -215,20 +241,25 @@ public class SimulcastReceiver
         // the channel has accepted a datagram packet for the timeout to
         // function correctly.
 
-        if (!isSimulcastSignaled() || pkt == null)
+        if (pkt == null)
+        {
+            return;
+        }
+
+        SimulcastStream[] simStreams = getSimulcastStreams();
+        if (simStreams == null || simStreams.length == 0)
         {
             return;
         }
 
         // Find the simulcast stream that corresponds to this packet.
-        int acceptedSSRC = pkt.getSSRC();
-        SimulcastStream[] simStreams = getSimulcastStreams();
+        long acceptedSSRC = pkt.getSSRCAsLong();
         SimulcastStream acceptedStream = null;
         for (SimulcastStream simStream : simStreams)
         {
             // We only care about the primary SSRC and not the RTX ssrc (or
             // future FEC ssrc).
-            if ((int) simStream.getPrimarySSRC() == acceptedSSRC)
+            if (simStream.getPrimarySSRC() == acceptedSSRC)
             {
                 acceptedStream = simStream;
                 break;
@@ -259,9 +290,9 @@ public class SimulcastReceiver
             if (logger.isTraceEnabled())
             {
                 logger.trace(
-                        "pkt.payloadLength= " + pktPayloadLength
-                            + " <= pkt.paddingSize= " + pktPaddingSize + "("
-                            + pkt.getSequenceNumber() + ")");
+                    "pkt.payloadLength= " + pktPayloadLength
+                        + " <= pkt.paddingSize= " + pktPaddingSize + "("
+                        + pkt.getSequenceNumber() + ")");
             }
             return;
         }
@@ -269,80 +300,137 @@ public class SimulcastReceiver
         // NOTE(gp) we expect the base stream to be always on, so we never touch
         // it or starve it.
 
-        // XXX Refer to the implementation of
-        // SimulcastStream#touch(boolean, RawPacket) for an explanation of why we
-        // chose to use a return value.
-        boolean frameStarted = acceptedStream.touch(pkt);
-        if (frameStarted)
-            simulcastStreamFrameStarted(acceptedStream, pkt, simStreams);
-    }
+        // Attempt to speed up the detection of paused simulcast streams by
+        // counting (video) frames instead of or in addition to counting
+        // packets. The reasoning for why counting frames may be an optimization
+        // is that (1) frames may span varying number of packets and (2) the
+        // webrtc.org implementation consecutively (from low quality to high
+        // quality) sends frames for all sent (i.e. non-paused) simulcast
+        // streams. RTP packets which transport pieces of one and the same frame
+        // have one and the same timestamp and the last RTP packet has the
+        // marker bit set. Since the RTP packet with the set marker bit may get
+        // lost, it sounds more reliably to distinguish frames by looking at the
+        // timestamps of the RTP packets.
+        long pktTimestamp = pkt.readUnsignedIntAsLong(4);
+        boolean frameStarted = false;
 
-    private void logDebug(String msg)
-    {
-        if (logger.isDebugEnabled())
+        if (acceptedStream.lastPktTimestamp <= pktTimestamp)
         {
-            msg = getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.debug(msg);
-        }
-    }
+            if (acceptedStream.lastPktTimestamp < pktTimestamp)
+            {
+                // The current pkt signals the receit of a piece of a new (i.e.
+                // unobserved until now) frame.
+                acceptedStream.lastPktTimestamp = pktTimestamp;
+                frameStarted = true;
+            }
 
-    private void logWarn(String msg)
-    {
-        if (logger.isWarnEnabled())
+            int pktSequenceNumber = pkt.getSequenceNumber();
+            boolean pktSequenceNumberIsInOrder = true;
+
+            if (acceptedStream.lastPktSequenceNumber != -1)
+            {
+                int expectedPktSequenceNumber
+                    = acceptedStream.lastPktSequenceNumber + 1;
+
+                // sequence number: 16 bits
+                if (expectedPktSequenceNumber > 0xFFFF)
+                    expectedPktSequenceNumber = 0;
+
+                if (pktSequenceNumber == expectedPktSequenceNumber)
+                {
+                    // It appears no pkt was lost (or delayed). We can rely on
+                    // lastPktMarker.
+
+                    // XXX Sequences of packets have been observed with
+                    // increasing RTP timestamps but without the marker bit set.
+                    // Supposedly, they are probes to detect whether the
+                    // bandwidth may increase. They may cause a SimulcastStream
+                    // (other than this, of course) to time out. As a
+                    // workaround, we will consider them to not signal new
+                    // frames.
+                    if (frameStarted && acceptedStream.lastPktMarker != null
+                        && !acceptedStream.lastPktMarker)
+                    {
+                        frameStarted = false;
+                        if (logger.isTraceEnabled())
+                        {
+                            logger.trace(
+                                    "order-" + acceptedStream.getOrder() + " stream ("
+                                        + acceptedStream.getPrimarySSRC()
+                                        + ") detected an alien pkt: seqnum "
+                                        + pkt.getSequenceNumber() + ", ts "
+                                        + pktTimestamp + ", "
+                                        + (pkt.isPacketMarked()
+                                                ? "marker, "
+                                                : "")
+                                        + "payload "
+                                        + (pkt.getLength()
+                                                - pkt.getHeaderLength()
+                                                - pkt.getPaddingSize())
+                                        + " bytes, "
+                                        + (acceptedStream.isKeyFrame(pkt) ? "key" : "delta")
+                                        + " frame.");
+                        }
+                    }
+                }
+                else if (pktSequenceNumber > acceptedStream.lastPktSequenceNumber)
+                {
+                    // It looks like at least one pkt was lost (or delayed). We
+                    // cannot rely on lastPktMarker.
+                }
+                else
+                {
+                    pktSequenceNumberIsInOrder = false;
+                }
+            }
+            if (pktSequenceNumberIsInOrder)
+            {
+                acceptedStream.lastPktMarker
+                    = pkt.isPacketMarked() ? Boolean.TRUE : Boolean.FALSE;
+                acceptedStream.lastPktSequenceNumber = pktSequenceNumber;
+            }
+        }
+
+        if (!frameStarted)
         {
-            msg = getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.warn(msg);
-        }
-    }
-
-    private void logError(String msg, Throwable e)
-    {
-        msg = getSimulcastEngine().getVideoChannel()
-            .getEndpoint().getID() + ": " + msg;
-        logger.error(msg, e);
-    }
-
-    private void logInfo(String msg)
-    {
-        if (logger.isInfoEnabled())
-        {
-            msg = getSimulcastEngine().getVideoChannel()
-                .getEndpoint().getID() + ": " + msg;
-            logger.info(msg);
-        }
-    }
-
-    /**
-     * Notifies this {@code SimulcastReceiver} that a specific
-     * {@code SimulcastReceiver} has detected the start of a new video frame in
-     * the RTP stream that it represents. Determines whether any of
-     * {@link #simulcastStreams} other than {@code source} have been
-     * paused/stopped by the remote peer. The determination is based on counting
-     * (video) frames.
-     *
-     * @param source the {@code SimulcastStream} which is the source of the event
-     * i.e. which has detected the start of a new video frame in the RTP stream
-     * that it represents
-     * @param pkt the {@code RawPacket} which was received by {@code source} and
-     * possibly influenced the decision that a new view frame was started in the
-     * RTP stream represented by {@code source}
-     * @param simStreams the set of {@code SimulcastStream}s managed by this
-     * {@code SimulcastReceiver}. Explicitly provided to the method in order to
-     * avoid invocations of {@link #getSimulcastStreams()} because the latter
-     * makes a copy at the time of this writing.
-     */
-    private void simulcastStreamFrameStarted(
-            SimulcastStream source,
-            RawPacket pkt,
-            SimulcastStream[] simStreams)
-    {
-        // Allow the value of the constant TIMEOUT_ON_FRAME_COUNT to disable (at
-        // compile time) the frame-based approach to the detection of stream
-        // drops.
-        if (TIMEOUT_ON_FRAME_COUNT <= 1)
             return;
+        }
+
+        if (acceptedStream.isKeyFrame(pkt))
+        {
+            acceptedStream.keyFrameRequested.set(false);
+        }
+
+        if (acceptedStream.getOrder() != 0 && !acceptedStream.isStreaming)
+        {
+            // If the frame-based approach to the detection of stream drops works
+            // (i.e. there will always be at least 1 high quality frame among
+            // SimulcastReceiver#TIMEOUT_ON_FRAME_COUNT consecutive low quality
+            // frames), then it may be argued that a late pkt (i.e. which does not
+            // start a new frame after this SimulcastStream has been stopped) should
+            // not start this SimulcastStream.
+
+            // Do not activate the hq stream if the bitrate estimation is not
+            // above 300kbps.
+
+            acceptedStream.isStreaming = true;
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                    "order-" + acceptedStream.getOrder() + " stream (" +
+                        acceptedStream.getPrimarySSRC()
+                        + ") resumed on seqnum " + pkt.getSequenceNumber()
+                        + ", " + (acceptedStream.isKeyFrame(pkt) ? "key" : "delta")
+                        + " frame.");
+            }
+
+            fireSimulcastStreamsChangedAsync(acceptedStream);
+        }
+
+        // Determine whether any of {@link #simulcastStreams} other than
+        // {@code acceptedStream} have been paused/stopped by the remote peer.
+        // The determination is based on counting (video) frames.
 
         // Timeouts in simulcast streams caused by source may occur only based
         // on the span (of time or received frames) during which source has
@@ -353,11 +441,11 @@ public class SimulcastReceiver
         int ix = 0;
 
         for (Iterator<SimulcastStream> it
-                    = simulcastStreamFrameHistory.iterator();
-                it.hasNext();
-                ++ix)
+             = simulcastStreamFrameHistory.iterator();
+             it.hasNext();
+             ++ix)
         {
-            if (it.next() == source)
+            if (it.next() == acceptedStream)
             {
                 if (indexOfLastSourceOccurrenceInHistory != -1)
                 {
@@ -378,41 +466,93 @@ public class SimulcastReceiver
             }
         }
 
-        if (indexOfLastSourceOccurrenceInHistory != -1)
+        if (indexOfLastSourceOccurrenceInHistory == -1)
         {
-            // Presumably, if a SimulcastStream is active, all SimulcastStreams
-            // before it (according to SimulcastStream's order) are active as
-            // well. Consequently, timeouts may occur in SimulcastStreams which
-            // are after source.
-            boolean maybeTimeout = false;
+            return;
+        }
 
-            for (SimulcastStream simStream : simStreams)
+        // Presumably, if a SimulcastStream is active, all SimulcastStreams
+        // before it (according to SimulcastStream's order) are active as
+        // well. Consequently, timeouts may occur in SimulcastStreams which
+        // are after source.
+        boolean maybeTimeout = false;
+
+        for (SimulcastStream simStream : simStreams)
+        {
+            if (maybeTimeout)
             {
-                if (maybeTimeout)
+                // There's no point in timing stream out if it's timed out
+                // already.
+                if (simStream.isStreaming())
                 {
-                    // There's no point in timing stream out if it's timed out
-                    // already.
-                    if (simStream.isStreaming())
-                    {
-                        maybeTimeout(
-                                source,
-                                pkt,
-                                simStream,
-                                indexOfLastSourceOccurrenceInHistory);
-                    }
+                    maybeTimeout(
+                        acceptedStream,
+                        pkt,
+                        simStream,
+                        indexOfLastSourceOccurrenceInHistory);
                 }
-                else if (simStream == source)
-                {
-                    maybeTimeout = true;
-                }
+            }
+            else if (simStream == acceptedStream)
+            {
+                maybeTimeout = true;
             }
         }
 
+
         // As previously stated, the current method invocation signals the
         // receipt of 1 frame by source.
-        simulcastStreamFrameHistory.add(0, source);
+        simulcastStreamFrameHistory.add(0, acceptedStream);
         // TODO Prune simulcastStreamFrameHistory by forgetting so that it does
         // not become too long.
+    }
+
+    /**
+     * Asks for a keyframe for the <tt>SimulcastStream</tt> passed in as a
+     * param.
+     *
+     * @param simulcastStream
+     */
+    public void askForKeyframe(final SimulcastStream simulcastStream)
+    {
+        if (simulcastStream == null)
+        {
+            logger.warn("Didn't ask for key frame because the simulcastStream" +
+                    " is null!");
+            return;
+        }
+
+        if (!simulcastStream.keyFrameRequested.compareAndSet(false, true))
+        {
+            // TODO this should probably managed at a lower level.
+            logger.debug("Keyframe request throttling.");
+            return;
+        }
+
+        executorService.execute(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                SimulcastEngine peerSM = getSimulcastEngine();
+                if (peerSM == null)
+                {
+                    logger.warn("Requested a key frame but the peer simulcast " +
+                            "manager is null!");
+                    return;
+                }
+                else
+                {
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("Asking for a key frame for "
+                                + simulcastStream.getPrimarySSRC());
+                    }
+                }
+
+                peerSM.getVideoChannel().askForKeyframes(
+                        new int[]{(int) simulcastStream.getPrimarySSRC()});
+            }
+        });
     }
 
     /**
@@ -449,8 +589,6 @@ public class SimulcastReceiver
         }
         if (timeout)
         {
-            effect.maybeTimeout(pkt);
-
             if (!effect.isStreaming())
             {
                 // Since effect has been determined to have been paused/stopped
@@ -461,6 +599,119 @@ public class SimulcastReceiver
                 {
                     if (it.next() == effect)
                         it.remove();
+                }
+            }
+            else
+            {
+                effect.isStreaming = false;
+
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(
+                        "order-" + effect.getOrder() + " stream (" + effect.getPrimarySSRC()
+                            + ") stopped on seqnum " + pkt.getSequenceNumber()
+                            + ".");
+                }
+
+                // XXX(gp) One could try to ask for a key frame now, if the packet that
+                // caused the resuming of the high quality stream isn't a key frame; But
+                // the correct approach is to handle  this with the SimulcastSender
+                // because stream switches happen not only when a stream resumes or drops
+                // but also when the selected endpoint at a given receiving endpoint
+                // changes, for example.
+
+                // TODO merge with other fire event
+                fireSimulcastStreamsChangedAsync(effect);
+            }
+        }
+    }
+
+    /**
+     */
+    private void fireSimulcastStreamsSignaled()
+    {
+        // This can be synchronous as its not called from inside a time
+        // critical method (like reading/writing packets).
+        Iterator<WeakReference<SimulcastReceiver.Listener>>
+            it = weakListeners.iterator();
+
+        while (it.hasNext())
+        {
+            WeakReference<SimulcastReceiver.Listener> weakNext = it.next();
+            SimulcastReceiver.Listener next = weakNext.get();
+            if (next == null)
+            {
+                // Clean-up the list. Expensive operation.
+                it.remove();
+            }
+            else
+            {
+                next.simulcastStreamsSignaled();
+            }
+        }
+    }
+
+    /**
+     * @param simulcastStreams the <tt>SimulcastStream</tt>s that have changed.
+     */
+    private void fireSimulcastStreamsChangedAsync(
+        SimulcastStream... simulcastStreams)
+    {
+        // This operation needs to be async because it may end up requesting a
+        // key frame.
+        executorService.execute(
+            new SimulcastStreamsChangedRunnable(simulcastStreams));
+    }
+
+    /**
+     */
+    public interface Listener
+    {
+        void simulcastStreamsChanged(SimulcastStream ... simulcastStreams);
+
+        void simulcastStreamsSignaled();
+    }
+
+    /**
+     */
+    class SimulcastStreamsChangedRunnable
+        implements Runnable
+    {
+        /**
+         * Ctor.
+         *
+         * @param simulcastStreams the <tt>SimulcastStream</tt>s that have
+         * changed.
+         */
+        public SimulcastStreamsChangedRunnable(
+                SimulcastStream... simulcastStreams)
+        {
+            this.simulcastStreams = simulcastStreams;
+        }
+
+        /**
+         * The <tt>SimulcastStream</tt>s that have changed.
+         */
+        private final SimulcastStream[] simulcastStreams;
+
+        @Override
+        public void run()
+        {
+            Iterator<WeakReference<SimulcastReceiver.Listener>>
+                it = weakListeners.iterator();
+
+            while (it.hasNext())
+            {
+                WeakReference<SimulcastReceiver.Listener> weakNext = it.next();
+                SimulcastReceiver.Listener next = weakNext.get();
+                if (next == null)
+                {
+                    // Clean-up the list.
+                    it.remove();
+                }
+                else
+                {
+                    next.simulcastStreamsChanged(simulcastStreams);
                 }
             }
         }

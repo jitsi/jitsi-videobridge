@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import net.java.sip.communicator.service.protocol.*;
-
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.service.neomedia.*;
@@ -132,38 +131,27 @@ public class Main
         cmdLine.parse(args);
 
         // Parse the command-line arguments.
-        int maxPort
-            = cmdLine.getIntOptionValue(
-                    MAX_PORT_ARG_NAME, MAX_PORT_ARG_VALUE);
-
-        int minPort
-            = cmdLine.getIntOptionValue(
-                    MIN_PORT_ARG_NAME, MIN_PORT_ARG_VALUE);
-
-        int port = cmdLine.getIntOptionValue(PORT_ARG_NAME, PORT_ARG_VALUE);
-
-        String secret = cmdLine.getOptionValue(SECRET_ARG_NAME, "");
-
+        String apis
+            = cmdLine.getOptionValue(APIS_ARG_NAME, Videobridge.XMPP_API);
         String domain = cmdLine.getOptionValue(DOMAIN_ARG_NAME, null);
-
+        int maxPort
+            = cmdLine.getIntOptionValue(MAX_PORT_ARG_NAME, MAX_PORT_ARG_VALUE);
+        int minPort
+            = cmdLine.getIntOptionValue(MIN_PORT_ARG_NAME, MIN_PORT_ARG_VALUE);
+        int port = cmdLine.getIntOptionValue(PORT_ARG_NAME, PORT_ARG_VALUE);
+        String secret = cmdLine.getOptionValue(SECRET_ARG_NAME, "");
         String subdomain
             = cmdLine.getOptionValue(
                     SUBDOMAIN_ARG_NAME, ComponentImpl.SUBDOMAIN);
-
-        String apis
-            = cmdLine.getOptionValue(
-                    APIS_ARG_NAME, Videobridge.XMPP_API);
 
         String host
             = cmdLine.getOptionValue(
                     HOST_ARG_NAME,
                     domain == null ? HOST_ARG_VALUE : domain);
 
-        /*
-         * Before initializing the application programming interfaces (APIs) of
-         * Jitsi Videobridge, set any System properties which they use and which
-         * may be specified by the command-line arguments.
-         */
+        // Before initializing the application programming interfaces (APIs) of
+        // Jitsi Videobridge, set any System properties which they use and which
+        // may be specified by the command-line arguments.
         System.setProperty(
                 Videobridge.REST_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.REST_API)));
@@ -171,24 +159,24 @@ public class Main
                 Videobridge.XMPP_API_PNAME,
                 Boolean.toString(apis.contains(Videobridge.XMPP_API)));
 
-        // Min port and Max port properties
+        // Max and min port properties
+        String maxPort_ = String.valueOf(maxPort);
+        String minPort_ = String.valueOf(minPort);
 
         // Jingle Raw UDP transport
         System.setProperty(
                 DefaultStreamConnector.MAX_PORT_NUMBER_PROPERTY_NAME,
-                String.valueOf(maxPort));
+                maxPort_);
+        System.setProperty(
+                DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
+                minPort_);
         // Jingle ICE-UDP transport
         System.setProperty(
                 OperationSetBasicTelephony.MAX_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                String.valueOf(maxPort));
-        // Jingle Raw UDP transport
-        System.setProperty(
-                DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
-                String.valueOf(minPort));
-        // Jingle ICE-UDP transport
+                maxPort_);
         System.setProperty(
                 OperationSetBasicTelephony.MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                String.valueOf(minPort));
+                minPort_);
 
         ComponentMain main = new ComponentMain();
         JvbBundleConfig osgiBundles = new JvbBundleConfig();

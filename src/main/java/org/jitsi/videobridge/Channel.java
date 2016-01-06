@@ -422,7 +422,7 @@ public abstract class Channel
      *
      * @return the <tt>Content</tt> which has initialized this <tt>Content</tt>
      */
-    public final Content getContent()
+    public Content getContent()
     {
         return content;
     }

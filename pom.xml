@@ -20,6 +20,7 @@
 
   <properties>
     <assembly.skipAssembly>true</assembly.skipAssembly>
+    <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
   </properties>
 
   <dependencyManagement>
@@ -185,6 +186,12 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.easymock</groupId>
+      <artifactId>easymock</artifactId>
+      <version>3.4</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -272,9 +279,32 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
-        <configuration>
-          <mainClass>org.jitsi.videobridge.Main</mainClass>
-        </configuration>
+        <executions>
+          <execution>
+            <id>exec-exec</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>java</executable>
+              <arguments>
+                <argument>-classpath</argument>
+                <classpath />
+                <argument>-Djava.util.logging.config.file=${project.basedir}/lib/logging.properties</argument>
+                <argument>${exec.mainClass}</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>exec-java</id>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>${exec.mainClass}</mainClass>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

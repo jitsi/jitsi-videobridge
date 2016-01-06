@@ -36,6 +36,7 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -235,6 +236,12 @@ public class RtpChannel
      * The "associated payload type" number for RTX on this channel.
      */
     private byte rtxAssociatedPayloadType = -1;
+
+    /**
+     * The payload type number configured for RED (RFC-2198) for this channel,
+     * or -1 if none is configured (the other end does not support red).
+     */
+    private byte redPayloadType = -1;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -612,6 +619,10 @@ public class RtpChannel
      */
     public void askForKeyframes(int[] receiveSSRCs)
     {
+        // XXX(gp) does it make sense to repeatedly request key frames when we
+        // haven't received a key frame for a previous request? In some cases,
+        // maybe (the key frame might have been lost for example). This should
+        // be more intelligent.
         if (receiveSSRCs != null && receiveSSRCs.length != 0)
         {
             RTCPFeedbackMessageSender rtcpFeedbackMessageSender
@@ -1408,6 +1419,7 @@ public class RtpChannel
                 }
 
                 rtxPayloadType = -1;
+                redPayloadType = -1;
                 for (PayloadTypePacketExtension ext : payloadTypes)
                 {
                     if ("rtx".equalsIgnoreCase(ext.getName()))
@@ -1420,6 +1432,11 @@ public class RtpChannel
                                         = Byte.valueOf(ppe.getValue());
 
                         }
+                    }
+
+                    if (Constants.RED.equalsIgnoreCase(ext.getName()))
+                    {
+                        redPayloadType = (byte) ext.getID();
                     }
                 }
             }
@@ -1847,7 +1864,7 @@ public class RtpChannel
         super.expire();
     }
 
-    /*
+    /**
      * Returns the payload type number for the RTX payload type (RFC-4588) for
      * this channel.
      * @return the payload type number for the RTX payload type (RFC-4588) for
@@ -1865,6 +1882,17 @@ public class RtpChannel
     public byte getRtxAssociatedPayloadType()
     {
         return rtxAssociatedPayloadType;
+    }
+
+    /**
+     * Returns the payload type number for the RED payload type (RFC-2198) for
+     * this channel.
+     * @return the payload type number for the RED payload type (RFC-2198) for
+     * this channel.
+     */
+    public byte getRedPayloadType()
+    {
+        return redPayloadType;
     }
 
     /**

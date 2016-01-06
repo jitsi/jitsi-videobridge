@@ -95,6 +95,14 @@ public class RewritingSendMode
     @Override
     public void receive(SimulcastStream simStream, boolean urgent)
     {
+        if (simStream == null)
+        {
+            // This is acceptable when a participant leaves.
+            weakCurrent = null;
+            weakNext = null;
+            return;
+        }
+
         SimulcastStream current = getCurrent();
         SimulcastStream next = getNext();
 
@@ -102,7 +110,7 @@ public class RewritingSendMode
         {
             if (logger.isDebugEnabled())
             {
-                logDebug("order-" + simStream.getOrder()
+                logger.debug("order-" + simStream.getOrder()
                         + " stream is already the target.");
             }
 
@@ -111,7 +119,7 @@ public class RewritingSendMode
 
         if (logger.isDebugEnabled())
         {
-            logDebug("order-" + simStream.getOrder()
+            logger.debug("order-" + simStream.getOrder()
                     + " is the target (urgent:" + urgent + ") from " +
                     getSimulcastSender().getSimulcastReceiver()
                     .getSimulcastEngine()
@@ -126,26 +134,6 @@ public class RewritingSendMode
         else
         {
             weakNext = new WeakReference<>(simStream);
-        }
-    }
-
-    private void logDebug(String msg)
-    {
-        if (logger.isDebugEnabled())
-        {
-            msg =
-                getSimulcastSender().getReceiveEndpoint().getID() + ": " + msg;
-            logger.debug(msg);
-        }
-    }
-
-    private void logWarn(String msg)
-    {
-        if (logger.isWarnEnabled())
-        {
-            msg =
-                getSimulcastSender().getReceiveEndpoint().getID() + ": " + msg;
-            logger.warn(msg);
         }
     }
 
