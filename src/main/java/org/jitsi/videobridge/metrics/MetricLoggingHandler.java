@@ -15,13 +15,16 @@
  */
 package org.jitsi.videobridge.metrics;
 
-import java.util.*;
-
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
+import org.jitsi.eventadmin.Event;
+import org.jitsi.eventadmin.EventHandler;
+import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.service.neomedia.MediaStream;
+import org.jitsi.service.neomedia.MediaStreamStats;
+import org.jitsi.util.Logger;
 import org.jitsi.videobridge.*;
-import org.jitsi.eventadmin.*;
+
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * A generic service interface to push metrics to cloud based collector servers.
@@ -118,6 +121,11 @@ public class MetricLoggingHandler
      */
     public static final String METRIC_UPLOAD_AVG_JITTER
         = "Avg upload jitter";
+
+    /** 
+     * Total number or endpoints connected to a conference 
+     */
+    public static final String METRIC_ENDPOINTS = "Endpoints";
 
     public MetricLoggingHandler(ConfigurationService config)
     {
@@ -444,6 +452,8 @@ public class MetricLoggingHandler
 
             publishNumericMetric(
                 METRIC_VIDEO_STREAMS, videobridge.getConferenceMetrics()[1]);
+
+            publishNumericMetric(METRIC_ENDPOINTS, conference.getEndpointCount());
         }
         else if (
             EventFactory.CONFERENCE_CREATED_TOPIC.equals(event.getTopic()))
