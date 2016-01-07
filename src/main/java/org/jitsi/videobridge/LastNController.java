@@ -504,7 +504,7 @@ public class LastNController
      * ({@link #speechActivityEndpointsChanged(List)}) with the current
      * endpoints from the conference.
      */
-    private synchronized void initializeConferenceEndpoints()
+    public synchronized void initializeConferenceEndpoints()
     {
         speechActivityEndpointsChanged(
                 channel.getConferenceSpeechActivity().getEndpoints());

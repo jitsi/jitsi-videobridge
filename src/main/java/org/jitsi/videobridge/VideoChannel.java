@@ -512,9 +512,14 @@ public class VideoChannel
 
         if (endpoint.equals(getEndpoint()))
         {
-            // TODO:
-            // 1. Send list of endpoints to the channel
-            // 2. updateInLastN(this)
+            if (lastNController.getLastN() >= 0)
+            {
+                lastNController.initializeConferenceEndpoints();
+                sendLastNEndpointsChangeEventOnDataChannel(
+                        lastNController.getForwardedEndpoints(), null);
+            }
+
+            updateInLastN(this);
         }
     }
 
