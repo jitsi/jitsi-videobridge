@@ -102,15 +102,13 @@ public class VideoChannelLastNAdaptor
     {
         this.bitrateController = bitrateController;
 
-        /*
-        if (bitrateController.getChannel().getAdaptiveSimulcast())
+        if (bitrateController.getLastNController().getAdaptiveSimulcast())
         {
             this.slaveSimulcastAdaptor
                     = new SimulcastAdaptor(bitrateController);
         }
 
         this.initializeConfiguration();
-        */
     }
 
     @Override

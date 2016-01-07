@@ -37,7 +37,6 @@ import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.transform.*;
@@ -129,12 +128,6 @@ public class VideoChannel
      * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>.
      */
     private SimulcastMode simulcastMode;
-
-    /**
-     * The <tt>BitrateController</tt> which will be controlling the
-     * value of <tt>bitrate</tt> for this <tt>VideoChannel</tt>.
-     */
-    private BitrateController bitrateController;
 
     /**
      * The instance which controls which endpoints' video streams are to be
@@ -279,9 +272,6 @@ public class VideoChannel
 
             stream.getMediaStreamStats().addNackListener(this);
         }
-
-        // FIXME: this shouldn't depend on cfg, and shouldn't happen here.
-        getBitrateController();
     }
 
     /**
@@ -350,21 +340,6 @@ public class VideoChannel
 
         iq.setLastN(lastNController.getLastN());
         iq.setSimulcastMode(getSimulcastMode());
-    }
-
-    /**
-     * Returns the <tt>BitrateController</tt> for this <tt>VideoChannel</tt>,
-     * creating it if necessary.
-     * TODO: move to LastNController
-     *
-     * @return the <tt>VideoChannelLastNAdaptor</tt> for this
-     * <tt>VideoChannel</tt>, creating it if necessary.
-     */
-    private BitrateController getBitrateController()
-    {
-        if (bitrateController == null)
-            bitrateController = new BitrateController(this);
-        return bitrateController;
     }
 
     /**
@@ -1151,5 +1126,23 @@ public class VideoChannel
 
         // FIXME Force NACK termination. Postponing because this will require a
         // few changes here and there, and it's enabled by default anyway.
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setAdaptiveLastN(boolean adaptiveLastN)
+    {
+        lastNController.setAdaptiveLastN(adaptiveLastN);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
+    {
+        lastNController.setAdaptiveSimulcast(adaptiveSimulcast);
     }
 }

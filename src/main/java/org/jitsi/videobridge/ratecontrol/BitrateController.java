@@ -21,29 +21,28 @@ import net.java.sip.communicator.util.*;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
 
 /**
- * Controls the bitrate of a specific <tt>VideoChannel</tt>.
  * <p>
- * Gets notified of received RTCP REMB packets through
- * {@link #receivedREMB(long)}. Based on this information (the estimation of
- * the available bandwidth to the endpoint of the <tt>VideoChannel</tt>) and on
- * the recent average bitrates coming from the other endpoints in the conference
- * decides whether the bitrate of the channel should be changed. A specialized
- * bitrate adaptor performs the change.
+ * Gets notified of changes to the estimation of the available bandwidth towards
+ * the remote endpoint through {@link #bandwidthEstimationChanged(long)}. Based
+ * on this information, and on the current average bitrates coming from the
+ * other endpoints in the conference decides whether the configuration of the
+ * channel (i.e. the set of forwarded endpoints) should be changed.
  * </p>
  * <p>
  * The specific logic used to make the decision is implemented and documented in
- * {@link #receivedREMB(long)}.
+ * {@link #bandwidthEstimationChanged(long)}.
  * </p>
  *
  * @author Boris Grozev
  * @author George Politis
  */
 public class BitrateController
-    //implements BandwidthEstimator.Listener
+    implements BandwidthEstimator.Listener
 {
     /**
      * Whether the values for the constants have been initialized or not.
@@ -179,23 +178,32 @@ public class BitrateController
     private final ReceivedRembList receivedRembs
             = new ReceivedRembList(REMB_AVERAGE_INTERVAL_MS);
 
+    private final LastNController lastNController;
+
     /**
      * Initializes a new <tt>BitrateController</tt> instance.
      *
      * @param channel the <tt>VideoChannel</tt> for which the new instance is to
      * serve.
      */
-    public BitrateController(VideoChannel channel)
+    public BitrateController(LastNController lastNController,
+                             VideoChannel channel)
     {
         this.channel = channel;
-        // FIXME
-        //BandwidthEstimator be = ((VideoMediaStream) channel.getStream()).getOrCreateBandwidthEstimator();
-        //be.addListener(this);
+        this.lastNController = lastNController;
 
         initializeConfiguration();
+
+        // Create a bandwidth estimator and hook us up to changes to the
+        // estimation.
+        BandwidthEstimator be
+            = ((VideoMediaStream) channel.getStream())
+                .getOrCreateBandwidthEstimator();
+        be.addListener(this);
+
     }
 
-    public int calcNumEndpointsThatFitIn()
+    int calcNumEndpointsThatFitIn()
     {
         final long now = System.currentTimeMillis();
 
@@ -245,7 +253,7 @@ public class BitrateController
      *
      * @return the <tt>VideoChannel</tt> of this <tt>BitrateController</tt>.
      */
-    public VideoChannel getChannel()
+    VideoChannel getChannel()
     {
         return channel;
     }
@@ -300,16 +308,14 @@ public class BitrateController
         {
             bitrateAdaptorSet = true;
 
-            /*
-            if (channel.getAdaptiveLastN())
+            if (lastNController.getAdaptiveLastN())
             {
                 bitrateAdaptor = new VideoChannelLastNAdaptor(this);
             }
-            else if (channel.getAdaptiveSimulcast())
+            else if (lastNController.getAdaptiveSimulcast())
             {
                 bitrateAdaptor = new SimulcastAdaptor(this);
             }
-            */
         }
 
         return bitrateAdaptor;
@@ -376,7 +382,7 @@ public class BitrateController
      *
      * @param remb the bitrate of the REMB packet received.
      */
-    //@Override
+    @Override
     public void bandwidthEstimationChanged(long remb)
     {
         logger.warn("XXX new bw estimate: " + remb);
@@ -447,6 +453,11 @@ public class BitrateController
                 bitrateAdaptor.increase();
             }
         }
+    }
+
+    LastNController getLastNController()
+    {
+        return lastNController;
     }
 
     /**
