@@ -32,4 +32,4 @@ if [ -f $videobridge_rc  ]; then
         source $videobridge_rc
 fi
 
-java $VIDEOBRIDGE_DEBUG_OPTIONS -Djava.library.path=$libs $LOGGING_CONFIG_PARAM $JAVA_SYS_PROPS -cp $cp $mainClass $@
+exec java $VIDEOBRIDGE_DEBUG_OPTIONS -Djava.library.path=$libs $LOGGING_CONFIG_PARAM $JAVA_SYS_PROPS -cp $cp $mainClass $@

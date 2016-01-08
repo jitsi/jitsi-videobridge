@@ -5,14 +5,13 @@
 
 PID=$(cat /var/run/jitsi-videobridge.pid)
 if [ $PID ]; then
-    PROC_PID=$(pgrep -P $PID)
-    echo "Jvb at pid $PROC_PID"
+    echo "Jvb at pid $PID"
     STAMP=`date +%Y-%m-%d-%H%M`
-    THREADS_FILE="/tmp/stack-${STAMP}-${PROC_PID}.threads"
-    HEAP_FILE="/tmp/heap-${STAMP}-${PROC_PID}.bin"
-    sudo -u jvb jstack ${PROC_PID} > ${THREADS_FILE}
-    sudo -u jvb jmap -dump:live,format=b,file=${HEAP_FILE} ${PROC_PID}
-    tar zcvf jvb-dumps-${STAMP}-${PROC_PID}.tgz ${THREADS_FILE} ${HEAP_FILE} /var/log/jitsi/jvb.log
+    THREADS_FILE="/tmp/stack-${STAMP}-${PID}.threads"
+    HEAP_FILE="/tmp/heap-${STAMP}-${PID}.bin"
+    sudo -u jvb jstack ${PID} > ${THREADS_FILE}
+    sudo -u jvb jmap -dump:live,format=b,file=${HEAP_FILE} ${PID}
+    tar zcvf jvb-dumps-${STAMP}-${PID}.tgz ${THREADS_FILE} ${HEAP_FILE} /var/log/jitsi/jvb.log
     rm ${HEAP_FILE} ${THREADS_FILE}
 else
     echo "JVB not running."

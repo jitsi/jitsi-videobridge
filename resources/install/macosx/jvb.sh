@@ -28,4 +28,4 @@ if [ -f $videobridge_rc  ]; then
 fi
 
 
-java $VIDEOBRIDGE_DEBUG_OPTIONS -Djava.library.path=$libs -Djava.util.logging.config.file=$logging_config -cp $cp $mainClass $@
+exec java $VIDEOBRIDGE_DEBUG_OPTIONS -Djava.library.path=$libs -Djava.util.logging.config.file=$logging_config -cp $cp $mainClass $@
