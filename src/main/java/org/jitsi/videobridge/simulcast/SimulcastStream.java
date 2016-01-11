@@ -29,7 +29,6 @@ import org.jitsi.impl.neomedia.codec.video.*;
  * @author Lyubomir Marinov
  */
 public class SimulcastStream
-    extends PropertyChangeNotifier
     implements Comparable<SimulcastStream>
 {
     /**
