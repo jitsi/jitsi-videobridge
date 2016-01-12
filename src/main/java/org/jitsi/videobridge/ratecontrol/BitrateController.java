@@ -139,6 +139,57 @@ public class BitrateController
             = BitrateController.class.getName() + ".REMB_MULT_CONSTANT";
 
     /**
+     * Initializes the constants used by this class from the configuration.
+     */
+    private static void initializeConfiguration(ConfigurationService cfg)
+    {
+        synchronized (BitrateController.class)
+        {
+            if (configurationInitialized)
+                return;
+            configurationInitialized = true;
+
+
+            if (cfg != null)
+            {
+                INCREASE_LAG_MS
+                        = cfg.getInt(INCREASE_LAG_MS_PNAME, INCREASE_LAG_MS);
+                INCREASE_LAG_MS
+                        = cfg.getInt(DECREASE_LAG_MS_PNAME, DECREASE_LAG_MS);
+                INITIAL_INTERVAL_MS
+                        = cfg.getInt(
+                        INITIAL_INTERVAL_MS_PNAME,
+                        INITIAL_INTERVAL_MS);
+
+                String rembMultConstantStr
+                        = cfg.getString(REMB_MULT_CONSTANT_PNAME, null);
+
+                if (rembMultConstantStr != null)
+                {
+                    try
+                    {
+                        REMB_MULT_CONSTANT
+                                = Double.parseDouble(rembMultConstantStr);
+                    }
+                    catch (Exception e)
+                    {
+                        // Whatever, use the default
+                    }
+                }
+
+                REMB_AVERAGE_INTERVAL_MS
+                        = cfg.getInt(
+                        REMB_AVERAGE_INTERVAL_MS_PNAME,
+                        REMB_AVERAGE_INTERVAL_MS);
+                MIN_ASSUMED_ENDPOINT_BITRATE_BPS
+                        = cfg.getInt(
+                        MIN_ASSUMED_ENDPOINT_BITRATE_BPS_PNAME,
+                        MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
+            }
+        }
+    }
+
+    /**
      * The <tt>BitrateAdaptor</tt> to use to adapt the bandwidth.
      */
     private BitrateAdaptor bitrateAdaptor;
@@ -192,7 +243,10 @@ public class BitrateController
         this.channel = channel;
         this.lastNController = lastNController;
 
-        initializeConfiguration();
+        initializeConfiguration(
+                ServiceUtils.getService(
+                        channel.getBundleContext(),
+                        ConfigurationService.class));
 
         // Create a bandwidth estimator and hook us up to changes to the
         // estimation.
@@ -205,31 +259,20 @@ public class BitrateController
 
     int calcNumEndpointsThatFitIn()
     {
-        final long now = System.currentTimeMillis();
-
-        // Our estimate of the available bandwidth is the average of all
-        // REMBs received in the last REMB_AVERAGE_INTERVAL_MS milliseconds. We
-        // do this in order to reduce the fluctuations, because REMBs often
-        // change very rapidly and we want to avoid changing lastN often.
-        // Multiplying with a constant is an experimental option.
-        final long availableBandwidth
-                = (long) (receivedRembs.getAverage(now) * REMB_MULT_CONSTANT);
+        final long availableBandwidth = receivedRembs.getLast();
+                //= (long) (receivedRembs.getAverage(now) * REMB_MULT_CONSTANT);
+        long remainingBandwidth = availableBandwidth;
+        int numEndpointsThatFitIn = 0;
+        Conference conference = channel.getContent().getConference();
 
         // Calculate the biggest number K, such that there are at least K other
         // endpoints in the conference, and the cumulative bitrate of the first
         // K endpoints does not exceed the available bandwidth estimate.
-
-        long remainingBandwidth = availableBandwidth;
-        int numEndpointsThatFitIn = 0;
-
-        final Iterator<Endpoint> it = null; //channel.getReceivingEndpoints();
-        final Endpoint thisEndpoint = channel.getEndpoint();
-
-        while (it.hasNext())
+        for (String endpointId : lastNController.getForwardedEndpoints())
         {
-            Endpoint endpoint = it.next();
+            Endpoint endpoint = conference.getEndpoint(endpointId);
 
-            if (endpoint != null && !endpoint.equals(thisEndpoint))
+            if (endpoint != null)
             {
                 long endpointBitrate = getEndpointBitrate(endpoint);
 
@@ -261,8 +304,8 @@ public class BitrateController
     /**
      * Returns the incoming bitrate in bits per second from all
      * <tt>VideoChannel</tt>s of the endpoint <tt>endpoint</tt> or
-     * {@link #MIN_ASSUMED_ENDPOINT_BITRATE_BPS} if the actual bitrate is that
-     * limit.
+     * {@link #MIN_ASSUMED_ENDPOINT_BITRATE_BPS} if the actual bitrate is below
+     * that limit.
      *
      * @param endpoint the endpoint.
      * @return the incoming bitrate in bits per second from <tt>endpoint</tt>,
@@ -320,61 +363,6 @@ public class BitrateController
 
         return bitrateAdaptor;
     }
-    /**
-     * Initializes the constants used by this class from the configuration.
-     */
-    private void initializeConfiguration()
-    {
-        synchronized (BitrateController.class)
-        {
-            if (configurationInitialized)
-                return;
-            configurationInitialized = true;
-
-            ConfigurationService cfg
-                    = ServiceUtils.getService(
-                    channel.getBundleContext(),
-                    ConfigurationService.class);
-
-            if (cfg != null)
-            {
-                INCREASE_LAG_MS
-                        = cfg.getInt(INCREASE_LAG_MS_PNAME, INCREASE_LAG_MS);
-                INCREASE_LAG_MS
-                        = cfg.getInt(DECREASE_LAG_MS_PNAME, DECREASE_LAG_MS);
-                INITIAL_INTERVAL_MS
-                        = cfg.getInt(
-                        INITIAL_INTERVAL_MS_PNAME,
-                        INITIAL_INTERVAL_MS);
-
-                String rembMultConstantStr
-                        = cfg.getString(REMB_MULT_CONSTANT_PNAME, null);
-
-                if (rembMultConstantStr != null)
-                {
-                    try
-                    {
-                        REMB_MULT_CONSTANT
-                                = Double.parseDouble(rembMultConstantStr);
-                    }
-                    catch (Exception e)
-                    {
-                        // Whatever, use the default
-                    }
-                }
-
-                REMB_AVERAGE_INTERVAL_MS
-                        = cfg.getInt(
-                        REMB_AVERAGE_INTERVAL_MS_PNAME,
-                        REMB_AVERAGE_INTERVAL_MS);
-                MIN_ASSUMED_ENDPOINT_BITRATE_BPS
-                        = cfg.getInt(
-                        MIN_ASSUMED_ENDPOINT_BITRATE_BPS_PNAME,
-                        MIN_ASSUMED_ENDPOINT_BITRATE_BPS);
-            }
-        }
-    }
-
 
     /**
      * Notifies this instance that an RTCP REMB packet with a bitrate value of
@@ -385,19 +373,18 @@ public class BitrateController
     @Override
     public void bandwidthEstimationChanged(long remb)
     {
-        logger.warn("XXX new bw estimate: " + remb);
         BitrateAdaptor bitrateAdaptor = getOrCreateBitrateAdaptor();
         if (bitrateAdaptor == null)
         {
             // A bitrate adaptor is not set. It makes no sense to continue.
             return;
         }
-        logger.warn(hashCode()+" YYY new bw estimate: " + remb);
 
         long now = System.currentTimeMillis();
 
         // The number of endpoints this channel is currently receiving
-        int receivingEndpointCount = 0;//channel.getReceivingEndpointCount();
+        int receivingEndpointCount
+            = lastNController.getForwardedEndpoints().size();
 
         if (firstRemb == -1)
             firstRemb = now;
@@ -485,6 +472,8 @@ public class BitrateController
          */
         private long sum = 0;
 
+        private long last = -1;
+
         /**
          * Used in {@link #clean(long)}.
          */
@@ -511,6 +500,7 @@ public class BitrateController
         {
             sum += rate;
             receivedRembs.put(time, rate);
+            last = rate;
             clean(time);
         }
 
@@ -549,6 +539,11 @@ public class BitrateController
             int size = receivedRembs.size();
 
             return (size == 0) ? 0 : (sum / size);
+        }
+
+        private long getLast()
+        {
+            return last;
         }
     }
 }
