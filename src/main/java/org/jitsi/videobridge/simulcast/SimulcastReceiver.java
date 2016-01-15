@@ -461,35 +461,33 @@ public class SimulcastReceiver
             }
         }
 
-        if (indexOfLastSourceOccurrenceInHistory == -1)
+        if (indexOfLastSourceOccurrenceInHistory != -1)
         {
-            return;
-        }
+            // Presumably, if a SimulcastStream is active, all SimulcastStreams
+            // before it (according to SimulcastStream's order) are active as
+            // well. Consequently, timeouts may occur in SimulcastStreams which
+            // are after source.
+            boolean maybeTimeout = false;
 
-        // Presumably, if a SimulcastStream is active, all SimulcastStreams
-        // before it (according to SimulcastStream's order) are active as
-        // well. Consequently, timeouts may occur in SimulcastStreams which
-        // are after source.
-        boolean maybeTimeout = false;
-
-        for (SimulcastStream simStream : simStreams)
-        {
-            if (maybeTimeout)
+            for (SimulcastStream simStream : simStreams)
             {
-                // There's no point in timing stream out if it's timed out
-                // already.
-                if (simStream.isStreaming())
+                if (maybeTimeout)
                 {
-                    maybeTimeout(
-                        acceptedStream,
-                        pkt,
-                        simStream,
-                        indexOfLastSourceOccurrenceInHistory);
+                    // There's no point in timing stream out if it's timed out
+                    // already.
+                    if (simStream.isStreaming())
+                    {
+                        maybeTimeout(
+                                acceptedStream,
+                                pkt,
+                                simStream,
+                                indexOfLastSourceOccurrenceInHistory);
+                    }
                 }
-            }
-            else if (simStream == acceptedStream)
-            {
-                maybeTimeout = true;
+                else if (simStream == acceptedStream)
+                {
+                    maybeTimeout = true;
+                }
             }
         }
 
