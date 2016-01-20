@@ -59,43 +59,32 @@ class LongPollingServlet
         throws IOException,
                ServletException
     {
-        System.out.println("BB: IN LONG POLLING");
-        Continuation continuation = ContinuationSupport.getContinuation(request);
-        
-        // We don't get the target here (TODO: is that something that could
-        //  be fixed?), so we need to do a bit more work to extract the bits of the path
-        //  we're interested in.
-        // The stuff we're interested in starts after the /colibri/
-        String colibriPath = request.getRequestURL().toString().split("colibri/")[1];
-        String target = colibriPath.split("/")[0];
-
-        continuation.suspend();
+      System.out.println("BB: GOT long polling in thread " + Thread.currentThread().getId());
+      // We don't get the target here (TODO: is that something that could
+      //  be fixed?), so we need to do a bit more work to extract the bits of the path
+      //  we're interested in.
+      // The stuff we're interested in starts after the /colibri/
+      String colibriPath = request.getRequestURL().toString().split("colibri/")[1];
+      String target = colibriPath.split("/")[0];
+      if (target.equals("subscribeToEvents"))
+      {
         Videobridge videobridge = getVideobridge();
-        System.out.println("got target: " + target);
-        if (target.equals("subscribeToEvents")) 
+        String confId = colibriPath.split("/")[1];
+        System.out.println("BB: subscribing to conference events for conference " + confId);
+        Conference conference = videobridge.getConference(confId, null);
+        if (conference == null)
         {
-          String confId = colibriPath.split("/")[1];
-          System.out.println("BB: subscribing to conference events for conference " + confId);
-          Conference conference = videobridge.getConference(confId, null);
-          if (conference == null)
-          {
-            System.out.println("Couldn't find conference " + confId);
-          }
-          else
-          {
-            System.out.println("found conf object");
-            System.out.println("Waiting for event");
-            try
-            {
-              JSONObject pushEvent = conference.getPushEvent();
-              pushEvent.writeJSONString(response.getWriter());
-              continuation.complete();
-            }
-            catch (InterruptedException e)
-            {
-            }
-          }
+          System.out.println("Couldn't find conference " + confId);
+          response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
+        else
+        {
+          System.out.println("found conf object");
+          System.out.println("Waiting for event");
+          AsyncContext context = request.startAsync();
+          new Thread(new ConfPushAsyncService(context, conference)).run();
+        }
+      }
     }
 
     /**
