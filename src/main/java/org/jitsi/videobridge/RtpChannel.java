@@ -965,12 +965,6 @@ public class RtpChannel
             stream.addPropertyChangeListener(streamPropertyChangeListener);
             stream.setName(getID());
             stream.setProperty(RtpChannel.class.getName(), this);
-            Endpoint endpoint = getEndpoint();
-            if (endpoint != null)
-            {
-                stream.setProperty(
-                    MediaStream.PNAME_RECEIVER_IDENTIFIER, endpoint.getID());
-            }
             if (transformEngine != null)
                 stream.setExternalTransformer(transformEngine);
 
@@ -1166,13 +1160,6 @@ public class RtpChannel
         {
             newValue.addChannel(this);
             newValue.addPropertyChangeListener(this);
-            stream.setProperty(
-                MediaStream.PNAME_RECEIVER_IDENTIFIER, newValue.getID());
-        }
-        else
-        {
-            stream.setProperty(
-                MediaStream.PNAME_RECEIVER_IDENTIFIER, null);
         }
     }
 
