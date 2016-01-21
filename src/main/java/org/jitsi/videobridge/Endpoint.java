@@ -540,7 +540,13 @@ public class Endpoint
                             + " {pinnedId}."));
         }
 
-        pinnedEndpointsChanged(Collections.singletonList(newPinnedEndpointID));
+        List<String> newPinnedIDList = Collections.EMPTY_LIST;
+        if (newPinnedEndpointID == null || "".equals(newPinnedEndpointID))
+        {
+            newPinnedIDList = Collections.singletonList(newPinnedEndpointID);
+        }
+
+        pinnedEndpointsChanged(newPinnedIDList);
     }
 
     /**
