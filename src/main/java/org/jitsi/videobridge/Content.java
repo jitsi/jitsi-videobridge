@@ -194,6 +194,36 @@ public class Content
         return accept;
     }
 
+    /**
+     * Sends keyframe requests for all SSRCs in all video channels of the
+     * endpoints specified by ID in {@code endpointIds}.
+     * @param endpointIds the list of IDs of endpoints to send keyframe
+     * requests to.
+     */
+    public void askForKeyframesById(Collection<String> endpointIds)
+    {
+        List<Endpoint> endpoints = new LinkedList<>();
+        Conference conference = getConference();
+        for (String endpointId : endpointIds)
+        {
+            Endpoint endpoint = conference.getEndpoint(endpointId);
+            if (endpoint != null)
+            {
+                endpoints.add(endpoint);
+            }
+        }
+
+        if (!endpoints.isEmpty())
+        {
+            askForKeyframes(endpoints);
+        }
+    }
+
+    /**
+     * Sends keyframe requests for all SSRCs in all video channels of the
+     * endpoints in {@code endpoints}.
+     * @param endpoints the list of endpoints to send keyframe requests to.
+     */
     void askForKeyframes(Collection<Endpoint> endpoints)
     {
         for (Endpoint endpoint : endpoints)

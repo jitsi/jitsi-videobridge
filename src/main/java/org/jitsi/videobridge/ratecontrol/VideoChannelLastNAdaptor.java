@@ -102,7 +102,7 @@ public class VideoChannelLastNAdaptor
     {
         this.bitrateController = bitrateController;
 
-        if (bitrateController.getChannel().getAdaptiveSimulcast())
+        if (bitrateController.getLastNController().getAdaptiveSimulcast())
         {
             this.slaveSimulcastAdaptor
                     = new SimulcastAdaptor(bitrateController);
@@ -258,25 +258,18 @@ public class VideoChannelLastNAdaptor
     private int setInitialLastN(int lastN)
     {
         VideoChannel channel = bitrateController.getChannel();
-        Endpoint thisEndpoint = channel.getEndpoint();
-        int endpointCount = 0;
+        int endpointCount
+            = bitrateController
+                    .getLastNController().getForwardedEndpoints().size();
 
-        for (Endpoint endpoint : channel.getLastNEndpoints())
-        {
-            if (endpoint != null && !endpoint.equals(thisEndpoint))
-                endpointCount += 1;
-        }
-
-        /*
-         * We update lastN if either:
-         * 1. It is currently disabled (-1)
-         * 2. It is currently more than the number of endpoints (because
-         * otherwise we detect this as a drop in the number of endpoint the
-         * channel can receive and we drop it aggressively)
-         *
-         * In the other cases (0 <= lastN <= endpointCount) we leave it as it is
-         * because it is a reasonable start point.
-         */
+         // We update lastN if either:
+         // 1. It is currently disabled (-1)
+         // 2. It is currently more than the number of endpoints (because
+         // otherwise we detect this as a drop in the number of endpoint the
+         // channel can receive and we drop it aggressively)
+         //
+         // In the other cases (0 <= lastN <= endpointCount) we leave it as it is
+         // because it is a reasonable start point.
         if (lastN < 0 || lastN > endpointCount)
         {
             lastN = endpointCount;
@@ -298,13 +291,6 @@ public class VideoChannelLastNAdaptor
 
         if (lastN > 0)
             lastNonZeroLastN = now;
-
-        // The ordered (by speech activity) list of endpoints currently in the
-        // conference.
-        // XXX Lyubomir Marinov: The method VideoChannel.getLastNEndpoints()
-        // never returns null.
-//        if (channel.getLastNEndpoints() == null)
-//            return false;
 
         if (!initialLastNSet)
         {
