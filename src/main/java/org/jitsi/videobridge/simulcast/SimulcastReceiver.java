@@ -616,19 +616,17 @@ public class SimulcastReceiver
      */
     private void fireSimulcastStreamsSignaled()
     {
+
         // This can be synchronous as its not called from inside a time
         // critical method (like reading/writing packets).
-        Iterator<WeakReference<SimulcastReceiver.Listener>>
-            it = weakListeners.iterator();
 
-        while (it.hasNext())
+        for (WeakReference<SimulcastReceiver.Listener> weakNext : weakListeners)
         {
-            WeakReference<SimulcastReceiver.Listener> weakNext = it.next();
             SimulcastReceiver.Listener next = weakNext.get();
             if (next == null)
             {
                 // Clean-up the list. Expensive operation.
-                it.remove();
+                weakListeners.remove(next);
             }
             else
             {
