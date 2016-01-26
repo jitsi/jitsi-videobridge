@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.simulcast;
 
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.util.event.*;
 import org.jitsi.impl.neomedia.codec.video.*;
 
 /**
