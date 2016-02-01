@@ -684,14 +684,14 @@ public class SimulcastReceiver
             Iterator<WeakReference<SimulcastReceiver.Listener>>
                 it = weakListeners.iterator();
 
-            while (it.hasNext())
+            for (WeakReference<SimulcastReceiver.Listener> weakNext
+                    : weakListeners)
             {
-                WeakReference<SimulcastReceiver.Listener> weakNext = it.next();
                 SimulcastReceiver.Listener next = weakNext.get();
                 if (next == null)
                 {
-                    // Clean-up the list.
-                    it.remove();
+                    // Clean-up the list. Expensive operation.
+                    weakListeners.remove(next);
                 }
                 else
                 {
