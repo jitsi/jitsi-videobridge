@@ -129,6 +129,7 @@ The respective response could look like:
 "total_memory":4051,
 "videochannels":0
 }</pre>
+		(Make sure <a href="using_statistics.md#configuration">statistics are enabled</a>.)
 		</td>
 	</tr>
 </table>
