@@ -246,7 +246,7 @@ public class SimulcastEngine
          */
         public MyRTPTransformer()
         {
-            super(RTPPacketPredicate.instance);
+            super(RTPPacketPredicate.INSTANCE);
         }
 
         @Override
@@ -292,7 +292,7 @@ public class SimulcastEngine
          */
         public MyRTCPTransformer()
         {
-            super(RTCPPacketPredicate.instance);
+            super(RTCPPacketPredicate.INSTANCE);
         }
 
         /**
