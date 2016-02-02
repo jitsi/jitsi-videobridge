@@ -821,7 +821,7 @@ public class Content
                          * The places that are involved in this have been tagged
                          * with TAG(cat4-local-ssrc-hurricane).
                          */
-                        initialLocalSSRC = Videobridge.RANDOM.nextInt();
+                        initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffl;
 
                         rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
 
