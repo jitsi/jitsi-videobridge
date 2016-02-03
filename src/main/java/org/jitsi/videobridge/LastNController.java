@@ -500,9 +500,12 @@ public class LastNController
             forwardedEndpoints
                     = Collections.unmodifiableList(newForwardedEndpoints);
 
-            // TODO: we may want to do this asynchronously.
-            channel.sendLastNEndpointsChangeEventOnDataChannel(
-                    forwardedEndpoints, enteringEndpoints);
+            if (lastN >= 0 || currentLastN >= 0)
+            {
+                // TODO: we may want to do this asynchronously.
+                channel.sendLastNEndpointsChangeEventOnDataChannel(
+                        forwardedEndpoints, enteringEndpoints);
+            }
         }
 
         // If lastN is disabled, the endpoints entering forwardedEndpoints were
