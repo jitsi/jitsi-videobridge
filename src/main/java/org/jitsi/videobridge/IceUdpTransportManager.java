@@ -20,8 +20,6 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-import javax.media.rtp.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.netaddr.*;
@@ -33,7 +31,6 @@ import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.socket.*;
 import org.jitsi.eventadmin.*;
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
@@ -189,12 +186,6 @@ public class IceUdpTransportManager
      * The <tt>DtlsControl</tt> that this <tt>TransportManager</tt> uses.
      */
     private final DtlsControlImpl dtlsControl;
-
-    /**
-     * The <tt>AbstractRTPConnector</tt> which this transport manager creates
-     * for the purposes of DTLS.
-     */
-    private AbstractRTPConnector rtpConnector;
 
     /**
      * The <tt>Agent</tt> which implements the ICE protocol and which is used
@@ -557,12 +548,6 @@ public class IceUdpTransportManager
             {
                 dtlsControl.start(null); //stop
                 dtlsControl.cleanup(this);
-            }
-
-            if (rtpConnector != null)
-            {
-                rtpConnector.close();
-                rtpConnector = null;
             }
 
 //            DatagramSocket[] datagramSockets = getStreamConnectorSockets();
@@ -1866,64 +1851,13 @@ public class IceUdpTransportManager
                     ? DtlsControl.Setup.PASSIVE
                     : DtlsControl.Setup.ACTIVE);
         dtlsControl.setRtcpmux(rtcpmux);
-
-        // Setup the connector
-        IceSocketWrapper[] iceSockets = getStreamConnectorSockets();
-        if (iceSockets == null || iceSockets[0] == null)
-        {
-            logd("Cannot start DTLS, no sockets from ICE.");
-            return;
-        }
-
-        StreamConnector streamConnector;
-        if (rtpConnector != null)
-        {
-            rtpConnector.close();
-            logger.warn("More than one RTPConnector. Closing the old one.");
-        }
-
-        DatagramSocket udpSocket = iceSockets[0].getUDPSocket();
-        if (udpSocket != null)
-        {
-            streamConnector
-                    = new DefaultStreamConnector(
-                        udpSocket,
-                        iceSockets[1] == null ? null : iceSockets[1].getUDPSocket(),
-                        rtcpmux);
-            rtpConnector = new RTPConnectorUDPImpl(streamConnector);
-        }
-        else
-        {
-            //Assume/try TCP
-            streamConnector
-                = new DefaultTCPStreamConnector(
-                        iceSockets[0].getTCPSocket(),
-                        iceSockets[1] == null ? null : iceSockets[1].getTCPSocket(),
-                        rtcpmux);
-            rtpConnector = new RTPConnectorTCPImpl(streamConnector);
-        }
-
-        MediaStreamTarget target = getStreamTarget();
-        if (target != null)
-        {
-            try
-            {
-                rtpConnector.addTarget(
-                    new SessionAddress(target.getDataAddress().getAddress(),
-                                       target.getDataAddress().getPort()));
-            }
-            catch (IOException ioe)
-            {
-                logger.warn("Failed to add target to DTLS connector: " + ioe);
-                // But do go on, because it is not necessary in all cases
-            }
-        }
-
-        dtlsControl.setConnector(rtpConnector);
         dtlsControl.registerUser(this);
 
         // For DTLS, the media type doesn't matter (as long as it's not
         // null).
+        // Note that the actual start of the DTLS servers/clients will be
+        // delayed until an rtpConnector is set (when a MediaStream with this
+        // SrtpControl starts or is set a target).
         dtlsControl.start(MediaType.AUDIO);
     }
 
