@@ -301,8 +301,6 @@ public class Content
         // Initialize channel
         channel.initialize(rtpLevelRelayType);
 
-        Videobridge videobridge = getConference().getVideobridge();
-
         if (logger.isInfoEnabled())
         {
             /*
@@ -311,6 +309,7 @@ public class Content
              * of causing deadlocks.
              */
 
+            Videobridge videobridge = getConference().getVideobridge();
             logger.info(
                     "Created channel " + channel.getID() + " of content "
                         + getName() + " of conference " + conference.getID()
