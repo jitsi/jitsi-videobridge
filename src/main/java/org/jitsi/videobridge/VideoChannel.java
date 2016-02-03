@@ -204,7 +204,14 @@ public class VideoChannel
     public void initialize()
         throws IOException
     {
-        super.initialize();
+        initialize(null);
+    }
+
+    @Override
+    void initialize(RTPLevelRelayType rtpLevelRelayType)
+        throws IOException
+    {
+        super.initialize(rtpLevelRelayType);
 
         ConfigurationService cfg
             = getContent().getConference().getVideobridge()

@@ -95,7 +95,8 @@ public class Health
                     = content.createRtpChannel(
                             channelBundleId,
                             /* transportNamespace */ null,
-                            initiator);
+                            initiator,
+                            null);
 
                 // Fail as quickly as possible.
                 if (rtpChannel == null)
