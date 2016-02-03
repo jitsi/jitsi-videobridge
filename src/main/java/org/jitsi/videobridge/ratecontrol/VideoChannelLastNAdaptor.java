@@ -116,7 +116,7 @@ public class VideoChannelLastNAdaptor
     {
         VideoChannel channel = bitrateController.getChannel();
         Endpoint thisEndpoint = channel.getEndpoint();
-        int lastN = channel.getLastN();
+        int lastN = bitrateController.getLastNController().getCurrentLastN();
         int numEndpointsThatFitIn
                 = bitrateController.calcNumEndpointsThatFitIn();
 
@@ -162,7 +162,7 @@ public class VideoChannelLastNAdaptor
                         " to {newN}."));
             }
 
-            channel.setLastN(newn);
+            bitrateController.getLastNController().setCurrentLastN(newn);
 
             decreased = true;
         }
@@ -175,7 +175,7 @@ public class VideoChannelLastNAdaptor
     {
         VideoChannel channel = bitrateController.getChannel();
         Endpoint thisEndpoint = channel.getEndpoint();
-        int lastN = channel.getLastN();
+        int lastN = bitrateController.getLastNController().getCurrentLastN();
         int numEndpointsThatFitIn
                 = bitrateController.calcNumEndpointsThatFitIn();
 
@@ -212,7 +212,7 @@ public class VideoChannelLastNAdaptor
             }
 
             // Increase conservatively, by 1
-            channel.setLastN(lastN + 1);
+            bitrateController.getLastNController().setCurrentLastN(lastN + 1);
 
             increased = true;
         }
@@ -273,7 +273,8 @@ public class VideoChannelLastNAdaptor
         if (lastN < 0 || lastN > endpointCount)
         {
             lastN = endpointCount;
-            channel.setLastN(endpointCount);
+            bitrateController.getLastNController()
+                    .setCurrentLastN(endpointCount);
         }
 
         return lastN;
@@ -302,7 +303,7 @@ public class VideoChannelLastNAdaptor
                 && lastNonZeroLastN != -1
                 && now - lastNonZeroLastN > MAX_STAY_AT_ZERO_MS)
         {
-            channel.setLastN(1);
+            bitrateController.getLastNController().setCurrentLastN(1);
             return false;
         }
 

@@ -487,7 +487,8 @@ public class VideoChannel
 
         if (endpoint.equals(getEndpoint()))
         {
-            if (lastNController.getLastN() >= 0)
+            if (lastNController.getLastN() >= 0 ||
+                    lastNController.getCurrentLastN() >= 0)
             {
                 lastNController.initializeConferenceEndpoints();
                 sendLastNEndpointsChangeEventOnDataChannel(

@@ -64,10 +64,20 @@ public class LastNController
 
     /**
      * The maximum number of endpoints whose video streams will be forwarded
-     * to the endpoint. A value of {@code -1} means that there is no limit, and
-     * all endpoints' video streams will be forwarded.
+     * to the endpoint, as externally configured (by the client, by the focus
+     * agent, or by default configuration). A value of {@code -1} means that
+     * there is no limit, and all endpoints' video streams will be forwarded.
      */
     private int lastN = -1;
+
+    /**
+     * The current limit to the number of endpoints whose video streams will be
+     * forwarded to the endpoint. This value can be changed by videobridge
+     * (i.e. when Adaptive Last N is used), but it must not exceed the value
+     * of {@link #lastN}. A value of {@code -1} means that there is no limit, and
+     * all endpoints' video streams will be forwarded.
+     */
+    private int currentLastN = -1;
 
     /**
      * Whether or not adaptive lastN is in use.
@@ -152,6 +162,11 @@ public class LastNController
 
                 this.lastN = lastN;
 
+                if (lastN >= 0 && (currentLastN < 0 || currentLastN > lastN))
+                {
+                    currentLastN = lastN;
+                }
+
                 if (update)
                 {
                     endpointsToAskForKeyframe = update();
@@ -201,7 +216,7 @@ public class LastNController
      */
     public boolean isForwarded(Channel sourceChannel)
     {
-        if (lastN < 0)
+        if (lastN < 0 && currentLastN < 0)
         {
             // If Last-N is disabled, we forward everything.
             return true;
@@ -413,7 +428,7 @@ public class LastNController
             newConferenceEndpoints = conferenceSpeechActivityEndpoints;
         }
 
-        if (lastN < 0)
+        if (lastN < 0 && currentLastN < 0)
         {
             // Last-N is disabled, we forward everything.
             newForwardedEndpoints.addAll(conferenceSpeechActivityEndpoints);
@@ -424,12 +439,15 @@ public class LastNController
         }
         else
         {
+            // Here we have lastN >= 0 || currentLastN >= 0 which implies
+            // currentLastN >= 0.
+
             // Pinned endpoints are always forwarded.
             newForwardedEndpoints.addAll(getPinnedEndpoints());
             // As long as they are still endpoints in the conference.
             newForwardedEndpoints.retainAll(conferenceSpeechActivityEndpoints);
 
-            if (newForwardedEndpoints.size() > lastN)
+            if (newForwardedEndpoints.size() > currentLastN)
             {
                 // What do we want in this case? It looks like a contradictory
                 // request from the client, but maybe it makes for a good API
@@ -437,11 +455,11 @@ public class LastNController
                 // Unfortunately, this will not play well with Adaptive-Last-N
                 // or changes to Last-N for other reasons.
             }
-            else if (newForwardedEndpoints.size() < lastN)
+            else if (newForwardedEndpoints.size() < currentLastN)
             {
                 for (String endpointId : conferenceSpeechActivityEndpoints)
                 {
-                    if (newForwardedEndpoints.size() < lastN)
+                    if (newForwardedEndpoints.size() < currentLastN)
                     {
                         if (!endpointId.equals(ourEndpointId)
                                 && !newForwardedEndpoints.contains(endpointId))
@@ -489,7 +507,7 @@ public class LastNController
 
         // If lastN is disabled, the endpoints entering forwardedEndpoints were
         // never filtered, so they don't need to be asked for keyframes.
-        if (lastN < 0)
+        if (lastN < 0 && currentLastN < 0)
         {
             enteringEndpoints = null;
         }
@@ -570,5 +588,35 @@ public class LastNController
         }
 
         return null;
+    }
+
+    public int getCurrentLastN()
+    {
+        return currentLastN;
+    }
+
+    public int setCurrentLastN(int currentLastN)
+    {
+        List<String> endpointsToAskForKeyframe;
+
+        synchronized (this)
+        {
+            // Since we have the lock anyway, call update() inside, so it
+            // doesn't have to obtain it again. But keep the call to
+            // askForKeyframes() outside.
+
+            if (lastN >= 0 && lastN < currentLastN)
+            {
+                currentLastN = lastN;
+            }
+
+            this.currentLastN = currentLastN;
+
+            endpointsToAskForKeyframe = update();
+        }
+
+        askForKeyframes(endpointsToAskForKeyframe);
+
+        return currentLastN;
     }
 }
