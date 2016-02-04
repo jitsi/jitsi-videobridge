@@ -110,7 +110,8 @@ public class SimulcastSenderManager
         int ssrc = pkt.getSSRC();
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver(ssrc);
 
-        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
+        if (simulcastReceiver == null
+                || !simulcastReceiver.isSimulcastSignaled())
         {
             // Just forward the packet, we don't receive any simulcast from
             // the peer endpoint.
@@ -120,8 +121,7 @@ public class SimulcastSenderManager
         SimulcastSender simulcastSender
             = getOrCreateSimulcastSender(simulcastReceiver);
 
-        return (simulcastSender != null && simulcastSender.accept(pkt))
-            ? true : false;
+        return simulcastSender != null && simulcastSender.accept(pkt);
     }
 
     /**
@@ -165,8 +165,9 @@ public class SimulcastSenderManager
      */
     private SimulcastReceiver getSimulcastReceiver(int ssrc)
     {
-        Channel channel = simulcastEngine.getVideoChannel()
-            .getContent().findChannel(ssrc & 0xffffffffl);
+        Channel channel
+            = simulcastEngine.getVideoChannel().getContent().findChannel(
+                    ssrc & 0xffffffffL);
 
         if (!(channel instanceof VideoChannel))
         {
@@ -177,9 +178,10 @@ public class SimulcastSenderManager
 
         VideoChannel videoChannel = (VideoChannel) channel;
 
-        SimulcastReceiver simulcastReceiver = videoChannel.getTransformEngine()
-            .getSimulcastEngine().getSimulcastReceiver();
-
-        return simulcastReceiver;
+        return
+            videoChannel
+                .getTransformEngine()
+                    .getSimulcastEngine()
+                        .getSimulcastReceiver();
     }
 }
