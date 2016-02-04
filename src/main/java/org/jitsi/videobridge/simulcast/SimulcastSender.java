@@ -493,5 +493,4 @@ public class SimulcastSender
             react(isUrgent);
         }
     }
-
 }

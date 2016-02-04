@@ -83,8 +83,8 @@ public class SimulcastReceiver
 
     /**
      * The history of the order/sequence of receipt of (video) frames by
-     * {@link #simulcastStreams}. Used in an attempt to speed up the detection of
-     * paused/stopped {@code SimulcastStream}s by counting (video) frames.
+     * {@link #simulcastStreams}. Used in an attempt to speed up the detection
+     * of paused/stopped {@code SimulcastStream}s by counting (video) frames.
      */
     private final List<SimulcastStream> simulcastStreamFrameHistory
         = new LinkedList<>();
@@ -123,12 +123,13 @@ public class SimulcastReceiver
     }
 
     /**
-     * Returns a <tt>SimulcastStream</tt> that is the closest match to the target
-     * order, or null if simulcast hasn't been configured for this receiver.
+     * Returns a <tt>SimulcastStream</tt> that is the closest match to the
+     * target order, or null if simulcast hasn't been configured for this
+     * receiver.
      *
      * @param targetOrder the simulcast stream target order.
-     * @return a <tt>SimulcastStream</tt> that is the closest match to the target
-     * order, or null.
+     * @return a <tt>SimulcastStream</tt> that is the closest match to the
+     * target order, or null.
      */
     public SimulcastStream getSimulcastStream(int targetOrder)
     {
@@ -181,6 +182,7 @@ public class SimulcastReceiver
 
         setSimulcastStreams(streams);
     }
+
     /**
      * Sets the simulcast streams for this receiver and fires an event about it.
      *
@@ -207,9 +209,9 @@ public class SimulcastReceiver
 
        fireSimulcastStreamsSignaled();
 
-        // TODO If simulcastStreams has changed, then simulcastStreamFrameHistory
-        // has very likely become irrelevant. In other words, clear
-        // simulcastStreamFrameHistory.
+        // TODO If simulcastStreams has changed, then
+        // simulcastStreamFrameHistory has very likely become irrelevant. In
+        // other words, clear simulcastStreamFrameHistory.
     }
 
     /**
@@ -355,7 +357,8 @@ public class SimulcastReceiver
                         if (logger.isTraceEnabled())
                         {
                             logger.trace(
-                                    "order-" + acceptedStream.getOrder() + " stream ("
+                                    "order-" + acceptedStream.getOrder()
+                                        + " stream ("
                                         + acceptedStream.getPrimarySSRC()
                                         + ") detected an alien pkt: seqnum "
                                         + pkt.getSequenceNumber() + ", ts "
@@ -368,7 +371,9 @@ public class SimulcastReceiver
                                                 - pkt.getHeaderLength()
                                                 - pkt.getPaddingSize())
                                         + " bytes, "
-                                        + (acceptedStream.isKeyFrame(pkt) ? "key" : "delta")
+                                        + (acceptedStream.isKeyFrame(pkt)
+                                            ? "key"
+                                            : "delta")
                                         + " frame.");
                         }
                     }
@@ -399,12 +404,12 @@ public class SimulcastReceiver
 
         if (acceptedStream.getOrder() != 0 && !acceptedStream.isStreaming)
         {
-            // If the frame-based approach to the detection of stream drops works
-            // (i.e. there will always be at least 1 high quality frame among
-            // SimulcastReceiver#TIMEOUT_ON_FRAME_COUNT consecutive low quality
-            // frames), then it may be argued that a late pkt (i.e. which does not
-            // start a new frame after this SimulcastStream has been stopped) should
-            // not start this SimulcastStream.
+            // If the frame-based approach to the detection of stream drops
+            // works (i.e. there will always be at least 1 high quality frame
+            // among SimulcastReceiver#TIMEOUT_ON_FRAME_COUNT consecutive low
+            // quality frames), then it may be argued that a late pkt (i.e.
+            // which does not start a new frame after this SimulcastStream has
+            // been stopped) should not start this SimulcastStream.
 
             // Do not activate the hq stream if the bitrate estimation is not
             // above 300kbps.
@@ -417,7 +422,8 @@ public class SimulcastReceiver
                     "order-" + acceptedStream.getOrder() + " stream (" +
                         acceptedStream.getPrimarySSRC()
                         + ") resumed on seqnum " + pkt.getSequenceNumber()
-                        + ", " + (acceptedStream.isKeyFrame(pkt) ? "key" : "delta")
+                        + ", "
+                        + (acceptedStream.isKeyFrame(pkt) ? "key" : "delta")
                         + " frame.");
             }
 
@@ -510,8 +516,9 @@ public class SimulcastReceiver
     {
         if (simulcastStream == null)
         {
-            logger.warn("Didn't ask for key frame because the simulcastStream" +
-                    " is null!");
+            logger.warn(
+                    "Didn't ask for key frame because the simulcastStream is"
+                        + " null!");
             return;
         }
 
@@ -523,8 +530,9 @@ public class SimulcastReceiver
                 SimulcastEngine peerSM = getSimulcastEngine();
                 if (peerSM == null)
                 {
-                    logger.warn("Requested a key frame but the peer simulcast " +
-                            "manager is null!");
+                    logger.warn(
+                            "Requested a key frame but the peer simulcast "
+                                + "manager is null!");
                     return;
                 }
                 else
@@ -547,8 +555,8 @@ public class SimulcastReceiver
      * peer. The determination is based on counting frames and is triggered by
      * the receipt of (a piece of) a new (video) frame by {@code cause}.
      *
-     * @param cause the {@code SimulcastStream} which has received (a piece of) a
-     * new (video) frame and has thus triggered a check on {@code effect}
+     * @param cause the {@code SimulcastStream} which has received (a piece of)
+     * a new (video) frame and has thus triggered a check on {@code effect}
      * @param pkt the {@code RawPacket} which was received by {@code cause} and
      * possibly influenced the decision to trigger a check on {@code effect}
      * @param effect the {@code SimulcastStream} which is to be checked whether
@@ -580,8 +588,8 @@ public class SimulcastReceiver
             {
                 // Since effect has been determined to have been paused/stopped
                 // by the remote peer, its possible presence in
-                // simulcastStreamFrameHistory is irrelevant now. In other words,
-                // remove effect from simulcastStreamFrameHistory.
+                // simulcastStreamFrameHistory is irrelevant now. In other
+                // words, remove effect from simulcastStreamFrameHistory.
                 while (it.hasNext())
                 {
                     if (it.next() == effect)
@@ -595,17 +603,19 @@ public class SimulcastReceiver
                 if (logger.isDebugEnabled())
                 {
                     logger.debug(
-                        "order-" + effect.getOrder() + " stream (" + effect.getPrimarySSRC()
-                            + ") stopped on seqnum " + pkt.getSequenceNumber()
-                            + ".");
+                            "order-" + effect.getOrder() + " stream ("
+                                + effect.getPrimarySSRC()
+                                + ") stopped on seqnum "
+                                + pkt.getSequenceNumber() + ".");
                 }
 
-                // XXX(gp) One could try to ask for a key frame now, if the packet that
-                // caused the resuming of the high quality stream isn't a key frame; But
-                // the correct approach is to handle  this with the SimulcastSender
-                // because stream switches happen not only when a stream resumes or drops
-                // but also when the selected endpoint at a given receiving endpoint
-                // changes, for example.
+                // XXX(gp) One could try to ask for a key frame now, if the
+                // packet that caused the resuming of the high quality stream
+                // isn't a key frame; But the correct approach is to handle this
+                // with the SimulcastSender because stream switches happen not
+                // only when a stream resumes or drops but also when the
+                // selected endpoint at a given receiving endpoint changes, for
+                // example.
 
                 // TODO merge with other fire event
                 fireSimulcastStreamsChangedAsync(effect);
