@@ -178,6 +178,24 @@ public class LastNController
     }
 
     /**
+     * Closes this {@link LastNController}.
+     */
+    public void close()
+    {
+        if (bitrateController != null)
+        {
+            try
+            {
+                bitrateController.close();
+            }
+            finally
+            {
+                bitrateController = null;
+            }
+        }
+    }
+
+    /**
      * Sets the list of "pinned" endpoints (i.e. endpoints for which video
      * should always be forwarded, regardless of {@code lastN}).
      * @param newPinnedEndpointIds the list of endpoint IDs to set.
@@ -569,7 +587,7 @@ public class LastNController
         if (logger.isDebugEnabled())
         {
             logger.debug("Initialized the list of endpoints: "
-                             + conferenceSpeechActivityEndpoints.toString());
+                                 + conferenceSpeechActivityEndpoints.toString());
         }
     }
 

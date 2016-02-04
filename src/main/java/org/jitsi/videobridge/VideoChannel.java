@@ -500,6 +500,21 @@ public class VideoChannel
     }
 
     /**
+     * {@inheritDoc}
+     * Closes the {@link LastNController} before expiring the channel.
+     */
+    @Override
+    public void expire()
+    {
+        if (lastNController != null)
+        {
+            lastNController.close();
+        }
+
+        super.expire();
+    }
+
+    /**
      * Sends a message with <tt>colibriClass</tt>
      * <tt>LastNEndpointsChangeEvent</tt> to the <tt>Endpoint</tt> of this
      * <tt>VideoChannel</tt> in order to notify it that the list/set of

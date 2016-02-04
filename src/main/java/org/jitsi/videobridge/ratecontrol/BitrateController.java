@@ -19,6 +19,7 @@ import java.util.*;
 
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
@@ -42,12 +43,19 @@ import org.jitsi.videobridge.simulcast.*;
  * @author George Politis
  */
 public class BitrateController
-    implements BandwidthEstimator.Listener
+    implements BandwidthEstimator.Listener,
+               RecurringProcessible
 {
     /**
      * Whether the values for the constants have been initialized or not.
      */
     private static boolean configurationInitialized = false;
+
+    /**
+     * The interval at which {@link #process()} should be called, in
+     * milliseconds.
+     */
+    private static final int PROCESS_INTERVAL_MS = 200;
 
     /**
      * The constant that specifies the minimum amount of time in milliseconds
@@ -139,6 +147,12 @@ public class BitrateController
             = BitrateController.class.getName() + ".REMB_MULT_CONSTANT";
 
     /**
+     * The {@link RecurringProcessibleExecutor} which will periodically call
+     * {@link #process()} on active {@link BitrateController} instances.
+     */
+    private static RecurringProcessibleExecutor recurringProcessibleExecutor;
+
+    /**
      * Initializes the constants used by this class from the configuration.
      */
     private static void initializeConfiguration(ConfigurationService cfg)
@@ -149,6 +163,7 @@ public class BitrateController
                 return;
             configurationInitialized = true;
 
+            recurringProcessibleExecutor = new RecurringProcessibleExecutor();
 
             if (cfg != null)
             {
@@ -232,6 +247,17 @@ public class BitrateController
     private final LastNController lastNController;
 
     /**
+     * The latest estimation of the available bandwidth as reported by our
+     * {@link Channel}'s {@link MediaStream}'s {@link BandwidthEstimator}.
+     */
+    private long latestBwe = -1;
+
+    /**
+     * The time that {@link #process()} was last called.
+     */
+    private long lastUpdateTime = -1;
+
+    /**
      * Initializes a new <tt>BitrateController</tt> instance.
      *
      * @param channel the <tt>VideoChannel</tt> for which the new instance is to
@@ -255,6 +281,16 @@ public class BitrateController
                 .getOrCreateBandwidthEstimator();
         be.addListener(this);
 
+        recurringProcessibleExecutor.registerRecurringProcessible(this);
+    }
+
+    /**
+     * Releases resources used by this instance and stops the periodic execution
+     * of {@link #process()}.
+     */
+    public void close()
+    {
+        recurringProcessibleExecutor.deRegisterRecurringProcessible(this);
     }
 
     int calcNumEndpointsThatFitIn()
@@ -373,14 +409,26 @@ public class BitrateController
     @Override
     public void bandwidthEstimationChanged(long remb)
     {
+        latestBwe = remb;
+    }
+
+    /**
+     * {@inheritDoc}
+     * @return Zero.
+     */
+    @Override
+    public long process()
+    {
+        long remb = latestBwe;
+        long now = System.currentTimeMillis();
+        lastUpdateTime = now;
+
         BitrateAdaptor bitrateAdaptor = getOrCreateBitrateAdaptor();
         if (bitrateAdaptor == null)
         {
             // A bitrate adaptor is not set. It makes no sense to continue.
-            return;
+            return 0;
         }
-
-        long now = System.currentTimeMillis();
 
         // The number of endpoints this channel is currently receiving
         int receivingEndpointCount
@@ -396,11 +444,13 @@ public class BitrateController
         // Do not change lastN in the initial interval (give time to the
         // incoming REMBs to "ramp-up").
         if (now - firstRemb <= INITIAL_INTERVAL_MS)
-            return;
+        {
+            return 0;
+        }
 
         // Touch the adaptor and give it a chance to prevent bitrate adaptation.
         if (!bitrateAdaptor.touch())
-            return;
+            return 0;
 
         int numEndpointsThatFitIn = calcNumEndpointsThatFitIn();
         if (numEndpointsThatFitIn < receivingEndpointCount)
@@ -440,6 +490,8 @@ public class BitrateController
                 bitrateAdaptor.increase();
             }
         }
+
+        return 0;
     }
 
     LastNController getLastNController()
@@ -447,7 +499,17 @@ public class BitrateController
         return lastNController;
     }
 
-    /**
+    @Override
+    public long getTimeUntilNextProcess()
+    {
+        return
+                (lastUpdateTime < 0L)
+                        ? 0L
+                        : lastUpdateTime + PROCESS_INTERVAL_MS
+                        - System.currentTimeMillis();
+    }
+
+/**
      * Saves the received REMB values along with their time of reception and
      * allows getting the average value over a certain period.
      *
