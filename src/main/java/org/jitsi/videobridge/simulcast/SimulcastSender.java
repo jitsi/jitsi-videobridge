@@ -191,8 +191,8 @@ public class SimulcastSender
             if (logger.isDebugEnabled())
             {
                 logger.debug(
-                    Arrays.toString(
-                        Thread.currentThread().getStackTrace()));
+                        Arrays.toString(
+                                Thread.currentThread().getStackTrace()));
             }
 
             return null;
@@ -210,11 +210,11 @@ public class SimulcastSender
         if (sendEndpoint == null)
         {
             logger.warn("Send endpoint is null!");
-
             if (logger.isDebugEnabled())
             {
-                logger.debug(Arrays.toString(
-                    Thread.currentThread().getStackTrace()));
+                logger.debug(
+                        Arrays.toString(
+                                Thread.currentThread().getStackTrace()));
             }
         }
 
@@ -232,9 +232,9 @@ public class SimulcastSender
 
         // FIXME the urgent parameter is useless, this method can determine
         // whether or not this is an urgent switch.
-        SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
         SimulcastStream closestMatch
-            = simulcastReceiver.getSimulcastStream(targetOrder);
+            = getSimulcastReceiver().getSimulcastStream(targetOrder);
+
         sm.receive(closestMatch, urgent);
     }
 

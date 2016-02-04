@@ -214,7 +214,7 @@ public class SwitchingSendMode
             // TODO(gp) We may want to move this code somewhere more centralized
             // to take into account last-n etc.
 
-            Integer key = Integer.valueOf(pkt.getSSRC());
+            Integer key = pkt.getSSRC();
             CyclicCounter counter = dropped.getOrCreate(key, 0x800);
             accept = counter.cyclicallyIncrementAndGet() < 8;
         }
@@ -325,14 +325,15 @@ public class SwitchingSendMode
 
         SimulcastReceiver simulcastReceiver
             = getSimulcastSender().getSimulcastReceiver();
-        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
+        if (simulcastReceiver == null
+                || !simulcastReceiver.isSimulcastSignaled())
         {
             logger.warn("doesn't have any simulcast streams.");
             return;
         }
 
-        SimulcastStream next = simulcastReceiver == null ? null
-            : simulcastReceiver.getSimulcastStream(options.getNextOrder());
+        SimulcastStream next
+            = simulcastReceiver.getSimulcastStream(options.getNextOrder());
 
         // Do NOT switch to hq if it's not streaming.
         if (next == null
@@ -351,8 +352,6 @@ public class SwitchingSendMode
             // and forget "previous" next, we're sticking with current.
             this.weakNext = null;
             this.seenNext = 0;
-
-            return;
         }
         else
         {
@@ -368,9 +367,6 @@ public class SwitchingSendMode
                 {
                     next.askForKeyframe();
                 }
-                else
-                {
-                }
             }
 
 
@@ -383,9 +379,6 @@ public class SwitchingSendMode
                 if (getOverride() == null)
                 {
                     this.simulcastStreamsChanged(next);
-                }
-                else
-                {
                 }
 
                 this.weakCurrent = new WeakReference<>(next);
@@ -402,9 +395,6 @@ public class SwitchingSendMode
                 if (getOverride() == null)
                 {
                     this.simulcastStreamsChanging(next);
-                }
-                else
-                {
                 }
 
                 // If the simulcast streams we receive has changed (hasn't
@@ -434,7 +424,7 @@ public class SwitchingSendMode
             // expire the previous simulcast stream.
             if (next != null)
             {
-                this.seenNext++;
+                seenNext++;
 
                 // NOTE(gp) not unexpectedly we have observed that 250 high
                 // quality packets make 5 seconds to arrive (approx), then 250
@@ -447,18 +437,15 @@ public class SwitchingSendMode
                 // to reflect the different relative rates of incoming packets
                 // of the different simulcast streams we receive.
 
-                if (this.seenNext > this.minNextSeen * Math.pow(2, next.getOrder()))
+                if (seenNext > minNextSeen * Math.pow(2, next.getOrder()))
                 {
                     if (getOverride() == null)
                     {
-                        this.simulcastStreamsChanged(next);
-                    }
-                    else
-                    {
+                        simulcastStreamsChanged(next);
                     }
 
-                    this.weakCurrent = weakNext;
-                    this.weakNext = null;
+                    weakCurrent = weakNext;
+                    weakNext = null;
                 }
             }
         }
@@ -658,7 +645,8 @@ public class SwitchingSendMode
         SimulcastReceiver simulcastReceiver
             = this.getSimulcastSender().getSimulcastReceiver();
 
-        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
+        if (simulcastReceiver == null
+                || !simulcastReceiver.isSimulcastSignaled())
         {
             return;
         }
@@ -679,8 +667,8 @@ public class SwitchingSendMode
         }
         else
         {
-            SimulcastStream override = simulcastReceiver == null ? null
-                : simulcastReceiver.getSimulcastStream(overrideOrder);
+            SimulcastStream override
+                = simulcastReceiver.getSimulcastStream(overrideOrder);
             if (override != null)
             {
                 synchronized (sendStreamsSyncRoot)
@@ -697,25 +685,29 @@ public class SwitchingSendMode
     /**
      * A thread safe cyclic counter.
      */
-    static class CyclicCounter {
-
-        private final int maxVal;
+    static class CyclicCounter
+    {
         private final AtomicInteger ai = new AtomicInteger(0);
 
-        public CyclicCounter(int maxVal) {
+        private final int maxVal;
+
+        public CyclicCounter(int maxVal)
+        {
             this.maxVal = maxVal;
         }
 
-        public int cyclicallyIncrementAndGet() {
+        public int cyclicallyIncrementAndGet()
+        {
             int curVal, newVal;
-            do {
+            do
+            {
                 curVal = this.ai.get();
                 newVal = (curVal + 1) % this.maxVal;
                 // note that this doesn't guarantee fairness
-            } while (!this.ai.compareAndSet(curVal, newVal));
+            }
+            while (!this.ai.compareAndSet(curVal, newVal));
             return newVal;
         }
-
     }
 
     /**
