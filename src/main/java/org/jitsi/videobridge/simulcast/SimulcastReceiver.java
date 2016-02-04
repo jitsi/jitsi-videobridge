@@ -140,18 +140,20 @@ public class SimulcastReceiver
         }
 
         // Iterate through the simulcast streams that we own and return the one
-        // that matches best the targetOrder parameter.
+        // that matches the targetOrder parameter best.
         SimulcastStream next = simStreams[0];
-        for (int i = 1; i < Math.min(targetOrder + 1, simStreams.length); i++)
+
+        for (int i = 1, end = Math.min(targetOrder + 1, simStreams.length);
+                i < end;
+                i++)
         {
-            if (!simStreams[i].isStreaming())
-            {
+            SimulcastStream ss = simStreams[i];
+
+            if (ss.isStreaming())
+                next = ss;
+            else
                 break;
-            }
-
-            next = simStreams[i];
         }
-
         return next;
     }
 
