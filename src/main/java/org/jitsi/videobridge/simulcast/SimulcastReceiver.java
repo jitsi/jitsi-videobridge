@@ -373,7 +373,8 @@ public class SimulcastReceiver
                         }
                     }
                 }
-                else if (pktSequenceNumber > acceptedStream.lastPktSequenceNumber)
+                else if (pktSequenceNumber
+                        > acceptedStream.lastPktSequenceNumber)
                 {
                     // It looks like at least one pkt was lost (or delayed). We
                     // cannot rely on lastPktMarker.
@@ -616,17 +617,15 @@ public class SimulcastReceiver
      */
     private void fireSimulcastStreamsSignaled()
     {
-
         // This can be synchronous as its not called from inside a time
         // critical method (like reading/writing packets).
-
         for (WeakReference<SimulcastReceiver.Listener> weakNext : weakListeners)
         {
             SimulcastReceiver.Listener next = weakNext.get();
             if (next == null)
             {
                 // Clean-up the list. Expensive operation.
-                weakListeners.remove(next);
+                weakListeners.remove(weakNext);
             }
             else
             {
@@ -681,9 +680,6 @@ public class SimulcastReceiver
         @Override
         public void run()
         {
-            Iterator<WeakReference<SimulcastReceiver.Listener>>
-                it = weakListeners.iterator();
-
             for (WeakReference<SimulcastReceiver.Listener> weakNext
                     : weakListeners)
             {
@@ -691,7 +687,7 @@ public class SimulcastReceiver
                 if (next == null)
                 {
                     // Clean-up the list. Expensive operation.
-                    weakListeners.remove(next);
+                    weakListeners.remove(weakNext);
                 }
                 else
                 {
