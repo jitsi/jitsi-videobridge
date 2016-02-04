@@ -726,18 +726,25 @@ public class SwitchingSendMode
         private final Map<Integer, CyclicCounter> instances
             = new ConcurrentHashMap<>();
 
-        private Lock createLock = new ReentrantLock();
+        private final Lock createLock = new ReentrantLock();
 
-        CyclicCounter getOrCreate(Integer key, int maxVal) {
+        CyclicCounter getOrCreate(Integer key, int maxVal)
+        {
             CyclicCounter instance = instances.get(key);
-            if (instance == null) {
+
+            if (instance == null)
+            {
                 createLock.lock();
-                try {
-                    if (instance == null) {
+                try
+                {
+                    if ((instance = instances.get(key)) == null)
+                    {
                         instance = new CyclicCounter(maxVal);
                         instances.put(key, instance);
                     }
-                } finally {
+                }
+                finally
+                {
                     createLock.unlock();
                 }
             }
