@@ -332,14 +332,13 @@ public class SwitchingSendMode
             return;
         }
 
-        SimulcastStream next
-            = simulcastReceiver.getSimulcastStream(options.getNextOrder());
+        SimulcastStream next = simulcastReceiver.getSimulcastStream(nextOrder);
 
         // Do NOT switch to hq if it's not streaming.
         if (next == null
-            || (next.getOrder()
-            != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
-            && !next.isStreaming()))
+                || (next.getOrder()
+                        != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
+                    && !next.isStreaming()))
         {
             return;
         }
@@ -369,9 +368,7 @@ public class SwitchingSendMode
                 }
             }
 
-
-            if (options.isUrgent() || current == null
-                || this.minNextSeen < 1)
+            if (options.isUrgent() || current == null || this.minNextSeen < 1)
             {
                 // Receiving simulcast streams have brutally changed. Create
                 // and send an event through data channels to the receiving
@@ -678,7 +675,6 @@ public class SwitchingSendMode
                     this.simulcastStreamsChanged(override);
                 }
             }
-
         }
     }
 
