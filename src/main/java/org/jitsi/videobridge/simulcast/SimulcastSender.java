@@ -78,8 +78,17 @@ public class SimulcastSender
 
     /**
      * The simulcast target order for this <tt>SimulcastSender</tt>.
+     *
+     * XXX Defaulting to the lowest-quality simulcast stream until we are
+     * explicitly told to switch to a higher-quality simulcast stream is one way
+     * to go, of course. But such a default presents the problem that a remote
+     * peer will see the lowest quality possible for a noticeably long period of
+     * time because its command to switch to the highest quality possible can
+     * only come via its data/SCTP channel and that may take a very (and
+     * unpredictably) long time to set up. That is why we may default to the
+     * highest-quality simulcast stream here.
      */
-    private int targetOrder;
+    private int targetOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
 
     /**
      * Indicates whether this <tt>SimulcastSender</tt> has been initialized or
@@ -312,20 +321,24 @@ public class SimulcastSender
             return;
         }
 
-        int hqOrder = simStreams.length - 1;
-        if (newEndpoint == getSendEndpoint() && targetOrder != hqOrder)
-        {
-            targetOrder = hqOrder;
-            react(false);
-        }
-
+        Endpoint sendEndpoint = getSendEndpoint();
         // Send LQ stream for the previously selected endpoint.
-        if (oldEndpoint == getSendEndpoint()
-                && targetOrder != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE)
-        {
-            targetOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE;
+        int lqOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE;
+        // XXX Practically, we should react once anyway. But since we have to if
+        // statements, it is technically possible to react twice. Which is
+        // unnecessary.
+        int oldTargetOrder = targetOrder;
+
+        if (oldEndpoint == sendEndpoint && targetOrder != lqOrder)
+            targetOrder = lqOrder;
+
+        int hqOrder = simStreams.length - 1;
+
+        if (newEndpoint == sendEndpoint && targetOrder != hqOrder)
+            targetOrder = hqOrder;
+
+        if (oldTargetOrder != targetOrder)
             react(false);
-        }
     }
 
     /**
