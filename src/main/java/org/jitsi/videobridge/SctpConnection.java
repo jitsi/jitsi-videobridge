@@ -64,13 +64,13 @@ public class SctpConnection
      * DTLS transport buffer size.
      * Note: randomly chosen.
      */
-    private final static int DTLS_BUFFER_SIZE = 2048;
+    private static final int DTLS_BUFFER_SIZE = 2048;
 
     /**
      * Switch used for debugging SCTP traffic purposes.
      * FIXME to be removed
      */
-    private final static boolean LOG_SCTP_PACKETS = false;
+    private static final boolean LOG_SCTP_PACKETS = false;
 
     /**
      * The logger
@@ -81,21 +81,20 @@ public class SctpConnection
      * Message type used to acknowledge WebRTC data channel allocation on SCTP
      * stream ID on which <tt>MSG_OPEN_CHANNEL</tt> message arrives.
      */
-    private final static int MSG_CHANNEL_ACK = 0x2;
+    private static final int MSG_CHANNEL_ACK = 0x2;
 
-    private static final byte[] MSG_CHANNEL_ACK_BYTES
-        = new byte[] { MSG_CHANNEL_ACK };
+    private static final byte[] MSG_CHANNEL_ACK_BYTES = { MSG_CHANNEL_ACK };
 
     /**
      * Message with this type sent over control PPID in order to open new WebRTC
      * data channel on SCTP stream ID that this message is sent.
      */
-    private final static int MSG_OPEN_CHANNEL = 0x3;
+    private static final int MSG_OPEN_CHANNEL = 0x3;
 
     /**
      * SCTP transport buffer size.
      */
-    private final static int SCTP_BUFFER_SIZE = DTLS_BUFFER_SIZE - 13;
+    private static final int SCTP_BUFFER_SIZE = DTLS_BUFFER_SIZE - 13;
 
     /**
      * The pool of <tt>Thread</tt>s which run <tt>SctpConnection</tt>s.
@@ -215,10 +214,12 @@ public class SctpConnection
             Boolean initiator)
         throws Exception
     {
-        super(content, id,
-              channelBundleId,
-              IceUdpTransportPacketExtension.NAMESPACE,
-              initiator);
+        super(
+                content,
+                id,
+                channelBundleId,
+                IceUdpTransportPacketExtension.NAMESPACE,
+                initiator);
 
         setEndpoint(endpoint.getID());
 
@@ -242,10 +243,8 @@ public class SctpConnection
         {
             synchronized (listeners)
             {
-                if(!listeners.contains(listener))
-                {
+                if (!listeners.contains(listener))
                     listeners.add(listener);
-                }
             }
         }
     }
@@ -272,12 +271,10 @@ public class SctpConnection
         }
         finally
         {
-            if (iceSocket != null)
-            {
-                // It is now the responsibility of the transport manager to
-                // close the socket.
-                //iceUdpSocket.close();
-            }
+            // It is now the responsibility of the transport manager to close
+            // iceSocket.
+//            if (iceSocket != null)
+//                iceSocket.close();
         }
     }
 
@@ -303,8 +300,8 @@ public class SctpConnection
         }
         else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
         {
-            //TODO: support RawUdp once RawUdpTransportManager is updated
-            //return new RawUdpTransportManager(this);
+            //TODO Support RawUdp once RawUdpTransportManager is updated.
+//            return new RawUdpTransportManager(this);
             throw new IllegalArgumentException(
                     "Unsupported Jingle transport " + xmlNamespace);
         }
@@ -381,17 +378,14 @@ public class SctpConnection
                 // Channel that runs on sid 0
                 def = channels.get(0);
                 if (def == null)
-                {
                     def = openChannel(0, 0, 0, 0, "default");
-                }
-                // Pawel Domas: Must be acknowledged before use
-                /*
-                 * XXX Lyubomir Marinov: We're always sending ordered. According
-                 * to "WebRTC Data Channel Establishment Protocol", we can start
-                 * sending messages containing user data after the
-                 * DATA_CHANNEL_OPEN message has been sent without waiting for
-                 * the reception of the corresponding DATA_CHANNEL_ACK message.
-                 */
+
+                // Pawel Domas: Must be acknowledged before use.
+                // XXX Lyubomir Marinov: We're always sending ordered. According
+                // to "WebRTC Data Channel Establishment Protocol", we can start
+                // sending messages containing user data after the
+                // DATA_CHANNEL_OPEN message has been sent without waiting for
+                // the reception of the corresponding DATA_CHANNEL_ACK message.
 //                if (!def.isAcknowledged())
 //                    def = null;
             }
@@ -490,10 +484,8 @@ public class SctpConnection
     private void notifyChannelOpenedInEventDispatcher(
             WebRtcDataStream dataChannel)
     {
-        /*
-         * When executing asynchronously in eventDispatcher, it is technically
-         * possible that this SctpConnection may have expired by now.
-         */
+        // When executing asynchronously in eventDispatcher, it is technically
+        // possible that this SctpConnection may have expired by now.
         if (!isExpired())
         {
             WebRtcDataStreamListener[] ls = getChannelListeners();
@@ -501,9 +493,7 @@ public class SctpConnection
             if (ls != null)
             {
                 for (WebRtcDataStreamListener l : ls)
-                {
                     l.onChannelOpened(this, dataChannel);
-                }
             }
         }
     }
@@ -546,9 +536,7 @@ public class SctpConnection
             if (ls != null)
             {
                 for(WebRtcDataStreamListener l : ls)
-                {
                     l.onSctpConnectionReady(this);
-                }
             }
         }
     }
@@ -639,10 +627,8 @@ public class SctpConnection
                             + " proto: " + protocol);
             }
 
-            if(channels.containsKey(sid))
-            {
+            if (channels.containsKey(sid))
                 logger.error("Channel on sid: " + sid + " already exists");
-            }
 
             WebRtcDataStream newChannel
                 = new WebRtcDataStream(sctpSocket, sid, label, true);
@@ -680,9 +666,8 @@ public class SctpConnection
                                    SctpNotification notification)
     {
         if (logger.isDebugEnabled())
-        {
             logger.debug("socket=" + socket + "; notification=" + notification);
-        }
+
         switch (notification.sn_type)
         {
         case SctpNotification.SCTP_ASSOC_CHANGE:
@@ -820,13 +805,11 @@ public class SctpConnection
      * @throws IOException if IO error occurs.
      */
     public synchronized WebRtcDataStream openChannel(
-            int type, int prio, long reliab, int sid,  String label)
+            int type, int prio, long reliab, int sid, String label)
         throws IOException
     {
-        if(channels.containsKey(sid))
-        {
+        if (channels.containsKey(sid))
             throw new IOException("Channel on sid: " + sid + " already exists");
-        }
 
         // Label Length & Label
         byte[] labelBytes;
@@ -840,20 +823,13 @@ public class SctpConnection
         else
         {
             labelBytes = label.getBytes("UTF-8");
-            labelByteLength = labelBytes.length;
-            if (labelByteLength > 0xFFFF)
-                labelByteLength = 0xFFFF;
+            labelByteLength = Math.min(labelBytes.length, 0xFFFF);
         }
 
         // Protocol Length & Protocol
         String protocol = WEBRTC_DATA_CHANNEL_PROTOCOL;
         byte[] protocolBytes = protocol.getBytes("UTF-8");
-        int protocolByteLength = protocolBytes.length;
-
-        if (protocolByteLength > 0xFFFF)
-        {
-            protocolByteLength = 0xFFFF;
-        }
+        int protocolByteLength = Math.min(protocolBytes.length, 0xFFFF);
 
         ByteBuffer packet
             = ByteBuffer.allocate(12 + labelByteLength + protocolByteLength);
@@ -873,22 +849,16 @@ public class SctpConnection
         packet.putShort((short) protocolByteLength);
         // Label
         if(labelByteLength != 0)
-        {
             packet.put(labelBytes, 0, labelByteLength);
-        }
         // Protocol
         if (protocolByteLength != 0)
-        {
             packet.put(protocolBytes, 0, protocolByteLength);
-        }
 
         int sentCount
             = sctpSocket.send(packet.array(), true, sid, WEB_RTC_PPID_CTRL);
 
-        if(sentCount != packet.capacity())
-        {
+        if (sentCount != packet.capacity())
             throw new IOException("Failed to open new chanel on sid: " + sid);
-        }
 
         WebRtcDataStream channel
             = new WebRtcDataStream(sctpSocket, sid, label, false);
@@ -919,10 +889,10 @@ public class SctpConnection
         throws IOException
     {
         DtlsControlImpl dtlsControl
-                = (DtlsControlImpl) getTransportManager().getDtlsControl(this);
+            = (DtlsControlImpl) getTransportManager().getDtlsControl(this);
         DtlsTransformEngine engine = dtlsControl.getTransformEngine();
         final DtlsPacketTransformer transformer
-                = (DtlsPacketTransformer) engine.getRTPTransformer();
+            = (DtlsPacketTransformer) engine.getRTPTransformer();
 
         byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
 
@@ -1099,9 +1069,7 @@ public class SctpConnection
         catch (SocketException ex)
         {
             if (!"Socket closed".equals(ex.getMessage()))
-            {
                 throw ex;
-            }
         }
         finally
         {
@@ -1129,11 +1097,8 @@ public class SctpConnection
     {
         // Send ACK
         byte[] ack = MSG_CHANNEL_ACK_BYTES;
-        int sendAck = sctpSocket.send(ack, true, sid, WEB_RTC_PPID_CTRL);
 
-        if(sendAck != ack.length)
-        {
+        if (sctpSocket.send(ack, true, sid, WEB_RTC_PPID_CTRL) != ack.length)
             logger.error("Failed to send open channel confirmation");
-        }
     }
 }
