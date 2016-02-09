@@ -1035,7 +1035,7 @@ public class SctpConnection
                     = new IceTcpSocketWrapper(connector.getDataTCPSocket());
         }
 
-        DatagramPacket rcvPacket
+        DatagramPacket recv
             = new DatagramPacket(receiveBuffer, 0, receiveBuffer.length);
 
         // Receive loop, breaks when SCTP socket is closed
@@ -1043,38 +1043,56 @@ public class SctpConnection
         {
             do
             {
-                iceSocket.receive(rcvPacket);
+                iceSocket.receive(recv);
 
-                RawPacket raw
-                    = new RawPacket(
-                            rcvPacket.getData(),
-                            rcvPacket.getOffset(),
-                            rcvPacket.getLength());
+                RawPacket[] send
+                    = {
+                        new RawPacket(
+                                recv.getData(),
+                                recv.getOffset(),
+                                recv.getLength())
+                    };
 
-                raw = transformer.reverseTransform(raw);
+                send = transformer.reverseTransform(send);
                 // Check for app data
-                if (raw == null)
+                if (send == null || send.length == 0)
                     continue;
 
                 if(LOG_SCTP_PACKETS)
                 {
-                    LibJitsi.getPacketLoggingService().logPacket(
-                            PacketLoggingService.ProtocolName.ICE4J,
-                            new byte[] { 0,0,0, (byte) (debugId +1) },
-                            remoteSctpPort,
-                            new byte[] { 0,0,0, (byte) debugId },
-                            5000,
-                            PacketLoggingService.TransportName.UDP,
-                            false,
-                            raw.getBuffer(), raw.getOffset(), raw.getLength());
+                    PacketLoggingService pktLogging
+                        = LibJitsi.getPacketLoggingService();
+                    byte[] srcAddr
+                        = new byte[] { 0, 0, 0, (byte) (debugId + 1) };
+                    byte[] dstAddr = new byte[] { 0, 0, 0, (byte) debugId };
+
+                    for (RawPacket s : send)
+                    {
+                        if (s == null)
+                            continue;
+
+                        pktLogging.logPacket(
+                                PacketLoggingService.ProtocolName.ICE4J,
+                                srcAddr, remoteSctpPort,
+                                dstAddr, 5000,
+                                PacketLoggingService.TransportName.UDP,
+                                false,
+                                s.getBuffer(), s.getOffset(), s.getLength());
+                    }
                 }
 
                 if (sctpSocket == null)
                     break;
 
                 // Pass network packet to SCTP stack
-                sctpSocket.onConnIn(
-                    raw.getBuffer(), raw.getOffset(), raw.getLength());
+                for (RawPacket s : send)
+                {
+                    if (s != null)
+                    {
+                        sctpSocket.onConnIn(
+                                s.getBuffer(), s.getOffset(), s.getLength());
+                    }
+                }
             }
             while (true);
         }
