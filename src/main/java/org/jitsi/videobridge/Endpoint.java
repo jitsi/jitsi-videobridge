@@ -540,12 +540,7 @@ public class Endpoint
                             + " {pinnedId}."));
         }
 
-        List<String> newPinnedIDList = Collections.EMPTY_LIST;
-        if (newPinnedEndpointID == null || "".equals(newPinnedEndpointID))
-        {
-            newPinnedIDList = Collections.singletonList(newPinnedEndpointID);
-        }
-
+        List<String> newPinnedIDList = (newPinnedEndpointID == null) ? Collections.EMPTY_LIST : Collections.singletonList(newPinnedEndpointID);
         pinnedEndpointsChanged(newPinnedIDList);
     }
 

@@ -494,8 +494,6 @@ public class VideoChannel
                 sendLastNEndpointsChangeEventOnDataChannel(
                         lastNController.getForwardedEndpoints(), null);
             }
-
-            updateInLastN(this);
         }
     }
 
