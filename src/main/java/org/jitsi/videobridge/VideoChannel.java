@@ -915,16 +915,18 @@ public class VideoChannel
 
         }
 
-        // FID groups have been saved in RtpChannel. Make sure any changes are
-        // propagated to the appropriate SimulcastStream-s.
-        for (Map.Entry<Long, Long> entry : this.fidSourceGroups.entrySet())
-        {
-            SimulcastStream simulcastStream = ssrc2stream.get(entry.getKey());
-            simulcastStream.setRTXSSRC(entry.getValue());
+        if (simulcastStreams != null) {
+            // FID groups have been saved in RtpChannel. Make sure any changes are
+            // propagated to the appropriate SimulcastStream-s.
+            for (Map.Entry<Long, Long> entry : this.fidSourceGroups.entrySet())
+            {
+                SimulcastStream simulcastStream = ssrc2stream.get(entry.getKey());
+                simulcastStream.setRTXSSRC(entry.getValue());
+            }
+        
+            simulcastEngine
+                .getSimulcastReceiver().setSimulcastStreams(simulcastStreams);
         }
-
-        simulcastEngine
-            .getSimulcastReceiver().setSimulcastStreams(simulcastStreams);
     }
 
     /**
