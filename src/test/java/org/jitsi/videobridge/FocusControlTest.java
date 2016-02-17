@@ -74,10 +74,32 @@ public class FocusControlTest
         assertTrue(respIq instanceof ColibriConferenceIQ);
     }
 
+    private static void expectResult(HealthCheckIQ healthIq)
+        throws Exception
+    {
+        IQ respIq = bridge.handleHealthCheckIQ(healthIq);
+
+        assertEquals(IQ.Type.RESULT, respIq.getType());
+    }
+
     private static void expectNotAuthorized(ColibriConferenceIQ confIq)
         throws Exception
     {
         IQ respIq = bridge.handleColibriConferenceIQ(confIq);
+
+        Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
+
+        assertNotNull(respIq);
+        assertEquals(IQ.Type.ERROR, respIq.getType());
+        assertEquals(
+            XMPPError.Condition.not_authorized.toString(),
+            respIq.getError().getCondition());
+    }
+
+    private static void expectNotAuthorized(HealthCheckIQ healthIq)
+        throws Exception
+    {
+        IQ respIq = bridge.handleHealthCheckIQ(healthIq);
 
         Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
 
@@ -207,5 +229,14 @@ public class FocusControlTest
         expectNotAuthorized(
             ColibriUtilities.createConferenceIq(
                 "fdfsgv1@auth.domain23.com/pc3"));
+
+        // Check for HealthCheckIQ
+        HealthCheckIQ healthCheckIQ = new HealthCheckIQ();
+
+        healthCheckIQ.setFrom("focus@auth.domain.com/fdsfwetg");
+        expectResult(healthCheckIQ);
+
+        healthCheckIQ.setFrom("focus@auth.domain4.com/fdsfwetg");
+        expectNotAuthorized(healthCheckIQ);
     }
 }

@@ -239,56 +239,6 @@ public class ComponentImpl
     }
 
     /**
-     * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
-     *
-     * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
-     * the request to handle
-     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
-     * represents the response to the specified request or <tt>null</tt> to
-     * reply with <tt>feature-not-implemented</tt>
-     * @throws Exception to reply with <tt>internal-server-error</tt> to the
-     * specified request
-     */
-    private org.jivesoftware.smack.packet.IQ handleColibriConferenceIQ(
-            ColibriConferenceIQ conferenceIQ)
-        throws Exception
-    {
-        Videobridge videobridge = getVideobridge();
-        org.jivesoftware.smack.packet.IQ iq;
-
-        if (videobridge == null)
-            iq = null;
-        else
-            iq = videobridge.handleColibriConferenceIQ(conferenceIQ);
-        return iq;
-    }
-
-    /**
-     * Handles a <tt>ShutdownIQ</tt> stanza which represents a request.
-     *
-     * @param shutdownIQ the <tt>ShutdownIQ</tt> stanza represents the request
-     *                   to handle
-     * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
-     * represents the response to the specified request or <tt>null</tt> to
-     * reply with <tt>feature-not-implemented</tt>
-     * @throws Exception to reply with <tt>internal-server-error</tt> to the
-     * specified request
-     */
-    private org.jivesoftware.smack.packet.IQ handleShutdownIQ(
-            ShutdownIQ shutdownIQ)
-        throws Exception
-    {
-        Videobridge videobridge = getVideobridge();
-        org.jivesoftware.smack.packet.IQ iq;
-
-        if (videobridge == null)
-            iq = null;
-        else
-            iq = videobridge.handleShutdownIQ(shutdownIQ);
-        return iq;
-    }
-
-    /**
      * Handles an <tt>org.xmpp.packet.IQ</tt> stanza of type <tt>get</tt> or
      * <tt>set</tt> which represents a request. Converts the specified
      * <tt>org.xmpp.packet.IQ</tt> to an
@@ -427,17 +377,36 @@ public class ComponentImpl
          * child element) and forwarded to specialized Videobridge methods for
          * convenience.
          */
+        if (request instanceof org.jivesoftware.smackx.packet.Version)
+        {
+            return handleVersionIQ(
+                (org.jivesoftware.smackx.packet.Version) request);
+        }
+
+        Videobridge videobridge = getVideobridge();
+        if (videobridge == null)
+        {
+            return null;
+        }
+
         org.jivesoftware.smack.packet.IQ response;
 
         if (request instanceof ColibriConferenceIQ)
-            response = handleColibriConferenceIQ((ColibriConferenceIQ) request);
+        {
+            response = videobridge.handleColibriConferenceIQ(
+                (ColibriConferenceIQ) request);
+        }
+        else if (request instanceof HealthCheckIQ)
+        {
+            response = videobridge.handleHealthCheckIQ((HealthCheckIQ) request);
+        }
         else if (request instanceof ShutdownIQ)
-            response = handleShutdownIQ((ShutdownIQ) request);
-        else if (request instanceof org.jivesoftware.smackx.packet.Version)
-            response = handleVersionIQ(
-                (org.jivesoftware.smackx.packet.Version) request);
+        {
+            response = videobridge.handleShutdownIQ((ShutdownIQ) request);
+        }
         else
             response = null;
+
         return response;
     }
 

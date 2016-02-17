@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.rest;
+package org.jitsi.videobridge.health;
 
 import java.io.*;
 import java.util.*;
@@ -129,7 +129,7 @@ public class Health
      * of {@code videobridge} or the check determines that {@code videobridge}
      * is not healthy 
      */
-    private static void check(Videobridge videobridge)
+    public static void check(Videobridge videobridge)
         throws Exception
     {
         // Conference
@@ -299,11 +299,11 @@ public class Health
      * @throws IOException
      * @throws ServletException
      */
-    static void getJSON(
-            Videobridge videobridge,
-            Request baseRequest,
-            HttpServletRequest request,
-            HttpServletResponse response)
+    public static void getJSON(
+        Videobridge videobridge,
+        Request baseRequest,
+        HttpServletRequest request,
+        HttpServletResponse response)
         throws IOException,
                ServletException
     {

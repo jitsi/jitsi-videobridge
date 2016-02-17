@@ -32,6 +32,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.eventadmin.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
@@ -1028,6 +1029,48 @@ public class Videobridge
                     org.jivesoftware.smack.packet.IQ.Type.RESULT);
         }
         return responseConferenceIQ;
+    }
+
+    /**
+     * Handles <tt>HealthCheckIQ</tt> by performing health check on this
+     * <tt>Videobridge</tt> instance.
+     *
+     * @param healthCheckIQ the <tt>HealthCheckIQ</tt> to be handled.
+     *
+     * @return IQ with "result" type if the health check succeeded or IQ with
+     *         "error" type if something went wrong.
+     *         {@link XMPPError.Condition#interna_server_error} is returned when
+     *         the health check fails or
+     *         {@link XMPPError.Condition#not_authorized} if the request comes
+     *         from the JID that is not authorized to do health checks on this
+     *         instance.
+     */
+    public IQ handleHealthCheckIQ(HealthCheckIQ healthCheckIQ)
+    {
+        String from = healthCheckIQ.getFrom();
+
+        if (authorizedSourcePattern != null &&
+            !authorizedSourcePattern.matcher(from).matches())
+        {
+            return IQ.createErrorResponse(
+                healthCheckIQ,
+                new XMPPError(XMPPError.Condition.not_authorized));
+        }
+
+        try
+        {
+            Health.check(this);
+
+            return IQ.createResultIQ(healthCheckIQ);
+        }
+        catch (Exception e)
+        {
+            XMPPError error = new XMPPError(
+                XMPPError.Condition.interna_server_error, e.getMessage());
+
+            return org.jivesoftware.smack.packet.IQ.createErrorResponse(
+                healthCheckIQ, error);
+        }
     }
 
     /**
