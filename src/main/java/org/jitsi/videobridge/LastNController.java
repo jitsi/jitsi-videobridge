@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.ratecontrol.*;
 
@@ -506,6 +507,12 @@ public class LastNController
             enteringEndpoints = new ArrayList<>(newForwardedEndpoints);
             enteringEndpoints.removeAll(forwardedEndpoints);
 
+            List<String> leavingEndpoints
+                = new ArrayList<>(forwardedEndpoints);
+            leavingEndpoints.removeAll(newForwardedEndpoints);
+
+            updateInLastN(enteringEndpoints, leavingEndpoints);
+
             if (logger.isDebugEnabled())
             {
                 logger.debug(
@@ -541,6 +548,91 @@ public class LastNController
         }
 
         return enteringEndpoints;
+    }
+
+    /**
+     * Updates the value of the "inLastN" property of the {@link VideoChannel}s
+     * of the given endpoints after {@code enteringEndpoints} have entered
+     * the {@code forwardedEndpoints} set and {@code leavingEndpoints} have
+     * left the {@code forwardedEndpoints} set.
+     *
+     * @param enteringEndpoints the list of IDs of endpoints which entered our
+     * {@code forwardedEndpoints} set.
+     * @param leavingEndpoints the list of IDs of endpoints which left our
+     * {@code forwardedEndpoints} set.
+     */
+    private void updateInLastN(List<String> enteringEndpoints,
+                               List<String> leavingEndpoints)
+    {
+        for (String endpointId : enteringEndpoints)
+        {
+            for (VideoChannel videoChannel : getVideoChannels(endpointId))
+            {
+                // This endpoint just entered our forwardedEndpoints set, so
+                // it is streamed to *someone*.
+                videoChannel.setInLastN(true);
+            }
+        }
+
+        for (String endpointId : leavingEndpoints)
+        {
+            for (VideoChannel videoChannel : getVideoChannels(endpointId))
+            {
+                // We are not forwarding this channel anymore. It should
+                // re-evaluate its 'inLastN'.
+                videoChannel.updateInLastN();
+            }
+        }
+    }
+
+    /**
+     * Gets the list of {@link VideoChannel}s belonging to an endpoint with a
+     * given ID.
+     * @param id the ID of the endpoint.
+     * @return the {@link VideoChannel}s of the endpoint.
+     */
+    private List<VideoChannel> getVideoChannels(String id)
+    {
+        Endpoint endpoint = null;
+
+        if (channel != null)
+        {
+            Content content = channel.getContent();
+            if (content != null)
+            {
+                Conference conference = content.getConference();
+                if (conference != null)
+                {
+                    endpoint = conference.getEndpoint(id);
+                }
+            }
+        }
+
+        return getVideoChannels(endpoint);
+    }
+
+    /**
+     * Gets the list of {@link VideoChannel}s belonging to an endpoint.
+     *
+     * @param endpoint the endpoint.
+     * @return the {@link VideoChannel}s of the endpoint.
+     */
+    private List<VideoChannel> getVideoChannels(Endpoint endpoint)
+    {
+        List<VideoChannel> videoChannels = new LinkedList<>();
+
+        if (endpoint != null)
+        {
+            for (Channel channel : endpoint.getChannels(MediaType.VIDEO))
+            {
+                if (channel instanceof VideoChannel)
+                {
+                    videoChannels.add((VideoChannel)channel);
+                }
+            }
+        }
+
+        return videoChannels;
     }
 
     /**
