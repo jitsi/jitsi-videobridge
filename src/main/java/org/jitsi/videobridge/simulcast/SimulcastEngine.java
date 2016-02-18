@@ -164,74 +164,50 @@ public class SimulcastEngine
     }
 
     /**
-     * A utility class that allows to track modifications to a "tracked" object.
-     *
-     * @param <T> the type of the tracked object.
-     */
-    static class Tracked<T>
-    {
-        /**
-         * Ctor.
-         *
-         * @param tracked the tracked object.
-         */
-        public Tracked(T tracked)
-        {
-            this.tracked = tracked;
-        }
-
-        /**
-         * A boolean indicating whether the tracked object has been changed or
-         * not.
-         */
-        boolean modified;
-
-        /**
-         * The tracked object.
-         */
-        T tracked;
-    }
-
-    /**
      * Updates octet count and packet count in sender reports.
      */
     private class SenderReportGateway
     {
         /**
          * Updates octet count and packet count in sender reports found in the
-         * tracked <tt>RTCPCompoundPacket</tt>.
+         * <tt>RTCPCompoundPacket</tt>.
          *
-         * @param trackedPacket
+         * @param pkt
+         * @return {@code true} if the specified {@code pkt} was modified;
+         * otherwise, {@code false}
          */
-        public void gateway(Tracked<RTCPCompoundPacket> trackedPacket)
+        public boolean gateway(RTCPCompoundPacket pkt)
         {
-            if (trackedPacket == null || trackedPacket.tracked == null
-                || trackedPacket.tracked.packets == null
-                || trackedPacket.tracked.packets.length == 0)
-            {
-                return;
-            }
+            RTCPPacket[] pkts;
+            boolean modified = false;
 
-            for (RTCPPacket p : trackedPacket.tracked.packets)
+            if (pkt != null
+                    && (pkts = pkt.packets) != null
+                    && pkts.length != 0)
             {
-                switch (p.type)
+                for (RTCPPacket p : pkts)
                 {
+                    switch (p.type)
+                    {
                     case RTCPPacket.SR:
-                        RTCPSRPacket srPacket = (RTCPSRPacket)p;
-                        int ssrc = srPacket.ssrc;
+                        RTCPSRPacket sr = (RTCPSRPacket) p;
+                        int ssrc = sr.ssrc;
                         RTPStatsEntry rtpStats = rtpStatsMap.get(ssrc);
+
                         if (rtpStats != null)
                         {
-                            // Mark the packet as modified and update the
-                            // octet and packet count using the information
-                            // gathered by {@link this.rtpStatsMap}.
-                            trackedPacket.modified = true;
-                            srPacket.octetcount = rtpStats.getBytesSent();
-                            srPacket.packetcount = rtpStats.getPacketsSent();
+                            // Mark the packet as modified and update the octet
+                            // and packet count using the information gathered
+                            // by rtpStatsMap.
+                            sr.octetcount = rtpStats.getBytesSent();
+                            sr.packetcount = rtpStats.getPacketsSent();
+                            modified = true;
                         }
                         break;
+                    }
                 }
             }
+            return modified;
         }
     }
 
@@ -326,13 +302,9 @@ public class SimulcastEngine
                 return null;
             }
 
-            Tracked<RTCPCompoundPacket> trackedRTCP = new Tracked<>(inPacket);
-
-            srGateway.gateway(trackedRTCP);
-
-            if (trackedRTCP.modified)
+            if (srGateway.gateway(inPacket))
             {
-                return generator.apply(trackedRTCP.tracked);
+                return generator.apply(inPacket);
             }
             else
             {
