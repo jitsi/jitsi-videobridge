@@ -256,7 +256,7 @@ public class SimulcastEngine
 
             return p;
         }
-    };
+    }
 
     /**
      * The RTCP <tt>PacketTransformer</tt> of this <tt>SimulcastEngine</tt>.
@@ -320,5 +320,5 @@ public class SimulcastEngine
             // Don't touch incoming RTCP traffic.
             return pkt;
         }
-    };
+    }
 }
