@@ -84,12 +84,7 @@ public class RewritingSendMode
         }
 
         SimulcastStream current = getCurrent();
-        if (current != null && current.match(pkt))
-        {
-            return true;
-        }
-
-        return false;
+        return current != null && current.match(pkt);
     }
 
     @Override
