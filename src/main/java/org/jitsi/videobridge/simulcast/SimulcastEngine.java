@@ -82,7 +82,7 @@ public class SimulcastEngine
      * pausing/resuming of the simulcast streams due to simulcast.
      *
      * RTCP termination, which needs to be activated for simulcast, nullifies
-     * the effects of the SenderReportGateay because it generates SRs from
+     * the effects of the SenderReportGateway because it generates SRs from
      * scratch.
      *
      * The original idea behind having the SenderReportGateway inside the
