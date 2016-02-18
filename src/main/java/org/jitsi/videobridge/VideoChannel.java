@@ -1045,7 +1045,8 @@ public class VideoChannel
         {
             // FIXME Instead we should do something like this.
             // setSimulcastMode(SimulcastMode.REWRITING);
-            logger.warn("Aborting: simulcast mode is not set, but it is required.");
+            logger.debug("Won't update our view of the peer video channel" +
+                    " because the simulcast mode is not set.");
             return;
         }
 
