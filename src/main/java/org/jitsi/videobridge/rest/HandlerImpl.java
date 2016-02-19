@@ -27,6 +27,7 @@ import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.stats.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
@@ -787,10 +788,9 @@ class HandlerImpl
 
             requestShutdownIQ.setFrom(ipAddress);
 
-            IQ responseIQ = null;
             try
             {
-                responseIQ
+                IQ responseIQ
                     = videobridge.handleShutdownIQ(
                             requestShutdownIQ);
 

@@ -32,6 +32,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.eventadmin.*;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
@@ -581,15 +582,15 @@ public class Videobridge
             focus = null;
         }
 
-        if ((focus == null) && ((options & OPTION_ALLOW_NO_FOCUS) == 0))
+        if (focus == null && (options & OPTION_ALLOW_NO_FOCUS) == 0)
         {
             return IQ.createErrorResponse(
                 conferenceIQ,
                 new XMPPError(XMPPError.Condition.not_authorized));
         }
-        else if (authorizedSourcePattern != null &&
-                 (focus == null ||
-                  !authorizedSourcePattern.matcher(focus).matches()))
+        else if (authorizedSourcePattern != null
+                && (focus == null
+                    || !authorizedSourcePattern.matcher(focus).matches()))
         {
             return IQ.createErrorResponse(
                 conferenceIQ,
@@ -1031,6 +1032,48 @@ public class Videobridge
     }
 
     /**
+     * Handles <tt>HealthCheckIQ</tt> by performing health check on this
+     * <tt>Videobridge</tt> instance.
+     *
+     * @param healthCheckIQ the <tt>HealthCheckIQ</tt> to be handled.
+     * @return IQ with &quot;result&quot; type if the health check succeeded or
+     * IQ with &quot;error&quot; type if something went wrong.
+     * {@link XMPPError.Condition#interna_server_error} is returned when the
+     * health check fails or {@link XMPPError.Condition#not_authorized} if the
+     * request comes from a JID that is not authorized to do health checks on
+     * this instance.
+     */
+    public IQ handleHealthCheckIQ(HealthCheckIQ healthCheckIQ)
+    {
+        if (authorizedSourcePattern != null
+                && !authorizedSourcePattern
+                    .matcher(healthCheckIQ.getFrom())
+                        .matches())
+        {
+            return
+                IQ.createErrorResponse(
+                        healthCheckIQ,
+                        new XMPPError(XMPPError.Condition.not_authorized));
+        }
+
+        try
+        {
+            Health.check(this);
+
+            return IQ.createResultIQ(healthCheckIQ);
+        }
+        catch (Exception e)
+        {
+            return
+                IQ.createErrorResponse(
+                        healthCheckIQ,
+                        new XMPPError(
+                                XMPPError.Condition.interna_server_error,
+                                e.getMessage()));
+        }
+    }
+
+    /**
      * Handles a <tt>GracefulShutdownIQ</tt> stanza which represents a request.
      *
      * @param shutdownIQ the <tt>GracefulShutdownIQ</tt> stanza represents
@@ -1163,22 +1206,21 @@ public class Videobridge
             authorizedSourcePattern
                 = Pattern.compile(authorizedSourceRegExp);
 
-            // If no shutdown regexp then authorized sources are also
-            // allowed trigger graceful shutdown
+            // If no shutdown regexp, then authorized sources are also allowed
+            // to trigger graceful shutdown.
             if (shutdownSourcePattern == null)
+            {
                 shutdownSourcePattern = authorizedSourcePattern;
+            }
         }
-        else
         // Turn off
+        else
         {
             if (shutdownSourcePattern == authorizedSourcePattern)
             {
-                shutdownSourcePattern = authorizedSourcePattern = null;
+                shutdownSourcePattern = null;
             }
-            else
-            {
-                authorizedSourcePattern = null;
-            }
+            authorizedSourcePattern = null;
         }
     }
 

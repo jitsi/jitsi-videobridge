@@ -74,10 +74,32 @@ public class FocusControlTest
         assertTrue(respIq instanceof ColibriConferenceIQ);
     }
 
+    private static void expectResult(HealthCheckIQ healthIq)
+        throws Exception
+    {
+        IQ respIq = bridge.handleHealthCheckIQ(healthIq);
+
+        assertEquals(IQ.Type.RESULT, respIq.getType());
+    }
+
     private static void expectNotAuthorized(ColibriConferenceIQ confIq)
         throws Exception
     {
         IQ respIq = bridge.handleColibriConferenceIQ(confIq);
+
+        Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
+
+        assertNotNull(respIq);
+        assertEquals(IQ.Type.ERROR, respIq.getType());
+        assertEquals(
+            XMPPError.Condition.not_authorized.toString(),
+            respIq.getError().getCondition());
+    }
+
+    private static void expectNotAuthorized(HealthCheckIQ healthIq)
+        throws Exception
+    {
+        IQ respIq = bridge.handleHealthCheckIQ(healthIq);
 
         Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
 
@@ -100,9 +122,7 @@ public class FocusControlTest
 
         ColibriConferenceIQ confIq
             = ColibriUtilities.createConferenceIq(focusJid);
-        IQ respIq;
-
-        respIq = bridge.handleColibriConferenceIQ(confIq);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq);
 
         assertTrue(respIq instanceof ColibriConferenceIQ);
 
@@ -132,13 +152,11 @@ public class FocusControlTest
     {
         ColibriConferenceIQ confIq = ColibriUtilities.createConferenceIq(null);
         int options = Videobridge.OPTION_ALLOW_NO_FOCUS;
-        IQ respIq;
-        ColibriConferenceIQ respConfIq;
 
-        respIq = bridge.handleColibriConferenceIQ(confIq, options);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, options);
         assertTrue(respIq instanceof ColibriConferenceIQ);
 
-        respConfIq = (ColibriConferenceIQ) respIq;
+        ColibriConferenceIQ respConfIq = (ColibriConferenceIQ) respIq;
 
         confIq.setID(respConfIq.getID());
 
@@ -160,14 +178,12 @@ public class FocusControlTest
         ColibriConferenceIQ confIq
             = ColibriUtilities.createConferenceIq(focusJid);
         int options = Videobridge.OPTION_ALLOW_ANY_FOCUS;
-        IQ respIq;
-        ColibriConferenceIQ respConfIq;
 
-        respIq = bridge.handleColibriConferenceIQ(confIq, options);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, options);
 
         assertTrue(respIq instanceof ColibriConferenceIQ);
 
-        respConfIq = (ColibriConferenceIQ) respIq;
+        ColibriConferenceIQ respConfIq = (ColibriConferenceIQ) respIq;
 
         // Set conference id
         confIq.setID(respConfIq.getID());
@@ -207,5 +223,14 @@ public class FocusControlTest
         expectNotAuthorized(
             ColibriUtilities.createConferenceIq(
                 "fdfsgv1@auth.domain23.com/pc3"));
+
+        // Check for HealthCheckIQ
+        HealthCheckIQ healthCheckIQ = new HealthCheckIQ();
+
+        healthCheckIQ.setFrom("focus@auth.domain.com/fdsfwetg");
+        expectResult(healthCheckIQ);
+
+        healthCheckIQ.setFrom("focus@auth.domain4.com/fdsfwetg");
+        expectNotAuthorized(healthCheckIQ);
     }
 }
