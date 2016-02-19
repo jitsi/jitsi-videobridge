@@ -42,7 +42,7 @@ stop() {
     fi
     echo -n "Stopping $DESC: "
     if [ $PID ]; then
-        kill $PID
+        kill $PID || true
         rm $PIDFILE || true
         echo "$NAME stopped."
     else
