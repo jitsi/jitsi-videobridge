@@ -544,7 +544,10 @@ public class RtpChannel
                                     && !format.equals(stream.getFormat()))
                             {
                                 stream.setFormat(format);
-                                stream.setDirection(MediaDirection.SENDRECV);
+                                synchronized (streamSyncRoot)
+                                {   // otherwise races with stream.start()
+                                    stream.setDirection(MediaDirection.SENDRECV);
+                                }
                                 notify = true;
                             }
                         }
@@ -1048,7 +1051,10 @@ public class RtpChannel
             if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
                 stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
 
-            stream.start();
+            synchronized (streamSyncRoot)
+            {   // otherwise races with stream.setDirection()
+                stream.start();
+            }
 
             Videobridge videobridge
                 = getContent().getConference().getVideobridge();
