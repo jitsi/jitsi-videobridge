@@ -7,8 +7,15 @@ JVB_HEAPDUMP_PATH="/tmp/java_*.hprof"
 STAMP=`date +%Y-%m-%d-%H%M`
 PID_PATH="/var/run/jitsi-videobridge.pid"
 
+RUNNING=""
+unset PID
+
 [ -e $PID_PATH ] && PID=$(cat $PID_PATH)
-if [ $PID ]; then
+if [ ! -z $PID ]; then
+   ps -p $PID | grep -q java
+   [ $? -eq 0 ] && RUNNING="true"
+fi
+if [ ! -z $RUNNING ]; then
     echo "Jvb at pid $PID"
     THREADS_FILE="/tmp/stack-${STAMP}-${PID}.threads"
     HEAP_FILE="/tmp/heap-${STAMP}-${PID}.bin"
@@ -17,7 +24,8 @@ if [ $PID ]; then
     tar zcvf jvb-dumps-${STAMP}-${PID}.tgz ${THREADS_FILE} ${HEAP_FILE} /var/log/jitsi/jvb.log
     rm ${HEAP_FILE} ${THREADS_FILE}
 else
-    if [ -e $JVB_HEAPDUMP_PATH ]; then
+    ls $JAVA_HEAPDUMP_PATH >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
         echo "JVB not running, but previous heap dump found."
         tar zcvf jvb-dumps-${STAMP}-crash.tgz $JVB_HEAPDUMP_PATH /var/log/jitsi/jvb.log
         rm ${JVB_HEAPDUMP_PATH}
