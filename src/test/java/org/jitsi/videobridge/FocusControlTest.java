@@ -65,10 +65,11 @@ public class FocusControlTest
         osgiHandler.stop();
     }
 
-    private static void expectResult(ColibriConferenceIQ confIq)
+    private static void expectResult(ColibriConferenceIQ confIq,
+                                     int processingOptions)
         throws Exception
     {
-        IQ respIq = bridge.handleColibriConferenceIQ(confIq);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
 
         assertEquals(IQ.Type.RESULT, respIq.getType());
         assertTrue(respIq instanceof ColibriConferenceIQ);
@@ -82,10 +83,11 @@ public class FocusControlTest
         assertEquals(IQ.Type.RESULT, respIq.getType());
     }
 
-    private static void expectNotAuthorized(ColibriConferenceIQ confIq)
+    private static void expectNotAuthorized(ColibriConferenceIQ confIq,
+                                            int processingOptions)
         throws Exception
     {
-        IQ respIq = bridge.handleColibriConferenceIQ(confIq);
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq, processingOptions);
 
         Logger.getLogger(FocusControlTest.class).info(respIq.toXML());
 
@@ -119,6 +121,7 @@ public class FocusControlTest
         throws Exception
     {
         String focusJid = "focusJid";
+        int options = 0;
 
         ColibriConferenceIQ confIq
             = ColibriUtilities.createConferenceIq(focusJid);
@@ -139,7 +142,7 @@ public class FocusControlTest
         // with default options
         confIq.setFrom(null);
 
-        expectNotAuthorized(confIq);
+        expectNotAuthorized(confIq, options);
     }
 
     /**
@@ -208,21 +211,29 @@ public class FocusControlTest
         String authorizedRegExpr = "^focus@auth.domain.com/.*$";
         bridge.setAuthorizedSourceRegExp(authorizedRegExpr);
 
-        expectResult(
-            ColibriUtilities.createConferenceIq(
-                "focus@auth.domain.com/focus8969386508643465"));
+        // Make sure we run with no extra options to avoid test failures if
+        // we have defaults specified in the system
+        int processingOptions = 0;
 
         expectResult(
             ColibriUtilities.createConferenceIq(
-                "focus@auth.domain.com/fdsfwetg"));
+                "focus@auth.domain.com/focus8969386508643465"),
+            processingOptions);
+
+        expectResult(
+            ColibriUtilities.createConferenceIq(
+                "focus@auth.domain.com/fdsfwetg"),
+            processingOptions);
 
         expectNotAuthorized(
             ColibriUtilities.createConferenceIq(
-                "focus@auth2.domain.com/res1"));
+                "focus@auth2.domain.com/res1"),
+            processingOptions);
 
         expectNotAuthorized(
             ColibriUtilities.createConferenceIq(
-                "fdfsgv1@auth.domain23.com/pc3"));
+                "fdfsgv1@auth.domain23.com/pc3"),
+            processingOptions);
 
         // Check for HealthCheckIQ
         HealthCheckIQ healthCheckIQ = new HealthCheckIQ();
