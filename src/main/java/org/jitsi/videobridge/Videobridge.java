@@ -20,6 +20,7 @@ import java.util.regex.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
@@ -1342,6 +1343,12 @@ public class Videobridge
                 PubSubElementType.PUBLISH.getElementName(),
                 PubSubElementType.PUBLISH.getNamespace().getXmlns(),
                 new PubSubProvider());
+
+        // Health-check
+        providerManager.addIQProvider(
+                HealthCheckIQ.ELEMENT_NAME,
+                HealthCheckIQ.NAMESPACE,
+                new HealthCheckIQProvider());
 
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
