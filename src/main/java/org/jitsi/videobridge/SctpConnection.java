@@ -627,15 +627,23 @@ public class SctpConnection
                             + " proto: " + protocol);
             }
 
+            WebRtcDataStream.DataCallback oldCallback = null;
             if (channels.containsKey(sid))
-                logger.error("Channel on sid: " + sid + " already exists");
+            {
+                logger.warn("Channel on sid: " + sid + " already exists");
+                oldCallback = channels.get(sid).getDataCallback();
+            }
 
             WebRtcDataStream newChannel
                 = new WebRtcDataStream(sctpSocket, sid, label, true);
             channels.put(sid, newChannel);
 
-            sendOpenChannelAck(sid);
+            if (oldCallback != null)
+            {
+                newChannel.setDataCallback(oldCallback);    // Save the data callback from the previous channel object
+            }
 
+            sendOpenChannelAck(sid);
             notifyChannelOpened(newChannel);
         }
         else

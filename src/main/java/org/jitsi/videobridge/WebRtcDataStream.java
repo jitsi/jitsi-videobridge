@@ -192,6 +192,16 @@ public class WebRtcDataStream
     }
 
     /**
+     * Returns the callback that will be fired whenever string or binary message is
+     * received on this <tt>WebRtcDataStream</tt>.
+     */
+    public DataCallback getDataCallback()
+    {
+        return dataCallback;
+    }
+
+
+    /**
      * Interface used to receive data on this stream.
      * It is message oriented and supports text or binary payload.
      */
