@@ -27,6 +27,7 @@ import org.junit.runners.*;
 @Suite.SuiteClasses(
     {
         FocusControlTest.class,
+        RawUdpConferenceTest.class,
         BridgeShutdownTest.class // This one must be the last one
     })
 public class VideoBridgeTestSuite
