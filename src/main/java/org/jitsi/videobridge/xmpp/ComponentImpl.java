@@ -19,6 +19,7 @@ import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.meet.*;
@@ -141,15 +142,15 @@ public class ComponentImpl
             new String[]
                     {
                         ColibriConferenceIQ.NAMESPACE,
+                        HealthCheckIQ.NAMESPACE,
                         ProtocolProviderServiceJabberImpl
                             .URN_XMPP_JINGLE_DTLS_SRTP,
                         ProtocolProviderServiceJabberImpl
                             .URN_XMPP_JINGLE_ICE_UDP_1,
                         ProtocolProviderServiceJabberImpl
                             .URN_XMPP_JINGLE_RAW_UDP_0,
-                        // TODO this should be a constant in
-                        // ProtocolProviderServiceJabberImpl.
-                        "jabber:iq:version"
+                        ProtocolProviderServiceJabberImpl
+                            .URN_XMPP_IQ_VERSION
                     };
     }
 
