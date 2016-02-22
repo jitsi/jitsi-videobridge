@@ -740,7 +740,8 @@ public class Videobridge
                                     = content.createRtpChannel(
                                         channelBundleId,
                                         transportNamespace,
-                                        channelIQ.isInitiator());
+                                        channelIQ.isInitiator(),
+                                        channelIQ.getRTPLevelRelayType());
                                 channelCreated = true;
                             }
                         }
@@ -771,24 +772,6 @@ public class Videobridge
                                         && channel.isExpired())
                                     continue;
                             }
-
-                            /*
-                             * The attribute rtp-level-relay-type specifies the
-                             * vale of pretty much the most important Channel
-                             * property given that Jitsi Videobridge implements
-                             * an RTP-level relay. Consequently, it is
-                             * intuitively a sign of common sense to take the
-                             * value into account as possible.
-                             *
-                             * The attribute rtp-level-relay-type is optional.
-                             * If a value is not specified, then the Channel
-                             * rtpLevelRelayType is to not be changed.
-                             */
-                            RTPLevelRelayType rtpLevelRelayType
-                                = channelIQ.getRTPLevelRelayType();
-
-                            if (rtpLevelRelayType != null)
-                                channel.setRTPLevelRelayType(rtpLevelRelayType);
 
                             // endpoint
                             // The attribute endpoint is optional. If a value is

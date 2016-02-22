@@ -91,4 +91,30 @@ public class RawUdpConferenceTest
             assertNotEquals("127.0.0.1", candidate.getAttribute("ip"));
         }
     }
+
+    /**
+     * Tests requesting a raw UDP channel with RTP level relay type MIXER
+     */
+    @Test
+    public void testMixerChannel()
+            throws Exception
+    {
+        String focusJid = "focusJid";
+
+        ColibriConferenceIQ confIq
+                = ColibriUtilities.createConferenceIq(focusJid);
+        ColibriConferenceIQ.Channel channel
+                = confIq.getContents().get(0).getChannel(0);
+        channel.setTransport(new RawUdpTransportPacketExtension());
+        channel.setRTPLevelRelayType(RTPLevelRelayType.MIXER);
+
+        IQ respIq = bridge.handleColibriConferenceIQ(confIq);
+
+        assertTrue(respIq instanceof ColibriConferenceIQ);
+        ColibriConferenceIQ respConfIq = (ColibriConferenceIQ) respIq;
+
+        assertEquals(RTPLevelRelayType.MIXER,
+                        respConfIq.getContents().get(0).getChannel(0).
+                            getRTPLevelRelayType());
+    }
 }

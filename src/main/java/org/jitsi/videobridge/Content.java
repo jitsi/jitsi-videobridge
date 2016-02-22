@@ -19,6 +19,7 @@ import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.jitsi.eventadmin.*;
@@ -247,12 +248,14 @@ public class Content
      * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
+     * @param rtpLevelRelayType
      * @return the created <tt>RtpChannel</tt> instance.
      * @throws Exception
      */
     public RtpChannel createRtpChannel(String channelBundleId,
                                        String transportNamespace,
-                                       Boolean initiator)
+                                       Boolean initiator,
+                                       RTPLevelRelayType rtpLevelRelayType)
         throws Exception
     {
         RtpChannel channel = null;
@@ -296,9 +299,7 @@ public class Content
         while (channel == null);
 
         // Initialize channel
-        channel.initialize();
-
-        Videobridge videobridge = getConference().getVideobridge();
+        channel.initialize(rtpLevelRelayType);
 
         if (logger.isInfoEnabled())
         {
@@ -308,6 +309,7 @@ public class Content
              * of causing deadlocks.
              */
 
+            Videobridge videobridge = getConference().getVideobridge();
             logger.info(
                     "Created channel " + channel.getID() + " of content "
                         + getName() + " of conference " + conference.getID()

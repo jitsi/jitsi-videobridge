@@ -949,6 +949,12 @@ public class RtpChannel
     public void initialize()
         throws IOException
     {
+        initialize(null);
+    }
+
+    void initialize(RTPLevelRelayType rtpLevelRelayType)
+        throws IOException
+    {
         super.initialize();
 
         MediaService mediaService = getMediaService();
@@ -970,6 +976,21 @@ public class RtpChannel
             stream.setProperty(RtpChannel.class.getName(), this);
             if (transformEngine != null)
                 stream.setExternalTransformer(transformEngine);
+
+            /*
+             * The attribute rtp-level-relay-type specifies the
+             * vale of pretty much the most important Channel
+             * property given that Jitsi Videobridge implements
+             * an RTP-level relay. Consequently, it is
+             * intuitively a sign of common sense to take the
+             * value into account as possible.
+             *
+             * The attribute rtp-level-relay-type is optional.
+             * If a value is not specified, then the Channel
+             * rtpLevelRelayType is to not be changed.
+             */
+            if (rtpLevelRelayType != null)
+                setRTPLevelRelayType(rtpLevelRelayType);
 
             // The transport manager could be already connected, in which case
             // (since we just created the stream), any previous calls to
