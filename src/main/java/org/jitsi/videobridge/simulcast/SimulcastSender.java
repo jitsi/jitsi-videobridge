@@ -259,10 +259,10 @@ public class SimulcastSender
 
         if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
-            Endpoint oldEndpoint = (Endpoint) ev.getOldValue();
-            Endpoint newEndpoint = (Endpoint) ev.getNewValue();
+            Set<Endpoint> oldEndpoints = (Set<Endpoint>) ev.getOldValue();
+            Set<Endpoint> newEndpoints = (Set<Endpoint>) ev.getNewValue();
 
-            selectedEndpointChanged(oldEndpoint, newEndpoint);
+            selectedEndpointChanged(oldEndpoints, newEndpoints);
         }
         else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(propertyName))
         {
@@ -287,20 +287,20 @@ public class SimulcastSender
 
     /**
      * Handles a change in the selected endpoint.
-     * @param oldEndpoint the old selected endpoint.
-     * @param newEndpoint the new selected endpoint.
+     * @param oldEndpoints Set of the old selected endpoints.
+     * @param newEndpoints Set of the new selected endpoints.
      */
     private void selectedEndpointChanged(
-            Endpoint oldEndpoint, Endpoint newEndpoint)
+            Set<Endpoint> oldEndpoints, Set<Endpoint> newEndpoints)
     {
         // Here we update the targetOrder value.
 
         if (logger.isDebugEnabled())
         {
-            if (newEndpoint == null)
+            if (newEndpoints.isEmpty())
                 logger.debug("Now I'm not watching anybody. What?!");
             else
-                logger.debug("Now I'm watching " + newEndpoint.getID());
+                logger.debug("Now I'm watching: " + newEndpoints);  // TODO: transform to ID list
         }
 
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
@@ -324,18 +324,23 @@ public class SimulcastSender
         Endpoint sendEndpoint = getSendEndpoint();
         // Send LQ stream for the previously selected endpoint.
         int lqOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE;
+        int hqOrder = simStreams.length - 1;
         // XXX Practically, we should react once anyway. But since we have to if
         // statements, it is technically possible to react twice. Which is
         // unnecessary.
         int oldTargetOrder = targetOrder;
 
-        if (oldEndpoint == sendEndpoint && targetOrder != lqOrder)
-            targetOrder = lqOrder;
+        boolean iWasInTheSelectedEndpoints     = oldEndpoints.contains(sendEndpoint);
+        boolean iWillbeInTheSelectedEndpoints  = newEndpoints.contains(sendEndpoint);
 
-        int hqOrder = simStreams.length - 1;
-
-        if (newEndpoint == sendEndpoint && targetOrder != hqOrder)
+        if (iWillbeInTheSelectedEndpoints)
+        {
             targetOrder = hqOrder;
+        }
+        else if(iWasInTheSelectedEndpoints)
+        {
+            targetOrder = lqOrder;
+        }
 
         if (oldTargetOrder != targetOrder)
             react(false);

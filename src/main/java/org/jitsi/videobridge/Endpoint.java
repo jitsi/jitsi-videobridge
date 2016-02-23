@@ -162,7 +162,8 @@ public class Endpoint
      * A weak reference to the currently selected <tt>Endpoint</tt> at this
      * <tt>Endpoint</tt>.
      */
-    private WeakReference<Endpoint> weakSelectedEndpoint;
+//    private WeakReference<Endpoint> weakSelectedEndpoint;
+    private Set<WeakReference<Endpoint>> weakSelectedEndpoints = new HashSet<>();
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -344,19 +345,36 @@ public class Endpoint
         return sctpConnection.get();
     }
 
+
+    private Endpoint checkEndpointWeakReference(WeakReference<Endpoint> wr)
+    {
+        Endpoint e = wr == null ? null : wr.get();
+
+        return e == null || e.expired ? null : e;
+    }
+
     /**
+     * // TODO UPDATE
      * Gets the currently selected <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
      *
      * @return the currently selected <tt>Endpoint</tt> at this
      * <tt>Endpoint</tt>.
      */
-    private Endpoint getSelectedEndpoint()
+    private Set<Endpoint> getSelectedEndpoints()
     {
-        WeakReference<Endpoint> wr = this.weakSelectedEndpoint;
-        Endpoint e = wr == null ? null : wr.get();
+        Set<Endpoint> result = new HashSet<>();
+        for (WeakReference<Endpoint> wr : weakSelectedEndpoints)
+        {
+            Endpoint endpoint = checkEndpointWeakReference(wr);
+            if (endpoint != null)
+            {
+                result.add(endpoint);
+            }
+        }
 
-        return e == null || e.expired ? null : e;
+        return result;
     }
+
 
     /**
      * @return the list of pinned endpoints, represented as a list of endpoint
@@ -647,13 +665,13 @@ public class Endpoint
             WebRtcDataStream src,
             JSONObject jsonObject)
     {
-        String newSelectedEndpointID
-            = (String) jsonObject.get("selectedEndpoint");
+        List<String> newSelectedEndpointIDs
+            = (List<String>) jsonObject.get("selectedEndpoint");
 
         if (logger.isDebugEnabled())
         {
             StringCompiler sc = new StringCompiler();
-            sc.bind("selectedId", newSelectedEndpointID);
+            sc.bind("selectedIds", newSelectedEndpointIDs);
             sc.bind("this", this);
             logger.debug(sc.c(
                     "Endpoint {this.id} notified us that its big screen"
@@ -662,33 +680,28 @@ public class Endpoint
 
         Conference conference = weakConference.get();
 
-        Endpoint newSelectedEndpoint;
-        if (!StringUtils.isNullOrEmpty(newSelectedEndpointID)
-                && conference != null)
-        {
-            newSelectedEndpoint = conference.getEndpoint(newSelectedEndpointID);
-        }
-        else
-        {
-            newSelectedEndpoint = null;
+        Set<Endpoint> newSelectedEndpoints = new HashSet<>();
+
+        if (!newSelectedEndpointIDs.isEmpty() && conference != null ) {
+            for (String endpointId : newSelectedEndpointIDs) {
+                Endpoint endpoint = conference.getEndpoint(endpointId);
+                if (endpoint != null) {
+                    newSelectedEndpoints.add(endpoint);
+                }
+            }
         }
 
         boolean changed;
-        Endpoint oldSelectedEndpoint = this.getSelectedEndpoint();
+        Set<Endpoint> oldSelectedEndpoints = this.getSelectedEndpoints();
         synchronized (selectedEndpointSyncRoot)
         {
-            changed = newSelectedEndpoint != oldSelectedEndpoint;
+            // Compare the collections
+            changed = !(oldSelectedEndpoints.containsAll(newSelectedEndpoints) &&   // TODO: not equals
+                      newSelectedEndpoints.containsAll(oldSelectedEndpoints));
+
             if (changed)
             {
-                if (newSelectedEndpoint == null)
-                {
-                    this.weakSelectedEndpoint = null;
-                }
-                else
-                {
-                    this.weakSelectedEndpoint
-                        = new WeakReference<>(newSelectedEndpoint);
-                }
+                updateWeakSelectedEndpoints(newSelectedEndpoints);
             }
         }
 
@@ -703,14 +716,25 @@ public class Endpoint
             if (logger.isDebugEnabled())
             {
                 StringCompiler sc = new StringCompiler();
-                sc.bind("selected", newSelectedEndpoint);
+                sc.bind("selected", newSelectedEndpoints);
                 sc.bind("this", this);
                 logger.debug(sc.c(
                         "Endpoint {this.id} selected {selected.id}."));
             }
             firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
-                oldSelectedEndpoint, newSelectedEndpoint);
+                oldSelectedEndpoints, newSelectedEndpoints);
         }
+    }
+
+    void updateWeakSelectedEndpoints(Set<Endpoint> newSelectedEndpoints)
+    {
+        Set<WeakReference<Endpoint>> newSet = new HashSet<>();
+
+        for (Endpoint endpoint : newSelectedEndpoints) {
+            newSet.add(new WeakReference<Endpoint>(endpoint));
+        }
+
+        weakSelectedEndpoints = newSet;
     }
 
     /**
