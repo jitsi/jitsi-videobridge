@@ -215,7 +215,7 @@ public class SimulcastEngine
     /**
      * The RTP <tt>PacketTransformer</tt> of this <tt>SimulcastEngine</tt>.
      */
-    class MyRTPTransformer extends SinglePacketTransformer
+    private class MyRTPTransformer extends SinglePacketTransformer
     {
         /**
          * Ctor.
@@ -261,7 +261,7 @@ public class SimulcastEngine
     /**
      * The RTCP <tt>PacketTransformer</tt> of this <tt>SimulcastEngine</tt>.
      */
-    class MyRTCPTransformer extends SinglePacketTransformer
+    private class MyRTCPTransformer extends SinglePacketTransformerAdapter
     {
         /**
          * Ctor.
