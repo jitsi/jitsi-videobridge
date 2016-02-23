@@ -218,7 +218,7 @@ public class SimulcastEngine
     private class MyRTPTransformer extends SinglePacketTransformer
     {
         /**
-         * Ctor.
+         * Initializes a new {@code MyRTPTransformer} instance.
          */
         public MyRTPTransformer()
         {
@@ -226,19 +226,18 @@ public class SimulcastEngine
         }
 
         @Override
-        public RawPacket transform(RawPacket pkt)
+        public RawPacket transform(RawPacket p)
         {
-            // Drops or accepts RTP packets depending on which simulcast
-            // stream is currently being sent. This is managed by the
-            // <tt>SwitchingSimulcastSender</tt>.
-
-            boolean accept = simulcastSenderManager.accept(pkt);
-            if (accept)
+            // Accepts or drops RTP packets (to be sent from the local peer to
+            // the remote peer) depending on which SimulcastStream is currently
+            // being sent, which SendMode is in use, etc.
+            if (simulcastSenderManager.accept(p))
             {
-                // Update the RTP stats map with the stuff that we accept to
-                // send and return the packet as is.
-                rtpStatsMap.apply(pkt);
-                return pkt;
+                // Update rtpStatsMap with the information that we've accepted
+                // to send.
+                rtpStatsMap.apply(p);
+
+                return p;
             }
             else
             {
@@ -249,9 +248,9 @@ public class SimulcastEngine
         @Override
         public RawPacket reverseTransform(RawPacket p)
         {
-            // Pass the received <tt>RawPacket</tt> down to the
-            // <tt>SimulcastReceiver</tt> and let it do its thing (updates the
-            // <tt>SimulcastStream</tt>s that we receive).
+            // Forward the received RawPacket (from the remote peer to the local
+            // peer) to the SimulcastReceiver. The latter will, for example,
+            // update the received SimulcastStreams.
             simulcastReceiver.accepted(p);
 
             return p;
@@ -264,14 +263,6 @@ public class SimulcastEngine
     private class MyRTCPTransformer extends SinglePacketTransformerAdapter
     {
         /**
-         * Ctor.
-         */
-        public MyRTCPTransformer()
-        {
-            super(RTCPPacketPredicate.INSTANCE);
-        }
-
-        /**
          * The RTCP packet parser that parses RTCP packets from
          * <tt>RawPacket</tt>s.
          */
@@ -283,42 +274,45 @@ public class SimulcastEngine
          */
         private final RTCPGenerator generator = new RTCPGenerator();
 
-        @Override
-        public RawPacket transform(RawPacket pkt)
+        /**
+         * Initializes a new {@code MyRTCPTransformer} instance.
+         */
+        public MyRTCPTransformer()
         {
-            // Update octets and packets sent in SRs.
-            RTCPCompoundPacket inPacket;
-            try
-            {
-                inPacket = (RTCPCompoundPacket) parser.parse(
-                    pkt.getBuffer(),
-                    pkt.getOffset(),
-                    pkt.getLength());
-            }
-            catch (BadFormatException e)
-            {
-                logger.warn("Failed to terminate an RTCP packet. " +
-                    "Dropping packet.");
-                return null;
-            }
-
-            if (srGateway.gateway(inPacket))
-            {
-                return generator.apply(inPacket);
-            }
-            else
-            {
-                // If the RTCP packet hasn't been modified don't generate
-                // anything, just send whatever we got as input.
-                return pkt;
-            }
+            super(RTCPPacketPredicate.INSTANCE);
         }
 
         @Override
-        public RawPacket reverseTransform(RawPacket pkt)
+        public RawPacket transform(RawPacket p)
         {
-            // Don't touch incoming RTCP traffic.
-            return pkt;
+            // Update octets and packets sent in SRs.
+            RTCPCompoundPacket compound;
+
+            try
+            {
+                compound
+                    = (RTCPCompoundPacket)
+                        parser.parse(
+                                p.getBuffer(),
+                                p.getOffset(),
+                                p.getLength());
+            }
+            catch (BadFormatException e)
+            {
+                logger.warn("Failed to terminate an RTCP packet. Dropping it.");
+                return null;
+            }
+
+            if (srGateway.gateway(compound))
+            {
+                return generator.apply(compound);
+            }
+            else
+            {
+                // If the RTCP packet hasn't been modified, send the input
+                // without regenerating it (i.e. optimize).
+                return p;
+            }
         }
     }
 }

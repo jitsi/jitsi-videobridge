@@ -359,11 +359,11 @@ public class SimulcastSender
     }
 
     /**
-     * Returns a boolean indicating whether the caller must drop, or accept, the
-     * packet passed in as a parameter.
+     * Determines whether the caller must drop or accept a specific
+     * {@code RawPacket}.
      *
-     * @param pkt the <tt>RawPacket</tt> that needs to be accepted or dropped.
-     * @return true if the packet is to be accepted, false otherwise.
+     * @param pkt the <tt>RawPacket</tt> to accept or drop.
+     * @return {@code true} to accept {@code pkt}; {@code false}, otherwise.
      */
     public boolean accept(RawPacket pkt)
     {
@@ -372,7 +372,7 @@ public class SimulcastSender
             return false;
         }
 
-        this.assertInitialized();
+        assertInitialized();
 
         if (sendMode == null)
         {
@@ -400,27 +400,25 @@ public class SimulcastSender
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
 
         // We want to be notified when the simulcast streams of the sending
-        // endpoint change. It will wall the {#receiveStreamsChanged()} method.
+        // endpoint change. It will call the receiveStreamsChanged() method.
         simulcastReceiver.addWeakListener(
-            new WeakReference<>(simulcastReceiverListener));
+                new WeakReference<>(simulcastReceiverListener));
 
-        // Manually trigger the {#receiveStreamsChanged()} method so that w
-        // Initialize the send mode.
-        SimulcastMode simulcastMode = getSimulcastSenderManager()
-            .getSimulcastEngine().getVideoChannel().getSimulcastMode();
+        // Manually trigger the receiveStreamsChanged() method so that we
+        // initialize the send mode.
+        VideoChannel sendVideoChannel
+            = getSimulcastSenderManager().getSimulcastEngine().getVideoChannel();
+        SimulcastMode simulcastMode = sendVideoChannel.getSimulcastMode();
 
         sendModeChanged(simulcastMode, null);
 
-        VideoChannel sendVideoChannel = getSimulcastSenderManager()
-            .getSimulcastEngine().getVideoChannel();
-        // We want to be notified and react when the simulcast mode of the
-        // send-<tt>VideoChannel</tt> changes.
+        // We want to be notified and react when the simulcast mode of the send
+        // VideoChannel changes.
         sendVideoChannel.addPropertyChangeListener(propertyChangeListener);
 
         // We want to be notified and react when the selected endpoint has
         // changed at the client.
-        Endpoint receiveEndpoint = getReceiveEndpoint();
-        receiveEndpointChanged(receiveEndpoint, null);
+        receiveEndpointChanged(getReceiveEndpoint(), null);
     }
 
     /**
