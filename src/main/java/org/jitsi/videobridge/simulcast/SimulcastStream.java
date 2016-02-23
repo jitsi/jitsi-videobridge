@@ -187,7 +187,7 @@ public class SimulcastStream
      * @return true if the packet belongs to this simulcast stream, false
      * otherwise.
      */
-    public boolean match(RawPacket pkt)
+    public boolean matches(RawPacket pkt)
     {
         if (pkt == null)
         {
