@@ -159,11 +159,11 @@ public class Endpoint
     private List<String> pinnedEndpoints = new LinkedList<>();
 
     /**
-     * A weak reference to the currently selected <tt>Endpoint</tt> at this
+     * Weak references to the currently selected <tt>Endpoint</tt>s at this
      * <tt>Endpoint</tt>.
      */
-//    private WeakReference<Endpoint> weakSelectedEndpoint;
-    private Set<WeakReference<Endpoint>> weakSelectedEndpoints = new HashSet<>();
+    private Set<WeakReference<Endpoint>> weakSelectedEndpoints
+            = new HashSet<>();
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -346,6 +346,13 @@ public class Endpoint
     }
 
 
+    /**
+     Helper method that unwraps the <tt>Endpoint</tt> from the weak reference
+     and performs the necessary checks.
+
+     @return The unwrapped Endpoint object or null if the Endpoint was release
+     of it has been expired
+     */
     private Endpoint checkEndpointWeakReference(WeakReference<Endpoint> wr)
     {
         Endpoint e = wr == null ? null : wr.get();
@@ -354,10 +361,9 @@ public class Endpoint
     }
 
     /**
-     * // TODO UPDATE
-     * Gets the currently selected <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
+     * Gets the currently selected <tt>Endpoint</tt>s at this <tt>Endpoint</tt>
      *
-     * @return the currently selected <tt>Endpoint</tt> at this
+     * @return the currently selected <tt>Endpoint</tt>s at this
      * <tt>Endpoint</tt>.
      */
     private Set<Endpoint> getSelectedEndpoints()
@@ -666,7 +672,7 @@ public class Endpoint
             JSONObject jsonObject)
     {
         List<String> newSelectedEndpointIDs
-            = (List<String>) jsonObject.get("selectedEndpoint");
+                = readSelectedEndpointID(jsonObject);
 
         if (logger.isDebugEnabled())
         {
@@ -696,8 +702,7 @@ public class Endpoint
         synchronized (selectedEndpointSyncRoot)
         {
             // Compare the collections
-            changed = !(oldSelectedEndpoints.containsAll(newSelectedEndpoints) &&   // TODO: not equals
-                      newSelectedEndpoints.containsAll(oldSelectedEndpoints));
+            changed = !(oldSelectedEndpoints.equals(newSelectedEndpoints));
 
             if (changed)
             {
@@ -726,11 +731,50 @@ public class Endpoint
         }
     }
 
-    void updateWeakSelectedEndpoints(Set<Endpoint> newSelectedEndpoints)
+    /**
+     * A helper function that reads the selected endpoint id list from the json
+     * message. Accepts ID list and a single ID
+     *
+     * @param jsonObject The whole message that contains a 'selectedEnpoint'
+     *                   field
+     * @return The list of the IDs or empty list if some problem happened
+     */
+    static private List<String> readSelectedEndpointID(JSONObject jsonObject)
+    {
+        List<String> selectedEndpointIDs;
+        Object selectedEndpointJsonObject = jsonObject.get("selectedEndpoint");
+
+        if (selectedEndpointJsonObject != null &&
+                selectedEndpointJsonObject instanceof JSONArray)
+        {   // JSONArray is an ArrayList
+            selectedEndpointIDs = (List<String>) selectedEndpointJsonObject;
+        }
+        else if (selectedEndpointJsonObject != null &&
+                selectedEndpointJsonObject instanceof String)
+        {
+            selectedEndpointIDs = new ArrayList<>();
+            selectedEndpointIDs.add((String)selectedEndpointJsonObject);
+        }
+        else
+        {   // Unknown type
+            selectedEndpointIDs = new ArrayList<>();
+        }
+
+        return selectedEndpointIDs;
+    }
+
+    /**
+     * A helper method that updates the <tt>weakSelectedEndpoints<tt/>.
+     * Wraps the elements of <tt>newSelectedEndpoints<tt/> to weak references.
+     * @param newSelectedEndpoints The set to use in weakSelectedEndpoints
+     */
+    private void updateWeakSelectedEndpoints(
+            Set<Endpoint> newSelectedEndpoints)
     {
         Set<WeakReference<Endpoint>> newSet = new HashSet<>();
 
-        for (Endpoint endpoint : newSelectedEndpoints) {
+        for (Endpoint endpoint : newSelectedEndpoints)
+        {
             newSet.add(new WeakReference<Endpoint>(endpoint));
         }
 

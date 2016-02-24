@@ -300,7 +300,16 @@ public class SimulcastSender
             if (newEndpoints.isEmpty())
                 logger.debug("Now I'm not watching anybody. What?!");
             else
-                logger.debug("Now I'm watching: " + newEndpoints);  // TODO: transform to ID list
+            {
+                StringBuilder newEndpointsIDList = new StringBuilder();
+                for (Endpoint e : newEndpoints)
+                {
+                    newEndpointsIDList.append(e.getID());
+                    newEndpointsIDList.append(", ");
+                }
+                logger.debug("Now I'm watching: "
+                        + newEndpointsIDList.toString());
+            }
         }
 
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
@@ -330,15 +339,18 @@ public class SimulcastSender
         // unnecessary.
         int oldTargetOrder = targetOrder;
 
-        boolean iWasInTheSelectedEndpoints     = oldEndpoints.contains(sendEndpoint);
-        boolean iWillbeInTheSelectedEndpoints  = newEndpoints.contains(sendEndpoint);
+        boolean thisWasInTheSelectedEndpoints
+                = oldEndpoints.contains(sendEndpoint);
+        boolean thisWillbeInTheSelectedEndpoints
+                = newEndpoints.contains(sendEndpoint);
 
-        if (iWillbeInTheSelectedEndpoints)
+        if (thisWillbeInTheSelectedEndpoints)
         {
             targetOrder = hqOrder;
         }
-        else if(iWasInTheSelectedEndpoints)
-        {
+        else if(thisWasInTheSelectedEndpoints)
+        { // It was in the old selected endpoints but it is not present in the
+          // new ones
             targetOrder = lqOrder;
         }
 
