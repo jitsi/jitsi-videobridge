@@ -180,21 +180,20 @@ public class SimulcastStream
     }
 
     /**
-     * Determines whether a packet belongs to this simulcast stream or not and
-     * returns a boolean to the caller indicating that.
+     * Determines whether a packet belongs to this {@code SimulcastStream}.
      *
      * @param pkt
-     * @return true if the packet belongs to this simulcast stream, false
-     * otherwise.
+     * @return {@code true} if {@code pkt} belongs to this
+     * {@code SimulcastStream}; {@code false}, otherwise.
      */
-    public boolean match(RawPacket pkt)
+    public boolean matches(RawPacket pkt)
     {
         if (pkt == null)
         {
             return false;
         }
 
-        long ssrc = pkt.getSSRC() & 0xffffffffl;
+        long ssrc = pkt.getSSRC() & 0xffffffffL;
         return ssrc == primarySSRC || ssrc == rtxSSRC || ssrc == fecSSRC;
     }
 

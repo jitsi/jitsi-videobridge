@@ -175,7 +175,7 @@ public class SwitchingSendMode
         boolean accept = false;
 
         if (current != null)
-            accept = current.match(pkt);
+            accept = current.matches(pkt);
 
         if (!accept)
         {
@@ -183,7 +183,7 @@ public class SwitchingSendMode
 
             if (next != null)
             {
-                accept = next.match(pkt);
+                accept = next.matches(pkt);
                 if (accept)
                     maybeSwitchToNext();
             }
@@ -192,7 +192,7 @@ public class SwitchingSendMode
         SimulcastStream override = getOverride();
 
         if (override != null)
-            accept = override.match(pkt);
+            accept = override.matches(pkt);
 
         if (!accept)
         {

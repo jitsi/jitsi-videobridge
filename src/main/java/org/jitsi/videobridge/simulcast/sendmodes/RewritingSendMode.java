@@ -74,7 +74,7 @@ public class RewritingSendMode
         }
 
         SimulcastStream next = getNext();
-        if (next != null && next.match(pkt) && next.isKeyFrame(pkt))
+        if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
         {
             // There's a next simulcast stream. Let's see if we can switch to
             // it.
@@ -84,7 +84,7 @@ public class RewritingSendMode
         }
 
         SimulcastStream current = getCurrent();
-        return current != null && current.match(pkt);
+        return current != null && current.matches(pkt);
     }
 
     @Override

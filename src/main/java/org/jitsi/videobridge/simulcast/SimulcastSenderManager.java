@@ -97,16 +97,16 @@ public class SimulcastSenderManager
     }
 
     /**
-     * Returns a boolean indicating whether the caller must drop, or accept, the
-     * packet passed in as a parameter.
+     * Determines whether the caller must drop or accept a specific
+     * {@code RawPacket}.
      *
      * @param pkt the packet to drop or accept.
-     * @return true if the packet is to be accepted, false otherwise.
+     * @return {@code true} to accept {@code pkt}; {@code false}, otherwise.
      */
     public boolean accept(RawPacket pkt)
     {
-        // Find the associated <tt>SimulcastReceiver</tt> and make sure it
-        // receives simulcast, otherwise return the input packet as is.
+        // Find the associated SimulcastReceiver and make sure it receives
+        // simulcast; otherwise, return the input packet as is.
         int ssrc = pkt.getSSRC();
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver(ssrc);
 
@@ -134,32 +134,28 @@ public class SimulcastSenderManager
     private synchronized SimulcastSender getOrCreateSimulcastSender(
         SimulcastReceiver simulcastReceiver)
     {
-        if (simulcastReceiver == null || !simulcastReceiver.isSimulcastSignaled())
+        if (simulcastReceiver == null
+                || !simulcastReceiver.isSimulcastSignaled())
         {
             return null;
         }
 
-        SimulcastSender simulcastSender;
-        if (!this.senders.containsKey(simulcastReceiver))
+        SimulcastSender simulcastSender = senders.get(simulcastReceiver);
+
+        if (simulcastSender == null) // Create a new sender.
         {
-            // Create a new sender.
             simulcastSender = new SimulcastSender(this, simulcastReceiver);
 
             // TODO remove stuff from the map (not strictly necessary as they'll
             // get garbage collected).
-            this.senders.put(simulcastReceiver, simulcastSender);
-        }
-        else
-        {
-            // Get the receiver that handles this peer simulcast
-            // manager
-            simulcastSender = this.senders.get(simulcastReceiver);
+            senders.put(simulcastReceiver, simulcastSender);
         }
 
         return simulcastSender;
     }
 
     /**
+     *
      * @param ssrc
      * @return
      */
@@ -171,8 +167,7 @@ public class SimulcastSenderManager
 
         if (!(channel instanceof VideoChannel))
         {
-            // This line should be unreachable, in other words, this is a nice
-            // place to add a Tetris launcher.
+            // Should never happen.
             return null;
         }
 
