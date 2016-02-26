@@ -94,7 +94,7 @@ mode and that we have no further improvements planned for it.
 	}
 
 
-2. SelectedEndpointChangedEvent :Sent by a receiving endpoint to the bridge to
+2. SelectedEndpointChangedEvent: Sent by a receiving endpoint to the bridge to
    indicate its currently selected endpoint. The `selectedEndpoint` can be
    empty, if there's no endpoint currently being displayed at the receiver.
 
@@ -102,6 +102,13 @@ mode and that we have no further improvements planned for it.
 		'colibriClass': 'SelectedEndpointChangedEvent',
 		'selectedEndpoint': 'ENDPOINT_RESOURCE_ID'
 	}
+
+    It is also possible to select multiple endpoints by sending an ID array.
+	{
+		'colibriClass': 'SelectedEndpointChangedEvent',
+		'selectedEndpoint': ['ENDPOINT_RESOURCE_ID1', 'ENDPOINT_RESOURCE_ID2']
+	}
+
 
 3. StartSimulcastLayerEvent: Sent by the bridge to a sending endpoint to
    indicate that it should resume the simulcast layer indicated by the

@@ -159,10 +159,11 @@ public class Endpoint
     private List<String> pinnedEndpoints = new LinkedList<>();
 
     /**
-     * A weak reference to the currently selected <tt>Endpoint</tt> at this
+     * Weak references to the currently selected <tt>Endpoint</tt>s at this
      * <tt>Endpoint</tt>.
      */
-    private WeakReference<Endpoint> weakSelectedEndpoint;
+    private Set<WeakReference<Endpoint>> weakSelectedEndpoints
+            = new HashSet<>();
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -344,19 +345,42 @@ public class Endpoint
         return sctpConnection.get();
     }
 
+
     /**
-     * Gets the currently selected <tt>Endpoint</tt> at this <tt>Endpoint</tt>.
-     *
-     * @return the currently selected <tt>Endpoint</tt> at this
-     * <tt>Endpoint</tt>.
+     Helper method that unwraps the <tt>Endpoint</tt> from the weak reference
+     and performs the necessary checks.
+
+     @return The unwrapped Endpoint object or null if the Endpoint was release
+     of it has been expired
      */
-    private Endpoint getSelectedEndpoint()
+    private Endpoint checkEndpointWeakReference(WeakReference<Endpoint> wr)
     {
-        WeakReference<Endpoint> wr = this.weakSelectedEndpoint;
         Endpoint e = wr == null ? null : wr.get();
 
         return e == null || e.expired ? null : e;
     }
+
+    /**
+     * Gets the currently selected <tt>Endpoint</tt>s at this <tt>Endpoint</tt>
+     *
+     * @return the currently selected <tt>Endpoint</tt>s at this
+     * <tt>Endpoint</tt>.
+     */
+    private Set<Endpoint> getSelectedEndpoints()
+    {
+        Set<Endpoint> result = new HashSet<>();
+        for (WeakReference<Endpoint> wr : weakSelectedEndpoints)
+        {
+            Endpoint endpoint = checkEndpointWeakReference(wr);
+            if (endpoint != null)
+            {
+                result.add(endpoint);
+            }
+        }
+
+        return result;
+    }
+
 
     /**
      * @return the list of pinned endpoints, represented as a list of endpoint
@@ -647,13 +671,13 @@ public class Endpoint
             WebRtcDataStream src,
             JSONObject jsonObject)
     {
-        String newSelectedEndpointID
-            = (String) jsonObject.get("selectedEndpoint");
+        List<String> newSelectedEndpointIDs
+                = readSelectedEndpointID(jsonObject);
 
         if (logger.isDebugEnabled())
         {
             StringCompiler sc = new StringCompiler();
-            sc.bind("selectedId", newSelectedEndpointID);
+            sc.bind("selectedIds", newSelectedEndpointIDs);
             sc.bind("this", this);
             logger.debug(sc.c(
                     "Endpoint {this.id} notified us that its big screen"
@@ -662,33 +686,27 @@ public class Endpoint
 
         Conference conference = weakConference.get();
 
-        Endpoint newSelectedEndpoint;
-        if (!StringUtils.isNullOrEmpty(newSelectedEndpointID)
-                && conference != null)
-        {
-            newSelectedEndpoint = conference.getEndpoint(newSelectedEndpointID);
-        }
-        else
-        {
-            newSelectedEndpoint = null;
+        Set<Endpoint> newSelectedEndpoints = new HashSet<>();
+
+        if (!newSelectedEndpointIDs.isEmpty() && conference != null ) {
+            for (String endpointId : newSelectedEndpointIDs) {
+                Endpoint endpoint = conference.getEndpoint(endpointId);
+                if (endpoint != null) {
+                    newSelectedEndpoints.add(endpoint);
+                }
+            }
         }
 
         boolean changed;
-        Endpoint oldSelectedEndpoint = this.getSelectedEndpoint();
+        Set<Endpoint> oldSelectedEndpoints = this.getSelectedEndpoints();
         synchronized (selectedEndpointSyncRoot)
         {
-            changed = newSelectedEndpoint != oldSelectedEndpoint;
+            // Compare the collections
+            changed = !(oldSelectedEndpoints.equals(newSelectedEndpoints));
+
             if (changed)
             {
-                if (newSelectedEndpoint == null)
-                {
-                    this.weakSelectedEndpoint = null;
-                }
-                else
-                {
-                    this.weakSelectedEndpoint
-                        = new WeakReference<>(newSelectedEndpoint);
-                }
+                updateWeakSelectedEndpoints(newSelectedEndpoints);
             }
         }
 
@@ -703,14 +721,64 @@ public class Endpoint
             if (logger.isDebugEnabled())
             {
                 StringCompiler sc = new StringCompiler();
-                sc.bind("selected", newSelectedEndpoint);
+                sc.bind("selected", newSelectedEndpoints);
                 sc.bind("this", this);
                 logger.debug(sc.c(
                         "Endpoint {this.id} selected {selected.id}."));
             }
             firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
-                oldSelectedEndpoint, newSelectedEndpoint);
+                oldSelectedEndpoints, newSelectedEndpoints);
         }
+    }
+
+    /**
+     * A helper function that reads the selected endpoint id list from the json
+     * message. Accepts ID list and a single ID
+     *
+     * @param jsonObject The whole message that contains a 'selectedEnpoint'
+     *                   field
+     * @return The list of the IDs or empty list if some problem happened
+     */
+    static private List<String> readSelectedEndpointID(JSONObject jsonObject)
+    {
+        List<String> selectedEndpointIDs;
+        Object selectedEndpointJsonObject = jsonObject.get("selectedEndpoint");
+
+        if (selectedEndpointJsonObject != null &&
+                selectedEndpointJsonObject instanceof JSONArray)
+        {   // JSONArray is an ArrayList
+            selectedEndpointIDs = (List<String>) selectedEndpointJsonObject;
+        }
+        else if (selectedEndpointJsonObject != null &&
+                selectedEndpointJsonObject instanceof String)
+        {
+            selectedEndpointIDs = new ArrayList<>();
+            selectedEndpointIDs.add((String)selectedEndpointJsonObject);
+        }
+        else
+        {   // Unknown type
+            selectedEndpointIDs = new ArrayList<>();
+        }
+
+        return selectedEndpointIDs;
+    }
+
+    /**
+     * A helper method that updates the <tt>weakSelectedEndpoints<tt/>.
+     * Wraps the elements of <tt>newSelectedEndpoints<tt/> to weak references.
+     * @param newSelectedEndpoints The set to use in weakSelectedEndpoints
+     */
+    private void updateWeakSelectedEndpoints(
+            Set<Endpoint> newSelectedEndpoints)
+    {
+        Set<WeakReference<Endpoint>> newSet = new HashSet<>();
+
+        for (Endpoint endpoint : newSelectedEndpoints)
+        {
+            newSet.add(new WeakReference<Endpoint>(endpoint));
+        }
+
+        weakSelectedEndpoints = newSet;
     }
 
     /**
