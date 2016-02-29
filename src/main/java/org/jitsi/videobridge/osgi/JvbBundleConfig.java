@@ -24,6 +24,7 @@ import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.meet.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
 
 /**
@@ -227,6 +228,11 @@ public class JvbBundleConfig
         // This will eventually be enabled by default, but keep it off until
         // more testing.
         defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false_);
+
+        // Disable packet logging.
+        defaults.put(
+                PacketLoggingConfiguration.PACKET_LOGGING_ENABLED_PROPERTY_NAME,
+                false_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed
