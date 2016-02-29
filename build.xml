@@ -201,8 +201,10 @@
     <!-- Jitsi Videobridge Version -->
     <target name="version">
         <!-- set the build id according to the cruisecontrol property -->
-        <replaceregexp file="${src}/org/jitsi/videobridge/version/VersionImpl.java"
-                 match="NIGHTLY_BUILD_ID=(.+)" replace="NIGHTLY_BUILD_ID=&quot;${label}&quot;;" byline="true"/>
+        <replaceregexp file="${src}/org/jitsi/videobridge/version/CurrentVersionImpl.java"
+                 match="NIGHTLY_BUILD_ID = (.+)"
+                 replace="NIGHTLY_BUILD_ID = &quot;${label}&quot;;"
+                 byline="true"/>
     </target>
 
     <!-- JAVADOC -->
