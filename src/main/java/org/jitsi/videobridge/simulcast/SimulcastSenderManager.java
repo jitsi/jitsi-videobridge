@@ -124,13 +124,6 @@ public class SimulcastSenderManager
         return simulcastSender != null && simulcastSender.accept(pkt);
     }
 
-    /**
-     * Determines which simulcast simulcast stream from the srcVideoChannel is
-     * currently being received by this video channel.
-     *
-     * @param simulcastReceiver
-     * @return
-     */
     private synchronized SimulcastSender getOrCreateSimulcastSender(
         SimulcastReceiver simulcastReceiver)
     {

@@ -1010,27 +1010,25 @@ public class VideoChannel
     }
 
     /**
-     * Updates the view that this <tt>VideoChanel</tt> has of all the translated
-     * <tt>VideoChannel</tt>s.
+     * Updates the simulcast-related configuration of this {@link VideoChannel}
+     * with the current state of all other channels in its {@link Content}.
      */
     public void updateTranslatedVideoChannels()
     {
         logger.debug("Updating the translated channels.");
         for (Channel peerVideoChannel : getContent().getChannels())
         {
-            if (!(peerVideoChannel instanceof VideoChannel))
+            if (peerVideoChannel instanceof VideoChannel
+                    && !equals(peerVideoChannel))
             {
-                logger.warn("Er, what? I Taw a Putty Tat.");
-                continue;
+                updateTranslatedVideoChannel((VideoChannel) peerVideoChannel);
             }
-
-            updateTranslatedVideoChannel((VideoChannel) peerVideoChannel);
         }
     }
 
     /**
-     * Updates the view that this <tt>VideoChannel</tt> has of the translated
-     * peer <tt>VideoChannel</tt>.
+     * Updates the simulcast-related configuration of this {@link VideoChannel}
+     * with the current state of {@code peerVideoChannel}.
      *
      * @param peerVideoChannel
      */
@@ -1120,8 +1118,8 @@ public class VideoChannel
             peerVideoChannel.getStream().getDynamicRTPPayloadTypes().entrySet())
         {
             Byte pt = entry.getKey();
-            MediaFormat format = entry.getValue();
-            if (Constants.RED.equals(format.getEncoding()))
+            String encoding = entry.getValue().getEncoding();
+            if (Constants.RED.equals(encoding))
             {
                 for (Integer ssrc : ssrcGroup)
                 {
@@ -1133,8 +1131,7 @@ public class VideoChannel
                     ssrc2red.put(ssrc, pt);
                 }
             }
-
-            if (Constants.ULPFEC.equals(entry.getValue().getEncoding()))
+            else if (Constants.ULPFEC.equals(encoding))
             {
                 for (Integer ssrc : ssrcGroup)
                 {

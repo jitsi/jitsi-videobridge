@@ -77,7 +77,7 @@ public class SimulcastReceiver
     private final SimulcastEngine simulcastEngine;
 
     /**
-     * The simulcast stream of this <tt>VideoChannel</tt>.
+     * The simulcast streams of this {@link SimulcastReceiver}.
      */
     private SimulcastStream[] simulcastStreams;
 
@@ -111,9 +111,9 @@ public class SimulcastReceiver
     }
 
     /**
-     * Returns true if the endpoint has signaled two or more simulcast streams.
+     * Returns true if the endpoint has signaled one or more simulcast streams.
      *
-     * @return true if the endpoint has signaled two or more simulcast streams,
+     * @return true if the endpoint has signaled one or more simulcast streams,
      * false otherwise.
      */
     public boolean isSimulcastSignaled()
