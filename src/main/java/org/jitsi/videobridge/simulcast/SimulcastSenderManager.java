@@ -172,4 +172,14 @@ public class SimulcastSenderManager
                     .getSimulcastEngine()
                         .getSimulcastReceiver();
     }
+
+    /**
+     * @return the map which contains the {@link SimulcastSender}s of this
+     * {@link SimulcastSenderManager}.
+     */
+    public Map<SimulcastReceiver, SimulcastSender> getSenders()
+    {
+        return senders;
+    }
+
 }

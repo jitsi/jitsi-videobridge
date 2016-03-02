@@ -77,6 +77,14 @@ public class SimulcastSender
     private SendMode sendMode;
 
     /**
+     * @return the target order of this {@link SimulcastSender}.
+     */
+    public int getTargetOrder()
+    {
+        return targetOrder;
+    }
+
+    /**
      * The simulcast target order for this <tt>SimulcastSender</tt>.
      *
      * XXX Defaulting to the lowest-quality simulcast stream until we are
