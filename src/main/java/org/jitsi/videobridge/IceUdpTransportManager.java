@@ -1818,7 +1818,17 @@ public class IceUdpTransportManager
                             }
                         }
 
+                        // XXX The value of the field iceAgent is null at times.
+                        Agent iceAgent = getAgent();
+
+                        if (iceAgent == null)
+                        {
+                            // This TransportManager has (probably) been closed.
+                            return;
+                        }
+
                         IceProcessingState state = iceAgent.getState();
+
                         if (IceProcessingState.COMPLETED.equals(state)
                                 || IceProcessingState.TERMINATED.equals(state))
                         {
