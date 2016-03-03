@@ -267,11 +267,12 @@ public class RtxTransformer
 
         if (destinationSupportsRtx)
         {
-            long rtxSsrc = getPairedSsrc(pkt.getSSRC());
+            long rtxSsrc = getPairedSsrc(pkt.getSSRCAsLong());
 
             if (rtxSsrc == -1)
             {
-                logger.warn("Cannot find SSRC for RTX, retransmitting plain.");
+                logger.warn("Cannot find SSRC for RTX, retransmitting plain. "
+                            + "SSRC=" + pkt.getSSRCAsLong());
                 retransmitPlain = true;
             }
             else
