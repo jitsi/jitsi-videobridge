@@ -104,7 +104,7 @@ public class RtxTransformer
         {
             pkt.setSequenceNumber(
                     getNextRtxSequenceNumber(
-                            pkt.getSSRC() & 0xffffffffL,
+                            pkt.getSSRCAsLong(),
                             pkt.getSequenceNumber()));
         }
         else
@@ -126,7 +126,7 @@ public class RtxTransformer
     private RawPacket createMediaPacket(RawPacket pkt)
     {
         RawPacket mediaPacket = null;
-        long rtxSsrc = pkt.getSSRC() & 0xffffffffL;
+        long rtxSsrc = pkt.getSSRCAsLong();
 
         // We need to know the SSRC paired with rtxSsrc *as seen by the
         // receiver (i.e. this.channel)*. However, we only store SSRCs
@@ -267,11 +267,12 @@ public class RtxTransformer
 
         if (destinationSupportsRtx)
         {
-            long rtxSsrc = getPairedSsrc(pkt.getSSRC());
+            long rtxSsrc = getPairedSsrc(pkt.getSSRCAsLong());
 
             if (rtxSsrc == -1)
             {
-                logger.warn("Cannot find SSRC for RTX, retransmitting plain.");
+                logger.warn("Cannot find SSRC for RTX, retransmitting plain. "
+                            + "SSRC=" + pkt.getSSRCAsLong());
                 retransmitPlain = true;
             }
             else

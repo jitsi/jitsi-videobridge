@@ -193,7 +193,7 @@ public class SimulcastStream
             return false;
         }
 
-        long ssrc = pkt.getSSRC() & 0xffffffffL;
+        long ssrc = pkt.getSSRCAsLong();
         return ssrc == primarySSRC || ssrc == rtxSSRC || ssrc == fecSSRC;
     }
 
