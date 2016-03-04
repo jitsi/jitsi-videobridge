@@ -23,11 +23,49 @@ the dominant speaker or lastN endpoints.
     ],
     "lastNEndpoints": [
       "myuserJid@somewhere.com/chat-1234"
+    ],
+    "conferenceEndpoints": [
+      "myuserJid@somewhere.com/chat-1234", "another-endpoint"
     ]
 }
 ```
-This event could be used by the client to show avatars or placeholders for users who are not
-currently in the `lastNEndpoints` array.
+The "lastNEndpoints" array contains the IDs of the endpoints for which video is
+currently being forwarded from the bridge to the client, and only these
+endpoints. The list is ordered according to the history of the speech activity in
+the conference. That is, the first entry in the list is the one which has been dominant
+speaker most recently. This list is not necessarily an initial segment of the 
+"conferenceEndpoints" list, because of endpoint pinning.
+
+The "endpointsEnteringLastN" array contains the IDs of the endpoints which are
+in the "lastNEndpoints" array, but were not in the array the last time the
+event was sent. I.e. their video was not being forwarded, but now it is.
+
+The "conferenceEndpoints" array contains the IDs of the endpoints in the
+conference, ordered by speech activity. That is, the first element is the
+current dominant speaker, the second element is the previous dominant speaker
+and so on. The list is limited to the "lastN" value for the endpoint (which may
+or may not be the same as the size of "lastNEndpoints").
+
+For example, if we have a conference with endpoints "a", "b", "c", "d", "e",
+ordered by speech activity in this way, we have lastN=4, we have "e" as a pinned endpoint,
+and previously no video was being forwarded (e.g. adaptive last-n had dropped the
+number of forwarded streams to 0), we could receive the following:
+
+```json
+{
+    "colibriClass": "LastNEndpointsChangeEvent",
+    "endpointsEnteringLastN": [
+      "a", "b", "e"
+    ],
+    "lastNEndpoints": [
+     "a", "b", "e"
+    ],
+    "conferenceEndpoints": [
+      "a", "b", "c", "d"
+    ]
+}
+```
+
 
 **DominantSpeakerEndpointChangeEvent**
 ```json

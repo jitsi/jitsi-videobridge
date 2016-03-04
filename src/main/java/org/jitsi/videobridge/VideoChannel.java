@@ -499,7 +499,9 @@ public class VideoChannel
             {
                 lastNController.initializeConferenceEndpoints();
                 sendLastNEndpointsChangeEventOnDataChannel(
-                        lastNController.getForwardedEndpoints(), null);
+                        lastNController.getForwardedEndpoints(),
+                        null,
+                        null);
             }
 
             updateInLastN(this);
@@ -532,7 +534,8 @@ public class VideoChannel
      */
     public void sendLastNEndpointsChangeEventOnDataChannel(
             List<String> forwardedEndpoints,
-            List<String> endpointsEnteringLastN)
+            List<String> endpointsEnteringLastN,
+            List<String> conferenceEndpoints)
     {
         Endpoint thisEndpoint = getEndpoint();
 
@@ -560,6 +563,10 @@ public class VideoChannel
             // endpointsEnteringLastN
             msg.append(",\"endpointsEnteringLastN\":");
             msg.append(getJsonString(endpointsEnteringLastN));
+
+            // conferenceEndpoints
+            msg.append(",\"conferenceEndpoints\":");
+            msg.append(getJsonString(conferenceEndpoints));
         }
         msg.append('}');
 
