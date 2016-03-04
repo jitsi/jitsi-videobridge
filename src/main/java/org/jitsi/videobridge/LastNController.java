@@ -363,9 +363,16 @@ public class LastNController
     {
         if (this.adaptiveLastN != adaptiveLastN)
         {
-            if (adaptiveLastN && bitrateController == null)
+            if (adaptiveLastN && adaptiveSimulcast)
             {
-                bitrateController = new BitrateController(this, channel);
+                //adaptive LastN and adaptive simulcast cannot be used together.
+                logger.error("Not enabling adaptive lastN, because adaptive" +
+                                     " simulcast is in use.");
+                return;
+            }
+            else if (adaptiveLastN && bitrateController == null)
+            {
+                bitrateController = new LastNBitrateController(this, channel);
             }
 
             this.adaptiveLastN = adaptiveLastN;
@@ -382,9 +389,17 @@ public class LastNController
     {
         if (this.adaptiveSimulcast != adaptiveSimulcast)
         {
-            if (adaptiveSimulcast && bitrateController == null)
+            if (adaptiveSimulcast && adaptiveLastN)
             {
-                bitrateController = new BitrateController(this, channel);
+                //adaptive LastN and adaptive simulcast cannot be used together.
+                logger.error("Not enabling adaptive simulcast, because " +
+                             "adaptive lastN is in use.");
+                return;
+            }
+            else if (adaptiveSimulcast && bitrateController == null)
+            {
+                bitrateController
+                    = new AdaptiveSimulcastBitrateController(this, channel);
             }
 
             this.adaptiveSimulcast = adaptiveSimulcast;

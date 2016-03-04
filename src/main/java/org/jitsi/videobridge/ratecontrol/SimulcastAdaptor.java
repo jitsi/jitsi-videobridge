@@ -27,7 +27,7 @@ import java.util.*;
 public class SimulcastAdaptor
         implements BitrateAdaptor
 {
-    private final BitrateController bitrateController;
+    private final LastNBitrateController bitrateController;
 
     /**
      * The <tt>Logger</tt> used by the <tt>SimulcastAdaptor</tt> class
@@ -36,7 +36,7 @@ public class SimulcastAdaptor
     private static final org.jitsi.util.Logger logger
         = org.jitsi.util.Logger.getLogger(SimulcastAdaptor.class);
 
-    public SimulcastAdaptor(BitrateController bitrateController)
+    public SimulcastAdaptor(LastNBitrateController bitrateController)
     {
         this.bitrateController = bitrateController;
     }

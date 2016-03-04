@@ -71,9 +71,9 @@ public class VideoChannelLastNAdaptor
             + ".MIN_ENDPOINTS_BEFORE_HQ_DROP";
 
     /**
-     * The <tt>BitrateController</tt> of this <tt>VideoChannelLastNAdaptor</tt>.
+     * The <tt>LastNBitrateController</tt> of this <tt>VideoChannelLastNAdaptor</tt>.
      */
-    private final BitrateController bitrateController;
+    private final LastNBitrateController bitrateController;
 
     /**
      * Whether this <tt>VideoChannelLastNAdaptor</tt> has changed the value of
@@ -95,10 +95,10 @@ public class VideoChannelLastNAdaptor
     /**
      * Initializes a new <tt>VideoChannelLastNAdaptor</tt> instance.
      *
-     * @param bitrateController the <tt>BitrateController</tt> for which the
+     * @param bitrateController the <tt>LastNBitrateController</tt> for which the
      * new instance is to serve.
      */
-    public VideoChannelLastNAdaptor(BitrateController bitrateController)
+    public VideoChannelLastNAdaptor(LastNBitrateController bitrateController)
     {
         this.bitrateController = bitrateController;
 

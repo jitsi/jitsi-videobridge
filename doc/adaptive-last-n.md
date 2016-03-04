@@ -101,10 +101,10 @@ bandwidth.
 The parameters from the above section can be configured with the following
 properties (with their default values given):
 
-org.jitsi.videobridge.ratecontrol.BitrateController.INCREASE\_LAG\_MS=20000
-org.jitsi.videobridge.ratecontrol.BitrateController.DECREASE\_LAG\_MS=10000
-org.jitsi.videobridge.ratecontrol.BitrateController.INITIAL\_INTERVAL\_MS=70000
-org.jitsi.videobridge.ratecontrol.BitrateController.REMB\_MULT\_CONSTANT=1.0
-org.jitsi.videobridge.ratecontrol.BitrateController.MIN\_ASSUMED\_ENDPOINT\_BITRATE\_BPS=400000
-org.jitsi.videobridge.ratecontrol.BitrateController.REMB\_AVERAGE\_INTERVAL\_MS=5000
+org.jitsi.videobridge.ratecontrol.LastNBitrateController.INCREASE\_LAG\_MS=20000
+org.jitsi.videobridge.ratecontrol.LastNBitrateController.DECREASE\_LAG\_MS=10000
+org.jitsi.videobridge.ratecontrol.LastNBitrateController.INITIAL\_INTERVAL\_MS=70000
+org.jitsi.videobridge.ratecontrol.LastNBitrateController.REMB\_MULT\_CONSTANT=1.0
+org.jitsi.videobridge.ratecontrol.LastNBitrateController.MIN\_ASSUMED\_ENDPOINT\_BITRATE\_BPS=400000
+org.jitsi.videobridge.ratecontrol.LastNBitrateController.REMB\_AVERAGE\_INTERVAL\_MS=5000
 org.jitsi.videobridge.ratecontrol.VideoChannelLastNAdaptor.MAX\_STAY\_AT\_ZERO\_MS=60000
