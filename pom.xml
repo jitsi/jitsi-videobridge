@@ -90,7 +90,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>fmj</artifactId>
-      <version>1.0-20160211.051527-17</version>
+      <version>1.0-20160225.164040-18</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -171,7 +171,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20160229.215705-102</version>
+      <version>1.0-20160304.191712-103</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
