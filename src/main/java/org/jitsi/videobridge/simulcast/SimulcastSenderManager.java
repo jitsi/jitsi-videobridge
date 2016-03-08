@@ -174,12 +174,27 @@ public class SimulcastSenderManager
     }
 
     /**
-     * @return the map which contains the {@link SimulcastSender}s of this
-     * {@link SimulcastSenderManager}.
+     * @return the highest "target order" of the senders of this {@link
+     * SimulcastSenderManager}, whose highest stream is currently streaming.
      */
-    public Map<SimulcastReceiver, SimulcastSender> getSenders()
+    public synchronized int getHighestStreamingTargetOrder()
     {
-        return senders;
+        int max = -1;
+
+        for (Map.Entry<SimulcastReceiver, SimulcastSender> entry
+                : senders.entrySet())
+        {
+            int senderTargetOrder = entry.getValue().getTargetOrder();
+            if (senderTargetOrder >= max)
+            {
+                SimulcastStream ss
+                    = entry.getKey().getSimulcastStream(senderTargetOrder);
+                if (ss != null && ss.isStreaming())
+                    max = senderTargetOrder;
+            }
+        }
+
+        return max;
     }
 
 }

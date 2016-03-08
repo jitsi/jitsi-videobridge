@@ -421,39 +421,8 @@ public class AdaptiveSimulcastBitrateController
             return false;
         }
 
-        Map<SimulcastReceiver, SimulcastSender> senders = ssm.getSenders();
-        if (senders == null)
-        {
-            logger.warn("senders is null");
-            return false;
-        }
-
-        for (Map.Entry<SimulcastReceiver, SimulcastSender> entry
-                : senders.entrySet())
-        {
-            try
-            {
-                if (entry.getValue().getTargetOrder() >= TARGET_ORDER_HD)
-                {
-                    SimulcastStream ss
-                        = entry.
-                            getKey().
-                                getSimulcastStream(
-                                        entry.getValue().getTargetOrder());
-
-                    if (ss.isStreaming())
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch (Throwable t)
-            {
-                logger.warn("Checking for HQ layer failed for an endpoint.", t);
-            }
-        }
-
-        return false;
+        int highestStreamingTargetOrder = ssm.getHighestStreamingTargetOrder();
+        return highestStreamingTargetOrder >= TARGET_ORDER_HD;
     }
 
     @Override
