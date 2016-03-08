@@ -29,6 +29,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
+import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
@@ -50,7 +51,6 @@ import org.json.simple.*;
  */
 public class VideoChannel
     extends RtpChannel
-    implements NACKListener
 {
     /**
      * The length in milliseconds of the interval for which the average incoming
@@ -84,6 +84,86 @@ public class VideoChannel
      * instances to print debug information.
      */
     private static final Logger logger = Logger.getLogger(VideoChannel.class);
+
+    /**
+     * The {@code RTCPListener} of this {@code VideoChannel} that handles NACKs.
+     */
+    private final RTCPListener rtcpListener = new RTCPListenerAdapter()
+    {
+        /**
+         * Implements {@link RTCPListener#nackReceived(NACKPacket)}.
+         *
+         * Handles an incoming RTCP NACK packet from a receiver.
+         */
+        @Override
+        public void nackReceived(NACKPacket nackPacket)
+        {
+            long ssrc = nackPacket.sourceSSRC;
+            Set<Integer> lostPackets = new TreeSet<>(nackPacket.getLostPackets());
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                    "Received NACK on channel " + getID() +" for SSRC " + ssrc
+                        + ". Packets reported lost: " + lostPackets);
+            }
+
+            RawPacketCache cache;
+            RtxTransformer rtxTransformer;
+
+            if ((cache = getStream().getPacketCache()) != null
+                && (rtxTransformer = transformEngine.getRtxTransformer())
+                != null)
+            {
+                // XXX The retransmission of packets MUST take into account SSRC
+                // rewriting. Which it may do by injecting retransmitted packets
+                // AFTER the SsrcRewritingEngine. Since the retransmitted packets
+                // have been cached by cache and cache is a TransformEngine, the
+                // injection may as well happen after cache.
+                TransformEngine after
+                    = (cache instanceof TransformEngine)
+                    ? (TransformEngine) cache
+                    : null;
+
+                for (Iterator<Integer> i = lostPackets.iterator(); i.hasNext();)
+                {
+                    int seq = i.next();
+                    RawPacket pkt = cache.get(ssrc, seq);
+
+                    if (pkt != null)
+                    {
+                        if (logger.isDebugEnabled())
+                        {
+                            logger.debug(
+                                "Retransmitting packet from cache. SSRC " + ssrc
+                                    + " seq " + seq);
+                        }
+                        if (rtxTransformer.retransmit(pkt, after))
+                        {
+                            i.remove();
+                        }
+                    }
+                }
+            }
+
+            if (!lostPackets.isEmpty())
+            {
+                if (requestRetransmissions)
+                {
+                    // If retransmission requests are enabled, videobridge assumes
+                    // the responsibility of requesting missing packets.
+                    logger.debug("Packets missing from the cache. Ignoring, because"
+                        + " retransmission requests are enabled.");
+                }
+                else
+                {
+                    // Otherwise, if retransmission requests are disabled, we send
+                    // a NACK packet of our own.
+                    sendNack(nackPacket.senderSSRC, ssrc, lostPackets);
+                }
+            }
+        }
+    };
 
     /**
      * The payload type number configured for VP8 for this channel,
@@ -277,7 +357,7 @@ public class VideoChannel
                                     " a packet cache.");
             }
 
-            stream.getMediaStreamStats().addNackListener(this);
+            stream.getMediaStreamStats().addNackListener(rtcpListener);
         }
     }
 
@@ -735,80 +815,6 @@ public class VideoChannel
         // Otherwise, we strip it.
         if (transformEngine != null)
             transformEngine.enableREDFilter(enableRedFilter);
-    }
-
-    /**
-     * Implements {@link NACKListener#nackReceived(NACKPacket)}.
-     *
-     * Handles an incoming RTCP NACK packet from a receiver.
-     */
-    @Override
-    public void nackReceived(NACKPacket nackPacket)
-    {
-        long ssrc = nackPacket.sourceSSRC;
-        Set<Integer> lostPackets = new TreeSet<>(nackPacket.getLostPackets());
-
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                    "Received NACK on channel " + getID() +" for SSRC " + ssrc
-                        + ". Packets reported lost: " + lostPackets);
-        }
-
-        RawPacketCache cache;
-        RtxTransformer rtxTransformer;
-
-        if ((cache = getStream().getPacketCache()) != null
-                && (rtxTransformer = transformEngine.getRtxTransformer())
-                        != null)
-        {
-            // XXX The retransmission of packets MUST take into account SSRC
-            // rewriting. Which it may do by injecting retransmitted packets
-            // AFTER the SsrcRewritingEngine. Since the retransmitted packets
-            // have been cached by cache and cache is a TransformEngine, the
-            // injection may as well happen after cache.
-            TransformEngine after
-                = (cache instanceof TransformEngine)
-                    ? (TransformEngine) cache
-                    : null;
-
-            for (Iterator<Integer> i = lostPackets.iterator(); i.hasNext();)
-            {
-                int seq = i.next();
-                RawPacket pkt = cache.get(ssrc, seq);
-
-                if (pkt != null)
-                {
-                    if (logger.isDebugEnabled())
-                    {
-                        logger.debug(
-                                "Retransmitting packet from cache. SSRC " + ssrc
-                                    + " seq " + seq);
-                    }
-                    if (rtxTransformer.retransmit(pkt, after))
-                    {
-                        i.remove();
-                    }
-                }
-            }
-        }
-
-        if (!lostPackets.isEmpty())
-        {
-            if (requestRetransmissions)
-            {
-                // If retransmission requests are enabled, videobridge assumes
-                // the responsibility of requesting missing packets.
-                logger.debug("Packets missing from the cache. Ignoring, because"
-                                     + " retransmission requests are enabled.");
-            }
-            else
-            {
-                // Otherwise, if retransmission requests are disabled, we send
-                // a NACK packet of our own.
-                sendNack(nackPacket.senderSSRC, ssrc, lostPackets);
-            }
-        }
     }
 
     /**
