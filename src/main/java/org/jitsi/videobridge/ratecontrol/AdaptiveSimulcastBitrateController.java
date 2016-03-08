@@ -173,10 +173,12 @@ public class AdaptiveSimulcastBitrateController
      */
     private static void initializeConfiguration(ConfigurationService cfg)
     {
-        if (configurationInitialized)
-            return;
         synchronized (AdaptiveSimulcastBitrateController.class)
         {
+            if (configurationInitialized)
+                return;
+            configurationInitialized = true;
+
             if (cfg != null)
             {
                 PROCESS_INTERVAL_MS
@@ -197,7 +199,6 @@ public class AdaptiveSimulcastBitrateController
             }
 
             recurringProcessibleExecutor = new RecurringProcessibleExecutor();
-            configurationInitialized = true;
         }
     }
 
