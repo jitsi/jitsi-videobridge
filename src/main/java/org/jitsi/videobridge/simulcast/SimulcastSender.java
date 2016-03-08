@@ -354,7 +354,16 @@ public class SimulcastSender
 
         if (thisWillbeInTheSelectedEndpoints)
         {
-            targetOrder = hqOrder;
+            int overrideOrder = getSimulcastSenderManager().getOverrideOrder();
+            if (overrideOrder
+                    == SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
+            {
+                targetOrder = hqOrder;
+            }
+            else
+            {
+                targetOrder = Math.min(hqOrder, overrideOrder);
+            }
         }
         else if(thisWasInTheSelectedEndpoints)
         { // It was in the old selected endpoints but it is not present in the
