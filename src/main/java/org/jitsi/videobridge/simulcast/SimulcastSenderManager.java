@@ -124,13 +124,6 @@ public class SimulcastSenderManager
         return simulcastSender != null && simulcastSender.accept(pkt);
     }
 
-    /**
-     * Determines which simulcast simulcast stream from the srcVideoChannel is
-     * currently being received by this video channel.
-     *
-     * @param simulcastReceiver
-     * @return
-     */
     private synchronized SimulcastSender getOrCreateSimulcastSender(
         SimulcastReceiver simulcastReceiver)
     {
@@ -179,4 +172,29 @@ public class SimulcastSenderManager
                     .getSimulcastEngine()
                         .getSimulcastReceiver();
     }
+
+    /**
+     * @return the highest "target order" of the senders of this {@link
+     * SimulcastSenderManager}, whose highest stream is currently streaming.
+     */
+    public synchronized int getHighestStreamingTargetOrder()
+    {
+        int max = -1;
+
+        for (Map.Entry<SimulcastReceiver, SimulcastSender> entry
+                : senders.entrySet())
+        {
+            int senderTargetOrder = entry.getValue().getTargetOrder();
+            if (senderTargetOrder >= max)
+            {
+                SimulcastStream ss
+                    = entry.getKey().getSimulcastStream(senderTargetOrder);
+                if (ss != null && ss.isStreaming())
+                    max = senderTargetOrder;
+            }
+        }
+
+        return max;
+    }
+
 }

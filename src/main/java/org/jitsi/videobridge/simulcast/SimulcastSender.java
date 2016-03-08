@@ -77,6 +77,14 @@ public class SimulcastSender
     private SendMode sendMode;
 
     /**
+     * @return the target order of this {@link SimulcastSender}.
+     */
+    public int getTargetOrder()
+    {
+        return targetOrder;
+    }
+
+    /**
      * The simulcast target order for this <tt>SimulcastSender</tt>.
      *
      * XXX Defaulting to the lowest-quality simulcast stream until we are
@@ -346,7 +354,16 @@ public class SimulcastSender
 
         if (thisWillbeInTheSelectedEndpoints)
         {
-            targetOrder = hqOrder;
+            int overrideOrder = getSimulcastSenderManager().getOverrideOrder();
+            if (overrideOrder
+                    == SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
+            {
+                targetOrder = hqOrder;
+            }
+            else
+            {
+                targetOrder = Math.min(hqOrder, overrideOrder);
+            }
         }
         else if(thisWasInTheSelectedEndpoints)
         { // It was in the old selected endpoints but it is not present in the
