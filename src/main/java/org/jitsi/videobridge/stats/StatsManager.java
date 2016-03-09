@@ -70,7 +70,7 @@ public class StatsManager
      * <tt>statistics</tt> is to be generated/updated by this
      * <tt>StatsManager</tt>
      */
-    public void addStatistics(Statistics statistics, long period)
+    void addStatistics(Statistics statistics, long period)
     {
         if (statistics == null)
             throw new NullPointerException("statistics");
@@ -95,7 +95,7 @@ public class StatsManager
      * <tt>StatsManager</tt> is to repeatedly send the <tt>Statistics</tt> added
      * to it through the specified <tt>transport</tt>
      */
-    public void addTransport(StatsTransport transport, long period)
+    void addTransport(StatsTransport transport, long period)
     {
         if (transport == null)
             throw new NullPointerException("transport");
