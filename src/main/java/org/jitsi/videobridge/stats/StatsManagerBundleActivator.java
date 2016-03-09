@@ -45,7 +45,7 @@ public class StatsManagerBundleActivator
     /**
      * The default value for statistics interval.
      */
-    private static final int DEFAULT_STAT_INTERVAL = 1000;
+    static final int DEFAULT_STAT_INTERVAL = 1000;
 
     /**
      * The default value for statistics transport.

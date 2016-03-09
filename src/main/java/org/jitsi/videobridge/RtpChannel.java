@@ -768,6 +768,14 @@ public class RtpChannel
      */
     public long getLastPacketsLostNB()
     {
+        // XXX The field stream is assigned to in #initialize(RTPLevelRelayType)
+        // but by that time this RtpChannel is already exposed through its
+        // Content.
+        MediaStream stream = this.stream;
+
+        if (stream == null)
+            return 0;
+
         long newPacketsLost = stream.getMediaStreamStats().getNbPacketsLost();
         long lastPacketsNB = newPacketsLost - lastKnownPacketsLostNB;
 
@@ -795,6 +803,14 @@ public class RtpChannel
      */
     public long getLastPacketsNB()
     {
+        // XXX The field stream is assigned to in #initialize(RTPLevelRelayType)
+        // but by that time this RtpChannel is already exposed through its
+        // Content.
+        MediaStream stream = this.stream;
+
+        if (stream == null)
+            return 0;
+
         long newPackets = stream.getMediaStreamStats().getNbPackets();
         long lastPacketsNB = newPackets - lastKnownPacketsNB;
 
@@ -831,9 +847,18 @@ public class RtpChannel
      */
     public long getNBReceivedBytes()
     {
-        long bytes = 0;
+        // XXX The field stream is assigned to in #initialize(RTPLevelRelayType)
+        // but by that time this RtpChannel is already exposed through its
+        // Content.
+        MediaStream stream = this.stream;
+
+        if (stream == null)
+            return 0;
+
         long newBytes = stream.getMediaStreamStats().getNbReceivedBytes();
-        if(newBytes > lastKnownReceivedBytes)
+        long bytes = 0;
+
+        if (newBytes > lastKnownReceivedBytes)
         {
             bytes += newBytes - lastKnownReceivedBytes;
             lastKnownReceivedBytes = newBytes;
@@ -854,11 +879,18 @@ public class RtpChannel
      */
     public long getNBSentBytes()
     {
-        long bytes = 0;
+        // XXX The field stream is assigned to in #initialize(RTPLevelRelayType)
+        // but by that time this RtpChannel is already exposed through its
+        // Content.
+        MediaStream stream = this.stream;
+
+        if (stream == null)
+            return 0;
 
         long newBytes = stream.getMediaStreamStats().getNbSentBytes();
+        long bytes = 0;
 
-        if(newBytes > lastKnownSentBytes)
+        if (newBytes > lastKnownSentBytes)
         {
             bytes += newBytes - lastKnownSentBytes;
             lastKnownSentBytes = newBytes;
