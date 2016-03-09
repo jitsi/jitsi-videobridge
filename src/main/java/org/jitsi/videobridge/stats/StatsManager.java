@@ -62,6 +62,10 @@ public class StatsManager
     /**
      * Adds a specific (set of) <tt>Statistics</tt> to be periodically
      * generated/updated by this <tt>StatsManager</tt>.
+     * <p>
+     * Warning: {@code Statistics} added to this {@code StatsMamanager} after
+     * {@link #start(BundleContext)} has been invoked will not be updated.
+     * </p>
      *
      * @param statistics the (set of) <tt>Statistics</tT> to be repeatedly
      * generated/updated by this <tt>StatsManager</tt> at the specified
@@ -87,6 +91,10 @@ public class StatsManager
      * Adds a specific <tt>StatsTransport</tt> through which this
      * <tt>StatsManager</tt> is to periodically send the <tt>Statistics</tt>
      * added to it.
+     * <p>
+     * Warning: {@code StatsTransport}s added to this {@code StatsMamanager}
+     * after {@link #start(BundleContext)} has been invoked will not be called.
+     * </p>
      *
      * @param transport the <tt>StatsTransport</tt> to add to this
      * <tt>StatsManager</tt> so that the latter periodically sends the
@@ -215,8 +223,15 @@ public class StatsManager
     /**
      * {@inheritDoc}
      *
-     * Starts the <tt>StatsTransport</tt>s added to this <tt>StatsManager</tt>
-     * in the specified <tt>bundleContext</tt>.
+     * Starts the {@code StatsTransport}s added to this {@code StatsManager} in
+     * the specified {@code bundleContext}. Commences the generation of the
+     * {@code Statistics} added to this {@code StatsManager}.
+     * <p>
+     * Warning: {@code Statistics} and {@code StatsTransport}s added by way of
+     * {@link #addStatistics(Statistics, long)} and
+     * {@link #addTransport(StatsTransport, long)} after the current method
+     * invocation will not be started.
+     * </p>
      */
     @Override
     void start(BundleContext bundleContext)
