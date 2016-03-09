@@ -19,10 +19,10 @@ import java.util.*;
 
 import net.java.sip.communicator.util.*;
 
-import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
+import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
 

@@ -17,7 +17,7 @@ package org.jitsi.videobridge.stats;
 
 import java.util.*;
 import java.util.concurrent.*;
-import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
+import org.jitsi.util.concurrent.*;
 import org.osgi.framework.*;
 
 /**
@@ -282,68 +282,6 @@ public class StatsManager
             transportExecutor.deRegisterRecurringProcessible(tpp);
 
             tpp.o.stop(bundleContext);
-        }
-    }
-
-    /**
-     * Implements a {@link PeriodicProcessible} associated with an
-     * {@code Object}.
-     *
-     * @param <T> the type of the {@code Object} associated with the
-     * {@code PeriodicProcessible}
-     */
-    private static abstract class PeriodicProcessibleWithObject<T>
-        extends PeriodicProcessible
-    {
-        /**
-         * The {@code Object} associated with this {@link PeriodicProcessible}.
-         */
-        public final T o;
-
-        /**
-         * Initializes a new {@code PeriodicProcessibleWithObject} instance
-         * associated with a specific {@code Object}.
-         *
-         * @param o the {@code Object} associated with the new instance
-         * @param period the interval/period in milliseconds at which
-         * {@link #process()} is to be invoked
-         */
-        protected PeriodicProcessibleWithObject(T o, long period)
-        {
-            super(period);
-
-            if (o == null)
-                throw new NullPointerException("o");
-
-            this.o = o;
-        }
-
-        /**
-         * Invoked by {@link #process()} (1) before
-         * {@link PeriodicProcessible#_lastProcessTime} is updated and (2)
-         * removing the requirement of {@link RecurringProcessible#process()} to
-         * return a {@code long} value with unknown/undocumented (at the time of
-         * this writing) meaning.
-         */
-        protected abstract void doProcess();
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public long process()
-        {
-            long ret;
-
-            try
-            {
-                doProcess();
-            }
-            finally
-            {
-                ret = super.process();
-            }
-            return ret;
         }
     }
 
