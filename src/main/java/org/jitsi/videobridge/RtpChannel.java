@@ -1102,38 +1102,40 @@ public class RtpChannel
                 return;
         }
 
-        // connector
+        MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
+        if (streamTarget == null)
+        {
+            logger.info("Not starting stream, target is null");
+            return;
+        }
 
         if (connector == null)
-            return;
-        else
-            stream.setConnector(connector);
-
-        // target
-        MediaStreamTarget streamTarget = createStreamTarget();
-
-        if (streamTarget != null)
         {
-            InetSocketAddress dataAddr = streamTarget.getDataAddress();
-
-            if (dataAddr != null)
-            {
-                this.streamTarget.setDataHostAddress(dataAddr.getAddress());
-                this.streamTarget.setDataPort(dataAddr.getPort());
-            }
-
-            InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
-
-            if (ctrlAddr != null)
-            {
-                this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
-                this.streamTarget.setControlPort(ctrlAddr.getPort());
-            }
-
-            if (dataAddr != null)
-                stream.setTarget(streamTarget);
+            logger.info("Not starting stream, target is null");
+            return;
         }
+
+        InetSocketAddress dataAddr = streamTarget.getDataAddress();
+        if (dataAddr == null)
+        {
+            logger.info(
+                "Not starting stream, the target's data address is null");
+            return;
+        }
+
+        this.streamTarget.setDataHostAddress(dataAddr.getAddress());
+        this.streamTarget.setDataPort(dataAddr.getPort());
+
+        InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
+        if (ctrlAddr != null)
+        {
+            this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
+            this.streamTarget.setControlPort(ctrlAddr.getPort());
+        }
+
+        stream.setTarget(streamTarget);
+        stream.setConnector(connector);
 
         Content content = getContent();
 
@@ -1157,7 +1159,7 @@ public class RtpChannel
             Videobridge videobridge
                 = getContent().getConference().getVideobridge();
             EventAdmin eventAdmin = videobridge.getEventAdmin();
-            if (eventAdmin != null && streamTarget != null)
+            if (eventAdmin != null)
             {
                 eventAdmin
                     .sendEvent(EventFactory.streamStarted(this));
