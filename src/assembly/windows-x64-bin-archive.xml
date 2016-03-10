@@ -15,6 +15,9 @@
       <includes>
         <include>*.jar</include>
       </includes>
+      <excludes>
+        <exclude>original-*.jar</exclude>
+      </excludes>
     </fileSet>
     <fileSet>
       <directory>${project.basedir}/lib</directory>
