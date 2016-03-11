@@ -44,5 +44,9 @@
         <include>jvb.bat</include>
       </includes>
     </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/.sip-communicator</directory>
+      <outputDirectory>.sip-communicator</outputDirectory>
+    </fileSet>
   </fileSets>
 </assembly>
