@@ -34,4 +34,4 @@ fi
 
 if [ -z "$VIDEOBRIDGE_MAX_MEMORY" ]; then VIDEOBRIDGE_MAX_MEMORY=3072m; fi
 
-LD_LIBRARY_PATH=$libs exec java -Xmx$VIDEOBRIDGE_MAX_MEMORY $VIDEOBRIDGE_DEBUG_OPTIONS -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp -Djava.library.path=$libs $LOGGING_CONFIG_PARAM $JAVA_SYS_PROPS -cp $cp $mainClass $@
+LD_LIBRARY_PATH=$libs exec java -Xmx$VIDEOBRIDGE_MAX_MEMORY $VIDEOBRIDGE_DEBUG_OPTIONS -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=$SCRIPT_DIR -Djava.library.path=$libs $LOGGING_CONFIG_PARAM $JAVA_SYS_PROPS -cp $cp $mainClass $@
