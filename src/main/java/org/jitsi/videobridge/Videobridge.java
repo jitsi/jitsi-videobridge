@@ -1333,11 +1333,27 @@ public class Videobridge
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());
 
+        this.bundleContext = bundleContext;
+
+        startIce4j(bundleContext, cfg);
+    }
+
+    /**
+     * Implements the ice4j-related portion of {@link #start(BundleContext)}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code Videobridge} is to start
+     * @param cfg the {@code ConfigurationService} registered in
+     * {@code bundleContext}. Explicitly provided for the sake of performance.
+     */
+    private void startIce4j(
+            BundleContext bundleContext,
+            ConfigurationService cfg)
+    {
         // TODO Packet logging for ice4j is not supported at this time.
         StunStack.setPacketLogger(null);
 
         // Make all ice4j properties system properties.
-
         if (cfg != null)
         {
             List<String> ice4jPropertyNames
@@ -1371,7 +1387,10 @@ public class Videobridge
                     e);
         }
 
-        this.bundleContext = bundleContext;
+        // CandidateHarvesters may take (non-trivial) time to initialize so
+        // initialize them as soon as possible, don't wait to initialize them
+        // after a Channel is requested.
+        IceUdpTransportManager.initializeStaticHarvesters(cfg);
     }
 
     /**
