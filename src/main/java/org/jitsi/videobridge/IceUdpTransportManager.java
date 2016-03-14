@@ -308,7 +308,7 @@ public class IceUdpTransportManager
         this.rtcpmux = numComponents == 1;
         this.isControlling = isControlling;
 
-        this.dtlsControl = new DtlsControlImpl(false);
+        dtlsControl = new DtlsControlImpl(false);
         dtlsControl.registerUser(this);
 
         iceAgent = createIceAgent(isControlling, iceStreamName, rtcpmux);
@@ -425,8 +425,6 @@ public class IceUdpTransportManager
 
         if (rtcpmux)
         {
-            initializeStaticHarvesters();
-
             if (tcpHostHarvester != null)
                 iceAgent.addCandidateHarvester(tcpHostHarvester);
             if (singlePortHarvesters != null)
@@ -457,9 +455,9 @@ public class IceUdpTransportManager
 
         HarvesterConfiguration addressesConfig
             = HarvesterConfiguration.getInstance(cfg);
-
         MappingCandidateHarvester mappingHarvester
             = addressesConfig.getCandidateHarvester();
+
         //append the mapping harvester
         if( mappingHarvester != null)
         {
@@ -1661,17 +1659,18 @@ public class IceUdpTransportManager
      * Initializes the static <tt>Harvester</tt> instances used by all
      * <tt>IceUdpTransportManager</tt> instances, that is
      * {@link #tcpHostHarvester} and {@link #singlePortHarvesters}.
+     *
+     * @param cfg the {@link ConfigurationService} which provides values to
+     * configurable properties of the behavior/logic of the method
+     * implementation
      */
-    private void initializeStaticHarvesters()
+    static void initializeStaticHarvesters(ConfigurationService cfg)
     {
         synchronized (IceUdpTransportManager.class)
         {
             if (staticHarvestersInitialized)
                 return;
             staticHarvestersInitialized = true;
-
-            ConfigurationService cfg
-                = conference.getVideobridge().getConfigurationService();
 
             int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
                                         SINGLE_PORT_DEFAULT_VALUE);
@@ -1701,8 +1700,7 @@ public class IceUdpTransportManager
 
                 try
                 {
-                    tcpHostHarvester
-                        = new TcpHarvester(port, ssltcp);
+                    tcpHostHarvester = new TcpHarvester(port, ssltcp);
                 }
                 catch (IOException ioe)
                 {
