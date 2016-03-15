@@ -214,7 +214,7 @@ public class LastNController
             // Since we have the lock anyway, call update() inside, so it
             // doesn't have to obtain it again. But keep the call to
             // askForKeyframes() outside.
-            if (!pinnedEndpoints.equals(newPinnedEndpointIds))
+            if (!equalAsSets(pinnedEndpoints, newPinnedEndpointIds))
             {
                 pinnedEndpoints
                         = Collections.unmodifiableList(newPinnedEndpointIds);
