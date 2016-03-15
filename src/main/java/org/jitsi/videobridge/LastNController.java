@@ -335,7 +335,8 @@ public class LastNController
     private synchronized List<String> speechActivityEndpointIdsChanged(
             List<String> endpointIds)
     {
-        if (conferenceSpeechActivityEndpoints.equals(endpointIds))
+
+        if (equalAsSets(conferenceSpeechActivityEndpoints, endpointIds))
         {
             if (logger.isDebugEnabled())
             {
