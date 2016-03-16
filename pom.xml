@@ -213,6 +213,61 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <git-SHA-1>${buildNumber}</git-SHA-1>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.4.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>org.jitsi.videobridge.Main</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>2.4.3</version>
@@ -255,7 +310,7 @@
             <configuration>
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/linux-x64-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-linux-x64-${project.version}</finalName>
+              <finalName>${project.artifactId}-linux-x64-${project.version}_${buildNumber}</finalName>
               <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
@@ -268,7 +323,7 @@
             <configuration>
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/linux-x86-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-linux-x86-${project.version}</finalName>
+              <finalName>${project.artifactId}-linux-x86-${project.version}_${buildNumber}</finalName>
               <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
@@ -281,7 +336,7 @@
             <configuration>
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/macosx-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-macosx-${project.version}</finalName>
+              <finalName>${project.artifactId}-macosx-${project.version}_${buildNumber}</finalName>
               <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
@@ -294,7 +349,7 @@
             <configuration>
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/windows-x64-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-windows-x64-${project.version}</finalName>
+              <finalName>${project.artifactId}-windows-x64-${project.version}_${buildNumber}</finalName>
               <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
           </execution>
@@ -307,9 +362,22 @@
             <configuration>
               <appendAssemblyId>false</appendAssemblyId>
               <descriptor>src/assembly/windows-x86-bin-archive.xml</descriptor>
-              <finalName>${project.artifactId}-windows-x86-${project.version}</finalName>
+              <finalName>${project.artifactId}-windows-x86-${project.version}_${buildNumber}</finalName>
               <skipAssembly>${assembly.skipAssembly}</skipAssembly>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>auto-clean</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
