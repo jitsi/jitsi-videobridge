@@ -29,6 +29,7 @@ import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
@@ -1222,11 +1223,10 @@ public class Videobridge
                     bundleContext,
                     ConfigurationService.class);
 
-        this.defaultProcessingOptions
+        defaultProcessingOptions
             = (cfg == null)
                 ? 0
                 : cfg.getInt(DEFAULT_OPTIONS_PROPERTY_NAME, 0);
-
         if (logger.isDebugEnabled())
         {
             logger.debug(
@@ -1336,6 +1336,11 @@ public class Videobridge
         this.bundleContext = bundleContext;
 
         startIce4j(bundleContext, cfg);
+
+        // MediaService may take (non-trivial) time to initialize so initialize
+        // it as soon as possible, don't wait to initialize it after an
+        // RtpChannel is requested.
+        LibJitsi.getMediaService();
     }
 
     /**
