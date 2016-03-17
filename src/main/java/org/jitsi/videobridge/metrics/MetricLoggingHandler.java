@@ -410,8 +410,10 @@ public class MetricLoggingHandler
                 return;
             }
 
+            int[] conferenceChannelAndStreamCount
+                = videobridge.getConferenceChannelAndStreamCount();
             publishNumericMetric(
-                METRIC_CHANNELS, videobridge.getChannelCount());
+                METRIC_CHANNELS, conferenceChannelAndStreamCount[1]);
 
             if(EventFactory.CHANNEL_EXPIRED_TOPIC.equals(event.getTopic()))
             {
@@ -451,7 +453,7 @@ public class MetricLoggingHandler
             }
 
             publishNumericMetric(
-                METRIC_VIDEO_STREAMS, videobridge.getChannelCount());
+                METRIC_VIDEO_STREAMS, conferenceChannelAndStreamCount[2]);
 
             publishNumericMetric(METRIC_ENDPOINTS, conference.getEndpointCount());
         }
