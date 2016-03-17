@@ -1392,7 +1392,7 @@ public class Videobridge
      * @return an array that contains the total number of
      * conferences/channels/video streams.
      */
-    public int[] getConferenceMetrics()
+    private int[] getConferenceMetrics()
     {
         Conference[] conferences = getConferences();
         int conferenceCount = 0, channelCount = 0, streamCount = 0;
@@ -1452,7 +1452,7 @@ public class Videobridge
         return
             "The total number of conferences is now " + metrics[0]
                 + ", channels " + metrics[1] + ", video streams "
-                + metrics[1] + ".";
+                + metrics[2] + ".";
     }
 
     /**

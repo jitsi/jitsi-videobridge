@@ -451,7 +451,7 @@ public class MetricLoggingHandler
             }
 
             publishNumericMetric(
-                METRIC_VIDEO_STREAMS, videobridge.getConferenceMetrics()[1]);
+                METRIC_VIDEO_STREAMS, videobridge.getChannelCount());
 
             publishNumericMetric(METRIC_ENDPOINTS, conference.getEndpointCount());
         }
