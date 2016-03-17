@@ -226,11 +226,18 @@ public class SimulcastStream
 
     public boolean isKeyFrame(RawPacket pkt)
     {
-        byte redPT = simulcastReceiver.getSimulcastEngine()
-            .getVideoChannel().getRedPayloadType();
-        byte vp8PT = simulcastReceiver.getSimulcastEngine()
-            .getVideoChannel().getVP8PayloadType();
-        return Utils.isKeyFrame(pkt, redPT, vp8PT);
+        try
+        {
+            byte redPT = simulcastReceiver.getSimulcastEngine()
+                .getVideoChannel().getRedPayloadType();
+            byte vp8PT = simulcastReceiver.getSimulcastEngine()
+                .getVideoChannel().getVP8PayloadType();
+            return Utils.isKeyFrame(pkt, redPT, vp8PT);
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
     }
 
     /**

@@ -77,6 +77,11 @@ public class RtpChannel
     private static final long[] NO_RECEIVE_SSRCS = new long[0];
 
     /**
+     * The maximum number of SSRCs to accept on this channel. RTP packets arriving
+     */
+    private static final int MAX_RECEIVE_SSRCS = 50;
+
+    /**
      * Gets the <tt>Channel</tt> which uses a specific <tt>MediaStream</tt>.
      *
      * @param stream a <tt>MediaStream</tt> which was initialized by a
@@ -493,7 +498,19 @@ public class RtpChannel
                      * to the focus by the Jitsi Videobridge server.
                      */
                     int ssrc = RTPTranslatorImpl.readInt(data, off + 8);
-                    boolean notify = addReceiveSSRC(ssrc);
+                    boolean notify;
+
+                    try
+                    {
+                        notify = addReceiveSSRC(ssrc, true);
+                    }
+                    catch (SizeExceededException see)
+                    {
+                        // Drop the packet and do *not* trigger signalling
+                        // because of it.
+                        accept = false;
+                        notify = false;
+                    }
 
                     /*
                      * If a new SSRC has been detected on this channel, and a
@@ -570,10 +587,18 @@ public class RtpChannel
      *
      * @param receiveSSRC the RTP SSRC to be added to the list of SSRCs received
      * on this <tt>Channel</tt>
+     * @param checkLimit whether to check whether the number of receive SSRCs
+     * for the channel exceed the limit ({@link #MAX_RECEIVE_SSRCS}).
      * @return <tt>true</tt> if <tt>receiveSSRC</tt> was added to the list
      * (i.e. was not previously there); otherwise, <tt>false</tt>
+     * @throws org.jitsi.videobridge.RtpChannel.SizeExceededException if
+     * {@code checkLimit} is true and the number of SSRCs in {@link
+     * #receiveSSRCs} would have exceeded {@link #MAX_RECEIVE_SSRCS} with the
+     * addition of the new SSRC.
      */
-    private synchronized boolean addReceiveSSRC(int receiveSSRC)
+    private synchronized boolean addReceiveSSRC(int receiveSSRC,
+                                                boolean checkLimit)
+        throws SizeExceededException
     {
         long now = System.currentTimeMillis();
 
@@ -592,6 +617,11 @@ public class RtpChannel
                  */
                 return false;
             }
+        }
+
+        if (checkLimit && length >= MAX_RECEIVE_SSRCS / 2)
+        {
+            throw new SizeExceededException();
         }
 
         // add
@@ -1786,7 +1816,16 @@ public class RtpChannel
         {
             for (Integer addedSSRC : addedSSRCs)
             {
-                addReceiveSSRC(addedSSRC);
+                try
+                {
+                    // Do allow the number of explicitly signalled SSRCs to
+                    // exceed the limit.
+                    addReceiveSSRC(addedSSRC, false);
+                }
+                catch (SizeExceededException see)
+                {
+                    // Never throw with checkLimit=false.
+                }
             }
         }
 
@@ -1973,4 +2012,7 @@ public class RtpChannel
     {
         return conferenceSpeechActivity;
     }
+
+    private static class SizeExceededException extends Exception
+    {}
 }
