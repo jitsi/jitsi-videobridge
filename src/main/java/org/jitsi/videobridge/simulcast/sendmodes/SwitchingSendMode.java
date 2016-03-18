@@ -39,6 +39,7 @@ import java.util.concurrent.locks.*;
  *
  * @author George Politis
  */
+@Deprecated
 public class SwitchingSendMode
     extends SendMode
 {
