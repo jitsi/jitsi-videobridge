@@ -318,9 +318,11 @@ public class SimulcastReceiver
         long pktTimestamp = pkt.readUnsignedIntAsLong(4);
         boolean frameStarted = false;
 
-        if (acceptedStream.lastPktTimestamp <= pktTimestamp)
+        if (acceptedStream.lastPktTimestamp == -1 || TimeUtils
+            .rtpDiff(acceptedStream.lastPktTimestamp, pktTimestamp) <= 0)
         {
-            if (acceptedStream.lastPktTimestamp < pktTimestamp)
+            if (acceptedStream.lastPktTimestamp == -1 || TimeUtils
+                .rtpDiff(acceptedStream.lastPktTimestamp, pktTimestamp) < 0)
             {
                 // The current pkt signals the receit of a piece of a new (i.e.
                 // unobserved until now) frame.
