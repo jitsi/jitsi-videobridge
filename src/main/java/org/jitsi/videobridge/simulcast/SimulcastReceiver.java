@@ -464,7 +464,11 @@ public class SimulcastReceiver
             return;
         }
 
-        if (acceptedStream.getOrder() != 0 && !acceptedStream.isStreaming)
+        List<SimulcastStream> changedStreams = new ArrayList<>();
+
+        if (acceptedStream.getOrder()
+            != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
+            && !acceptedStream.isStreaming)
         {
             // If the frame-based approach to the detection of stream drops
             // works (i.e. there will always be at least 1 high quality frame
@@ -489,7 +493,7 @@ public class SimulcastReceiver
                         + " frame.");
             }
 
-            fireSimulcastStreamsChangedAsync(acceptedStream);
+            changedStreams.add(acceptedStream);
         }
 
         // Determine whether any of {@link #simulcastStreams} other than
@@ -546,12 +550,17 @@ public class SimulcastReceiver
                     // already.
                     if (simStream.isStreaming())
                     {
-                        maybeTimeout(
+                        boolean needsTimeout = needsTimeout(
                                 acceptedStream,
                                 pkt,
                                 simStream,
                                 localSimulcastStreamFrameHistory,
                                 indexOfLastSourceOccurrenceInHistory);
+
+                        if (needsTimeout)
+                        {
+                            changedStreams.add(simStream);
+                        }
                     }
                 }
                 else if (simStream == acceptedStream)
@@ -562,6 +571,10 @@ public class SimulcastReceiver
         }
 
 
+        SimulcastStream[] changedStreamsArr = changedStreams.toArray(
+            new SimulcastStream[changedStreams.size()]);
+
+        fireSimulcastStreamsChangedAsync(changedStreamsArr);
         // As previously stated, the current method invocation signals the
         // receipt of 1 frame by source.
         localSimulcastStreamFrameHistory.add(0, acceptedStream);
@@ -626,7 +639,7 @@ public class SimulcastReceiver
      * it looks like it has been paused/stopped by the remote peer
      * @param endIndexInSimulcastStreamFrameHistory
      */
-    private void maybeTimeout(
+    private boolean needsTimeout(
             SimulcastStream cause,
             RawPacket pkt,
             SimulcastStream effect,
@@ -682,10 +695,11 @@ public class SimulcastReceiver
                 // selected endpoint at a given receiving endpoint changes, for
                 // example.
 
-                // TODO merge with other fire event
-                fireSimulcastStreamsChangedAsync(effect);
+                return true;
             }
         }
+
+        return false;
     }
 
     /**
