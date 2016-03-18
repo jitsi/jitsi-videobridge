@@ -77,7 +77,8 @@ public class SimulcastReceiver
     private final SimulcastEngine simulcastEngine;
 
     /**
-     * The simulcast streams of this {@link SimulcastReceiver}.
+     * The simulcast streams of this {@link SimulcastReceiver}. This array is
+     * supposed to be immutable.
      */
     private SimulcastStream[] simulcastStreams;
 
@@ -86,7 +87,7 @@ public class SimulcastReceiver
      * {@link #simulcastStreams}. Used in an attempt to speed up the detection
      * of paused/stopped {@code SimulcastStream}s by counting (video) frames.
      */
-    private final List<SimulcastStream> simulcastStreamFrameHistory
+    private List<SimulcastStream> simulcastStreamFrameHistory
         = new LinkedList<>();
 
     /**
@@ -188,32 +189,76 @@ public class SimulcastReceiver
     /**
      * Sets the simulcast streams for this receiver and fires an event about it.
      *
-     * @param simulcastStreams the simulcast streams for this receiver.
+     * @param newSimulcastStreams the simulcast streams for this receiver.
      */
-    public void setSimulcastStreams(SimulcastStream[] simulcastStreams)
+    public void setSimulcastStreams(SimulcastStream[] newSimulcastStreams)
     {
-        this.simulcastStreams = simulcastStreams;
+        SimulcastStream[] oldSimulcastStreams = this.simulcastStreams;
+        int oldLen
+            = oldSimulcastStreams == null ? 0 : oldSimulcastStreams.length;
+        int newLen
+            = newSimulcastStreams == null ? 0 : newSimulcastStreams.length;
+
+        if (oldLen == newLen)
+        {
+            if (oldLen == 0)
+            {
+                // The simulcast streams have not changed.
+                return;
+            }
+
+            boolean changed = false;
+            for (int i = 0; i < oldLen; i++)
+            {
+                SimulcastStream newStream = newSimulcastStreams[i];
+                SimulcastStream oldStream = oldSimulcastStreams[i];
+
+                if ((oldStream == null && newStream != null)
+                    || (oldStream != null && newStream == null))
+                {
+                    changed = true;
+                    break;
+                }
+
+                if (!oldStream.equals(newStream))
+                {
+                    changed = true;
+                    break;
+                }
+            }
+
+            if (!changed)
+            {
+                // The simulcast streams have not changed.
+                return;
+            }
+        }
+
+        synchronized (this)
+        {
+            this.simulcastStreams = newSimulcastStreams;
+            // If simulcastStreams has changed, then simulcastStreamFrameHistory has
+            // very likely become irrelevant. In other words, clear
+            // simulcastStreamFrameHistory.
+            this.simulcastStreamFrameHistory = new LinkedList<>();
+        }
 
         if (logger.isInfoEnabled())
         {
-            if (simulcastStreams == null)
+            if (newSimulcastStreams == null)
             {
                 logger.info("Simulcast disabled.");
             }
             else
             {
-                for (SimulcastStream l : simulcastStreams)
+                for (SimulcastStream l : newSimulcastStreams)
                 {
                     logger.info(l.getOrder() + ": " + l.getPrimarySSRC());
                 }
             }
         }
 
-       fireSimulcastStreamsSignaled();
-
-        // TODO If simulcastStreams has changed, then
-        // simulcastStreamFrameHistory has very likely become irrelevant. In
-        // other words, clear simulcastStreamFrameHistory.
+        fireSimulcastStreamsSignaled();
     }
 
     /**
@@ -250,7 +295,15 @@ public class SimulcastReceiver
             return;
         }
 
-        SimulcastStream[] simStreams = getSimulcastStreams();
+        SimulcastStream[] simStreams;
+        List<SimulcastStream> localSimulcastStreamFrameHistory;
+
+        synchronized (this)
+        {
+            simStreams = this.simulcastStreams;
+            localSimulcastStreamFrameHistory = this.simulcastStreamFrameHistory;
+        }
+
         if (simStreams == null || simStreams.length == 0)
         {
             return;
@@ -387,6 +440,11 @@ public class SimulcastReceiver
                 {
                     // It looks like at least one pkt was lost (or delayed). We
                     // cannot rely on lastPktMarker.
+                    if (logger.isInfoEnabled())
+                    {
+                        logger.info("It looks like at least one pkt was lost " +
+                            "(or delayed).");
+                    }
                 }
                 else
                 {
@@ -447,7 +505,7 @@ public class SimulcastReceiver
         int ix = 0;
 
         for (Iterator<SimulcastStream> it
-             = simulcastStreamFrameHistory.iterator();
+             = localSimulcastStreamFrameHistory.iterator();
              it.hasNext();
              ++ix)
         {
@@ -492,6 +550,7 @@ public class SimulcastReceiver
                                 acceptedStream,
                                 pkt,
                                 simStream,
+                                localSimulcastStreamFrameHistory,
                                 indexOfLastSourceOccurrenceInHistory);
                     }
                 }
@@ -505,7 +564,7 @@ public class SimulcastReceiver
 
         // As previously stated, the current method invocation signals the
         // receipt of 1 frame by source.
-        simulcastStreamFrameHistory.add(0, acceptedStream);
+        localSimulcastStreamFrameHistory.add(0, acceptedStream);
         // TODO Prune simulcastStreamFrameHistory by forgetting so that it does
         // not become too long.
     }
@@ -571,9 +630,11 @@ public class SimulcastReceiver
             SimulcastStream cause,
             RawPacket pkt,
             SimulcastStream effect,
+            List<SimulcastStream> localSimulcastStreamFrameHistory,
             int endIndexInSimulcastStreamFrameHistory)
     {
-        Iterator<SimulcastStream> it = simulcastStreamFrameHistory.iterator();
+        Iterator<SimulcastStream> it
+            = localSimulcastStreamFrameHistory.iterator();
         boolean timeout = true;
 
         for (int ix = 0;
