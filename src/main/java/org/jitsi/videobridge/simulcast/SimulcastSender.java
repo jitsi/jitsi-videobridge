@@ -231,23 +231,6 @@ public class SimulcastSender
         return sendEndpoint;
     }
 
-    private void react(boolean urgent)
-    {
-        SendMode sm = sendMode;
-        if (sm == null)
-        {
-            // This should never happen.
-            return;
-        }
-
-        // FIXME the urgent parameter is useless, this method can determine
-        // whether or not this is an urgent switch.
-        SimulcastStream closestMatch
-            = getSimulcastReceiver().getSimulcastStream(targetOrder);
-
-        sm.receive(closestMatch, urgent);
-    }
-
     /**
      * {@inheritDoc}
      *
@@ -365,7 +348,13 @@ public class SimulcastSender
         }
 
         if (oldTargetOrder != targetOrder)
-            react(false);
+        {
+            SendMode sm = this.sendMode;
+            if (sm != null)
+            {
+                this.sendMode.receive(targetOrder);
+            }
+        }
     }
 
     /**
@@ -446,6 +435,7 @@ public class SimulcastSender
         {
             // Now, why would you want to do that?
             sendMode = null;
+            return;
         }
         else if (newMode == SimulcastMode.REWRITING)
         {
@@ -456,7 +446,7 @@ public class SimulcastSender
             sendMode = new SwitchingSendMode(this);
         }
 
-        react(false);
+        this.sendMode.receive(targetOrder);
     }
 
     /**
@@ -518,17 +508,7 @@ public class SimulcastSender
                 return;
             }
 
-            boolean isUrgent = false;
-            for (SimulcastStream l : simulcastStreams)
-            {
-                isUrgent = l == sm.getCurrent() && !l.isStreaming();
-                if (isUrgent)
-                {
-                    break;
-                }
-            }
-
-            react(isUrgent);
+            sm.receive(targetOrder);
         }
     }
 }

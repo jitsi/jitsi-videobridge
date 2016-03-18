@@ -135,13 +135,12 @@ public class SwitchingSendMode
      * {@inheritDoc}
      */
     @Override
-    public void receive(SimulcastStream simStream, boolean urgent)
+    public void receive(SimulcastStream simStream)
     {
         SwitchingModeOptions options = new SwitchingModeOptions();
 
         options.setNextOrder(simStream.getOrder());
         options.setHardSwitch(true);
-        options.setUrgent(urgent);
 
         configure(options);
 

@@ -34,23 +34,17 @@ public class RewritingSendMode
     extends SendMode
 {
     /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
-     * currently being received.
-     */
-    private WeakReference<SimulcastStream> weakCurrent;
-
-    /**
-     * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
-     * (possibly) received next.
-     */
-    private WeakReference<SimulcastStream> weakNext;
-
-    /**
      * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger
             = Logger.getLogger(RewritingSendMode.class);
+
+    /**
+     * Holds the state of this {@code RewritingSendMode}. Grouping the state in
+     * a single object allows for synchronized-less code.
+     */
+    private State state = new State(null, null);
 
     /**
      * Ctor.
@@ -73,33 +67,42 @@ public class RewritingSendMode
             return false;
         }
 
-        SimulcastStream next = getNext();
+        State oldState = this.state;
+
+        SimulcastStream next
+            = oldState.weakNext != null ? oldState.weakNext.get() : null;
+
         if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
         {
             // There's a next simulcast stream. Let's see if we can switch to
             // it.
-            weakCurrent = new WeakReference<>(next);
-            weakNext = null;
+            this.state = new State(new WeakReference<>(next), null);
             return true;
         }
 
-        SimulcastStream current = getCurrent();
+        SimulcastStream current
+            = oldState.weakCurrent != null ? oldState.weakCurrent.get() : null;
         return current != null && current.matches(pkt);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void receive(SimulcastStream simStream, boolean urgent)
+    public void receive(SimulcastStream simStream)
     {
         if (simStream == null)
         {
             // This is acceptable when a participant leaves.
-            weakCurrent = null;
-            weakNext = null;
+            this.state = new State(null, null);
             return;
         }
 
-        SimulcastStream current = getCurrent();
-        SimulcastStream next = getNext();
+        State oldState = this.state;
+        SimulcastStream current
+            = oldState.weakCurrent != null ? oldState.weakCurrent.get() : null;
+        SimulcastStream next
+            = oldState.weakNext != null ? oldState.weakNext.get() : null;
 
         if (current == simStream || next == simStream)
         {
@@ -115,42 +118,56 @@ public class RewritingSendMode
         if (logger.isDebugEnabled())
         {
             logger.debug("order-" + simStream.getOrder()
-                    + " is the target (urgent:" + urgent + ") from " +
+                    + " is the target from " +
                     getSimulcastSender().getSimulcastReceiver()
                     .getSimulcastEngine()
                     .getVideoChannel().getEndpoint().getID() + ".");
         }
 
         simStream.askForKeyframe();
-        if (urgent || current == null)
+        if (current == null)
         {
-            weakCurrent = new WeakReference<>(simStream);
+            this.state
+                = new State(new WeakReference<>(simStream), oldState.weakNext);
         }
         else
         {
-            weakNext = new WeakReference<>(simStream);
+            this.state
+                = new State(oldState.weakCurrent, new WeakReference<>(simStream));
         }
     }
 
     /**
-     * Gets the <tt>SimulcastStream</tt> that is currently being received.
-     *
-     * @return
+     * A simple class that holds the state of a {@RewritingSendMode}.
      */
-    public SimulcastStream getCurrent()
+    static class State
     {
-        WeakReference<SimulcastStream> wr = this.weakCurrent;
-        return (wr != null) ? wr.get() : null;
-    }
+        /**
+         * Ctor.
+         *
+         * @param weakCurrent A <tt>WeakReference</tt> to the
+         * <tt>SimulcastStream</tt> that is currently being received.
+         * @param weakNext A <tt>WeakReference</tt> to the
+         * <tt>SimulcastStream</tt> that is currently being received.
+         */
+        public State(
+            WeakReference<SimulcastStream> weakCurrent,
+            WeakReference<SimulcastStream> weakNext)
+        {
+            this.weakCurrent = weakCurrent;
+            this.weakNext = weakNext;
+        }
 
-    /**
-     * Gets the <tt>SimulcastStream</tt> that was previously being received.
-     *
-     * @return
-     */
-    public SimulcastStream getNext()
-    {
-        WeakReference<SimulcastStream> wr = this.weakNext;
-        return (wr != null) ? wr.get() : null;
+        /**
+         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
+         * currently being received.
+         */
+        private final WeakReference<SimulcastStream> weakCurrent;
+
+        /**
+         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
+         * (possibly) received next.
+         */
+        private final WeakReference<SimulcastStream> weakNext;
     }
 }

@@ -190,33 +190,4 @@ public class SimulcastMessagesMapper
         b.append(Boolean.toString(simulcastStream.isStreaming()));
         b.append("}");
     }
-
-    public String toJson(RewritingSendMode rewritingSendMode)
-    {
-        if (rewritingSendMode == null)
-        {
-            return "";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-
-        SimulcastStream current = rewritingSendMode.getCurrent();
-        if (current != null)
-        {
-            sb.append("current: ");
-            toJson(sb, current);
-            sb.append(", ");
-        }
-
-        SimulcastStream next = rewritingSendMode.getNext();
-        if (next != null)
-        {
-            sb.append("next: ");
-            toJson(sb, next);
-        }
-
-        sb.append("}");
-        return sb.toString();
-    }
 }
