@@ -95,7 +95,7 @@ public class SimulcastSender
      */
     private boolean initialized = false;
 
-     /**
+    /**
      * Ctor.
      *
      * @param simulcastSenderManager the <tt>SimulcastSender</tt> that owns this
