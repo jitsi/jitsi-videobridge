@@ -927,7 +927,7 @@ public class SctpConnection
         sctpSocket.setLink(new NetworkLink()
         {
             @Override
-            public void onConnOut(SctpSocket s, byte[] packet)
+            public void onConnOut(SctpSocket s, final byte[] packet)
                 throws IOException
             {
                 if (LOG_SCTP_PACKETS)
@@ -943,8 +943,16 @@ public class SctpConnection
                             packet);
                 }
 
-                // Send through DTLS transport
-                transformer.sendApplicationData(packet, 0, packet.length);
+                // Send through DTLS transport.
+                threadPool.execute(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        transformer.sendApplicationData(
+                            packet, 0, packet.length);
+                    }
+                });
             }
         });
 
