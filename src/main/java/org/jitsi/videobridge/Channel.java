@@ -19,6 +19,7 @@ import java.io.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.util.concurrent.*;
 import org.jitsi.util.event.*;
 import org.jitsi.eventadmin.*;
 import org.osgi.framework.*;
@@ -111,7 +112,8 @@ public abstract class Channel
      * <tt>Channel</tt>. In the time interval between the last activity and now,
      * this <tt>Channel</tt> is considered inactive.
      */
-    private long lastActivityTime;
+    private final MonotonicAtomicLong lastActivityTime
+        = new MonotonicAtomicLong();
 
     /**
      * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
@@ -492,10 +494,7 @@ public abstract class Channel
      */
     public long getLastActivityTime()
     {
-        synchronized (this)
-        {
-            return lastActivityTime;
-        }
+        return lastActivityTime.get();
     }
 
     /**
@@ -564,10 +563,10 @@ public abstract class Channel
      */
     public boolean isExpired()
     {
-        synchronized (this)
-        {
-            return expired;
-        }
+        // XXX It should be safe to go unsynchronized here because the field
+        // expired (1) is a primitive (boolean) value and (2) gets flipped from
+        // false to true only.
+        return expired;
     }
 
     /**
@@ -743,13 +742,7 @@ public abstract class Channel
      */
     public void touch()
     {
-        long now = System.currentTimeMillis();
-
-        synchronized (this)
-        {
-            if (getLastActivityTime() < now)
-                lastActivityTime = now;
-        }
+        lastActivityTime.increase(System.currentTimeMillis());
     }
 
     /**

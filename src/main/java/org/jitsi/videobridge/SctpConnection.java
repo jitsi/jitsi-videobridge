@@ -166,11 +166,6 @@ public class SctpConnection
         = new AsyncExecutor<>(15, TimeUnit.MILLISECONDS);
 
     /**
-     * Datagram socket for ICE/UDP layer.
-     */
-    private IceSocketWrapper iceSocket;
-
-    /**
      * List of <tt>WebRtcDataStreamListener</tt>s that will be notified whenever
      * new WebRTC data channel is opened.
      */
@@ -191,6 +186,13 @@ public class SctpConnection
      * {@link #maybeStartStream()}.
      */
     private boolean started;
+
+    /**
+     * The object used to synchronize access to fields specific to this
+     * {@link SctpConnection}. We use it to avoid synchronizing on {@code this}
+     * which is a {@link Channel}.
+     */
+    private final Object syncRoot = new Object();
 
     /**
      * Initializes a new <tt>SctpConnection</tt> instance.
@@ -254,27 +256,16 @@ public class SctpConnection
      */
     @Override
     protected void closeStream()
-        throws IOException
     {
-        try
+        synchronized (syncRoot)
         {
-            synchronized (this)
+            assocIsUp = false;
+            acceptedIncomingConnection = false;
+            if (sctpSocket != null)
             {
-                assocIsUp = false;
-                acceptedIncomingConnection = false;
-                if (sctpSocket != null)
-                {
-                    sctpSocket.close();
-                    sctpSocket = null;
-                }
+                sctpSocket.close();
+                sctpSocket = null;
             }
-        }
-        finally
-        {
-            // It is now the responsibility of the transport manager to close
-            // iceSocket.
-//            if (iceSocket != null)
-//                iceSocket.close();
         }
     }
 
@@ -367,9 +358,9 @@ public class SctpConnection
     {
         WebRtcDataStream def;
 
-        synchronized (this)
+        synchronized (syncRoot)
         {
-            if(sctpSocket == null)
+            if (sctpSocket == null)
             {
                 def = null;
             }
@@ -418,7 +409,7 @@ public class SctpConnection
         if (connector == null)
             return;
 
-        synchronized (this)
+        synchronized (syncRoot)
         {
             if (started)
                 return;
@@ -542,17 +533,34 @@ public class SctpConnection
     }
 
     /**
-     * Handles control packet.
+     * Handles a control packet.
+     *
      * @param data raw packet data that arrived on control PPID.
      * @param sid SCTP stream id on which the data has arrived.
      */
-    private synchronized void onCtrlPacket(byte[] data, int sid)
+    private void onCtrlPacket(byte[] data, int sid)
+        throws IOException
+    {
+        synchronized (syncRoot)
+        {
+            onCtrlPacketNotSynchronized(data, sid);
+        }
+    }
+
+    /**
+     * Handles a control packet. Should only be called while holding the lock on
+     * {@link #syncRoot}.
+     *
+     * @param data raw packet data that arrived on control PPID.
+     * @param sid SCTP stream id on which the data has arrived.
+     */
+    private void onCtrlPacketNotSynchronized(byte[] data, int sid)
         throws IOException
     {
         ByteBuffer buffer = ByteBuffer.wrap(data);
         int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
 
-        if(messageType == MSG_CHANNEL_ACK)
+        if (messageType == MSG_CHANNEL_ACK)
         {
             if (logger.isDebugEnabled())
             {
@@ -561,7 +569,7 @@ public class SctpConnection
             }
             // Open channel ACK
             WebRtcDataStream channel = channels.get(sid);
-            if(channel != null)
+            if (channel != null)
             {
                 // Ack check prevents from firing multiple notifications
                 // if we get more than one ACKs (by mistake/bug).
@@ -640,7 +648,8 @@ public class SctpConnection
 
             if (oldCallback != null)
             {
-                newChannel.setDataCallback(oldCallback);    // Save the data callback from the previous channel object
+                // Save the data callback from the previous channel object
+                newChannel.setDataCallback(oldCallback);
             }
 
             sendOpenChannelAck(sid);
@@ -670,45 +679,44 @@ public class SctpConnection
      * Implements notification in order to track socket state.
      */
     @Override
-    public synchronized void onSctpNotification(SctpSocket socket,
+    public void onSctpNotification(SctpSocket socket,
                                    SctpNotification notification)
     {
-        if (logger.isDebugEnabled())
-            logger.debug("socket=" + socket + "; notification=" + notification);
-
-        switch (notification.sn_type)
+        synchronized (syncRoot)
         {
-        case SctpNotification.SCTP_ASSOC_CHANGE:
-            SctpNotification.AssociationChange assocChange
-                = (SctpNotification.AssociationChange) notification;
-
-            switch (assocChange.state)
+            if (logger.isDebugEnabled())
             {
-            case SctpNotification.AssociationChange.SCTP_COMM_UP:
-                if (!assocIsUp)
-                {
-                    boolean wasReady = isReady();
+                logger.debug(
+                        "socket=" + socket + "; notification=" + notification);
+            }
 
-                    assocIsUp = true;
-                    if (isReady() && !wasReady)
-                        notifySctpConnectionReady();
-                }
-                break;
+            switch (notification.sn_type)
+            {
+            case SctpNotification.SCTP_ASSOC_CHANGE:
+                SctpNotification.AssociationChange assocChange
+                    = (SctpNotification.AssociationChange) notification;
 
-            case SctpNotification.AssociationChange.SCTP_COMM_LOST:
-            case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
-            case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
-                try
+                switch (assocChange.state)
                 {
+                case SctpNotification.AssociationChange.SCTP_COMM_UP:
+                    if (!assocIsUp)
+                    {
+                        boolean wasReady = isReady();
+
+                        assocIsUp = true;
+                        if (isReady() && !wasReady)
+                            notifySctpConnectionReady();
+                    }
+                    break;
+
+                case SctpNotification.AssociationChange.SCTP_COMM_LOST:
+                case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
+                case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
                     closeStream();
-                }
-                catch (IOException e)
-                {
-                    logger.error("Error closing SCTP socket", e);
+                    break;
                 }
                 break;
             }
-            break;
         }
     }
 
@@ -738,7 +746,7 @@ public class SctpConnection
         {
             WebRtcDataStream channel;
 
-            synchronized (this)
+            synchronized (syncRoot)
             {
                 channel = channels.get(sid);
             }
@@ -812,7 +820,24 @@ public class SctpConnection
      *         WebRTC data channel.
      * @throws IOException if IO error occurs.
      */
-    public synchronized WebRtcDataStream openChannel(
+    public WebRtcDataStream openChannel(
+        int type, int prio, long reliab, int sid, String label)
+        throws IOException
+    {
+        synchronized (syncRoot)
+        {
+            return openChannelNotSynchronized(type, prio, reliab, sid, label);
+        }
+    }
+
+    /**
+     * Opens new WebRTC data channel using specified parameters. This should
+     * only be called while holding a lock on {@link #syncRoot}, as it does not
+     * obtain any locks on its own.
+     * See {@link #openChannel(int, int, long, int, String)} for a more detailed
+     * description.
+     */
+    private WebRtcDataStream openChannelNotSynchronized(
             int type, int prio, long reliab, int sid, String label)
         throws IOException
     {
@@ -914,7 +939,7 @@ public class SctpConnection
                     SctpConnection.class.getName());
         }
 
-        synchronized (this)
+        synchronized (syncRoot)
         {
             // FIXME local SCTP port is hardcoded in bridge offer SDP (Jitsi
             // Meet)
@@ -1003,14 +1028,15 @@ public class SctpConnection
 
         // Setup iceSocket
         DatagramSocket datagramSocket = connector.getDataSocket();
+        IceSocketWrapper iceSocket;
+
         if (datagramSocket != null)
         {
-            this.iceSocket = new IceUdpSocketWrapper(datagramSocket);
+            iceSocket = new IceUdpSocketWrapper(datagramSocket);
         }
         else
         {
-            this.iceSocket
-                    = new IceTcpSocketWrapper(connector.getDataTCPSocket());
+            iceSocket = new IceTcpSocketWrapper(connector.getDataTCPSocket());
         }
 
         DatagramPacket recv
@@ -1081,18 +1107,9 @@ public class SctpConnection
         }
         finally
         {
-            // Eventually, close the socket although it should happen from
+            // Eventually, close the socket although it should happen in
             // expire().
-            synchronized (this)
-            {
-                assocIsUp = false;
-                acceptedIncomingConnection = false;
-                if(sctpSocket != null)
-                {
-                    sctpSocket.close();
-                    sctpSocket = null;
-                }
-            }
+            closeStream();
         }
     }
 
