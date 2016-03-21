@@ -1112,7 +1112,7 @@ public class RtpChannel
 
         if (connector == null)
         {
-            logger.info("Not starting stream, target is null");
+            logger.info("Not starting stream, connector is null");
             return;
         }
 
