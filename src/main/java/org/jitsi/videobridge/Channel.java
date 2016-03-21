@@ -112,7 +112,8 @@ public abstract class Channel
      * <tt>Channel</tt>. In the time interval between the last activity and now,
      * this <tt>Channel</tt> is considered inactive.
      */
-    private MonotonicAtomicLong lastActivityTime = new MonotonicAtomicLong();
+    private final MonotonicAtomicLong lastActivityTime
+        = new MonotonicAtomicLong();
 
     /**
      * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
@@ -562,6 +563,9 @@ public abstract class Channel
      */
     public boolean isExpired()
     {
+        // XXX It should be safe to go unsynchronized here because the field
+        // expired (1) is a primitive (boolean) value and (2) gets flipped from
+        // false to true only.
         return expired;
     }
 

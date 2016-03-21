@@ -285,7 +285,7 @@ public class RtpChannel
          * synchronization source identifier (SSRC), which Jitsi Videobridge
          * pre-announces.
          */
-        initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffl;
+        initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffL;
 
         conferenceSpeechActivity
             = getContent().getConference().getSpeechActivity();
@@ -522,7 +522,7 @@ public class RtpChannel
                                 if (synchronizer != null)
                                 {
                                     synchronizer.setEndpoint(
-                                            ssrc & 0xffffffffl,
+                                            ssrc & 0xffffffffL,
                                             endpoint.getID());
                                 }
                             }
@@ -543,8 +543,7 @@ public class RtpChannel
                         if (payloadTypes != null)
                         {
                             int pt = data[off + 1] & 0x7f;
-                            MediaFormat format
-                                = payloadTypes.get(Byte.valueOf((byte) pt));
+                            MediaFormat format = payloadTypes.get((byte) pt);
 
                             if ((format != null)
                                     && !format.equals(stream.getFormat()))
@@ -583,35 +582,37 @@ public class RtpChannel
     {
         synchronized (receiveSSRCsSyncRoot)
         {
-            long now = System.currentTimeMillis();
 
-            // contains
-            final int length = receiveSSRCs.length;
+        long now = System.currentTimeMillis();
 
-            for (int i = 0; i < length; i += 2)
+        // contains
+        final int length = receiveSSRCs.length;
+
+        for (int i = 0; i < length; i += 2)
+        {
+            if (((int) receiveSSRCs[i]) == receiveSSRC)
             {
-                if (((int) receiveSSRCs[i]) == receiveSSRC)
-                {
-                    receiveSSRCs[i + 1] = now;
+                receiveSSRCs[i + 1] = now;
                 /*
                  * The update of the time at which the specified receiveSSRC was
                  * last seen does not constitute a change in the value of the
                  * receiveSSRCs property of this instance.
                  */
-                    return false;
-                }
+                return false;
             }
+        }
 
-            // add
-            long[] newReceiveSSRCs = new long[length + 2];
+        // add
+        long[] newReceiveSSRCs = new long[length + 2];
 
-            System.arraycopy(receiveSSRCs, 0, newReceiveSSRCs, 0, length);
-            newReceiveSSRCs[length] = 0xFFFFFFFFL & receiveSSRC;
-            newReceiveSSRCs[length + 1] = now;
-            receiveSSRCs = newReceiveSSRCs;
+        System.arraycopy(receiveSSRCs, 0, newReceiveSSRCs, 0, length);
+        newReceiveSSRCs[length] = 0xFFFFFFFFL & receiveSSRC;
+        newReceiveSSRCs[length + 1] = now;
+        receiveSSRCs = newReceiveSSRCs;
 
         return true;
-        }
+
+        } // synchronized (receiveSSRCsSyncRoot)
     }
 
     /**
@@ -918,21 +919,23 @@ public class RtpChannel
     {
         synchronized (receiveSSRCsSyncRoot)
         {
-            final int length = this.receiveSSRCs.length;
 
-            if (length == 0)
-            {
-                return ColibriConferenceIQ.NO_SSRCS;
-            }
-            else
-            {
-                int[] receiveSSRCs = new int[length / 2];
+        final int length = this.receiveSSRCs.length;
 
-                for (int src = 0, dst = 0; src < length; src += 2, dst++)
-                    receiveSSRCs[dst] = (int) this.receiveSSRCs[src];
-                return receiveSSRCs;
-            }
+        if (length == 0)
+        {
+            return ColibriConferenceIQ.NO_SSRCS;
         }
+        else
+        {
+            int[] receiveSSRCs = new int[length / 2];
+
+            for (int src = 0, dst = 0; src < length; src += 2, dst++)
+                receiveSSRCs[dst] = (int) this.receiveSSRCs[src];
+            return receiveSSRCs;
+        }
+
+        } // synchronized (receiveSSRCsSyncRoot)
     }
 
     /**
@@ -1257,45 +1260,47 @@ public class RtpChannel
 
         synchronized (receiveSSRCsSyncRoot)
         {
-            final int length = receiveSSRCs.length;
 
-            if (length == 2)
+        final int length = receiveSSRCs.length;
+
+        if (length == 2)
+        {
+            if (((int) receiveSSRCs[0]) == receiveSSRC)
             {
-                if (((int) receiveSSRCs[0]) == receiveSSRC)
-                {
-                    receiveSSRCs = NO_RECEIVE_SSRCS;
-                    removed = true;
-                }
+                receiveSSRCs = NO_RECEIVE_SSRCS;
+                removed = true;
             }
-            else
+        }
+        else
+        {
+            for (int i = 0; i < length; i += 2)
             {
-                for (int i = 0; i < length; i += 2)
+                if (((int) receiveSSRCs[i]) == receiveSSRC)
                 {
-                    if (((int) receiveSSRCs[i]) == receiveSSRC)
-                    {
-                        long[] newReceiveSSRCs = new long[length - 2];
+                    long[] newReceiveSSRCs = new long[length - 2];
 
-                        if (i != 0)
-                        {
-                            System.arraycopy(
+                    if (i != 0)
+                    {
+                        System.arraycopy(
                                 receiveSSRCs, 0,
                                 newReceiveSSRCs, 0,
                                 i);
-                        }
-                        if (i != newReceiveSSRCs.length)
-                        {
-                            System.arraycopy(
+                    }
+                    if (i != newReceiveSSRCs.length)
+                    {
+                        System.arraycopy(
                                 receiveSSRCs, i + 2,
                                 newReceiveSSRCs, i,
                                 newReceiveSSRCs.length - i);
-                        }
-                        receiveSSRCs = newReceiveSSRCs;
-                        removed = true;
-                        break;
                     }
+                    receiveSSRCs = newReceiveSSRCs;
+                    removed = true;
+                    break;
                 }
             }
         }
+
+        } // synchronized (receiveSSRCsSyncRoot)
 
         return removed;
     }
@@ -1778,49 +1783,43 @@ public class RtpChannel
     public void setSources(List<SourcePacketExtension> sources)
     {
         if (sources == null || sources.isEmpty())
-        {
             return;
-        }
 
         synchronized (receiveSSRCsSyncRoot)
         {
-            Set<Integer> oldSignaledSSRCs = new HashSet<>(signaledSSRCs);
 
-            // Build the set of the newly signaled SSRCs.
-            Set<Integer> newSignaledSSRCs = new HashSet<>();
-            for (SourcePacketExtension source : sources)
-            {
-                int ssrc = (int) source.getSSRC();
-                if (ssrc != -1)
-                {
-                    newSignaledSSRCs.add((int) source.getSSRC());
-                }
-            }
+        Set<Integer> oldSignaledSSRCs = new HashSet<>(signaledSSRCs);
 
-            // Add the added SSRCs.
-            Set<Integer> addedSSRCs = new HashSet<>(newSignaledSSRCs);
-            addedSSRCs.removeAll(oldSignaledSSRCs);
-            if (!addedSSRCs.isEmpty())
-            {
-                for (Integer addedSSRC : addedSSRCs)
-                {
-                    addReceiveSSRC(addedSSRC);
-                }
-            }
-
-            // Remove the removed SSRCs.
-            oldSignaledSSRCs.removeAll(newSignaledSSRCs);
-            if (!oldSignaledSSRCs.isEmpty())
-            {
-                for (Integer removedSSRC : oldSignaledSSRCs)
-                {
-                    removeReceiveSSRC(removedSSRC);
-                }
-            }
-
-            // Set the newly signaled ssrcs.
-            signaledSSRCs = newSignaledSSRCs;
+        // Build the set of the newly signaled SSRCs.
+        Set<Integer> newSignaledSSRCs = new HashSet<>();
+        for (SourcePacketExtension source : sources)
+        {
+            int ssrc = (int) source.getSSRC();
+            if (ssrc != -1)
+                newSignaledSSRCs.add((int) source.getSSRC());
         }
+
+        // Add the added SSRCs.
+        Set<Integer> addedSSRCs = new HashSet<>(newSignaledSSRCs);
+        addedSSRCs.removeAll(oldSignaledSSRCs);
+        if (!addedSSRCs.isEmpty())
+        {
+            for (Integer addedSSRC : addedSSRCs)
+                addReceiveSSRC(addedSSRC);
+        }
+
+        // Remove the removed SSRCs.
+        oldSignaledSSRCs.removeAll(newSignaledSSRCs);
+        if (!oldSignaledSSRCs.isEmpty())
+        {
+            for (Integer removedSSRC : oldSignaledSSRCs)
+                removeReceiveSSRC(removedSSRC);
+        }
+
+        // Set the newly signaled ssrcs.
+        signaledSSRCs = newSignaledSSRCs;
+
+        } // synchronized (receiveSSRCsSyncRoot)
 
         touch(); // It seems this Channel is still active.
     }

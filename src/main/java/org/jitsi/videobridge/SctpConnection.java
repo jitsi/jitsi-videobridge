@@ -166,11 +166,6 @@ public class SctpConnection
         = new AsyncExecutor<>(15, TimeUnit.MILLISECONDS);
 
     /**
-     * Datagram socket for ICE/UDP layer.
-     */
-    private IceSocketWrapper iceSocket;
-
-    /**
      * List of <tt>WebRtcDataStreamListener</tt>s that will be notified whenever
      * new WebRTC data channel is opened.
      */
@@ -194,8 +189,8 @@ public class SctpConnection
 
     /**
      * The object used to synchronize access to fields specific to this
-     * {@link SctpConnection}. We use this to avoid synchronizing on
-     * {@code this} which is a {@link Channel}.
+     * {@link SctpConnection}. We use it to avoid synchronizing on {@code this}
+     * which is a {@link Channel}.
      */
     private final Object syncRoot = new Object();
 
@@ -261,27 +256,16 @@ public class SctpConnection
      */
     @Override
     protected void closeStream()
-        throws IOException
     {
-        try
+        synchronized (syncRoot)
         {
-            synchronized (syncRoot)
+            assocIsUp = false;
+            acceptedIncomingConnection = false;
+            if (sctpSocket != null)
             {
-                assocIsUp = false;
-                acceptedIncomingConnection = false;
-                if (sctpSocket != null)
-                {
-                    sctpSocket.close();
-                    sctpSocket = null;
-                }
+                sctpSocket.close();
+                sctpSocket = null;
             }
-        }
-        finally
-        {
-            // It is now the responsibility of the transport manager to close
-            // iceSocket.
-//            if (iceSocket != null)
-//                iceSocket.close();
         }
     }
 
@@ -701,8 +685,10 @@ public class SctpConnection
         synchronized (syncRoot)
         {
             if (logger.isDebugEnabled())
+            {
                 logger.debug(
-                    "socket=" + socket + "; notification=" + notification);
+                        "socket=" + socket + "; notification=" + notification);
+            }
 
             switch (notification.sn_type)
             {
@@ -726,14 +712,7 @@ public class SctpConnection
                 case SctpNotification.AssociationChange.SCTP_COMM_LOST:
                 case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
                 case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
-                    try
-                    {
-                        closeStream();
-                    }
-                    catch (IOException e)
-                    {
-                        logger.error("Error closing SCTP socket", e);
-                    }
+                    closeStream();
                     break;
                 }
                 break;
@@ -1049,14 +1028,15 @@ public class SctpConnection
 
         // Setup iceSocket
         DatagramSocket datagramSocket = connector.getDataSocket();
+        IceSocketWrapper iceSocket;
+
         if (datagramSocket != null)
         {
-            this.iceSocket = new IceUdpSocketWrapper(datagramSocket);
+            iceSocket = new IceUdpSocketWrapper(datagramSocket);
         }
         else
         {
-            this.iceSocket
-                    = new IceTcpSocketWrapper(connector.getDataTCPSocket());
+            iceSocket = new IceTcpSocketWrapper(connector.getDataTCPSocket());
         }
 
         DatagramPacket recv
@@ -1127,18 +1107,9 @@ public class SctpConnection
         }
         finally
         {
-            // Eventually, close the socket although it should happen from
+            // Eventually, close the socket although it should happen in
             // expire().
-            synchronized (syncRoot)
-            {
-                assocIsUp = false;
-                acceptedIncomingConnection = false;
-                if(sctpSocket != null)
-                {
-                    sctpSocket.close();
-                    sctpSocket = null;
-                }
-            }
+            closeStream();
         }
     }
 
