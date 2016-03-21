@@ -1794,9 +1794,9 @@ public class RtpChannel
         Set<Integer> newSignaledSSRCs = new HashSet<>();
         for (SourcePacketExtension source : sources)
         {
-            int ssrc = (int) source.getSSRC();
+            long ssrc = source.getSSRC();
             if (ssrc != -1)
-                newSignaledSSRCs.add((int) source.getSSRC());
+                newSignaledSSRCs.add((int) ssrc);
         }
 
         // Add the added SSRCs.
