@@ -742,7 +742,8 @@ public class Videobridge
                                         channelBundleId,
                                         transportNamespace,
                                         channelIQ.isInitiator(),
-                                        channelIQ.getRTPLevelRelayType());
+                                        channelIQ.getRTPLevelRelayType(),
+                                        channelIQ.getReceivingSimulcastLayer());
                                 channelCreated = true;
                             }
                         }

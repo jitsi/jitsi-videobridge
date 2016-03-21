@@ -255,7 +255,8 @@ public class Content
     public RtpChannel createRtpChannel(String channelBundleId,
                                        String transportNamespace,
                                        Boolean initiator,
-                                       RTPLevelRelayType rtpLevelRelayType)
+                                       RTPLevelRelayType rtpLevelRelayType,
+                                       Integer receiveSimulcastLayer)
         throws Exception
     {
         RtpChannel channel = null;
@@ -284,7 +285,8 @@ public class Content
                     case VIDEO:
                         channel = new VideoChannel(
                                 this, id, channelBundleId,
-                                transportNamespace, initiator);
+                                transportNamespace, initiator,
+                                receiveSimulcastLayer);
                         break;
                     default:
                         channel = new RtpChannel(
