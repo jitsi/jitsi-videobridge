@@ -746,8 +746,14 @@ public class Videobridge
 
                                 if (channel instanceof VideoChannel)
                                 {
-                                    VideoChannel videoChannel = (VideoChannel)channel;
-                                    videoChannel.setReceiveSimulcastLayer(channelIQ.getReceivingSimulcastLayer());
+                                    VideoChannel videoChannel
+                                        = (VideoChannel)channel;
+
+                                    Integer receiveSimulcastLayer =
+                                        channelIQ.getReceivingSimulcastLayer();
+
+                                    videoChannel.setReceiveSimulcastLayer(
+                                            receiveSimulcastLayer);
                                 }
 
                                 channelCreated = true;
