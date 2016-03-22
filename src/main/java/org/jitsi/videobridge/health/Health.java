@@ -96,7 +96,6 @@ public class Health
                             channelBundleId,
                             /* transportNamespace */ null,
                             initiator,
-                            null,
                             null);
 
                 // Fail as quickly as possible.

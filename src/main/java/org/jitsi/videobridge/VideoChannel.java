@@ -196,16 +196,10 @@ public class VideoChannel
                         String id,
                         String channelBundleId,
                         String transportNamespace,
-                        Boolean initiator,
-                        Integer receiveSimulcastLayer)
+                        Boolean initiator)
         throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
-
-        if (receiveSimulcastLayer != null)
-        {
-            this.receiveSimulcastLayer = receiveSimulcastLayer;
-        }
 
         setTransformEngine(new RtpChannelTransformEngine(this));
 
@@ -401,6 +395,14 @@ public class VideoChannel
     public int getReceiveSimulcastLayer()
     {
         return  receiveSimulcastLayer;
+    }
+
+    public void setReceiveSimulcastLayer(Integer receiveSimulcastLayer)
+    {
+        if (receiveSimulcastLayer != null)
+        {
+            this.receiveSimulcastLayer = receiveSimulcastLayer;
+        }
     }
 
     /**
