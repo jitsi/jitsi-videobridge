@@ -743,6 +743,19 @@ public class Videobridge
                                         transportNamespace,
                                         channelIQ.isInitiator(),
                                         channelIQ.getRTPLevelRelayType());
+
+                                if (channel instanceof VideoChannel)
+                                {
+                                    VideoChannel videoChannel
+                                        = (VideoChannel)channel;
+
+                                    Integer receiveSimulcastLayer =
+                                        channelIQ.getReceivingSimulcastLayer();
+
+                                    videoChannel.setReceiveSimulcastLayer(
+                                            receiveSimulcastLayer);
+                                }
+
                                 channelCreated = true;
                             }
                         }

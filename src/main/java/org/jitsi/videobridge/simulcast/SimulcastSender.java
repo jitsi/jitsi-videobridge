@@ -86,17 +86,8 @@ public class SimulcastSender
 
     /**
      * The simulcast target order for this <tt>SimulcastSender</tt>.
-     *
-     * XXX Defaulting to the lowest-quality simulcast stream until we are
-     * explicitly told to switch to a higher-quality simulcast stream is one way
-     * to go, of course. But such a default presents the problem that a remote
-     * peer will see the lowest quality possible for a noticeably long period of
-     * time because its command to switch to the highest quality possible can
-     * only come via its data/SCTP channel and that may take a very (and
-     * unpredictably) long time to set up. That is why we may default to the
-     * highest-quality simulcast stream here.
      */
-    private int targetOrder = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
+    private int targetOrder;
 
     /**
      * Indicates whether this <tt>SimulcastSender</tt> has been initialized or
@@ -113,13 +104,15 @@ public class SimulcastSender
      */
     public SimulcastSender(
         SimulcastSenderManager simulcastSenderManager,
-        SimulcastReceiver simulcastReceiver)
+        SimulcastReceiver simulcastReceiver,
+        int targetOrder)
     {
         this.simulcastSenderManager = simulcastSenderManager;
 
         // We don't own the receiver, keep a weak reference so that it can be
         // garbage collected.
         this.weakSimulcastReceiver = new WeakReference<>(simulcastReceiver);
+        this.targetOrder = targetOrder;
     }
 
     /**

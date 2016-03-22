@@ -91,6 +91,23 @@ public class VideoChannel
      */
     private byte vp8PayloadType = -1;
 
+
+    /**
+     * XXX Defaulting to the lowest-quality simulcast stream until we are
+     * explicitly told to switch to a higher-quality simulcast stream is one way
+     * to go, of course. But such a default presents the problem that a remote
+     * peer will see the lowest quality possible for a noticeably long period of
+     * time because its command to switch to the highest quality possible can
+     * only come via its data/SCTP channel and that may take a very (and
+     * unpredictably) long time to set up. That is why we may default to the
+     * highest-quality simulcast stream here.
+     *
+     * This value can be set through colibri channel IQ with
+     * receive-simulcast-layer attribute.
+     */
+    private int receiveSimulcastLayer
+            = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
+
     /**
      * Updates the values of the property <tt>inLastN</tt> of all
      * <tt>VideoChannel</tt>s in the <tt>Content</tt> of a specific
@@ -373,6 +390,19 @@ public class VideoChannel
     public int getLastN()
     {
         return lastNController.getLastN();
+    }
+
+    public int getReceiveSimulcastLayer()
+    {
+        return  receiveSimulcastLayer;
+    }
+
+    public void setReceiveSimulcastLayer(Integer receiveSimulcastLayer)
+    {
+        if (receiveSimulcastLayer != null)
+        {
+            this.receiveSimulcastLayer = receiveSimulcastLayer;
+        }
     }
 
     /**

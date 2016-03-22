@@ -137,7 +137,15 @@ public class SimulcastSenderManager
 
         if (simulcastSender == null) // Create a new sender.
         {
-            simulcastSender = new SimulcastSender(this, simulcastReceiver);
+            // Create a new sender.
+            int targetOrder = simulcastEngine.
+                    getVideoChannel().
+                    getReceiveSimulcastLayer();
+
+            simulcastSender = new SimulcastSender(
+                    this,
+                    simulcastReceiver,
+                    targetOrder);
 
             // TODO remove stuff from the map (not strictly necessary as they'll
             // get garbage collected).
