@@ -308,8 +308,7 @@ public class IceUdpTransportManager
         this.numComponents = numComponents;
         this.rtcpmux = numComponents == 1;
 
-        dtlsControl = new DtlsControlImpl(false);
-        dtlsControl.registerUser(this);
+        dtlsControl = createDtlsControl();
 
         iceAgent = createIceAgent(controlling, iceStreamName, rtcpmux);
         iceAgent.addStateChangeListener(iceAgentStateChangeListener);
@@ -680,6 +679,30 @@ public class IceUdpTransportManager
     }
 
     /**
+     * Initializes a new {@code DtlsControlImpl} instance.
+     *
+     * @return a new {@code DtlsControlImpl} instance
+     */
+    private DtlsControlImpl createDtlsControl()
+    {
+        DtlsControlImpl dtlsControl
+            = new DtlsControlImpl(/* srtpDisabled */ false);
+
+        dtlsControl.registerUser(this);
+        dtlsControl.setSetup(
+                controlling
+                    ? DtlsControl.Setup.PASSIVE
+                    : DtlsControl.Setup.ACTIVE);
+        // XXX For DTLS, the media type doesn't matter (as long as it's not
+        // null).
+        // XXX The actual start of the DTLS servers/clients will be delayed
+        // until an rtpConnector is set (when a MediaStream with this
+        // SrtpControl starts or is assigned a target).
+        dtlsControl.start(MediaType.AUDIO);
+        return dtlsControl;
+    }
+
+    /**
      * Initializes a new <tt>Agent</tt> instance which implements the ICE
      * protocol and which is to be used by this instance to implement the Jingle
      * ICE-UDP transport.
@@ -922,6 +945,7 @@ public class IceUdpTransportManager
         if (closed)
             return;
 
+        // Reflect the transport's rtcpmux onto this instance.
         if (transport.isRtcpMux())
         {
             rtcpmux = true;
@@ -932,7 +956,9 @@ public class IceUdpTransportManager
                         .setAcceptNonRtp(false);
             }
         }
+        dtlsControl.setRtcpmux(rtcpmux);
 
+        // Reflect the transport's remote fingerprints onto this instance.
         List<DtlsFingerprintPacketExtension> dfpes
             = transport.getChildExtensionsOfType(
                     DtlsFingerprintPacketExtension.class);
@@ -1834,7 +1860,6 @@ public class IceUdpTransportManager
                         if (IceProcessingState.COMPLETED.equals(state)
                                 || IceProcessingState.TERMINATED.equals(state))
                         {
-                            startDtls();
                             onIceConnected();
                         }
                         else
@@ -1850,27 +1875,6 @@ public class IceUdpTransportManager
                 connectThread.start();
             }
         }
-    }
-
-    /**
-     * Sets up {@link #dtlsControl} with a proper target (the remote sockets
-     * from the pair(s) selected by the ICE agent) and starts it.
-     */
-    private void startDtls()
-    {
-        dtlsControl.setSetup(
-                controlling
-                    ? DtlsControl.Setup.PASSIVE
-                    : DtlsControl.Setup.ACTIVE);
-        dtlsControl.setRtcpmux(rtcpmux);
-        dtlsControl.registerUser(this);
-
-        // For DTLS, the media type doesn't matter (as long as it's not
-        // null).
-        // Note that the actual start of the DTLS servers/clients will be
-        // delayed until an rtpConnector is set (when a MediaStream with this
-        // SrtpControl starts or is set a target).
-        dtlsControl.start(MediaType.AUDIO);
     }
 
     /**
