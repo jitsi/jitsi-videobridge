@@ -237,7 +237,7 @@ public class IceUdpTransportManager
      * Whether this <tt>IceUdpTransportManager</tt> will serve as the the
      * controlling or controlled ICE agent.
      */
-    private final boolean isControlling;
+    private final boolean controlling;
 
     /**
      * The number of {@link org.ice4j.ice.Component}-s to create in
@@ -265,23 +265,23 @@ public class IceUdpTransportManager
      *
      * @param conference the <tt>Conference</tt> which created this
      * <tt>TransportManager</tt>.
-     * @param isControlling whether the new instance is to server as a
-     * controlling or controlled ICE agent.
+     * @param controlling {@code true} if the new instance is to serve as a
+     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
      * @throws IOException
      */
     public IceUdpTransportManager(Conference conference,
-                                  boolean isControlling)
+                                  boolean controlling)
         throws IOException
     {
-        this(conference, isControlling, 2, DEFAULT_ICE_STREAM_NAME);
+        this(conference, controlling, 2, DEFAULT_ICE_STREAM_NAME);
     }
 
     public IceUdpTransportManager(Conference conference,
-                                  boolean isControlling,
+                                  boolean controlling,
                                   int numComponents)
         throws IOException
     {
-        this(conference, isControlling, numComponents, DEFAULT_ICE_STREAM_NAME);
+        this(conference, controlling, numComponents, DEFAULT_ICE_STREAM_NAME);
     }
 
     /**
@@ -289,8 +289,8 @@ public class IceUdpTransportManager
      *
      * @param conference the <tt>Conference</tt> which created this
      * <tt>TransportManager</tt>.
-     * @param isControlling whether the new instance is to server as a
-     * controlling or controlled ICE agent.
+     * @param controlling {@code true} if the new instance is to serve as a
+     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
      * @param numComponents the number of ICE components that this instance is
      * to start with.
      * @param iceStreamName the name of the ICE stream to be created by this
@@ -298,20 +298,20 @@ public class IceUdpTransportManager
      * @throws IOException
      */
     public IceUdpTransportManager(Conference conference,
-                                  boolean isControlling,
+                                  boolean controlling,
                                   int numComponents,
                                   String iceStreamName)
         throws IOException
     {
         this.conference = conference;
+        this.controlling = controlling;
         this.numComponents = numComponents;
         this.rtcpmux = numComponents == 1;
-        this.isControlling = isControlling;
 
         dtlsControl = new DtlsControlImpl(false);
         dtlsControl.registerUser(this);
 
-        iceAgent = createIceAgent(isControlling, iceStreamName, rtcpmux);
+        iceAgent = createIceAgent(controlling, iceStreamName, rtcpmux);
         iceAgent.addStateChangeListener(iceAgentStateChangeListener);
         iceStream = iceAgent.getStream(iceStreamName);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
@@ -326,18 +326,18 @@ public class IceUdpTransportManager
      *
      * @param conference the <tt>Conference</tt> which created this
      * <tt>TransportManager</tt>.
-     * @param isControlling whether the new instance is to server as a
-     * controlling or controlled ICE agent.
+     * @param controlling {@code true} if the new instance is to serve as a
+     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
      * @param iceStreamName the name of the ICE stream to be created by this
      * instance.
      * @throws IOException
      */
     public IceUdpTransportManager(Conference conference,
-                                  boolean isControlling,
+                                  boolean controlling,
                                   String iceStreamName)
         throws IOException
     {
-        this(conference, isControlling, 2, iceStreamName);
+        this(conference, controlling, 2, iceStreamName);
     }
 
     /**
@@ -684,13 +684,16 @@ public class IceUdpTransportManager
      * protocol and which is to be used by this instance to implement the Jingle
      * ICE-UDP transport.
      *
+     * @param controlling
+     * @param iceStreamName
+     * @param rtcpmux
      * @return a new <tt>Agent</tt> instance which implements the ICE protocol
      * and which is to be used by this instance to implement the Jingle ICE-UDP
      * transport
      * @throws IOException if initializing a new <tt>Agent</tt> instance for the
      * purposes of this <tt>TransportManager</tt> fails
      */
-    private Agent createIceAgent(boolean isControlling,
+    private Agent createIceAgent(boolean controlling,
                                  String iceStreamName,
                                  boolean rtcpmux)
             throws IOException
@@ -704,7 +707,7 @@ public class IceUdpTransportManager
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
         appendVideobridgeHarvesters(iceAgent, rtcpmux);
-        iceAgent.setControlling(isControlling);
+        iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 
         PortTracker portTracker = JitsiTransportManager.getPortTracker(null);
@@ -1177,7 +1180,7 @@ public class IceUdpTransportManager
      */
     public boolean isControlling()
     {
-        return isControlling;
+        return controlling;
     }
 
     /**
@@ -1855,7 +1858,7 @@ public class IceUdpTransportManager
     private void startDtls()
     {
         dtlsControl.setSetup(
-                isControlling
+                controlling
                     ? DtlsControl.Setup.PASSIVE
                     : DtlsControl.Setup.ACTIVE);
         dtlsControl.setRtcpmux(rtcpmux);
