@@ -960,9 +960,7 @@ public class Endpoint
     {
         Object oldValue = getSctpConnection();
 
-        if ((sctpConnection == null)
-                ? (oldValue != null)
-                : !sctpConnection.equals(oldValue))
+        if (!Objects.equals(oldValue, sctpConnection))
         {
             if (oldValue != null && sctpConnection != null)
             {
