@@ -727,19 +727,16 @@ public class IceUdpTransportManager
         // configured min port. When maxPort is reached, allocation will begin
         // from minPort again, so we don't have to worry about wraps.
         int maxAllocatedPort
-                = getMaxAllocatedPort(
+            = getMaxAllocatedPort(
                     iceStream,
                     portTracker.getMinPort(),
                     portTracker.getMaxPort());
         if (maxAllocatedPort > 0)
         {
-            portTracker.setNextPort(1 + maxAllocatedPort);
+            int nextPort = 1 + maxAllocatedPort;
+            portTracker.setNextPort(nextPort);
             if (logger.isDebugEnabled())
-            {
-                logger.debug(
-                    "Updating the port tracker min port: "
-                            + (1 + maxAllocatedPort));
-            }
+                logger.debug("Updating the port tracker min port: " + nextPort);
         }
 
         return iceAgent;
@@ -751,13 +748,14 @@ public class IceUdpTransportManager
      */
     private int getMaxAllocatedPort(IceMediaStream iceStream, int min, int max)
     {
-        return Math.max(
-                getMaxAllocatedPort(
-                        iceStream.getComponent(Component.RTP),
-                        min, max),
-                getMaxAllocatedPort(
-                        iceStream.getComponent(Component.RTCP),
-                        min, max));
+        return
+            Math.max(
+                    getMaxAllocatedPort(
+                            iceStream.getComponent(Component.RTP),
+                            min, max),
+                    getMaxAllocatedPort(
+                            iceStream.getComponent(Component.RTCP),
+                            min, max));
     }
 
     /**
@@ -774,9 +772,12 @@ public class IceUdpTransportManager
             {
                 int candidatePort = candidate.getTransportAddress().getPort();
 
-                if (min <= candidatePort && candidatePort <= max
-                        && candidatePort > maxAllocatedPort)
+                if (min <= candidatePort
+                        && candidatePort <= max
+                        && maxAllocatedPort < candidatePort)
+                {
                     maxAllocatedPort = candidatePort;
+                }
             }
         }
 
@@ -910,10 +911,10 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Sets up {@link #dtlsControl} according to <tt>transport</tt>,
-     * adds all (supported) remote candidates from <tt>transport</tt>
-     * to {@link #iceAgent} and starts {@link #iceAgent} if it isn't already
-     * started.
+     * Sets up {@link #dtlsControl} according to <tt>transport</tt>, adds all
+     * (supported) remote candidates from <tt>transport</tt> to
+     * {@link #iceAgent} and starts {@link #iceAgent} if it isn't started
+     * already.
      */
     private synchronized void doStartConnectivityEstablishment(
             IceUdpTransportPacketExtension transport)
@@ -927,7 +928,8 @@ public class IceUdpTransportManager
             if (channelForDtls != null && channelForDtls instanceof RtpChannel)
             {
                 ((RtpChannel) channelForDtls)
-                        .getDatagramFilter(true).setAcceptNonRtp(false);
+                    .getDatagramFilter(true)
+                        .setAcceptNonRtp(false);
             }
         }
 
@@ -1011,7 +1013,7 @@ public class IceUdpTransportManager
             }
 
             Component component
-                    = iceStream.getComponent(candidate.getComponent());
+                = iceStream.getComponent(candidate.getComponent());
             String relAddr;
             int relPort;
             TransportAddress relatedAddress = null;
@@ -1064,9 +1066,8 @@ public class IceUdpTransportManager
             if (remoteCandidateCount == 0)
             {
                 // XXX Effectively, the check above but realizing that all
-                // candidates were ignored: iceAgentStateIsRunning
-                // && (candidates.size() == 0).
-                return;
+                // candidates were ignored:
+                // iceAgentStateIsRunning && candidates.isEmpty().
             }
             else
             {
