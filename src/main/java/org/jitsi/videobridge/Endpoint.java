@@ -964,6 +964,14 @@ public class Endpoint
                 ? (oldValue != null)
                 : !sctpConnection.equals(oldValue))
         {
+            if (oldValue != null && sctpConnection != null)
+            {
+                // This is not necessarily invalid, but with the current
+                // codebase it likely indicates a problem. If we start to
+                // actually use it, this warning should be removed.
+                logger.warn("Replacing an Endpoint's SctpConnection.");
+            }
+
             this.sctpConnection = new WeakReference<>(sctpConnection);
 
             firePropertyChange(

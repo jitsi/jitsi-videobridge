@@ -101,18 +101,21 @@ public class Health
                 // Fail as quickly as possible.
                 if (rtpChannel == null)
                     throw new NullPointerException();
+            }
 
-                // SctpConnection
-                SctpConnection sctpConnection
-                    = content.createSctpConnection(
-                            endpoint,
-                            /* sctpPort */ RANDOM.nextInt(),
-                            channelBundleId,
-                            initiator);
+            // SctpConnection
+            Content dataContent = conference.getOrCreateContent("data");
+            SctpConnection sctpConnection
+                = dataContent.createSctpConnection(
+                        endpoint,
+                        /* sctpPort */ RANDOM.nextInt(),
+                        channelBundleId,
+                        initiator);
 
-                // Fail as quickly as possible.
-                if (sctpConnection == null)
-                    throw new NullPointerException();
+            // Fail as quickly as possible.
+            if (sctpConnection == null)
+            {
+                throw new NullPointerException();
             }
         }
 
