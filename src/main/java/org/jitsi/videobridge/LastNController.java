@@ -220,6 +220,7 @@ public class LastNController
                         = Collections.unmodifiableList(newPinnedEndpointIds);
 
                 endpointsToAskForKeyframe = update();
+                update(new ArrayList<String>());
             }
         }
 
