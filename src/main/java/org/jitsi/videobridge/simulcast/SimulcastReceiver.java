@@ -179,7 +179,7 @@ public class SimulcastReceiver
             streams = new SimulcastStream[ssrcs.length];
             for (int i = 0; i < ssrcs.length; i++)
             {
-                streams[i] = new SimulcastStream(this, ssrcs[i], i);
+                streams[i] = new SimulcastStream(this, ssrcs[i], -1, -1, i);
             }
         }
 
