@@ -69,8 +69,7 @@ public class RewritingSendMode
 
         State oldState = this.state;
 
-        SimulcastStream next
-            = oldState.weakNext != null ? oldState.weakNext.get() : null;
+        SimulcastStream next = oldState.getNext();
 
         if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
         {
@@ -80,8 +79,7 @@ public class RewritingSendMode
             return true;
         }
 
-        SimulcastStream current
-            = oldState.weakCurrent != null ? oldState.weakCurrent.get() : null;
+        SimulcastStream current = oldState.getCurrent();
         return current != null && current.matches(pkt);
     }
 
@@ -99,10 +97,8 @@ public class RewritingSendMode
         }
 
         State oldState = this.state;
-        SimulcastStream current
-            = oldState.weakCurrent != null ? oldState.weakCurrent.get() : null;
-        SimulcastStream next
-            = oldState.weakNext != null ? oldState.weakNext.get() : null;
+        SimulcastStream current = oldState.getCurrent();
+        SimulcastStream next = oldState.getNext();
 
         if (current == simStream || next == simStream)
         {
@@ -169,5 +165,29 @@ public class RewritingSendMode
          * (possibly) received next.
          */
         private final WeakReference<SimulcastStream> weakNext;
+
+        /**
+         * Returns the <tt>SimulcastStream</tt> that will be (possibly) received
+         * next.
+         *
+         * @return the <tt>SimulcastStream</tt> that will be (possibly) received
+         * next.
+         */
+        public SimulcastStream getNext()
+        {
+            return weakNext == null ? null : weakNext.get();
+        }
+
+        /**
+         * Returns the <tt>SimulcastStream</tt> that is currently being
+         * received.
+         *
+         * @return the <tt>SimulcastStream</tt> that is currently being
+         * received.
+         */
+        public SimulcastStream getCurrent()
+        {
+            return weakCurrent == null ? null : weakCurrent.get();
+        }
     }
 }
