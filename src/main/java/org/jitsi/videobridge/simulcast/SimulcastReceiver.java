@@ -604,7 +604,13 @@ public class SimulcastReceiver
      * possibly influenced the decision to trigger a check on {@code effect}
      * @param effect the {@code SimulcastStream} which is to be checked whether
      * it looks like it has been paused/stopped by the remote peer
-     * @param endIndexInSimulcastStreamFrameHistory
+     * @param endIndexInSimulcastStreamFrameHistory Determines how far back in
+     * the {@localSimulcastStreamFrameHistory} we should look for the
+     * {@code effect}.
+     * @param localSimulcastStreamFrameHistory The history of the order/sequence
+     * of receipt of (video) frames by {@link #simulcastStreams}. Used in an
+     * attempt to speed up the detection of paused/stopped
+     * {@code SimulcastStream}s by counting (video) frames.
      */
     private boolean needsTimeout(
             SimulcastStream cause,
