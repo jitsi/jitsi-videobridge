@@ -138,7 +138,7 @@ public class RewritingSendMode
     }
 
     /**
-     * A simple class that holds the state of a {@RewritingSendMode}.
+     * A simple class that holds the state of a {@code RewritingSendMode}.
      */
     static class State
     {
