@@ -554,8 +554,6 @@ public class SimulcastReceiver
         // As previously stated, the current method invocation signals the
         // receipt of 1 frame by source.
         localSimulcastStreamFrameHistory.add(0, acceptedStream);
-        // TODO Prune simulcastStreamFrameHistory by forgetting so that it does
-        // not become too long.
     }
 
     /**
