@@ -24,6 +24,7 @@ import java.util.concurrent.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.ice4j.socket.*;
+import org.ice4j.util.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.impl.osgi.framework.*;
@@ -195,6 +196,24 @@ public class SctpConnection
     private final Object syncRoot = new Object();
 
     /**
+     * The {@link PacketQueue} instance in which we place packets coming from
+     * the SCTP stack which are to be sent via {@link #transformer}.
+     */
+    private final RawPacketQueue packetQueue;
+
+    /**
+     * The {@link DtlsPacketTransformer} instance which we use to transport
+     * SCTP packets.
+     */
+    private DtlsPacketTransformer transformer = null;
+
+    /**
+     * The instance which we use to handle packets read from
+     * {@link #packetQueue}.
+     */
+    private final Handler handler = new Handler();
+
+    /**
      * Initializes a new <tt>SctpConnection</tt> instance.
      *
      * @param id the string identifier of this connection instance
@@ -224,6 +243,11 @@ public class SctpConnection
                 initiator);
 
         setEndpoint(endpoint.getID());
+        packetQueue
+            = new RawPacketQueue(
+                false,
+                getClass().getSimpleName() + "-" + endpoint.getID(),
+                handler);
 
         this.remoteSctpPort = remoteSctpPort;
         this.debugId = generateDebugId();
@@ -261,6 +285,7 @@ public class SctpConnection
         {
             assocIsUp = false;
             acceptedIncomingConnection = false;
+            packetQueue.close();
             if (sctpSocket != null)
             {
                 sctpSocket.close();
@@ -924,8 +949,12 @@ public class SctpConnection
         DtlsControlImpl dtlsControl
             = (DtlsControlImpl) getTransportManager().getDtlsControl(this);
         DtlsTransformEngine engine = dtlsControl.getTransformEngine();
-        final DtlsPacketTransformer transformer
+        DtlsPacketTransformer transformer
             = (DtlsPacketTransformer) engine.getRTPTransformer();
+        if (this.transformer == null)
+        {
+            this.transformer = transformer;
+        }
 
         byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
 
@@ -968,8 +997,9 @@ public class SctpConnection
                             packet);
                 }
 
-                // Send through DTLS transport
-                transformer.sendApplicationData(packet, 0, packet.length);
+                // Send through DTLS transport. Add to the queue in order to
+                // make sure we don't block the thread which executes this.
+                packetQueue.add(packet, 0, packet.length);
             }
         });
 
@@ -1126,4 +1156,35 @@ public class SctpConnection
         if (sctpSocket.send(ack, true, sid, WEB_RTC_PPID_CTRL) != ack.length)
             logger.error("Failed to send open channel confirmation");
     }
+
+    /**
+     * A {@link org.ice4j.util.PacketQueue.PacketHandler} which sends packets
+     * over DTLS.
+     */
+    private class Handler implements PacketQueue.PacketHandler<RawPacket>
+    {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean handlePacket(RawPacket pkt)
+        {
+            if (pkt == null)
+            {
+                return true;
+            }
+
+            DtlsPacketTransformer transformer = SctpConnection.this.transformer;
+            if (transformer == null)
+            {
+                logger.error("Cannot send SCTP packet, DTLS transformer is null");
+                return false;
+            }
+
+            transformer.sendApplicationData(
+                pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
+
+            return true;
+        }
+    };
 }
