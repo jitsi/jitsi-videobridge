@@ -251,6 +251,9 @@ public class SimulcastReceiver
      */
     public void accepted(RawPacket pkt)
     {
+        // FIXME we should split this method (in a meaningful way) because it is
+        // way too long.
+
         // With native simulcast we don't have a notification when a stream
         // has started/stopped. The simulcast manager implements a timeout
         // for the high quality stream and it needs to be notified when
@@ -431,7 +434,7 @@ public class SimulcastReceiver
             return;
         }
 
-        List<SimulcastStream> changedStreams = new ArrayList<>();
+        Set<SimulcastStream> changedStreams = new HashSet<>();
 
         if (acceptedStream.getOrder()
             != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
