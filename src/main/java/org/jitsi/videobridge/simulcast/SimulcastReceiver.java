@@ -194,44 +194,11 @@ public class SimulcastReceiver
     public void setSimulcastStreams(SimulcastStream[] newSimulcastStreams)
     {
         SimulcastStream[] oldSimulcastStreams = this.simulcastStreams;
-        int oldLen
-            = oldSimulcastStreams == null ? 0 : oldSimulcastStreams.length;
-        int newLen
-            = newSimulcastStreams == null ? 0 : newSimulcastStreams.length;
 
-        if (oldLen == newLen)
+        // XXX Arrays.equals is doing null checks for us.
+        if (Arrays.equals(oldSimulcastStreams, newSimulcastStreams))
         {
-            if (oldLen == 0)
-            {
-                // The simulcast streams have not changed.
-                return;
-            }
-
-            boolean changed = false;
-            for (int i = 0; i < oldLen; i++)
-            {
-                SimulcastStream newStream = newSimulcastStreams[i];
-                SimulcastStream oldStream = oldSimulcastStreams[i];
-
-                if ((oldStream == null && newStream != null)
-                    || (oldStream != null && newStream == null))
-                {
-                    changed = true;
-                    break;
-                }
-
-                if (!oldStream.equals(newStream))
-                {
-                    changed = true;
-                    break;
-                }
-            }
-
-            if (!changed)
-            {
-                // The simulcast streams have not changed.
-                return;
-            }
+            return;
         }
 
         synchronized (this)
