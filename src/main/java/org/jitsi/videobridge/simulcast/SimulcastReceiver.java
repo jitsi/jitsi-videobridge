@@ -210,8 +210,8 @@ public class SimulcastReceiver
         synchronized (this)
         {
             this.simulcastStreams = newSimulcastStreams;
-            // If simulcastStreams has changed, then simulcastStreamFrameHistory has
-            // very likely become irrelevant. In other words, clear
+            // If simulcastStreams has changed, then simulcastStreamFrameHistory
+            // has very likely become irrelevant. In other words, clear
             // simulcastStreamFrameHistory.
             this.simulcastStreamFrameHistory = new LinkedList<>();
         }
