@@ -244,21 +244,42 @@ public class SimulcastStream
         simulcastReceiver.askForKeyframe(this);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean equals(Object o)
     {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
 
         SimulcastStream that = (SimulcastStream) o;
 
-        if (primarySSRC != that.primarySSRC) return false;
-        if (rtxSSRC != that.rtxSSRC) return false;
-        if (fecSSRC != that.fecSSRC) return false;
+        if (primarySSRC != that.primarySSRC)
+        {
+            return false;
+        }
+        if (rtxSSRC != that.rtxSSRC)
+        {
+            return false;
+        }
+        if (fecSSRC != that.fecSSRC)
+        {
+            return false;
+        }
         return order == that.order;
 
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int hashCode()
     {
