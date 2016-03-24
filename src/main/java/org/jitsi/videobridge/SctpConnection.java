@@ -211,25 +211,7 @@ public class SctpConnection
      * The instance which we use to handle packets read from
      * {@link #packetQueue}.
      */
-    private final PacketQueue.PacketHandler<RawPacket> handler
-        = new PacketQueue.PacketHandler<RawPacket>()
-    {
-        @Override
-        public boolean handlePacket(RawPacket pkt)
-        {
-            if (pkt == null)
-                return true;
-
-            if (transformer == null)
-                return false;
-
-            System.err.println("XXX sending sctp data over DTLS");
-            transformer.sendApplicationData(
-                pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
-
-            return true;
-        }
-    };
+    private final Handler handler = new Handler();
 
     /**
      * Initializes a new <tt>SctpConnection</tt> instance.
@@ -1174,4 +1156,35 @@ public class SctpConnection
         if (sctpSocket.send(ack, true, sid, WEB_RTC_PPID_CTRL) != ack.length)
             logger.error("Failed to send open channel confirmation");
     }
+
+    /**
+     * A {@link org.ice4j.util.PacketQueue.PacketHandler} which sends packets
+     * over DTLS.
+     */
+    private class Handler implements PacketQueue.PacketHandler<RawPacket>
+    {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean handlePacket(RawPacket pkt)
+        {
+            if (pkt == null)
+            {
+                return true;
+            }
+
+            DtlsPacketTransformer transformer = SctpConnection.this.transformer;
+            if (transformer == null)
+            {
+                logger.error("Cannot send SCTP packet, DTLS transformer is null");
+                return false;
+            }
+
+            transformer.sendApplicationData(
+                pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
+
+            return true;
+        }
+    };
 }
