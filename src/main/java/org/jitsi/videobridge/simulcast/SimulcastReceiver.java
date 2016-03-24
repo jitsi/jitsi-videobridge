@@ -344,7 +344,7 @@ public class SimulcastReceiver
         // marker bit set. Since the RTP packet with the set marker bit may get
         // lost, it sounds more reliably to distinguish frames by looking at the
         // timestamps of the RTP packets.
-        long pktTimestamp = pkt.readUnsignedIntAsLong(4);
+        long pktTimestamp = pkt.getTimestamp();
         boolean frameStarted = false;
 
         if (acceptedStream.lastPktTimestamp == -1 || TimeUtils
