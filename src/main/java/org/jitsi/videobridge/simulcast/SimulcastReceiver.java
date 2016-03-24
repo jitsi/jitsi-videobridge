@@ -195,8 +195,14 @@ public class SimulcastReceiver
     {
         SimulcastStream[] oldSimulcastStreams = this.simulcastStreams;
 
+        int oldLen
+            = oldSimulcastStreams == null ? 0 : oldSimulcastStreams.length;
+        int newLen
+            = newSimulcastStreams == null ? 0 : newSimulcastStreams.length;
+
         // XXX Arrays.equals is doing null checks for us.
-        if (Arrays.equals(oldSimulcastStreams, newSimulcastStreams))
+        if ((oldLen == 0 && newLen == 0)
+            || Arrays.equals(oldSimulcastStreams, newSimulcastStreams))
         {
             return;
         }
