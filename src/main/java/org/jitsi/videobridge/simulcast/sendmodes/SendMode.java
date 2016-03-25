@@ -52,6 +52,17 @@ public abstract class SendMode
     }
 
     /**
+     *
+     * @param targetOrder
+     */
+    public void receive(int targetOrder)
+    {
+        SimulcastStream closestMatch = this.simulcastSender
+            .getSimulcastReceiver().getSimulcastStream(targetOrder);
+
+        receive(closestMatch);
+    }
+    /**
      * Gets a boolean indicating whether the packet has to be accepted or not.
      *
      * @param pkt the packet that is to be accepted or not.
@@ -61,14 +72,6 @@ public abstract class SendMode
 
     /**
      * Configures this mode to receive the low quality stream.
-     *
-     * @param urgent if urgent is true, switch immediately and don't wait for a
-     * keyframe of the low quality stream.
      */
-    public abstract void receive(SimulcastStream simStream, boolean urgent);
-
-    /**
-     * Gets the simulcast stream that is currently being received.
-     */
-    public abstract SimulcastStream getCurrent();
+    public abstract void receive(SimulcastStream simStream);
 }

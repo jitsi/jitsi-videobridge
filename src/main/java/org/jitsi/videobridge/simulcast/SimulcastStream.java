@@ -43,12 +43,12 @@ public class SimulcastStream
     /**
      * The primary SSRC for this simulcast stream.
      */
-    private long primarySSRC = -1; // FIXME We need an INVALID_SSRC cnt.
+    private final long primarySSRC;
 
     /**
      * The RTX SSRC for this simulcast stream.
      */
-    private long rtxSSRC = -1; // FIXME We need an INVALID_SSRC cnt.
+    private final long rtxSSRC;
 
     /**
      * The FEC SSRC for this simulcast stream.
@@ -56,7 +56,7 @@ public class SimulcastStream
      * XXX This isn't currently used anywhere because Chrome doens't use a
      * separate SSRC for FEC.
      */
-    private long fecSSRC = -1; // FIXME We need an INVALID_SSRC cnt.
+    private final long fecSSRC;
 
     /**
      * The order of this simulcast stream.
@@ -107,15 +107,21 @@ public class SimulcastStream
      *
      * @param simulcastReicever
      * @param primarySSRC
+     * @param rtxSSRC
+     * @param fecSSRC
      * @param order
      */
     public SimulcastStream(
             SimulcastReceiver simulcastReicever,
             long primarySSRC,
+            long rtxSSRC,
+            long fecSSRC,
             int order)
     {
         this.simulcastReceiver = simulcastReicever;
         this.primarySSRC = primarySSRC;
+        this.rtxSSRC = rtxSSRC;
+        this.fecSSRC = fecSSRC;
         this.order = order;
     }
 
@@ -147,26 +153,6 @@ public class SimulcastStream
     public long getFECSSRC()
     {
         return fecSSRC;
-    }
-
-    /**
-     * Sets the RTX SSRC for this simulcast stream.
-     *
-     * @param rtxSSRC the new RTX SSRC for this simulcast stream.
-     */
-    public void setRTXSSRC(long rtxSSRC)
-    {
-        this.rtxSSRC = rtxSSRC;
-    }
-
-    /**
-     * Sets the FEC SSRC for this simulcast stream.
-     *
-     * @param fecSSRC the new FEC SSRC for this simulcast stream.
-     */
-    public void setFECSSRC(long fecSSRC)
-    {
-        this.fecSSRC = fecSSRC;
     }
 
     /**
@@ -242,5 +228,51 @@ public class SimulcastStream
     public void askForKeyframe()
     {
         simulcastReceiver.askForKeyframe(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass())
+        {
+            return false;
+        }
+
+        SimulcastStream that = (SimulcastStream) o;
+
+        if (primarySSRC != that.primarySSRC)
+        {
+            return false;
+        }
+        if (rtxSSRC != that.rtxSSRC)
+        {
+            return false;
+        }
+        if (fecSSRC != that.fecSSRC)
+        {
+            return false;
+        }
+        return order == that.order;
+
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode()
+    {
+        int result = (int) (primarySSRC ^ (primarySSRC >>> 32));
+        result = 31 * result + (int) (rtxSSRC ^ (rtxSSRC >>> 32));
+        result = 31 * result + (int) (fecSSRC ^ (fecSSRC >>> 32));
+        result = 31 * result + order;
+        return result;
     }
 }

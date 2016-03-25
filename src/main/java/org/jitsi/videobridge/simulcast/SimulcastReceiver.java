@@ -77,7 +77,8 @@ public class SimulcastReceiver
     private final SimulcastEngine simulcastEngine;
 
     /**
-     * The simulcast streams of this {@link SimulcastReceiver}.
+     * The simulcast streams of this {@link SimulcastReceiver}. This array is
+     * supposed to be immutable.
      */
     private SimulcastStream[] simulcastStreams;
 
@@ -86,7 +87,7 @@ public class SimulcastReceiver
      * {@link #simulcastStreams}. Used in an attempt to speed up the detection
      * of paused/stopped {@code SimulcastStream}s by counting (video) frames.
      */
-    private final List<SimulcastStream> simulcastStreamFrameHistory
+    private List<SimulcastStream> simulcastStreamFrameHistory
         = new LinkedList<>();
 
     /**
@@ -178,7 +179,7 @@ public class SimulcastReceiver
             streams = new SimulcastStream[ssrcs.length];
             for (int i = 0; i < ssrcs.length; i++)
             {
-                streams[i] = new SimulcastStream(this, ssrcs[i], i);
+                streams[i] = new SimulcastStream(this, ssrcs[i], -1, -1, i);
             }
         }
 
@@ -188,32 +189,49 @@ public class SimulcastReceiver
     /**
      * Sets the simulcast streams for this receiver and fires an event about it.
      *
-     * @param simulcastStreams the simulcast streams for this receiver.
+     * @param newSimulcastStreams the simulcast streams for this receiver.
      */
-    public void setSimulcastStreams(SimulcastStream[] simulcastStreams)
+    public void setSimulcastStreams(SimulcastStream[] newSimulcastStreams)
     {
-        this.simulcastStreams = simulcastStreams;
+        SimulcastStream[] oldSimulcastStreams = this.simulcastStreams;
+
+        int oldLen
+            = oldSimulcastStreams == null ? 0 : oldSimulcastStreams.length;
+        int newLen
+            = newSimulcastStreams == null ? 0 : newSimulcastStreams.length;
+
+        // XXX Arrays.equals is doing null checks for us.
+        if ((oldLen == 0 && newLen == 0)
+            || Arrays.equals(oldSimulcastStreams, newSimulcastStreams))
+        {
+            return;
+        }
+
+        synchronized (this)
+        {
+            this.simulcastStreams = newSimulcastStreams;
+            // If simulcastStreams has changed, then simulcastStreamFrameHistory
+            // has very likely become irrelevant. In other words, clear
+            // simulcastStreamFrameHistory.
+            this.simulcastStreamFrameHistory = new LinkedList<>();
+        }
 
         if (logger.isInfoEnabled())
         {
-            if (simulcastStreams == null)
+            if (newSimulcastStreams == null)
             {
                 logger.info("Simulcast disabled.");
             }
             else
             {
-                for (SimulcastStream l : simulcastStreams)
+                for (SimulcastStream l : newSimulcastStreams)
                 {
                     logger.info(l.getOrder() + ": " + l.getPrimarySSRC());
                 }
             }
         }
 
-       fireSimulcastStreamsSignaled();
-
-        // TODO If simulcastStreams has changed, then
-        // simulcastStreamFrameHistory has very likely become irrelevant. In
-        // other words, clear simulcastStreamFrameHistory.
+        fireSimulcastStreamsSignaled();
     }
 
     /**
@@ -239,6 +257,9 @@ public class SimulcastReceiver
      */
     public void accepted(RawPacket pkt)
     {
+        // FIXME we should split this method (in a meaningful way) because it is
+        // way too long.
+
         // With native simulcast we don't have a notification when a stream
         // has started/stopped. The simulcast manager implements a timeout
         // for the high quality stream and it needs to be notified when
@@ -250,7 +271,15 @@ public class SimulcastReceiver
             return;
         }
 
-        SimulcastStream[] simStreams = getSimulcastStreams();
+        SimulcastStream[] simStreams;
+        List<SimulcastStream> localSimulcastStreamFrameHistory;
+
+        synchronized (this)
+        {
+            simStreams = this.simulcastStreams;
+            localSimulcastStreamFrameHistory = this.simulcastStreamFrameHistory;
+        }
+
         if (simStreams == null || simStreams.length == 0)
         {
             return;
@@ -315,12 +344,14 @@ public class SimulcastReceiver
         // marker bit set. Since the RTP packet with the set marker bit may get
         // lost, it sounds more reliably to distinguish frames by looking at the
         // timestamps of the RTP packets.
-        long pktTimestamp = pkt.readUnsignedIntAsLong(4);
+        long pktTimestamp = pkt.getTimestamp();
         boolean frameStarted = false;
 
-        if (acceptedStream.lastPktTimestamp <= pktTimestamp)
+        if (acceptedStream.lastPktTimestamp == -1 || TimeUtils
+            .rtpDiff(acceptedStream.lastPktTimestamp, pktTimestamp) <= 0)
         {
-            if (acceptedStream.lastPktTimestamp < pktTimestamp)
+            if (acceptedStream.lastPktTimestamp == -1 || TimeUtils
+                .rtpDiff(acceptedStream.lastPktTimestamp, pktTimestamp) < 0)
             {
                 // The current pkt signals the receit of a piece of a new (i.e.
                 // unobserved until now) frame.
@@ -385,6 +416,11 @@ public class SimulcastReceiver
                 {
                     // It looks like at least one pkt was lost (or delayed). We
                     // cannot rely on lastPktMarker.
+                    if (logger.isInfoEnabled())
+                    {
+                        logger.info("It looks like at least one pkt was lost " +
+                            "(or delayed).");
+                    }
                 }
                 else
                 {
@@ -404,7 +440,11 @@ public class SimulcastReceiver
             return;
         }
 
-        if (acceptedStream.getOrder() != 0 && !acceptedStream.isStreaming)
+        Set<SimulcastStream> changedStreams = new HashSet<>();
+
+        if (acceptedStream.getOrder()
+            != SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
+            && !acceptedStream.isStreaming)
         {
             // If the frame-based approach to the detection of stream drops
             // works (i.e. there will always be at least 1 high quality frame
@@ -429,7 +469,7 @@ public class SimulcastReceiver
                         + " frame.");
             }
 
-            fireSimulcastStreamsChangedAsync(acceptedStream);
+            changedStreams.add(acceptedStream);
         }
 
         // Determine whether any of {@link #simulcastStreams} other than
@@ -445,7 +485,7 @@ public class SimulcastReceiver
         int ix = 0;
 
         for (Iterator<SimulcastStream> it
-             = simulcastStreamFrameHistory.iterator();
+             = localSimulcastStreamFrameHistory.iterator();
              it.hasNext();
              ++ix)
         {
@@ -486,11 +526,17 @@ public class SimulcastReceiver
                     // already.
                     if (simStream.isStreaming())
                     {
-                        maybeTimeout(
+                        boolean needsTimeout = needsTimeout(
                                 acceptedStream,
                                 pkt,
                                 simStream,
+                                localSimulcastStreamFrameHistory,
                                 indexOfLastSourceOccurrenceInHistory);
+
+                        if (needsTimeout)
+                        {
+                            changedStreams.add(simStream);
+                        }
                     }
                 }
                 else if (simStream == acceptedStream)
@@ -501,11 +547,13 @@ public class SimulcastReceiver
         }
 
 
+        SimulcastStream[] changedStreamsArr = changedStreams.toArray(
+            new SimulcastStream[changedStreams.size()]);
+
+        fireSimulcastStreamsChangedAsync(changedStreamsArr);
         // As previously stated, the current method invocation signals the
         // receipt of 1 frame by source.
-        simulcastStreamFrameHistory.add(0, acceptedStream);
-        // TODO Prune simulcastStreamFrameHistory by forgetting so that it does
-        // not become too long.
+        localSimulcastStreamFrameHistory.add(0, acceptedStream);
     }
 
     /**
@@ -563,15 +611,23 @@ public class SimulcastReceiver
      * possibly influenced the decision to trigger a check on {@code effect}
      * @param effect the {@code SimulcastStream} which is to be checked whether
      * it looks like it has been paused/stopped by the remote peer
-     * @param endIndexInSimulcastStreamFrameHistory
+     * @param endIndexInSimulcastStreamFrameHistory Determines how far back in
+     * the {@localSimulcastStreamFrameHistory} we should look for the
+     * {@code effect}.
+     * @param localSimulcastStreamFrameHistory The history of the order/sequence
+     * of receipt of (video) frames by {@link #simulcastStreams}. Used in an
+     * attempt to speed up the detection of paused/stopped
+     * {@code SimulcastStream}s by counting (video) frames.
      */
-    private void maybeTimeout(
+    private boolean needsTimeout(
             SimulcastStream cause,
             RawPacket pkt,
             SimulcastStream effect,
+            List<SimulcastStream> localSimulcastStreamFrameHistory,
             int endIndexInSimulcastStreamFrameHistory)
     {
-        Iterator<SimulcastStream> it = simulcastStreamFrameHistory.iterator();
+        Iterator<SimulcastStream> it
+            = localSimulcastStreamFrameHistory.iterator();
         boolean timeout = true;
 
         for (int ix = 0;
@@ -619,10 +675,11 @@ public class SimulcastReceiver
                 // selected endpoint at a given receiving endpoint changes, for
                 // example.
 
-                // TODO merge with other fire event
-                fireSimulcastStreamsChangedAsync(effect);
+                return true;
             }
         }
+
+        return false;
     }
 
     /**

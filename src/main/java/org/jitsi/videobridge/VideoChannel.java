@@ -946,10 +946,8 @@ public class VideoChannel
         SimulcastEngine simulcastEngine
             = getTransformEngine().getSimulcastEngine();
 
-        Map<Long, SimulcastStream> ssrc2stream = new HashMap<>();
-
         // Build the simulcast streams.
-        SimulcastStream[] simulcastStreams = null;
+        long[][] simulcastTriplets = null;
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
         {
             List<SourcePacketExtension> sources = sourceGroup.getSources();
@@ -962,35 +960,61 @@ public class VideoChannel
             }
 
             // sources are in low to high order.
-            simulcastStreams = new SimulcastStream[sources.size()];
+            simulcastTriplets = new long[sources.size()][];
             for (int i = 0; i < sources.size(); i++)
             {
                 SourcePacketExtension source = sources.get(i);
-                Long primarySSRC = source.getSSRC();
-                SimulcastStream simulcastStream = new SimulcastStream(
-                    simulcastEngine.getSimulcastReceiver(), primarySSRC, i);
-
-                // Add the stream to the reverse map.
-                ssrc2stream.put(primarySSRC, simulcastStream);
-
-                // Add the stream to the sorted set.
-                simulcastStreams[i] = simulcastStream;
+                // FIXME we need an INVALID_SSRC constant.
+                simulcastTriplets[i] = new long[] { source.getSSRC(), -1, -1 };
             }
-
         }
 
-        if (simulcastStreams != null) {
-            // FID groups have been saved in RtpChannel. Make sure any changes are
-            // propagated to the appropriate SimulcastStream-s.
+        if (simulcastTriplets == null || simulcastTriplets.length == 0)
+        {
+            return;
+        }
+
+        // FID groups have been saved in RtpChannel. Make sure any changes are
+        // propagated to the appropriate SimulcastStream-s.
+        if (this.fidSourceGroups != null && this.fidSourceGroups.size() != 0)
+        {
             for (Map.Entry<Long, Long> entry : this.fidSourceGroups.entrySet())
             {
-                SimulcastStream simulcastStream = ssrc2stream.get(entry.getKey());
-                simulcastStream.setRTXSSRC(entry.getValue());
+                if (entry.getKey() == null || entry.getValue() == null)
+                {
+                    continue;
+                }
+
+                // autoboxing.
+                long primarySSRC = entry.getKey();
+                long fidSSRC = entry.getValue();
+
+                for (int i = 0; i < simulcastTriplets.length; i++)
+                {
+                    if (simulcastTriplets[i][0] == primarySSRC)
+                    {
+                        simulcastTriplets[i][1] = fidSSRC;
+                        break;
+                    }
+                }
             }
-        
-            simulcastEngine
-                .getSimulcastReceiver().setSimulcastStreams(simulcastStreams);
         }
+
+        SimulcastStream[] simulcastStreams
+            = new SimulcastStream[simulcastTriplets.length];
+
+        for (int i = 0; i < simulcastTriplets.length; i++)
+        {
+            simulcastStreams[i] = new SimulcastStream(
+                simulcastEngine.getSimulcastReceiver(),
+                simulcastTriplets[i][0],
+                simulcastTriplets[i][1],
+                simulcastTriplets[i][2],
+                i);
+        }
+
+        simulcastEngine
+            .getSimulcastReceiver().setSimulcastStreams(simulcastStreams);
     }
 
     /**
