@@ -21,6 +21,7 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -274,7 +275,7 @@ public abstract class TransportManager
      * @return the <tt>DtlsControl</tt> allocated by this instance for use by a
      * specific <tt>Channel</tt>.
      */
-    public abstract DtlsControl getDtlsControl(Channel channel);
+    public abstract DtlsControlImpl getDtlsControl(Channel channel);
 
     /**
      * Gets the <tt>StreamConnector</tt> which represents the datagram sockets

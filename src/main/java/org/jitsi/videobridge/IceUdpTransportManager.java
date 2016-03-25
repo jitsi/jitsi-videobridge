@@ -1230,7 +1230,7 @@ public class IceUdpTransportManager
      * {@inheritDoc}
      */
     @Override
-    public DtlsControl getDtlsControl(Channel channel)
+    public DtlsControlImpl getDtlsControl(Channel channel)
     {
         return dtlsControl;
     }
