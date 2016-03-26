@@ -248,7 +248,7 @@ public class IceUdpTransportManager
     /**
      * Whether we're using rtcp-mux or not.
      */
-    private boolean rtcpmux = false;
+    private boolean rtcpmux;
 
     /**
      * The <tt>SctpConnection</tt> instance, if any, added as a <tt>Channel</tt>
@@ -1211,6 +1211,17 @@ public class IceUdpTransportManager
     }
 
     /**
+     * Returns whether this {@code IceUdpTransportManager} is using rtcp-mux.
+     *
+     * @return {@code true} if this {@code IceUdpTransportManager} is using
+     * rtcp-mux; otherwise, {@code false}
+     */
+    public boolean isRtcpmux()
+    {
+        return rtcpmux;
+    }
+
+    /**
      * Gets the <tt>BundleContext</tt> associated with the <tt>Channel</tt>
      * that this {@link net.java.sip.communicator.service.protocol.media
      * .TransportManager} is servicing. The method is a
@@ -1370,6 +1381,7 @@ public class IceUdpTransportManager
         if (numComponents > 1 && !rtcpmux)
         {
             Component rtcpComponent = iceStream.getComponent(Component.RTCP);
+
             if (rtcpComponent != null)
             {
                 streamConnectorSockets[1 /* RTCP */]
@@ -1383,11 +1395,11 @@ public class IceUdpTransportManager
     private MediaStreamTarget getStreamTarget()
     {
         MediaStreamTarget streamTarget = null;
-        InetSocketAddress[] streamTargetAddresses
-                = new InetSocketAddress[2];
+        InetSocketAddress[] streamTargetAddresses = new InetSocketAddress[2];
         int streamTargetAddressCount = 0;
 
         Component rtpComponent = iceStream.getComponent(Component.RTP);
+
         if (rtpComponent != null)
         {
             CandidatePair selectedPair = rtpComponent.getSelectedPair();
@@ -1395,9 +1407,9 @@ public class IceUdpTransportManager
             if (selectedPair != null)
             {
                 InetSocketAddress streamTargetAddress
-                        = selectedPair
+                    = selectedPair
                         .getRemoteCandidate()
-                        .getTransportAddress();
+                            .getTransportAddress();
 
                 if (streamTargetAddress != null)
                 {
@@ -1407,9 +1419,15 @@ public class IceUdpTransportManager
             }
         }
 
-        if (numComponents > 1 && !rtcpmux)
+        if (rtcpmux)
+        {
+            streamTargetAddresses[1] = streamTargetAddresses[0];
+            streamTargetAddressCount++;
+        }
+        else if (numComponents > 1)
         {
             Component rtcpComponent = iceStream.getComponent(Component.RTCP);
+
             if (rtcpComponent != null)
             {
                 CandidatePair selectedPair = rtcpComponent.getSelectedPair();
@@ -1417,9 +1435,9 @@ public class IceUdpTransportManager
                 if (selectedPair != null)
                 {
                     InetSocketAddress streamTargetAddress
-                            = selectedPair
+                        = selectedPair
                             .getRemoteCandidate()
-                            .getTransportAddress();
+                                .getTransportAddress();
 
                     if (streamTargetAddress != null)
                     {
@@ -1430,16 +1448,10 @@ public class IceUdpTransportManager
             }
         }
 
-        if (rtcpmux)
-        {
-            streamTargetAddresses[1] = streamTargetAddresses[0];
-            streamTargetAddressCount++;
-        }
-
         if (streamTargetAddressCount > 0)
         {
             streamTarget
-                    = new MediaStreamTarget(
+                = new MediaStreamTarget(
                         streamTargetAddresses[0 /* RTP */],
                         streamTargetAddresses[1 /* RTCP */]);
         }
@@ -1890,14 +1902,13 @@ public class IceUdpTransportManager
                 @Override
                 public void propertyChange(PropertyChangeEvent ev)
                 {
-                    Object newValue = ev.getNewValue();
+                    // Wait for ICE to finish establishing connectivity (or to
+                    // determine that no connectivity can be successfully
+                    // established, of course).
+                    Agent iceAgent = (Agent) ev.getSource();
 
-                    if (IceProcessingState.COMPLETED.equals(newValue)
-                            || IceProcessingState.FAILED.equals(newValue)
-                            || IceProcessingState.TERMINATED.equals(newValue))
+                    if (iceAgent.isOver())
                     {
-                        Agent iceAgent = (Agent) ev.getSource();
-
                         iceAgent.removeStateChangeListener(this);
                         if (iceAgent == IceUdpTransportManager.this.iceAgent)
                         {
