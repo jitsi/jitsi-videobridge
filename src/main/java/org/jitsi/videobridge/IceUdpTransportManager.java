@@ -408,6 +408,85 @@ public class IceUdpTransportManager
         return true;
     }
 
+    private int addRemoteCandidates(
+            List<CandidatePacketExtension> candidates,
+            boolean iceAgentStateIsRunning)
+    {
+        // Sort the remote candidates (host < reflexive < relayed) in order to
+        // create first the host, then the reflexive, the relayed candidates and
+        // thus be able to set the relative-candidate matching the
+        // rel-addr/rel-port attribute.
+        Collections.sort(candidates);
+
+        int generation = iceAgent.getGeneration();
+        int remoteCandidateCount = 0;
+
+        for (CandidatePacketExtension candidate : candidates)
+        {
+            // Is the remote candidate from the current generation of the
+            // iceAgent?
+            if (candidate.getGeneration() != generation)
+                continue;
+
+            if (rtcpmux && Component.RTCP == candidate.getComponent())
+            {
+                logger.warn(
+                        "Received an RTCP candidate, but we're using rtcp-mux."
+                            + " Ignoring.");
+                continue;
+            }
+
+            Component component
+                = iceStream.getComponent(candidate.getComponent());
+            String relAddr;
+            int relPort;
+            TransportAddress relatedAddress = null;
+
+            if ((relAddr = candidate.getRelAddr()) != null
+                    && (relPort = candidate.getRelPort()) != -1)
+            {
+                relatedAddress
+                    = new TransportAddress(
+                            relAddr,
+                            relPort,
+                            Transport.parse(candidate.getProtocol()));
+            }
+
+            RemoteCandidate relatedCandidate
+                = component.findRemoteCandidate(relatedAddress);
+            RemoteCandidate remoteCandidate
+                = new RemoteCandidate(
+                        new TransportAddress(
+                                candidate.getIP(),
+                                candidate.getPort(),
+                                Transport.parse(candidate.getProtocol())),
+                        component,
+                        org.ice4j.ice.CandidateType.parse(
+                                candidate.getType().toString()),
+                        candidate.getFoundation(),
+                        candidate.getPriority(),
+                        relatedCandidate);
+
+            // XXX IceUdpTransportManager harvests host candidates only and the
+            // ICE Components utilize the UDP protocol/transport only at the
+            // time of this writing. The ice4j library will, of course, check
+            // the theoretical reachability between the local and the remote
+            // candidates. However, we would like (1) to not mess with a
+            // possibly running iceAgent and (2) to return a consistent return
+            // value.
+            if (!canReach(component, remoteCandidate))
+                continue;
+
+            if (iceAgentStateIsRunning)
+                component.addUpdateRemoteCandidates(remoteCandidate);
+            else
+                component.addRemoteCandidate(remoteCandidate);
+            remoteCandidateCount++;
+        }
+
+        return remoteCandidateCount;
+    }
+
     /**
      * Adds to <tt>iceAgent</tt> videobridge specific candidate harvesters such
      * as an Amazon AWS EC2 specific harvester.
@@ -946,39 +1025,14 @@ public class IceUdpTransportManager
             return;
 
         // Reflect the transport's rtcpmux onto this instance.
-        if (transport.isRtcpMux())
-        {
-            rtcpmux = true;
-            if (channelForDtls != null && channelForDtls instanceof RtpChannel)
-            {
-                ((RtpChannel) channelForDtls)
-                    .getDatagramFilter(true)
-                        .setAcceptNonRtp(false);
-            }
-        }
-        dtlsControl.setRtcpmux(rtcpmux);
+        setRtcpmux(transport);
 
         // Reflect the transport's remote fingerprints onto this instance.
-        List<DtlsFingerprintPacketExtension> dfpes
-            = transport.getChildExtensionsOfType(
-                    DtlsFingerprintPacketExtension.class);
+        setRemoteFingerprints(transport);
 
-        if (!dfpes.isEmpty())
-        {
-            Map<String, String> remoteFingerprints = new LinkedHashMap<>();
+        IceProcessingState iceAgentState = iceAgent.getState();
 
-            for (DtlsFingerprintPacketExtension dfpe : dfpes)
-            {
-                remoteFingerprints.put(
-                        dfpe.getHash(),
-                        dfpe.getFingerprint());
-            }
-            dtlsControl.setRemoteFingerprints(remoteFingerprints);
-        }
-
-        IceProcessingState state = iceAgent.getState();
-        if (IceProcessingState.COMPLETED.equals(state)
-                || IceProcessingState.TERMINATED.equals(state))
+        if (iceAgentState.isEstablished())
         {
             // Adding candidates to a completed Agent is unnecessary and has
             // been observed to cause problems.
@@ -988,8 +1042,7 @@ public class IceUdpTransportManager
         // If ICE is running already, we try to update the checklists with the
         // candidates. Note that this is a best effort.
         boolean iceAgentStateIsRunning
-            = IceProcessingState.RUNNING.equals(state);
-        int remoteCandidateCount = 0;
+            = IceProcessingState.RUNNING.equals(iceAgentState);
 
         if (rtcpmux)
         {
@@ -998,16 +1051,8 @@ public class IceUdpTransportManager
                 iceStream.removeComponent(rtcpComponent);
         }
 
-        // Different stream may have different ufrag/password
-        String ufrag = transport.getUfrag();
-
-        if (ufrag != null)
-            iceStream.setRemoteUfrag(ufrag);
-
-        String password = transport.getPassword();
-
-        if (password != null)
-            iceStream.setRemotePassword(password);
+        // Different streams may have different ufrag/pwd.
+        setRemoteUfragAndPwd(transport);
 
         List<CandidatePacketExtension> candidates
             = transport.getChildExtensionsOfType(
@@ -1016,76 +1061,8 @@ public class IceUdpTransportManager
         if (iceAgentStateIsRunning && candidates.isEmpty())
             return;
 
-        // Sort the remote candidates (host < reflexive < relayed) in order
-        // to create first the host, then the reflexive, the relayed
-        // candidates and thus be able to set the relative-candidate
-        // matching the rel-addr/rel-port attribute.
-        Collections.sort(candidates);
-
-        int generation = iceAgent.getGeneration();
-
-        for (CandidatePacketExtension candidate : candidates)
-        {
-            // Is the remote candidate from the current generation of the
-            // iceAgent?
-            if (candidate.getGeneration() != generation)
-                continue;
-
-            if (rtcpmux && Component.RTCP == candidate.getComponent())
-            {
-                logger.warn("Received an RTCP candidate, but we're using"
-                                    + " rtcp-mux. Ignoring.");
-                continue;
-            }
-
-            Component component
-                = iceStream.getComponent(candidate.getComponent());
-            String relAddr;
-            int relPort;
-            TransportAddress relatedAddress = null;
-
-            if (((relAddr = candidate.getRelAddr()) != null)
-                    && ((relPort = candidate.getRelPort()) != -1))
-            {
-                relatedAddress
-                        = new TransportAddress(
-                        relAddr,
-                        relPort,
-                        Transport.parse(candidate.getProtocol()));
-            }
-
-            RemoteCandidate relatedCandidate
-                    = component.findRemoteCandidate(relatedAddress);
-            RemoteCandidate remoteCandidate
-                    = new RemoteCandidate(
-                    new TransportAddress(
-                            candidate.getIP(),
-                            candidate.getPort(),
-                            Transport.parse(
-                                    candidate.getProtocol())),
-                    component,
-                    org.ice4j.ice.CandidateType.parse(
-                            candidate.getType().toString()),
-                    candidate.getFoundation(),
-                    candidate.getPriority(),
-                    relatedCandidate);
-
-            // XXX IceUdpTransportManager harvests host candidates only and
-            // the ICE Components utilize the UDP protocol/transport only at
-            // the time of this writing. The ice4j library will, of course,
-            // check the theoretical reachability between the local and the
-            // remote candidates. However, we would like (1) to not mess
-            // with a possibly running iceAgent and (2) to return a
-            // consistent return value.
-            if (!canReach(component, remoteCandidate))
-                continue;
-
-            if (iceAgentStateIsRunning)
-                component.addUpdateRemoteCandidates(remoteCandidate);
-            else
-                component.addRemoteCandidate(remoteCandidate);
-            remoteCandidateCount++;
-        }
+        int remoteCandidateCount
+            = addRemoteCandidates(candidates, iceAgentStateIsRunning);
 
         if (iceAgentStateIsRunning)
         {
@@ -1822,6 +1799,54 @@ public class IceUdpTransportManager
 
         for (Channel channel : getChannels())
             channel.transportConnected();
+    }
+
+    private void setRemoteFingerprints(IceUdpTransportPacketExtension transport)
+    {
+        List<DtlsFingerprintPacketExtension> dfpes
+            = transport.getChildExtensionsOfType(
+                    DtlsFingerprintPacketExtension.class);
+
+        if (!dfpes.isEmpty())
+        {
+            Map<String, String> remoteFingerprints = new LinkedHashMap<>();
+
+            for (DtlsFingerprintPacketExtension dfpe : dfpes)
+            {
+                remoteFingerprints.put(
+                        dfpe.getHash(),
+                        dfpe.getFingerprint());
+            }
+            dtlsControl.setRemoteFingerprints(remoteFingerprints);
+        }
+    }
+
+    private void setRemoteUfragAndPwd(IceUdpTransportPacketExtension transport)
+    {
+        String ufrag = transport.getUfrag();
+
+        if (ufrag != null)
+            iceStream.setRemoteUfrag(ufrag);
+
+        String password = transport.getPassword();
+
+        if (password != null)
+            iceStream.setRemotePassword(password);
+    }
+
+    private void setRtcpmux(IceUdpTransportPacketExtension transport)
+    {
+        if (transport.isRtcpMux())
+        {
+            rtcpmux = true;
+            if (channelForDtls != null && channelForDtls instanceof RtpChannel)
+            {
+                ((RtpChannel) channelForDtls)
+                    .getDatagramFilter(true)
+                        .setAcceptNonRtp(false);
+            }
+        }
+        dtlsControl.setRtcpmux(rtcpmux);
     }
 
     /**
