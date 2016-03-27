@@ -34,6 +34,7 @@ import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.osgi.framework.*;
 
@@ -768,9 +769,18 @@ public class IceUdpTransportManager
             = new DtlsControlImpl(/* srtpDisabled */ false);
 
         dtlsControl.registerUser(this);
+        // (1) According to https://tools.ietf.org/html/rfc5245#section-5.2, in
+        // the case of two full ICE agents: [t]he agent that generated the offer
+        // which started the ICE processing MUST take the controlling role, and
+        // the other MUST take the controlled role.
+        // (2) According to https://tools.ietf.org/html/rfc5763#section-5: [t]he
+        // endpoint that is the offerer MUST use the setup attribute value of
+        // setup:actpass and be prepared to receive a client_hello before it
+        // receives the answer. The answerer MUST use either a setup attribute
+        // value of setup:active or setup:passive.
         dtlsControl.setSetup(
                 controlling
-                    ? DtlsControl.Setup.PASSIVE
+                    ? DtlsControl.Setup.ACTPASS
                     : DtlsControl.Setup.ACTIVE);
         // XXX For DTLS, the media type doesn't matter (as long as it's not
         // null).
@@ -996,6 +1006,7 @@ public class IceUdpTransportManager
      */
     private void describeDtlsControl(IceUdpTransportPacketExtension transportPE)
     {
+        DtlsControlImpl dtlsControl = getDtlsControl(/* channel */ null);
         String fingerprint = dtlsControl.getLocalFingerprint();
         String hash = dtlsControl.getLocalFingerprintHashFunction();
 
@@ -1010,6 +1021,12 @@ public class IceUdpTransportManager
         }
         fingerprintPE.setFingerprint(fingerprint);
         fingerprintPE.setHash(hash);
+
+        // setup
+        DtlsControl.Setup setup = dtlsControl.getSetup();
+
+        if (setup != null)
+            fingerprintPE.setSetup(setup.toString());
     }
 
     /**
@@ -1801,8 +1818,21 @@ public class IceUdpTransportManager
             channel.transportConnected();
     }
 
+    /**
+     * Sets the remote DTLS fingerprints which are to validate and verify the
+     * remote DTLS certificate in the DTLS sessions in which this instance is
+     * the local peer.
+     *
+     * @param transport the {@code IceUdpTransportPacketExtension} which carries
+     * the remote DTLS fingerprints which are to validate and verify the remote
+     * DTLS certificate in the DTLS sessions in which this instance is the local
+     * peer
+     */
     private void setRemoteFingerprints(IceUdpTransportPacketExtension transport)
     {
+        // In accord with https://xmpp.org/extensions/xep-0320.html, the
+        // fingerprint signals the setup attribute defined by
+        // https://tools.ietf.org/html/rfc4145 as well.
         List<DtlsFingerprintPacketExtension> dfpes
             = transport.getChildExtensionsOfType(
                     DtlsFingerprintPacketExtension.class);
@@ -1810,13 +1840,81 @@ public class IceUdpTransportManager
         if (!dfpes.isEmpty())
         {
             Map<String, String> remoteFingerprints = new LinkedHashMap<>();
+            boolean setSetup = true;
+            DtlsControl.Setup setup = null;
 
             for (DtlsFingerprintPacketExtension dfpe : dfpes)
             {
+                // fingerprint & hash
                 remoteFingerprints.put(
                         dfpe.getHash(),
                         dfpe.getFingerprint());
+
+                // setup
+                if (setSetup)
+                {
+                    String aSetupStr = dfpe.getSetup();
+                    DtlsControl.Setup aSetup = null;
+
+                    if (!StringUtils.isNullOrEmpty(aSetupStr, /* trim */ true))
+                    {
+                        try
+                        {
+                            aSetup = DtlsControl.Setup.parseSetup(aSetupStr);
+                        }
+                        catch (IllegalArgumentException e)
+                        {
+                            // The value of aSetup will remain null and will
+                            // thus signal the exception.
+                        }
+                    }
+                    if (aSetup == null)
+                    {
+                        // The null setup of dfpe disagrees with any non-null
+                        // setups of previous and/or next remoteFingerprints.
+                        // For the sake of clarity, don't set a setup on
+                        // dtlsControl.
+                        setSetup = false;
+                    }
+                    else if (setup == null)
+                    {
+                        setup = aSetup;
+                    }
+                    else if (!setup.equals(aSetup))
+                    {
+                        // The setup of dfpe disagrees with the setups of the
+                        // prevous remoteFingerprints. For the sake of clarity,
+                        // don't set a setup on dtlsControl.
+                        setSetup = false;
+                    }
+                }
             }
+
+            // setup
+            if (setSetup && setup != null)
+            {
+                // The setup of the local peer is the inverse of the setup of
+                // the remote peer.
+                switch (setup)
+                {
+                case ACTIVE:
+                    if (DtlsControl.Setup.ACTIVE.equals(dtlsControl.getSetup()))
+                    {
+                        // ACTPASS is the same as passive to DtlsControlImpl at
+                        // the time of this writing.
+                        dtlsControl.setSetup(DtlsControl.Setup.ACTPASS);
+                    }
+                    break;
+                case PASSIVE:
+                    dtlsControl.setSetup(DtlsControl.Setup.ACTIVE);
+                    break;
+                default:
+                    // TODO I don't have the time to deal with these at the time
+                    // of this writing.
+                    break;
+                }
+            }
+
             dtlsControl.setRemoteFingerprints(remoteFingerprints);
         }
     }
