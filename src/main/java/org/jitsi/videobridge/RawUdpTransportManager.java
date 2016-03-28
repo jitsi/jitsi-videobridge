@@ -24,6 +24,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.xmpp.*;
@@ -433,7 +434,7 @@ public class RawUdpTransportManager
      * RawUdpTransportManager does not implement DTLS.
      */
     @Override
-    public DtlsControl getDtlsControl(Channel channel)
+    public DtlsControlImpl getDtlsControl(Channel channel)
     {
         return null;
     }

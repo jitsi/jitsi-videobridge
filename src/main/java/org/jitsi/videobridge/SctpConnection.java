@@ -947,7 +947,7 @@ public class SctpConnection
         throws IOException
     {
         DtlsControlImpl dtlsControl
-            = (DtlsControlImpl) getTransportManager().getDtlsControl(this);
+            = getTransportManager().getDtlsControl(this);
         DtlsTransformEngine engine = dtlsControl.getTransformEngine();
         DtlsPacketTransformer transformer
             = (DtlsPacketTransformer) engine.getRTPTransformer();

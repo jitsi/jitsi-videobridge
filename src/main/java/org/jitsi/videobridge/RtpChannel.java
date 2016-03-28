@@ -1138,6 +1138,7 @@ public class RtpChannel
         stream.setConnector(connector);
 
         Content content = getContent();
+        Conference conference = content.getConference();
 
         if (!stream.isStarted())
         {
@@ -1151,19 +1152,15 @@ public class RtpChannel
             if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
                 stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
 
-            synchronized (streamSyncRoot)
-            {   // otherwise races with stream.setDirection()
+            synchronized (streamSyncRoot) // Otherwise, races with stream.setDirection().
+            {
                 stream.start();
             }
 
-            Videobridge videobridge
-                = getContent().getConference().getVideobridge();
-            EventAdmin eventAdmin = videobridge.getEventAdmin();
+            EventAdmin eventAdmin
+                = conference.getVideobridge().getEventAdmin();
             if (eventAdmin != null)
-            {
-                eventAdmin
-                    .sendEvent(EventFactory.streamStarted(this));
-            }
+                eventAdmin.sendEvent(EventFactory.streamStarted(this));
         }
 
         if (logger.isTraceEnabled())
@@ -1171,7 +1168,7 @@ public class RtpChannel
             logger.trace(
                     "Direction of channel " + getID() + " of content "
                         + content.getName() + " of conference "
-                        + content.getConference().getID() + " is "
+                        + conference.getID() + " is "
                         + stream.getDirection() + ".");
         }
 
