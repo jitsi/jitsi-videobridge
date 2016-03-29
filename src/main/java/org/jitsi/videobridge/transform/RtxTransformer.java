@@ -49,6 +49,14 @@ public class RtxTransformer
     private RtpChannel channel;
 
     /**
+     * The payload type of the RTX format in the conference. This class
+     * assumes that if RTX is used, all channels which use it will use it with
+     * this PT. It is cached here for performance reasons (to avoid searching
+     * all channels for it).
+     */
+    private byte rtxPt = -1;
+
+    /**
      * Maps an RTX SSRC to the last RTP sequence number sent with that SSRC.
      */
     private final Map<Long, Integer> rtxSequenceNumbers = new HashMap<>();
@@ -73,13 +81,47 @@ public class RtxTransformer
     @Override
     public RawPacket transform(RawPacket pkt)
     {
-        byte rtxPt = channel.getRtxPayloadType();
-        if (rtxPt != -1 && pkt.getPayloadType() == rtxPt)
+        if (isRtx(pkt))
         {
             pkt = handleRtxPacket(pkt);
         }
 
         return pkt;
+    }
+
+    /**
+     * Determines whether {@code pkt} is an RTX packet.
+     * @param pkt the packet to check.
+     * @return {@code true} iff {@code pkt} is an RTX packet.
+     */
+    private boolean isRtx(RawPacket pkt)
+    {
+        if (rtxPt == -1)
+        {
+            initRtxPt();
+        }
+
+        return rtxPt != -1 && pkt.getPayloadType() == rtxPt;
+    }
+
+    /**
+     * Tries to find a channel in our channel's content, which has RTX enabled,
+     * and sets the value of {@link #rtxPt} to this channel's RTX PT.
+     */
+    private void initRtxPt()
+    {
+        for (Channel c : channel.getContent().getChannels())
+        {
+            if (c instanceof RtpChannel)
+            {
+                byte pt = ((RtpChannel) c).getRtxPayloadType();
+                if (pt != -1)
+                {
+                    rtxPt = pt;
+                    return;
+                }
+            }
+        }
     }
 
     /**
@@ -133,7 +175,7 @@ public class RtxTransformer
         // receiver (i.e. this.channel)*. However, we only store SSRCs
         // that endpoints *send* with.
         // We therefore assume that SSRC re-writing has not introduced any
-        // new SSRCs and therefor the FID mappings known to the senders
+        // new SSRCs and therefore the FID mappings known to the senders
         // also apply to receivers.
         RtpChannel sourceChannel
                 = channel.getContent().findChannelByFidSsrc(rtxSsrc);
