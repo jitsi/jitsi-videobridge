@@ -1517,7 +1517,7 @@ public class RtpChannel
                 redPayloadType = -1;
                 for (PayloadTypePacketExtension ext : payloadTypes)
                 {
-                    if ("rtx".equalsIgnoreCase(ext.getName()))
+                    if (Constants.RTX.equalsIgnoreCase(ext.getName()))
                     {
                         rtxPayloadType = (byte) ext.getID();
                         for (ParameterPacketExtension ppe : ext.getParameters())

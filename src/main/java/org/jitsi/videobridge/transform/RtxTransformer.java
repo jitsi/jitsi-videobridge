@@ -61,6 +61,8 @@ public class RtxTransformer
      */
     RtxTransformer(RtpChannel channel)
     {
+        super(RTPPacketPredicate.INSTANCE);
+
         this.channel = channel;
     }
 
@@ -71,9 +73,8 @@ public class RtxTransformer
     @Override
     public RawPacket transform(RawPacket pkt)
     {
-        byte rtxPt;
-        if (pkt != null && (rtxPt = channel.getRtxPayloadType()) != -1
-            && pkt.getPayloadType() == rtxPt)
+        byte rtxPt = channel.getRtxPayloadType();
+        if (rtxPt != -1 && pkt.getPayloadType() == rtxPt)
         {
             pkt = handleRtxPacket(pkt);
         }
