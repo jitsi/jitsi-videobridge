@@ -207,6 +207,13 @@ public class RtxTransformer
                             pkt.getOriginalSequenceNumber());
                     mediaPacket.setPayloadType(apt);
                 }
+                else
+                {
+                    logger.warn(
+                        "RTX packet received, but no APT is defined. Packet "
+                            + "SSRC " + rtxSsrc + ", associated media SSRC "
+                            + mediaSsrc);
+                }
             }
         }
 
@@ -320,7 +327,8 @@ public class RtxTransformer
             }
             else
             {
-                retransmitPlain = !encapsulateInRtxAndTransmit(pkt, rtxSsrc);
+                retransmitPlain
+                    = !encapsulateInRtxAndTransmit(pkt, rtxSsrc, after);
             }
         }
         else
@@ -355,49 +363,51 @@ public class RtxTransformer
      * {@code MediaStream}.
      * @param pkt the packet to transmit.
      * @param rtxSsrc the SSRC for the RTX stream.
+     * @param after the {@code TransformEngine} in the chain of
+     * {@code TransformEngine}s of the associated {@code MediaStream} after
+     * which the injection of {@code pkt} is to begin
      * @return {@code true} if the packet was successfully retransmitted,
      * {@code false} otherwise.
      */
-    private boolean encapsulateInRtxAndTransmit(RawPacket pkt, long rtxSsrc)
+    private boolean encapsulateInRtxAndTransmit(
+        RawPacket pkt, long rtxSsrc, TransformEngine after)
     {
         byte[] buf = pkt.getBuffer();
         int len = pkt.getLength();
         int off = pkt.getOffset();
-        byte[] newBuf = buf;
-        if (buf.length < len + 2)
-        {
-            // FIXME The byte array newly allocated and assigned to newBuf must
-            // be made known to pkt eventually.
-            newBuf = new byte[len + 2];
-        }
+
+        byte[] newBuf = new byte[len + 2];
+        RawPacket rtxPkt = new RawPacket(newBuf, 0, len + 2);
 
         int osn = pkt.getSequenceNumber();
         int headerLength = pkt.getHeaderLength();
-        int payloadLength = len - headerLength;
+        int payloadLength = pkt.getPayloadLength();
+
+        // Copy the header.
         System.arraycopy(buf, off, newBuf, 0, headerLength);
-        // FIXME If newBuf is actually buf, then we will override the first two
-        // bytes of the payload bellow.
+
+        // Set the OSN field.
         newBuf[headerLength] = (byte) ((osn >> 8) & 0xff);
         newBuf[headerLength + 1] = (byte) (osn & 0xff);
+
+        // Copy the payload.
         System.arraycopy(buf, off + headerLength,
                          newBuf, headerLength + 2,
                          payloadLength );
-        // FIXME We tried to extend the payload of pkt by two bytes above but
-        // we never told pkt that its length has increased by these two bytes.
 
         MediaStream mediaStream = channel.getStream();
         if (mediaStream != null)
         {
-            pkt.setSSRC((int) rtxSsrc);
+            rtxPkt.setSSRC((int) rtxSsrc);
             // Only call getNextRtxSequenceNumber() when we're sure we're going
             // to transmit a packet, because it consumes a sequence number.
-            pkt.setSequenceNumber(getNextRtxSequenceNumber(rtxSsrc));
+            rtxPkt.setSequenceNumber(getNextRtxSequenceNumber(rtxSsrc));
             try
             {
                 mediaStream.injectPacket(
-                        pkt,
+                        rtxPkt,
                         /* data */ true,
-                        /* after */ null);
+                        after);
             }
             catch (TransmissionFailedException tfe)
             {
