@@ -435,14 +435,17 @@ public class SimulcastSender
         {
             // Now, why would you want to do that?
             sendMode = null;
+            logger.debug("Setting simulcastMode to null.");
             return;
         }
         else if (newMode == SimulcastMode.REWRITING)
         {
+            logger.debug("Setting simulcastMode to rewriting mode.");
             sendMode = new RewritingSendMode(this);
         }
         else if (newMode == SimulcastMode.SWITCHING)
         {
+            logger.debug("Setting simulcastMode to switching mode.");
             sendMode = new SwitchingSendMode(this);
         }
 

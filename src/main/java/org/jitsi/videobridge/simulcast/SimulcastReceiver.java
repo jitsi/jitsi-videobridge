@@ -419,7 +419,10 @@ public class SimulcastReceiver
                     if (logger.isInfoEnabled())
                     {
                         logger.info("It looks like at least one pkt was lost " +
-                            "(or delayed).");
+                            "(or delayed). Last pkt sequence number=" +
+                            acceptedStream.lastPktSequenceNumber +
+                            ", expected sequence number="
+                            + expectedPktSequenceNumber);
                     }
                 }
                 else
