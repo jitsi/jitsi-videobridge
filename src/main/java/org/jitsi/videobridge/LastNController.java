@@ -511,7 +511,7 @@ public class LastNController
         }
 
         newForwardedEndpoints
-            = orderBy(newConferenceEndpoints, conferenceSpeechActivityEndpoints);
+            = orderBy(newForwardedEndpoints, conferenceSpeechActivityEndpoints);
 
         List<String> enteringEndpoints;
         if (equalAsSets(forwardedEndpoints,newForwardedEndpoints))
