@@ -1554,7 +1554,7 @@ public class Videobridge
     private void setupInitialSelectedEndpoints(
             Conference conference,
             String endpoint,
-            int receivingSimulcastLayer)
+            Integer receivingSimulcastLayer)
     {
         List<Endpoint> othersInThisConference =
                 conference.getEndpoints();
@@ -1562,7 +1562,8 @@ public class Videobridge
         Endpoint me = conference.getOrCreateEndpoint(endpoint);
 
         // Add everyone to my selected endpoints
-        if (receivingSimulcastLayer !=
+        if (receivingSimulcastLayer != null &&
+                receivingSimulcastLayer !=
                 SimulcastStream.SIMULCAST_LAYER_ORDER_BASE)
         {
             for (Endpoint other : othersInThisConference)
@@ -1579,15 +1580,14 @@ public class Videobridge
                     other.getChannels(MediaType.VIDEO);
             if (othersVideoChannels.size() > 0)
             {
-                int receiveSimulcastLayer =
+                int othersReceiveSimulcastLayer =
                         ((VideoChannel)othersVideoChannels.get(0))
                                 .getReceiveSimulcastLayer();
-                if (receiveSimulcastLayer !=
-                        SimulcastStream.SIMULCAST_LAYER_ORDER_BASE)
+                if (othersReceiveSimulcastLayer !=
+                        SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
+                        && !other.equals(me))
                 {
-                    if (!other.equals(me)) {
-                        other.addSelectedEndpointNoSideEffect(me);
-                    }
+                    other.addSelectedEndpointNoSideEffect(me);
                 }
             }
         }
