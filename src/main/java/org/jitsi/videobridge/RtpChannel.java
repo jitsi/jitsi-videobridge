@@ -947,10 +947,9 @@ public class RtpChannel
      */
     public int[] getReceiveSSRCs()
     {
-        synchronized (receiveSSRCsSyncRoot)
-        {
-
-        final int length = this.receiveSSRCs.length;
+        // this.receiveSSRCs is copy-on-write.
+        long[] receiveSSRCsField = this.receiveSSRCs;
+        int length = receiveSSRCsField.length;
 
         if (length == 0)
         {
@@ -961,11 +960,11 @@ public class RtpChannel
             int[] receiveSSRCs = new int[length / 2];
 
             for (int src = 0, dst = 0; src < length; src += 2, dst++)
-                receiveSSRCs[dst] = (int) this.receiveSSRCs[src];
+            {
+                receiveSSRCs[dst] = (int) receiveSSRCsField[src];
+            }
             return receiveSSRCs;
         }
-
-        } // synchronized (receiveSSRCsSyncRoot)
     }
 
     /**
