@@ -601,7 +601,7 @@ public class RtpChannel
      * #receiveSSRCs} would have exceeded {@link #MAX_RECEIVE_SSRCS} with the
      * addition of the new SSRC.
      */
-    private synchronized boolean addReceiveSSRC(int receiveSSRC,
+    private boolean addReceiveSSRC(int receiveSSRC,
                                                 boolean checkLimit)
         throws SizeExceededException
     {
