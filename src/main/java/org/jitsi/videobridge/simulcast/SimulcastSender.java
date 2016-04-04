@@ -480,6 +480,33 @@ public class SimulcastSender
     }
 
     /**
+     * Notifies this instance that the overrider order of the parent
+     * {@link SimulcastSenderManager} has changed.
+     *
+     */
+    void overrideOrderChanged()
+    {
+        // FIXME: this may not be thread safe. Making it thread safe, though,
+        // requires changes to the whole class.
+
+        int overrideOrder = getSimulcastSenderManager().getOverrideOrder();
+        // FIXME: this only drop the target order if the override is low. If
+        // doesn't support clearing the override order (for this, we need to
+        // reevaluate the list of selected endpoints).
+        if (overrideOrder
+            != SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE)
+        {
+            targetOrder = Math.min(targetOrder, overrideOrder);
+
+            SendMode sm = this.sendMode;
+            if (sm != null)
+            {
+                this.sendMode.receive(targetOrder);
+            }
+        }
+    }
+
+    /**
      * Implements a <tt>SimulcastReceiver.Listener</tt> to be used wit this
      * <tt>SimulcastSender</tt>.
      */
