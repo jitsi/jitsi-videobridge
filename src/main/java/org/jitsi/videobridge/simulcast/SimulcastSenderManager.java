@@ -94,6 +94,13 @@ public class SimulcastSenderManager
     public void setOverrideOrder(int overrideOrder)
     {
        this.overrideOrder = overrideOrder;
+        synchronized (this)
+        {
+            for (SimulcastSender sender : senders.values())
+            {
+                sender.overrideOrderChanged();
+            }
+        }
     }
 
     /**
