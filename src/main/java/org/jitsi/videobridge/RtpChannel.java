@@ -1534,6 +1534,14 @@ public class RtpChannel
                         redPayloadType = (byte) ext.getID();
                     }
                 }
+
+                RetransmissionRequester retransmissionRequester
+                    = stream.getRetransmissionRequester();
+                if (retransmissionRequester != null)
+                {
+                    retransmissionRequester.configureRtx(rtxPayloadType,
+                                                         fidSourceGroups);
+                }
             }
         }
 
@@ -1909,6 +1917,15 @@ public class RtpChannel
                 // one for the RTX stream.
                 fidSourceGroups.put(first, second);
             }
+        }
+
+        // The RTX configuration (PT and SSRC maps) may have changed.
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+        {
+            retransmissionRequester.configureRtx(rtxPayloadType,
+                                                 fidSourceGroups);
         }
     }
 
