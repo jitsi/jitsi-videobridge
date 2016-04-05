@@ -399,6 +399,7 @@ public class RtxTransformer
         if (mediaStream != null)
         {
             rtxPkt.setSSRC((int) rtxSsrc);
+            rtxPkt.setPayloadType(rtxPt);
             // Only call getNextRtxSequenceNumber() when we're sure we're going
             // to transmit a packet, because it consumes a sequence number.
             rtxPkt.setSequenceNumber(getNextRtxSequenceNumber(rtxSsrc));
