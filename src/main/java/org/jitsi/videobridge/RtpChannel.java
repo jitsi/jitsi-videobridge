@@ -1101,6 +1101,11 @@ public class RtpChannel
                 return;
         }
 
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+            retransmissionRequester.setSenderSsrc(getContent().getInitialLocalSSRC());
+
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
         if (streamTarget == null)
