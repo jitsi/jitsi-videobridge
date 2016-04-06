@@ -296,18 +296,35 @@ public class AdaptiveSimulcastBitrateController
     {
         SimulcastEngine simulcastEngine
                 = channel.getTransformEngine().getSimulcastEngine();
-        SimulcastSenderManager ssm
-                = simulcastEngine.getSimulcastSenderManager();
-        if (enable)
+        if (simulcastEngine != null)
         {
-            ssm.setOverrideOrder(
-                    SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE);
-            logger.info("Enabling HQ layer for endpoint " + getEndpointID());
+            SimulcastSenderManager ssm
+                = simulcastEngine.getSimulcastSenderManager();
+            if (ssm != null)
+            {
+                if (enable)
+                {
+                    ssm.setOverrideOrder(
+                        SimulcastSenderManager.SIMULCAST_LAYER_ORDER_NO_OVERRIDE);
+
+                    logger
+                        .info(
+                            "Enabling HQ layer for endpoint " + getEndpointID());
+                }
+                else
+                {
+                    ssm.setOverrideOrder(TARGET_ORDER_HD - 1);
+                    logger
+                        .info(
+                            "Disabling HQ layer for endpoint " + getEndpointID());
+                }
+            }
         }
         else
         {
-            ssm.setOverrideOrder(TARGET_ORDER_HD - 1);
-            logger.info("Disabling HQ layer for endpoint " + getEndpointID());
+            logger.error("Failed to enable or disable theHQ layer, "
+                         + "simulcastEngine is null. Maybe simulcast is not "
+                         + "enabled for this channel?");
         }
     }
 
