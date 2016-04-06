@@ -1101,6 +1101,11 @@ public class RtpChannel
                 return;
         }
 
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+            retransmissionRequester.setSenderSsrc(getContent().getInitialLocalSSRC());
+
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
         if (streamTarget == null)
@@ -1517,7 +1522,7 @@ public class RtpChannel
                 redPayloadType = -1;
                 for (PayloadTypePacketExtension ext : payloadTypes)
                 {
-                    if ("rtx".equalsIgnoreCase(ext.getName()))
+                    if (Constants.RTX.equalsIgnoreCase(ext.getName()))
                     {
                         rtxPayloadType = (byte) ext.getID();
                         for (ParameterPacketExtension ppe : ext.getParameters())
@@ -1533,6 +1538,14 @@ public class RtpChannel
                     {
                         redPayloadType = (byte) ext.getID();
                     }
+                }
+
+                RetransmissionRequester retransmissionRequester
+                    = stream.getRetransmissionRequester();
+                if (retransmissionRequester != null)
+                {
+                    retransmissionRequester.configureRtx(rtxPayloadType,
+                                                         fidSourceGroups);
                 }
             }
         }
@@ -1909,6 +1922,15 @@ public class RtpChannel
                 // one for the RTX stream.
                 fidSourceGroups.put(first, second);
             }
+        }
+
+        // The RTX configuration (PT and SSRC maps) may have changed.
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+        {
+            retransmissionRequester.configureRtx(rtxPayloadType,
+                                                 fidSourceGroups);
         }
     }
 
