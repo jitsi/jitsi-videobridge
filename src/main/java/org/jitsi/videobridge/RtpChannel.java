@@ -601,7 +601,7 @@ public class RtpChannel
      * #receiveSSRCs} would have exceeded {@link #MAX_RECEIVE_SSRCS} with the
      * addition of the new SSRC.
      */
-    private synchronized boolean addReceiveSSRC(int receiveSSRC,
+    private boolean addReceiveSSRC(int receiveSSRC,
                                                 boolean checkLimit)
         throws SizeExceededException
     {
@@ -947,10 +947,9 @@ public class RtpChannel
      */
     public int[] getReceiveSSRCs()
     {
-        synchronized (receiveSSRCsSyncRoot)
-        {
-
-        final int length = this.receiveSSRCs.length;
+        // this.receiveSSRCs is copy-on-write.
+        long[] receiveSSRCsField = this.receiveSSRCs;
+        int length = receiveSSRCsField.length;
 
         if (length == 0)
         {
@@ -961,11 +960,11 @@ public class RtpChannel
             int[] receiveSSRCs = new int[length / 2];
 
             for (int src = 0, dst = 0; src < length; src += 2, dst++)
-                receiveSSRCs[dst] = (int) this.receiveSSRCs[src];
+            {
+                receiveSSRCs[dst] = (int) receiveSSRCsField[src];
+            }
             return receiveSSRCs;
         }
-
-        } // synchronized (receiveSSRCsSyncRoot)
     }
 
     /**
@@ -1101,6 +1100,11 @@ public class RtpChannel
             if (stream == null)
                 return;
         }
+
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+            retransmissionRequester.setSenderSsrc(getContent().getInitialLocalSSRC());
 
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
@@ -1518,7 +1522,7 @@ public class RtpChannel
                 redPayloadType = -1;
                 for (PayloadTypePacketExtension ext : payloadTypes)
                 {
-                    if ("rtx".equalsIgnoreCase(ext.getName()))
+                    if (Constants.RTX.equalsIgnoreCase(ext.getName()))
                     {
                         rtxPayloadType = (byte) ext.getID();
                         for (ParameterPacketExtension ppe : ext.getParameters())
@@ -1534,6 +1538,14 @@ public class RtpChannel
                     {
                         redPayloadType = (byte) ext.getID();
                     }
+                }
+
+                RetransmissionRequester retransmissionRequester
+                    = stream.getRetransmissionRequester();
+                if (retransmissionRequester != null)
+                {
+                    retransmissionRequester.configureRtx(rtxPayloadType,
+                                                         fidSourceGroups);
                 }
             }
         }
@@ -1910,6 +1922,15 @@ public class RtpChannel
                 // one for the RTX stream.
                 fidSourceGroups.put(first, second);
             }
+        }
+
+        // The RTX configuration (PT and SSRC maps) may have changed.
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+        {
+            retransmissionRequester.configureRtx(rtxPayloadType,
+                                                 fidSourceGroups);
         }
     }
 
