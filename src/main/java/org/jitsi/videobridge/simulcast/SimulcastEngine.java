@@ -15,12 +15,14 @@
  */
 package org.jitsi.videobridge.simulcast;
 
+import net.java.sip.communicator.util.ServiceUtils;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.util.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.function.*;
 import org.jitsi.videobridge.*;
@@ -56,8 +58,7 @@ public class SimulcastEngine
      * If the owning endpoint (viewed as a sender) has signaled simulcast, this
      * object receives it.
      */
-    private final SimulcastReceiver simulcastReceiver
-        = new SimulcastReceiver(this);
+    private final SimulcastReceiver simulcastReceiver;
 
     /**
      * For each <tt>SimulcastReceiver</tt> we have a <tt>SimulcastSender</tt>.
@@ -111,6 +112,11 @@ public class SimulcastEngine
     public SimulcastEngine(VideoChannel videoChannel)
     {
         this.videoChannel = videoChannel;
+        simulcastReceiver = new SimulcastReceiver(this,
+                ServiceUtils.getService(
+                        videoChannel.getBundleContext(),
+                        ConfigurationService.class)
+        );
     }
 
     /**
