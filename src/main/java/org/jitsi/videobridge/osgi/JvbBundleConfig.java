@@ -225,9 +225,8 @@ public class JvbBundleConfig
         // We want them forwarded as normal packets.
         defaults.put(AudioMediaStream.DISABLE_DTMF_HANDLING_PNAME, true_);
 
-        // This will eventually be enabled by default, but keep it off until
-        // more testing.
-        defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false_);
+        // Enable retransmission requests for video streams.
+        defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, true_);
 
         // Disable packet logging.
         defaults.put(
