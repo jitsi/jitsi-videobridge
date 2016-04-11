@@ -124,7 +124,7 @@ public class SimulcastReceiverTest
     {
         // Setup the <tt>SimulcastReceiver</tt> to test.
         final SimulcastReceiver simulcastReceiver
-            = new SimulcastReceiver(mockSimulcastEngine);
+            = new SimulcastReceiver(mockSimulcastEngine, null);
 
         final long[] ssrcs = new long[] {
             0xeb6717b9L, 0xa9245e9eL, 0xa7828c21L
