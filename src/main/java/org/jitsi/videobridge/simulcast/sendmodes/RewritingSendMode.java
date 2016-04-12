@@ -73,10 +73,37 @@ public class RewritingSendMode
 
         if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
         {
-            // There's a next simulcast stream. Let's see if we can switch to
-            // it.
-            this.state = new State(new WeakReference<>(next), null);
-            return true;
+            // This is the first packet of a keyframe.
+
+            int lastReceivedSeq = next.getLastPktSequenceNumber();
+            int diff = RTPUtils.sequenceNumberDiff(pkt.getSequenceNumber(), lastReceivedSeq);
+            if (diff >= 0)
+            {
+                this.state = new State(new WeakReference<>(next), null);
+                return true;
+            }
+            else
+            {
+                // The first packet of a keyframe arrives out of order (maybe it
+                // was lost and retransmitted). Some of the remaining packets
+                // from the keyframe may have already been received and dropped
+                // since they were not recognized as belonging to a keyframe. In
+                // this case we don't want to switch to 'next' yet, as it will
+                // not be in a decodable state (even worse, some of the
+                // keyframe's packets will be missing from our cache, and will
+                // not be requested from the sender (since they were received)).
+
+                // We don't expect this to happen often, so we will just ask
+                // for another keyframe.
+                // TODO: requesting keyframes should be refactored to allow
+                // retrying and avoid sending unnecessary requests.
+                logger.warn(
+                    "Ignoring a keyframe on the stream we want to switch to. "
+                    + "The packet is old: seq=" + pkt.getSequenceNumber()
+                    + " lastReceivedSeq=" + lastReceivedSeq + " SSRC="
+                    + pkt.getSSRCAsLong());
+                next.askForKeyframe();
+            }
         }
 
         SimulcastStream current = oldState.getCurrent();
@@ -139,6 +166,18 @@ public class RewritingSendMode
     static class State
     {
         /**
+         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
+         * currently being received.
+         */
+        private final WeakReference<SimulcastStream> weakCurrent;
+
+        /**
+         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
+         * (possibly) received next.
+         */
+        private final WeakReference<SimulcastStream> weakNext;
+
+        /**
          * Ctor.
          *
          * @param weakCurrent A <tt>WeakReference</tt> to the
@@ -153,18 +192,6 @@ public class RewritingSendMode
             this.weakCurrent = weakCurrent;
             this.weakNext = weakNext;
         }
-
-        /**
-         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
-         * currently being received.
-         */
-        private final WeakReference<SimulcastStream> weakCurrent;
-
-        /**
-         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
-         * (possibly) received next.
-         */
-        private final WeakReference<SimulcastStream> weakNext;
 
         /**
          * Returns the <tt>SimulcastStream</tt> that will be (possibly) received
