@@ -16,7 +16,7 @@ newrelic.config.file=/my/new/location/newrelic.jar
 Uncomment the property JVB_EXTRA_JVM_PARAMS in /etc/jitsi/videobridge/config.
 And put the following property in /etc/jitsi/videobridge/sip-communicator.properties:
 ```json
-org.jitsi.videobridge.metricservice.NewRelic=org.jitsi.videobridge.metrics.NewRelicMetricPublisher
+org.jitsi.videobridge.metricservice.NewRelic=org.jitsi.videobridge.eventadmin.metrics.NewRelicMetricPublisher
 ```
 
 ## Metrics Produced

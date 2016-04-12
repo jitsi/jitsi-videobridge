@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.metrics;
+package org.jitsi.videobridge.eventadmin.metrics;
 
 import org.jitsi.eventadmin.Event;
 import org.jitsi.eventadmin.EventHandler;
@@ -144,6 +144,15 @@ public class MetricLoggingHandler
                 try
                 {
                     String serviceClassName = config.getString(propName);
+
+                    // backward compatibility after package change
+                    if(serviceClassName.startsWith(
+                        "org.jitsi.videobridge.metrics"))
+                    {
+                        serviceClassName.replace(
+                            "metrics", "eventadmin.metrics");
+                    }
+
                     Class<?> serviceClass = Class.forName(serviceClassName);
                     MetricServicePublisher publisher
                         = (MetricServicePublisher)
