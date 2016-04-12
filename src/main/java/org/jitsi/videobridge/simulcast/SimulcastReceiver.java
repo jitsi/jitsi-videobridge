@@ -61,7 +61,38 @@ public class SimulcastReceiver
      * Configuration key for TIMEOUT_ON_FRAME_COUNT
      */
     private static final String TIMEOUT_ON_FRAME_COUNT_CONFIG_KEY
-            = "org.jitsi.videobridge.TIMEOUT_ON_FRAME_COUNT";
+        = "org.jitsi.videobridge.simulcast.SimulcastReceiver"
+               + ".TIMEOUT_ON_FRAME_COUNT";
+
+    /**
+     * Reads TIMEOUT_ON_FRAME_COUNT from the <tt>ConfigurationService</tt>
+     *
+     * @param cfg The global <tt>ConfigurationService</tt> object
+     */
+    private static void initializeConfiguration(ConfigurationService cfg) {
+        if (cfg == null)
+        {
+            logger.warn("Can't set TIMEOUT_ON_FRAME_COUNT because "
+                            + "the configuration service was not found. "
+                            + "Using " + DEFAULT_TIMEOUT_ON_FRAME_COUNT
+                            + " as default");
+
+            TIMEOUT_ON_FRAME_COUNT = DEFAULT_TIMEOUT_ON_FRAME_COUNT;
+        }
+        else
+        {
+            TIMEOUT_ON_FRAME_COUNT = cfg.getInt(
+                TIMEOUT_ON_FRAME_COUNT_CONFIG_KEY,
+                DEFAULT_TIMEOUT_ON_FRAME_COUNT);
+        }
+    }
+
+    /**
+     * The pool of threads utilized by this class. This could be a private
+     * static final field but we want to be able to override it for testing.
+     */
+    static ExecutorService executorService = ExecutorUtils
+        .newCachedThreadPool(true, SimulcastReceiver.class.getName());
 
     /**
      * The list of listeners to be notified by this receiver when a change in
@@ -76,13 +107,6 @@ public class SimulcastReceiver
      */
     private final List<WeakReference<Listener>> weakListeners
         = new CopyOnWriteArrayList<>();
-
-    /**
-     * The pool of threads utilized by this class. This could be a private
-     * static final field but we want to be able to override it for testing.
-     */
-    static ExecutorService executorService = ExecutorUtils
-        .newCachedThreadPool(true, SimulcastReceiver.class.getName());
 
     /**
      * The <tt>SimulcastEngine</tt> that owns this receiver.
@@ -129,29 +153,6 @@ public class SimulcastReceiver
     public SimulcastEngine getSimulcastEngine()
     {
         return this.simulcastEngine;
-    }
-
-    /**
-     * Reads TIMEOUT_ON_FRAME_COUNT from the <tt>ConfigurationService</tt>
-     *
-     * @param cfg The global <tt>ConfigurationService</tt> object
-     */
-    private static void initializeConfiguration(ConfigurationService cfg) {
-        if (cfg == null)
-        {
-            logger.warn("Can't set TIMEOUT_ON_FRAME_COUNT because "
-                    + "the configuration service was not found. "
-                    + "Using " + DEFAULT_TIMEOUT_ON_FRAME_COUNT
-                    + " as default");
-
-            TIMEOUT_ON_FRAME_COUNT = DEFAULT_TIMEOUT_ON_FRAME_COUNT;
-        }
-        else
-        {
-            TIMEOUT_ON_FRAME_COUNT = cfg.getInt(
-                    TIMEOUT_ON_FRAME_COUNT_CONFIG_KEY,
-                    DEFAULT_TIMEOUT_ON_FRAME_COUNT);
-        }
     }
 
     /**

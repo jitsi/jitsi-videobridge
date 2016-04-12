@@ -15,7 +15,7 @@
  */
 package org.jitsi.videobridge.simulcast;
 
-import net.java.sip.communicator.util.ServiceUtils;
+import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.util.*;
 import org.jitsi.impl.neomedia.*;
@@ -23,7 +23,7 @@ import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
-import org.jitsi.util.*;
+import org.jitsi.util.Logger; //Ambiguous with "*"
 import org.jitsi.util.function.*;
 import org.jitsi.videobridge.*;
 
