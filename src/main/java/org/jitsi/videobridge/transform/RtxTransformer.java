@@ -100,6 +100,17 @@ public class RtxTransformer
         boolean success = false;
         long rtxSsrc = pkt.getSSRCAsLong();
 
+        if (pkt.getPayloadLength() - pkt.getPaddingSize() < 2)
+        {
+            // We need at least 2 bytes to read the OSN field.
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                    "Dropping an incoming RTX packet with padding only: " + pkt);
+            }
+            return null;
+        }
+
         long mediaSsrc = channel.getFidPairedSsrc(rtxSsrc);
         if (mediaSsrc != -1)
         {
