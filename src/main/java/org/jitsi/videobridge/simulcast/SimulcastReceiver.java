@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.simulcast;
 
+import org.jitsi.service.configuration.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
 import java.util.concurrent.*;
@@ -48,7 +49,50 @@ public class SimulcastReceiver
      * from its remote peer or it will be declared paused/stopped/not streaming
      * by its {@code SimulcastReceiver}.
      */
-    private static final int TIMEOUT_ON_FRAME_COUNT = 5;
+    private static int TIMEOUT_ON_FRAME_COUNT = -1; // -1 means uninitialized
+
+    /**
+     * The default value for TIMEOUT_ON_FRAME_COUNT if the config not specifies
+     * it
+     */
+    private static final int DEFAULT_TIMEOUT_ON_FRAME_COUNT = 5;
+
+    /**
+     * Configuration key for TIMEOUT_ON_FRAME_COUNT
+     */
+    private static final String TIMEOUT_ON_FRAME_COUNT_CONFIG_KEY
+        = "org.jitsi.videobridge.simulcast.SimulcastReceiver"
+               + ".TIMEOUT_ON_FRAME_COUNT";
+
+    /**
+     * Reads TIMEOUT_ON_FRAME_COUNT from the <tt>ConfigurationService</tt>
+     *
+     * @param cfg The global <tt>ConfigurationService</tt> object
+     */
+    private static void initializeConfiguration(ConfigurationService cfg) {
+        if (cfg == null)
+        {
+            logger.warn("Can't set TIMEOUT_ON_FRAME_COUNT because "
+                            + "the configuration service was not found. "
+                            + "Using " + DEFAULT_TIMEOUT_ON_FRAME_COUNT
+                            + " as default");
+
+            TIMEOUT_ON_FRAME_COUNT = DEFAULT_TIMEOUT_ON_FRAME_COUNT;
+        }
+        else
+        {
+            TIMEOUT_ON_FRAME_COUNT = cfg.getInt(
+                TIMEOUT_ON_FRAME_COUNT_CONFIG_KEY,
+                DEFAULT_TIMEOUT_ON_FRAME_COUNT);
+        }
+    }
+
+    /**
+     * The pool of threads utilized by this class. This could be a private
+     * static final field but we want to be able to override it for testing.
+     */
+    static ExecutorService executorService = ExecutorUtils
+        .newCachedThreadPool(true, SimulcastReceiver.class.getName());
 
     /**
      * The list of listeners to be notified by this receiver when a change in
@@ -63,13 +107,6 @@ public class SimulcastReceiver
      */
     private final List<WeakReference<Listener>> weakListeners
         = new CopyOnWriteArrayList<>();
-
-    /**
-     * The pool of threads utilized by this class. This could be a private
-     * static final field but we want to be able to override it for testing.
-     */
-    static ExecutorService executorService = ExecutorUtils
-        .newCachedThreadPool(true, SimulcastReceiver.class.getName());
 
     /**
      * The <tt>SimulcastEngine</tt> that owns this receiver.
@@ -95,9 +132,16 @@ public class SimulcastReceiver
      *
      * @param simulcastEngine the <tt>SimulcastEngine</tt> that owns this
      * receiver.
+     * @param cfg Needed to read TIMEOUT_ON_FRAME_COUNT
      */
-    public SimulcastReceiver(SimulcastEngine simulcastEngine)
+    public SimulcastReceiver(SimulcastEngine simulcastEngine,
+                             ConfigurationService cfg)
     {
+        if (TIMEOUT_ON_FRAME_COUNT < 0) // Initialize config only once
+        {
+            initializeConfiguration(cfg);
+        }
+
         this.simulcastEngine = simulcastEngine;
     }
 
