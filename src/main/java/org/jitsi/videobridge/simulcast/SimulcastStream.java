@@ -76,18 +76,18 @@ public class SimulcastStream
      * packet retransmissions so the value of {@code lastPktMarker} may not come
      * from the last received {@code RawPacket} but from a received
      * {@code RawPacket} which would have been the last received if there were
-     * no network transport and RTP packet retransmission abberations.
+     * no network transport and RTP packet retransmission aberrations.
      */
     Boolean lastPktMarker;
 
     /**
-     * The {@code sequenceNumber} of the last {@code RawPacket} seen by this
-     * {@code SimulcastStream}. Technically, the order of the receipt of RTP
-     * packets may be disturbed by the network transport (e.g. UDP) and/or RTP
-     * packet retransmissions so the value of {@code lastPktSequenceNumber} may
+     * The highest RTP {@code sequenceNumber} received by this {@code
+     * SimulcastStream}. The order of the receipt of RTP packets may be
+     * disturbed by the network transport (e.g. UDP) and/or RTP packet
+     * retransmissions so the value of {@code lastPktSequenceNumber} may
      * not come from the last received {@code RawPacket} but from a received
      * {@code RawPacket} which would have been the last received if there were
-     * no network transport and RTP packet retransmission abberations.
+     * no network transport and RTP packet retransmission aberrations.
      */
     int lastPktSequenceNumber = -1;
 
@@ -98,27 +98,27 @@ public class SimulcastStream
      * packet retransmissions so the value of {@code lastPktTimestamp} may not
      * come from the last received {@code RawPacket} but from a received
      * {@code RawPacket} which would have been the last received if there were
-     * no network transport and RTP packet retransmission abberations.
+     * no network transport and RTP packet retransmission aberrations.
      */
     long lastPktTimestamp = -1;
 
     /**
      * Ctor.
      *
-     * @param simulcastReicever
+     * @param simulcastReceiver
      * @param primarySSRC
      * @param rtxSSRC
      * @param fecSSRC
      * @param order
      */
     public SimulcastStream(
-            SimulcastReceiver simulcastReicever,
+            SimulcastReceiver simulcastReceiver,
             long primarySSRC,
             long rtxSSRC,
             long fecSSRC,
             int order)
     {
-        this.simulcastReceiver = simulcastReicever;
+        this.simulcastReceiver = simulcastReceiver;
         this.primarySSRC = primarySSRC;
         this.rtxSSRC = rtxSSRC;
         this.fecSSRC = fecSSRC;

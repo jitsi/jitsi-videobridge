@@ -20,6 +20,7 @@ import org.jitsi.util.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.lang.ref.*;
+import java.util.*;
 
 /**
  * The <tt>RewritingSendMode</tt> implements the streams rewriting mode in which
@@ -47,6 +48,12 @@ public class RewritingSendMode
     private State state = new State(null, null);
 
     /**
+     * A map that holds the last sequence number that we've seen for a given
+     * SSRC.
+     */
+    private final Map<Long, Integer> lastPktSequenceNumbers = new HashMap<>();
+
+    /**
      * Ctor.
      *
      * @param simulcastSender
@@ -71,16 +78,60 @@ public class RewritingSendMode
 
         SimulcastStream next = oldState.getNext();
 
-        if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
+        Long pktSSRC = pkt.getSSRCAsLong();
+        Integer pktSequenceNumber = pkt.getSequenceNumber();
+        int diff = 1;
+
+        if (lastPktSequenceNumbers.containsKey(pktSSRC))
         {
-            // There's a next simulcast stream. Let's see if we can switch to
-            // it.
-            this.state = new State(new WeakReference<>(next), null);
-            return true;
+            int lastReceivedSeq = lastPktSequenceNumbers.get(pktSSRC);
+            diff = RTPUtils.sequenceNumberDiff(
+                pkt.getSequenceNumber(), lastReceivedSeq);
         }
 
-        SimulcastStream current = oldState.getCurrent();
-        return current != null && current.matches(pkt);
+        boolean accept = false;
+        if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
+        {
+            // This is the first packet of a keyframe.
+            if (diff >= 0)
+            {
+                this.state = new State(new WeakReference<>(next), null);
+                accept = true;
+            }
+            else
+            {
+                // The first packet of a keyframe arrives out of order (maybe it
+                // was lost and retransmitted). Some of the remaining packets
+                // from the keyframe may have already been received and dropped
+                // since they were not recognized as belonging to a keyframe. In
+                // this case we don't want to switch to 'next' yet, as it will
+                // not be in a decodable state (even worse, some of the
+                // keyframe's packets will be missing from our cache, and will
+                // not be requested from the sender (since they were received)).
+
+                // We don't expect this to happen often, so we will just ask
+                // for another keyframe.
+                logger.warn(
+                    "Ignoring a keyframe on the stream we want to switch to. "
+                    + "The packet is old: seq=" + pkt.getSequenceNumber()
+                    + " diff=" + diff + " SSRC="
+                    + pkt.getSSRCAsLong());
+
+                next.askForKeyframe();
+            }
+        }
+        else
+        {
+            SimulcastStream current = oldState.getCurrent();
+            accept = current != null && current.matches(pkt);
+        }
+
+        if (diff >= 0)
+        {
+            lastPktSequenceNumbers.put(pktSSRC, pktSequenceNumber);
+        }
+
+        return accept;
     }
 
     /**
@@ -139,6 +190,18 @@ public class RewritingSendMode
     static class State
     {
         /**
+         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
+         * currently being received.
+         */
+        private final WeakReference<SimulcastStream> weakCurrent;
+
+        /**
+         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
+         * (possibly) received next.
+         */
+        private final WeakReference<SimulcastStream> weakNext;
+
+        /**
          * Ctor.
          *
          * @param weakCurrent A <tt>WeakReference</tt> to the
@@ -153,18 +216,6 @@ public class RewritingSendMode
             this.weakCurrent = weakCurrent;
             this.weakNext = weakNext;
         }
-
-        /**
-         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that is
-         * currently being received.
-         */
-        private final WeakReference<SimulcastStream> weakCurrent;
-
-        /**
-         * A <tt>WeakReference</tt> to the <tt>SimulcastStream</tt> that will be
-         * (possibly) received next.
-         */
-        private final WeakReference<SimulcastStream> weakNext;
 
         /**
          * Returns the <tt>SimulcastStream</tt> that will be (possibly) received
