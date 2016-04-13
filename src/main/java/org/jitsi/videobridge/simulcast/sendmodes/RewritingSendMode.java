@@ -20,6 +20,7 @@ import org.jitsi.util.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.lang.ref.*;
+import java.util.*;
 
 /**
  * The <tt>RewritingSendMode</tt> implements the streams rewriting mode in which
@@ -47,6 +48,12 @@ public class RewritingSendMode
     private State state = new State(null, null);
 
     /**
+     * A map that holds the last sequence number that we've seen for a given
+     * SSRC.
+     */
+    private final Map<Long, Integer> lastPktSequenceNumbers = new HashMap<>();
+
+    /**
      * Ctor.
      *
      * @param simulcastSender
@@ -71,16 +78,25 @@ public class RewritingSendMode
 
         SimulcastStream next = oldState.getNext();
 
+        Long pktSSRC = pkt.getSSRCAsLong();
+        Integer pktSequenceNumber = pkt.getSequenceNumber();
+        int diff = 1;
+
+        if (lastPktSequenceNumbers.containsKey(pktSSRC))
+        {
+            int lastReceivedSeq = lastPktSequenceNumbers.get(pktSSRC);
+            diff = RTPUtils.sequenceNumberDiff(
+                pkt.getSequenceNumber(), lastReceivedSeq);
+        }
+
+        boolean accept = false;
         if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
         {
             // This is the first packet of a keyframe.
-
-            int lastReceivedSeq = next.getLastPktSequenceNumber();
-            int diff = RTPUtils.sequenceNumberDiff(pkt.getSequenceNumber(), lastReceivedSeq);
             if (diff >= 0)
             {
                 this.state = new State(new WeakReference<>(next), null);
-                return true;
+                accept = true;
             }
             else
             {
@@ -95,19 +111,27 @@ public class RewritingSendMode
 
                 // We don't expect this to happen often, so we will just ask
                 // for another keyframe.
-                // TODO: requesting keyframes should be refactored to allow
-                // retrying and avoid sending unnecessary requests.
                 logger.warn(
                     "Ignoring a keyframe on the stream we want to switch to. "
                     + "The packet is old: seq=" + pkt.getSequenceNumber()
-                    + " lastReceivedSeq=" + lastReceivedSeq + " SSRC="
+                    + " diff=" + diff + " SSRC="
                     + pkt.getSSRCAsLong());
+
                 next.askForKeyframe();
             }
         }
+        else
+        {
+            SimulcastStream current = oldState.getCurrent();
+            accept = current != null && current.matches(pkt);
+        }
 
-        SimulcastStream current = oldState.getCurrent();
-        return current != null && current.matches(pkt);
+        if (diff >= 0)
+        {
+            lastPktSequenceNumbers.put(pktSSRC, pktSequenceNumber);
+        }
+
+        return accept;
     }
 
     /**

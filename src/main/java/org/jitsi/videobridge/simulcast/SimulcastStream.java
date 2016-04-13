@@ -275,13 +275,4 @@ public class SimulcastStream
         result = 31 * result + order;
         return result;
     }
-
-    /**
-     * @return the highest RTP sequence number received by this
-     * {@link SimulcastStream}.
-     */
-    public int getLastPktSequenceNumber()
-    {
-        return lastPktSequenceNumber;
-    }
 }
