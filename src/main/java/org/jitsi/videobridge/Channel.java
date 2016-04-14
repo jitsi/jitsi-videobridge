@@ -331,8 +331,7 @@ public abstract class Channel
         Content content = getContent();
         Conference conference = content.getConference();
 
-        EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.channelExpired(this));
         try

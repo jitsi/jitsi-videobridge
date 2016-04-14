@@ -185,6 +185,11 @@ public class Conference
                 };
 
     /**
+     * The event admin used by this conference and all instances created by it.
+     */
+    private final EventAdmin eventAdmin;
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -196,10 +201,13 @@ public class Conference
      * initialization of the new instance and from whom further/future requests
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
+     * @param eventAdmin to be used by the conference and all his children
+     * objects.
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      String focus)
+                      String focus,
+                      EventAdmin eventAdmin)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -210,11 +218,11 @@ public class Conference
         this.id = id;
         this.focus = focus;
         this.lastKnownFocus = focus;
+        this.eventAdmin = eventAdmin;
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
 
-        EventAdmin eventAdmin = videobridge.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
     }
@@ -588,7 +596,7 @@ public class Conference
                 expired = true;
         }
 
-        EventAdmin eventAdmin = videobridge.getEventAdmin();
+        EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
 
@@ -804,7 +812,7 @@ public class Conference
                 endpoints.add(new WeakReference<>(endpoint));
                 changed = true;
 
-                EventAdmin eventAdmin = videobridge.getEventAdmin();
+                EventAdmin eventAdmin = getEventAdmin();
                 if (eventAdmin != null)
                     eventAdmin.sendEvent(EventFactory.endpointCreated(endpoint));
             }
@@ -1647,8 +1655,7 @@ public class Conference
                     if (isRecording() && endpointRecorder != null)
                         endpointRecorder.updateEndpoint(endpoint);
 
-                    EventAdmin eventAdmin
-                            = getVideobridge().getEventAdmin();
+                    EventAdmin eventAdmin = getEventAdmin();
                     if (eventAdmin != null)
                     {
                         eventAdmin.sendEvent(
@@ -1677,5 +1684,15 @@ public class Conference
     public String getName()
     {
         return name;
+    }
+
+    /**
+     * Returns the <tt>EventAdmin</tt> used by this <tt>Conference</tt>.
+     *
+     * @return the <tt>EventAdmin</tt> used by this <tt>Conference</tt>.
+     */
+    public EventAdmin getEventAdmin()
+    {
+        return this.eventAdmin;
     }
 }

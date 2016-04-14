@@ -1161,8 +1161,7 @@ public class RtpChannel
                 stream.start();
             }
 
-            EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+            EventAdmin eventAdmin = conference.getEventAdmin();
             if (eventAdmin != null)
                 eventAdmin.sendEvent(EventFactory.streamStarted(this));
         }
