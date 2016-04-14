@@ -653,7 +653,7 @@ public class SctpConnection
             if (logger.isDebugEnabled())
             {
                 logger.debug(
-                        "!!! " + getEndpoint().getID()
+                            getEndpoint().getID()
                             + " data channel open request on SID: " + sid
                             + " type: " + channelType + " prio: " + priority
                             + " reliab: " + reliability + " label: " + label
@@ -1013,6 +1013,9 @@ public class SctpConnection
         sctpSocket.setNotificationListener(this);
         sctpSocket.listen();
 
+        // Notify that from now on SCTP connection is considered functional
+        sctpSocket.setDataCallback(this);
+
         // FIXME manage threads
         threadPool.execute(
                 new Runnable()
@@ -1030,6 +1033,9 @@ public class SctpConnection
                                 if (sctpSocket.accept())
                                 {
                                     acceptedIncomingConnection = true;
+                                    logger.info("SCTP socket accepted for "
+                                            + "endpoint "
+                                            + getEndpoint().getID());
                                     break;
                                 }
                                 Thread.sleep(100);
@@ -1052,9 +1058,6 @@ public class SctpConnection
                         }
                     }
                 });
-
-        // Notify that from now on SCTP connection is considered functional
-        sctpSocket.setDataCallback(this);
 
         // Setup iceSocket
         DatagramSocket datagramSocket = connector.getDataSocket();
