@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge.metrics;
+package org.jitsi.videobridge.eventadmin.metrics;
 
 import org.jitsi.eventadmin.Event;
 import org.jitsi.eventadmin.EventHandler;
@@ -51,9 +51,9 @@ import java.util.List;
 public class MetricLoggingHandler
     implements EventHandler
 {
-
     private static final Logger logger
         = Logger.getLogger(MetricLoggingHandler.class);
+
     private List<MetricServicePublisher> publishers;
 
     public static final String METRIC_CONFERENCES = "Conferences";
@@ -143,11 +143,28 @@ public class MetricLoggingHandler
                 logger.info("Initialising metric service: " + propName);
                 try
                 {
-                    String serviceClassName = config.getString(propName);
-                    Class<?> serviceClass = Class.forName(serviceClassName);
+                    String className = config.getString(propName);
+
+                    // We moved the metrics package (and the influxdb package)
+                    // deeper into a new eventadmin package. Be
+                    // backwards-compatible.
+                    String oldPkgName = "org.jitsi.videobridge.metrics.";
+
+                    if (className.startsWith(oldPkgName))
+                    {
+                        String newPkgName
+                            = "org.jitsi.videobridge.eventadmin.metrics.";
+
+                        className
+                            = newPkgName
+                                + className.substring(oldPkgName.length());
+                    }
+
+                    Class<?> clazz = Class.forName(className);
                     MetricServicePublisher publisher
                         = (MetricServicePublisher)
-                            serviceClass.getConstructor().newInstance();
+                            clazz.getConstructor().newInstance();
+
                     this.publishers.add(publisher);
                 }
                 catch (Throwable t)
