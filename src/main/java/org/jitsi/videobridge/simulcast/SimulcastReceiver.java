@@ -156,29 +156,6 @@ public class SimulcastReceiver
     }
 
     /**
-     * Reads TIMEOUT_ON_FRAME_COUNT from the <tt>ConfigurationService</tt>
-     *
-     * @param cfg The global <tt>ConfigurationService</tt> object
-     */
-    private static void initializeConfiguration(ConfigurationService cfg) {
-        if (cfg == null)
-        {
-            logger.warn("Can't set TIMEOUT_ON_FRAME_COUNT because "
-                    + "the configuration service was not found. "
-                    + "Using " + DEFAULT_TIMEOUT_ON_FRAME_COUNT
-                    + " as default");
-
-            TIMEOUT_ON_FRAME_COUNT = DEFAULT_TIMEOUT_ON_FRAME_COUNT;
-        }
-        else
-        {
-            TIMEOUT_ON_FRAME_COUNT = cfg.getInt(
-                    TIMEOUT_ON_FRAME_COUNT_CONFIG_KEY,
-                    DEFAULT_TIMEOUT_ON_FRAME_COUNT);
-        }
-    }
-
-    /**
      * Returns true if the endpoint has signaled one or more simulcast streams.
      *
      * @return true if the endpoint has signaled one or more simulcast streams,
