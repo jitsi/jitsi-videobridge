@@ -82,9 +82,9 @@ public class RewritingSendMode
         Integer pktSequenceNumber = pkt.getSequenceNumber();
         int diff = 1;
 
-        if (lastPktSequenceNumbers.containsKey(pktSSRC))
+        Integer lastReceivedSeq = lastPktSequenceNumbers.get(pktSSRC);
+        if (lastReceivedSeq != null)
         {
-            int lastReceivedSeq = lastPktSequenceNumbers.get(pktSSRC);
             diff = RTPUtils.sequenceNumberDiff(
                 pkt.getSequenceNumber(), lastReceivedSeq);
         }

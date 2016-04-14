@@ -65,17 +65,14 @@ public class PubSubPublisher
      */
     public static PubSubPublisher getPubsubManager(String serviceName)
     {
-        PubSubPublisher publisher;
+        PubSubPublisher publisher = instances.get(serviceName);
 
-        if (instances.containsKey(serviceName))
-        {
-            publisher = instances.get(serviceName);
-        }
-        else
+        if (publisher == null)
         {
             publisher = new PubSubPublisher(serviceName);
             instances.put(serviceName, publisher);
         }
+
         return publisher;
     }
 
