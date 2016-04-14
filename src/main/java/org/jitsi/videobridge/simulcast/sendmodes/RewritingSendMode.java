@@ -79,15 +79,13 @@ public class RewritingSendMode
         SimulcastStream next = oldState.getNext();
 
         Long pktSSRC = pkt.getSSRCAsLong();
-        Integer pktSequenceNumber = pkt.getSequenceNumber();
-        int diff = 1;
+        int pktSeq = pkt.getSequenceNumber();
 
         Integer lastReceivedSeq = lastPktSequenceNumbers.get(pktSSRC);
-        if (lastReceivedSeq != null)
-        {
-            diff = RTPUtils.sequenceNumberDiff(
-                pkt.getSequenceNumber(), lastReceivedSeq);
-        }
+        int diff
+            = (lastReceivedSeq == null)
+                ? 1
+                : RTPUtils.sequenceNumberDiff(pktSeq, lastReceivedSeq);
 
         boolean accept = false;
         if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
@@ -112,10 +110,9 @@ public class RewritingSendMode
                 // We don't expect this to happen often, so we will just ask
                 // for another keyframe.
                 logger.warn(
-                    "Ignoring a keyframe on the stream we want to switch to. "
-                    + "The packet is old: seq=" + pkt.getSequenceNumber()
-                    + " diff=" + diff + " SSRC="
-                    + pkt.getSSRCAsLong());
+                        "Ignoring a keyframe on the stream we want to switch "
+                            + "to. The packet is old: seq=" + pktSeq + " diff="
+                            + diff + " SSRC=" + pktSSRC);
 
                 next.askForKeyframe();
             }
@@ -128,7 +125,7 @@ public class RewritingSendMode
 
         if (diff >= 0)
         {
-            lastPktSequenceNumbers.put(pktSSRC, pktSequenceNumber);
+            lastPktSequenceNumbers.put(pktSSRC, pktSeq);
         }
 
         return accept;
