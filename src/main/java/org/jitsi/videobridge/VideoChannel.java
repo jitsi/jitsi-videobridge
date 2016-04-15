@@ -759,7 +759,6 @@ public class VideoChannel
             if (Constants.RED.equals(payloadType.getName()))
             {
                 enableRedFilter = false;
-                break;
             }
 
             if (Constants.VP8.equalsIgnoreCase(payloadType.getName()))
