@@ -78,6 +78,7 @@ public class RewritingSendMode
 
         SimulcastStream next = oldState.getNext();
 
+        // Protection against key frame packet re-ordering.
         Long pktSSRC = pkt.getSSRCAsLong();
         int pktSeq = pkt.getSequenceNumber();
 

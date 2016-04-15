@@ -672,7 +672,7 @@ public class RtpChannel
                 = getContent().getRTCPFeedbackMessageSender();
 
             if (rtcpFeedbackMessageSender != null)
-                rtcpFeedbackMessageSender.sendFIR(stream, receiveSSRCs);
+                rtcpFeedbackMessageSender.sendFIR(receiveSSRCs);
         }
     }
 
