@@ -149,12 +149,43 @@ public class RewritingSendMode
         SimulcastStream current = oldState.getCurrent();
         SimulcastStream next = oldState.getNext();
 
-        if (current == simStream || next == simStream)
+        if (current == simStream)
         {
             if (logger.isDebugEnabled())
             {
                 logger.debug("order-" + simStream.getOrder()
-                        + " stream is already the target.");
+                    + " stream is already streaming from " +
+                    getSimulcastSender().getSimulcastReceiver()
+                        .getSimulcastEngine()
+                        .getVideoChannel().getEndpoint().getID() + ".");
+            }
+
+            if (next != null)
+            {
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Forgetting next stream of order-"
+                        + simStream.getOrder() + " from " +
+                        getSimulcastSender().getSimulcastReceiver()
+                            .getSimulcastEngine()
+                            .getVideoChannel().getEndpoint().getID() + ".");
+                }
+
+                this.state = new State(new WeakReference<>(simStream), null);
+            }
+
+            return;
+        }
+
+        if (next == simStream)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("order-" + simStream.getOrder()
+                        + " stream is already the target from " +
+                    getSimulcastSender().getSimulcastReceiver()
+                        .getSimulcastEngine()
+                        .getVideoChannel().getEndpoint().getID() + ".");
             }
 
             return;
