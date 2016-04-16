@@ -681,7 +681,7 @@ public class Endpoint
             sc.bind("this", this);
             logger.debug(sc.c(
                     "Endpoint {this.id} notified us that its big screen"
-                        + " displays endpoint {selectedId}."));
+                        + " displays endpoint {selectedIds}."));
         }
 
         Conference conference = weakConference.get();
@@ -721,10 +721,10 @@ public class Endpoint
             if (logger.isDebugEnabled())
             {
                 StringCompiler sc = new StringCompiler();
-                sc.bind("selected", newSelectedEndpoints);
+                sc.bind("newSelectedEndpoints", newSelectedEndpoints);
                 sc.bind("this", this);
                 logger.debug(sc.c(
-                        "Endpoint {this.id} selected {selected.id}."));
+                        "Endpoint {this.id} selected {newSelectedEndpoints}."));
             }
             firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
                 oldSelectedEndpoints, newSelectedEndpoints);
