@@ -39,7 +39,8 @@ public class Health
     /**
      * The {@link MediaType}s of {@link RtpChannel}s supported by
      * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
-     * by {@link Content#createRtpChannel(String, String, Boolean)}.
+     * by {@link
+     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
      */
     private static final MediaType[] MEDIA_TYPES
         = { MediaType.AUDIO, MediaType.VIDEO };
@@ -137,7 +138,9 @@ public class Health
         throws Exception
     {
         // Conference
-        Conference conference = videobridge.createConference(/* focus */ null);
+        Conference conference = videobridge.createConference(
+            /* focus */ null,
+            /* disable events for created conf,channels etc.*/ true);
 
         // Fail as quickly as possible.
         if (conference == null)

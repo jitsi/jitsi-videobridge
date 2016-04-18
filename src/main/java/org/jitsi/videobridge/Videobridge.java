@@ -226,6 +226,29 @@ public class Videobridge
      */
     public Conference createConference(String focus)
     {
+        return this.createConference(focus, false);
+    }
+
+    /**
+     * Initializes a new {@link Conference} instance with an ID unique to the
+     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt> and
+     * adds the new instance to the list of existing <tt>Conference</tt>
+     * instances. Optionally the new instance is owned by a specific conference
+     * focus i.e. further/future requests to manage the new instance must come
+     * from the specified <tt>focus</tt> or they will be ignored. If the focus
+     * is not specified this safety check is overridden.
+     *
+     * @param focus (optional) a <tt>String</tt> which specifies the JID of
+     * the conference focus which will own the new instance i.e. from whom
+     * further/future requests to manage the new instance must come or they will
+     * be ignored. Pass <tt>null</tt> to override this safety check.
+     * @return a new <tt>Conference</tt> instance with an ID unique to the
+     * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
+     * @param disableEvens disables publishing events,
+     * passes null as EventAdmin instance to the created conference
+     */
+    public Conference createConference(String focus, boolean disableEvens)
+    {
         Conference conference = null;
 
         do
@@ -236,7 +259,8 @@ public class Videobridge
             {
                 if (!conferences.containsKey(id))
                 {
-                    conference = new Conference(this, id, focus);
+                    conference = new Conference(this, id, focus,
+                        disableEvens ? null : getEventAdmin());
                     conferences.put(id, conference);
                 }
             }
@@ -523,13 +547,13 @@ public class Videobridge
     }
 
     /**
-     * Returns the <tt>LoggingService</tt> used by this
+     * Returns the <tt>EventAdmin</tt> used by this
      * <tt>Videobridge</tt>.
      *
-     * @return the <tt>LoggingService</tt> used by this
+     * @return the <tt>EventAdmin</tt> used by this
      * <tt>Videobridge</tt>.
      */
-    public EventAdmin getEventAdmin()
+    private EventAdmin getEventAdmin()
     {
         BundleContext bundleContext = getBundleContext();
 

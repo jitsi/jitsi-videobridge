@@ -156,9 +156,7 @@ public class Content
 
         mediaType = MediaType.parseString(this.name);
 
-        EventAdmin eventAdmin
-            = this.conference.getVideobridge().getEventAdmin();
-
+        EventAdmin eventAdmin = this.conference.getEventAdmin();
         if (eventAdmin != null)
         {
             eventAdmin.sendEvent(EventFactory.contentCreated(this));
@@ -391,10 +389,10 @@ public class Content
         setRecording(false, null);
         Conference conference = getConference();
 
-        EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.contentExpired(this));
+
         try
         {
             conference.expireContent(this);
