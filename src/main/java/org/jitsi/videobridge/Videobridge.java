@@ -27,13 +27,13 @@ import net.java.sip.communicator.util.*;
 
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
+import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
-import org.jitsi.eventadmin.*;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -226,7 +226,7 @@ public class Videobridge
      */
     public Conference createConference(String focus)
     {
-        return this.createConference(focus, false);
+        return this.createConference(focus, /* eventadmin */ true);
     }
 
     /**
@@ -242,12 +242,13 @@ public class Videobridge
      * the conference focus which will own the new instance i.e. from whom
      * further/future requests to manage the new instance must come or they will
      * be ignored. Pass <tt>null</tt> to override this safety check.
+     * @param eventadmin {@code true} to enable support for the
+     * {@code eventadmin} package i.e. fire {@code Event}s through
+     * {@code EventAdmin}; otherwise, {@code false}
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
-     * @param disableEvens disables publishing events,
-     * passes null as EventAdmin instance to the created conference
      */
-    public Conference createConference(String focus, boolean disableEvens)
+    public Conference createConference(String focus, boolean eventadmin)
     {
         Conference conference = null;
 
@@ -259,8 +260,12 @@ public class Videobridge
             {
                 if (!conferences.containsKey(id))
                 {
-                    conference = new Conference(this, id, focus,
-                        disableEvens ? null : getEventAdmin());
+                    conference
+                        = new Conference(
+                                this,
+                                id,
+                                focus,
+                                eventadmin ? getEventAdmin() : null);
                     conferences.put(id, conference);
                 }
             }
@@ -547,10 +552,10 @@ public class Videobridge
     }
 
     /**
-     * Returns the <tt>EventAdmin</tt> used by this
+     * Returns the <tt>EventAdmin</tt> instance (to be) used by this
      * <tt>Videobridge</tt>.
      *
-     * @return the <tt>EventAdmin</tt> used by this
+     * @return the <tt>EventAdmin</tt> instance (to be) used by this
      * <tt>Videobridge</tt>.
      */
     private EventAdmin getEventAdmin()
@@ -900,12 +905,11 @@ public class Videobridge
 
                             EventAdmin eventAdmin;
                             if (channelCreated
-                                    && (eventAdmin = getEventAdmin())
-                                        != null)
+                                    && (eventAdmin = getEventAdmin()) != null)
 
                             {
                                 eventAdmin.sendEvent(
-                                    EventFactory.channelCreated(channel));
+                                        EventFactory.channelCreated(channel));
                             }
 
                             // XXX we might want to fire more precise events,

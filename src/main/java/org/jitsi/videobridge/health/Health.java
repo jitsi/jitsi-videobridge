@@ -138,9 +138,10 @@ public class Health
         throws Exception
     {
         // Conference
-        Conference conference = videobridge.createConference(
-            /* focus */ null,
-            /* disable events for created conf,channels etc.*/ true);
+        Conference conference
+            = videobridge.createConference(
+                    /* focus */ null,
+                    /* eventadmin */ false);
 
         // Fail as quickly as possible.
         if (conference == null)

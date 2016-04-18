@@ -26,13 +26,13 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.eventadmin.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
@@ -77,6 +77,13 @@ public class Conference
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
     private final List<WeakReference<Endpoint>> endpoints = new LinkedList<>();
+
+    /**
+     * The {@link EventAdmin} instance (to be) used by this {@code Conference}
+     * and all instances (of {@code Content}, {@code Channel}, etc.) created by
+     * it.
+     */
+    private final EventAdmin eventAdmin;
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -185,11 +192,6 @@ public class Conference
                 };
 
     /**
-     * The event admin used by this conference and all instances created by it.
-     */
-    private final EventAdmin eventAdmin;
-
-    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -201,8 +203,9 @@ public class Conference
      * initialization of the new instance and from whom further/future requests
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
-     * @param eventAdmin to be used by the conference and all his children
-     * objects.
+     * @param eventAdmin the {@code EventAdmin} instance to be used by the new
+     * instance and all instances (of {@code Content}, {@code Channel}, etc.)
+     * created by it.
      */
     public Conference(Videobridge videobridge,
                       String id,
@@ -217,8 +220,9 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
-        this.lastKnownFocus = focus;
         this.eventAdmin = eventAdmin;
+
+        lastKnownFocus = focus;
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
@@ -250,7 +254,6 @@ public class Conference
             }
         }
     }
-
 
     /**
      * Broadcasts string message to all participants over default data channel.
@@ -814,7 +817,10 @@ public class Conference
 
                 EventAdmin eventAdmin = getEventAdmin();
                 if (eventAdmin != null)
-                    eventAdmin.sendEvent(EventFactory.endpointCreated(endpoint));
+                {
+                    eventAdmin.sendEvent(
+                            EventFactory.endpointCreated(endpoint));
+                }
             }
         }
 
@@ -1659,7 +1665,8 @@ public class Conference
                     if (eventAdmin != null)
                     {
                         eventAdmin.sendEvent(
-                            EventFactory.endpointDisplayNameChanged(endpoint));
+                                EventFactory.endpointDisplayNameChanged(
+                                        endpoint));
                     }
                 }
             }
@@ -1687,12 +1694,14 @@ public class Conference
     }
 
     /**
-     * Returns the <tt>EventAdmin</tt> used by this <tt>Conference</tt>.
+     * Returns the <tt>EventAdmin</tt> instance used by this <tt>Conference</tt>
+     * and all instances (of {@code Content}, {@code Channel}, etc.) created by
+     * it.
      *
-     * @return the <tt>EventAdmin</tt> used by this <tt>Conference</tt>.
+     * @return the <tt>EventAdmin</tt> instance used by this <tt>Conference</tt>
      */
     public EventAdmin getEventAdmin()
     {
-        return this.eventAdmin;
+        return eventAdmin;
     }
 }

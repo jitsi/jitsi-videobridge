@@ -156,11 +156,9 @@ public class Content
 
         mediaType = MediaType.parseString(this.name);
 
-        EventAdmin eventAdmin = this.conference.getEventAdmin();
+        EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
-        {
             eventAdmin.sendEvent(EventFactory.contentCreated(this));
-        }
 
         touch();
     }
@@ -387,6 +385,7 @@ public class Content
         }
 
         setRecording(false, null);
+
         Conference conference = getConference();
 
         EventAdmin eventAdmin = conference.getEventAdmin();
