@@ -30,6 +30,7 @@ import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 
 import org.ice4j.socket.*;
+import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
@@ -42,7 +43,6 @@ import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.eventadmin.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -1161,8 +1161,7 @@ public class RtpChannel
                 stream.start();
             }
 
-            EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+            EventAdmin eventAdmin = conference.getEventAdmin();
             if (eventAdmin != null)
                 eventAdmin.sendEvent(EventFactory.streamStarted(this));
         }

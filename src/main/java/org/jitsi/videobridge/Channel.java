@@ -17,11 +17,11 @@ package org.jitsi.videobridge;
 
 import java.io.*;
 
+import org.jitsi.eventadmin.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.util.event.*;
-import org.jitsi.eventadmin.*;
 import org.osgi.framework.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -331,10 +331,10 @@ public abstract class Channel
         Content content = getContent();
         Conference conference = content.getConference();
 
-        EventAdmin eventAdmin
-                = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.channelExpired(this));
+
         try
         {
             content.expireChannel(this);

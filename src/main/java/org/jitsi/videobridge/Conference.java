@@ -26,13 +26,13 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.eventadmin.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
@@ -77,6 +77,13 @@ public class Conference
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
     private final List<WeakReference<Endpoint>> endpoints = new LinkedList<>();
+
+    /**
+     * The {@link EventAdmin} instance (to be) used by this {@code Conference}
+     * and all instances (of {@code Content}, {@code Channel}, etc.) created by
+     * it.
+     */
+    private final EventAdmin eventAdmin;
 
     /**
      * The indicator which determines whether {@link #expire()} has been called
@@ -196,10 +203,14 @@ public class Conference
      * initialization of the new instance and from whom further/future requests
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
+     * @param eventAdmin the {@code EventAdmin} instance to be used by the new
+     * instance and all instances (of {@code Content}, {@code Channel}, etc.)
+     * created by it.
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      String focus)
+                      String focus,
+                      EventAdmin eventAdmin)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -209,12 +220,13 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
-        this.lastKnownFocus = focus;
+        this.eventAdmin = eventAdmin;
+
+        lastKnownFocus = focus;
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
 
-        EventAdmin eventAdmin = videobridge.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
     }
@@ -242,7 +254,6 @@ public class Conference
             }
         }
     }
-
 
     /**
      * Broadcasts string message to all participants over default data channel.
@@ -588,7 +599,7 @@ public class Conference
                 expired = true;
         }
 
-        EventAdmin eventAdmin = videobridge.getEventAdmin();
+        EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
 
@@ -804,9 +815,12 @@ public class Conference
                 endpoints.add(new WeakReference<>(endpoint));
                 changed = true;
 
-                EventAdmin eventAdmin = videobridge.getEventAdmin();
+                EventAdmin eventAdmin = getEventAdmin();
                 if (eventAdmin != null)
-                    eventAdmin.sendEvent(EventFactory.endpointCreated(endpoint));
+                {
+                    eventAdmin.sendEvent(
+                            EventFactory.endpointCreated(endpoint));
+                }
             }
         }
 
@@ -1647,12 +1661,12 @@ public class Conference
                     if (isRecording() && endpointRecorder != null)
                         endpointRecorder.updateEndpoint(endpoint);
 
-                    EventAdmin eventAdmin
-                            = getVideobridge().getEventAdmin();
+                    EventAdmin eventAdmin = getEventAdmin();
                     if (eventAdmin != null)
                     {
                         eventAdmin.sendEvent(
-                            EventFactory.endpointDisplayNameChanged(endpoint));
+                                EventFactory.endpointDisplayNameChanged(
+                                        endpoint));
                     }
                 }
             }
@@ -1677,5 +1691,17 @@ public class Conference
     public String getName()
     {
         return name;
+    }
+
+    /**
+     * Returns the <tt>EventAdmin</tt> instance used by this <tt>Conference</tt>
+     * and all instances (of {@code Content}, {@code Channel}, etc.) created by
+     * it.
+     *
+     * @return the <tt>EventAdmin</tt> instance used by this <tt>Conference</tt>
+     */
+    public EventAdmin getEventAdmin()
+    {
+        return eventAdmin;
     }
 }

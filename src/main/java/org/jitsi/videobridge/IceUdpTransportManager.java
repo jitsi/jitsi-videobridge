@@ -316,7 +316,7 @@ public class IceUdpTransportManager
         iceStream = iceAgent.getStream(iceStreamName);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
-        EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.transportCreated(this));
     }
@@ -402,7 +402,7 @@ public class IceUdpTransportManager
         if (iceConnected)
             channel.transportConnected();
 
-        EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.transportChannelAdded(channel));
 
@@ -742,7 +742,7 @@ public class IceUdpTransportManager
                 logd("Failed to close sockets when closing a channel:" + ioe);
             }
 
-            EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
+            EventAdmin eventAdmin = conference.getEventAdmin();
             if (eventAdmin != null)
             {
                 eventAdmin.sendEvent(
@@ -1647,7 +1647,7 @@ public class IceUdpTransportManager
                 .append(newState).append(".");
             logd(s.toString());
 
-            EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
+            EventAdmin eventAdmin = conference.getEventAdmin();
             if (eventAdmin != null)
             {
                 eventAdmin.sendEvent(
@@ -1810,7 +1810,7 @@ public class IceUdpTransportManager
     {
         iceConnected = true;
 
-        EventAdmin eventAdmin = conference.getVideobridge().getEventAdmin();
+        EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.transportConnected(this));
 
