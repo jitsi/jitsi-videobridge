@@ -327,10 +327,10 @@ public class SimulcastSender
 
         boolean thisWasInTheSelectedEndpoints
                 = oldEndpoints.contains(sendEndpoint);
-        boolean thisWillbeInTheSelectedEndpoints
+        boolean thisWillBeInTheSelectedEndpoints
                 = newEndpoints.contains(sendEndpoint);
 
-        if (thisWillbeInTheSelectedEndpoints)
+        if (thisWillBeInTheSelectedEndpoints)
         {
             int overrideOrder = getSimulcastSenderManager().getOverrideOrder();
             if (overrideOrder
@@ -344,8 +344,9 @@ public class SimulcastSender
             }
         }
         else if(thisWasInTheSelectedEndpoints)
-        { // It was in the old selected endpoints but it is not present in the
-          // new ones
+        {
+            // It was in the old selected endpoints but it is not present in the
+            // new ones
             newTargetOrder = lqOrder;
         }
         else
