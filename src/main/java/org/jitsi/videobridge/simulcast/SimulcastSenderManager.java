@@ -144,6 +144,10 @@ public class SimulcastSenderManager
 
         if (simulcastStreams == null || simulcastStreams.length == 0)
         {
+            // This is equivalent to !simulcastReceiver.isSimulcastSignaled() in
+            // which case we don't want to create a SimulcastSender. The reason
+            // why we don't call the isSimulcastSignaled method is because we
+            // might need a reference to the simulcastStreams later on.
             return null;
         }
 
