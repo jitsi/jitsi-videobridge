@@ -134,8 +134,15 @@ public class SimulcastSenderManager
     private synchronized SimulcastSender getOrCreateSimulcastSender(
         SimulcastReceiver simulcastReceiver)
     {
-        if (simulcastReceiver == null
-                || !simulcastReceiver.isSimulcastSignaled())
+        if (simulcastReceiver == null)
+        {
+            return null;
+        }
+
+        SimulcastStream[] simulcastStreams
+            = simulcastReceiver.getSimulcastStreams();
+
+        if (simulcastStreams == null || simulcastStreams.length == 0)
         {
             return null;
         }
@@ -144,10 +151,25 @@ public class SimulcastSenderManager
 
         if (simulcastSender == null) // Create a new sender.
         {
+            Endpoint sendingEndpoint = simulcastReceiver // never null.
+                .getSimulcastEngine() // never null.
+                .getVideoChannel() // never null.
+                .getEndpoint(); // might be null.
+
+            Endpoint receivingEndpoint = simulcastEngine // never null.
+                .getVideoChannel() // never null.
+                .getEndpoint(); // might be null.
+
+            Set<Endpoint> selectedEndpoints
+                = receivingEndpoint.getSelectedEndpoints(); // never null.
+
             // Create a new sender.
-            int targetOrder = simulcastEngine.
-                    getVideoChannel().
-                    getReceiveSimulcastLayer();
+            int targetOrder = sendingEndpoint != null
+                && receivingEndpoint != null
+                && selectedEndpoints.contains(sendingEndpoint)
+
+                ? simulcastStreams.length - 1
+                : simulcastEngine.getVideoChannel().getReceiveSimulcastLayer();
 
             simulcastSender = new SimulcastSender(
                     this,

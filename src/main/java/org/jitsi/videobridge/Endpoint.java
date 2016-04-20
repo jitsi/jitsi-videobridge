@@ -366,7 +366,7 @@ public class Endpoint
      * @return the currently selected <tt>Endpoint</tt>s at this
      * <tt>Endpoint</tt>.
      */
-    private Set<Endpoint> getSelectedEndpoints()
+    public Set<Endpoint> getSelectedEndpoints()
     {
         Set<Endpoint> result = new HashSet<>();
         for (WeakReference<Endpoint> wr : weakSelectedEndpoints)
