@@ -134,9 +134,20 @@ public class SimulcastSenderManager
     private synchronized SimulcastSender getOrCreateSimulcastSender(
         SimulcastReceiver simulcastReceiver)
     {
-        if (simulcastReceiver == null
-                || !simulcastReceiver.isSimulcastSignaled())
+        if (simulcastReceiver == null)
         {
+            return null;
+        }
+
+        SimulcastStream[] simulcastStreams
+            = simulcastReceiver.getSimulcastStreams();
+
+        if (simulcastStreams == null || simulcastStreams.length == 0)
+        {
+            // This is equivalent to !simulcastReceiver.isSimulcastSignaled() in
+            // which case we don't want to create a SimulcastSender. The reason
+            // why we don't call the isSimulcastSignaled method is because we
+            // might need a reference to the simulcastStreams later on.
             return null;
         }
 
@@ -144,11 +155,28 @@ public class SimulcastSenderManager
 
         if (simulcastSender == null) // Create a new sender.
         {
-            // Create a new sender.
-            int targetOrder = simulcastEngine.
-                    getVideoChannel().
-                    getReceiveSimulcastLayer();
+            VideoChannel videoChannel = simulcastEngine.getVideoChannel();
+            int targetOrder = videoChannel.getReceiveSimulcastLayer();
 
+            Endpoint sendingEndpoint = simulcastReceiver
+                .getSimulcastEngine()
+                .getVideoChannel()
+                .getEndpoint();
+
+            Endpoint receivingEndpoint = videoChannel.getEndpoint();
+
+            if (receivingEndpoint != null && sendingEndpoint != null)
+            {
+                Set<Endpoint> selectedEndpoints
+                    = receivingEndpoint.getSelectedEndpoints(); // never null.
+
+                if (selectedEndpoints.contains(sendingEndpoint))
+                {
+                    targetOrder = simulcastStreams.length - 1;
+                }
+            }
+
+            // Create a new sender.
             simulcastSender = new SimulcastSender(
                     this,
                     simulcastReceiver,
