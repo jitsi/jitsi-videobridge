@@ -155,18 +155,15 @@ public class SimulcastSenderManager
 
         if (simulcastSender == null) // Create a new sender.
         {
-            int targetOrder = simulcastEngine
-                .getVideoChannel() // never null.
-                .getReceiveSimulcastLayer();
+            VideoChannel videoChannel = simulcastEngine.getVideoChannel();
+            int targetOrder = videoChannel.getReceiveSimulcastLayer();
 
-            Endpoint sendingEndpoint = simulcastReceiver // never null.
-                .getSimulcastEngine() // never null.
-                .getVideoChannel() // never null.
-                .getEndpoint(); // might be null.
+            Endpoint sendingEndpoint = simulcastReceiver
+                .getSimulcastEngine()
+                .getVideoChannel()
+                .getEndpoint();
 
-            Endpoint receivingEndpoint = simulcastEngine // never null.
-                .getVideoChannel() // never null.
-                .getEndpoint(); // might be null.
+            Endpoint receivingEndpoint = videoChannel.getEndpoint();
 
             if (receivingEndpoint != null && sendingEndpoint != null)
             {
