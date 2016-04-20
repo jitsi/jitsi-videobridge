@@ -1080,6 +1080,9 @@ public class SctpConnection
         {
             do
             {
+                if (sctpSocket == null)
+                    break;
+
                 iceSocket.receive(recv);
 
                 RawPacket[] send
@@ -1117,9 +1120,6 @@ public class SctpConnection
                                 s.getBuffer(), s.getOffset(), s.getLength());
                     }
                 }
-
-                if (sctpSocket == null)
-                    break;
 
                 // Pass network packet to SCTP stack
                 for (RawPacket s : send)
