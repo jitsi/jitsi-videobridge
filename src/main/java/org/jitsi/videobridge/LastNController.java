@@ -335,8 +335,10 @@ public class LastNController
     private synchronized List<String> speechActivityEndpointIdsChanged(
             List<String> endpointIds)
     {
-
-        if (equalAsSets(conferenceSpeechActivityEndpoints, endpointIds))
+        // This comparison needs to care about order because you could have the same set of active endpoints,
+        //  but have one that moved from outside the last-n range to inside the last-n range, so there needs to
+        //  be an update.
+        if (conferenceSpeechActivityEndpoints.equals(endpointIds))
         {
             if (logger.isDebugEnabled())
             {
