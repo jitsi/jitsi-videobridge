@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import java.util.*;
+import java.util.List;
 import java.util.regex.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
@@ -37,6 +38,7 @@ import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.videobridge.simulcast.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
@@ -824,7 +826,13 @@ public class Videobridge
                             String endpoint = channelIQ.getEndpoint();
 
                             if (endpoint != null)
+                            {
                                 channel.setEndpoint(endpoint);
+                                setupInitialSelectedEndpoints(
+                                        conference,
+                                        endpoint,
+                                        channelIQ.getReceivingSimulcastLayer());
+                            }
 
                             /*
                              * The attribute last-n is optional. If a value is
@@ -1558,5 +1566,58 @@ public class Videobridge
             }
         }
         return contentStreamCount;
+    }
+
+    /**
+     * Sets the selected endpoint list of the conference's endpoints based on
+     * the selected receiving simulcast layer of the new endpoint.
+     * This method is intended to be called when a new endpoint enters the
+     * conference.
+     *
+     * @param conference The conference that is the subject of the change
+     * @param endpoint The id of the endpoint that entered the conference
+     * @param receivingSimulcastLayer The default received simulcast layer that
+     *                                is received by the <tt>endpoint<tt/>
+     */
+    private void setupInitialSelectedEndpoints(
+            Conference conference,
+            String endpoint,
+            Integer receivingSimulcastLayer)
+    {
+        List<Endpoint> othersInThisConference =
+                conference.getEndpoints();
+
+        Endpoint me = conference.getOrCreateEndpoint(endpoint);
+
+        // Add everyone to my selected endpoints
+        if (receivingSimulcastLayer != null &&
+                receivingSimulcastLayer !=
+                SimulcastStream.SIMULCAST_LAYER_ORDER_BASE)
+        {
+            for (Endpoint other : othersInThisConference)
+            {
+                if (!other.equals(me)) {
+                    me.addSelectedEndpointNoSideEffect(other);
+                }
+            }
+        }
+
+        // Add me to everyone else
+        for (Endpoint other : othersInThisConference) {
+            List<RtpChannel> othersVideoChannels =
+                    other.getChannels(MediaType.VIDEO);
+            if (othersVideoChannels.size() > 0)
+            {
+                int othersReceiveSimulcastLayer =
+                        ((VideoChannel)othersVideoChannels.get(0))
+                                .getReceiveSimulcastLayer();
+                if (othersReceiveSimulcastLayer !=
+                        SimulcastStream.SIMULCAST_LAYER_ORDER_BASE
+                        && !other.equals(me))
+                {
+                    other.addSelectedEndpointNoSideEffect(me);
+                }
+            }
+        }
     }
 }

@@ -657,6 +657,16 @@ public class Endpoint
     }
 
     /**
+     * Adds an endpoint to the selected endpoints' list but does not trigger
+     * any further actions.
+     * @param endpoint The {@code Endpoint} object to be added
+     */
+    public void addSelectedEndpointNoSideEffect(Endpoint endpoint)
+    {
+        weakSelectedEndpoints.add( new WeakReference<Endpoint>(endpoint) );
+    }
+
+    /**
      * Notifies this {@code Endpoint} that a
      * {@code SelectedEndpointChangedEvent} has been received by the associated
      * {@code SctpConnection}.
