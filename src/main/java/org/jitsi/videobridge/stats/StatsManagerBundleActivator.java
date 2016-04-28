@@ -45,7 +45,7 @@ public class StatsManagerBundleActivator
     /**
      * The default value for statistics interval.
      */
-    static final int DEFAULT_STAT_INTERVAL = 1000;
+    public static final int DEFAULT_STAT_INTERVAL = 1000;
 
     /**
      * The default value for statistics transport.
@@ -85,7 +85,7 @@ public class StatsManagerBundleActivator
     /**
      * The value for callstats.io statistics transport.
      */
-    private static final String STAT_TRANSPORT_CALLSTATS_IO = "callstats.io";
+    public static final String STAT_TRANSPORT_CALLSTATS_IO = "callstats.io";
 
     /**
      * The value for COLIBRI statistics transport.
@@ -101,7 +101,7 @@ public class StatsManagerBundleActivator
      * The name of the property which specifies the interval in milliseconds for
      * sending statistics about the Videobridge.
      */
-    private static final String STATISTICS_INTERVAL_PNAME
+    public static final String STATISTICS_INTERVAL_PNAME
         = "org.jitsi.videobridge.STATISTICS_INTERVAL";
 
     /**
