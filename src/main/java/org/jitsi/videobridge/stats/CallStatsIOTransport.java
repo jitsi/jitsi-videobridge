@@ -65,6 +65,11 @@ public class CallStatsIOTransport
     private CallStats callStats;
 
     /**
+     * CallStats service registration.
+     */
+    private ServiceRegistration<CallStats> serviceRegistration = null;
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -116,6 +121,11 @@ public class CallStatsIOTransport
                     "callstats.io Java library initialized successfully"
                         + " with message: " + msg);
         }
+
+        this.serviceRegistration = this.getBundleContext().registerService(
+            CallStats.class,
+            callStats,
+            null);
     }
 
     /**
@@ -160,6 +170,12 @@ public class CallStatsIOTransport
      */
     private void dispose(BundleContext bundleContext)
     {
+        if(serviceRegistration != null)
+        {
+            serviceRegistration.unregister();
+            serviceRegistration = null;
+        }
+
         bridgeStatusInfoBuilder = null;
         callStats = null;
     }
