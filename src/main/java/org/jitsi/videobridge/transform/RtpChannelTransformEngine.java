@@ -16,6 +16,8 @@
 package org.jitsi.videobridge.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.util.StringUtils;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
 
@@ -64,18 +66,19 @@ public class RtpChannelTransformEngine
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
      */
-    public RtpChannelTransformEngine(RtpChannel channel)
+    public RtpChannelTransformEngine(RtpChannel channel,
+                                     TransformEngine rtpTransformEngine)
     {
         this.channel = channel;
 
-        engineChain = createChain();
+        engineChain = createChain(rtpTransformEngine);
     }
 
     /**
      * Initializes the transformers used by this instance and returns them as
      * an array.
      */
-    private TransformEngine[] createChain()
+    private TransformEngine[] createChain(TransformEngine rtpTransformEngine)
     {
         boolean video = (channel instanceof VideoChannel);
 
@@ -101,6 +104,9 @@ public class RtpChannelTransformEngine
         else
         {
             transformerList = Collections.emptyList();
+        }
+        if (rtpTransformEngine != null) {
+            transformerList.add(0, rtpTransformEngine);
         }
 
         // Endpoint-end (the last transformer in the list executes last for

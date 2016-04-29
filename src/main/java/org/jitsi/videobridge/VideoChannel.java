@@ -67,6 +67,12 @@ public class VideoChannel
         = "org.jitsi.videobridge.rtcp.strategy";
 
     /**
+     *
+     */
+    private static final String RTP_TRANSFORM_ENGINE_PNAME
+            = "org.jitsi.videobridge.rtp.engine";
+
+    /**
      * The name of the property which specifies the simulcast mode of a
      * <tt>VideoChannel</tt>.
      */
@@ -201,11 +207,31 @@ public class VideoChannel
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
 
-        setTransformEngine(new RtpChannelTransformEngine(this));
+        ConfigurationService cfg = getContent().getConference()
+                .getVideobridge().getConfigurationService();
 
-        ConfigurationService cfg
-            = content.getConference().getVideobridge()
-                        .getConfigurationService();
+        TransformEngine rtpTransformEngine = null;
+        if (cfg != null ) {
+            String transformEngineFQDN = cfg.getString
+                    (RTP_TRANSFORM_ENGINE_PNAME);
+            if (!StringUtils.isNullOrEmpty(transformEngineFQDN)) {
+                try
+                {
+                    rtpTransformEngine = (TransformEngine) Class.forName
+                            (transformEngineFQDN).newInstance();
+                }
+                catch (Exception e)
+                {
+                    logger.error(
+                            "Failed to configure rtp transform engine",
+                            e);
+                }
+            }
+        }
+
+        setTransformEngine(
+                new RtpChannelTransformEngine(this, rtpTransformEngine));
+
         requestRetransmissions
             = cfg != null
                 && cfg.getBoolean(
