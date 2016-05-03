@@ -1432,11 +1432,6 @@ public class Videobridge
                         + " initialization.",
                     e);
         }
-
-        // CandidateHarvesters may take (non-trivial) time to initialize so
-        // initialize them as soon as possible, don't wait to initialize them
-        // after a Channel is requested.
-        IceUdpTransportManager.initializeStaticHarvesters(cfg);
     }
 
     /**
