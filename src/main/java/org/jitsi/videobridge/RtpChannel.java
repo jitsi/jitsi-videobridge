@@ -1108,37 +1108,34 @@ public class RtpChannel
 
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
-        if (streamTarget == null)
-        {
-            logger.info("Not starting stream, target is null");
-            return;
-        }
-
         if (connector == null)
         {
             logger.info("Not starting stream, connector is null");
             return;
         }
 
-        InetSocketAddress dataAddr = streamTarget.getDataAddress();
-        if (dataAddr == null)
+        if (streamTarget != null)
         {
-            logger.info(
-                "Not starting stream, the target's data address is null");
-            return;
+            InetSocketAddress dataAddr = streamTarget.getDataAddress();
+            if (dataAddr == null)
+            {
+                logger.info(
+                        "Not starting stream, the target's data address is null");
+                return;
+            }
+
+            this.streamTarget.setDataHostAddress(dataAddr.getAddress());
+            this.streamTarget.setDataPort(dataAddr.getPort());
+
+            InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
+            if (ctrlAddr != null)
+            {
+                this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
+                this.streamTarget.setControlPort(ctrlAddr.getPort());
+            }
+
+            stream.setTarget(streamTarget);
         }
-
-        this.streamTarget.setDataHostAddress(dataAddr.getAddress());
-        this.streamTarget.setDataPort(dataAddr.getPort());
-
-        InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
-        if (ctrlAddr != null)
-        {
-            this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
-            this.streamTarget.setControlPort(ctrlAddr.getPort());
-        }
-
-        stream.setTarget(streamTarget);
         stream.setConnector(connector);
 
         Content content = getContent();
