@@ -201,7 +201,7 @@ public class VideoChannel
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
 
-        setTransformEngine(new RtpChannelTransformEngine(this));
+        initializeTransformerEngine();
 
         ConfigurationService cfg
             = content.getConference().getVideobridge()
