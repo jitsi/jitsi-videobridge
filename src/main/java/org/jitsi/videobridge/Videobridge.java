@@ -846,6 +846,13 @@ public class Videobridge
                             if (adaptiveSimulcast != null)
                                 channel.setAdaptiveSimulcast(adaptiveSimulcast);
 
+                            // Packet delay - for automated testing purpose only
+                            Integer packetDelay = channelIQ.getPacketDelay();
+                            if (packetDelay != null)
+                            {
+                                channel.setPacketDelay(packetDelay);
+                            }
+
                             /*
                              * XXX The attribute initiator is optional. If a
                              * value is not specified, then the Channel
