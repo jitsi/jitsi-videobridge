@@ -42,7 +42,8 @@ public class StatsManager
      * {@link Statistics#generate()} on {@link #statistics}.
      */
     private final RecurringProcessibleExecutor statisticsExecutor
-        = new RecurringProcessibleExecutor();
+        = new RecurringProcessibleExecutor(
+                StatsManager.class.getSimpleName() + "-statisticsExecutor");
 
     /**
      * The {@link RecurringProcessibleExecutor} which periodically invokes
@@ -50,7 +51,8 @@ public class StatsManager
      * {@link #transports}.
      */
     private final RecurringProcessibleExecutor transportExecutor
-        = new RecurringProcessibleExecutor();
+        = new RecurringProcessibleExecutor(
+                StatsManager.class.getSimpleName() + "-transportExecutor");
 
     /**
      * The <tt>StatsTransport</tt>s added to this <tt>StatsManager</tt> to

@@ -196,7 +196,9 @@ public class AdaptiveSimulcastBitrateController
                     = cfg.getBoolean(ENABLE_TRIGGER_PNAME, ENABLE_TRIGGER);
             }
 
-            recurringProcessibleExecutor = new RecurringProcessibleExecutor();
+            recurringProcessibleExecutor
+                = new RecurringProcessibleExecutor(
+                    AdaptiveSimulcastBitrateController.class.getSimpleName());
         }
     }
 
