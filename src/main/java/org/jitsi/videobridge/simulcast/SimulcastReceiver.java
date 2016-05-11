@@ -466,7 +466,9 @@ public class SimulcastReceiver
                             "(or delayed). Last pkt sequence number=" +
                             acceptedStream.lastPktSequenceNumber +
                             ", expected sequence number="
-                            + expectedPktSequenceNumber);
+                            + expectedPktSequenceNumber +
+                            ", received sequence number="
+                            + pktSequenceNumber);
                     }
                 }
                 else
