@@ -25,10 +25,6 @@ import org.jitsi.videobridge.simulcast.messages.*;
 
 import java.io.*;
 import java.lang.ref.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
-import java.util.concurrent.locks.*;
 
 /**
  * The <tt>SwitchingSendMode</tt> implements the switching simulcast streams
