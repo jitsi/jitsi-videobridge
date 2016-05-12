@@ -210,27 +210,7 @@ public class VideoChannel
         ConfigurationService cfg = getContent().getConference()
                 .getVideobridge().getConfigurationService();
 
-        TransformEngine rtpTransformEngine = null;
-        if (cfg != null ) {
-            String transformEngineFQDN = cfg.getString
-                    (RTP_TRANSFORM_ENGINE_PNAME);
-            if (!StringUtils.isNullOrEmpty(transformEngineFQDN)) {
-                try
-                {
-                    rtpTransformEngine = (TransformEngine) Class.forName
-                            (transformEngineFQDN).newInstance();
-                }
-                catch (Exception e)
-                {
-                    logger.error(
-                            "Failed to configure rtp transform engine",
-                            e);
-                }
-            }
-        }
-
-        setTransformEngine(
-                new RtpChannelTransformEngine(this, rtpTransformEngine));
+        initializeTransformerEngine();
 
         requestRetransmissions
             = cfg != null
@@ -356,6 +336,8 @@ public class VideoChannel
      */
     private void configureTransformEngineChain(TransformEngineChain chain)
     {
+        addCustomTransformEngine(chain);
+
         // Make sure there is a LastNTransformEngine in the TransformEngineChain
         // in order optimize the performance by dropping received RTP packets
         // from VideoChannels/Endpoints which are not in any
@@ -376,6 +358,60 @@ public class VideoChannel
         }
         if (add)
             chain.addEngine(new LastNTransformEngine(this));
+    }
+
+    /**
+     * Performs (additional) <tt>VideoChannel</tt>-specific configuration of the
+     * <tt>TransformEngineChain</tt> employed by the <tt>MediaStream</tt> of
+     * this <tt>RtpChannel</tt>. The additional transform chain configured with
+     * <tt>org.jitsi.videobridge.rtp.engine</tt>
+     *
+     * @param chain the <tt>TransformEngineChain</tt> employed by the
+     * <tt>MediaStream</tt> of this <tt>RtpChannel</tt>
+     */
+    private void addCustomTransformEngine(TransformEngineChain chain)
+    {
+        ConfigurationService cfg = getContent().getConference()
+                .getVideobridge().getConfigurationService();
+
+        TransformEngine rtpTransformEngine = null;
+        Class rtpTransformEngineClass = null;
+        if (cfg != null ) {
+            String transformEngineFQDN = cfg.getString
+                    (RTP_TRANSFORM_ENGINE_PNAME);
+            if (!StringUtils.isNullOrEmpty(transformEngineFQDN)) {
+                try
+                {
+                    rtpTransformEngine = (TransformEngine) Class.forName
+                            (transformEngineFQDN).newInstance();
+                    rtpTransformEngineClass = rtpTransformEngine.getClass();
+                }
+                catch (Exception e)
+                {
+                    logger.error(
+                            "Failed to configure rtp transform engine",
+                            e);
+                }
+            }
+        }
+
+        TransformEngine[] engines = chain.getEngineChain();
+        boolean add = true;
+        if ((rtpTransformEngineClass != null) && (engines != null)
+                && (engines.length != 0))
+        {
+            for (TransformEngine engine : engines)
+            {
+                if (rtpTransformEngineClass.isInstance(engine))
+                {
+                    add = false;
+                }
+            }
+        }
+        if(add && rtpTransformEngine != null)
+        {
+            chain.addEngine(rtpTransformEngine);
+        }
     }
 
     /**
