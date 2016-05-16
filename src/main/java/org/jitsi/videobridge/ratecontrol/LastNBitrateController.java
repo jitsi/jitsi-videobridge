@@ -164,7 +164,9 @@ public class LastNBitrateController
                 return;
             configurationInitialized = true;
 
-            recurringProcessibleExecutor = new RecurringProcessibleExecutor();
+            recurringProcessibleExecutor
+                = new RecurringProcessibleExecutor(
+                        LastNBitrateController.class.getSimpleName());
 
             if (cfg != null)
             {

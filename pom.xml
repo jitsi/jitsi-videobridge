@@ -125,7 +125,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-protocol-jabber</artifactId>
-      <version>2.9-20160302.230919-9</version>
+      <version>2.9-20160505.143533-15</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -150,7 +150,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20160420.145638-153</version>
+      <version>1.0-20160511.154709-159</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

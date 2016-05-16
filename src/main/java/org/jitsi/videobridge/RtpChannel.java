@@ -1081,6 +1081,22 @@ public class RtpChannel
     }
 
     /**
+     * Initializes the <tt>RtpChannelTransformEngine</tt> that will be used by
+     * this <tt>RtpChannel</tt>.
+     *
+     * @return the just created <tt>RtpChannelTransformEngine</tt> instance.
+     */
+    RtpChannelTransformEngine initializeTransformerEngine()
+    {
+        transformEngine = new RtpChannelTransformEngine(this);
+        if (stream != null)
+        {
+            stream.setExternalTransformer(transformEngine);
+        }
+        return transformEngine;
+    }
+
+    /**
      * Starts {@link #stream} if it has not been started yet and if the state of
      * this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
@@ -1108,37 +1124,34 @@ public class RtpChannel
 
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
-        if (streamTarget == null)
-        {
-            logger.info("Not starting stream, target is null");
-            return;
-        }
-
         if (connector == null)
         {
             logger.info("Not starting stream, connector is null");
             return;
         }
 
-        InetSocketAddress dataAddr = streamTarget.getDataAddress();
-        if (dataAddr == null)
+        if (streamTarget != null)
         {
-            logger.info(
-                "Not starting stream, the target's data address is null");
-            return;
+            InetSocketAddress dataAddr = streamTarget.getDataAddress();
+            if (dataAddr == null)
+            {
+                logger.info(
+                        "Not starting stream, the target's data address is null");
+                return;
+            }
+
+            this.streamTarget.setDataHostAddress(dataAddr.getAddress());
+            this.streamTarget.setDataPort(dataAddr.getPort());
+
+            InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
+            if (ctrlAddr != null)
+            {
+                this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
+                this.streamTarget.setControlPort(ctrlAddr.getPort());
+            }
+
+            stream.setTarget(streamTarget);
         }
-
-        this.streamTarget.setDataHostAddress(dataAddr.getAddress());
-        this.streamTarget.setDataPort(dataAddr.getPort());
-
-        InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
-        if (ctrlAddr != null)
-        {
-            this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
-            this.streamTarget.setControlPort(ctrlAddr.getPort());
-        }
-
-        stream.setTarget(streamTarget);
         stream.setConnector(connector);
 
         Content content = getContent();
@@ -1945,21 +1958,6 @@ public class RtpChannel
     }
 
     /**
-     * Sets the <tt>RtpChannelTransformEngine</tt> to be used by this
-     * <tt>RtpChannel</tt>.
-     * @param transformEngine the <tt>RtpChannelTransformEngine</tt> to set.
-     */
-    void setTransformEngine(RtpChannelTransformEngine transformEngine)
-    {
-        if (this.transformEngine != transformEngine)
-        {
-            this.transformEngine = transformEngine;
-            if (stream != null)
-                stream.setExternalTransformer(transformEngine);
-        }
-    }
-
-    /**
      * Closes {@link #transformEngine}. Normally this would be done by
      * {@link #stream} when it is being closed, but we have observed cases (e.g.
      * when running health checks) where it doesn't happen, and since
@@ -2050,6 +2048,30 @@ public class RtpChannel
     public ConferenceSpeechActivity getConferenceSpeechActivity()
     {
         return conferenceSpeechActivity;
+    }
+
+    /**
+     * Sets a delay of the RTP stream expressed in a number of packets.
+     * The property is immutable which means than once set can not be changed
+     * later.
+     *
+     * *NOTE* that this delay is meant to be used only for audio and video
+     * synchronization tests and should never be used in production.
+     *
+     * @param packetDelay tells by how many packets RTP stream should be
+     * delayed. Will have effect only if greater than 0.
+     *
+     * @return <tt>true</tt> if the delay has been set or <tt>false</tt>
+     * otherwise.
+     */
+    public boolean setPacketDelay(int packetDelay)
+    {
+        RtpChannelTransformEngine engine = this.transformEngine;
+        if (engine == null)
+        {
+            engine = initializeTransformerEngine();
+        }
+        return engine.setPacketDelay(packetDelay);
     }
 
     /**

@@ -846,6 +846,13 @@ public class Videobridge
                             if (adaptiveSimulcast != null)
                                 channel.setAdaptiveSimulcast(adaptiveSimulcast);
 
+                            // Packet delay - for automated testing purpose only
+                            Integer packetDelay = channelIQ.getPacketDelay();
+                            if (packetDelay != null)
+                            {
+                                channel.setPacketDelay(packetDelay);
+                            }
+
                             /*
                              * XXX The attribute initiator is optional. If a
                              * value is not specified, then the Channel
@@ -1432,11 +1439,6 @@ public class Videobridge
                         + " initialization.",
                     e);
         }
-
-        // CandidateHarvesters may take (non-trivial) time to initialize so
-        // initialize them as soon as possible, don't wait to initialize them
-        // after a Channel is requested.
-        IceUdpTransportManager.initializeStaticHarvesters(cfg);
     }
 
     /**
