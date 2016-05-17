@@ -31,7 +31,7 @@
     <dependency>
       <groupId>callstats</groupId>
       <artifactId>callstats</artifactId>
-      <version>0.0.1-20160105.133358-6</version>
+      <version>0.0.1-20160426.085453-7</version>
     </dependency>
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
@@ -150,7 +150,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20160511.154709-159</version>
+      <version>1.0-20160512.161146-162</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

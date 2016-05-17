@@ -74,7 +74,8 @@ public class JvbBundleConfig
             "net/java/sip/communicator/service/protocol/media/ProtocolMediaActivator"
         },
         {
-            "org/jitsi/videobridge/eventadmin/influxdb/Activator"
+            "org/jitsi/videobridge/eventadmin/influxdb/Activator",
+            "org/jitsi/videobridge/eventadmin/callstats/Activator"
         },
         {
             "org/jitsi/videobridge/eventadmin/metrics/MetricLoggingActivator"
