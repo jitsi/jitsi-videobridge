@@ -93,70 +93,59 @@ public class Activator
     @Override
     public void serviceChanged(ServiceEvent ev)
     {
+        if (bundleContext == null)
+            return;
+
+        Object service;
+
+        try
+        {
+            service = bundleContext.getService(ev.getServiceReference());
+        }
+        catch (IllegalArgumentException
+            | IllegalStateException
+            | SecurityException ex)
+        {
+            service = null;
+        }
+
+        if (service == null || !(service instanceof CallStats))
+            return;
+
         switch (ev.getType())
         {
         case ServiceEvent.REGISTERED:
-            if (bundleContext != null)
-            {
-                Object service;
+            ConfigurationService cfg = ServiceUtils.getService(
+                bundleContext, ConfigurationService.class);
+            String bridgeId = ConfigUtils.getString(
+                cfg,
+                "io.callstats.sdk.CallStats.bridgeId",
+                null);
+            int interval = ConfigUtils.getInt(
+                cfg,
+                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME,
+                StatsManagerBundleActivator.DEFAULT_STAT_INTERVAL);
 
-                try
-                {
-                    service
-                        = bundleContext.getService(ev.getServiceReference());
-                }
-                catch (IllegalArgumentException
-                        | IllegalStateException
-                        | SecurityException ex)
-                {
-                    service = null;
-                }
-                if (service instanceof CallStats)
-                {
-                    ConfigurationService cfg
-                        = ServiceUtils.getService(
-                                bundleContext,
-                                ConfigurationService.class);
-                    String bridgeId
-                        = ConfigUtils.getString(
-                                cfg,
-                                "io.callstats.sdk.CallStats.bridgeId",
-                                null);
-                    int interval
-                        = ConfigUtils.getInt(
-                                cfg,
-                                StatsManagerBundleActivator
-                                    .STATISTICS_INTERVAL_PNAME,
-                                StatsManagerBundleActivator
-                                    .DEFAULT_STAT_INTERVAL);
+            // Update with per stats transport interval if available.
+            interval = ConfigUtils.getInt(
+                cfg,
+                StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME
+                    + "."
+                    + StatsManagerBundleActivator.STAT_TRANSPORT_CALLSTATS_IO,
+                interval);
 
-                    // Update with per stats transport interval if available.
-                    interval
-                        = ConfigUtils.getInt(
-                                cfg,
-                                StatsManagerBundleActivator
-                                        .STATISTICS_INTERVAL_PNAME
-                                    + "."
-                                    + StatsManagerBundleActivator
-                                        .STAT_TRANSPORT_CALLSTATS_IO,
-                                interval);
+            conferenceStatsHandler = new CallStatsConferenceStatsHandler();
+            conferenceStatsHandler.start(
+                (CallStats) service,
+                bridgeId,
+                interval);
 
-                    conferenceStatsHandler
-                        = new CallStatsConferenceStatsHandler();
-                    conferenceStatsHandler.start(
-                            (CallStats) service,
-                            bridgeId,
-                            interval);
+            String[] topics = { "org/jitsi/*" };
 
-                    String[] topics = { "org/jitsi/*" };
-
-                    serviceRegistration
-                        = EventUtil.registerEventHandler(
-                                bundleContext,
-                                topics,
-                                conferenceStatsHandler);
-                }
-            }
+            serviceRegistration = EventUtil.registerEventHandler(
+                bundleContext,
+                topics,
+                conferenceStatsHandler);
             break;
 
         case ServiceEvent.UNREGISTERING:
