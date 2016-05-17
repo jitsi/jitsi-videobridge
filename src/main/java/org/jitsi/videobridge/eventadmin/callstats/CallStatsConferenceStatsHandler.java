@@ -15,6 +15,8 @@
  */
 package org.jitsi.videobridge.eventadmin.callstats;
 
+import java.util.*;
+
 import io.callstats.sdk.*;
 import io.callstats.sdk.data.*;
 import io.callstats.sdk.listeners.*;
@@ -26,15 +28,13 @@ import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.stats.*;
 
-import java.util.*;
-
 /**
  * Handles events of the bridge for creating a conference/channel or expiring it
  * and reports statistics per endpoint.
  *
  * @author Damian Minkov
  */
-public class CallStatsConferenceStatsHandler
+class CallStatsConferenceStatsHandler
     implements EventHandler
 {
     /**
@@ -73,7 +73,8 @@ public class CallStatsConferenceStatsHandler
      * deRegister them from the executor.
      */
     private final Map<Conference,ConferencePeriodicProcessible>
-        statisticsProcessors = new HashMap<>();
+        statisticsProcessors
+            = new HashMap<>();
 
     /**
      * The interval to poll for stats and to push them to the callstats service.
@@ -96,7 +97,7 @@ public class CallStatsConferenceStatsHandler
      */
     void stop()
     {
-        // lets stop all left executors
+        // Let's stop all left processibles.
         for (ConferencePeriodicProcessible cpp : statisticsProcessors.values())
         {
             statisticsExecutor.deRegisterRecurringProcessible(cpp);
@@ -112,20 +113,21 @@ public class CallStatsConferenceStatsHandler
     {
         if (event == null)
         {
-            logger.debug("Could not handle the event because it was null.");
+            logger.debug("Could not handle an event because it was null.");
             return;
         }
 
         String topic = event.getTopic();
+
         if (EventFactory.CONFERENCE_CREATED_TOPIC.equals(topic))
         {
             conferenceCreated(
-                (Conference) event.getProperty(EventFactory.EVENT_SOURCE));
+                    (Conference) event.getProperty(EventFactory.EVENT_SOURCE));
         }
         else if (EventFactory.CONFERENCE_EXPIRED_TOPIC.equals(topic))
         {
             conferenceExpired(
-                (Conference) event.getProperty(EventFactory.EVENT_SOURCE));
+                    (Conference) event.getProperty(EventFactory.EVENT_SOURCE));
         }
     }
 
@@ -137,14 +139,16 @@ public class CallStatsConferenceStatsHandler
     {
         if (conference == null)
         {
-            logger.debug("Could not log conference created event because " +
-                "the conference is null.");
+            logger.debug(
+                    "Could not log conference created event because the"
+                        + " conference is null.");
             return;
         }
 
-        // creates the PeriodicProcessible and start it
+        // Create a new PeriodicProcessible and start it.
         ConferencePeriodicProcessible cpp
             = new ConferencePeriodicProcessible(conference, interval);
+
         cpp.start();
     }
 
@@ -156,15 +160,16 @@ public class CallStatsConferenceStatsHandler
     {
         if (conference == null)
         {
-            logger.debug("Could not log conference expired event because " +
-                "the conference is null.");
+            logger.debug(
+                    "Could not log conference expired event because the"
+                        + " conference is null.");
             return;
         }
 
         ConferencePeriodicProcessible cpp
             = statisticsProcessors.remove(conference);
 
-        if(cpp == null)
+        if (cpp == null)
             return;
 
         cpp.stop();
@@ -179,15 +184,15 @@ public class CallStatsConferenceStatsHandler
         extends PeriodicProcessibleWithObject<Conference>
     {
         /**
-         * The user info object used to identify the reports to callstats.
-         * Holds the conference, the bridgeID and user callstats ID.
+         * The user info object used to identify the reports to callstats. Holds
+         * the conference, the bridgeID and user callstats ID.
          */
-        private UserInfo userInfo = null;
+        private UserInfo userInfo;
 
         /**
          * Initializes a new {@code ConferencePeriodicProcessible} instance
-         * which is to {@code period}ically generate statistics for
-         * the conference channels.
+         * which is to {@code period}ically generate statistics for the
+         * conference channels.
          *
          * @param conference the {@code Conference}'s channels to be
          * {@code period}ically checked for statistics by the new instance
@@ -195,8 +200,8 @@ public class CallStatsConferenceStatsHandler
          * generations of statistics
          */
         public ConferencePeriodicProcessible(
-            Conference conference,
-            long period)
+                Conference conference,
+                long period)
         {
             super(conference, period);
         }
@@ -221,44 +226,45 @@ public class CallStatsConferenceStatsHandler
 
         /**
          * Called when conference is created. Sends a setup event to callstats
-         * and creates the userInfo object that identifies the statistics
-         * for this conference.
+         * and creates the userInfo object that identifies the statistics for
+         * this conference.
          */
         void start()
         {
-            ConferenceInfo conferenceInfo = new ConferenceInfo(
-                o.getID(), CallStatsConferenceStatsHandler.this.bridgeId);
+            ConferenceInfo conferenceInfo
+                = new ConferenceInfo(
+                        o.getID(),
+                        bridgeId);
 
-            // sends setup event to callstats and on succesful response create
-            // the userInfo object
+            // Send setup event to callstats and on successful response create
+            // the userInfo object.
             callStats.sendCallStatsConferenceEvent(
-                CallStatsConferenceEvents.CONFERENCE_SETUP,
-                conferenceInfo,
-                new CallStatsStartConferenceListener() {
-                    @Override
-                    public void onResponse(String ucid)
+                    CallStatsConferenceEvents.CONFERENCE_SETUP,
+                    conferenceInfo,
+                    new CallStatsStartConferenceListener()
                     {
-                        ConferencePeriodicProcessible.this.userInfo
-                            = new UserInfo(
-                                o.getID(),
-                                CallStatsConferenceStatsHandler.this.bridgeId,
-                                ucid);
-                        // successful setup, from callstats perspective
-                        // adds it to statisticsProcessors map
-                        // and register it for periodic execution
-                        statisticsProcessors.put(
-                            o, ConferencePeriodicProcessible.this);
-                        statisticsExecutor.registerRecurringProcessible(
-                            ConferencePeriodicProcessible.this);
-                    }
+                        @Override
+                        public void onResponse(String ucid)
+                        {
+                            userInfo = new UserInfo(o.getID(), bridgeId, ucid);
+                            // Successful setup from callstats' perspective. Add
+                            // it to statisticsProcessors map and register it
+                            // for periodic execution.
+                            statisticsProcessors.put(
+                                    o,
+                                    ConferencePeriodicProcessible.this);
+                            statisticsExecutor.registerRecurringProcessible(
+                                    ConferencePeriodicProcessible.this);
+                        }
 
-                    @Override
-                    public void onError(
-                        CallStatsErrors callStatsErrors, String s)
-                    {
-                        logger.error(s + "," + callStatsErrors);
-                    }
-                });
+                        @Override
+                        public void onError(
+                                CallStatsErrors callStatsErrors,
+                                String s)
+                        {
+                            logger.error(s + "," + callStatsErrors);
+                        }
+                    });
         }
 
         /**
@@ -267,7 +273,8 @@ public class CallStatsConferenceStatsHandler
         void stop()
         {
             callStats.sendCallStatsConferenceEvent(
-                CallStatsConferenceEvents.CONFERENCE_TERMINATED, userInfo);
+                    CallStatsConferenceEvents.CONFERENCE_TERMINATED,
+                    userInfo);
         }
 
         /**
@@ -278,81 +285,70 @@ public class CallStatsConferenceStatsHandler
         {
             if (channel == null)
             {
-                logger.debug("Could not log the channel expired event " +
-                    "because the channel is null.");
+                logger.debug(
+                        "Could not log the channel expired event because the"
+                            + " channel is null.");
                 return;
             }
 
-            Content content = channel.getContent();
-            if (content == null)
-            {
-                logger.debug("Could not log the channel expired event " +
-                    "because the content is null.");
-                return;
-            }
-
-            Conference conference = content.getConference();
-            if (conference == null)
-            {
-                logger.debug("Could not log the channel expired event " +
-                    "because the conference is null.");
-                return;
-            }
-
-            MediaStreamStats stats = null;
-            if(channel.getReceiveSSRCs().length == 0)
+            if (channel.getReceiveSSRCs().length == 0)
                 return;
 
             MediaStream stream = channel.getStream();
             if (stream == null)
                 return;
 
-            stats = stream.getMediaStreamStats();
-            if(stats == null)
+            MediaStreamStats stats = stream.getMediaStreamStats();
+            if (stats == null)
                 return;
 
             Endpoint endpoint = channel.getEndpoint();
-            String endpointID = endpoint == null ? "" : endpoint.getID();
+            String endpointID = (endpoint == null) ? "" : endpoint.getID();
+            String conferenceID = channel.getContent().getConference().getID();
 
-            callStats.startStatsReportingForUser(endpointID, conference.getID());
+            callStats.startStatsReportingForUser(
+                    endpointID,
+                    conferenceID);
 
-            // send stats for received streams
+            // Send stats for received streams.
             for (MediaStreamSSRCStats receivedStat : stats.getReceivedStats())
             {
-                ConferenceStats conferenceStats = new ConferenceStatsBuilder()
-                    .bytesSent(receivedStat.getNbBytes())
-                    .packetsSent(receivedStat.getNbPackets())
-                    .ssrc(String.valueOf(receivedStat.getSSRC()))
-                    .confID(conference.getID())
-                    .localUserID(bridgeId)
-                    .remoteUserID(endpointID)
-                    .statsType(CallStatsStreamType.INBOUND)
-                    .jitter(receivedStat.getJitter())
-                    .rtt((int)receivedStat.getRttMs())
-                    .ucID(userInfo.getUcID())
-                    .build();
+                ConferenceStats conferenceStats
+                    = new ConferenceStatsBuilder()
+                        .bytesSent(receivedStat.getNbBytes())
+                        .packetsSent(receivedStat.getNbPackets())
+                        .ssrc(String.valueOf(receivedStat.getSSRC()))
+                        .confID(conferenceID)
+                        .localUserID(bridgeId)
+                        .remoteUserID(endpointID)
+                        .statsType(CallStatsStreamType.INBOUND)
+                        .jitter(receivedStat.getJitter())
+                        .rtt((int) receivedStat.getRttMs())
+                        .ucID(userInfo.getUcID())
+                        .build();
                 callStats.reportConferenceStats(endpointID, conferenceStats);
             }
 
-            // send stats for sent streams
+            // Send stats for sent streams.
             for (MediaStreamSSRCStats sentStat : stats.getSentStats())
             {
-                ConferenceStats conferenceStats = new ConferenceStatsBuilder()
-                    .bytesSent(sentStat.getNbBytes())
-                    .packetsSent(sentStat.getNbPackets())
-                    .ssrc(String.valueOf(sentStat.getSSRC()))
-                    .confID(conference.getID())
-                    .localUserID(bridgeId)
-                    .remoteUserID(endpointID)
-                    .statsType(CallStatsStreamType.OUTBOUND)
-                    .jitter(sentStat.getJitter())
-                    .rtt((int)sentStat.getRttMs())
-                    .ucID(userInfo.getUcID())
-                    .build();
+                ConferenceStats conferenceStats
+                    = new ConferenceStatsBuilder()
+                        .bytesSent(sentStat.getNbBytes())
+                        .packetsSent(sentStat.getNbPackets())
+                        .ssrc(String.valueOf(sentStat.getSSRC()))
+                        .confID(conferenceID)
+                        .localUserID(bridgeId)
+                        .remoteUserID(endpointID)
+                        .statsType(CallStatsStreamType.OUTBOUND)
+                        .jitter(sentStat.getJitter())
+                        .rtt((int) sentStat.getRttMs())
+                        .ucID(userInfo.getUcID())
+                        .build();
                 callStats.reportConferenceStats(endpointID, conferenceStats);
             }
 
-            callStats.stopStatsReportingForUser(endpointID, conference.getID());
+            callStats.stopStatsReportingForUser(endpointID, conferenceID);
         }
     }
 }

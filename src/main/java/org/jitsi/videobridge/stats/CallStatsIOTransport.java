@@ -67,7 +67,7 @@ public class CallStatsIOTransport
     /**
      * CallStats service registration.
      */
-    private ServiceRegistration<CallStats> serviceRegistration = null;
+    private ServiceRegistration<CallStats> serviceRegistration;
 
     /**
      * {@inheritDoc}
@@ -122,10 +122,11 @@ public class CallStatsIOTransport
                         + " with message: " + msg);
         }
 
-        this.serviceRegistration = this.getBundleContext().registerService(
-            CallStats.class,
-            callStats,
-            null);
+        serviceRegistration
+            = getBundleContext().registerService(
+                    CallStats.class,
+                    callStats,
+                    null);
     }
 
     /**
@@ -170,7 +171,7 @@ public class CallStatsIOTransport
      */
     private void dispose(BundleContext bundleContext)
     {
-        if(serviceRegistration != null)
+        if (serviceRegistration != null)
         {
             serviceRegistration.unregister();
             serviceRegistration = null;
