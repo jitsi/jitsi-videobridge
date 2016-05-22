@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.impl.neomedia.transform.delay.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
