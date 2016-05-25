@@ -38,6 +38,7 @@ import org.jitsi.videobridge.*;
  * of the pausing/resuming of the simulcast streams that this class performs.
  *
  * @author George Politis
+ * @author Boris Grozev
  */
 public class SimulcastEngine
     implements TransformEngine
@@ -53,12 +54,6 @@ public class SimulcastEngine
      * The owner of this <tt>SimulcastEngine</tt>.
      */
     private final VideoChannel videoChannel;
-
-    /**
-     * If the owning endpoint (viewed as a sender) has signaled simulcast, this
-     * object receives it.
-     */
-    private final SimulcastReceiver simulcastReceiver;
 
     /**
      * For each <tt>SimulcastReceiver</tt> we have a <tt>SimulcastSender</tt>.
@@ -112,22 +107,6 @@ public class SimulcastEngine
     public SimulcastEngine(VideoChannel videoChannel)
     {
         this.videoChannel = videoChannel;
-        simulcastReceiver = new SimulcastReceiver(this,
-                ServiceUtils.getService(
-                        videoChannel.getBundleContext(),
-                        ConfigurationService.class)
-        );
-    }
-
-    /**
-     *
-     * Gets the <tt>SimulcastReceiver</tt> of this <tt>SimulcastReceiver</tt>.
-     *
-     * @return
-     */
-    public SimulcastReceiver getSimulcastReceiver()
-    {
-        return simulcastReceiver;
     }
 
     /**
@@ -167,6 +146,15 @@ public class SimulcastEngine
     public PacketTransformer getRTCPTransformer()
     {
         return rtcpTransformer;
+    }
+
+    /**
+     * Closes this {@link SimulcastEngine}, releasing any resources that it
+     * uses.
+     */
+    public void close()
+    {
+        simulcastSenderManager.close();
     }
 
     /**
@@ -217,11 +205,10 @@ public class SimulcastEngine
         }
     }
 
-
     /**
      * The RTP <tt>PacketTransformer</tt> of this <tt>SimulcastEngine</tt>.
      */
-    private class MyRTPTransformer extends SinglePacketTransformer
+    private class MyRTPTransformer extends SinglePacketTransformerAdapter
     {
         /**
          * Initializes a new {@code MyRTPTransformer} instance.
@@ -249,17 +236,6 @@ public class SimulcastEngine
             {
                 return null;
             }
-        }
-
-        @Override
-        public RawPacket reverseTransform(RawPacket p)
-        {
-            // Forward the received RawPacket (from the remote peer to the local
-            // peer) to the SimulcastReceiver. The latter will, for example,
-            // update the received SimulcastStreams.
-            simulcastReceiver.accepted(p);
-
-            return p;
         }
     }
 

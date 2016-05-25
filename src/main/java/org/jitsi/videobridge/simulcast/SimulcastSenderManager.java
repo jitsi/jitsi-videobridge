@@ -27,6 +27,7 @@ import java.util.*;
  * <tt>SimulcastEngine</tt>.
  *
  * @author George Politis
+ * @author Boris Grozev
  */
 public class SimulcastSenderManager
 {
@@ -46,6 +47,11 @@ public class SimulcastSenderManager
      * <tt>SimulcastEngine</tt>. We keep them in a WeakHashMap so that we don't
      * block garbage collection of the <tt>SimulcastReceiver</tt> (that we
      * don't own).
+     * Note that SimulcastSender-s need to be closed, but this is only important
+     * while their corresponding SimulcastReceiver is in use. That is, if the
+     * receiver is no longer in use, closing the SimulcastSender is not
+     * important, so we can afford to lose reference to some SimulcastSender
+     * instances.
      */
     private final Map<SimulcastReceiver, SimulcastSender> senders
         = new WeakHashMap<>();
@@ -114,24 +120,30 @@ public class SimulcastSenderManager
     {
         // Find the associated SimulcastReceiver and make sure it receives
         // simulcast; otherwise, return the input packet as is.
-        int ssrc = pkt.getSSRC();
-        SimulcastReceiver simulcastReceiver = getSimulcastReceiver(ssrc);
+        Map.Entry<SimulcastReceiver, SimulcastSender> entry
+            = getEntry(pkt.getSSRCAsLong());
 
-        if (simulcastReceiver == null
-                || !simulcastReceiver.isSimulcastSignaled())
+        if (entry == null || !entry.getKey().isSimulcastSignaled())
         {
             // Just forward the packet, we don't receive any simulcast from
             // the peer endpoint.
             return true;
         }
 
-        SimulcastSender simulcastSender
-            = getOrCreateSimulcastSender(simulcastReceiver);
-
-        return simulcastSender != null && simulcastSender.accept(pkt);
+        return entry.getValue().accept(pkt);
     }
 
-    private synchronized SimulcastSender getOrCreateSimulcastSender(
+    /**
+     * Creates a {@link SimulcastSender} instance corresponding to the given
+     * {@link SimulcastReceiver}. If a corresponding instance already exists
+     * in this {@link SimulcastSenderManager}'s map, returns the existing
+     * instance.
+     * @param simulcastReceiver the {@link SimulcastReceiver} for which to
+     * create a {@link SimulcastSender}.
+     * @return the {@link SimulcastSender} instance corresponding to
+     * {@code simulcastReceiver}.
+     */
+    public synchronized SimulcastSender createSimulcastSender(
         SimulcastReceiver simulcastReceiver)
     {
         if (simulcastReceiver == null)
@@ -139,30 +151,21 @@ public class SimulcastSenderManager
             return null;
         }
 
-        SimulcastStream[] simulcastStreams
-            = simulcastReceiver.getSimulcastStreams();
-
-        if (simulcastStreams == null || simulcastStreams.length == 0)
-        {
-            // This is equivalent to !simulcastReceiver.isSimulcastSignaled() in
-            // which case we don't want to create a SimulcastSender. The reason
-            // why we don't call the isSimulcastSignaled method is because we
-            // might need a reference to the simulcastStreams later on.
-            return null;
-        }
-
         SimulcastSender simulcastSender = senders.get(simulcastReceiver);
-
         if (simulcastSender == null) // Create a new sender.
         {
             VideoChannel videoChannel = simulcastEngine.getVideoChannel();
             int targetOrder = videoChannel.getReceiveSimulcastLayer();
 
+            // Create a new sender.
+            simulcastSender = new SimulcastSender(
+                this,
+                simulcastReceiver,
+                targetOrder);
+
             Endpoint sendingEndpoint = simulcastReceiver
-                .getSimulcastEngine()
                 .getVideoChannel()
                 .getEndpoint();
-
             Endpoint receivingEndpoint = videoChannel.getEndpoint();
 
             if (receivingEndpoint != null && sendingEndpoint != null)
@@ -170,17 +173,10 @@ public class SimulcastSenderManager
                 Set<Endpoint> selectedEndpoints
                     = receivingEndpoint.getSelectedEndpoints(); // never null.
 
-                if (selectedEndpoints.contains(sendingEndpoint))
-                {
-                    targetOrder = simulcastStreams.length - 1;
-                }
+                // Initialize the selected endpoints.
+                simulcastSender.selectedEndpointsChanged(
+                    new HashSet<Endpoint>(), selectedEndpoints);
             }
-
-            // Create a new sender.
-            simulcastSender = new SimulcastSender(
-                    this,
-                    simulcastReceiver,
-                    targetOrder);
 
             // TODO remove stuff from the map (not strictly necessary as they'll
             // get garbage collected).
@@ -190,30 +186,17 @@ public class SimulcastSenderManager
         return simulcastSender;
     }
 
-    /**
-     *
-     * @param ssrc
-     * @return
-     */
-    private SimulcastReceiver getSimulcastReceiver(int ssrc)
+    private Map.Entry<SimulcastReceiver,SimulcastSender> getEntry(long ssrc)
     {
-        Channel channel
-            = simulcastEngine.getVideoChannel().getContent().findChannel(
-                    ssrc & 0xffffffffL);
-
-        if (!(channel instanceof VideoChannel))
+        for (Map.Entry<SimulcastReceiver, SimulcastSender> entry
+            : senders.entrySet())
         {
-            // Should never happen.
-            return null;
+            if (entry.getKey().matches(ssrc))
+            {
+                return entry;
+            }
         }
-
-        VideoChannel videoChannel = (VideoChannel) channel;
-
-        return
-            videoChannel
-                .getTransformEngine()
-                    .getSimulcastEngine()
-                        .getSimulcastReceiver();
+        return null;
     }
 
     /**
@@ -240,4 +223,14 @@ public class SimulcastSenderManager
         return max;
     }
 
+    /**
+     * Closes this {@link SimulcastSenderManager}.
+     */
+    public void close()
+    {
+        for (SimulcastSender sender : senders.values())
+        {
+            sender.close();
+        }
+    }
 }

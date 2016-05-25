@@ -363,10 +363,7 @@ public class LastNBitrateController
             if (channel != null && channel instanceof VideoChannel)
             {
                 VideoChannel vc = (VideoChannel) channel;
-                SimulcastEngine simulcastEngine
-                    = vc.getTransformEngine().getSimulcastEngine();
-                if (mySM != null && simulcastEngine != null
-                        && simulcastEngine.getSimulcastReceiver().isSimulcastSignaled())
+                if (mySM != null && vc.getSimulcastReceiver().isSimulcastSignaled())
                 {
                     // TODO we need a more general way for this
                 }

@@ -74,4 +74,11 @@ public abstract class SendMode
      * Configures this mode to receive the low quality stream.
      */
     public abstract void receive(SimulcastStream simStream);
+
+    /**
+     * Releases any resources used by this {@link SendMode}.
+     */
+    public void free()
+    {
+    }
 }
