@@ -499,23 +499,8 @@ public class SimulcastReceiver
                         }
                     }
                 }
-                else if (pktSequenceNumber
-                        > acceptedStream.lastPktSequenceNumber)
-                {
-                    // It looks like at least one pkt was lost (or delayed). We
-                    // cannot rely on lastPktMarker.
-                    if (logger.isInfoEnabled())
-                    {
-                        logger.info("It looks like at least one pkt was lost " +
-                            "(or delayed). Last pkt sequence number=" +
-                            acceptedStream.lastPktSequenceNumber +
-                            ", expected sequence number="
-                            + expectedPktSequenceNumber +
-                            ", received sequence number="
-                            + pktSequenceNumber);
-                    }
-                }
-                else
+                else if (RTPUtils.sequenceNumberDiff(
+                    pktSequenceNumber, acceptedStream.lastPktSequenceNumber) < 0)
                 {
                     pktSequenceNumberIsInOrder = false;
                 }
