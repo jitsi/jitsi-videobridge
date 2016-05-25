@@ -34,6 +34,7 @@ import org.jitsi.videobridge.simulcast.sendmodes.*;
  * streams.
  *
  * @author George Politis
+ * @author Boris Grozev
  */
 public class SimulcastSender
     implements PropertyChangeListener
@@ -113,6 +114,12 @@ public class SimulcastSender
         // garbage collected.
         this.weakSimulcastReceiver = new WeakReference<>(simulcastReceiver);
         this.targetOrder = targetOrder;
+
+        // Initialize the send mode early (before the first call to accept()),
+        // so that the it registers as a user for the stream(s) it wants to
+        // stream.
+        initializeSendMode();
+        assertInitialized();
     }
 
     /**
@@ -193,7 +200,8 @@ public class SimulcastSender
         }
 
         SimulcastEngine receiveSimulcastEngine
-            = simulcastReceiver.getSimulcastEngine();
+            = simulcastReceiver.getVideoChannel()
+                    .getTransformEngine().getSimulcastEngine();
 
         if (receiveSimulcastEngine == null)
         {
@@ -246,16 +254,15 @@ public class SimulcastSender
             Set<Endpoint> oldEndpoints = (Set<Endpoint>) ev.getOldValue();
             Set<Endpoint> newEndpoints = (Set<Endpoint>) ev.getNewValue();
 
-            selectedEndpointChanged(oldEndpoints, newEndpoints);
+            selectedEndpointsChanged(oldEndpoints, newEndpoints);
         }
         else if (VideoChannel.SIMULCAST_MODE_PNAME.equals(propertyName))
         {
             logger.debug("The simulcast mode has changed.");
 
-            SimulcastMode oldMode = (SimulcastMode) ev.getOldValue();
             SimulcastMode newMode = (SimulcastMode) ev.getNewValue();
 
-            sendModeChanged(newMode, oldMode);
+            setSimulcastMode(newMode);
         }
         else if (VideoChannel.ENDPOINT_PROPERTY_NAME.equals(propertyName))
         {
@@ -265,7 +272,7 @@ public class SimulcastSender
             Endpoint newValue = (Endpoint) ev.getNewValue();
             Endpoint oldValue = (Endpoint) ev.getOldValue();
 
-            receiveEndpointChanged(newValue, oldValue);
+            receiveEndpointChanged(oldValue, newValue);
         }
     }
 
@@ -274,7 +281,7 @@ public class SimulcastSender
      * @param oldEndpoints Set of the old selected endpoints.
      * @param newEndpoints Set of the new selected endpoints.
      */
-    private void selectedEndpointChanged(
+    void selectedEndpointsChanged(
             Set<Endpoint> oldEndpoints, Set<Endpoint> newEndpoints)
     {
         // Here we update the targetOrder value.
@@ -371,10 +378,10 @@ public class SimulcastSender
         {
             targetOrder = newTargetOrder;
 
-            SendMode sm = this.sendMode;
+            SendMode sm = sendMode;
             if (sm != null)
             {
-                this.sendMode.receive(newTargetOrder);
+                sendMode.receive(newTargetOrder);
             }
         }
     }
@@ -392,8 +399,6 @@ public class SimulcastSender
         {
             return false;
         }
-
-        assertInitialized();
 
         if (sendMode == null)
         {
@@ -421,17 +426,12 @@ public class SimulcastSender
         SimulcastReceiver simulcastReceiver = getSimulcastReceiver();
 
         // We want to be notified when the simulcast streams of the sending
-        // endpoint change. It will call the receiveStreamsChanged() method.
+        // endpoint change.
         simulcastReceiver.addWeakListener(
                 new WeakReference<>(simulcastReceiverListener));
 
-        // Manually trigger the receiveStreamsChanged() method so that we
-        // initialize the send mode.
         VideoChannel sendVideoChannel
             = getSimulcastSenderManager().getSimulcastEngine().getVideoChannel();
-        SimulcastMode simulcastMode = sendVideoChannel.getSimulcastMode();
-
-        sendModeChanged(simulcastMode, null);
 
         // We want to be notified and react when the simulcast mode of the send
         // VideoChannel changes.
@@ -439,50 +439,61 @@ public class SimulcastSender
 
         // We want to be notified and react when the selected endpoint has
         // changed at the client.
-        receiveEndpointChanged(getReceiveEndpoint(), null);
+        receiveEndpointChanged(null, getReceiveEndpoint());
     }
 
     /**
-     * Notifies this instance about a change in the simulcast mode of the
-     * sending <tt>VideoChannel</tt>. We keep this in a separate method for
-     * readability and re-usability.
-     *
-     * @param newMode
-     * @param oldMode
+     * Sets {@link #sendMode} in accord to {@code newMode}.
      */
-    private void sendModeChanged(
-        SimulcastMode newMode, SimulcastMode oldMode)
+    private void setSimulcastMode(SimulcastMode newMode)
     {
+        SendMode oldSendMode = sendMode;
+        boolean changed = false;
+
         if (newMode == null)
         {
-            // Now, why would you want to do that?
             sendMode = null;
             logger.debug("Setting simulcastMode to null.");
-            return;
+            changed = oldSendMode != null;
         }
         else if (newMode == SimulcastMode.REWRITING)
         {
-            logger.debug("Setting simulcastMode to rewriting mode.");
-            sendMode = new RewritingSendMode(this);
+            if (oldSendMode == null ||
+                !(oldSendMode instanceof RewritingSendMode))
+            {
+                logger.debug("Setting simulcastMode to rewriting mode.");
+                sendMode = new RewritingSendMode(this);
+                changed = true;
+            }
         }
         else if (newMode == SimulcastMode.SWITCHING)
         {
-            logger.debug("Setting simulcastMode to switching mode.");
-            sendMode = new SwitchingSendMode(this);
+            if (oldSendMode == null ||
+                !(oldSendMode instanceof SwitchingSendMode))
+            {
+                logger.debug("Setting simulcastMode to switching mode.");
+                sendMode = new SwitchingSendMode(this);
+                changed = true;
+            }
         }
 
-        this.sendMode.receive(targetOrder);
+        if (changed && oldSendMode != null)
+        {
+            oldSendMode.free();
+        }
+
+        if (sendMode != null)
+        {
+            sendMode.receive(targetOrder);
+        }
     }
 
     /**
      * Notifies this instance that the <tt>Endpoint</tt> that receives the
      * simulcast has changed. We keep this in a separate method for readability
      * and re-usability.
-     *
-     * @param newValue
-     * @param oldValue
      */
-    private void receiveEndpointChanged(Endpoint newValue, Endpoint oldValue)
+    private void receiveEndpointChanged(Endpoint oldValue, Endpoint newValue)
     {
         if (newValue != null)
         {
@@ -502,7 +513,7 @@ public class SimulcastSender
     }
 
     /**
-     * Notifies this instance that the overrider order of the parent
+     * Notifies this instance that the overridden order of the parent
      * {@link SimulcastSenderManager} has changed.
      *
      */
@@ -529,6 +540,28 @@ public class SimulcastSender
     }
 
     /**
+     * Initializes the send mode if this sender with the more configured for
+     * the owning {@link VideoChannel}.
+     */
+    private void initializeSendMode()
+    {
+        logger.debug("Handling simulcast signaling.");
+        // Initialize the send mode.
+        SimulcastMode simulcastMode = getSimulcastSenderManager()
+            .getSimulcastEngine().getVideoChannel().getSimulcastMode();
+
+        setSimulcastMode(simulcastMode);
+    }
+
+    /**
+     * Closes this {@link SimulcastSender} releasing its resources.
+     */
+    public void close()
+    {
+        setSimulcastMode(null);
+    }
+
+    /**
      * Implements a <tt>SimulcastReceiver.Listener</tt> to be used wit this
      * <tt>SimulcastSender</tt>.
      */
@@ -538,22 +571,15 @@ public class SimulcastSender
         @Override
         public void simulcastStreamsSignaled()
         {
-            logger.debug("Handling simulcast signaling.");
-            // Initialize the send mode.
-            SimulcastMode simulcastMode = getSimulcastSenderManager()
-                .getSimulcastEngine().getVideoChannel().getSimulcastMode();
-
-            sendModeChanged(simulcastMode, null);
+            // XXX FIXME: we need to re-evaluate the target order based on the
+            // selected endpoints.
+            if (sendMode != null)
+                sendMode.receive(targetOrder);
         }
 
         @Override
-        public void simulcastStreamsChanged(SimulcastStream... simulcastStreams)
+        public void simulcastStreamsChanged()
         {
-            if (simulcastStreams == null || simulcastStreams.length == 0)
-            {
-                return;
-            }
-
             SendMode sm = sendMode;
             if (sm == null)
             {

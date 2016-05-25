@@ -52,7 +52,7 @@ public class RewritingSendMode
      * Holds the state of this {@code RewritingSendMode}. Grouping the state in
      * a single object allows for synchronized-less code.
      */
-    private State state = new State(null, null);
+    private State state;
 
     /**
      * A map that holds the last sequence number that we've seen for a given
@@ -68,6 +68,8 @@ public class RewritingSendMode
     public RewritingSendMode(SimulcastSender simulcastSender)
     {
         super(simulcastSender);
+
+        setState(new State(null, null));
     }
 
     /**
@@ -104,12 +106,12 @@ public class RewritingSendMode
         }
 
         boolean accept = false;
-        if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
+        if (next != null && next.matches(pktSSRC) && next.isKeyFrame(pkt))
         {
             // This is the first packet of a keyframe.
             if (diff >= 0)
             {
-                this.state = new State(new WeakReference<>(next), null);
+                setState(new State(new WeakReference<>(next), null));
                 accept = true;
             }
             else
@@ -136,7 +138,7 @@ public class RewritingSendMode
         else
         {
             SimulcastStream current = oldState.getCurrent();
-            accept = current != null && current.matches(pkt);
+            accept = current != null && current.matches(pktSSRC);
         }
 
         if (diff >= 0)
@@ -156,7 +158,7 @@ public class RewritingSendMode
         if (simStream == null)
         {
             // This is acceptable when a participant leaves.
-            this.state = new State(null, null);
+            setState(new State(null, null));
             return;
         }
 
@@ -171,7 +173,6 @@ public class RewritingSendMode
                 logger.debug("order-" + simStream.getOrder()
                     + " stream is already streaming from " +
                     getSimulcastSender().getSimulcastReceiver()
-                        .getSimulcastEngine()
                         .getVideoChannel().getEndpoint().getID() + ".");
             }
 
@@ -182,11 +183,10 @@ public class RewritingSendMode
                     logger.debug("Forgetting next stream of order-"
                         + simStream.getOrder() + " from " +
                         getSimulcastSender().getSimulcastReceiver()
-                            .getSimulcastEngine()
                             .getVideoChannel().getEndpoint().getID() + ".");
                 }
 
-                this.state = new State(new WeakReference<>(simStream), null);
+                setState(new State(new WeakReference<>(simStream), null));
             }
 
             return;
@@ -199,7 +199,6 @@ public class RewritingSendMode
                 logger.debug("order-" + simStream.getOrder()
                         + " stream is already the target from " +
                     getSimulcastSender().getSimulcastReceiver()
-                        .getSimulcastEngine()
                         .getVideoChannel().getEndpoint().getID() + ".");
             }
 
@@ -211,20 +210,66 @@ public class RewritingSendMode
             logger.debug("order-" + simStream.getOrder()
                     + " is the target from " +
                     getSimulcastSender().getSimulcastReceiver()
-                    .getSimulcastEngine()
                     .getVideoChannel().getEndpoint().getID() + ".");
         }
 
         simStream.askForKeyframe();
         if (current == null)
         {
-            this.state
-                = new State(new WeakReference<>(simStream), oldState.weakNext);
+            setState(
+                new State(new WeakReference<>(simStream), oldState.weakNext));
         }
         else
         {
-            this.state
-                = new State(oldState.weakCurrent, new WeakReference<>(simStream));
+            setState(
+                new State(oldState.weakCurrent, new WeakReference<>(simStream)));
+        }
+    }
+
+    /**
+     * Updates {@link #state} with the given {@code state}.
+     * @param state the new state.
+     */
+    private void setState(State state)
+    {
+        // Update the used streams
+        SimulcastStream newCur = state.getCurrent();
+        SimulcastStream newNext = state.getNext();
+        SimulcastStream oldCur
+            = this.state == null ? null : this.state.getCurrent();
+        SimulcastStream oldNext
+            = this.state == null ? null : this.state.getNext();
+
+        SimulcastReceiver simulcastReceiver
+            = getSimulcastSender().getSimulcastReceiver();
+
+        if (oldCur != null && !oldCur.equals(newCur) && !oldCur.equals(newNext))
+        {
+            simulcastReceiver.deregisterSimulcastStreamUser(oldCur);
+        }
+        if (oldNext != null && !oldNext.equals(newCur) && !oldNext.equals(newNext))
+        {
+            simulcastReceiver.deregisterSimulcastStreamUser(oldNext);
+        }
+        if (newCur != null && !newCur.equals(oldCur) && !newCur.equals(oldNext))
+        {
+            simulcastReceiver.registerSimulcastStreamUser(newCur);
+        }
+        if (newNext != null && !newNext.equals(oldCur) && !newNext.equals(
+            oldNext))
+        {
+            simulcastReceiver.registerSimulcastStreamUser(newNext);
+        }
+
+        this.state = state;
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Setting new state ("
+                         + (newCur == null ? "null" : newCur.getOrder())
+                         + ", "
+                         + (newNext == null ? "null" : newNext.getOrder())
+                         + ").");
         }
     }
 
@@ -300,7 +345,7 @@ public class RewritingSendMode
         /**
          * Gets a boolean indicating whether this state is stalled or not.
          *
-         * @return true if a switch is requred but <tt>STALLED_DELTA_MS</tt>
+         * @return true if a switch is required but <tt>STALLED_DELTA_MS</tt>
          * have passed, otherwise false.
          */
         public boolean hasStalled()
@@ -308,5 +353,17 @@ public class RewritingSendMode
             return getNext() != null && System.currentTimeMillis() - created
                 > STALL_DELTA_MS;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     * Set the state to (null, null), triggering de-registering as a user of
+     * the used streams.
+     */
+    @Override
+    public void free()
+    {
+        // Make sure we de-register from the SimulcastReceiver
+        setState(new State(null, null));
     }
 }

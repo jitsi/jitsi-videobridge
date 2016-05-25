@@ -35,6 +35,7 @@ import java.util.concurrent.*;
 public class SimulcastReceiverTest
 {
     private SimulcastEngine mockSimulcastEngine;
+    private VideoChannel mockVideoChannel;
 
     @Before
     public void setUp()
@@ -43,8 +44,7 @@ public class SimulcastReceiverTest
         // Setup mock objects.
         final byte REDPT = 0x74, VP8PT = 0x64;
 
-        // Dummy SimulcastEngine. Doesn't do/have to do anything.
-        VideoChannel mockVideoChannel
+        mockVideoChannel
             = EasyMock.createMock(VideoChannel.class);
 
         EasyMock.expect(mockVideoChannel.getRedPayloadType())
@@ -101,14 +101,8 @@ public class SimulcastReceiverTest
         int timesSimulcastStreamsSignaled = 0;
 
         @Override
-        public void simulcastStreamsChanged(SimulcastStream... simulcastStreams)
+        public void simulcastStreamsChanged()
         {
-            for (int i = 0; i < simulcastStreams.length; i++)
-            {
-                assertEquals(
-                    expectedStates[idxExpectedState++].streaming,
-                    simulcastStreams[i].isStreaming);
-            }
         }
 
         @Override
@@ -124,7 +118,7 @@ public class SimulcastReceiverTest
     {
         // Setup the <tt>SimulcastReceiver</tt> to test.
         final SimulcastReceiver simulcastReceiver
-            = new SimulcastReceiver(mockSimulcastEngine, null);
+            = new SimulcastReceiver(mockVideoChannel, null);
 
         final long[] ssrcs = new long[] {
             0xeb6717b9L, 0xa9245e9eL, 0xa7828c21L
@@ -157,7 +151,7 @@ public class SimulcastReceiverTest
             RawPacket pkt;
             while ((pkt = rtpdumpFileReader.getNextPacket(false)) != null)
             {
-                simulcastReceiver.accepted(pkt);
+                simulcastReceiver.reverseTransform(pkt);
             }
         }
         catch (EOFException e)
