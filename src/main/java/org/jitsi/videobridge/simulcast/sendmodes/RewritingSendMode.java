@@ -17,6 +17,7 @@ package org.jitsi.videobridge.simulcast.sendmodes;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.lang.ref.*;
@@ -83,9 +84,8 @@ public class RewritingSendMode
             return false;
         }
 
-        State oldState = this.state;
-
-        SimulcastStream next = oldState.getNext();
+        State state = this.state;
+        SimulcastStream next = state.getNext();
 
         // Protection against key frame packet re-ordering.
         Long pktSSRC = pkt.getSSRCAsLong();
@@ -97,12 +97,9 @@ public class RewritingSendMode
                 ? 1
                 : RTPUtils.sequenceNumberDiff(pktSeq, lastReceivedSeq);
 
-        if (WARN)
+        if (state.hasStalled())
         {
-            if (next != null && oldState.hasStalled())
-            {
-                logger.warn("Switching has stalled.");
-            }
+            logger.warn("Switching has stalled. " + toString());
         }
 
         boolean accept = false;
@@ -137,7 +134,7 @@ public class RewritingSendMode
         }
         else
         {
-            SimulcastStream current = oldState.getCurrent();
+            SimulcastStream current = state.getCurrent();
             accept = current != null && current.matches(pktSSRC);
         }
 
@@ -197,9 +194,10 @@ public class RewritingSendMode
             if (logger.isDebugEnabled())
             {
                 logger.debug("order-" + simStream.getOrder()
-                        + " stream is already the target from " +
-                    getSimulcastSender().getSimulcastReceiver()
-                        .getVideoChannel().getEndpoint().getID() + ".");
+                                 + " stream is already the target from " +
+                                 getSimulcastSender().getSimulcastReceiver()
+                                     .getVideoChannel().getEndpoint()
+                                     .getID() + ".");
             }
 
             return;
@@ -265,7 +263,7 @@ public class RewritingSendMode
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("Setting new state ("
+            logger.debug(toString() + ". Setting new state ("
                          + (newCur == null ? "null" : newCur.getOrder())
                          + ", "
                          + (newNext == null ? "null" : newNext.getOrder())
@@ -365,5 +363,22 @@ public class RewritingSendMode
     {
         // Make sure we de-register from the SimulcastReceiver
         setState(new State(null, null));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString()
+    {
+        Endpoint receiveEndpoint
+            = getSimulcastSender().getReceiveEndpoint();
+        Endpoint sendEndpoint
+            = getSimulcastSender().getSendEndpoint();
+
+        return RewritingSendMode.class.getSimpleName() + " "
+            + (receiveEndpoint == null ? "null" : receiveEndpoint.getID())
+            + " -> "
+            + (sendEndpoint == null ? "null" : sendEndpoint.getID());
     }
 }
