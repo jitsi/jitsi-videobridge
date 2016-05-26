@@ -859,12 +859,12 @@ public class SimulcastReceiver
                     // can associate the SSRC with the corresponding MediaStream
                     if (simulcastStreams[i].acceptedPacket)
                     {
-                        return false;
+                        return true;
                     }
                     else
                     {
                         simulcastStreams[i].acceptedPacket = true;
-                        return true;
+                        return false;
                     }
                 }
                 return false;
