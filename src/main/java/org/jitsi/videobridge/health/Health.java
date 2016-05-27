@@ -141,6 +141,7 @@ public class Health
         Conference conference
             = videobridge.createConference(
                     /* focus */ null,
+                    /* name */ null,
                     /* eventadmin */ false);
 
         // Fail as quickly as possible.

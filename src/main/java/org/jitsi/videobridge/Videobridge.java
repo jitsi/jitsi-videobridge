@@ -221,12 +221,13 @@ public class Videobridge
      * the conference focus which will own the new instance i.e. from whom
      * further/future requests to manage the new instance must come or they will
      * be ignored. Pass <tt>null</tt> to override this safety check.
+     * @param name world readable name of the conference to create.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(String focus)
+    public Conference createConference(String focus, String name)
     {
-        return this.createConference(focus, /* eventadmin */ true);
+        return this.createConference(focus, name, /* eventadmin */ true);
     }
 
     /**
@@ -242,13 +243,15 @@ public class Videobridge
      * the conference focus which will own the new instance i.e. from whom
      * further/future requests to manage the new instance must come or they will
      * be ignored. Pass <tt>null</tt> to override this safety check.
+     * @param name world readable name of the conference to create.
      * @param eventadmin {@code true} to enable support for the
      * {@code eventadmin} package i.e. fire {@code Event}s through
      * {@code EventAdmin}; otherwise, {@code false}
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(String focus, boolean eventadmin)
+    public Conference createConference(
+        String focus, String name, boolean eventadmin)
     {
         Conference conference = null;
 
@@ -265,6 +268,7 @@ public class Videobridge
                                 this,
                                 id,
                                 focus,
+                                name,
                                 eventadmin ? getEventAdmin() : null);
                     conferences.put(id, conference);
                 }
@@ -640,7 +644,8 @@ public class Videobridge
             {
                 if (!isShutdownInProgress())
                 {
-                    conference = createConference(focus);
+                    conference
+                        = createConference(focus, conferenceIQ.getName());
                 }
                 else
                 {
@@ -671,10 +676,6 @@ public class Videobridge
         }
         else
         {
-            String name = conferenceIQ.getName();
-            if (name != null)
-                conference.setName(name);
-
             responseConferenceIQ = new ColibriConferenceIQ();
             conference.describeShallow(responseConferenceIQ);
 
