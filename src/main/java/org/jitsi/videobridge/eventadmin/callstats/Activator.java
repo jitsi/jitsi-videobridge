@@ -133,11 +133,16 @@ public class Activator
                     + "."
                     + StatsManagerBundleActivator.STAT_TRANSPORT_CALLSTATS_IO,
                 interval);
+            String conferenceIDPrefix = ConfigUtils.getString(
+                cfg,
+                "io.callstats.sdk.CallStats.conferenceIDPrefix",
+                null);
 
             conferenceStatsHandler = new CallStatsConferenceStatsHandler();
             conferenceStatsHandler.start(
                 (CallStats) service,
                 bridgeId,
+                conferenceIDPrefix,
                 interval);
 
             String[] topics = { "org/jitsi/*" };

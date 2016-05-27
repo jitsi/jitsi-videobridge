@@ -62,6 +62,11 @@ class CallStatsConferenceStatsHandler
     private String bridgeId;
 
     /**
+     * The prefix to use when creating conference ID to report.
+     */
+    private String conferenceIDPrefix;
+
+    /**
      * The {@link RecurringProcessibleExecutor} which periodically invokes
      * generating and pushing statistics per conference for every Channel.
      */
@@ -83,13 +88,24 @@ class CallStatsConferenceStatsHandler
 
     /**
      * Starts the handler with initialized callstats library.
-     * @param callStats
+     * @param callStats entry point into the callstats.io (Java) library.
+     * @param bridgeId the id which identifies the current bridge.
+     * @param conferenceIDPrefix prefix to use when creating conference IDs.
+     * @param interval interval to poll for stats and
+     * to push them to the callstats service.
      */
-    void start(CallStats callStats, String bridgeId, int interval)
+    void start(CallStats callStats, String bridgeId,
+        String conferenceIDPrefix,
+        int interval)
     {
         this.callStats = callStats;
         this.bridgeId = bridgeId;
         this.interval = interval;
+
+        this.conferenceIDPrefix = conferenceIDPrefix;
+        if(this.conferenceIDPrefix != null
+            && !this.conferenceIDPrefix.endsWith("/"))
+            this.conferenceIDPrefix += "/";
     }
 
     /**
@@ -190,6 +206,11 @@ class CallStatsConferenceStatsHandler
         private UserInfo userInfo;
 
         /**
+         * The conference ID to use when reporting stats.
+         */
+        private final String conferenceID;
+
+        /**
          * Initializes a new {@code ConferencePeriodicProcessible} instance
          * which is to {@code period}ically generate statistics for the
          * conference channels.
@@ -204,6 +225,10 @@ class CallStatsConferenceStatsHandler
                 long period)
         {
             super(conference, period);
+
+            this.conferenceID =
+                (conferenceIDPrefix != null ? conferenceIDPrefix : "")
+                    + conference.getName();
         }
 
         /**
@@ -232,9 +257,7 @@ class CallStatsConferenceStatsHandler
         void start()
         {
             ConferenceInfo conferenceInfo
-                = new ConferenceInfo(
-                        o.getID(),
-                        bridgeId);
+                = new ConferenceInfo(this.conferenceID, bridgeId);
 
             // Send setup event to callstats and on successful response create
             // the userInfo object.
@@ -246,7 +269,8 @@ class CallStatsConferenceStatsHandler
                         @Override
                         public void onResponse(String ucid)
                         {
-                            userInfo = new UserInfo(o.getID(), bridgeId, ucid);
+                            userInfo
+                                = new UserInfo(conferenceID, bridgeId, ucid);
                             // Successful setup from callstats' perspective. Add
                             // it to statisticsProcessors map and register it
                             // for periodic execution.
@@ -304,11 +328,10 @@ class CallStatsConferenceStatsHandler
 
             Endpoint endpoint = channel.getEndpoint();
             String endpointID = (endpoint == null) ? "" : endpoint.getID();
-            String conferenceID = channel.getContent().getConference().getID();
 
             callStats.startStatsReportingForUser(
                     endpointID,
-                    conferenceID);
+                    this.conferenceID);
 
             // Send stats for received streams.
             for (MediaStreamSSRCStats receivedStat : stats.getReceivedStats())
@@ -318,7 +341,7 @@ class CallStatsConferenceStatsHandler
                         .bytesSent(receivedStat.getNbBytes())
                         .packetsSent(receivedStat.getNbPackets())
                         .ssrc(String.valueOf(receivedStat.getSSRC()))
-                        .confID(conferenceID)
+                        .confID(this.conferenceID)
                         .localUserID(bridgeId)
                         .remoteUserID(endpointID)
                         .statsType(CallStatsStreamType.INBOUND)
@@ -337,7 +360,7 @@ class CallStatsConferenceStatsHandler
                         .bytesSent(sentStat.getNbBytes())
                         .packetsSent(sentStat.getNbPackets())
                         .ssrc(String.valueOf(sentStat.getSSRC()))
-                        .confID(conferenceID)
+                        .confID(this.conferenceID)
                         .localUserID(bridgeId)
                         .remoteUserID(endpointID)
                         .statsType(CallStatsStreamType.OUTBOUND)
@@ -348,7 +371,7 @@ class CallStatsConferenceStatsHandler
                 callStats.reportConferenceStats(endpointID, conferenceStats);
             }
 
-            callStats.stopStatsReportingForUser(endpointID, conferenceID);
+            callStats.stopStatsReportingForUser(endpointID, this.conferenceID);
         }
     }
 }
