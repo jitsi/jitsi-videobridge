@@ -113,6 +113,12 @@ public class CallStatsIOTransport
      */
     private void callStatsOnInitialized(CallStats callStats, String msg)
     {
+        // callstats get re-initialized every few hours, which
+        // can leads to registering callstats in osgi many times, while
+        // the service instance is the same
+        if(serviceRegistration != null)
+            return;
+
         bridgeStatusInfoBuilder = new BridgeStatusInfoBuilder();
 
         if (logger.isDebugEnabled())
