@@ -71,7 +71,9 @@ class CallStatsConferenceStatsHandler
      * generating and pushing statistics per conference for every Channel.
      */
     private final RecurringProcessibleExecutor statisticsExecutor
-        = new RecurringProcessibleExecutor();
+        = new RecurringProcessibleExecutor(
+            CallStatsConferenceStatsHandler.class.getSimpleName()
+                + "-statisticsExecutor");
 
     /**
      * List of the processor per conference. Kept in order to stop and
