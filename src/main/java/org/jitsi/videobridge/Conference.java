@@ -203,6 +203,7 @@ public class Conference
      * initialization of the new instance and from whom further/future requests
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
+     * @param name world readable name of this instance if any.
      * @param eventAdmin the {@code EventAdmin} instance to be used by the new
      * instance and all instances (of {@code Content}, {@code Channel}, etc.)
      * created by it.
@@ -210,6 +211,7 @@ public class Conference
     public Conference(Videobridge videobridge,
                       String id,
                       String focus,
+                      String name,
                       EventAdmin eventAdmin)
     {
         if (videobridge == null)
@@ -221,6 +223,7 @@ public class Conference
         this.id = id;
         this.focus = focus;
         this.eventAdmin = eventAdmin;
+        this.name = name;
 
         lastKnownFocus = focus;
 
@@ -1671,16 +1674,6 @@ public class Conference
                 }
             }
         }
-    }
-
-    /**
-     * Sets the conference name.
-     *
-     * @param name the new name.
-     */
-    public void setName(String name)
-    {
-        this.name = name;
     }
 
     /**
