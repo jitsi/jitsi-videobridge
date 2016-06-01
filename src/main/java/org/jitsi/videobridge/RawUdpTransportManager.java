@@ -334,19 +334,19 @@ public class RawUdpTransportManager
             HarvesterConfiguration addressesConfig
                     = HarvesterConfiguration.getInstance(cfg);
 
-            InetAddress publicAddress = null;
+            InetAddress localAddress = null;
 
-            /*if the harverster public address is configured,
+            /*if the harverster local address is configured,
              *use this as the bind address.
              *NOTE: both public and local addresses need to be configured
              */
-            if (addressesConfig != null && addressesConfig.getPublicAddress() != null)
+            if (addressesConfig != null && addressesConfig.getLocalAddress() != null)
             {
-                publicAddress = addressesConfig.getPublicAddress().getAddress();
+                localAddress = addressesConfig.getLocalAddress().getAddress();
             }
 
-            if (publicAddress != null)
-                bindAddr = publicAddress;
+            if (localAddress != null)
+                bindAddr = localAddress;
             else
                 bindAddr = getLocalHostLanAddress();
         }
