@@ -50,6 +50,14 @@ class CallStatsConferenceStatsHandler
     private static final MediaType[] MEDIA_TYPES
         = { MediaType.AUDIO, MediaType.VIDEO };
 
+    /**
+     * The {@link RecurringProcessibleExecutor} which periodically invokes
+     * generating and pushing statistics per conference for every Channel.
+     */
+    private static final RecurringProcessibleExecutor statisticsExecutor
+        = new RecurringProcessibleExecutor(
+        CallStatsConferenceStatsHandler.class.getSimpleName()
+            + "-statisticsExecutor");
 
     /**
      * The entry point into the callstats.io (Java) library.
@@ -65,15 +73,6 @@ class CallStatsConferenceStatsHandler
      * The prefix to use when creating conference ID to report.
      */
     private String conferenceIDPrefix;
-
-    /**
-     * The {@link RecurringProcessibleExecutor} which periodically invokes
-     * generating and pushing statistics per conference for every Channel.
-     */
-    private final RecurringProcessibleExecutor statisticsExecutor
-        = new RecurringProcessibleExecutor(
-            CallStatsConferenceStatsHandler.class.getSimpleName()
-                + "-statisticsExecutor");
 
     /**
      * List of the processor per conference. Kept in order to stop and
