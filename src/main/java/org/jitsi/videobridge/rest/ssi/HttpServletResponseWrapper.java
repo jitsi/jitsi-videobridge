@@ -15,14 +15,14 @@
  */
 package org.jitsi.videobridge.rest.ssi;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
 import java.io.*;
 import java.util.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
 
 /**
- * A wrapper around HttpServletResponse instance which has custom output stream
- * which just stores into memory the bytes to be served as response.
+ * A wrapper around {@code HttpServletResponse} instance which has custom output
+ * stream which just stores into memory the bytes to be served as response.
  * Later the result can be filtered or modified by ssi impl.
  *
  * @author Damian Minkov
@@ -31,38 +31,278 @@ public class HttpServletResponseWrapper
     implements HttpServletResponse
 {
     /**
+     * Custom ServletOutputStream instance used to store the byte content of
+     * the resulting file to serve.
+     */
+    private ByteArrayServletOutputStream outputStream;
+
+    /**
      * The response object we wrap.
      */
     private final HttpServletResponse servletResponse;
 
     /**
-     * Construct HttpServletResponse wrapper.
+     * Constructs a new HttpServletResponse wrapper.
      * @param servletResponse the response to wrap.
      */
-    public HttpServletResponseWrapper(
-        HttpServletResponse servletResponse)
+    public HttpServletResponseWrapper(HttpServletResponse servletResponse)
     {
         this.servletResponse = servletResponse;
     }
 
-    /**
-     * Custom ServletOutputStream instance used to store the byte content of
-     * the resulting file to serve.
-     */
-    private CustomServletOutputStream customServletOutputStream;
+    @Override
+    public void addCookie(Cookie cookie)
+    {
+        servletResponse.addCookie(cookie);
+    }
+
+    @Override
+    public void addDateHeader(String s, long l)
+    {
+        servletResponse.addDateHeader(s, l);
+    }
+
+    @Override
+    public void addHeader(String s, String s1)
+    {
+        servletResponse.addHeader(s, s1);
+    }
+
+    @Override
+    public void addIntHeader(String s, int i)
+    {
+        servletResponse.addIntHeader(s, i);
+    }
+
+    @Override
+    public boolean containsHeader(String s)
+    {
+        return servletResponse.containsHeader(s);
+    }
+
+    @Override
+    public String encodeRedirectURL(String s)
+    {
+        return servletResponse.encodeRedirectURL(s);
+    }
+
+    @Override
+    public String encodeRedirectUrl(String s)
+    {
+        return servletResponse.encodeRedirectUrl(s);
+    }
+
+    @Override
+    public String encodeURL(String s)
+    {
+        return servletResponse.encodeURL(s);
+    }
+
+    @Override
+    public String encodeUrl(String s)
+    {
+        return servletResponse.encodeURL(s);
+    }
+
+    @Override
+    public void flushBuffer()
+        throws IOException
+    {
+        servletResponse.flushBuffer();
+    }
+
+    @Override
+    public int getBufferSize()
+    {
+        return servletResponse.getBufferSize();
+    }
+
+    @Override
+    public String getCharacterEncoding()
+    {
+        return servletResponse.getCharacterEncoding();
+    }
 
     /**
-     * Custom ServletOutputStream used to store the byte content of
-     * the resulting file to serve.
+     * Returns the currently stored file content.
+     * @return the currently stored file content.
      */
-    private class CustomServletOutputStream
+    byte[] getContent()
+    {
+        return
+            (outputStream == null)
+                ? null
+                : outputStream.resContent.toByteArray();
+    }
+
+    @Override
+    public String getContentType()
+    {
+        return servletResponse.getContentType();
+    }
+
+    @Override
+    public String getHeader(String s)
+    {
+        return servletResponse.getHeader(s);
+    }
+
+    @Override
+    public Collection<String> getHeaderNames()
+    {
+        return servletResponse.getHeaderNames();
+    }
+
+    @Override
+    public Collection<String> getHeaders(String s)
+    {
+        return servletResponse.getHeaders(s);
+    }
+
+    @Override
+    public Locale getLocale()
+    {
+        return servletResponse.getLocale();
+    }
+
+    @Override
+    public ServletOutputStream getOutputStream() throws IOException
+    {
+        if (outputStream == null)
+            outputStream = new ByteArrayServletOutputStream();
+        return outputStream;
+    }
+
+    @Override
+    public int getStatus()
+    {
+        return servletResponse.getStatus();
+    }
+
+    @Override
+    public PrintWriter getWriter()
+        throws IOException
+    {
+        return servletResponse.getWriter();
+    }
+
+    @Override
+    public boolean isCommitted()
+    {
+        return servletResponse.isCommitted();
+    }
+
+    @Override
+    public void reset()
+    {
+        servletResponse.reset();
+    }
+
+    @Override
+    public void resetBuffer()
+    {
+        servletResponse.resetBuffer();
+    }
+
+    @Override
+    public void setBufferSize(int bufferSize)
+    {
+        servletResponse.setBufferSize(bufferSize);
+    }
+
+    @Override
+    public void setCharacterEncoding(String characterEncoding)
+    {
+        servletResponse.setCharacterEncoding(characterEncoding);
+    }
+
+    @Override
+    public void setContentLength(int contentLength)
+    {
+        servletResponse.setContentLength(contentLength);
+    }
+
+    @Override
+    public void setContentLengthLong(long contentLength)
+    {
+        servletResponse.setContentLengthLong(contentLength);
+    }
+
+    @Override
+    public void setContentType(String contentType)
+    {
+        servletResponse.setContentType(contentType);
+    }
+
+    @Override
+    public void setDateHeader(String s, long l)
+    {
+        servletResponse.setDateHeader(s, l);
+    }
+
+    @Override
+    public void setHeader(String s, String s1)
+    {
+        servletResponse.setHeader(s, s1);
+    }
+
+    @Override
+    public void setIntHeader(String s, int i)
+    {
+        servletResponse.setIntHeader(s, i);
+    }
+
+    @Override
+    public void setLocale(Locale locale)
+    {
+        servletResponse.setLocale(locale);
+    }
+
+    @Override
+    public void setStatus(int i)
+    {
+        servletResponse.setStatus(i);
+    }
+
+    @Override
+    public void setStatus(int i, String s)
+    {
+        servletResponse.setStatus(i, s);
+    }
+
+    @Override
+    public void sendError(int i)
+        throws IOException
+    {
+        servletResponse.sendError(i);
+    }
+
+    @Override
+    public void sendError(int i, String s)
+        throws IOException
+    {
+        servletResponse.sendError(i, s);
+    }
+
+    @Override
+    public void sendRedirect(String s)
+        throws IOException
+    {
+        servletResponse.sendRedirect(s);
+    }
+
+    /**
+     * Custom {@code ServletOutputStream} used to store the byte content of the
+     * resulting file to serve.
+     */
+    private static class ByteArrayServletOutputStream
         extends ServletOutputStream
     {
         /**
          * Used to store the content of the file to serve before processing it
          * searching for server-side includes.
          */
-        private ByteArrayOutputStream resContent = new ByteArrayOutputStream();
+        final ByteArrayOutputStream resContent = new ByteArrayOutputStream();
 
         /**
          * Just stores the data into the local byte array.
@@ -92,251 +332,7 @@ public class HttpServletResponseWrapper
          */
         @Override
         public void setWriteListener(WriteListener writeListener)
-        {}
-    }
-
-    @Override
-    public ServletOutputStream getOutputStream() throws IOException
-    {
-        if(customServletOutputStream == null)
-            customServletOutputStream = new CustomServletOutputStream();
-        return customServletOutputStream;
-    }
-
-    /**
-     * Returns the currently stored file content.
-     * @return the currently stored file content.
-     */
-    byte[] getContent()
-    {
-        if(customServletOutputStream == null)
-            return null;
-
-        return customServletOutputStream.resContent.toByteArray();
-    }
-
-    /**
-     * Start of wrapped methods for HttpServletResponse.
-     */
-
-    @Override
-    public void addCookie(Cookie cookie)
-    {
-        this.servletResponse.addCookie(cookie);
-    }
-
-    @Override
-    public boolean containsHeader(String s)
-    {
-        return this.servletResponse.containsHeader(s);
-    }
-
-    @Override
-    public String encodeURL(String s)
-    {
-        return this.servletResponse.encodeURL(s);
-    }
-
-    @Override
-    public String encodeRedirectURL(String s)
-    {
-        return this.servletResponse.encodeRedirectURL(s);
-    }
-
-    @Override
-    public String encodeUrl(String s)
-    {
-        return this.servletResponse.encodeURL(s);
-    }
-
-    @Override
-    public String encodeRedirectUrl(String s)
-    {
-        return this.servletResponse.encodeRedirectUrl(s);
-    }
-
-    @Override
-    public void sendError(int i, String s)
-        throws IOException
-    {
-        this.servletResponse.sendError(i, s);
-    }
-
-    @Override
-    public void sendError(int i)
-        throws IOException
-    {
-        this.servletResponse.sendError(i);
-    }
-
-    @Override
-    public void sendRedirect(String s)
-        throws IOException
-    {
-        this.servletResponse.sendRedirect(s);
-    }
-
-    @Override
-    public void setDateHeader(String s, long l)
-    {
-        this.servletResponse.setDateHeader(s, l);
-    }
-
-    @Override
-    public void addDateHeader(String s, long l)
-    {
-        this.servletResponse.addDateHeader(s, l);
-    }
-
-    @Override
-    public void setHeader(String s, String s1)
-    {
-        this.servletResponse.setHeader(s, s1);
-    }
-
-    @Override
-    public void addHeader(String s, String s1)
-    {
-        this.servletResponse.addHeader(s, s1);
-    }
-
-    @Override
-    public void setIntHeader(String s, int i)
-    {
-        this.servletResponse.setIntHeader(s, i);
-    }
-
-    @Override
-    public void addIntHeader(String s, int i)
-    {
-        this.servletResponse.addIntHeader(s, i);
-    }
-
-    @Override
-    public void setStatus(int i)
-    {
-        this.servletResponse.setStatus(i);
-    }
-
-    @Override
-    public void setStatus(int i, String s)
-    {
-        this.servletResponse.setStatus(i, s);
-    }
-
-    @Override
-    public int getStatus()
-    {
-        return this.servletResponse.getStatus();
-    }
-
-    @Override
-    public String getHeader(String s)
-    {
-        return this.servletResponse.getHeader(s);
-    }
-
-    @Override
-    public Collection<String> getHeaders(String s)
-    {
-        return this.servletResponse.getHeaders(s);
-    }
-
-    @Override
-    public Collection<String> getHeaderNames()
-    {
-        return this.servletResponse.getHeaderNames();
-    }
-
-    @Override
-    public String getCharacterEncoding()
-    {
-        return this.servletResponse.getCharacterEncoding();
-    }
-
-    @Override
-    public String getContentType()
-    {
-        return this.servletResponse.getContentType();
-    }
-
-    @Override
-    public PrintWriter getWriter()
-        throws IOException
-    {
-        return this.servletResponse.getWriter();
-    }
-
-    @Override
-    public void setCharacterEncoding(String s)
-    {
-        this.servletResponse.setCharacterEncoding(s);
-    }
-
-    @Override
-    public void setContentLength(int i)
-    {
-        this.servletResponse.setContentLength(i);
-    }
-
-    @Override
-    public void setContentLengthLong(long l)
-    {
-        setContentLengthLong(l);
-    }
-
-    @Override
-    public void setContentType(String s)
-    {
-        this.servletResponse.setContentType(s);
-    }
-
-    @Override
-    public void setBufferSize(int i)
-    {
-        this.servletResponse.setBufferSize(i);
-    }
-
-    @Override
-    public int getBufferSize()
-    {
-        return this.servletResponse.getBufferSize();
-    }
-
-    @Override
-    public void flushBuffer()
-        throws IOException
-    {
-        this.servletResponse.flushBuffer();
-    }
-
-    @Override
-    public void resetBuffer()
-    {
-        this.servletResponse.resetBuffer();
-    }
-
-    @Override
-    public boolean isCommitted()
-    {
-        return this.servletResponse.isCommitted();
-    }
-
-    @Override
-    public void reset()
-    {
-        this.servletResponse.reset();
-    }
-
-    @Override
-    public void setLocale(Locale locale)
-    {
-        this.servletResponse.setLocale(locale);
-    }
-
-    @Override
-    public Locale getLocale()
-    {
-        return this.servletResponse.getLocale();
+        {
+        }
     }
 }

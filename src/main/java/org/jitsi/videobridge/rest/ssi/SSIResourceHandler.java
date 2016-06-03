@@ -31,14 +31,13 @@ import java.util.*;
 import java.util.Scanner;
 
 /**
- * ResourceHandler implementation which check a property to search
- * for preconfigured paths to be scanned for ssi tags. Rest of the resources
- * are loaded by default implementation of ResourceHandler.
+ * ResourceHandler implementation which check a property to search for
+ * preconfigured paths to be scanned for ssi tags. Rest of the resources are
+ * loaded by default implementation of ResourceHandler.
  *
- * TODO:
- * Current implementation doesn't respect file modifications, if you
- * modify the included files and the main one hasn't change a response
- * HttpStatus.NOT_MODIFIED_304 will be returned.
+ * TODO Current implementation doesn't respect file modifications. If you modify
+ * the included files and the main one hasn't changed, a response
+ * {@code HttpStatus.NOT_MODIFIED_304} will be returned.
  *
  * @author Damian Minkov
  */
@@ -47,7 +46,7 @@ public class SSIResourceHandler
 {
     /**
      * Prefix that can configure multiple location aliases.
-     * rest.api.jetty.SSIResourceHandler.paths=/;/somefolder/somepage.html
+     * <tt>rest.api.jetty.SSIResourceHandler.paths=/;/somefolder/somepage.html</tt>
      */
     private static final String JETTY_SSI_RESOURCE_HANDLER_PATHS
         = Videobridge.REST_API_PNAME + ".jetty.SSIResourceHandler.paths";
@@ -81,35 +80,38 @@ public class SSIResourceHandler
      * The {@code ConfigurationService} which looks up values of configuration
      * properties.
      */
-    protected ConfigurationService cfg;
+    protected final ConfigurationService cfg;
 
     /**
-     * The list of targets which will be processed by this ResourceHandler
-     * otherwise defaults will be used.
+     * The list of targets which will be processed by this
+     * {@code ResourceHandler}; otherwise, defaults will be used.
      */
     private final List<String> ssiPaths;
 
     /**
-     * Constructs new SSIResourceHandler.
+     * Constructs a new {@code SSIResourceHandler} instance.
+     *
      * @param cfg the configuration.
      */
     public SSIResourceHandler(ConfigurationService cfg)
     {
         this.cfg = cfg;
 
-        String paths = ConfigUtils.getString(
-            cfg, JETTY_SSI_RESOURCE_HANDLER_PATHS, null);
+        String paths
+            = ConfigUtils.getString(
+                    cfg,
+                    JETTY_SSI_RESOURCE_HANDLER_PATHS,
+                    null);
 
-        if(paths != null)
-        {
-            ssiPaths = Arrays.asList(paths.split(";"));
-        }
+        if (paths == null)
+            ssiPaths = Collections.emptyList();
         else
-            ssiPaths = new ArrayList<>();
+            ssiPaths = Arrays.asList(paths.split(";"));
     }
 
     /**
      * Overrides default handler entry.
+     *
      * @param target the target location
      * @param baseRequest the base request
      * @param request the request
@@ -119,22 +121,23 @@ public class SSIResourceHandler
      */
     @Override
     public void handle(
-                    String target,
-                    Request baseRequest,
-                    HttpServletRequest request,
-                    HttpServletResponse response)
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
         throws IOException,
                ServletException
     {
-        if(ssiPaths.contains(target))
-            this.handleSSIRequest(target, baseRequest, request, response);
+        if (ssiPaths.contains(target))
+            handleSSIRequest(target, baseRequest, request, response);
         else
             super.handle(target, baseRequest, request, response);
     }
 
     /**
-     * Process the request to serve a file while checking it for
-     * ssi replacement tags
+     * Processes the request to serve a file while checking it for ssi
+     * replacement tags.
+     *
      * @param target the target location
      * @param baseRequest the base request
      * @param request the request
@@ -143,99 +146,108 @@ public class SSIResourceHandler
      * @throws ServletException
      */
     private void handleSSIRequest(
-                        String target,
-                        Request baseRequest,
-                        HttpServletRequest request,
-                        HttpServletResponse response)
+            String target,
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
         throws IOException,
                ServletException
     {
         HttpServletResponseWrapper servletResponseWrapper
             = new HttpServletResponseWrapper(response);
+
         super.handle(target, baseRequest, request, servletResponseWrapper);
 
-        byte[] processedResult = processContentForServerSideIncludes(
-            servletResponseWrapper.getContent());
-        // if content length had changed, update it
-        response.setContentLength(processedResult.length);
+        byte[] processedResult
+            = processContentForServerSideIncludes(
+                    servletResponseWrapper.getContent());
 
+        // If content length has changed, update it.
+        response.setContentLength(processedResult.length);
         response.getOutputStream().write(processedResult);
     }
 
     /**
-     * Process the current content and searches for ssi tags to replace them
-     * with the content.
-     * Currently only include virtual is supported.
+     * Processes the current content and searches for ssi tags to replace them
+     * with the content. Currently, only include virtual is supported.
+     *
      * @param content the content to scan for ssi tags.
      * @return the resulting content.
      * @throws IOException
      */
-    private byte[] processContentForServerSideIncludes(
-            byte[] content)
+    private byte[] processContentForServerSideIncludes(byte[] content)
         throws IOException
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-        if(content == null)
+        if (content == null)
             return out.toByteArray();
 
-        // scanner delimiter is the same as BufferedReader.readLine
+        // Scanner delimiter is the same as BufferedReader.readLine:
         // "A line is considered to be terminated by any one of a line feed
         // ('\n'), a carriage return ('\r'), or a carriage return followed
         // immediately by a linefeed."
-        Scanner scanner = new Scanner(
-            new ByteArrayInputStream(content), "UTF-8")
+        Scanner scanner
+            = new Scanner(
+                    new ByteArrayInputStream(content),
+                    "UTF-8")
                 .useDelimiter("(?<=\n)|(?!\n)(?<=\r)");
-        while(scanner.hasNext())
+        Charset charset = StandardCharsets.UTF_8;
+
+        while (scanner.hasNext())
         {
             String line = scanner.next();
+            int startIx = line.indexOf(SSI_CMD_START);
 
-            if (line.contains(SSI_CMD_START))
+            if (startIx != -1)
             {
-                int startIx = line.indexOf(SSI_CMD_START);
-                int endIx = line.indexOf(SSI_CMD_END, startIx);
+                int endIx
+                    = line.indexOf(
+                            SSI_CMD_END,
+                            startIx + SSI_CMD_START.length());
 
-                if(endIx != -1)
+                if (endIx != -1)
                 {
-                    // include virtual="config.js"
-                    String cmd = line.substring(
-                        startIx + SSI_CMD_START.length(),
-                        endIx);
+                    // Include virtual="config.js".
+                    String cmd
+                        = line.substring(
+                                startIx + SSI_CMD_START.length(),
+                                endIx);
 
-                    // write everything to this point
-                    out.write(line.substring(0, startIx)
-                        .getBytes(StandardCharsets.UTF_8));
+                    // Write everything upto this point.
+                    out.write(
+                            line.substring(0, startIx).getBytes(charset));
 
-                    if(!processSSICmd(cmd, out))
+                    if (!processSSICmd(cmd, out))
                     {
-                        // print the original text
-                        out.write(
-                            SSI_CMD_START.getBytes(StandardCharsets.UTF_8));
-                        out.write(cmd.getBytes(StandardCharsets.UTF_8));
-                        out.write(
-                            SSI_CMD_END.getBytes(StandardCharsets.UTF_8));
+                        // Print the original text.
+                        out.write(SSI_CMD_START.getBytes(charset));
+                        out.write(cmd.getBytes(charset));
+                        out.write(SSI_CMD_END.getBytes(charset));
                     }
 
-                    // write everything after the ssi directive
+                    // Write everything after the ssi directive.
                     out.write(
-                        line.substring(endIx + SSI_CMD_END.length(),
-                            line.length())
-                            .getBytes(StandardCharsets.UTF_8));
+                        line.substring(
+                                endIx + SSI_CMD_END.length(),
+                                line.length())
+                            .getBytes(charset));
 
-                    // stop processing
+                    // Stop processing.
                     continue;
                 }
             }
 
-            // by default write the line if nothing is found
-            out.write(line.getBytes(StandardCharsets.UTF_8));
+            // By default, write the line if nothing is found.
+            out.write(line.getBytes(charset));
         }
 
         return out.toByteArray();
     }
 
     /**
-     * Processing the ssi commands. Currently only include is supported.
+     * Processes the ssi commands. Currently, only include is supported.
+     *
      * @param cmd command with parameters.
      * @param out the result
      * @return return true if some processing had been done, false otherwise
@@ -245,43 +257,47 @@ public class SSIResourceHandler
         throws IOException
     {
         // include command
-        if(cmd.startsWith(SSI_CMD_INCLUDE) && cmd.contains("="))
+        if (cmd.startsWith(SSI_CMD_INCLUDE) && cmd.contains("="))
         {
-            String parameterName = cmd.substring(
-                SSI_CMD_INCLUDE.length(), cmd.indexOf("=")).trim();
+            String parameterName
+                = cmd.substring(SSI_CMD_INCLUDE.length(), cmd.indexOf("="))
+                    .trim();
 
             // we need virtual or file parameter
-            if(!parameterName.equals(SSI_PARAM_VIRTUAL)
-                && !parameterName.equals(SSI_PARAM_FILE))
+            if (!SSI_PARAM_VIRTUAL.equals(parameterName)
+                    && !SSI_PARAM_FILE.equals(parameterName)) {
                 return false;
+            }
 
-            String fileToInclude
-                = cmd.substring(cmd.indexOf("=") + 1).trim();
+            String fileToInclude = cmd.substring(cmd.indexOf("=") + 1).trim();
 
-            // remove surrounding " if any
+            // Remove surrounding " if any.
             fileToInclude = fileToInclude.replaceAll("\\\"", "");
 
-            // if file is virtual(its a location) we can have an alias for that
-            // and we need to check that
-            if(parameterName.equals(SSI_PARAM_VIRTUAL))
+            // If file is virtual (it's a location), we can have an alias for
+            // that and we need to check that.
+            if (SSI_PARAM_VIRTUAL.equals(parameterName))
             {
-                // add / in the beginning to represent a relative address
-                if(!fileToInclude.startsWith("/"))
+                // Add / in the beginning to represent a relative address.
+                if (!fileToInclude.startsWith("/"))
                     fileToInclude = "/" + fileToInclude;
 
-                // alias check
+                // Alias check.
                 String aliasValue
-                    = ConfigUtils.getString(cfg,
-                    RESTBundleActivator.JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
-                        + "." + fileToInclude,
-                    null);
-                if(aliasValue != null)
+                    = ConfigUtils.getString(
+                            cfg,
+                            RESTBundleActivator
+                                    .JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
+                                + "."
+                                + fileToInclude,
+                            null);
+                if (aliasValue != null)
                     fileToInclude = aliasValue;
             }
 
             Resource r = Resource.newResource(fileToInclude);
 
-            if(r.exists())
+            if (r.exists())
             {
                 r.writeTo(out, 0, r.length());
                 return true;
@@ -289,7 +305,7 @@ public class SSIResourceHandler
         }
         else
         {
-            // other commands not supported yet
+            // Other commands are not supported yet.
         }
 
         return false;
