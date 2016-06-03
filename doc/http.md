@@ -14,6 +14,7 @@ org.jitsi.videobridge.rest.jetty.ResourceHandler.resourceBase=/usr/share/jitsi-m
 org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./config.js=/etc/jitsi/meet/example.meet.jit.si-config.js
 org.jitsi.videobridge.rest.jetty.RewriteHandler.regex=^/([a-zA-Z0-9]+)$
 org.jitsi.videobridge.rest.jetty.RewriteHandler.replacement=/
+org.jitsi.videobridge.rest.api.jetty.SSIResourceHandler.paths=/
 org.jitsi.videobridge.rest.jetty.tls.port=443
 org.jitsi.videobridge.TCP_HARVESTER_PORT=443
 org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePath=/etc/jitsi/videobridge/example.meet.jit.si.jks

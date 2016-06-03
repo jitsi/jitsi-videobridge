@@ -25,6 +25,7 @@ import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.rest.ssi.*;
 import org.osgi.framework.*;
 
 /**
@@ -67,7 +68,7 @@ public class RESTBundleActivator
      * rest.api.jetty.ResourceHandler.alias./config.js=/etc/jitsi/my-config.js
      * rest.api.jetty.ResourceHandler.alias./settings.js=/etc/jitsi/my-sets.js
      */
-    private static final String JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
+    public static final String JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
         = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.alias";
 
     private static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
@@ -295,7 +296,7 @@ public class RESTBundleActivator
         }
         else
         {
-            ResourceHandler resourceHandler = new ResourceHandler();
+            ResourceHandler resourceHandler = new SSIResourceHandler(cfg);
 
             resourceHandler.setResourceBase(resourceBase);
 
