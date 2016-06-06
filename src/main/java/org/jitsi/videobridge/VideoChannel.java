@@ -19,7 +19,9 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.concurrent.locks.*;
 
 import javax.media.rtp.*;
 
@@ -109,6 +111,13 @@ public class VideoChannel
             = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
 
     /**
+     * A cyclic counters multitone that counts how many packets we've dropped
+     * per source end point.
+     */
+    private final CyclicCounters dropped = new CyclicCounters();
+
+
+  /**
      * Updates the values of the property <tt>inLastN</tt> of all
      * <tt>VideoChannel</tt>s in the <tt>Content</tt> of a specific
      * <tt>VideoChannel</tt>.
@@ -498,14 +507,31 @@ public class VideoChannel
             byte[] buffer, int offset, int length,
             Channel source)
     {
-        boolean accept = true;
-
-        if (data && (source != null))
+        if (!data || source == null)
         {
-            // XXX(gp) we could potentially move this into a TransformEngine.
-            accept = lastNController.isForwarded(source);
+          return true;
         }
-
+        // XXX(gp) we could potentially move this into a TransformEngine.
+        boolean accept = lastNController.isForwarded(source);
+        if (!accept && !source.getID().equals(this.getID()))
+        {
+            // For SRTP replay protection the webrtc.org implementation uses a
+            // replay database with extended range, using a rollover counter
+            // (ROC) which counts the number of times the RTP sequence number
+            // carried in the RTP packet has rolled over.
+            //
+            // In this way, the ROC extends the 16-bit RTP sequence number to a
+            // 48-bit "SRTP packet index". The ROC is not be explicitly
+            // exchanged between the SRTP endpoints because in all practical
+            // situations a rollover of the RTP sequence number can be detected
+            // unless 2^15 consecutive RTP packets are lost.
+            //
+            // If this variable is set to true, then for every 0x800 (2048)
+            // dropped packets (at most), we send 8 packets so that the
+            // receiving endpoint can update its ROC.
+            CyclicCounter counter = dropped.getOrCreate(source.getEndpoint().getID(), 0x800);
+            accept = counter.cyclicallyIncrementAndGet() < 8;
+        }
         return accept;
     }
 
@@ -1247,5 +1273,67 @@ public class VideoChannel
     public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
     {
         lastNController.setAdaptiveSimulcast(adaptiveSimulcast);
+    }
+
+    /**
+     * A thread safe cyclic counter.
+     */
+    static class CyclicCounter
+    {
+        private final AtomicInteger ai = new AtomicInteger(0);
+
+        private final int maxVal;
+
+        public CyclicCounter(int maxVal)
+      {
+        this.maxVal = maxVal;
+      }
+
+        public int cyclicallyIncrementAndGet()
+        {
+            int curVal, newVal;
+            do
+            {
+                curVal = this.ai.get();
+                newVal = (curVal + 1) % this.maxVal;
+                // note that this doesn't guarantee fairness
+            }
+            while (!this.ai.compareAndSet(curVal, newVal));
+            return newVal;
+        }
+    }
+
+    /**
+     * Multitone pattern with Lazy Initialization.
+     */
+    static class CyclicCounters
+    {
+        private final Map<String, CyclicCounter> instances
+            = new ConcurrentHashMap<>();
+
+        private final Lock createLock = new ReentrantLock();
+
+        CyclicCounter getOrCreate(String key, int maxVal)
+        {
+            CyclicCounter instance = instances.get(key);
+
+            if (instance == null)
+            {
+                createLock.lock();
+                try
+                {
+                    if ((instance = instances.get(key)) == null)
+                    {
+                      instance = new CyclicCounter(maxVal);
+                      instances.put(key, instance);
+                    }
+                }
+                finally
+                {
+                    createLock.unlock();
+                }
+            }
+            return instance;
+        }
     }
 }
