@@ -31,7 +31,7 @@ public class SimulcastStream
     implements Comparable<SimulcastStream>
 {
     /**
-     * Base simlucast stream quality order.
+     * Base simulcast stream quality order.
      */
     public static final int SIMULCAST_LAYER_ORDER_BASE = 0;
 
@@ -53,7 +53,7 @@ public class SimulcastStream
     /**
      * The FEC SSRC for this simulcast stream.
      *
-     * XXX This isn't currently used anywhere because Chrome doens't use a
+     * XXX This isn't currently used anywhere because Chrome doesn't use a
      * separate SSRC for FEC.
      */
     private final long fecSSRC;
@@ -68,6 +68,11 @@ public class SimulcastStream
      * streaming.
      */
     boolean isStreaming = false;
+
+    /**
+     * Whether at least one packet was accepted on this stream.
+     */
+    boolean acceptedPacket = false;
 
     /**
      * The value of the RTP marker (bit) of the last {@code RawPacket} seen by
@@ -166,20 +171,14 @@ public class SimulcastStream
     }
 
     /**
-     * Determines whether a packet belongs to this {@code SimulcastStream}.
+     * Determines whether an SSRC belongs to this {@code SimulcastStream}.
      *
-     * @param pkt
-     * @return {@code true} if {@code pkt} belongs to this
+     * @param ssrc the SSRC for which to check.
+     * @return {@code true} if {@code ssrc} belongs to this
      * {@code SimulcastStream}; {@code false}, otherwise.
      */
-    public boolean matches(RawPacket pkt)
+    public boolean matches(long ssrc)
     {
-        if (pkt == null)
-        {
-            return false;
-        }
-
-        long ssrc = pkt.getSSRCAsLong();
         return ssrc == primarySSRC || ssrc == rtxSSRC || ssrc == fecSSRC;
     }
 
@@ -212,10 +211,8 @@ public class SimulcastStream
 
     public boolean isKeyFrame(RawPacket pkt)
     {
-        byte redPT = simulcastReceiver.getSimulcastEngine()
-            .getVideoChannel().getRedPayloadType();
-        byte vp8PT = simulcastReceiver.getSimulcastEngine()
-            .getVideoChannel().getVP8PayloadType();
+        byte redPT = simulcastReceiver.getVideoChannel().getRedPayloadType();
+        byte vp8PT = simulcastReceiver.getVideoChannel().getVP8PayloadType();
         return Utils.isKeyFrame(pkt, redPT, vp8PT);
     }
 

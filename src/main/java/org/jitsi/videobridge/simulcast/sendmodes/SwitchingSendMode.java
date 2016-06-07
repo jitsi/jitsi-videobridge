@@ -173,9 +173,10 @@ public class SwitchingSendMode
 
         SimulcastStream current = getCurrent();
         boolean accept = false;
+        long ssrc = pkt.getSSRCAsLong();
 
         if (current != null)
-            accept = current.matches(pkt);
+            accept = current.matches(ssrc);
 
         if (!accept)
         {
@@ -183,7 +184,7 @@ public class SwitchingSendMode
 
             if (next != null)
             {
-                accept = next.matches(pkt);
+                accept = next.matches(ssrc);
                 if (accept)
                     maybeSwitchToNext();
             }
@@ -192,7 +193,7 @@ public class SwitchingSendMode
         SimulcastStream override = getOverride();
 
         if (override != null)
-            accept = override.matches(pkt);
+            accept = override.matches(ssrc);
 
         if (!accept)
         {

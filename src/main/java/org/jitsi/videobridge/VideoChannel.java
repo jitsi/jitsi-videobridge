@@ -104,6 +104,11 @@ public class VideoChannel
      *
      * This value can be set through colibri channel IQ with
      * receive-simulcast-layer attribute.
+     *
+     * XXX(boris) I cannot find the semantics of this field documented anywhere.
+     * It is used inconsistently (only when a SimulcastSender is created, but
+     * not when the targetOrder changes for another reason), and the original
+     * intention seems lost.
      */
     private int receiveSimulcastLayer
             = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
@@ -173,6 +178,11 @@ public class VideoChannel
     private final boolean requestRetransmissions;
 
     /**
+     * The {@link SimulcastReceiver} of this channel.
+     */
+    private final SimulcastReceiver simulcastReceiver;
+
+    /**
      * Initializes a new <tt>VideoChannel</tt> instance which is to have a
      * specific ID. The initialization is to be considered requested by a
      * specific <tt>Content</tt>.
@@ -206,10 +216,46 @@ public class VideoChannel
         ConfigurationService cfg
             = content.getConference().getVideobridge()
                         .getConfigurationService();
+
         requestRetransmissions
             = cfg != null
                 && cfg.getBoolean(
                         VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false);
+        simulcastReceiver = new SimulcastReceiver(this, cfg);
+
+        // Make sure that all the needed SimulcastSender instances are created.
+        // This includes one SimulcastSender instances in this channel's
+        // SimulcastEngine for each other channel in the Content, and one
+        // instance in each other channel corresponding to this channel.
+        // Note that this code needs to execute while holding the lock to the
+        // Content's channels.
+        for (Channel otherChannel : content.getChannels())
+        {
+            if (otherChannel instanceof VideoChannel && otherChannel != this)
+            {
+                VideoChannel otherVideoChannel = (VideoChannel) otherChannel;
+                otherVideoChannel.addSimulcastReceiver(simulcastReceiver);
+                addSimulcastReceiver(otherVideoChannel.getSimulcastReceiver());
+            }
+        }
+    }
+
+    /**
+     * Notifies this channel about a new {@link SimulcastReceiver}.
+     * @param receiverToAdd the {@link SimulcastReceiver}.
+     */
+    private void addSimulcastReceiver(SimulcastReceiver receiverToAdd)
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Adding SimulcastReceiver: " + getChannelBundleId()
+                + " " + receiverToAdd.getVideoChannel().getChannelBundleId());
+        }
+
+        getTransformEngine()
+            .getSimulcastEngine()
+                .getSimulcastSenderManager()
+                    .createSimulcastSender(receiverToAdd);
     }
 
     /**
@@ -350,6 +396,8 @@ public class VideoChannel
         }
         if (add)
             chain.addEngine(new LastNTransformEngine(this));
+
+        chain.addEngine(simulcastReceiver);
     }
 
     /**
@@ -548,6 +596,13 @@ public class VideoChannel
         if (lastNController != null)
         {
             lastNController.close();
+        }
+
+        SimulcastEngine simulcastEngine
+            = getTransformEngine().getSimulcastEngine();
+        if (simulcastEngine != null)
+        {
+            simulcastEngine.close();
         }
 
         super.expire();
@@ -941,10 +996,6 @@ public class VideoChannel
             return;
         }
 
-        // Setup simulcast streams from source groups.
-        SimulcastEngine simulcastEngine
-            = getTransformEngine().getSimulcastEngine();
-
         // Build the simulcast streams.
         long[][] simulcastTriplets = null;
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
@@ -1005,15 +1056,14 @@ public class VideoChannel
         for (int i = 0; i < simulcastTriplets.length; i++)
         {
             simulcastStreams[i] = new SimulcastStream(
-                simulcastEngine.getSimulcastReceiver(),
+                simulcastReceiver,
                 simulcastTriplets[i][0],
                 simulcastTriplets[i][1],
                 simulcastTriplets[i][2],
                 i);
         }
 
-        simulcastEngine
-            .getSimulcastReceiver().setSimulcastStreams(simulcastStreams);
+        simulcastReceiver.setSimulcastStreams(simulcastStreams);
     }
 
     /**
@@ -1129,18 +1179,8 @@ public class VideoChannel
 
         // Update the SSRC rewriting engine from the peer simulcast engine
         // state.
-        SimulcastEngine sim
-            = peerVideoChannel.getTransformEngine().getSimulcastEngine();
-
-        if (sim == null)
-        {
-            logger.debug("Can't update our view of the peer video channel because" +
-                    " peerSimulcastEngine is null.");
-            return;
-        }
-
         SimulcastStream[] streams
-            = sim.getSimulcastReceiver().getSimulcastStreams();
+            = peerVideoChannel.getSimulcastReceiver().getSimulcastStreams();
 
         if (streams == null || streams.length == 0)
         {
@@ -1247,5 +1287,13 @@ public class VideoChannel
     public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
     {
         lastNController.setAdaptiveSimulcast(adaptiveSimulcast);
+    }
+
+    /**
+     * @return  the {@link SimulcastReceiver} of this {@link VideoChannel}.
+     */
+    public SimulcastReceiver getSimulcastReceiver()
+    {
+        return simulcastReceiver;
     }
 }

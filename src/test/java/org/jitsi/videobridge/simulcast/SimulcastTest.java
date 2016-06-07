@@ -220,7 +220,7 @@ public class SimulcastTest
          //       recvBRTS,
             });
 
-        recvSE.getSimulcastReceiver().setSimulcastStreams(ssrcs);
+        recvViC.getSimulcastReceiver().setSimulcastStreams(ssrcs);
 
         // Configure the mock content.
         for (int i = 0; i < ssrcs.length; i++)
