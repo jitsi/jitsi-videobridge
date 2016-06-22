@@ -80,6 +80,13 @@ public class VideoChannel
             = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
+     * The name of the property used to disable the logic which detects and
+     * marks/discards packets coming from "unused" streams.
+     */
+    public static final String DISABLE_LASTN_UNUSED_STREAM_DETECTION
+        = "org.jitsi.videobridge.DISABLE_LASTN_UNUSED_STREAM_DETECTION";
+
+    /**
      * The <tt>Logger</tt> used by the <tt>VideoChannel</tt> class and its
      * instances to print debug information.
      */
@@ -335,21 +342,37 @@ public class VideoChannel
         // from VideoChannels/Endpoints which are not in any
         // VideoChannel/Endpoint's lastN.
         TransformEngine[] engines = chain.getEngineChain();
-        boolean add = true;
+        boolean addLastNTransformEngine = true;
 
-        if ((engines != null) && (engines.length != 0))
+        ConfigurationService cfg
+            = getContent().getConference().getVideobridge()
+                    .getConfigurationService();
+        if (cfg != null)
+        {
+            addLastNTransformEngine
+                = !cfg.getBoolean(DISABLE_LASTN_UNUSED_STREAM_DETECTION, false);
+        }
+
+        if (addLastNTransformEngine && (engines != null) && (engines.length != 0))
         {
             for (TransformEngine engine : engines)
             {
                 if (engine instanceof LastNTransformEngine)
                 {
-                    add = false;
+                    addLastNTransformEngine = false;
                     break;
                 }
             }
         }
-        if (add)
+        if (addLastNTransformEngine)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Adding LastNTransformEngine for endpoint "
+                                 + getChannelBundleId());
+            }
             chain.addEngine(new LastNTransformEngine(this));
+        }
     }
 
     /**
