@@ -116,6 +116,16 @@ public class VideoChannel
             = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
 
     /**
+     * A map of source ssrc to last accepted sequence number
+     */
+    private final Map<Long, Integer> ssrcToLastAcceptedSeqNumber= new HashMap<>();
+
+    /**
+    * A map of source ssrc to the delta since the last accepted sequence number
+    */
+    private final Map<Long, Integer> ssrcToDeltaSinceLastAcceptedSeqNumber = new HashMap<>();
+
+    /**
      * Updates the values of the property <tt>inLastN</tt> of all
      * <tt>VideoChannel</tt>s in the <tt>Content</tt> of a specific
      * <tt>VideoChannel</tt>.
@@ -521,14 +531,49 @@ public class VideoChannel
             byte[] buffer, int offset, int length,
             Channel source)
     {
-        boolean accept = true;
+        // XXX(gp) we could potentially move this into a TransformEngine.
+        boolean accept = lastNController.isForwarded(source);
+        int seqNumber = RawPacket.getSequenceNumber(buffer, offset, length);
+        Long ssrc = RawPacket.getSSRCAsLong(buffer, offset, length);
 
-        if (data && (source != null))
+        if (accept)
         {
-            // XXX(gp) we could potentially move this into a TransformEngine.
-            accept = lastNController.isForwarded(source);
+            // overwrite the sequence number (if needed)
+            int delta = 0;
+            if (ssrcToDeltaSinceLastAcceptedSeqNumber.containsKey(ssrc))
+            {
+                delta = ssrcToDeltaSinceLastAcceptedSeqNumber.get(ssrc);
+            }
+            int newSequenceNumber = RTPUtils.subtractNumber(seqNumber, delta);
+            RawPacket.setSequenceNumber(buffer, offset, newSequenceNumber);
+            int highestSentSequenceNumber = newSequenceNumber;
+            if (ssrcToLastAcceptedSeqNumber.containsKey(ssrc))
+            {
+                highestSentSequenceNumber = ssrcToLastAcceptedSeqNumber.get(ssrc);
+            }
+            if (RTPUtils.sequenceNumberDiff(newSequenceNumber, highestSentSequenceNumber) >= 0)
+            {
+                ssrcToLastAcceptedSeqNumber.put(ssrc, newSequenceNumber);
+            }
         }
-
+        else
+        {
+            // update the delta (if needed)
+            if (ssrcToLastAcceptedSeqNumber.containsKey(ssrc))
+            {
+                int lastSeqNo = ssrcToLastAcceptedSeqNumber.get(ssrc);
+                int delta =  RTPUtils.subtractNumber(seqNumber, lastSeqNo);
+                int lastDelta = delta;
+                if (ssrcToDeltaSinceLastAcceptedSeqNumber.containsKey(ssrc))
+                {
+                    lastDelta = ssrcToDeltaSinceLastAcceptedSeqNumber.get(ssrc);
+                }
+                if (RTPUtils.sequenceNumberDiff(delta, lastDelta) >= 0)
+                {
+                  ssrcToDeltaSinceLastAcceptedSeqNumber.put(ssrc, delta);
+                }
+            }
+        }
         return accept;
     }
 
