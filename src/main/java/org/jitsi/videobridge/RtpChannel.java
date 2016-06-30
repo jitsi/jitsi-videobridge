@@ -1458,9 +1458,12 @@ public class RtpChannel
      */
     public void setDirection(MediaDirection direction)
     {
-        // XXX We modify the stream direction only after latching has finished.
-        if (streamTarget.getDataAddress() != null)
-            stream.setDirection(direction);
+        // If using latching, only modify the direction if the stream target destination is connected
+        if ((getTransportManager() instanceof RawUdpTransportManager && streamTarget.getDataAddress() != null) ||
+            getTransportManager() instanceof IceUdpTransportManager)
+        {
+          stream.setDirection(direction);
+        }
 
         touch(); // It seems this Channel is still active.
     }
