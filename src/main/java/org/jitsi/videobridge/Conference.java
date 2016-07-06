@@ -234,7 +234,7 @@ public class Conference
 
         if (!enableLogging)
         {
-            logger.setLevel(Level.OFF);
+            logger.setLevel(Level.WARNING);
         }
 
         lastKnownFocus = focus;
