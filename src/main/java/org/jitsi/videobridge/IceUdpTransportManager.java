@@ -1199,12 +1199,12 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Gets the <tt>Agent</tt> which implements the ICE protocol and which is
-     * used by this instance to implement the Jingle ICE-UDP transport.
+     * Gets the ICE local username fragment.
      */
-    public Agent getAgent()
+    public String getLocalUfrag()
     {
-        return iceAgent;
+        Agent iceAgent = this.iceAgent;
+        return iceAgent == null ? null : iceAgent.getLocalUfrag();
     }
 
     /**
@@ -2008,7 +2008,7 @@ public class IceUdpTransportManager
                         }
 
                         // XXX The value of the field iceAgent is null at times.
-                        Agent iceAgent = getAgent();
+                        Agent iceAgent = IceUdpTransportManager.this.iceAgent;
 
                         if (iceAgent == null)
                         {
@@ -2018,8 +2018,7 @@ public class IceUdpTransportManager
 
                         IceProcessingState state = iceAgent.getState();
 
-                        if (IceProcessingState.COMPLETED.equals(state)
-                                || IceProcessingState.TERMINATED.equals(state))
+                        if (state.isEstablished())
                         {
                             onIceConnected();
                         }

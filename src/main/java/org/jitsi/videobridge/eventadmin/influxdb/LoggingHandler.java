@@ -493,15 +493,6 @@ public class LoggingHandler
             return;
         }
 
-        Agent agent = transportManager.getAgent();
-        if (agent == null)
-        {
-            logger.debug(
-                    "Could not log the transport_created event"
-                        + " because the agent is null.");
-            return;
-        }
-
         logEvent(
                 new InfluxDBEvent(
                         "transport_created",
@@ -511,7 +502,7 @@ public class LoggingHandler
                             String.valueOf(transportManager.hashCode()),
                             conference.getID(),
                             transportManager.getNumComponents(),
-                            agent.getLocalUfrag(),
+                            transportManager.getLocalUfrag(),
                             Boolean
                                 .valueOf(transportManager.isControlling())
                                     .toString()

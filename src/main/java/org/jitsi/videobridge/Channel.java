@@ -536,7 +536,7 @@ public abstract class Channel
      * if "bundle" is being used.
      * @throws IOException in case of transport manager initialization error
      */
-    public void initialize()
+    void initialize()
             throws IOException
     {
         synchronized (transportManagerSyncRoot)
@@ -555,7 +555,6 @@ public abstract class Channel
                 transportManager
                     = getContent().getConference()
                         .getTransportManager(channelBundleId, true);
-
             }
 
             if (transportManager == null)

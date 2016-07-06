@@ -1203,6 +1203,9 @@ public class Conference
                     throw new UndeclaredThrowableException(ioe);
                 }
                 transportManagers.put(channelBundleId, transportManager);
+                logger.info("Created an ICE agent with local ufrag "
+                                + transportManager.getLocalUfrag()
+                                + " for endpoint " + channelBundleId + ".");
             }
         }
 
