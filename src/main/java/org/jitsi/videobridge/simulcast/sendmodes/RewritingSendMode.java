@@ -36,8 +36,7 @@ public class RewritingSendMode
 {
     /**
      * The {@link Logger} used by the {@link RewritingSendMode} class to print
-     * debug information. Note that {@link Conference} instances should use
-     * {@link #logger} instead.
+     * debug information. Note that instances should use {@link #logger} instead.
      */
     private static final Logger classLogger
             = Logger.getLogger(RewritingSendMode.class);
@@ -59,6 +58,13 @@ public class RewritingSendMode
      * information.
      */
     private final Logger logger;
+
+    /**
+     * The time in milliseconds since the epoch at which we attempted to switch
+     * to a new stream (that is, we sent a keyframe request for the next stream,
+     * and started to wait for a keyframe before switching).
+     */
+    private long timeOfLastAttemptToSwitch = -1;
 
     /**
      * Ctor.
@@ -111,6 +117,13 @@ public class RewritingSendMode
             // This is the first packet of a keyframe.
             if (diff >= 0)
             {
+                long delay = System.currentTimeMillis()
+                    - timeOfLastAttemptToSwitch;
+                timeOfLastAttemptToSwitch += delay;
+
+                logger.info("Successfully switched to SSRC="
+                                + next.getPrimarySSRC() + " order="
+                                + next.getOrder() + " after " + delay + "ms.");
                 this.state = new State(new WeakReference<>(next), null);
                 accept = true;
             }
@@ -225,6 +238,7 @@ public class RewritingSendMode
         }
         else
         {
+            timeOfLastAttemptToSwitch = System.currentTimeMillis();
             this.state
                 = new State(oldState.weakCurrent, new WeakReference<>(simStream));
         }
