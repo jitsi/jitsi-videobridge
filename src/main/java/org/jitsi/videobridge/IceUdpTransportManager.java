@@ -147,16 +147,6 @@ public class IceUdpTransportManager
     private static int tcpHostHarvesterMappedPort = -1;
 
     /**
-     * Logs a specific <tt>String</tt> at debug level.
-     *
-     * @param s the <tt>String</tt> to log at debug level
-     */
-    private static void logd(String s)
-    {
-        classLogger.info(s);
-    }
-
-    /**
      * The single (if any) <tt>Channel</tt> instance, whose sockets are
      * currently configured to accept DTLS packets.
      */
@@ -366,7 +356,8 @@ public class IceUdpTransportManager
                 && sctpConnection != null
                 && sctpConnection != channel)
         {
-            logd("Not adding a second SctpConnection to TransportManager.");
+            logger.info(
+                "Not adding a second SctpConnection to TransportManager.");
             return false;
         }
 
@@ -760,7 +751,8 @@ public class IceUdpTransportManager
             }
             catch (IOException ioe)
             {
-                logd("Failed to close sockets when closing a channel:" + ioe);
+                logger.info(
+                    "Failed to close sockets when closing a channel:" + ioe);
             }
 
             EventAdmin eventAdmin = conference.getEventAdmin();
@@ -1667,7 +1659,7 @@ public class IceUdpTransportManager
             s.append(")  of conference ").append(conference.getID())
                 .append(" changed from ").append(oldState).append(" to ")
                 .append(newState).append(".");
-            logd(s.toString());
+            logger.info(s.toString());
 
             EventAdmin eventAdmin = conference.getEventAdmin();
             if (eventAdmin != null)
@@ -1997,7 +1989,8 @@ public class IceUdpTransportManager
                         }
                         catch (OperationFailedException ofe)
                         {
-                            logd("Failed to connect IceUdpTransportManager: "
+                            logger.info(
+                                "Failed to connect IceUdpTransportManager: "
                                          + ofe);
 
                             synchronized (connectThreadSyncRoot)
