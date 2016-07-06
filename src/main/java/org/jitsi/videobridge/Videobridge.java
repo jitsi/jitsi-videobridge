@@ -275,16 +275,15 @@ public class Videobridge
         }
         while (conference == null);
 
-        /*
-         * The method Videobridge.getChannelCount() should better be executed
-         * outside synchronized blocks in order to reduce the risks of causing
-         * deadlocks.
-         */
+        // The method Videobridge.getChannelCount() should better be executed
+        // outside synchronized blocks in order to reduce the risks of causing
+        // deadlocks.
         if (logger.isInfoEnabled())
         {
             logger.info(
                     "Created conference " + conference.getID()
-                        + ". " + getConferenceCountString());
+                        + " (enableLogging=" + enableLogging + "). "
+                        + getConferenceCountString());
         }
 
         return conference;
