@@ -35,18 +35,12 @@ public class RewritingSendMode
     extends SendMode
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link RewritingSendMode} class to print
+     * debug information. Note that {@link Conference} instances should use
+     * {@link #logger} instead.
      */
-    private static final Logger logger
+    private static final Logger classLogger
             = Logger.getLogger(RewritingSendMode.class);
-
-    /**
-     * The value of {@link Logger#isWarnEnabled()} from the time of the
-     * initialization of the class {@code RewritingSendMode} cached for the
-     * purposes of performance.
-     */
-    private static final boolean WARN = logger.isWarnEnabled();
 
     /**
      * Holds the state of this {@code RewritingSendMode}. Grouping the state in
@@ -61,6 +55,12 @@ public class RewritingSendMode
     private final Map<Long, Integer> lastPktSequenceNumbers = new HashMap<>();
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Ctor.
      *
      * @param simulcastSender
@@ -68,6 +68,11 @@ public class RewritingSendMode
     public RewritingSendMode(SimulcastSender simulcastSender)
     {
         super(simulcastSender);
+        logger
+            = Logger.getLogger(
+                    classLogger,
+                    simulcastSender.getSimulcastSenderManager()
+                        .getSimulcastEngine().getLogger());
     }
 
     /**
@@ -95,12 +100,9 @@ public class RewritingSendMode
                 ? 1
                 : RTPUtils.sequenceNumberDiff(pktSeq, lastReceivedSeq);
 
-        if (WARN)
+        if (next != null && oldState.hasStalled())
         {
-            if (next != null && oldState.hasStalled())
-            {
-                logger.warn("Switching has stalled.");
-            }
+            logger.warn("Switching has stalled.");
         }
 
         boolean accept = false;

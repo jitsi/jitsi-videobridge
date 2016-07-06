@@ -64,10 +64,11 @@ public class RtpChannel
         = "org.jitsi.videobridge.DISABLE_ABS_SEND_TIME";
 
     /**
-     * The <tt>Logger</tt> used by the <tt>RtpChannel</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link RtpChannel} class to print debug
+     * information. Note that instances should use {@link #logger} instead.
      */
-    private static final Logger logger = Logger.getLogger(RtpChannel.class);
+    private static final Logger classLogger
+        = Logger.getLogger(RtpChannel.class);
 
     /**
      * An empty array of received synchronization source identifiers (SSRCs).
@@ -222,14 +223,10 @@ public class RtpChannel
     RtpChannelTransformEngine transformEngine = null;
 
     /**
-     * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
-     *
-     * @return The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
      */
-    public RtpChannelTransformEngine getTransformEngine()
-    {
-        return this.transformEngine;
-    }
+    private final Logger logger;
 
     /**
      * The FID (flow ID) groupings used by the remote side of this
@@ -284,6 +281,11 @@ public class RtpChannel
         throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
+
+        logger
+            = Logger.getLogger(
+                    classLogger,
+                    content.getConference().getLogger());
 
         /*
          * In the case of content mixing, each Channel has its own local
@@ -1176,7 +1178,9 @@ public class RtpChannel
 
             EventAdmin eventAdmin = conference.getEventAdmin();
             if (eventAdmin != null)
+            {
                 eventAdmin.sendEvent(EventFactory.streamStarted(this));
+            }
         }
 
         if (logger.isTraceEnabled())
@@ -2073,6 +2077,17 @@ public class RtpChannel
         }
         return engine.setPacketDelay(packetDelay);
     }
+
+    /**
+     * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     *
+     * @return The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+     */
+    public RtpChannelTransformEngine getTransformEngine()
+    {
+        return this.transformEngine;
+    }
+
 
     /**
      * An exception indicating that the maximum size of something was exceeded.

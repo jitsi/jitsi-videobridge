@@ -34,9 +34,11 @@ public class RtpChannelTransformEngine
     extends TransformEngineChain
 {
     /**
-     * The logger used by this instance
+     * The {@link Logger} used by the {@link RtpChannelTransformEngine} class
+     * to print debug information. Note that {@link Conference} instances should
+     * use {@link #logger} instead.
      */
-    private static final Logger logger
+    private static final Logger classLogger
         = Logger.getLogger(RtpChannelTransformEngine.class);
     /**
      * The payload type number for RED packets. We should set this dynamically
@@ -68,6 +70,12 @@ public class RtpChannelTransformEngine
     private SimulcastEngine simulcastEngine;
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
@@ -75,6 +83,10 @@ public class RtpChannelTransformEngine
     public RtpChannelTransformEngine(RtpChannel channel)
     {
         this.channel = channel;
+        this.logger
+            = Logger.getLogger(
+                    classLogger,
+                    channel.getContent().getConference().getLogger());
 
         engineChain = createChain();
     }

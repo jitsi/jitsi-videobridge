@@ -43,10 +43,10 @@ public class Content
     implements RTPTranslator.WriteFilter
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>Content</tt> class and its instances
-     * to print debug information.
+     * The @{link #Logger} used by the {@link Content} class. Note that class
+     * instances should use {@link #logger} instead.
      */
-    private static final Logger logger = Logger.getLogger(Content.class);
+    private static final Logger classLogger = Logger.getLogger(Content.class);
 
     /**
      * The name of the property which specifies an event that a
@@ -138,6 +138,12 @@ public class Content
     private RTPTranslator rtpTranslator;
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Initializes a new <tt>Content</tt> instance which is to be a part of a
      * specific <tt>Conference</tt> and which is to have a specific name.
      *
@@ -154,6 +160,7 @@ public class Content
 
         this.conference = conference;
         this.name = name;
+        this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
         mediaType = MediaType.parseString(this.name);
 
@@ -391,7 +398,9 @@ public class Content
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
+        {
             eventAdmin.sendEvent(EventFactory.contentExpired(this));
+        }
 
         try
         {

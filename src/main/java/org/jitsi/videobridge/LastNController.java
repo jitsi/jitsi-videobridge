@@ -33,10 +33,10 @@ import java.util.*;
 public class LastNController
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>VideoChannel</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link LastNController} class to print
+     * debug information. Note that instances should use {@link #logger} instead.
      */
-    private static final Logger logger
+    private static final Logger classLogger
          = Logger.getLogger(LastNController.class);
 
     /**
@@ -107,6 +107,12 @@ public class LastNController
     private String endpointId;
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Initializes a new {@link LastNController} instance which is to belong
      * to a particular {@link VideoChannel}.
      * @param channel the owning {@link VideoChannel}.
@@ -114,6 +120,10 @@ public class LastNController
     public LastNController(VideoChannel channel)
     {
         this.channel = channel;
+        this.logger
+            = Logger.getLogger(
+                    classLogger,
+                    channel.getContent().getConference().getLogger());
     }
 
     /**

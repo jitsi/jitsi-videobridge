@@ -142,7 +142,7 @@ public class Health
             = videobridge.createConference(
                     /* focus */ null,
                     /* name */ null,
-                    /* eventadmin */ false);
+                    /* enableLogging */ false);
 
         // Fail as quickly as possible.
         if (conference == null)

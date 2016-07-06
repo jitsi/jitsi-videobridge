@@ -21,6 +21,7 @@ import java.lang.ref.*;
 import java.lang.reflect.*;
 import java.text.*;
 import java.util.*;
+import java.util.logging.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
@@ -57,10 +58,11 @@ public class Conference
         = Conference.class.getName() + ".endpoints";
 
     /**
-     * The <tt>Logger</tt> used by the <tt>Conference</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link Conference} class to print debug
+     * information. Note that {@link Conference} instances should use {@link
+     * #logger} instead.
      */
-    private static final Logger logger = Logger.getLogger(Conference.class);
+    private static final Logger classLogger = Logger.getLogger(Conference.class);
 
     /**
      * The <tt>Content</tt>s of this <tt>Conference</tt>.
@@ -192,6 +194,12 @@ public class Conference
                 };
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger = Logger.getLogger(classLogger, null);
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -204,15 +212,14 @@ public class Conference
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of this instance if any.
-     * @param eventAdmin the {@code EventAdmin} instance to be used by the new
-     * instance and all instances (of {@code Content}, {@code Channel}, etc.)
-     * created by it.
+     * @param enableLogging whether logging should be enabled for this
+     * {@link Conference} and its sub-components.
      */
     public Conference(Videobridge videobridge,
                       String id,
                       String focus,
                       String name,
-                      EventAdmin eventAdmin)
+                      boolean enableLogging)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -222,8 +229,13 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
-        this.eventAdmin = eventAdmin;
+        this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
         this.name = name;
+
+        if (!enableLogging)
+        {
+            logger.setLevel(Level.OFF);
+        }
 
         lastKnownFocus = focus;
 
@@ -1696,5 +1708,13 @@ public class Conference
     public EventAdmin getEventAdmin()
     {
         return eventAdmin;
+    }
+
+    /**
+     * @return the {@link Logger} used by this instance.
+     */
+    public Logger getLogger()
+    {
+        return logger;
     }
 }
