@@ -45,10 +45,10 @@ public class Endpoint
         = Endpoint.class.getName() + ".channels";
 
     /**
-     * The <tt>Logger</tt> used by the <tt>Endpoint</tt> class and its instances
-     * to print debug information.
+     * The {@link Logger} used by the {@link Endpoint} class to print debug
+     * information.
      */
-    private static final Logger logger = Logger.getLogger(Endpoint.class);
+    private static final Logger classLogger = Logger.getLogger(Endpoint.class);
 
     /**
      * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
@@ -166,6 +166,12 @@ public class Endpoint
             = new HashSet<>();
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
@@ -180,6 +186,7 @@ public class Endpoint
 
         this.weakConference = new WeakReference<>(conference);
         this.id = id;
+        this.logger = Logger.getLogger(classLogger, conference.getLogger());
     }
 
     /**

@@ -52,10 +52,11 @@ public abstract class Channel
     public static final String INITIATOR_PROPERTY = "initiator";
 
     /**
-     * The <tt>Logger</tt> used by the <tt>Channel</tt> class and its instances
-     * to print debug information.
+     * The {@link Logger} used by the {@link Channel} class to print debug
+     * information. Note that {@link Channel} instances should use {@link
+     * #logger} instead.
      */
-    private static final Logger logger = Logger.getLogger(Channel.class);
+    private static final Logger classLogger = Logger.getLogger(Channel.class);
 
     /**
      * The ID of the channel-bundle that this <tt>Channel</tt> is part of, or
@@ -139,6 +140,12 @@ public abstract class Channel
     private final Object transportManagerSyncRoot = new Object();
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -175,6 +182,10 @@ public abstract class Channel
         this.channelBundleId = channelBundleId;
         if (initiator != null)
             this.initiator = initiator;
+
+        this.logger
+            = Logger.getLogger(classLogger,
+                               content.getConference().getLogger());
 
         // Get default transport namespace
         if (StringUtils.isNullOrEmpty(transportNamespace))
@@ -525,7 +536,7 @@ public abstract class Channel
      * if "bundle" is being used.
      * @throws IOException in case of transport manager initialization error
      */
-    public void initialize()
+    void initialize()
             throws IOException
     {
         synchronized (transportManagerSyncRoot)
@@ -544,7 +555,6 @@ public abstract class Channel
                 transportManager
                     = getContent().getConference()
                         .getTransportManager(channelBundleId, true);
-
             }
 
             if (transportManager == null)
@@ -584,14 +594,12 @@ public abstract class Channel
     }
 
     /**
-     * TODO: update this javadoc
-     * Starts {@link #stream} if it has not been started yet and if the state of
-     * this <tt>Channel</tt> meets the prerequisites to invoke
+     * Starts this channel's stream if it has not been started yet and if the
+     * state of this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
      * started only after a <tt>StreamConnector</tt> has been set on it and this
      * <tt>Channel</tt> may be able to provide a <tt>StreamConnector</tt> only
-     * after {@link #wrapupConnectivityEstablishment(TransportManager)} has
-     * completed on {@link #transportManager}.
+     * after {@link #transportManager} has connected.
      *
      * @throws IOException if anything goes wrong while starting <tt>stream</tt>
      */

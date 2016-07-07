@@ -34,6 +34,7 @@ import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger; // Disambiguation.
 
 /**
  * Class is a transport layer for WebRTC data channels. It consists of SCTP
@@ -74,9 +75,12 @@ public class SctpConnection
     private static final boolean LOG_SCTP_PACKETS = false;
 
     /**
-     * The logger
+     * The {@link Logger} used by the {@link SctpConnection} class to
+     * print debug information. Note that instances should use {@link #logger}
+     * instead.
      */
-    private static final Logger logger = Logger.getLogger(SctpConnection.class);
+    private static final Logger classLogger
+        = Logger.getLogger(SctpConnection.class);
 
     /**
      * Message type used to acknowledge WebRTC data channel allocation on SCTP
@@ -214,6 +218,12 @@ public class SctpConnection
     private final Handler handler = new Handler();
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Initializes a new <tt>SctpConnection</tt> instance.
      *
      * @param id the string identifier of this connection instance
@@ -242,6 +252,8 @@ public class SctpConnection
                 IceUdpTransportPacketExtension.NAMESPACE,
                 initiator);
 
+        logger
+            = Logger.getLogger(classLogger, content.getConference().getLogger());
         setEndpoint(endpoint.getID());
         packetQueue
             = new RawPacketQueue(

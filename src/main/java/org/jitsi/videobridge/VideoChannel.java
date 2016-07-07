@@ -37,6 +37,7 @@ import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger; // Disambiguation.
 import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.transform.*;
@@ -87,45 +88,11 @@ public class VideoChannel
         = "org.jitsi.videobridge.DISABLE_LASTN_UNUSED_STREAM_DETECTION";
 
     /**
-     * The <tt>Logger</tt> used by the <tt>VideoChannel</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link VideoChannel} class to print debug
+     * information. Note that instances should use {@link #logger} instead.
      */
-    private static final Logger logger = Logger.getLogger(VideoChannel.class);
-
-    /**
-     * The payload type number configured for VP8 for this channel,
-     * or -1 if none is configured (the other end does not support VP8).
-     */
-    private byte vp8PayloadType = -1;
-
-
-    /**
-     * XXX Defaulting to the lowest-quality simulcast stream until we are
-     * explicitly told to switch to a higher-quality simulcast stream is one way
-     * to go, of course. But such a default presents the problem that a remote
-     * peer will see the lowest quality possible for a noticeably long period of
-     * time because its command to switch to the highest quality possible can
-     * only come via its data/SCTP channel and that may take a very (and
-     * unpredictably) long time to set up. That is why we may default to the
-     * highest-quality simulcast stream here.
-     *
-     * This value can be set through colibri channel IQ with
-     * receive-simulcast-layer attribute.
-     */
-    private int receiveSimulcastLayer
-            = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
-
-    /**
-     * A map of source ssrc to last accepted sequence number
-     */
-    private final Map<Long, Integer> ssrcToHighestSentSeqNumber
-        = new HashMap<>();
-
-    /**
-    * A map of source ssrc to the delta since the last accepted sequence number
-    */
-    private final Map<Long, Integer> ssrcToDeltaSinceLastAcceptedSeqNumber
-        = new HashMap<>();
+    private static final Logger classLogger
+        = Logger.getLogger(VideoChannel.class);
 
     /**
      * Updates the values of the property <tt>inLastN</tt> of all
@@ -154,11 +121,45 @@ public class VideoChannel
                     else if (t instanceof ThreadDeath)
                         throw (ThreadDeath) t;
                     else
-                        logger.error(t);
+                        classLogger.error(t);
                 }
             }
         }
     }
+
+    /**
+     * The payload type number configured for VP8 for this channel,
+     * or -1 if none is configured (the other end does not support VP8).
+     */
+    private byte vp8PayloadType = -1;
+
+    /**
+     * XXX Defaulting to the lowest-quality simulcast stream until we are
+     * explicitly told to switch to a higher-quality simulcast stream is one way
+     * to go, of course. But such a default presents the problem that a remote
+     * peer will see the lowest quality possible for a noticeably long period of
+     * time because its command to switch to the highest quality possible can
+     * only come via its data/SCTP channel and that may take a very (and
+     * unpredictably) long time to set up. That is why we may default to the
+     * highest-quality simulcast stream here.
+     *
+     * This value can be set through colibri channel IQ with
+     * receive-simulcast-layer attribute.
+     */
+    private int receiveSimulcastLayer
+            = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
+
+    /**
+     * A map of source ssrc to last accepted sequence number
+     */
+    private final Map<Long, Integer> ssrcToHighestSentSeqNumber
+        = new HashMap<>();
+
+    /**
+    * A map of source ssrc to the delta since the last accepted sequence number
+    */
+    private final Map<Long, Integer> ssrcToDeltaSinceLastAcceptedSeqNumber
+        = new HashMap<>();
 
     /**
      * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>.
@@ -192,6 +193,12 @@ public class VideoChannel
     private final boolean requestRetransmissions;
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Initializes a new <tt>VideoChannel</tt> instance which is to have a
      * specific ID. The initialization is to be considered requested by a
      * specific <tt>Content</tt>.
@@ -219,6 +226,11 @@ public class VideoChannel
         throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
+
+        logger
+            = Logger.getLogger(
+                    classLogger,
+                    content.getConference().getLogger());
 
         initializeTransformerEngine();
 

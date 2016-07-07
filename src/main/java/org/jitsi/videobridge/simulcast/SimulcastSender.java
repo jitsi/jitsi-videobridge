@@ -39,10 +39,11 @@ public class SimulcastSender
     implements PropertyChangeListener
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link SimulcastSender} class to print
+     * debug information. Note that instances should use {@link #logger}
+     * instead.
      */
-    private static final Logger logger
+    private static final Logger classLogger
         = Logger.getLogger(SimulcastSender.class);
 
     /**
@@ -77,14 +78,6 @@ public class SimulcastSender
     private SendMode sendMode;
 
     /**
-     * @return the target order of this {@link SimulcastSender}.
-     */
-    public int getTargetOrder()
-    {
-        return targetOrder;
-    }
-
-    /**
      * The simulcast target order for this <tt>SimulcastSender</tt>.
      */
     private int targetOrder;
@@ -94,6 +87,12 @@ public class SimulcastSender
      * not.
      */
     private boolean initialized = false;
+
+    /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
 
     /**
      * Ctor.
@@ -113,6 +112,18 @@ public class SimulcastSender
         // garbage collected.
         this.weakSimulcastReceiver = new WeakReference<>(simulcastReceiver);
         this.targetOrder = targetOrder;
+        this.logger
+            = Logger.getLogger(
+                    classLogger,
+                    simulcastSenderManager.getSimulcastEngine().getLogger());
+    }
+
+    /**
+     * @return the target order of this {@link SimulcastSender}.
+     */
+    public int getTargetOrder()
+    {
+        return targetOrder;
     }
 
     /**

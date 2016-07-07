@@ -227,7 +227,7 @@ public class Videobridge
      */
     public Conference createConference(String focus, String name)
     {
-        return this.createConference(focus, name, /* eventadmin */ true);
+        return this.createConference(focus, name, /* enableLogging */ true);
     }
 
     /**
@@ -244,14 +244,13 @@ public class Videobridge
      * further/future requests to manage the new instance must come or they will
      * be ignored. Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of the conference to create.
-     * @param eventadmin {@code true} to enable support for the
-     * {@code eventadmin} package i.e. fire {@code Event}s through
-     * {@code EventAdmin}; otherwise, {@code false}
+     * @param enableLogging whether logging should be enabled or disabled for
+     * the {@link Conference}.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     public Conference createConference(
-        String focus, String name, boolean eventadmin)
+        String focus, String name, boolean enableLogging)
     {
         Conference conference = null;
 
@@ -269,23 +268,22 @@ public class Videobridge
                                 id,
                                 focus,
                                 name,
-                                eventadmin ? getEventAdmin() : null);
+                                enableLogging);
                     conferences.put(id, conference);
                 }
             }
         }
         while (conference == null);
 
-        /*
-         * The method Videobridge.getChannelCount() should better be executed
-         * outside synchronized blocks in order to reduce the risks of causing
-         * deadlocks.
-         */
+        // The method Videobridge.getChannelCount() should better be executed
+        // outside synchronized blocks in order to reduce the risks of causing
+        // deadlocks.
         if (logger.isInfoEnabled())
         {
             logger.info(
                     "Created conference " + conference.getID()
-                        + ". " + getConferenceCountString());
+                        + " (enableLogging=" + enableLogging + "). "
+                        + getConferenceCountString());
         }
 
         return conference;
@@ -562,7 +560,7 @@ public class Videobridge
      * @return the <tt>EventAdmin</tt> instance (to be) used by this
      * <tt>Videobridge</tt>.
      */
-    private EventAdmin getEventAdmin()
+    public EventAdmin getEventAdmin()
     {
         BundleContext bundleContext = getBundleContext();
 

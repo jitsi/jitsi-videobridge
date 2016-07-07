@@ -37,10 +37,11 @@ import java.util.*;
 public class SimulcastReceiver
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>ReceivingStreams</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link SimulcastReceiver} class to print
+     * debug information. Note that instances should use {@link #logger}
+     * instead.
      */
-    private static final Logger logger
+    private static final Logger classLogger
             = Logger.getLogger(SimulcastReceiver.class);
 
     /**
@@ -72,7 +73,7 @@ public class SimulcastReceiver
     private static void initializeConfiguration(ConfigurationService cfg) {
         if (cfg == null)
         {
-            logger.warn("Can't set TIMEOUT_ON_FRAME_COUNT because "
+            classLogger.warn("Can't set TIMEOUT_ON_FRAME_COUNT because "
                             + "the configuration service was not found. "
                             + "Using " + DEFAULT_TIMEOUT_ON_FRAME_COUNT
                             + " as default");
@@ -128,6 +129,12 @@ public class SimulcastReceiver
         = new LinkedList<>();
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Ctor.
      *
      * @param simulcastEngine the <tt>SimulcastEngine</tt> that owns this
@@ -143,6 +150,8 @@ public class SimulcastReceiver
         }
 
         this.simulcastEngine = simulcastEngine;
+        this.logger
+            = Logger.getLogger(classLogger, simulcastEngine.getLogger());
     }
 
     /**

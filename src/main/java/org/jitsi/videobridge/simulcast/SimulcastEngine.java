@@ -43,10 +43,11 @@ public class SimulcastEngine
     implements TransformEngine
 {
     /**
-     * The <tt>Logger</tt> used by the <tt>SimulcastEngine</tt> class and its
-     * instances to print debug information.
+     * The {@link Logger} used by the {@link SimulcastEngine} class to print
+     * debug information. Note that {@link Conference} instances should use
+     * {@link #logger} instead.
      */
-    private static final Logger logger
+    private static final Logger classLogger
         = Logger.getLogger(SimulcastEngine.class);
 
     /**
@@ -104,6 +105,12 @@ public class SimulcastEngine
     private final PacketTransformer rtcpTransformer = new MyRTCPTransformer();
 
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger;
+
+    /**
      * Ctor.
      *
      * @param videoChannel The <tt>VideoChannel</tt> associated to this
@@ -117,6 +124,10 @@ public class SimulcastEngine
                         videoChannel.getBundleContext(),
                         ConfigurationService.class)
         );
+        this.logger
+            = Logger.getLogger(
+                    classLogger,
+                    videoChannel.getContent().getConference().getLogger());
     }
 
     /**
@@ -320,5 +331,13 @@ public class SimulcastEngine
                 return p;
             }
         }
+    }
+
+    /**
+     * @return the {@link Logger} used by this instance.
+     */
+    public Logger getLogger()
+    {
+        return logger;
     }
 }

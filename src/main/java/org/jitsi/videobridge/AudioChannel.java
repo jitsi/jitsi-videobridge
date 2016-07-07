@@ -47,7 +47,7 @@ public class AudioChannel
      * {@link AudioMediaStream#setStreamAudioLevelListener(
      * SimpleAudioLevelListener)} in order to have the audio levels of the
      * contributing sources calculated and to end enable the functionality of
-     * {@link #lastN}.
+     * {@code #lastN}.
      */
     private SimpleAudioLevelListener streamAudioLevelListener;
 
@@ -113,7 +113,7 @@ public class AudioChannel
      * {@link AudioMediaStream#setStreamAudioLevelListener(
      * SimpleAudioLevelListener)} in order to have the audio levels of the
      * contributing sources calculated and to enable the functionality of
-     * {@link #lastN}.
+     * {@code #lastN}.
      *
      * @return the <tt>SimpleAudioLevelListener</tt> instance
      */
