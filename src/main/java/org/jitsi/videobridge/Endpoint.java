@@ -505,12 +505,13 @@ public class Endpoint
      * channel (e.g. file transfer), such that it may interfere with other 
      * jitsi-messages.
      */
+    @SuppressWarnings("unchecked")
     private void onClientEndpointMessage(
             WebRtcDataStream src,
             JSONObject jsonObject)
     {
         String to = (String)jsonObject.get("to");
-        String msgPayload = jsonObject.get("msgPayload").toString();
+        jsonObject.put("from", getID());
         Conference conf = getConference();
         if ("".equals(to))
         {
@@ -523,7 +524,7 @@ public class Endpoint
                     endpointSubset.add(endpoint);
                 }
             }
-            conf.sendMessageOnDataChannels(msgPayload, endpointSubset);
+            conf.sendMessageOnDataChannels(jsonObject.toString(), endpointSubset);
         }
         else
         {
@@ -533,7 +534,7 @@ public class Endpoint
             {
                 List<Endpoint> endpointSubset = new ArrayList<>();
                 endpointSubset.add(conf.getEndpoint(to));
-                conf.sendMessageOnDataChannels(msgPayload, endpointSubset);
+                conf.sendMessageOnDataChannels(jsonObject.toString(), endpointSubset);
             }
             else
             {
