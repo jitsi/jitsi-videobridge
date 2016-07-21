@@ -317,7 +317,7 @@ public class Conference
      *
      * @param msg the message to be advertised across conference peers.
      */
-    private void broadcastMessageOnDataChannels(String msg)
+    public void broadcastMessageOnDataChannels(String msg)
     {
         sendMessageOnDataChannels(msg, getEndpoints());
     }
