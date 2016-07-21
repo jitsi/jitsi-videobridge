@@ -362,7 +362,7 @@ public class RtpChannel
         if (accept)
         {
             // Note that this Channel is still active.
-            touch();
+            touch(true /* this touch comes from transport related event */);
 
             /*
              * Does the data of the specified DatagramPacket resemble (a header
@@ -461,7 +461,7 @@ public class RtpChannel
         if (accept)
         {
             // Note that this Channel is still active.
-            touch();
+            touch(true /* this touch comes from transport related event */);
 
             /*
              * Does the data of the specified DatagramPacket resemble (a header
@@ -1192,7 +1192,8 @@ public class RtpChannel
                         + stream.getDirection() + ".");
         }
 
-        touch(); // It seems this Channel is still active.
+        // It seems this Channel is still active.
+        touch(true /* triggered by transport related event */);
     }
 
     /**

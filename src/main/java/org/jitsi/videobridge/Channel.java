@@ -117,6 +117,16 @@ public abstract class Channel
         = new MonotonicAtomicLong();
 
     /**
+     * The time in milliseconds of the last transport related activity to this
+     * <tt>Channel</tt>. Currently this means when for the last time there were
+     * any RTP packets seen for this channel or ICE "consent freshness check"
+     * has succeeded. In the time interval between the last activity and now,
+     * this <tt>Channel</tt>'s transport is considered inactive.
+     */
+    private final MonotonicAtomicLong lastTransportActivityTime
+        = new MonotonicAtomicLong();
+
+    /**
      * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
      */
     private StreamConnector streamConnector;
@@ -509,6 +519,20 @@ public abstract class Channel
     }
 
     /**
+     * Gets the time in milliseconds of the last transport related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @return the time in milliseconds of the last transport related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @see #lastTransportActivityTime
+     */
+    public long getLastTransportActivityTime()
+    {
+        return lastTransportActivityTime.get();
+    }
+
+    /**
      * Gets the <tt>StreamConnector</tt> currently used by this instance.
      * @return the <tt>StreamConnector</tt> currently used by this instance.
      */
@@ -747,10 +771,36 @@ public abstract class Channel
     /**
      * Sets the time in milliseconds of the last activity related to this
      * <tt>Channel</tt> to the current system time.
+     *
+     * @param transport if <tt>true</tt> will also refresh "last transport
+     *        activity" timestamp. It is supposed to be refreshed whenever
+     *        some packets are received on this channel.
+     */
+    public void touch(boolean transport)
+    {
+        lastActivityTime.increase(System.currentTimeMillis());
+
+        if (transport)
+            touchTransport();
+    }
+
+    /**
+     * Sets the time in milliseconds of the last activity related to this
+     * <tt>Channel</tt> to the current system time.
      */
     public void touch()
     {
-        lastActivityTime.increase(System.currentTimeMillis());
+        touch(false);
+    }
+
+    /**
+     * Refreshes {@link #lastTransportActivityTime}.
+     *
+     * @see #lastTransportActivityTime
+     */
+    private void touchTransport()
+    {
+        lastTransportActivityTime.increase(System.currentTimeMillis());
     }
 
     /**

@@ -1701,7 +1701,7 @@ public class IceUdpTransportManager
             // TODO we might not necessarily want to keep all channels alive by
             // the ICE connection.
             for (Channel channel : getChannels())
-                channel.touch();
+                channel.touch(true /* transport related event */);
         }
     }
 
