@@ -218,6 +218,20 @@ public class JvbBundleConfig
                 true_);
         defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
 
+        // Sends "consent freshness" check every 3 seconds
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_INTERVAL, "3000");
+        // Retry every 500ms by setting original and max wait intervals
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_ORIGINAL_WAIT_INTERVAL,
+                "500");
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_MAX_WAIT_INTERVAL, "500");
+        // Retry max 5 times which will take up to 2500ms, that is before
+        // the next "consent freshness" transaction starts
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_MAX_RETRANSMISSIONS, "5");
+
         // In the majority of use-cases the clients which connect to Jitsi
         // Videobridge are not in the same network, so we don't need to
         // advertise link-local addresses.
