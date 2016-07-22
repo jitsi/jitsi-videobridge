@@ -100,7 +100,8 @@ public class JvbBundleConfig
             // before the HTTP/JSON API because the HTTP/JSON API (1) exposes
             // the vital, non-optional, non-additional pieces of functionality
             // of the Videobridge and (2) it pulls, does not push.
-            "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
+            "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
+            "org/jitsi/videobridge/EndpointConnectionStatus"
         }
     };
 
