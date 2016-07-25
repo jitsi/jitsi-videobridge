@@ -524,7 +524,8 @@ public class Endpoint
                     endpointSubset.add(endpoint);
                 }
             }
-            conf.sendMessageOnDataChannels(jsonObject.toString(), endpointSubset);
+            conf.sendMessageOnDataChannels(jsonObject.toString(), 
+                endpointSubset);
         }
         else
         {
@@ -534,7 +535,8 @@ public class Endpoint
             {
                 List<Endpoint> endpointSubset = new ArrayList<>();
                 endpointSubset.add(conf.getEndpoint(to));
-                conf.sendMessageOnDataChannels(jsonObject.toString(), endpointSubset);
+                conf.sendMessageOnDataChannels(jsonObject.toString(), 
+                    endpointSubset);
             }
             else
             {
