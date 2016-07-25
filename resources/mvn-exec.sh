@@ -1,12 +1,12 @@
 #!/bin/sh -e
 
-function error_exit
+error_exit ()
 {
   echo "$1" >&2
   exit 1
 }
 
-function usage
+usage ()
 {
   error_exit "Usage: $0 [-p XMPP_PORT] [-r] -f MVN_POM_FILE -d XMPP_DOMAIN -s XMPP_SECRET"
 }
