@@ -17,6 +17,9 @@ package org.jitsi.videobridge;
 
 import net.java.sip.communicator.util.Logger;
 
+import org.jitsi.eventadmin.*;
+import org.jitsi.osgi.*;
+
 import org.json.simple.*;
 
 import org.osgi.framework.*;
@@ -46,7 +49,7 @@ import java.util.*;
  * @author Pawel Domas
  */
 public class EndpointConnectionStatus
-    implements BundleActivator
+    extends EventHandlerActivator
 {
     /**
      * The logger instance used by this class.
@@ -89,6 +92,14 @@ public class EndpointConnectionStatus
     private Timer timer;
 
     /**
+     * Creates new instance of <tt>EndpointConnectionStatus</tt>
+     */
+    public EndpointConnectionStatus()
+    {
+        super(new String[] { EventFactory.SCTP_CONN_READY_TOPIC });
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -113,6 +124,8 @@ public class EndpointConnectionStatus
         {
             logger.error("Endpoint connection monitoring is already running");
         }
+
+        super.start(bundleContext);
     }
 
     /**
@@ -122,6 +135,8 @@ public class EndpointConnectionStatus
     public void stop(BundleContext bundleContext)
         throws Exception
     {
+        super.stop(bundleContext);
+
         if (timer != null)
         {
             timer.cancel();
@@ -203,7 +218,7 @@ public class EndpointConnectionStatus
 
             inactiveEndpoints.add(endpoint);
             // Broadcast connection "inactive" message over data channels
-            sendEndpointConnectionStatus(endpoint, false);
+            sendEndpointConnectionStatus(endpoint, false, null);
         }
         else if (!inactive && inactiveEndpoints.contains(endpoint))
         {
@@ -211,7 +226,7 @@ public class EndpointConnectionStatus
 
             inactiveEndpoints.remove(endpoint);
             // Broadcast connection "active" message over data channels
-            sendEndpointConnectionStatus(endpoint, true);
+            sendEndpointConnectionStatus(endpoint, true, null);
         }
 
         if (inactive && logger.isDebugEnabled())
@@ -222,17 +237,30 @@ public class EndpointConnectionStatus
         }
     }
 
-    private void sendEndpointConnectionStatus(Endpoint    endpoint,
-                                              boolean     isConnected)
+    private void sendEndpointConnectionStatus(Endpoint    subjectEndpoint,
+                                              boolean     isConnected,
+                                              Endpoint    msgReceiver)
     {
-        Conference conference = endpoint.getConference();
+        Conference conference = subjectEndpoint.getConference();
         if (conference != null)
         {
-            // We broadcast the message also to the endpoint itself for
-            // debugging purposes
-            conference.broadcastMessageOnDataChannels(
-                    createEndpointConnectivityStatusChangeEvent(
-                            endpoint, isConnected));
+            String msg
+                = createEndpointConnectivityStatusChangeEvent(
+                        subjectEndpoint, isConnected);
+            if (msgReceiver == null)
+            {
+                // We broadcast the message also to the endpoint itself for
+                // debugging purposes
+                conference.broadcastMessageOnDataChannels(msg);
+            }
+            else
+            {
+                // Send only to the receiver endpoint
+                ArrayList<Endpoint> receivers = new ArrayList<>(1);
+                receivers.add(msgReceiver);
+
+                conference.sendMessageOnDataChannels(msg, receivers);
+            }
         }
         else
         {
@@ -264,6 +292,46 @@ public class EndpointConnectionStatus
                         + endpoint.getID());
 
                 endpoints.remove();
+            }
+        }
+    }
+
+    @Override
+    public void handleEvent(Event event)
+    {
+        // Verify the topic just in case
+        // FIXME eventually add this verification to the base class
+        String topic = event.getTopic();
+        if (!EventFactory.SCTP_CONN_READY_TOPIC.equals(topic))
+        {
+            logger.warn("Received event for unexpected topic: " + topic);
+            return;
+        }
+
+        Endpoint endpoint
+            = (Endpoint) event.getProperty(EventFactory.EVENT_SOURCE);
+        if (endpoint == null)
+        {
+            logger.error("Endpoint is null");
+            return;
+        }
+
+        Conference conference = endpoint.getConference();
+        if (conference == null || conference.isExpired())
+        {
+            // Received event for endpoint which is now expired - ignore
+            return;
+        }
+
+        // Go over all endpoints in the conference and send notification about
+        // those currently "inactive"
+        List<Endpoint> endpoints = conference.getEndpoints();
+        for (Endpoint potentialSubject : endpoints)
+        {
+            if (inactiveEndpoints.contains(potentialSubject))
+            {
+                sendEndpointConnectionStatus(
+                        potentialSubject, false, endpoint);
             }
         }
     }
