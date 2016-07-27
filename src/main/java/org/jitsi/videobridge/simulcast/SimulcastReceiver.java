@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.simulcast;
 
+import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
@@ -399,6 +400,12 @@ public class SimulcastReceiver
         // timestamps of the RTP packets.
         long pktTimestamp = pkt.getTimestamp();
         boolean frameStarted = false;
+        Boolean isKeyFrame = null;
+
+        if (logger.isInfoEnabled() && (isKeyFrame = isKeyFrame(pkt)))
+        {
+            logger.info("Received a keyframe on SSRC=" + acceptedSSRC);
+        }
 
         if (acceptedStream.lastPktTimestamp == -1 || TimeUtils
             .rtpDiff(acceptedStream.lastPktTimestamp, pktTimestamp) <= 0)
@@ -457,10 +464,10 @@ public class SimulcastReceiver
                                                 - pkt.getHeaderLength()
                                                 - pkt.getPaddingSize())
                                         + " bytes, "
-                                        + (acceptedStream.isKeyFrame(pkt)
-                                            ? "key"
-                                            : "delta")
-                                        + " frame.");
+                                        + "isKeyFrame="
+                                        + (isKeyFrame == null ? "null"
+                                            : isKeyFrame)
+                                        + ".");
                         }
                     }
                 }
@@ -522,9 +529,8 @@ public class SimulcastReceiver
                     "order-" + acceptedStream.getOrder() + " stream (" +
                         acceptedStream.getPrimarySSRC()
                         + ") resumed on seqnum " + pkt.getSequenceNumber()
-                        + ", "
-                        + (acceptedStream.isKeyFrame(pkt) ? "key" : "delta")
-                        + " frame.");
+                        + ", " + "isKeyFrame="
+                        + (isKeyFrame == null ? "null" : isKeyFrame) + ".");
             }
 
             changedStreams.add(acceptedStream);
@@ -822,5 +828,17 @@ public class SimulcastReceiver
                 }
             }
         }
+    }
+
+    /**
+     * Checks whether {@code pkt} is the first RTP packet of a VP8 keyframe.
+     * @param pkt the packet to check.
+     * @return true if {@code pkt} is the first RTP packet of a VP8 keyframe.
+     */
+    boolean isKeyFrame(RawPacket pkt)
+    {
+        byte redPT = getSimulcastEngine().getVideoChannel().getRedPayloadType();
+        byte vp8PT = getSimulcastEngine().getVideoChannel().getVP8PayloadType();
+        return Utils.isKeyFrame(pkt, redPT, vp8PT);
     }
 }

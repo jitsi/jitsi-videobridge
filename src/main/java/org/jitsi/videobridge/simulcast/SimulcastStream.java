@@ -210,13 +210,14 @@ public class SimulcastStream
         return isStreaming || order == 0;
     }
 
+    /**
+     * Checks whether {@code pkt} is the first RTP packet of a VP8 keyframe.
+     * @param pkt the packet to check.
+     * @return true if {@code pkt} is the first RTP packet of a VP8 keyframe.
+     */
     public boolean isKeyFrame(RawPacket pkt)
     {
-        byte redPT = simulcastReceiver.getSimulcastEngine()
-            .getVideoChannel().getRedPayloadType();
-        byte vp8PT = simulcastReceiver.getSimulcastEngine()
-            .getVideoChannel().getVP8PayloadType();
-        return Utils.isKeyFrame(pkt, redPT, vp8PT);
+        return simulcastReceiver.isKeyFrame(pkt);
     }
 
     /**
