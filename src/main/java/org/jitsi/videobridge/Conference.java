@@ -493,12 +493,15 @@ public class Conference
     {
         Endpoint dominantSpeaker = speechActivity.getDominantEndpoint();
 
-        logger.info("The dominant speaker in conference " + getID()
-                        + " is now the endpoint "
-                        + ((dominantSpeaker == null)
-                            ? "(null)"
-                            : dominantSpeaker.getID())
-                        + ".");
+        if (logger.isInfoEnabled())
+        {
+            logger.info("The dominant speaker in conference " + getID()
+                            + " is now the endpoint "
+                            + ((dominantSpeaker == null)
+                ? "(null)"
+                : dominantSpeaker.getID())
+                            + ".");
+        }
 
         if (dominantSpeaker != null)
         {

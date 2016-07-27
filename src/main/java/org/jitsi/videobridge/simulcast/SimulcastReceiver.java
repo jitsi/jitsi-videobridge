@@ -402,7 +402,7 @@ public class SimulcastReceiver
         boolean frameStarted = false;
         boolean isKeyFrame = isKeyFrame(pkt);
 
-        if (isKeyFrame)
+        if (isKeyFrame && logger.isInfoEnabled())
         {
             logger.info("Received a keyframe on SSRC=" + acceptedSSRC);
         }
