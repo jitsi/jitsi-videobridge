@@ -464,7 +464,10 @@ public class SimulcastReceiver
                                                 - pkt.getHeaderLength()
                                                 - pkt.getPaddingSize())
                                         + " bytes, "
-                                        + "isKeyFrame=" + isKeyFrame + ".");
+                                        + "isKeyFrame="
+                                        + (isKeyFrame == null ? "null"
+                                            : isKeyFrame)
+                                        + ".");
                         }
                     }
                 }
@@ -526,8 +529,8 @@ public class SimulcastReceiver
                     "order-" + acceptedStream.getOrder() + " stream (" +
                         acceptedStream.getPrimarySSRC()
                         + ") resumed on seqnum " + pkt.getSequenceNumber()
-                        + ", "
-                        + "isKeyFrame=" + isKeyFrame + ".");
+                        + ", " + "isKeyFrame="
+                        + (isKeyFrame == null ? "null" : isKeyFrame) + ".");
             }
 
             changedStreams.add(acceptedStream);
