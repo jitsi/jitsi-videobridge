@@ -115,6 +115,11 @@ public class Endpoint
     private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
 
     /**
+     * The object that implements a hack for LS for this {@link Endpoint}.
+     */
+    private final LipSyncHack lipSyncHack = new LipSyncHack(this);
+
+    /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
      */
     private String displayName;
@@ -352,6 +357,16 @@ public class Endpoint
         return sctpConnection.get();
     }
 
+    /**
+     * Gets the object that implements a hack for LS for this {@link Endpoint}.
+     *
+     * @return the object that implements a hack for LS for this
+     * {@link Endpoint}.
+     */
+    public LipSyncHack getLipSyncHack()
+    {
+        return lipSyncHack;
+    }
 
     /**
      Helper method that unwraps the <tt>Endpoint</tt> from the weak reference

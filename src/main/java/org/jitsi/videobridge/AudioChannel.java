@@ -305,4 +305,19 @@ public class AudioChannel
             }
         }
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean rtpTranslatorWillWrite(
+        boolean data,
+        byte[] buffer, int offset, int length,
+        Channel source)
+    {
+        getEndpoint().getLipSyncHack().onRTPTranslatorWillWriteAudio(
+            data, buffer, offset, length, source);
+
+        return true;
+    }
 }
