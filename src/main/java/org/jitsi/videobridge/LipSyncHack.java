@@ -66,7 +66,7 @@ public class LipSyncHack
     /**
      * Wait for media for WAIT_MS before sending frames.
      */
-    private final long WAIT_MS = 1000;
+    private static final long WAIT_MS = 1000;
 
     /**
      * The <tt>Logger</tt> used by the <tt>LipSyncHack</tt> class and
