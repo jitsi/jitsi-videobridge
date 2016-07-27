@@ -400,9 +400,9 @@ public class SimulcastReceiver
         // timestamps of the RTP packets.
         long pktTimestamp = pkt.getTimestamp();
         boolean frameStarted = false;
-        boolean isKeyFrame = isKeyFrame(pkt);
+        Boolean isKeyFrame = null;
 
-        if (isKeyFrame && logger.isInfoEnabled())
+        if (logger.isInfoEnabled() && (isKeyFrame = isKeyFrame(pkt)))
         {
             logger.info("Received a keyframe on SSRC=" + acceptedSSRC);
         }
@@ -464,8 +464,7 @@ public class SimulcastReceiver
                                                 - pkt.getHeaderLength()
                                                 - pkt.getPaddingSize())
                                         + " bytes, "
-                                        + (isKeyFrame ? "key" : "delta")
-                                        + " frame.");
+                                        + "isKeyFrame=" + isKeyFrame + ".");
                         }
                     }
                 }
@@ -528,8 +527,7 @@ public class SimulcastReceiver
                         acceptedStream.getPrimarySSRC()
                         + ") resumed on seqnum " + pkt.getSequenceNumber()
                         + ", "
-                        + (isKeyFrame ? "key" : "delta")
-                        + " frame.");
+                        + "isKeyFrame=" + isKeyFrame + ".");
             }
 
             changedStreams.add(acceptedStream);
