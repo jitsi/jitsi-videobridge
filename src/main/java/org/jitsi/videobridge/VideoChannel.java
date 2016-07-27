@@ -536,8 +536,13 @@ public class VideoChannel
         // XXX(gp) we could potentially move this into a TransformEngine.
         boolean accept = lastNController.isForwarded(source);
 
-        getEndpoint().getLipSyncHack().onRTPTranslatorWillWriteVideo(
-            accept, data, buffer, offset, length, this);
+        LipSyncHack h = getEndpoint().getLipSyncHack();
+
+        if (h != null)
+        {
+            getEndpoint().getLipSyncHack().onRTPTranslatorWillWriteVideo(
+                accept, data, buffer, offset, length, this);
+        }
 
         return accept;
     }

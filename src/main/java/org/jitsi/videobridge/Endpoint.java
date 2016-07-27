@@ -19,6 +19,8 @@ import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
@@ -110,6 +112,12 @@ public class Endpoint
         = "EndpointMessage";
 
     /**
+     * Configuration property for number of streams to cache
+     */
+    public final static String ENABLE_LIPSYNC_HACK_PNAME
+        = Endpoint.class.getName() + ".ENABLE_LIPSYNC_HACK";
+
+    /**
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
     private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
@@ -117,7 +125,7 @@ public class Endpoint
     /**
      * The object that implements a hack for LS for this {@link Endpoint}.
      */
-    private final LipSyncHack lipSyncHack = new LipSyncHack(this);
+    private final LipSyncHack lipSyncHack;
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -192,6 +200,12 @@ public class Endpoint
         this.weakConference = new WeakReference<>(conference);
         this.id = id;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
+
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+        this.lipSyncHack
+            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, false)
+                ? new LipSyncHack(this) : null;
     }
 
     /**
