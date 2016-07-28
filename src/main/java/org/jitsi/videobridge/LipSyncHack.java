@@ -61,7 +61,13 @@ public class LipSyncHack
     /**
      * The rate (in ms) at which we are to send black key frames.
      */
-    private static final long KEY_FRAME_RATE_MS = 33;
+    private static final long KEY_FRAME_RATE_MS = 33 /* 1000 ms / 30 */;
+
+    /**
+     * Timestamp increment per frame.
+     */
+    private static final long TS_INCREMENT_PER_FRAME
+        = 90000 /* Hz */ / 30 /* fps */;
 
     /**
      * Wait for media for WAIT_MS before sending frames.
@@ -275,11 +281,13 @@ public class LipSyncHack
                     = RawPacket.getTimestamp(buffer, offset, length);
 
                 // Timestamps are calculated.
-                long highestTimestampSent = state.numOfKeyframesSent * 3000;
+                long highestTimestampSent
+                    = state.numOfKeyframesSent * TS_INCREMENT_PER_FRAME;
 
                 // Pretend we have dropped all the packets prior to the one
                 // that's about to be written by the translator.
-                long lastTimestampDropped = (timestamp - 3000) & 0xffffffffl;
+                long lastTimestampDropped
+                    = (timestamp - TS_INCREMENT_PER_FRAME) & 0xffffffffl;
                 long timestampDelta
                     = (lastTimestampDropped - highestTimestampSent) & 0xffffffff;
 
@@ -354,7 +362,8 @@ public class LipSyncHack
                     byte[] buf = KEY_FRAME_BUFFER.clone();
                     RawPacket keyframe = new RawPacket(buf, 0, buf.length);
 
-                    long timestamp = injectState.numOfKeyframesSent * 3000;
+                    long timestamp
+                        = injectState.numOfKeyframesSent * TS_INCREMENT_PER_FRAME;
                     keyframe.setSSRC(injectState.ssrc.intValue());
                     keyframe.setSequenceNumber(
                         injectState.numOfKeyframesSent);
