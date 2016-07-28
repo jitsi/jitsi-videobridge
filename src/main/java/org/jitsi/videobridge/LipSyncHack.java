@@ -332,7 +332,7 @@ public class LipSyncHack
             synchronized (injectState)
             {
                 if (!injectState.active
-                    || injectState.numOfKeyframesSent++ >= MAX_KEY_FRAMES)
+                    || injectState.numOfKeyframesSent >= MAX_KEY_FRAMES)
                 {
                     scheduledFuture.cancel(true);
                     return;
@@ -348,6 +348,8 @@ public class LipSyncHack
 
                 try
                 {
+                    injectState.numOfKeyframesSent++;
+
                     // FIXME maybe grab from the write pool and copy the array?
                     byte[] buf = KEY_FRAME_BUFFER.clone();
                     RawPacket keyframe = new RawPacket(buf, 0, buf.length);
