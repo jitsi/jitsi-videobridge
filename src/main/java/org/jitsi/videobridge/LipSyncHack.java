@@ -27,8 +27,8 @@ import java.util.concurrent.*;
 /**
  * Implements a hack for
  * https://bugs.chromium.org/p/chromium/issues/detail?id=403710. The hack
- * injects black video key frames to unstuck the playback of audio for composite
- * media streams.
+ * injects black video (VP8) key frames to unstuck the playback of audio for
+ * composite media streams.
  *
  * @author George Politis
  */
@@ -126,7 +126,7 @@ public class LipSyncHack
     /**
      * Ctor.
      *
-     * @param endpoint
+     * @param endpoint the endpoint that owns this hack.
      */
     public LipSyncHack(Endpoint endpoint)
     {
@@ -134,13 +134,17 @@ public class LipSyncHack
     }
 
     /**
-     * Notifies this instance that an audio packet is about to be written.
+     * Notifies this instance that an audio packet (RTP or RTCP) is about to be
+     * written.
      *
-     * @param data
-     * @param buffer
-     * @param offset
-     * @param length
-     * @param source
+     * @param data true if the buffer holds an RTP packet, false otherwise.
+     * @param buffer the buffer which contains the bytes of the received RTP or
+     * RTCP packet.
+     * @param offset the zero-based index in <tt>buffer</tt> at which the bytes
+     * of the received RTP or RTCP packet begin.
+     * @param length the number of bytes in <tt>buffer</tt> beginning at
+     * <tt>offset</tt> which represent the received RTP or RTCP packet.
+     * @param source the {@link Channel} where this packet came from.
      */
     public void onRTPTranslatorWillWriteAudio(
         boolean data, byte[] buffer, int offset,
@@ -225,7 +229,17 @@ public class LipSyncHack
     }
 
     /**
-     * Notifies this instance that a video packet is about to be written.
+     * Notifies this instance that a video packet (RTP or RTCP) is about to be
+     * written.
+     *
+     * @param data true if the buffer holds an RTP packet, false otherwise.
+     * @param buffer the buffer which contains the bytes of the received RTP or
+     * RTCP packet.
+     * @param offset the zero-based index in <tt>buffer</tt> at which the bytes
+     * of the received RTP or RTCP packet begin.
+     * @param length the number of bytes in <tt>buffer</tt> beginning at
+     * <tt>offset</tt> which represent the received RTP or RTCP packet.
+     * @param target the {@link Channel} where this packet is going.
      */
     public void onRTPTranslatorWillWriteVideo(
         boolean accept, boolean data, byte[] buffer,
@@ -326,7 +340,7 @@ public class LipSyncHack
     }
 
     /**
-     *
+     * The {@link Runnable} that injects the black video key frame packets.
      */
     class InjectTask implements Runnable
     {
@@ -414,7 +428,7 @@ public class LipSyncHack
         }
 
         /**
-         *
+         * Schedules this instance for execution at a fixed rate.
          */
         public void schedule()
         {
@@ -424,7 +438,7 @@ public class LipSyncHack
     }
 
     /**
-     *
+     * The RTP state of every monitored video SSRC.
      */
     static class InjectState
     {
@@ -449,7 +463,8 @@ public class LipSyncHack
         private final long timestampOffset;
 
         /**
-         *
+         * True if no real video packets have been received for this SSRC, false
+         * otherwise.
          */
         private boolean active;
 
