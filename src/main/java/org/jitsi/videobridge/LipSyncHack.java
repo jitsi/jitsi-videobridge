@@ -89,6 +89,12 @@ public class LipSyncHack
     private static final boolean DEBUG = logger.isDebugEnabled();
 
     /**
+     * The {@link Random} that will be used to generate the random sequence
+     * number and RTP timestamp offsets.
+     */
+    private static final Random RANDOM = new Random();
+
+    /**
      * The owner of this hack.
      */
     private final Endpoint endpoint;
@@ -282,15 +288,15 @@ public class LipSyncHack
                 // Pretend we have dropped all the packets prior to the one
                 // that's about to be written by the translator.
                 int lastSeqnumDropped = RTPUtils.subtractNumber(seqnum, 1);
+                int highestSeqnumSent = state.getNextSequenceNumber();
                 int seqnumDelta = RTPUtils.subtractNumber(
-                    lastSeqnumDropped, state.numOfKeyframesSent);
+                    lastSeqnumDropped, highestSeqnumSent);
 
                 long timestamp
                     = RawPacket.getTimestamp(buffer, offset, length);
 
                 // Timestamps are calculated.
-                long highestTimestampSent
-                    = state.numOfKeyframesSent * TS_INCREMENT_PER_FRAME;
+                long highestTimestampSent = state.getNextTimestamp();
 
                 // Pretend we have dropped all the packets prior to the one
                 // that's about to be written by the translator.
@@ -300,7 +306,7 @@ public class LipSyncHack
                     = (lastTimestampDropped - highestTimestampSent) & 0xffffffff;
 
                 rewriter = new ResumableStreamRewriter(
-                    state.numOfKeyframesSent, seqnumDelta,
+                    highestSeqnumSent, seqnumDelta,
                     highestTimestampSent, timestampDelta);
 
                 streamRTPManager.ssrcToRewriter.put(acceptedVideoSSRC, rewriter);
@@ -373,11 +379,15 @@ public class LipSyncHack
                     byte[] buf = KEY_FRAME_BUFFER.clone();
                     RawPacket keyframe = new RawPacket(buf, 0, buf.length);
 
-                    long timestamp
-                        = injectState.numOfKeyframesSent * TS_INCREMENT_PER_FRAME;
+                    // Set SSRC.
                     keyframe.setSSRC(injectState.ssrc.intValue());
-                    keyframe.setSequenceNumber(
-                        injectState.numOfKeyframesSent);
+
+                    // Set sequence number.
+                    int seqnum = injectState.getNextSequenceNumber();
+                    keyframe.setSequenceNumber(seqnum);
+
+                    // Set RTP timestamp.
+                    long timestamp = injectState.getNextTimestamp();
                     keyframe.setTimestamp(timestamp);
 
                     if (DEBUG)
@@ -419,9 +429,19 @@ public class LipSyncHack
         private final Long ssrc;
 
         /**
-         * The
+         * The target to inject RTP packets to.
          */
         private final WeakReference<MediaStream> target;
+
+        /**
+         * The random offset for the sequence numbers.
+         */
+        private final int seqnumOffset;
+
+        /**
+         * The random offset for the RTP timestamps.
+         */
+        private final long timestampOffset;
 
         /**
          *
@@ -434,6 +454,31 @@ public class LipSyncHack
         private int numOfKeyframesSent = 0;
 
         /**
+         * Gets the next sequence number to use based on the number of key
+         * frames that have already been sent.
+         *
+         * @return the next sequence number to use based on the number of key
+         * frames that have already been sent.
+         */
+        public int getNextSequenceNumber()
+        {
+            return (seqnumOffset + numOfKeyframesSent) & 0xffff;
+        }
+
+        /**
+         * Gets the next timestamp to use based on the number of key frames
+         * that have already been sent.
+         *
+         * @return Gets the next timestamp to use based on the number of key frames
+         * that have already been sent.
+         */
+        public long getNextTimestamp()
+        {
+            return (timestampOffset
+                + numOfKeyframesSent * TS_INCREMENT_PER_FRAME) & 0xffffffffl;
+        }
+
+        /**
          * Ctor.
          *
          * @param ssrc
@@ -444,6 +489,8 @@ public class LipSyncHack
             this.ssrc = ssrc;
             this.active = active;
             this.target = new WeakReference<>(target);
+            this.seqnumOffset = RANDOM.nextInt(Short.MAX_VALUE + 1);
+            this.timestampOffset = RANDOM.nextInt() & 0xffffffffl;
         }
     }
 }
