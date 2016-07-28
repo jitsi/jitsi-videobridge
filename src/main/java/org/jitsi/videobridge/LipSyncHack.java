@@ -168,8 +168,6 @@ public class LipSyncHack
             return;
         }
 
-        acceptedAudioSSRCs.add(acceptedAudioSSRC);
-
         // New audio stream. Trigger the hack for the associated video stream.
         List<RtpChannel> targetVideoChannels
             = endpoint.getChannels(MediaType.VIDEO);
@@ -196,6 +194,12 @@ public class LipSyncHack
         {
             return;
         }
+
+        // XXX we do this here (i.e. below the sanity checks), in order to avoid
+        // any race conditions with a video channel being created and added to
+        // its Endpoint. The disadvantage being that endpoints that only have an
+        // audio channel will never reach this.
+        acceptedAudioSSRCs.add(acceptedAudioSSRC);
 
         // FIXME this will include rtx ssrcs and whatnot.
         for (int ssrc : sourceVC.getReceiveSSRCs())
