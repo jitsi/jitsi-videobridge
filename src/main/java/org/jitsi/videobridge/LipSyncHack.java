@@ -35,7 +35,8 @@ import java.util.concurrent.*;
 public class LipSyncHack
 {
     /**
-     * A byte array holding a black key frame.
+     * A byte array holding a black VP8 key frame. The byte array contains the
+     * full RTP packet and not just the VP8 payload.
      */
     private static final byte[] KEY_FRAME_BUFFER = new byte[]{ -112, -28,
         64, 52,
