@@ -82,6 +82,13 @@ public class LipSyncHack
     private static final Logger logger = Logger.getLogger(LipSyncHack.class);
 
     /**
+     * The value of {@link Logger#isWarnEnabled()} from the time of the
+     * initialization of the class {@code LipSyncHack} cached for the purposes
+     * of performance.
+     */
+    private static final boolean DEBUG = logger.isDebugEnabled();
+
+    /**
      * The owner of this hack.
      */
     private final Endpoint endpoint;
@@ -350,8 +357,11 @@ public class LipSyncHack
                 MediaStream mediaStream = injectState.target.get();
                 if (mediaStream == null || !mediaStream.isStarted())
                 {
-                    logger.debug("Waiting for the media stream to become" +
-                        "available.");
+                    if (DEBUG)
+                    {
+                        logger.debug("Waiting for the media stream to become" +
+                            "available.");
+                    }
                     return;
                 }
 
@@ -370,9 +380,13 @@ public class LipSyncHack
                         injectState.numOfKeyframesSent);
                     keyframe.setTimestamp(timestamp);
 
-                    logger.debug("Injecting black key frame ssrc=" + injectState.ssrc
-                        + ", seqnum=" + injectState.numOfKeyframesSent
-                        + ", timestamp=" + timestamp);
+                    if (DEBUG)
+                    {
+                        logger.debug("Injecting black key frame ssrc="
+                            + injectState.ssrc + ", seqnum="
+                            + injectState.numOfKeyframesSent + ", timestamp="
+                            + timestamp);
+                    }
 
                     mediaStream.injectPacket(keyframe, true, null);
                 }
