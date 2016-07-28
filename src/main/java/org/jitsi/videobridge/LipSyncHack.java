@@ -248,6 +248,7 @@ public class LipSyncHack
 
         acceptedVideoSSRCs.add(acceptedVideoSSRC);
 
+        VideoChannel targetVC = (VideoChannel) target;
         InjectState state;
         synchronized (states)
         {
@@ -256,7 +257,7 @@ public class LipSyncHack
             {
                 // The hack has never been triggered for this stream.
                 states.put(acceptedVideoSSRC, new InjectState(acceptedVideoSSRC,
-                    ((RtpChannel) target).getStream(), false));
+                    targetVC.getStream(), false));
 
                 return;
             }
@@ -275,7 +276,7 @@ public class LipSyncHack
             }
 
             StreamRTPManager streamRTPManager
-                = ((VideoChannel) target).getStream().getStreamRTPManager();
+                = targetVC.getStream().getStreamRTPManager();
 
             ResumableStreamRewriter rewriter
                 = streamRTPManager.ssrcToRewriter.get(acceptedVideoSSRC);
