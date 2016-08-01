@@ -296,8 +296,8 @@ public class LipSyncHack
             StreamRTPManager streamRTPManager
                 = targetVC.getStream().getStreamRTPManager();
 
-            ResumableStreamRewriter rewriter
-                = streamRTPManager.ssrcToRewriter.get(acceptedVideoSSRC);
+            ResumableStreamRewriter rewriter = streamRTPManager
+                .getResumableStreamRewriter(acceptedVideoSSRC);
 
             if (rewriter == null)
             {
@@ -328,7 +328,8 @@ public class LipSyncHack
                     highestSeqnumSent, seqnumDelta,
                     highestTimestampSent, timestampDelta);
 
-                streamRTPManager.ssrcToRewriter.put(acceptedVideoSSRC, rewriter);
+                streamRTPManager
+                    .putResumableStreamRewriter(acceptedVideoSSRC, rewriter);
             }
             else
             {
