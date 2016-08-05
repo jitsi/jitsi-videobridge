@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 function error_exit
 {
@@ -76,7 +76,7 @@ LOG_LOCATION="${SC_HOME_DIR_ABSOLUTE_PATH}/log"
 ARCHIVE_LOCATION="${SC_HOME_DIR_ABSOLUTE_PATH}/archive"
 
 # Setup variables based on the source code location.
-SRC_LOCATION="$(basename ${MVN_POM_FILE})"
+SRC_LOCATION="$(dirname ${MVN_POM_FILE})"
 LOGGING_CONFIG_FILE="${SRC_LOCATION}/lib/logging.properties"
 
 if [ ! -d "${ARCHIVE_LOCATION}" ] ; then
