@@ -510,7 +510,7 @@ public class LipSyncHack
             this.ssrc = ssrc;
             this.active = active;
             this.target = new WeakReference<>(target);
-            this.seqnumOffset = RANDOM.nextInt(Short.MAX_VALUE + 1);
+            this.seqnumOffset = RANDOM.nextInt(0xffff);
             this.timestampOffset = RANDOM.nextInt() & 0xffffffffl;
         }
     }
