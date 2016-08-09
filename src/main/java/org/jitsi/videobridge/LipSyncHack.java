@@ -297,7 +297,7 @@ public class LipSyncHack
                 = targetVC.getStream().getStreamRTPManager();
 
             ResumableStreamRewriter rewriter = streamRTPManager
-                .getResumableStreamRewriter(acceptedVideoSSRC);
+                .getResumableStreamRewriter(acceptedVideoSSRC, false);
 
             if (rewriter == null)
             {
