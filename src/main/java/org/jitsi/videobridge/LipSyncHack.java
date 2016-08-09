@@ -321,8 +321,8 @@ public class LipSyncHack
                 // that's about to be written by the translator.
                 long lastTimestampDropped
                     = (timestamp - TS_INCREMENT_PER_FRAME) & 0xffffffffl;
-                long timestampDelta
-                    = (lastTimestampDropped - highestTimestampSent) & 0xffffffff;
+                long timestampDelta =
+                    (lastTimestampDropped - highestTimestampSent) & 0xffffffffl;
 
                 rewriter = new ResumableStreamRewriter(
                     highestSeqnumSent, seqnumDelta,
