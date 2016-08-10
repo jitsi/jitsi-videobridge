@@ -1,37 +1,58 @@
-#!/bin/bash -e
+#!/bin/sh -e
 
-function error_exit
-{
+error_exit() {
   echo "$1" >&2
   exit 1
 }
 
-function usage
-{
-  error_exit "Usage: $0 [-p XMPP_PORT] [-r] -f MVN_POM_FILE -d XMPP_DOMAIN -s XMPP_SECRET"
+usage() {
+  error_exit "Usage: $0 [-p JVB_PORT] [-r] [-f JVB_MVN_POM_FILE] [-d JVB_HOSTNAME] [-h JVB_HOST] [-s JVB_SECRET]"
 }
 
-# Get cmdline params.
-while getopts ":d:s:f:p:r4" o; do
+JVB_LOGGING_CONFIG_FILE="/etc/jitsi/videobridge/logging.properties"
+JVB_CONFIG_FILE="/etc/jitsi/videobridge/config"
+JVB_HOME_DIR_NAME="videobridge"
+JVB_HOME_DIR_LOCATION="/etc/jitsi"
+JVB_DATA_LOCATION="${HOME}/.jitsi-videobridge"
+JVB_MVN_REPO_LOCAL="${JVB_DATA_LOCATION}/m2"
+JVB_LOG_DIR_LOCATION="${JVB_DATA_LOCATION}/log"
+JVB_ARCHIVE_LOCATION="${JVB_DATA_LOCATION}/archive"
+JVB_HOSTNAME=
+JVB_HOST=
+JVB_PORT=
+JVB_SECRET=
+JVB_EXTRA_JVM_PARAMS=
+JVB_MVN_POM_FILE=
+JVB_JAVA_PREFER_IPV4=false
+
+# Source the JVB configuration file.
+if [ -f "${JVB_CONFIG_FILE}" ]; then
+  . "${JVB_CONFIG_FILE}"
+fi
+
+# Overide/complete with cmdline params.
+while getopts ":d:h:s:f:p:r4" o; do
   case "${o}" in
     d)
-      XMPP_DOMAIN="${OPTARG}"
+      JVB_HOSTNAME="${OPTARG}"
       ;;
     p)
-      XMPP_PORT="${OPTARG}"
+      JVB_PORT="${OPTARG}"
       ;;
-
     s)
-      XMPP_SECRET="${OPTARG}"
+      JVB_SECRET="${OPTARG}"
       ;;
     f)
-      MVN_POM_FILE="${OPTARG}"
+      JVB_MVN_POM_FILE="${OPTARG}"
       ;;
     r)
-      MVN_REBUILD=true
+      JVB_MVN_REBUILD=true
+      ;;
+    h)
+      JVB_HOST="${OPTARG}"
       ;;
     4)
-      JAVA_PREFER_IPV4=true
+      JVB_JAVA_PREFER_IPV4=true
       ;;
     *)
       usage
@@ -39,72 +60,54 @@ while getopts ":d:s:f:p:r4" o; do
   esac
 done
 
-# Cmdline params validation.
-if [ "${XMPP_DOMAIN}" = "" ]; then
+# Cmdline params validation and guessing.
+if [ "${JVB_HOSTNAME}" = "" ]; then
   usage
 fi
 
-if [ "${XMPP_SECRET}" = "" ]; then
+if [ "${JVB_SECRET}" = "" ]; then
   usage
 fi
 
-if [ "${XMPP_PORT}" = "" ]; then
-  XMPP_PORT=5347
+if [ "${JVB_PORT}" = "" ]; then
+  # Guess the XMPP port to use.
+  JVB_PORT=5347
 fi
 
-if [ ! -e "${MVN_POM_FILE}" ]; then
+if [ ! -e "${JVB_MVN_POM_FILE}" ]; then
+  # Guess the location of the pom file.
+  JVB_MVN_POM_FILE="$(pwd)/jitsi-videobridge/pom.xml"
+fi
+
+if [ ! -e "${JVB_MVN_POM_FILE}" ]; then
+  # Guess the location of the pom file.
+  JVB_MVN_POM_FILE="$(pwd)/pom.xml"
+fi
+
+if [ ! -e "${JVB_MVN_POM_FILE}" ]; then
   error_exit "The maven pom file was not found."
 fi
 
-echo Running with:
-echo
-echo XMPP_DOMAIN="${XMPP_DOMAIN}"
-echo XMPP_SECRET="${XMPP_SECRET}"
-echo XMPP_PORT="${XMPP_PORT}"
-echo MVN_POM_FILE="${MVN_POM_FILE}"
-echo MVN_REBUILD="${MVN_REBUILD}"
-echo JAVA_PREFER_IPV4="${JAVA_PREFER_IPV4}"
-
-ARTIFACT_ID=jitsi-videobridge
-
-# Setup variables based on the artifactId.
-SC_HOME_DIR_NAME=".${ARTIFACT_ID}"
-SC_HOME_DIR_LOCATION="${HOME}"
-SC_HOME_DIR_ABSOLUTE_PATH="${SC_HOME_DIR_LOCATION}/${SC_HOME_DIR_NAME}"
-MVN_REPO_LOCAL="${SC_HOME_DIR_ABSOLUTE_PATH}/m2"
-LOG_LOCATION="${SC_HOME_DIR_ABSOLUTE_PATH}/log"
-ARCHIVE_LOCATION="${SC_HOME_DIR_ABSOLUTE_PATH}/archive"
-
-# Setup variables based on the source code location.
-SRC_LOCATION="$(dirname ${MVN_POM_FILE})"
-LOGGING_CONFIG_FILE="${SRC_LOCATION}/lib/logging.properties"
-
-if [ ! -d "${ARCHIVE_LOCATION}" ] ; then
-  mkdir -p "${ARCHIVE_LOCATION}"
+# Archive old logs.
+if [ ! -d "${JVB_ARCHIVE_LOCATION}" ] ; then
+  mkdir -p "${JVB_ARCHIVE_LOCATION}"
 fi
 
-if [ -d "${LOG_LOCATION}" ] ; then
+if [ -d "${JVB_LOG_DIR_LOCATION}" ] ; then
   ARCHIVE_NAME="$(date '+%Y-%m-%d-%H-%M-%S')"
-  mv "${LOG_LOCATION}" "${ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
-  tar jcvf "${ARCHIVE_LOCATION}/${ARCHIVE_NAME}.tar.bz2" "${ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
-  rm -rf "${ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
+  mv "${JVB_LOG_DIR_LOCATION}" "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
+  tar jcvf "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}.tar.bz2" "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
+  rm -rf "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
 fi
 
-if [ ! -d "${LOG_LOCATION}" ] ; then
-  mkdir "${LOG_LOCATION}"
+if [ ! -d "${JVB_LOG_DIR_LOCATION}" ] ; then
+  mkdir "${JVB_LOG_DIR_LOCATION}"
 fi
 
-# Maybe clean.
-if ${MVN_REBUILD} ; then
-  mvn -f "${MVN_POM_FILE}" clean compile -Dmaven.repo.local="${MVN_REPO_LOCAL}"
+# Rebuild.
+if [ ! ${JVB_MVN_REBUILD} = "" ]; then
+  mvn -f "${JVB_MVN_POM_FILE}" clean compile -Dmaven.repo.local="${JVB_MVN_REPO_LOCAL}"
 fi
 
-exec mvn -f "${MVN_POM_FILE}" exec:java \
-  -Djna.nosys=true \
-  -Dexec.args="--domain=${XMPP_DOMAIN} --host=${XMPP_HOST} --port=${XMPP_PORT} --secret=${XMPP_SECRET} --apis=xmpp,rest" \
-  -Djava.net.preferIPv4Stack=true \
-  -Djava.util.logging.config.file="${LOGGING_CONFIG_FILE}" \
-  -Dnet.java.sip.communicator.SC_HOME_DIR_NAME="${SC_HOME_DIR_NAME}" \
-  -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION="${SC_HOME_DIR_LOCATION}" \
-  -Dmaven.repo.local="${MVN_REPO_LOCAL}" 2>&1 | tee "${LOG_LOCATION}/jvb.log"
-
+# Execute.
+exec mvn -f "${JVB_MVN_POM_FILE}" exec:exec -Dmaven.repo.local="${JVB_MVN_REPO_LOCAL}" -Dexec.executable=java -Dexec.args="-cp %classpath ${JVB_EXTRA_JVM_PARAMS} -Djava.util.logging.config.file=\"${JVB_LOGGING_CONFIG_FILE}\" -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=\"${JVB_HOME_DIR_NAME}\" -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=\"${JVB_HOME_DIR_LOCATION}\" -Dnet.java.sip.communicator.SC_LOG_DIR_LOCATION=\"${JVB_LOG_DIR_LOCATION}\" -Djna.nosys=true -Djava.net.preferIPv4Stack=\"${JVB_JAVA_PREFER_IPV4}\" org.jitsi.videobridge.Main --domain=\"${JVB_HOSTNAME}\" --host=\"${JVB_HOST}\" --port=\"${JVB_PORT}\" --secret=\"${JVB_SECRET}\" --apis=xmpp,rest" 2>&1 | tee "${JVB_LOG_DIR_LOCATION}/jvb.log"
