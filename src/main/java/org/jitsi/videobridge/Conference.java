@@ -224,7 +224,8 @@ public class Conference
      * Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of this instance if any.
      * @param enableLogging whether logging should be enabled for this
-     * {@link Conference} and its sub-components.
+     * {@link Conference} and its sub-components, and whether this conference
+     * should be considered when generating statistics.
      */
     public Conference(Videobridge videobridge,
                       String id,
