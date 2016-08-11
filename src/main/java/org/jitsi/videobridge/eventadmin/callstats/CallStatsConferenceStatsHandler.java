@@ -23,6 +23,7 @@ import io.callstats.sdk.listeners.*;
 
 import org.jitsi.eventadmin.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.*;
@@ -323,7 +324,7 @@ class CallStatsConferenceStatsHandler
             if (stream == null)
                 return;
 
-            MediaStreamStats stats = stream.getMediaStreamStats();
+            MediaStreamStats2 stats = stream.getMediaStreamStats();
             if (stats == null)
                 return;
 
@@ -335,38 +336,40 @@ class CallStatsConferenceStatsHandler
                     this.conferenceID);
 
             // Send stats for received streams.
-            for (MediaStreamSSRCStats receivedStat : stats.getReceivedStats())
+            for (BasicStreamStats receiveStat : stats.getAllReceiveStats())
             {
                 ConferenceStats conferenceStats
                     = new ConferenceStatsBuilder()
-                        .bytesSent(receivedStat.getNbBytes())
-                        .packetsSent(receivedStat.getNbPackets())
-                        .ssrc(String.valueOf(receivedStat.getSSRC()))
+                        .bytesSent(receiveStat.getBytes())
+                        .packetsSent(receiveStat.getPackets())
+                        .ssrc(String.valueOf(receiveStat.getSSRC()))
                         .confID(this.conferenceID)
                         .localUserID(bridgeId)
                         .remoteUserID(endpointID)
                         .statsType(CallStatsStreamType.INBOUND)
-                        .jitter(receivedStat.getJitter())
-                        .rtt((int) receivedStat.getRttMs())
+                        // XXX Note that we take these two from the global stats
+                        .jitter(stats.getReceiveStats().getJitter())
+                        .rtt((int) stats.getReceiveStats().getRtt())
                         .ucID(userInfo.getUcID())
                         .build();
                 callStats.reportConferenceStats(endpointID, conferenceStats);
             }
 
             // Send stats for sent streams.
-            for (MediaStreamSSRCStats sentStat : stats.getSentStats())
+            for (BasicStreamStats sendStat : stats.getAllSendStats())
             {
                 ConferenceStats conferenceStats
                     = new ConferenceStatsBuilder()
-                        .bytesSent(sentStat.getNbBytes())
-                        .packetsSent(sentStat.getNbPackets())
-                        .ssrc(String.valueOf(sentStat.getSSRC()))
+                        .bytesSent(sendStat.getBytes())
+                        .packetsSent(sendStat.getPackets())
+                        .ssrc(String.valueOf(sendStat.getSSRC()))
                         .confID(this.conferenceID)
                         .localUserID(bridgeId)
                         .remoteUserID(endpointID)
                         .statsType(CallStatsStreamType.OUTBOUND)
-                        .jitter(sentStat.getJitter())
-                        .rtt((int) sentStat.getRttMs())
+                        // XXX Note that we take these two from the global stats
+                        .jitter(stats.getSendStats().getJitter())
+                        .rtt((int) stats.getSendStats().getRtt())
                         .ucID(userInfo.getUcID())
                         .build();
                 callStats.reportConferenceStats(endpointID, conferenceStats);

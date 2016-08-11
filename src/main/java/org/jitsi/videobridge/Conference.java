@@ -200,6 +200,11 @@ public class Conference
     private final Logger logger = Logger.getLogger(classLogger, null);
 
     /**
+     * Whether this conference should be considered when generating statistics.
+     */
+    private final boolean includeInStatistics;
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -213,7 +218,8 @@ public class Conference
      * Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of this instance if any.
      * @param enableLogging whether logging should be enabled for this
-     * {@link Conference} and its sub-components.
+     * {@link Conference} and its sub-components, and whether this conference
+     * should be considered when generating statistics.
      */
     public Conference(Videobridge videobridge,
                       String id,
@@ -230,6 +236,7 @@ public class Conference
         this.id = id;
         this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
+        this.includeInStatistics = enableLogging;
         this.name = name;
 
         if (!enableLogging)
@@ -244,6 +251,15 @@ public class Conference
 
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
+    }
+
+    /**
+     * @return whether this conference should be included in generated
+     * statistics.
+     */
+    public boolean includeInStatistics()
+    {
+        return includeInStatistics;
     }
 
     /**
