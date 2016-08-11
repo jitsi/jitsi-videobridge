@@ -187,19 +187,17 @@ public class RtxTransformer
      * each SSRC.
      *
      * @param ssrc the SSRC of the RTX stream for the packet.
-     * @param defaultSeq the default sequence number to use in case we don't
-     * (yet) have any information about <tt>ssrc</tt>.
      * @return the sequence number which should be used for the next RTX
      * packet sent using SSRC <tt>ssrc</tt>.
      */
-    private int getNextRtxSequenceNumber(long ssrc, int defaultSeq)
+    public int getNextRtxSequenceNumber(long ssrc)
     {
         Integer seq;
         synchronized (rtxSequenceNumbers)
         {
             seq = rtxSequenceNumbers.get(ssrc);
             if (seq == null)
-                seq = defaultSeq;
+                seq = new Random().nextInt(0xffff);
             else
                 seq++;
 
@@ -207,17 +205,6 @@ public class RtxTransformer
         }
 
         return seq;
-    }
-
-    /**
-     * Returns the next RTP sequence number to use for the RTX stream for a
-     * particular SSRC.
-     * @param ssrc the SSRC.
-     * @return the next sequence number to use for SSRC <tt>ssrc</tt>.
-     */
-    private int getNextRtxSequenceNumber(long ssrc)
-    {
-        return getNextRtxSequenceNumber(ssrc, new Random().nextInt(1 << 16));
     }
 
     /**
