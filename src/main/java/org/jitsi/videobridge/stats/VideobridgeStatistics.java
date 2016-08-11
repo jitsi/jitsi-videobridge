@@ -22,6 +22,7 @@ import java.util.concurrent.locks.*;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 /**
@@ -69,9 +70,6 @@ public class VideobridgeStatistics
      */
     private static final DateFormat dateFormat;
 
-    private static final DecimalFormat decimalFormat
-        = new DecimalFormat("#.#####");
-
     /**
      * The name of the number of participants statistic. Its runtime type is
      * {@code Integer}.
@@ -89,6 +87,21 @@ public class VideobridgeStatistics
      * and the value represents a {@code double} value.
      */
     public static final String RTP_LOSS = "rtp_loss";
+
+    /**
+     * The name of the "largest conference" statistic.
+     */
+    public static final String LARGEST_CONFERENCE = "largest_conference";
+
+    /**
+     * The name of the conference sizes statistic.
+     */
+    public static final String CONFERENCE_SIZES = "conference_sizes";
+
+    /**
+     * The number of buckets to use for conference sizes.
+     */
+    private static final int CONFERENCE_SIZE_BUCKETS = 15;
 
     /**
      * The name of the stat that indicates the bridge has entered graceful
@@ -171,17 +184,19 @@ public class VideobridgeStatistics
     public VideobridgeStatistics()
     {
         unlockedSetStat(AUDIOCHANNELS, 0);
-        unlockedSetStat(BITRATE_DOWNLOAD, decimalFormat.format(0.0d));
-        unlockedSetStat(BITRATE_UPLOAD, decimalFormat.format(0.0d));
+        unlockedSetStat(BITRATE_DOWNLOAD, 0d);
+        unlockedSetStat(BITRATE_UPLOAD, 0d);
         unlockedSetStat(CONFERENCES, 0);
-        unlockedSetStat(CPU_USAGE, decimalFormat.format(0.0d));
+        unlockedSetStat(CPU_USAGE, 0d);
         unlockedSetStat(NUMBEROFPARTICIPANTS, 0);
         unlockedSetStat(NUMBEROFTHREADS, 0);
-        unlockedSetStat(RTP_LOSS, decimalFormat.format(0.0d));
+        unlockedSetStat(RTP_LOSS, 0d);
         unlockedSetStat(TOTAL_MEMORY, 0);
         unlockedSetStat(USED_MEMORY, 0);
         unlockedSetStat(VIDEOCHANNELS, 0);
         unlockedSetStat(VIDEOSTREAMS, 0);
+        unlockedSetStat(LARGEST_CONFERENCE, 0);
+        unlockedSetStat(CONFERENCE_SIZES, "[]");
 
         unlockedSetStat(TIMESTAMP, currentTimeMillis());
     }
@@ -249,6 +264,8 @@ public class VideobridgeStatistics
         int videoStreams = 0;
         long packets = 0, packetsLost = 0;
         long bytesReceived = 0, bytesSent = 0;
+        int largestConferenceSize = 0;
+        int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
         boolean shutdownInProgress = false;
 
         BundleContext bundleContext
@@ -261,6 +278,19 @@ public class VideobridgeStatistics
             {
                 for (Conference conference : videobridge.getConferences())
                 {
+                    int conferenceEndpoints = conference.getEndpointCount();
+                    endpoints += conference.getEndpointCount();
+                    if (conferenceEndpoints > largestConferenceSize)
+                    {
+                        largestConferenceSize = conferenceEndpoints;
+                    }
+
+                    int idx
+                        = conferenceEndpoints < conferenceSizes.length
+                        ? conferenceEndpoints
+                        : conferenceSizes.length - 1;
+                    conferenceSizes[idx]++;
+
                     for (Content content : conference.getContents())
                     {
                         MediaType mediaType = content.getMediaType();
@@ -305,7 +335,6 @@ public class VideobridgeStatistics
                         }
                     }
                     conferences++;
-                    endpoints += conference.getEndpointCount();
                 }
                 if (videobridge.isShutdownInProgress())
                 {
@@ -322,6 +351,11 @@ public class VideobridgeStatistics
             = ((packetsLost > 0) && (packets > 0))
                 ? ((double) packetsLost) / packets
                 : 0.0d;
+
+        // CONFERENCE_SIZES
+        JSONArray conferenceSizesJson = new JSONArray();
+        for (int size : conferenceSizes)
+            conferenceSizesJson.add(size);
 
         // NUMBEROFTHREADS
         int threadCount = ManagementFactory.getThreadMXBean().getThreadCount();
@@ -358,30 +392,24 @@ public class VideobridgeStatistics
             }
             lastGenerateTime = now;
 
-            unlockedSetStat(
-                    BITRATE_DOWNLOAD,
-                    decimalFormat.format(bitrateDownload));
-            unlockedSetStat(
-                    BITRATE_UPLOAD,
-                    decimalFormat.format(bitrateUpload));
+            unlockedSetStat(BITRATE_DOWNLOAD, bitrateDownload);
+            unlockedSetStat(BITRATE_UPLOAD, bitrateUpload);
 
-            unlockedSetStat(RTP_LOSS, decimalFormat.format(rtpLoss));
+            unlockedSetStat(RTP_LOSS, rtpLoss);
 
             unlockedSetStat(AUDIOCHANNELS, audioChannels);
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);
             unlockedSetStat(VIDEOCHANNELS, videoChannels);
             unlockedSetStat(VIDEOSTREAMS, videoStreams);
+            unlockedSetStat(LARGEST_CONFERENCE, largestConferenceSize);
+            unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
 
             unlockedSetStat(NUMBEROFTHREADS, threadCount);
 
-            unlockedSetStat(
-                    CPU_USAGE,
-                    (cpuUsage < 0) ? null : decimalFormat.format(cpuUsage));
-            unlockedSetStat(
-                    TOTAL_MEMORY,
-                    (totalMemory < 0) ? null : totalMemory);
-            unlockedSetStat(USED_MEMORY, (usedMemory < 0) ? null : usedMemory);
+            unlockedSetStat(CPU_USAGE, Math.max(cpuUsage, 0));
+            unlockedSetStat(TOTAL_MEMORY, Math.max(totalMemory, 0));
+            unlockedSetStat(USED_MEMORY, Math.max(usedMemory, 0));
 
             unlockedSetStat(SHUTDOWN_IN_PROGRESS, shutdownInProgress);
 
