@@ -135,7 +135,7 @@
               todir="${debian.dir}/etc/jitsi/videobridge"
               overwrite="true"/>
         <copy file="config/logrotate"
-              todir="${debian.dir}/etc/logrotate.d/jitsi-videobridge"
+              tofile="${debian.dir}/etc/logrotate.d/jitsi-videobridge"
               overwrite="true"/>
 
         <!-- creating a debian archive file
