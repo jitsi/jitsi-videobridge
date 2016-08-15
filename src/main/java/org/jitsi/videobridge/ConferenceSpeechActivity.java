@@ -174,12 +174,12 @@ public class ConferenceSpeechActivity
 
     /**
      * The <tt>Conference</tt> for which this instance represents the speech
-     * activity of its <tt>Endpoint</tt>s. The <tt>Conference</tt> is weakly
-     * referenced because <tt>ConferenceSpeechActivity</tt> is a part of
-     * <tt>Conference</tt> and the operation of the former in the absence of the
-     * latter is useless.
+     * activity of its <tt>Endpoint</tt>s. The reference will be set to
+     * <tt>null</tt> once the <tt>Conference</tt> gets expired.
+     * <tt>ConferenceSpeechActivity</tt> is a part of <tt>Conference</tt> and
+     * the operation of the former in the absence of the latter is useless.
      */
-    private final WeakReference<Conference> conference;
+    private Conference conference;
 
     /**
      * The <tt>Endpoint</tt> which is the dominant speaker in
@@ -255,7 +255,9 @@ public class ConferenceSpeechActivity
      */
     public ConferenceSpeechActivity(Conference conference)
     {
-        this.conference = new WeakReference<>(conference);
+        Objects.requireNonNull(conference, "conference");
+
+        this.conference = conference;
 
         /*
          * The PropertyChangeListener will weakly reference this instance and
@@ -276,7 +278,7 @@ public class ConferenceSpeechActivity
     {
         Conference conference = getConference();
 
-        if ((conference != null) && !conference.isExpired())
+        if (conference != null)
         {
             if (logger.isTraceEnabled())
             {
@@ -345,7 +347,7 @@ public class ConferenceSpeechActivity
         {
             Conference conference = getConference();
 
-            if ((conference == null) || conference.isExpired())
+            if (conference == null)
             {
                 jsonObject = null;
             }
@@ -472,7 +474,7 @@ public class ConferenceSpeechActivity
         {
             Conference conference = getConference();
 
-            if ((conference != null) && !conference.isExpired())
+            if (conference != null)
             {
                 activeSpeakerDetector.addActiveSpeakerChangedListener(
                         activeSpeakerChangedListener);
@@ -496,14 +498,16 @@ public class ConferenceSpeechActivity
      * instance.
      *
      * @return the <tt>Conference</tt> whose speech activity is represented by
-     * this instance
+     * this instance or <tt>null</tt> if the <tt>Conference</tt> has expired.
      */
     private Conference getConference()
     {
-        Conference conference = this.conference.get();
+        Conference conference = this.conference;
 
-        if ((conference == null) || conference.isExpired())
+        if ((conference != null) && conference.isExpired())
         {
+            this.conference = conference = null;
+
             /*
              * The Conference has expired so there is no point to listen to
              * ActiveSpeakerDetector. Remove the activeSpeakerChangedListener
@@ -711,7 +715,7 @@ public class ConferenceSpeechActivity
         // Cease to execute as soon as the Conference expires.
         Conference conference = getConference();
 
-        if ((conference == null) || conference.isExpired())
+        if (conference == null)
             return;
 
         String propertyName = ev.getPropertyName();
@@ -772,7 +776,7 @@ public class ConferenceSpeechActivity
              */
             Conference conference = getConference();
 
-            if ((conference == null) || conference.isExpired())
+            if (conference == null)
                 return false;
 
             long now = System.currentTimeMillis();
