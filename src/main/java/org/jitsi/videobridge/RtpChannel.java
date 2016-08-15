@@ -362,7 +362,7 @@ public class RtpChannel
         if (accept)
         {
             // Note that this Channel is still active.
-            touch(true /* this touch comes from transport related event */);
+            touch(ActivityType.PAYLOAD /* control received */);
 
             /*
              * Does the data of the specified DatagramPacket resemble (a header
@@ -461,7 +461,7 @@ public class RtpChannel
         if (accept)
         {
             // Note that this Channel is still active.
-            touch(true /* this touch comes from transport related event */);
+            touch(ActivityType.PAYLOAD /* data received */);
 
             /*
              * Does the data of the specified DatagramPacket resemble (a header
@@ -1193,7 +1193,7 @@ public class RtpChannel
         }
 
         // It seems this Channel is still active.
-        touch(true /* triggered by transport related event */);
+        touch(ActivityType.TRANSPORT /* transport connected */);
     }
 
     /**

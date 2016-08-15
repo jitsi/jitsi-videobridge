@@ -127,6 +127,14 @@ public abstract class Channel
         = new MonotonicAtomicLong();
 
     /**
+     * The time in milliseconds of the last payload related activity to this
+     * <tt>Channel</tt>. Currently this means when for the last time there were
+     * any RTP packets seen for this channel.
+     */
+    private final MonotonicAtomicLong lastPayloadActivityTime
+        = new MonotonicAtomicLong();
+
+    /**
      * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
      */
     private StreamConnector streamConnector;
@@ -772,16 +780,30 @@ public abstract class Channel
      * Sets the time in milliseconds of the last activity related to this
      * <tt>Channel</tt> to the current system time.
      *
-     * @param transport if <tt>true</tt> will also refresh "last transport
+     * @param activityType if <tt>true</tt> will also refresh "last transport
      *        activity" timestamp. It is supposed to be refreshed whenever
      *        some packets are received on this channel.
      */
-    public void touch(boolean transport)
+    public void touch(ActivityType activityType)
     {
         lastActivityTime.increase(System.currentTimeMillis());
 
-        if (transport)
-            touchTransport();
+        switch (activityType)
+        {
+            case TRANSPORT:
+                touchTransport();
+                break;
+            case PAYLOAD:
+                touchPayload();
+                break;
+        }
+    }
+
+    public enum ActivityType
+    {
+        TRANSPORT,
+        PAYLOAD,
+        OTHER
     }
 
     /**
@@ -790,7 +812,7 @@ public abstract class Channel
      */
     public void touch()
     {
-        touch(false);
+        touch(ActivityType.OTHER);
     }
 
     /**
@@ -802,6 +824,21 @@ public abstract class Channel
     {
         lastTransportActivityTime.increase(System.currentTimeMillis());
     }
+
+    /**
+     * Refreshes {@link #lastPayloadActivityTime} and
+     * {@link #lastTransportActivityTime}.
+     *
+     * @see #lastPayloadActivityTime
+     */
+    private void touchPayload()
+    {
+        long now = System.currentTimeMillis();
+
+        lastTransportActivityTime.increase(now);
+        lastPayloadActivityTime.increase(now);
+    }
+
 
     /**
      * Notifies this <tt>Channel</tt> that its <tt>TransportManager</tt> has
