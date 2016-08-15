@@ -212,14 +212,14 @@ public class Conference
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of this instance if any.
-     * @param enableLogging whether logging should be enabled for this
+     * @param loggingEnabled whether logging should be enabled for this
      * {@link Conference} and its sub-components.
      */
     public Conference(Videobridge videobridge,
                       String id,
                       String focus,
                       String name,
-                      boolean enableLogging)
+                      boolean loggingEnabled)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -229,10 +229,10 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
-        this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
+        this.eventAdmin = loggingEnabled ? videobridge.getEventAdmin() : null;
         this.name = name;
 
-        if (!enableLogging)
+        if (!loggingEnabled)
         {
             logger.setLevel(Level.WARNING);
         }
