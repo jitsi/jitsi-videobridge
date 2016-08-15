@@ -78,7 +78,7 @@ public class Conference
     /**
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
-    private final List<WeakReference<Endpoint>> endpoints = new LinkedList<>();
+    private final List<Endpoint> endpoints = new LinkedList<>();
 
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
@@ -803,12 +803,11 @@ public class Conference
 
         synchronized (endpoints)
         {
-            for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
-                    i.hasNext();)
+            for (Iterator<Endpoint> i = endpoints.iterator(); i.hasNext();)
             {
-                Endpoint e = i.next().get();
+                Endpoint e = i.next();
 
-                if (e == null)
+                if (e.isExpired())
                 {
                     i.remove();
                     changed = true;
@@ -826,7 +825,7 @@ public class Conference
                 // Conference and will unregister itself from the endpoint
                 // sooner or later.
                 endpoint.addPropertyChangeListener(propertyChangeListener);
-                endpoints.add(new WeakReference<>(endpoint));
+                endpoints.add(endpoint);
                 changed = true;
 
                 EventAdmin eventAdmin = getEventAdmin();
@@ -894,13 +893,11 @@ public class Conference
         synchronized (this.endpoints)
         {
             endpoints = new ArrayList<>(this.endpoints.size());
-            for (Iterator<WeakReference<Endpoint>> i
-                        = this.endpoints.iterator();
-                    i.hasNext();)
+            for (Iterator<Endpoint> i = this.endpoints.iterator(); i.hasNext();)
             {
-                Endpoint endpoint = i.next().get();
+                Endpoint endpoint = i.next();
 
-                if (endpoint == null)
+                if (endpoint.isExpired())
                 {
                     i.remove();
                     changed = true;
@@ -1326,12 +1323,11 @@ public class Conference
 
         synchronized (endpoints)
         {
-            for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
-                    i.hasNext();)
+            for (Iterator<Endpoint> i = endpoints.iterator(); i.hasNext();)
             {
-                Endpoint e = i.next().get();
+                Endpoint e = i.next();
 
-                if (e == null || e == endpoint)
+                if (e.isExpired() || e == endpoint)
                 {
                     i.remove();
                     removed = true;
