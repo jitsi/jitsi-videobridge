@@ -138,6 +138,18 @@ public class VideobridgeStatistics
      */
     public static final String VIDEOSTREAMS = "videostreams";
 
+    /**
+     * The name of the total number of failed audio channels statistic.
+     */
+    private static final String TOTAL_FAILED_AUDIO_CHANNELS
+        = "totalNumberOfFailedAudioChannels";
+
+    /**
+     * The name of the total number of failed video channels statistic.
+     */
+    private static final String TOTAL_FAILED_VIDEO_CHANNELS
+        = "totalNumberOfFailedVideoChannels";
+
     static
     {
         dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -271,11 +283,21 @@ public class VideobridgeStatistics
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
 
+        int totalNumberOfFailedAudioChannels = 0,
+            totalNumberOfFailedVideoChannels = 0;
         if (bundleContext != null)
         {
             for (Videobridge videobridge
                     : Videobridge.getVideobridges(bundleContext))
             {
+                totalNumberOfFailedAudioChannels
+                    += videobridge.getTotalNumberOfFailedChannels(
+                        MediaType.AUDIO);
+
+                totalNumberOfFailedVideoChannels
+                    += videobridge.getTotalNumberOfFailedChannels(
+                        MediaType.VIDEO);
+
                 for (Conference conference : videobridge.getConferences())
                 {
                     int conferenceEndpoints = conference.getEndpointCount();
@@ -406,6 +428,10 @@ public class VideobridgeStatistics
             unlockedSetStat(CONFERENCE_SIZES, conferenceSizesJson);
 
             unlockedSetStat(NUMBEROFTHREADS, threadCount);
+            unlockedSetStat(TOTAL_FAILED_VIDEO_CHANNELS,
+                totalNumberOfFailedVideoChannels);
+            unlockedSetStat(TOTAL_FAILED_AUDIO_CHANNELS,
+                totalNumberOfFailedAudioChannels);
 
             unlockedSetStat(CPU_USAGE, Math.max(cpuUsage, 0));
             unlockedSetStat(TOTAL_MEMORY, Math.max(totalMemory, 0));

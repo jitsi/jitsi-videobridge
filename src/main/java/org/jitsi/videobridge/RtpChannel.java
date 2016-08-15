@@ -1971,6 +1971,33 @@ public class RtpChannel
     @Override
     public void expire()
     {
+        // Check and report for failed channel, check from least expensive
+        // operation to most expensive one.
+        boolean loggingEnabled
+            = getContent().getConference().isLoggingEnabled();
+
+        if (loggingEnabled)
+        {
+            boolean connected = getTransportManager().isConnected();
+            if (connected)
+            {
+                boolean sawData
+                    = getNBReceivedBytes() != 0 || getNBSentBytes() != 0;
+
+                if (sawData)
+                {
+                    MediaType mediaType = getContent().getMediaType();
+                    // The transport is connected but nothing was sent/received.
+                    // This doesn't seem right and should never happen unless
+                    // this is a fake channel created for health checks.
+                    getContent()
+                        .getConference()
+                        .getVideobridge()
+                        .incrementTotalNumberOfFailedChannels(mediaType);
+                }
+            }
+        }
+
         TransformEngine transformEngine = this.transformEngine;
         if (transformEngine != null)
         {

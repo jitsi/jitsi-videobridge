@@ -201,6 +201,13 @@ public class Videobridge
     private Pattern shutdownSourcePattern;
 
     /**
+     * Keeps track of the total number of failed channels. (look at
+     * @{link RtpChannel} for the definition of "failed").
+     */
+    private Map<MediaType, Integer> totalNumberOfFailedChannelsMap
+        = new HashMap<>();
+
+    /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
     public Videobridge()
@@ -1559,5 +1566,46 @@ public class Videobridge
             }
         }
         return contentStreamCount;
+    }
+
+    /**
+     * Increments the total number of failed channels for the given
+     * {@link MediaType} by one.
+     */
+    public void incrementTotalNumberOfFailedChannels(MediaType mediaType)
+    {
+        synchronized (totalNumberOfFailedChannelsMap)
+        {
+            Integer totalNumberOfFailedChannels
+                = totalNumberOfFailedChannelsMap.get(mediaType);
+
+            if (totalNumberOfFailedChannels == null)
+            {
+                totalNumberOfFailedChannelsMap.put(mediaType, 1);
+            }
+            else
+            {
+                totalNumberOfFailedChannelsMap.put(
+                    mediaType, totalNumberOfFailedChannels + 1);
+            }
+        }
+    }
+
+    /**
+     * Gets the total number of failed channels for the given {@link MediaType}.
+     *
+     * @return the total number of failed channels for the given
+     * {@link MediaType}.
+     */
+    public int getTotalNumberOfFailedChannels(MediaType mediaType)
+    {
+        synchronized (totalNumberOfFailedChannelsMap)
+        {
+            Integer totalNumberOfFailedChannels
+                = totalNumberOfFailedChannelsMap.get(mediaType);
+
+            return totalNumberOfFailedChannels == null
+                ? 0 : totalNumberOfFailedChannels;
+        }
     }
 }

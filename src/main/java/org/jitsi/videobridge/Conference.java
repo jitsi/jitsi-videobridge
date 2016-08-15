@@ -70,6 +70,12 @@ public class Conference
     private final List<Content> contents = new LinkedList<>();
 
     /**
+     *  A boolean flag that determines whether logging should be enabled for
+     *  this conference.
+     */
+    private final boolean loggingEnabled;
+
+    /**
      * An instance used to save information about the endpoints of this
      * <tt>Conference</tt>, when media recording is enabled.
      */
@@ -212,14 +218,14 @@ public class Conference
      * to manage the new instance must come or they will be ignored.
      * Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of this instance if any.
-     * @param enableLogging whether logging should be enabled for this
+     * @param loggingEnabled whether logging should be enabled for this
      * {@link Conference} and its sub-components.
      */
     public Conference(Videobridge videobridge,
                       String id,
                       String focus,
                       String name,
-                      boolean enableLogging)
+                      boolean loggingEnabled)
     {
         if (videobridge == null)
             throw new NullPointerException("videobridge");
@@ -229,10 +235,11 @@ public class Conference
         this.videobridge = videobridge;
         this.id = id;
         this.focus = focus;
-        this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
+        this.eventAdmin = loggingEnabled ? videobridge.getEventAdmin() : null;
         this.name = name;
+        this.loggingEnabled = loggingEnabled;
 
-        if (!enableLogging)
+        if (!loggingEnabled)
         {
             logger.setLevel(Level.WARNING);
         }
@@ -244,6 +251,18 @@ public class Conference
 
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
+    }
+
+    /**
+     *
+     * Gets a boolean that determines whether logging should be enabled for
+     * this conference or not.
+     *
+     * @return true if logging is enabled for this conference, false otherwise.
+     */
+    public boolean isLoggingEnabled()
+    {
+        return loggingEnabled;
     }
 
     /**
