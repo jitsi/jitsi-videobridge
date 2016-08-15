@@ -527,6 +527,20 @@ public abstract class Channel
     }
 
     /**
+     * Gets the time in milliseconds of the last payload related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @return the time in milliseconds of the last payload related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @see #lastTransportActivityTime
+     */
+    public long getLastPayloadActivityTime()
+    {
+        return lastPayloadActivityTime.get();
+    }
+
+    /**
      * Gets the time in milliseconds of the last transport related activity
      * for this <tt>Channel</tt>.
      *

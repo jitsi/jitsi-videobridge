@@ -1972,6 +1972,27 @@ public class RtpChannel
     @Override
     public void expire()
     {
+        if (getContent().getConference().includeInStatistics())
+        {
+            Conference.Statistics conferenceStatistics
+                = getContent().getConference().getStatistics();
+            conferenceStatistics.totalChannels.incrementAndGet();
+
+            long lastPayloadActivityTime = getLastPayloadActivityTime();
+            long lastTransportActivityTime = getLastTransportActivityTime();
+
+            if (lastTransportActivityTime == 0)
+            {
+                // Check for ICE failures.
+                conferenceStatistics.totalNoTransportChannels.incrementAndGet();
+            }
+
+            if (lastPayloadActivityTime == 0)
+            {
+                // Check for payload.
+                conferenceStatistics.totalNoPayloadChannels.incrementAndGet();
+            }
+        }
         TransformEngine transformEngine = this.transformEngine;
         if (transformEngine != null)
         {
