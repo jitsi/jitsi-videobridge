@@ -800,15 +800,21 @@ public abstract class Channel
      */
     public void touch(ActivityType activityType)
     {
-        lastActivityTime.increase(System.currentTimeMillis());
+        long now = System.currentTimeMillis();
 
         switch (activityType)
         {
-            case TRANSPORT:
-                touchTransport();
-                break;
             case PAYLOAD:
-                touchPayload();
+                lastActivityTime.increase(now);
+                lastTransportActivityTime.increase(now);
+                lastPayloadActivityTime.increase(now);
+                break;
+            case TRANSPORT:
+                lastActivityTime.increase(now);
+                lastTransportActivityTime.increase(now);
+                break;
+            default:
+                lastActivityTime.increase(now);
                 break;
         }
     }
@@ -828,31 +834,6 @@ public abstract class Channel
     {
         touch(ActivityType.OTHER);
     }
-
-    /**
-     * Refreshes {@link #lastTransportActivityTime}.
-     *
-     * @see #lastTransportActivityTime
-     */
-    private void touchTransport()
-    {
-        lastTransportActivityTime.increase(System.currentTimeMillis());
-    }
-
-    /**
-     * Refreshes {@link #lastPayloadActivityTime} and
-     * {@link #lastTransportActivityTime}.
-     *
-     * @see #lastPayloadActivityTime
-     */
-    private void touchPayload()
-    {
-        long now = System.currentTimeMillis();
-
-        lastTransportActivityTime.increase(now);
-        lastPayloadActivityTime.increase(now);
-    }
-
 
     /**
      * Notifies this <tt>Channel</tt> that its <tt>TransportManager</tt> has
