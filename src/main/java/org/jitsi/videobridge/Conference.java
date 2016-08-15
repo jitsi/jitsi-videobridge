@@ -70,6 +70,12 @@ public class Conference
     private final List<Content> contents = new LinkedList<>();
 
     /**
+     *  A boolean flag that determines whether logging should be enabled for
+     *  this conference.
+     */
+    private final boolean loggingEnabled;
+
+    /**
      * An instance used to save information about the endpoints of this
      * <tt>Conference</tt>, when media recording is enabled.
      */
@@ -231,6 +237,7 @@ public class Conference
         this.focus = focus;
         this.eventAdmin = loggingEnabled ? videobridge.getEventAdmin() : null;
         this.name = name;
+        this.loggingEnabled = loggingEnabled;
 
         if (!loggingEnabled)
         {
@@ -244,6 +251,18 @@ public class Conference
 
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
+    }
+
+    /**
+     *
+     * Gets a boolean that determines whether logging should be enabled for
+     * this conference or not.
+     *
+     * @return true if logging is enabled for this conference, false otherwise.
+     */
+    public boolean isLoggingEnabled()
+    {
+        return loggingEnabled;
     }
 
     /**
