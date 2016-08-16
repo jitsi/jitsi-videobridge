@@ -279,8 +279,10 @@ public class EndpointConnectionStatus
             if (System.currentTimeMillis() - mostRecentChannelCreated
                     > firstTransferTimeout)
             {
-                logger.debug(endpointId + " is having trouble establishing"
-                        + " the connection and will be marked as inactive");
+                if (logger.isDebugEnabled())
+                    logger.debug(
+                            endpointId + " is having trouble establishing"
+                            + " the connection and will be marked as inactive");
                 // Let the logic below mark endpoint as inactive.
                 // Beware that FIRST_TRANSFER_TIMEOUT constant MUST be greater
                 // than MAX_INACTIVITY_LIMIT for this logic to work.
@@ -289,7 +291,9 @@ public class EndpointConnectionStatus
             else
             {
                 // Wait for the endpoint to connect...
-                logger.debug(endpointId + " not ready for activity checks yet");
+                if (logger.isDebugEnabled())
+                    logger.debug(
+                            endpointId + " not ready for activity checks yet");
                 return;
             }
         }
