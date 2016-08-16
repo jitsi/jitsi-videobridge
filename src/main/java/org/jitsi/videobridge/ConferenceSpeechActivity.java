@@ -174,18 +174,18 @@ public class ConferenceSpeechActivity
 
     /**
      * The <tt>Conference</tt> for which this instance represents the speech
-     * activity of its <tt>Endpoint</tt>s. The <tt>Conference</tt> is weakly
-     * referenced because <tt>ConferenceSpeechActivity</tt> is a part of
-     * <tt>Conference</tt> and the operation of the former in the absence of the
-     * latter is useless.
+     * activity of its <tt>Endpoint</tt>s. The reference will be set to
+     * <tt>null</tt> once the <tt>Conference</tt> gets expired.
+     * <tt>ConferenceSpeechActivity</tt> is a part of <tt>Conference</tt> and
+     * the operation of the former in the absence of the latter is useless.
      */
-    private final WeakReference<Conference> conference;
+    private Conference conference;
 
     /**
      * The <tt>Endpoint</tt> which is the dominant speaker in
      * {@link #conference}.
      */
-    private WeakReference<Endpoint> dominantEndpoint;
+    private Endpoint dominantEndpoint;
 
     /**
      * The indicator which signals to {@link #eventDispatcher} that
@@ -205,7 +205,7 @@ public class ConferenceSpeechActivity
      * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
      * beginning of the list i.e. the dominant speaker history.
      */
-    private List<WeakReference<Endpoint>> endpoints;
+    private List<Endpoint> endpoints;
 
     /**
      * The indicator which signals to {@link #eventDispatcher} that the
@@ -255,7 +255,9 @@ public class ConferenceSpeechActivity
      */
     public ConferenceSpeechActivity(Conference conference)
     {
-        this.conference = new WeakReference<>(conference);
+        Objects.requireNonNull(conference, "conference");
+
+        this.conference = conference;
 
         /*
          * The PropertyChangeListener will weakly reference this instance and
@@ -276,7 +278,7 @@ public class ConferenceSpeechActivity
     {
         Conference conference = getConference();
 
-        if ((conference != null) && !conference.isExpired())
+        if (conference != null)
         {
             if (logger.isTraceEnabled())
             {
@@ -306,7 +308,7 @@ public class ConferenceSpeechActivity
 
                     if (!endpoint.equals(dominantEndpoint))
                     {
-                        this.dominantEndpoint = new WeakReference<>(endpoint);
+                        this.dominantEndpoint = endpoint;
                         maybeStartEventDispatcher = true;
                     }
                 }
@@ -345,7 +347,7 @@ public class ConferenceSpeechActivity
         {
             Conference conference = getConference();
 
-            if ((conference == null) || conference.isExpired())
+            if (conference == null)
             {
                 jsonObject = null;
             }
@@ -472,7 +474,7 @@ public class ConferenceSpeechActivity
         {
             Conference conference = getConference();
 
-            if ((conference != null) && !conference.isExpired())
+            if (conference != null)
             {
                 activeSpeakerDetector.addActiveSpeakerChangedListener(
                         activeSpeakerChangedListener);
@@ -496,14 +498,16 @@ public class ConferenceSpeechActivity
      * instance.
      *
      * @return the <tt>Conference</tt> whose speech activity is represented by
-     * this instance
+     * this instance or <tt>null</tt> if the <tt>Conference</tt> has expired.
      */
     private Conference getConference()
     {
-        Conference conference = this.conference.get();
+        Conference conference = this.conference;
 
-        if ((conference == null) || conference.isExpired())
+        if ((conference != null) && conference.isExpired())
         {
+            this.conference = conference = null;
+
             /*
              * The Conference has expired so there is no point to listen to
              * ActiveSpeakerDetector. Remove the activeSpeakerChangedListener
@@ -551,8 +555,8 @@ public class ConferenceSpeechActivity
             }
             else
             {
-                dominantEndpoint = this.dominantEndpoint.get();
-                if (dominantEndpoint == null)
+                dominantEndpoint = this.dominantEndpoint;
+                if (dominantEndpoint.isExpired())
                     this.dominantEndpoint = null;
             }
         }
@@ -612,16 +616,15 @@ public class ConferenceSpeechActivity
 
                     endpoints = new ArrayList<>(conferenceEndpoints.size());
                     for (Endpoint endpoint : conferenceEndpoints)
-                        endpoints.add(new WeakReference<>(endpoint));
+                        endpoints.add(endpoint);
                 }
             }
 
             // The return value is the list of Endpoints of this instance.
             ret = new ArrayList<>(endpoints.size());
-            for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
-                    i.hasNext();)
+            for (Iterator<Endpoint> i = endpoints.iterator(); i.hasNext();)
             {
-                Endpoint endpoint = i.next().get();
+                Endpoint endpoint = i.next();
 
                 if (endpoint != null)
                     ret.add(endpoint);
@@ -712,7 +715,7 @@ public class ConferenceSpeechActivity
         // Cease to execute as soon as the Conference expires.
         Conference conference = getConference();
 
-        if ((conference == null) || conference.isExpired())
+        if (conference == null)
             return;
 
         String propertyName = ev.getPropertyName();
@@ -773,7 +776,7 @@ public class ConferenceSpeechActivity
              */
             Conference conference = getConference();
 
-            if ((conference == null) || conference.isExpired())
+            if (conference == null)
                 return false;
 
             long now = System.currentTimeMillis();
@@ -808,7 +811,7 @@ public class ConferenceSpeechActivity
                 endpoints = new ArrayList<>(conferenceEndpoints.size());
                 for (Endpoint endpoint : conferenceEndpoints)
                 {
-                    endpoints.add(new WeakReference<>(endpoint));
+                    endpoints.add(endpoint);
                 }
                 endpointsChanged = true;
             }
@@ -818,12 +821,11 @@ public class ConferenceSpeechActivity
                  * Remove the Endpoints of this instance which are no longer in
                  * the conference.
                  */
-                for (Iterator<WeakReference<Endpoint>> i = endpoints.iterator();
-                        i.hasNext();)
+                for (Iterator<Endpoint> i = endpoints.iterator(); i.hasNext();)
                 {
-                    Endpoint endpoint = i.next().get();
+                    Endpoint endpoint = i.next();
 
-                    if (endpoint == null)
+                    if (endpoint.isExpired())
                     {
                         i.remove();
                         endpointsChanged = true;
@@ -846,7 +848,7 @@ public class ConferenceSpeechActivity
                 {
                     for (Endpoint endpoint : conferenceEndpoints)
                     {
-                        endpoints.add(new WeakReference<>(endpoint));
+                        endpoints.add(endpoint);
                     }
                     endpointsChanged = true;
                 }
@@ -861,25 +863,8 @@ public class ConferenceSpeechActivity
 
             if (dominantEndpoint != null)
             {
-                int dominantEndpointIndex = -1;
-
-                for (int i = 0, count = endpoints.size(); i < count; ++i)
-                {
-                    if (dominantEndpoint.equals(endpoints.get(i).get()))
-                    {
-                        dominantEndpointIndex = i;
-                        break;
-                    }
-                }
-                if ((dominantEndpointIndex != -1)
-                        && (dominantEndpointIndex != 0))
-                {
-                    WeakReference<Endpoint> weakReference
-                        = endpoints.remove(dominantEndpointIndex);
-
-                    endpoints.add(0, weakReference);
-                    endpointsChanged = true;
-                }
+                endpoints.remove(dominantEndpoint);
+                endpoints.add(0, dominantEndpoint);
             }
 
             /*

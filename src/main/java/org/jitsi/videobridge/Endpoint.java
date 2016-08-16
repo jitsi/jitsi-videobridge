@@ -161,10 +161,9 @@ public class Endpoint
     private final Object selectedEndpointSyncRoot = new Object();
 
     /**
-     * A weak reference to the <tt>Conference</tt> this <tt>Endpoint</tt>
-     * belongs to.
+     * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
      */
-    private final WeakReference<Conference> weakConference;
+    private final Conference conference;
 
     /**
      * The list of IDs of the pinned endpoints of this {@code endpoint}.
@@ -172,11 +171,10 @@ public class Endpoint
     private List<String> pinnedEndpoints = new LinkedList<>();
 
     /**
-     * Weak references to the currently selected <tt>Endpoint</tt>s at this
+     * The list of currently selected <tt>Endpoint</tt>s at this
      * <tt>Endpoint</tt>.
      */
-    private Set<WeakReference<Endpoint>> weakSelectedEndpoints
-            = new HashSet<>();
+    private Set<Endpoint> selectedEndpoints = new HashSet<>();
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -194,10 +192,10 @@ public class Endpoint
      */
     public Endpoint(String id, Conference conference)
     {
-        if (id == null)
-            throw new NullPointerException("id");
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(conference, "conference");
 
-        this.weakConference = new WeakReference<>(conference);
+        this.conference = conference;
         this.id = id;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
@@ -383,20 +381,6 @@ public class Endpoint
     }
 
     /**
-     Helper method that unwraps the <tt>Endpoint</tt> from the weak reference
-     and performs the necessary checks.
-
-     @return The unwrapped Endpoint object or null if the Endpoint was release
-     of it has been expired
-     */
-    private Endpoint checkEndpointWeakReference(WeakReference<Endpoint> wr)
-    {
-        Endpoint e = wr == null ? null : wr.get();
-
-        return e == null || e.expired ? null : e;
-    }
-
-    /**
      * Gets the currently selected <tt>Endpoint</tt>s at this <tt>Endpoint</tt>
      *
      * @return the currently selected <tt>Endpoint</tt>s at this
@@ -405,10 +389,9 @@ public class Endpoint
     public Set<Endpoint> getSelectedEndpoints()
     {
         Set<Endpoint> result = new HashSet<>();
-        for (WeakReference<Endpoint> wr : weakSelectedEndpoints)
+        for (Endpoint endpoint : selectedEndpoints)
         {
-            Endpoint endpoint = checkEndpointWeakReference(wr);
-            if (endpoint != null)
+            if (!endpoint.isExpired())
             {
                 result.add(endpoint);
             }
@@ -434,9 +417,19 @@ public class Endpoint
      */
     public Conference getConference()
     {
-        WeakReference<Conference> wr = weakConference;
+        return this.conference;
+    }
 
-        return (wr == null) ? null : wr.get();
+    /**
+     * Checks whether or not this <tt>Endpoint</tt> is considered "expired"
+     * ({@link #expire()} method has been called).
+     *
+     * @return <tt>true</tt> if this instance is "expired" or <tt>false</tt>
+     * otherwise.
+     */
+    public boolean isExpired()
+    {
+        return expired;
     }
 
     /**
@@ -541,31 +534,37 @@ public class Endpoint
     {
         String to = (String)jsonObject.get("to");
         jsonObject.put("from", getID());
-        Conference conf = getConference();
+        if (conference.isExpired())
+        {
+            logger.warn(
+                "Unable to send EndpointMessage - the conference has expired");
+            return;
+        }
+
         if ("".equals(to))
         {
             // Broadcast message
             List<Endpoint> endpointSubset = new ArrayList<>();
-            for (Endpoint endpoint : conf.getEndpoints())
+            for (Endpoint endpoint : conference.getEndpoints())
             {
                 if (!endpoint.getID().equalsIgnoreCase(getID()))
                 {
                     endpointSubset.add(endpoint);
                 }
             }
-            conf.sendMessageOnDataChannels(jsonObject.toString(), 
-                endpointSubset);
+            conference.sendMessageOnDataChannels(
+                    jsonObject.toString(), endpointSubset);
         }
         else
         {
             // 1:1 message
-            Endpoint ep = conf.getEndpoint(to);
+            Endpoint ep = conference.getEndpoint(to);
             if (ep != null)
             {
                 List<Endpoint> endpointSubset = new ArrayList<>();
-                endpointSubset.add(conf.getEndpoint(to));
-                conf.sendMessageOnDataChannels(jsonObject.toString(), 
-                    endpointSubset);
+                endpointSubset.add(ep);
+                conference.sendMessageOnDataChannels(
+                        jsonObject.toString(), endpointSubset);
             }
             else
             {
@@ -723,11 +722,9 @@ public class Endpoint
                         + " displays endpoint {selectedIds}."));
         }
 
-        Conference conference = weakConference.get();
-
         Set<Endpoint> newSelectedEndpoints = new HashSet<>();
 
-        if (!newSelectedEndpointIDs.isEmpty() && conference != null ) {
+        if (!newSelectedEndpointIDs.isEmpty() && !conference.isExpired()) {
             for (String endpointId : newSelectedEndpointIDs) {
                 Endpoint endpoint = conference.getEndpoint(endpointId);
                 if (endpoint != null) {
@@ -745,7 +742,7 @@ public class Endpoint
 
             if (changed)
             {
-                updateWeakSelectedEndpoints(newSelectedEndpoints);
+                this.selectedEndpoints = new HashSet<>(newSelectedEndpoints);
             }
         }
 
@@ -800,24 +797,6 @@ public class Endpoint
         }
 
         return selectedEndpointIDs;
-    }
-
-    /**
-     * A helper method that updates the <tt>weakSelectedEndpoints<tt/>.
-     * Wraps the elements of <tt>newSelectedEndpoints<tt/> to weak references.
-     * @param newSelectedEndpoints The set to use in weakSelectedEndpoints
-     */
-    private void updateWeakSelectedEndpoints(
-            Set<Endpoint> newSelectedEndpoints)
-    {
-        Set<WeakReference<Endpoint>> newSet = new HashSet<>();
-
-        for (Endpoint endpoint : newSelectedEndpoints)
-        {
-            newSet.add(new WeakReference<Endpoint>(endpoint));
-        }
-
-        weakSelectedEndpoints = newSet;
     }
 
     /**

@@ -272,10 +272,10 @@ public class LoggingHandler
         }
 
         Conference conference = endpoint.getConference();
-        if (conference == null)
+        if (conference.isExpired())
         {
             logger.debug("Could not log endpoint created event because " +
-                "the conference is null.");
+                "the conference has expired.");
             return;
         }
 
@@ -301,10 +301,10 @@ public class LoggingHandler
         }
 
         Conference conference = endpoint.getConference();
-        if (conference == null)
+        if (conference.isExpired())
         {
             logger.debug("Could not log endpoint display name changed " +
-                " event because the conference is null.");
+                " event because the conference has expired.");
             return;
         }
 
