@@ -65,6 +65,11 @@ public abstract class Channel
     private final String channelBundleId;
 
     /**
+     * Remembers when this <tt>Channel</tt> instance was created.
+     */
+    private final long creationTimestamp = System.currentTimeMillis();
+
+    /**
      * The name of the <tt>Channel</tt> property <tt>endpoint</tt> which
      * points to the <tt>Endpoint</tt> of the conference participant associated
      * with this <tt>Channel</tt>..
@@ -460,6 +465,18 @@ public abstract class Channel
     public Content getContent()
     {
         return content;
+    }
+
+    /**
+     * Gets the time in milliseconds which tells when this <tt>Channel</tt> was
+     * created.
+     *
+     * @return the time in milliseconds which indicates when this
+     * <tt>Channel</tt> instance was created.
+     */
+    public long getCreationTimestamp()
+    {
+        return creationTimestamp;
     }
 
     /**

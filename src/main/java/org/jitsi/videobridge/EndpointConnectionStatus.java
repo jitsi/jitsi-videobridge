@@ -65,6 +65,12 @@ public class EndpointConnectionStatus
         = "EndpointConnectivityStatusChangeEvent";
 
     /**
+     * How long it can take an endpoint to send first data, before it will
+     * be marked as inactive.
+     */
+    private final static long FIRST_TRANSFER_TIMEOUT = 15000L;
+
+    /**
      * How long an endpoint can be inactive before it wil be considered
      * disconnected.
      */
@@ -97,6 +103,14 @@ public class EndpointConnectionStatus
     public EndpointConnectionStatus()
     {
         super(new String[] { EventFactory.SCTP_CONN_READY_TOPIC });
+
+        if (FIRST_TRANSFER_TIMEOUT <= MAX_INACTIVITY_LIMIT)
+        {
+            throw new IllegalArgumentException(
+                    String.format("FIRST_TRANSFER_TIMEOUT(%s) must be greater"
+                                + " than MAX_INACTIVITY_LIMIT(%s)",
+                            FIRST_TRANSFER_TIMEOUT, MAX_INACTIVITY_LIMIT));
+        }
     }
 
     /**
@@ -178,7 +192,9 @@ public class EndpointConnectionStatus
 
     private void monitorEndpointActivity(Endpoint endpoint)
     {
+        String endpointId = endpoint.getID();
         long lastActivity = 0;
+        long mostRecentChannelCreated = 0;
 
         // Go over all RTP channels to get the latest timestamp
         List<RtpChannel> rtpChannels = endpoint.getChannels(null);
@@ -188,6 +204,11 @@ public class EndpointConnectionStatus
             if (channelLastActivity > lastActivity)
             {
                 lastActivity = channelLastActivity;
+            }
+            long creationTimestamp = channel.getCreationTimestamp();
+            if (creationTimestamp > mostRecentChannelCreated)
+            {
+                mostRecentChannelCreated = creationTimestamp;
             }
         }
         // Also check SctpConnection
@@ -200,16 +221,37 @@ public class EndpointConnectionStatus
             {
                 lastActivity = lastSctpActivity;
             }
+            long creationTimestamp = sctpConnection.getCreationTimestamp();
+            if (creationTimestamp > mostRecentChannelCreated)
+            {
+                mostRecentChannelCreated = creationTimestamp;
+            }
         }
 
         // Transport not initialized yet
         if (lastActivity == 0)
         {
-            logger.debug(endpoint + " not ready for activity checks yet");
-            return;
+            // Here we check if it's taking too long for the endpoint to connect
+            // We're doing that by checking how much time has elapsed since
+            // the first endpoint's channel has been created.
+            if (System.currentTimeMillis() - mostRecentChannelCreated
+                    > FIRST_TRANSFER_TIMEOUT)
+            {
+                logger.debug(endpointId + " is having trouble establishing"
+                        + " the connection and will be marked as inactive");
+                // Let the logic below mark endpoint as inactive.
+                // Beware that FIRST_TRANSFER_TIMEOUT constant MUST be greater
+                // than MAX_INACTIVITY_LIMIT for this logic to work.
+                lastActivity = mostRecentChannelCreated;
+            }
+            else
+            {
+                // Wait for the endpoint to connect...
+                logger.debug(endpointId + " not ready for activity checks yet");
+                return;
+            }
         }
 
-        String endpointId = endpoint.getID();
         long noActivityForMs = System.currentTimeMillis() - lastActivity;
         boolean inactive = noActivityForMs > MAX_INACTIVITY_LIMIT;
         if (inactive && !inactiveEndpoints.contains(endpoint))
@@ -293,6 +335,12 @@ public class EndpointConnectionStatus
 
                 endpoints.remove();
             }
+            else if (endpoint.isExpired() && logger.isDebugEnabled())
+            {
+                logger.debug(
+                        "Endpoint has expired: " + endpoint.getID()
+                            + ", but still on the list");
+            }
         }
     }
 
@@ -325,10 +373,12 @@ public class EndpointConnectionStatus
 
         // Go over all endpoints in the conference and send notification about
         // those currently "inactive"
-        List<Endpoint> endpoints = conference.getEndpoints();
-        for (Endpoint potentialSubject : endpoints)
+        //
+        // Looping over all inactive endpoints of all conferences maybe is not
+        // the most efficient, but it should not be extremely large number.
+        for (Endpoint potentialSubject : inactiveEndpoints)
         {
-            if (inactiveEndpoints.contains(potentialSubject))
+            if (potentialSubject.getConference() == conference)
             {
                 sendEndpointConnectionStatus(
                         potentialSubject, false, endpoint);
