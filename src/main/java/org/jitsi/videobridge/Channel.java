@@ -804,17 +804,11 @@ public abstract class Channel
         switch (activityType)
         {
             case PAYLOAD:
-                lastActivityTime.increase(now);
-                lastTransportActivityTime.increase(now);
                 lastPayloadActivityTime.increase(now);
-                break;
             case TRANSPORT:
-                lastActivityTime.increase(now);
                 lastTransportActivityTime.increase(now);
-                break;
             default:
                 lastActivityTime.increase(now);
-                break;
         }
     }
 
