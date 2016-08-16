@@ -733,7 +733,7 @@ public class Conference
                             + metrics[0]
                             + ", channelCount="
                             + metrics[1]
-                            + ", streamCount="
+                            + ", video streams="
                             + metrics[2]
                             + ", totalConferences="
                             + videobridgeStatistics.totalConferences
