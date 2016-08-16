@@ -119,9 +119,9 @@ public abstract class Channel
     /**
      * The time in milliseconds of the last transport related activity to this
      * <tt>Channel</tt>. Currently this means when for the last time there were
-     * any RTP packets seen for this channel or ICE "consent freshness check"
-     * has succeeded. In the time interval between the last activity and now,
-     * this <tt>Channel</tt>'s transport is considered inactive.
+     * any RTP packets received for this channel or ICE "consent freshness
+     * check" has succeeded. In the time interval between the last activity and
+     * now, this <tt>Channel</tt>'s transport is considered inactive.
      */
     private final MonotonicAtomicLong lastTransportActivityTime
         = new MonotonicAtomicLong();
@@ -129,7 +129,7 @@ public abstract class Channel
     /**
      * The time in milliseconds of the last payload related activity to this
      * <tt>Channel</tt>. Currently this means when for the last time there were
-     * any RTP/RTCP packets seen for this channel.
+     * any RTP/RTCP packets received for this channel.
      */
     private final MonotonicAtomicLong lastPayloadActivityTime
         = new MonotonicAtomicLong();
