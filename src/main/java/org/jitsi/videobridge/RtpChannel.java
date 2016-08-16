@@ -1191,9 +1191,6 @@ public class RtpChannel
                         + conference.getID() + " is "
                         + stream.getDirection() + ".");
         }
-
-        // It seems this Channel is still active.
-        touch(ActivityType.TRANSPORT /* transport connected */);
     }
 
     /**

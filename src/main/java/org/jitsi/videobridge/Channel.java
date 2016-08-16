@@ -868,6 +868,10 @@ public abstract class Channel
                             + " of content " + getContent().getName()
                             + " of conference "
                             + getContent().getConference().getID());
+
+        // It seems this Channel is still active.
+        touch(ActivityType.TRANSPORT /* transport connected */);
+
         try
         {
             maybeStartStream();
