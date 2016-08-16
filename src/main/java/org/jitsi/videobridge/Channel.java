@@ -129,7 +129,7 @@ public abstract class Channel
     /**
      * The time in milliseconds of the last payload related activity to this
      * <tt>Channel</tt>. Currently this means when for the last time there were
-     * any RTP packets seen for this channel.
+     * any RTP/RTCP packets seen for this channel.
      */
     private final MonotonicAtomicLong lastPayloadActivityTime
         = new MonotonicAtomicLong();
@@ -794,9 +794,8 @@ public abstract class Channel
      * Sets the time in milliseconds of the last activity related to this
      * <tt>Channel</tt> to the current system time.
      *
-     * @param activityType if <tt>true</tt> will also refresh "last transport
-     *        activity" timestamp. It is supposed to be refreshed whenever
-     *        some packets are received on this channel.
+     * @param activityType the activity type that has happened on this
+     * channel.
      */
     public void touch(ActivityType activityType)
     {
@@ -819,10 +818,25 @@ public abstract class Channel
         }
     }
 
+    /**
+     * This enum describes the possible {@link Channel} activity types.
+     */
     public enum ActivityType
     {
+        /**
+         * Transport level activity like ICE consent checks and/or RTP/RTCP
+         * packets received.
+         */
         TRANSPORT,
+
+        /**
+         * Application level activity like RTP/RTCP packets received.
+         */
         PAYLOAD,
+
+        /**
+         * Anything else that doesn't fall in the above two categories.
+         */
         OTHER
     }
 

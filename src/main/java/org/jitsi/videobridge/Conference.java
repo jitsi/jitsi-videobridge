@@ -259,8 +259,9 @@ public class Conference
     }
 
     /**
+     * Gets the statistics of this {@link Conference}.
      *
-     * @return
+     * @return the statistics of this {@link Conference}.
      */
     public Statistics getStatistics()
     {
