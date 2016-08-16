@@ -555,11 +555,10 @@ public class Conference
         if (maybeRemoveEndpoint)
         {
             // It looks like there is a chance that the Endpoint may have
-            // expired. Endpoints are held by this Conference via WeakReferences
-            // but WeakReferences are unpredictable. We have functionality
-            // though which could benefit from discovering that an Endpoint has
-            // expired as quickly as possible (e.g. ConferenceSpeechActivity).
-            // Consequently, try to expedite the removal of expired Endpoints.
+            // expired. We have functionality though which could benefit from
+            // discovering that an Endpoint has expired as quickly as possible
+            // (e.g. ConferenceSpeechActivity). Consequently, try to expedite
+            // the removal of expired Endpoints.
             if (endpoint.getSctpConnection() == null
                     && endpoint.getChannelCount(null) == 0)
             {
