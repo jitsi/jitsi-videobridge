@@ -15,11 +15,12 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.util.Logger;
+import net.java.sip.communicator.util.*;
 
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 
+import org.jitsi.service.configuration.*;
 import org.json.simple.*;
 
 import org.osgi.framework.*;
@@ -34,7 +35,7 @@ import java.util.*;
  * An endpoint's connectivity status is considered connected as long as there
  * is any traffic activity seen on any of it's channels as defined in
  * {@link Channel#lastTransportActivityTime}. When there is no activity for
- * longer than {@link #MAX_INACTIVITY_LIMIT} it will be assumed that
+ * longer than {@link #maxInactivityLimit} it will be assumed that
  * the endpoint is having some connectivity issues. Those may be temporary or
  * permanent. When that happens there will be a Colibri message broadcasted
  * to all conference endpoints. The Colibri class name of the message is defined
@@ -52,6 +53,36 @@ public class EndpointConnectionStatus
     extends EventHandlerActivator
 {
     /**
+     * The base for config property names constants.
+     */
+    private final static String CFG_PNAME_BASE
+        = "org.jitsi.videobridge.EndpointConnectionStatus";
+
+    /**
+     * The name of the configuration property which configures
+     * {@link #firstTransferTimeout}.
+     */
+    public final static String CFG_PNAME_FIRST_TRANSFER_TIMEOUT
+        = CFG_PNAME_BASE + ".FIRST_TRANSFER_TIMEOUT";
+
+    /**
+     * The name of the configuration property which configures
+     * {@link #maxInactivityLimit}.
+     */
+    public static final String CFG_PNAME_MAX_INACTIVITY_LIMIT
+        = CFG_PNAME_BASE + ".MAX_INACTIVITY_LIMIT";
+
+    /**
+     * The default value for {@link #firstTransferTimeout}.
+     */
+    private final static long DEFAULT_FIRST_TRANSFER_TIMEOUT = 15000L;
+
+    /**
+     * The default value for {@link #maxInactivityLimit}.
+     */
+    private final static long DEFAULT_MAX_INACTIVITY_LIMIT = 3000L;
+
+    /**
      * The logger instance used by this class.
      */
     private final static Logger logger
@@ -68,13 +99,13 @@ public class EndpointConnectionStatus
      * How long it can take an endpoint to send first data, before it will
      * be marked as inactive.
      */
-    private final static long FIRST_TRANSFER_TIMEOUT = 15000L;
+    private long firstTransferTimeout;
 
     /**
      * How long an endpoint can be inactive before it wil be considered
      * disconnected.
      */
-    private final static long MAX_INACTIVITY_LIMIT = 3000L;
+    private long maxInactivityLimit;
 
     /**
      * How often connectivity status is being probed. Value in milliseconds.
@@ -103,14 +134,6 @@ public class EndpointConnectionStatus
     public EndpointConnectionStatus()
     {
         super(new String[] { EventFactory.SCTP_CONN_READY_TOPIC });
-
-        if (FIRST_TRANSFER_TIMEOUT <= MAX_INACTIVITY_LIMIT)
-        {
-            throw new IllegalArgumentException(
-                    String.format("FIRST_TRANSFER_TIMEOUT(%s) must be greater"
-                                + " than MAX_INACTIVITY_LIMIT(%s)",
-                            FIRST_TRANSFER_TIMEOUT, MAX_INACTIVITY_LIMIT));
-        }
     }
 
     /**
@@ -137,6 +160,25 @@ public class EndpointConnectionStatus
         else
         {
             logger.error("Endpoint connection monitoring is already running");
+        }
+
+        ConfigurationService config = ServiceUtils.getService(
+                bundleContext, ConfigurationService.class);
+
+        firstTransferTimeout = config.getLong(
+                CFG_PNAME_FIRST_TRANSFER_TIMEOUT,
+                DEFAULT_FIRST_TRANSFER_TIMEOUT);
+
+        maxInactivityLimit = config.getLong(
+                CFG_PNAME_MAX_INACTIVITY_LIMIT,
+                DEFAULT_MAX_INACTIVITY_LIMIT);
+
+        if (firstTransferTimeout <= maxInactivityLimit)
+        {
+            throw new IllegalArgumentException(
+                String.format("FIRST_TRANSFER_TIMEOUT(%s) must be greater"
+                            + " than MAX_INACTIVITY_LIMIT(%s)",
+                        firstTransferTimeout, maxInactivityLimit));
         }
 
         super.start(bundleContext);
@@ -235,7 +277,7 @@ public class EndpointConnectionStatus
             // We're doing that by checking how much time has elapsed since
             // the first endpoint's channel has been created.
             if (System.currentTimeMillis() - mostRecentChannelCreated
-                    > FIRST_TRANSFER_TIMEOUT)
+                    > firstTransferTimeout)
             {
                 logger.debug(endpointId + " is having trouble establishing"
                         + " the connection and will be marked as inactive");
@@ -253,7 +295,7 @@ public class EndpointConnectionStatus
         }
 
         long noActivityForMs = System.currentTimeMillis() - lastActivity;
-        boolean inactive = noActivityForMs > MAX_INACTIVITY_LIMIT;
+        boolean inactive = noActivityForMs > maxInactivityLimit;
         if (inactive && !inactiveEndpoints.contains(endpoint))
         {
             logger.debug(endpointId + " is considered disconnected");
