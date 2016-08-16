@@ -863,25 +863,8 @@ public class ConferenceSpeechActivity
 
             if (dominantEndpoint != null)
             {
-                int dominantEndpointIndex = -1;
-
-                for (int i = 0, count = endpoints.size(); i < count; ++i)
-                {
-                    if (dominantEndpoint.equals(endpoints.get(i)))
-                    {
-                        dominantEndpointIndex = i;
-                        break;
-                    }
-                }
-                if ((dominantEndpointIndex != -1)
-                        && (dominantEndpointIndex != 0))
-                {
-                    Endpoint weakReference
-                        = endpoints.remove(dominantEndpointIndex);
-
-                    endpoints.add(0, weakReference);
-                    endpointsChanged = true;
-                }
+                endpoints.remove(dominantEndpoint);
+                endpoints.add(0, dominantEndpoint);
             }
 
             /*
