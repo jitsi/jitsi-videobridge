@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import java.util.regex.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
@@ -201,6 +202,11 @@ public class Videobridge
     private Pattern shutdownSourcePattern;
 
     /**
+     * A class that holds some instance statistics.
+     */
+    private final Statistics statistics = new Statistics();
+
+    /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
     public Videobridge()
@@ -355,6 +361,16 @@ public class Videobridge
     public BundleContext getBundleContext()
     {
         return bundleContext;
+    }
+
+    /**
+     * Gets the statistics of this instance.
+     *
+     * @return the statistics of this instance.
+     */
+    public Statistics getStatistics()
+    {
+        return statistics;
     }
 
     /**
@@ -1559,5 +1575,53 @@ public class Videobridge
             }
         }
         return contentStreamCount;
+    }
+
+    /**
+     * Basic statistics/metrics about the videobridge like cumulative/total
+     * number of channels created, cumulative/total number of channels failed,
+     * etc.
+     */
+    public static class Statistics
+    {
+        /**
+         * The cumulative/total number of channels created on this
+         * {@link Videobridge}.
+         */
+        public AtomicInteger totalChannels = new AtomicInteger(0);
+
+        /**
+         * The cumulative/total number of channels that failed because of no
+         * transport activity on this {@link Videobridge}.
+         */
+        public AtomicInteger totalNoTransportChannels
+            = new AtomicInteger(0);
+
+        /**
+         * The cumulative/total number of channels that failed because of no
+         * payload activity on this {@link Videobridge}.
+         */
+        public AtomicInteger totalNoPayloadChannels = new AtomicInteger(0);
+
+        /**
+         * The cumulative/total number of conferences that had all of their
+         * channels failed because there was no transport activity (which
+         * includes those that failed because there was no payload activity).
+         */
+        public AtomicInteger totalFailedConferences = new AtomicInteger(0);
+
+        /**
+         * The cumulative/total number of conferences that had some of their
+         * channels failed because there was no transport activity (which
+         * includes those that failed because there was no payload activity).
+         */
+        public AtomicInteger totalPartiallyFailedConferences
+            = new AtomicInteger(0);
+
+        /**
+         * The cumulative/total number of conferences created on this
+         * {@link Videobridge}.
+         */
+        public AtomicInteger totalConferences = new AtomicInteger(0);
     }
 }

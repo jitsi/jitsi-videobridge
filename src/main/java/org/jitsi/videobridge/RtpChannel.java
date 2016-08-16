@@ -362,7 +362,7 @@ public class RtpChannel
         if (accept)
         {
             // Note that this Channel is still active.
-            touch();
+            touch(ActivityType.PAYLOAD /* control received */);
 
             /*
              * Does the data of the specified DatagramPacket resemble (a header
@@ -461,7 +461,7 @@ public class RtpChannel
         if (accept)
         {
             // Note that this Channel is still active.
-            touch();
+            touch(ActivityType.PAYLOAD /* data received */);
 
             /*
              * Does the data of the specified DatagramPacket resemble (a header
@@ -1191,8 +1191,6 @@ public class RtpChannel
                         + conference.getID() + " is "
                         + stream.getDirection() + ".");
         }
-
-        touch(); // It seems this Channel is still active.
     }
 
     /**
@@ -1971,6 +1969,27 @@ public class RtpChannel
     @Override
     public void expire()
     {
+        if (getContent().getConference().includeInStatistics())
+        {
+            Conference.Statistics conferenceStatistics
+                = getContent().getConference().getStatistics();
+            conferenceStatistics.totalChannels.incrementAndGet();
+
+            long lastPayloadActivityTime = getLastPayloadActivityTime();
+            long lastTransportActivityTime = getLastTransportActivityTime();
+
+            if (lastTransportActivityTime == 0)
+            {
+                // Check for ICE failures.
+                conferenceStatistics.totalNoTransportChannels.incrementAndGet();
+            }
+
+            if (lastPayloadActivityTime == 0)
+            {
+                // Check for payload.
+                conferenceStatistics.totalNoPayloadChannels.incrementAndGet();
+            }
+        }
         TransformEngine transformEngine = this.transformEngine;
         if (transformEngine != null)
         {

@@ -117,6 +117,24 @@ public abstract class Channel
         = new MonotonicAtomicLong();
 
     /**
+     * The time in milliseconds of the last transport related activity to this
+     * <tt>Channel</tt>. Currently this means when for the last time there were
+     * any RTP packets received for this channel or ICE "consent freshness
+     * check" has succeeded. In the time interval between the last activity and
+     * now, this <tt>Channel</tt>'s transport is considered inactive.
+     */
+    private final MonotonicAtomicLong lastTransportActivityTime
+        = new MonotonicAtomicLong();
+
+    /**
+     * The time in milliseconds of the last payload related activity to this
+     * <tt>Channel</tt>. Currently this means when for the last time there were
+     * any RTP/RTCP packets received for this channel.
+     */
+    private final MonotonicAtomicLong lastPayloadActivityTime
+        = new MonotonicAtomicLong();
+
+    /**
      * The <tt>StreamConnector</tt> currently used by this <tt>Channel</tt>.
      */
     private StreamConnector streamConnector;
@@ -509,6 +527,34 @@ public abstract class Channel
     }
 
     /**
+     * Gets the time in milliseconds of the last payload related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @return the time in milliseconds of the last payload related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @see #lastTransportActivityTime
+     */
+    public long getLastPayloadActivityTime()
+    {
+        return lastPayloadActivityTime.get();
+    }
+
+    /**
+     * Gets the time in milliseconds of the last transport related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @return the time in milliseconds of the last transport related activity
+     * for this <tt>Channel</tt>.
+     *
+     * @see #lastTransportActivityTime
+     */
+    public long getLastTransportActivityTime()
+    {
+        return lastTransportActivityTime.get();
+    }
+
+    /**
      * Gets the <tt>StreamConnector</tt> currently used by this instance.
      * @return the <tt>StreamConnector</tt> currently used by this instance.
      */
@@ -747,10 +793,54 @@ public abstract class Channel
     /**
      * Sets the time in milliseconds of the last activity related to this
      * <tt>Channel</tt> to the current system time.
+     *
+     * @param activityType the activity type that has happened on this
+     * channel.
+     */
+    public void touch(ActivityType activityType)
+    {
+        long now = System.currentTimeMillis();
+
+        switch (activityType)
+        {
+            case PAYLOAD:
+                lastPayloadActivityTime.increase(now);
+            case TRANSPORT:
+                lastTransportActivityTime.increase(now);
+            default:
+                lastActivityTime.increase(now);
+        }
+    }
+
+    /**
+     * This enum describes the possible {@link Channel} activity types.
+     */
+    public enum ActivityType
+    {
+        /**
+         * Transport level activity like ICE consent checks and/or RTP/RTCP
+         * packets received.
+         */
+        TRANSPORT,
+
+        /**
+         * Application level activity like RTP/RTCP packets received.
+         */
+        PAYLOAD,
+
+        /**
+         * Anything else that doesn't fall in the above two categories.
+         */
+        OTHER
+    }
+
+    /**
+     * Sets the time in milliseconds of the last activity related to this
+     * <tt>Channel</tt> to the current system time.
      */
     public void touch()
     {
-        lastActivityTime.increase(System.currentTimeMillis());
+        touch(ActivityType.OTHER);
     }
 
     /**
@@ -772,6 +862,10 @@ public abstract class Channel
                             + " of content " + getContent().getName()
                             + " of conference "
                             + getContent().getConference().getID());
+
+        // It seems this Channel is still active.
+        touch(ActivityType.TRANSPORT /* transport connected */);
+
         try
         {
             maybeStartStream();

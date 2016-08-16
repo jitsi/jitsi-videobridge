@@ -122,6 +122,45 @@ public class VideobridgeStatistics
     public static final String TOTAL_MEMORY = "total_memory";
 
     /**
+     * The name of the total number of channels without any payload (RTP/RTCP)
+     * traffic.
+     */
+    private static final String TOTAL_NO_PAYLOAD_CHANNELS
+        = "total_no_payload_channels";
+
+    /**
+     * The name of the total number of channels where the transport failed to
+     * be established.
+     */
+    private static final String TOTAL_NO_TRANSPORT_CHANNELS
+        = "total_no_transport_channels";
+
+    /**
+     * The name of the total number of channels (failed + succeeded).
+     */
+    private static final String TOTAL_CHANNELS
+        = "total_channels";
+
+    /**
+     * The name of the total number of conferences where all channels failed
+     * due to no payload traffic.
+     */
+    private static final String TOTAL_FAILED_CONFERENCES
+        = "total_failed_conferences";
+
+    /**
+     * The name of the total number of conferences with some failed channels.
+     */
+    private static final String TOTAL_PARTIALLY_FAILED_CONFERENCES
+        = "total_partially_failed_conferences";
+
+    /**
+     * The name of the total number of conferences (failed + succeeded).
+     */
+    private static final String TOTAL_CONFERENCES
+        = "total_conferences";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -268,6 +307,11 @@ public class VideobridgeStatistics
         int[] conferenceSizes = new int[CONFERENCE_SIZE_BUCKETS];
         boolean shutdownInProgress = false;
 
+        int totalConferences = 0, totalFailedConferences = 0,
+            totalPartiallyFailedConferences = 0,
+            totalNoTransportChannels = 0,
+            totalNoPayloadChannels = 0, totalChannels = 0;
+
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
 
@@ -276,6 +320,19 @@ public class VideobridgeStatistics
             for (Videobridge videobridge
                     : Videobridge.getVideobridges(bundleContext))
             {
+                Videobridge.Statistics jvbStats = videobridge.getStatistics();
+                totalConferences += jvbStats.totalConferences.intValue();
+                totalFailedConferences
+                    += jvbStats.totalFailedConferences.intValue();
+                totalPartiallyFailedConferences
+                    += jvbStats.totalPartiallyFailedConferences.intValue();
+                totalNoTransportChannels
+                    += jvbStats.totalNoTransportChannels.intValue();
+                totalNoPayloadChannels
+                    += jvbStats.totalNoPayloadChannels.intValue();
+                totalChannels
+                    += jvbStats.totalChannels.intValue();
+
                 for (Conference conference : videobridge.getConferences())
                 {
                     int conferenceEndpoints = conference.getEndpointCount();
@@ -398,6 +455,15 @@ public class VideobridgeStatistics
             unlockedSetStat(RTP_LOSS, rtpLoss);
 
             unlockedSetStat(AUDIOCHANNELS, audioChannels);
+            unlockedSetStat(TOTAL_FAILED_CONFERENCES, totalFailedConferences);
+            unlockedSetStat(TOTAL_PARTIALLY_FAILED_CONFERENCES,
+                totalPartiallyFailedConferences);
+            unlockedSetStat(TOTAL_NO_PAYLOAD_CHANNELS,
+                totalNoPayloadChannels);
+            unlockedSetStat(TOTAL_NO_TRANSPORT_CHANNELS,
+                totalNoTransportChannels);
+            unlockedSetStat(TOTAL_CONFERENCES, totalConferences);
+            unlockedSetStat(TOTAL_CHANNELS, totalChannels);
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);
             unlockedSetStat(VIDEOCHANNELS, videoChannels);

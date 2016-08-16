@@ -21,6 +21,7 @@ import java.lang.ref.*;
 import java.lang.reflect.*;
 import java.text.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -174,6 +175,11 @@ public class Conference
     private final Videobridge videobridge;
 
     /**
+     * Holds conference statistics.
+     */
+    private Statistics statistics = new Statistics();
+
+    /**
      * The <tt>WebRtcpDataStreamListener</tt> which listens to the
      * <tt>SctpConnection</tt>s of the <tt>Endpoint</tt>s participating in this
      * multipoint conference in order to detect when they are ready (to fire
@@ -198,6 +204,11 @@ public class Conference
      * information.
      */
     private final Logger logger = Logger.getLogger(classLogger, null);
+
+    /**
+     * Whether this conference should be considered when generating statistics.
+     */
+    private final boolean includeInStatistics;
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -230,6 +241,7 @@ public class Conference
         this.id = id;
         this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
+        this.includeInStatistics = enableLogging;
         this.name = name;
 
         if (!enableLogging)
@@ -245,6 +257,25 @@ public class Conference
         if (eventAdmin != null)
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
     }
+
+    /**
+     * Gets the statistics of this {@link Conference}.
+     *
+     * @return the statistics of this {@link Conference}.
+     */
+    public Statistics getStatistics()
+    {
+        return statistics;
+    }
+
+    /**
+     * @return whether this conference should be included in generated
+     * statistics.
+     */
+     public boolean includeInStatistics()
+     {
+         return includeInStatistics;
+     }
 
     /**
      * Used to send a message to a subset of endpoints in the call, primary use
@@ -660,11 +691,61 @@ public class Conference
             // TransportManager and then the TransportManager will not close.
             closeTransportManagers();
 
-            if (logger.isInfoEnabled())
+            if (includeInStatistics)
             {
-                logger.info(
-                        "Expired conference " + getID()
-                            + ". " + videobridge.getConferenceCountString());
+                Videobridge.Statistics videobridgeStatistics
+                    = getVideobridge().getStatistics();
+
+                videobridgeStatistics.totalConferences.incrementAndGet();
+
+                videobridgeStatistics.totalNoPayloadChannels.addAndGet(
+                    statistics.totalNoPayloadChannels.intValue());
+                videobridgeStatistics.totalNoTransportChannels.addAndGet(
+                    statistics.totalNoTransportChannels.intValue());
+
+                videobridgeStatistics.totalChannels.addAndGet(
+                    statistics.totalChannels.intValue());
+
+                boolean hasFailed = statistics.totalNoPayloadChannels.intValue()
+                    >= statistics.totalChannels.intValue();
+                boolean hasPartiallyFailed
+                    = statistics.totalNoPayloadChannels.intValue() != 0;
+
+                if (hasPartiallyFailed)
+                {
+                    videobridgeStatistics.totalPartiallyFailedConferences.incrementAndGet();
+                }
+
+                if (hasFailed)
+                {
+                    videobridgeStatistics.totalFailedConferences.incrementAndGet();
+                }
+
+                if (logger.isInfoEnabled())
+                {
+
+                    int[] metrics
+                        = videobridge.getConferenceChannelAndStreamCount();
+
+                    logger.info(
+                        "Expired conference id=" + getID()
+                            + ", conferenceCount="
+                            + metrics[0]
+                            + ", channelCount="
+                            + metrics[1]
+                            + ", video streams="
+                            + metrics[2]
+                            + ", totalConferences="
+                            + videobridgeStatistics.totalConferences
+                            + ", totalNoPayloadChannels="
+                            + videobridgeStatistics.totalNoPayloadChannels
+                            + ", totalNoTransportChannels="
+                            + videobridgeStatistics.totalNoTransportChannels
+                            + ", totalChannels="
+                            + videobridgeStatistics.totalChannels
+                            + ", hasFailed=" + hasFailed
+                            + ", hasPartiallyFailed=" + hasPartiallyFailed);
+                }
             }
         }
     }
@@ -1719,4 +1800,26 @@ public class Conference
     {
         return logger;
     }
+
+    /**
+     * Holds conference statistics.
+     */
+    class Statistics
+    {
+        /**
+         * The total number of channels where the transport failed to connect.
+         */
+        AtomicInteger totalNoTransportChannels = new AtomicInteger(0);
+
+        /**
+         * The total number of channels where there was no payload traffic.
+         */
+        AtomicInteger totalNoPayloadChannels = new AtomicInteger(0);
+
+        /**
+         * The total number of channels.
+         */
+        public AtomicInteger totalChannels = new AtomicInteger(0);
+    }
+
 }
