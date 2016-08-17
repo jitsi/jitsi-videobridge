@@ -190,7 +190,7 @@ public class RtxTransformer
      * @return the sequence number which should be used for the next RTX
      * packet sent using SSRC <tt>ssrc</tt>.
      */
-    public int getNextRtxSequenceNumber(long ssrc)
+    private int getNextRtxSequenceNumber(long ssrc)
     {
         Integer seq;
         synchronized (rtxSequenceNumbers)
