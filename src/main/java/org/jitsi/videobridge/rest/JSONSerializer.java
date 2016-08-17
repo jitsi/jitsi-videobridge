@@ -107,6 +107,12 @@ final class JSONSerializer
     static final String SOURCES = SourcePacketExtension.ELEMENT_NAME + "s";
 
     /**
+     * This parameters makes jitsi generate ssrc's for channels. 
+     * (unique ssrc id for each channel, so client applications will be able to use unique ssrc's) 
+     */
+    static final String GENERATE_SOURCES = "generate_sources";
+    
+    /**
      * The name of the JSON pair which specifies the value of the
      * <tt>ssrcs</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
      */
