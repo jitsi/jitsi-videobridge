@@ -400,9 +400,9 @@ public class VideobridgeStatistics
                                 }
                                 MediaStreamStats2 stats
                                     = stream.getMediaStreamStats();
-                                BasicReceiveStreamStats receiveStats
+                                ReceiveTrackStats receiveStats
                                     = stats.getReceiveStats();
-                                BasicSendStreamStats sendStats
+                                SendTrackStats sendStats
                                     = stats.getSendStats();
 
                                 packetsReceived += receiveStats.getCurrentPackets();
@@ -416,7 +416,7 @@ public class VideobridgeStatistics
                                 bitrateUploadBps += sendStats.getBitrate();
 
                                 double jitter = sendStats.getJitter();
-                                if (jitter != BasicStreamStats.JITTER_UNSET)
+                                if (jitter != TrackStats.JITTER_UNSET)
                                 {
                                     // We take the abs because otherwise the
                                     // aggregate makes no sense.
@@ -424,7 +424,7 @@ public class VideobridgeStatistics
                                     jitterCount++;
                                 }
                                 jitter = receiveStats.getJitter();
-                                if (jitter != BasicStreamStats.JITTER_UNSET)
+                                if (jitter != TrackStats.JITTER_UNSET)
                                 {
                                     // We take the abs because otherwise the
                                     // aggregate makes no sense.

@@ -336,7 +336,7 @@ class CallStatsConferenceStatsHandler
                     this.conferenceID);
 
             // Send stats for received streams.
-            for (BasicStreamStats receiveStat : stats.getAllReceiveStats())
+            for (ReceiveTrackStats receiveStat : stats.getAllReceiveStats())
             {
                 ConferenceStats conferenceStats
                     = new ConferenceStatsBuilder()
@@ -356,7 +356,7 @@ class CallStatsConferenceStatsHandler
             }
 
             // Send stats for sent streams.
-            for (BasicStreamStats sendStat : stats.getAllSendStats())
+            for (SendTrackStats sendStat : stats.getAllSendStats())
             {
                 ConferenceStats conferenceStats
                     = new ConferenceStatsBuilder()
