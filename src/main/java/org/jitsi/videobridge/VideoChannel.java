@@ -540,7 +540,7 @@ public class VideoChannel
 
         if (lipSyncHack != null)
         {
-            getEndpoint().getLipSyncHack().onRTPTranslatorWillWriteVideo(
+            lipSyncHack.onRTPTranslatorWillWriteVideo(
                 accept, data, buffer, offset, length, this);
         }
 
