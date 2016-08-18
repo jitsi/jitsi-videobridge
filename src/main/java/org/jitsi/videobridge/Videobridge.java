@@ -1619,9 +1619,33 @@ public class Videobridge
             = new AtomicInteger(0);
 
         /**
+         * The cumulative/total number of conferences completed/expired on this
+         * {@link Videobridge}.
+         */
+        public AtomicInteger totalConferencesCompleted = new AtomicInteger(0);
+
+        /**
          * The cumulative/total number of conferences created on this
          * {@link Videobridge}.
          */
-        public AtomicInteger totalConferences = new AtomicInteger(0);
+        public AtomicInteger totalConferencesCreated = new AtomicInteger(0);
+
+        /**
+         * The total duration in seconds of all completed conferences on this
+         * {@link Videobridge}.
+         */
+        public AtomicLong totalConferenceSeconds = new AtomicLong();
+
+        /**
+         * The total number of ICE transport managers on this videobridge which
+         * successfully connected over UDP.
+         */
+        public AtomicInteger totalUdpTransportManagers = new AtomicInteger();
+
+        /**
+         * The total number of ICE transport managers on this videobridge which
+         * successfully connected over TCP.
+         */
+        public AtomicInteger totalTcpTransportManagers = new AtomicInteger();
     }
 }

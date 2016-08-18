@@ -211,6 +211,11 @@ public class Conference
     private final boolean includeInStatistics;
 
     /**
+     * The time when this {@link Conference} was created.
+     */
+    private final long creationTime = System.currentTimeMillis();
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -255,8 +260,13 @@ public class Conference
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
 
-        if (eventAdmin != null)
+        if (enableLogging)
+        {
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
+            Videobridge.Statistics videobridgeStatistics
+                = videobridge.getStatistics();
+            videobridgeStatistics.totalConferencesCreated.incrementAndGet();
+        }
     }
 
     /**
@@ -693,60 +703,83 @@ public class Conference
 
             if (includeInStatistics)
             {
-                Videobridge.Statistics videobridgeStatistics
-                    = getVideobridge().getStatistics();
-
-                videobridgeStatistics.totalConferences.incrementAndGet();
-
-                videobridgeStatistics.totalNoPayloadChannels.addAndGet(
-                    statistics.totalNoPayloadChannels.intValue());
-                videobridgeStatistics.totalNoTransportChannels.addAndGet(
-                    statistics.totalNoTransportChannels.intValue());
-
-                videobridgeStatistics.totalChannels.addAndGet(
-                    statistics.totalChannels.intValue());
-
-                boolean hasFailed = statistics.totalNoPayloadChannels.intValue()
-                    >= statistics.totalChannels.intValue();
-                boolean hasPartiallyFailed
-                    = statistics.totalNoPayloadChannels.intValue() != 0;
-
-                if (hasPartiallyFailed)
-                {
-                    videobridgeStatistics.totalPartiallyFailedConferences.incrementAndGet();
-                }
-
-                if (hasFailed)
-                {
-                    videobridgeStatistics.totalFailedConferences.incrementAndGet();
-                }
-
-                if (logger.isInfoEnabled())
-                {
-
-                    int[] metrics
-                        = videobridge.getConferenceChannelAndStreamCount();
-
-                    logger.info(
-                        "Expired conference id=" + getID()
-                            + ", conferenceCount="
-                            + metrics[0]
-                            + ", channelCount="
-                            + metrics[1]
-                            + ", video streams="
-                            + metrics[2]
-                            + ", totalConferences="
-                            + videobridgeStatistics.totalConferences
-                            + ", totalNoPayloadChannels="
-                            + videobridgeStatistics.totalNoPayloadChannels
-                            + ", totalNoTransportChannels="
-                            + videobridgeStatistics.totalNoTransportChannels
-                            + ", totalChannels="
-                            + videobridgeStatistics.totalChannels
-                            + ", hasFailed=" + hasFailed
-                            + ", hasPartiallyFailed=" + hasPartiallyFailed);
-                }
+                updateStatisticsOnExpire();
             }
+        }
+    }
+
+    /**
+     * Updates the statistics for this conference when it is about to expire.
+     */
+    private void updateStatisticsOnExpire()
+    {
+        long durationSeconds
+            = Math.round(
+            (System.currentTimeMillis() - creationTime) / 1000d);
+
+        Videobridge.Statistics videobridgeStatistics
+            = getVideobridge().getStatistics();
+
+        videobridgeStatistics.totalConferencesCompleted
+            .incrementAndGet();
+        videobridgeStatistics.totalConferenceSeconds.addAndGet(
+            durationSeconds);
+        videobridgeStatistics.totalUdpTransportManagers.addAndGet(
+            statistics.totalUdpTransportManagers.get());
+        videobridgeStatistics.totalTcpTransportManagers.addAndGet(
+            statistics.totalTcpTransportManagers.get());
+
+        videobridgeStatistics.totalNoPayloadChannels.addAndGet(
+            statistics.totalNoPayloadChannels.get());
+        videobridgeStatistics.totalNoTransportChannels.addAndGet(
+            statistics.totalNoTransportChannels.get());
+
+        videobridgeStatistics.totalChannels.addAndGet(
+            statistics.totalChannels.get());
+
+        boolean hasFailed
+            = statistics.totalNoPayloadChannels.get()
+            >= statistics.totalChannels.get();
+        boolean hasPartiallyFailed
+            = statistics.totalNoPayloadChannels.get() != 0;
+
+        if (hasPartiallyFailed)
+        {
+            videobridgeStatistics.totalPartiallyFailedConferences
+                .incrementAndGet();
+        }
+
+        if (hasFailed)
+        {
+            videobridgeStatistics.totalFailedConferences
+                .incrementAndGet();
+        }
+
+        if (logger.isInfoEnabled())
+        {
+
+            int[] metrics
+                = videobridge.getConferenceChannelAndStreamCount();
+
+            logger.info(
+                "Expired conference id=" + getID()
+                    + ", duration=" + durationSeconds + "s; "
+                    + "conferenceCount="
+                    + metrics[0]
+                    + ", channelCount="
+                    + metrics[1]
+                    + ", video streams="
+                    + metrics[2]
+                    + ", totalConferencesCompleted="
+                    + videobridgeStatistics.totalConferencesCompleted
+                    + ", totalNoPayloadChannels="
+                    + videobridgeStatistics.totalNoPayloadChannels
+                    + ", totalNoTransportChannels="
+                    + videobridgeStatistics.totalNoTransportChannels
+                    + ", totalChannels="
+                    + videobridgeStatistics.totalChannels
+                    + ", hasFailed=" + hasFailed
+                    + ", hasPartiallyFailed=" + hasPartiallyFailed);
         }
     }
 
@@ -1148,13 +1181,9 @@ public class Conference
                                     getRecordingPath() + "/metadata.json"));
                 t = null;
             }
-            catch (IOException ioe)
+            catch (IOException | IllegalArgumentException e)
             {
-                t = ioe;
-            }
-            catch (IllegalArgumentException iae)
-            {
-                t = iae;
+                t = e;
             }
             if (t !=  null)
                 logger.warn("Could not create RecorderEventHandler. " + t);
@@ -1816,6 +1845,18 @@ public class Conference
          * The total number of channels.
          */
         public AtomicInteger totalChannels = new AtomicInteger(0);
+
+        /**
+         * The total number of ICE transport managers of this conference which
+         * successfully connected over UDP.
+         */
+        AtomicInteger totalUdpTransportManagers = new AtomicInteger();
+
+        /**
+         * The total number of ICE transport managers of this conference which
+         * successfully connected over TCP.
+         */
+        AtomicInteger totalTcpTransportManagers = new AtomicInteger();
     }
 
 }
