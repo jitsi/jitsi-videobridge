@@ -1629,5 +1629,11 @@ public class Videobridge
          * {@link Videobridge}.
          */
         public AtomicInteger totalConferencesCreated = new AtomicInteger(0);
+
+        /**
+         * The total duration in seconds of all completed conferences on this
+         * {@link Videobridge}.
+         */
+        public AtomicLong totalConferenceSeconds = new AtomicLong();
     }
 }

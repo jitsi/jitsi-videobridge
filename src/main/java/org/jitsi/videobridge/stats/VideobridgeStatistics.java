@@ -196,6 +196,13 @@ public class VideobridgeStatistics
         = "total_conferences_created";
 
     /**
+     * The name of the stat indicating the total number of conference-seconds
+     * (i.e. the sum of the lengths is seconds).
+     */
+    private static final String TOTAL_CONFERENCE_SECONDS
+        = "total_conference_seconds";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -342,6 +349,7 @@ public class VideobridgeStatistics
             totalFailedConferences = 0, totalPartiallyFailedConferences = 0,
             totalNoTransportChannels = 0, totalNoPayloadChannels = 0,
             totalChannels = 0;
+        long totalConferenceSeconds = 0;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
@@ -356,6 +364,8 @@ public class VideobridgeStatistics
                     += jvbStats.totalConferencesCreated.intValue();
                 totalConferencesCompleted
                     += jvbStats.totalConferencesCompleted.intValue();
+                totalConferenceSeconds
+                    += jvbStats.totalConferenceSeconds.intValue();
                 totalFailedConferences
                     += jvbStats.totalFailedConferences.intValue();
                 totalPartiallyFailedConferences
@@ -557,6 +567,7 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
                     totalConferencesCompleted);
+            unlockedSetStat(TOTAL_CONFERENCE_SECONDS, totalConferenceSeconds);
             unlockedSetStat(TOTAL_CHANNELS, totalChannels);
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);

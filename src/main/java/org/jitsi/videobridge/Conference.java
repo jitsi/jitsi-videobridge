@@ -211,6 +211,11 @@ public class Conference
     private final boolean includeInStatistics;
 
     /**
+     * The time when this {@link Conference} was created.
+     */
+    private final long creationTime = System.currentTimeMillis();
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -698,32 +703,42 @@ public class Conference
 
             if (includeInStatistics)
             {
+                long durationSeconds
+                    = Math.round(
+                        (System.currentTimeMillis() - creationTime) / 1000d);
+
                 Videobridge.Statistics videobridgeStatistics
                     = getVideobridge().getStatistics();
 
-                videobridgeStatistics.totalConferencesCompleted.incrementAndGet();
+                videobridgeStatistics.totalConferencesCompleted
+                        .incrementAndGet();
+                videobridgeStatistics.totalConferenceSeconds.addAndGet(
+                        durationSeconds);
 
                 videobridgeStatistics.totalNoPayloadChannels.addAndGet(
-                    statistics.totalNoPayloadChannels.intValue());
+                        statistics.totalNoPayloadChannels.intValue());
                 videobridgeStatistics.totalNoTransportChannels.addAndGet(
-                    statistics.totalNoTransportChannels.intValue());
+                        statistics.totalNoTransportChannels.intValue());
 
                 videobridgeStatistics.totalChannels.addAndGet(
-                    statistics.totalChannels.intValue());
+                        statistics.totalChannels.intValue());
 
-                boolean hasFailed = statistics.totalNoPayloadChannels.intValue()
-                    >= statistics.totalChannels.intValue();
+                boolean hasFailed
+                    = statistics.totalNoPayloadChannels.intValue()
+                        >= statistics.totalChannels.intValue();
                 boolean hasPartiallyFailed
                     = statistics.totalNoPayloadChannels.intValue() != 0;
 
                 if (hasPartiallyFailed)
                 {
-                    videobridgeStatistics.totalPartiallyFailedConferences.incrementAndGet();
+                    videobridgeStatistics.totalPartiallyFailedConferences
+                            .incrementAndGet();
                 }
 
                 if (hasFailed)
                 {
-                    videobridgeStatistics.totalFailedConferences.incrementAndGet();
+                    videobridgeStatistics.totalFailedConferences
+                            .incrementAndGet();
                 }
 
                 if (logger.isInfoEnabled())
@@ -734,7 +749,8 @@ public class Conference
 
                     logger.info(
                         "Expired conference id=" + getID()
-                            + ", conferenceCount="
+                            + ", duration=" + durationSeconds + "s; "
+                            + "conferenceCount="
                             + metrics[0]
                             + ", channelCount="
                             + metrics[1]
