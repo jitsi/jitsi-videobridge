@@ -1148,13 +1148,9 @@ public class Conference
                                     getRecordingPath() + "/metadata.json"));
                 t = null;
             }
-            catch (IOException ioe)
+            catch (IOException | IllegalArgumentException e)
             {
-                t = ioe;
-            }
-            catch (IllegalArgumentException iae)
-            {
-                t = iae;
+                t = e;
             }
             if (t !=  null)
                 logger.warn("Could not create RecorderEventHandler. " + t);
