@@ -255,8 +255,13 @@ public class Conference
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
 
-        if (eventAdmin != null)
+        if (enableLogging)
+        {
             eventAdmin.sendEvent(EventFactory.conferenceCreated(this));
+            Videobridge.Statistics videobridgeStatistics
+                = videobridge.getStatistics();
+            videobridgeStatistics.totalConferencesCreated.incrementAndGet();
+        }
     }
 
     /**

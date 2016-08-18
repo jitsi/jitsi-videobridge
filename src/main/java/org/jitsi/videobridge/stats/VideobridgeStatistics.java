@@ -183,10 +183,17 @@ public class VideobridgeStatistics
         = "total_partially_failed_conferences";
 
     /**
-     * The name of the total number of conferences (failed + succeeded).
+     * The name of the total number of completed/expired conferences
+     * (failed + succeeded).
      */
     private static final String TOTAL_CONFERENCES_COMPLETED
         = "total_conferences_completed";
+
+    /**
+     * The name of the stat indicating the total number of conferences created.
+     */
+    private static final String TOTAL_CONFERENCES_CREATED
+        = "total_conferences_created";
 
     /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
@@ -331,10 +338,10 @@ public class VideobridgeStatistics
 
         boolean shutdownInProgress = false;
 
-        int totalConferencesCompleted = 0, totalFailedConferences = 0,
-            totalPartiallyFailedConferences = 0,
-            totalNoTransportChannels = 0,
-            totalNoPayloadChannels = 0, totalChannels = 0;
+        int totalConferencesCreated = 0, totalConferencesCompleted = 0,
+            totalFailedConferences = 0, totalPartiallyFailedConferences = 0,
+            totalNoTransportChannels = 0, totalNoPayloadChannels = 0,
+            totalChannels = 0;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
@@ -345,6 +352,8 @@ public class VideobridgeStatistics
                     : Videobridge.getVideobridges(bundleContext))
             {
                 Videobridge.Statistics jvbStats = videobridge.getStatistics();
+                totalConferencesCreated
+                    += jvbStats.totalConferencesCreated.intValue();
                 totalConferencesCompleted
                     += jvbStats.totalConferencesCompleted.intValue();
                 totalFailedConferences
@@ -542,6 +551,9 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_NO_TRANSPORT_CHANNELS,
                     totalNoTransportChannels);
+            unlockedSetStat(
+                    TOTAL_CONFERENCES_CREATED,
+                    totalConferencesCreated);
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
                     totalConferencesCompleted);
