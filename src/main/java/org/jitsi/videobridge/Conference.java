@@ -714,6 +714,10 @@ public class Conference
                         .incrementAndGet();
                 videobridgeStatistics.totalConferenceSeconds.addAndGet(
                         durationSeconds);
+                videobridgeStatistics.totalUdpTransportManagers.addAndGet(
+                        statistics.totalUdpTransportManagers.get());
+                videobridgeStatistics.totalTcpTransportManagers.addAndGet(
+                        statistics.totalTcpTransportManagers.get());
 
                 videobridgeStatistics.totalNoPayloadChannels.addAndGet(
                         statistics.totalNoPayloadChannels.get());
@@ -1833,6 +1837,18 @@ public class Conference
          * The total number of channels.
          */
         public AtomicInteger totalChannels = new AtomicInteger(0);
+
+        /**
+         * The total number of ICE transport managers of this conference which
+         * successfully connected over UDP.
+         */
+        AtomicInteger totalUdpTransportManagers = new AtomicInteger();
+
+        /**
+         * The total number of ICE transport managers of this conference which
+         * successfully connected over TCP.
+         */
+        AtomicInteger totalTcpTransportManagers = new AtomicInteger();
     }
 
 }

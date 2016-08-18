@@ -1824,6 +1824,24 @@ public class IceUdpTransportManager
     {
         iceConnected = true;
 
+        Transport transport = getTransport();
+        if (transport == null)
+        {
+            logger.warn("Cannot get transport type.");
+        }
+        else
+        {
+            Conference.Statistics statistics = conference.getStatistics();
+            if (transport == Transport.TCP || transport == Transport.SSLTCP)
+            {
+                statistics.totalTcpTransportManagers.incrementAndGet();
+            }
+            else if (transport == Transport.UDP)
+            {
+                statistics.totalUdpTransportManagers.incrementAndGet();
+            }
+        }
+
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
         {
@@ -1834,6 +1852,30 @@ public class IceUdpTransportManager
         {
             channel.transportConnected();
         }
+    }
+
+    /**
+     * @return the {@link Transport} (e.g. UDP or TCP) of the selected pair
+     * of this {@link IceUdpTransportManager}. If the transport manager is
+     currently not connected, returns {@code null}.
+     */
+    private Transport getTransport()
+    {
+        Transport transport = null;
+
+        Component component = iceStream.getComponent(Component.RTP);
+        if (component != null)
+        {
+            CandidatePair selectedPair = component.getSelectedPair();
+            if (selectedPair != null)
+            {
+                transport
+                    = selectedPair.getLocalCandidate().getHostAddress()
+                            .getTransport();
+            }
+        }
+
+        return transport;
     }
 
     /**

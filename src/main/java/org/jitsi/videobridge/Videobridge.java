@@ -1635,5 +1635,17 @@ public class Videobridge
          * {@link Videobridge}.
          */
         public AtomicLong totalConferenceSeconds = new AtomicLong();
+
+        /**
+         * The total number of ICE transport managers on this videobridge which
+         * successfully connected over UDP.
+         */
+        public AtomicInteger totalUdpTransportManagers = new AtomicInteger();
+
+        /**
+         * The total number of ICE transport managers on this videobridge which
+         * successfully connected over TCP.
+         */
+        public AtomicInteger totalTcpTransportManagers = new AtomicInteger();
     }
 }

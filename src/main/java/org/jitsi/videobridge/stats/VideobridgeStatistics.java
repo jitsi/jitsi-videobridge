@@ -203,6 +203,18 @@ public class VideobridgeStatistics
         = "total_conference_seconds";
 
     /**
+     * The name of the stat indicating the total number of media connections
+     * established over UDP.
+     */
+    private static final String TOTAL_UDP_CONNECTIONS = "total_udp_connections";
+
+    /**
+     * The name of the stat indicating the total number of media connections
+     * established over TCP.
+     */
+    private static final String TOTAL_TCP_CONNECTIONS = "total_tcp_connections";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -248,6 +260,7 @@ public class VideobridgeStatistics
      */
     public VideobridgeStatistics()
     {
+        // Is it necessary to set initial values for all of these?
         unlockedSetStat(AUDIOCHANNELS, 0);
         unlockedSetStat(BITRATE_DOWNLOAD, 0d);
         unlockedSetStat(BITRATE_UPLOAD, 0d);
@@ -350,6 +363,7 @@ public class VideobridgeStatistics
             totalNoTransportChannels = 0, totalNoPayloadChannels = 0,
             totalChannels = 0;
         long totalConferenceSeconds = 0;
+        int totalUdpConnections = 0, totalTcpConnections = 0;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
@@ -374,6 +388,8 @@ public class VideobridgeStatistics
                     += jvbStats.totalNoTransportChannels.get();
                 totalNoPayloadChannels += jvbStats.totalNoPayloadChannels.get();
                 totalChannels += jvbStats.totalChannels.get();
+                totalUdpConnections += jvbStats.totalUdpTransportManagers.get();
+                totalTcpConnections += jvbStats.totalTcpTransportManagers.get();
 
                 for (Conference conference : videobridge.getConferences())
                 {
@@ -538,8 +554,8 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     BITRATE_UPLOAD,
                     bitrateUploadBps / 1000 /* kbps */);
-           unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
-           unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
+            unlockedSetStat(PACKET_RATE_DOWNLOAD, packetRateDownload);
+            unlockedSetStat(PACKET_RATE_UPLOAD, packetRateUpload);
             // Keep for backward compatibility
             unlockedSetStat(
                     RTP_LOSS,
@@ -565,6 +581,8 @@ public class VideobridgeStatistics
             unlockedSetStat(
                     TOTAL_CONFERENCES_COMPLETED,
                     totalConferencesCompleted);
+            unlockedSetStat(TOTAL_UDP_CONNECTIONS, totalUdpConnections);
+            unlockedSetStat(TOTAL_TCP_CONNECTIONS, totalTcpConnections);
             unlockedSetStat(TOTAL_CONFERENCE_SECONDS, totalConferenceSeconds);
             unlockedSetStat(TOTAL_CHANNELS, totalChannels);
             unlockedSetStat(CONFERENCES, conferences);
