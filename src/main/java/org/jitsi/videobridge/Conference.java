@@ -696,7 +696,7 @@ public class Conference
                 Videobridge.Statistics videobridgeStatistics
                     = getVideobridge().getStatistics();
 
-                videobridgeStatistics.totalConferences.incrementAndGet();
+                videobridgeStatistics.totalConferencesCompleted.incrementAndGet();
 
                 videobridgeStatistics.totalNoPayloadChannels.addAndGet(
                     statistics.totalNoPayloadChannels.intValue());
@@ -735,8 +735,8 @@ public class Conference
                             + metrics[1]
                             + ", video streams="
                             + metrics[2]
-                            + ", totalConferences="
-                            + videobridgeStatistics.totalConferences
+                            + ", totalConferencesCompleted="
+                            + videobridgeStatistics.totalConferencesCompleted
                             + ", totalNoPayloadChannels="
                             + videobridgeStatistics.totalNoPayloadChannels
                             + ", totalNoTransportChannels="

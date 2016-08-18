@@ -185,8 +185,8 @@ public class VideobridgeStatistics
     /**
      * The name of the total number of conferences (failed + succeeded).
      */
-    private static final String TOTAL_CONFERENCES
-        = "total_conferences";
+    private static final String TOTAL_CONFERENCES_COMPLETED
+        = "total_conferences_completed";
 
     /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
@@ -331,7 +331,7 @@ public class VideobridgeStatistics
 
         boolean shutdownInProgress = false;
 
-        int totalConferences = 0, totalFailedConferences = 0,
+        int totalConferencesCompleted = 0, totalFailedConferences = 0,
             totalPartiallyFailedConferences = 0,
             totalNoTransportChannels = 0,
             totalNoPayloadChannels = 0, totalChannels = 0;
@@ -345,7 +345,8 @@ public class VideobridgeStatistics
                     : Videobridge.getVideobridges(bundleContext))
             {
                 Videobridge.Statistics jvbStats = videobridge.getStatistics();
-                totalConferences += jvbStats.totalConferences.intValue();
+                totalConferencesCompleted
+                    += jvbStats.totalConferencesCompleted.intValue();
                 totalFailedConferences
                     += jvbStats.totalFailedConferences.intValue();
                 totalPartiallyFailedConferences
@@ -532,13 +533,18 @@ public class VideobridgeStatistics
             unlockedSetStat(RTT_AGGREGATE, rttAggregate);
             unlockedSetStat(AUDIOCHANNELS, audioChannels);
             unlockedSetStat(TOTAL_FAILED_CONFERENCES, totalFailedConferences);
-            unlockedSetStat(TOTAL_PARTIALLY_FAILED_CONFERENCES,
-                totalPartiallyFailedConferences);
-            unlockedSetStat(TOTAL_NO_PAYLOAD_CHANNELS,
-                totalNoPayloadChannels);
-            unlockedSetStat(TOTAL_NO_TRANSPORT_CHANNELS,
-                totalNoTransportChannels);
-            unlockedSetStat(TOTAL_CONFERENCES, totalConferences);
+            unlockedSetStat(
+                    TOTAL_PARTIALLY_FAILED_CONFERENCES,
+                    totalPartiallyFailedConferences);
+            unlockedSetStat(
+                    TOTAL_NO_PAYLOAD_CHANNELS,
+                    totalNoPayloadChannels);
+            unlockedSetStat(
+                    TOTAL_NO_TRANSPORT_CHANNELS,
+                    totalNoTransportChannels);
+            unlockedSetStat(
+                    TOTAL_CONFERENCES_COMPLETED,
+                    totalConferencesCompleted);
             unlockedSetStat(TOTAL_CHANNELS, totalChannels);
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);

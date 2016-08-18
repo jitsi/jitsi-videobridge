@@ -1619,9 +1619,9 @@ public class Videobridge
             = new AtomicInteger(0);
 
         /**
-         * The cumulative/total number of conferences created on this
+         * The cumulative/total number of conferences completed/expired on this
          * {@link Videobridge}.
          */
-        public AtomicInteger totalConferences = new AtomicInteger(0);
+        public AtomicInteger totalConferencesCompleted = new AtomicInteger(0);
     }
 }
