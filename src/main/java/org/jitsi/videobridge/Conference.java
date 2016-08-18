@@ -703,75 +703,83 @@ public class Conference
 
             if (includeInStatistics)
             {
-                long durationSeconds
-                    = Math.round(
-                        (System.currentTimeMillis() - creationTime) / 1000d);
-
-                Videobridge.Statistics videobridgeStatistics
-                    = getVideobridge().getStatistics();
-
-                videobridgeStatistics.totalConferencesCompleted
-                        .incrementAndGet();
-                videobridgeStatistics.totalConferenceSeconds.addAndGet(
-                        durationSeconds);
-                videobridgeStatistics.totalUdpTransportManagers.addAndGet(
-                        statistics.totalUdpTransportManagers.get());
-                videobridgeStatistics.totalTcpTransportManagers.addAndGet(
-                        statistics.totalTcpTransportManagers.get());
-
-                videobridgeStatistics.totalNoPayloadChannels.addAndGet(
-                        statistics.totalNoPayloadChannels.get());
-                videobridgeStatistics.totalNoTransportChannels.addAndGet(
-                        statistics.totalNoTransportChannels.get());
-
-                videobridgeStatistics.totalChannels.addAndGet(
-                        statistics.totalChannels.get());
-
-                boolean hasFailed
-                    = statistics.totalNoPayloadChannels.get()
-                        >= statistics.totalChannels.get();
-                boolean hasPartiallyFailed
-                    = statistics.totalNoPayloadChannels.get() != 0;
-
-                if (hasPartiallyFailed)
-                {
-                    videobridgeStatistics.totalPartiallyFailedConferences
-                            .incrementAndGet();
-                }
-
-                if (hasFailed)
-                {
-                    videobridgeStatistics.totalFailedConferences
-                            .incrementAndGet();
-                }
-
-                if (logger.isInfoEnabled())
-                {
-
-                    int[] metrics
-                        = videobridge.getConferenceChannelAndStreamCount();
-
-                    logger.info(
-                        "Expired conference id=" + getID()
-                            + ", duration=" + durationSeconds + "s; "
-                            + "conferenceCount="
-                            + metrics[0]
-                            + ", channelCount="
-                            + metrics[1]
-                            + ", video streams="
-                            + metrics[2]
-                            + ", totalConferencesCompleted="
-                            + videobridgeStatistics.totalConferencesCompleted
-                            + ", totalNoPayloadChannels="
-                            + videobridgeStatistics.totalNoPayloadChannels
-                            + ", totalNoTransportChannels="
-                            + videobridgeStatistics.totalNoTransportChannels
-                            + ", totalChannels="
-                            + videobridgeStatistics.totalChannels
-                            + ", hasFailed=" + hasFailed
-                            + ", hasPartiallyFailed=" + hasPartiallyFailed);
-                }
+                updateStatisticsOnExpire();
             }
+        }
+    }
+
+    /**
+     * Updates the statistics for this conference when it is about to expire.
+     */
+    private void updateStatisticsOnExpire()
+    {
+        long durationSeconds
+            = Math.round(
+            (System.currentTimeMillis() - creationTime) / 1000d);
+
+        Videobridge.Statistics videobridgeStatistics
+            = getVideobridge().getStatistics();
+
+        videobridgeStatistics.totalConferencesCompleted
+            .incrementAndGet();
+        videobridgeStatistics.totalConferenceSeconds.addAndGet(
+            durationSeconds);
+        videobridgeStatistics.totalUdpTransportManagers.addAndGet(
+            statistics.totalUdpTransportManagers.get());
+        videobridgeStatistics.totalTcpTransportManagers.addAndGet(
+            statistics.totalTcpTransportManagers.get());
+
+        videobridgeStatistics.totalNoPayloadChannels.addAndGet(
+            statistics.totalNoPayloadChannels.get());
+        videobridgeStatistics.totalNoTransportChannels.addAndGet(
+            statistics.totalNoTransportChannels.get());
+
+        videobridgeStatistics.totalChannels.addAndGet(
+            statistics.totalChannels.get());
+
+        boolean hasFailed
+            = statistics.totalNoPayloadChannels.get()
+            >= statistics.totalChannels.get();
+        boolean hasPartiallyFailed
+            = statistics.totalNoPayloadChannels.get() != 0;
+
+        if (hasPartiallyFailed)
+        {
+            videobridgeStatistics.totalPartiallyFailedConferences
+                .incrementAndGet();
+        }
+
+        if (hasFailed)
+        {
+            videobridgeStatistics.totalFailedConferences
+                .incrementAndGet();
+        }
+
+        if (logger.isInfoEnabled())
+        {
+
+            int[] metrics
+                = videobridge.getConferenceChannelAndStreamCount();
+
+            logger.info(
+                "Expired conference id=" + getID()
+                    + ", duration=" + durationSeconds + "s; "
+                    + "conferenceCount="
+                    + metrics[0]
+                    + ", channelCount="
+                    + metrics[1]
+                    + ", video streams="
+                    + metrics[2]
+                    + ", totalConferencesCompleted="
+                    + videobridgeStatistics.totalConferencesCompleted
+                    + ", totalNoPayloadChannels="
+                    + videobridgeStatistics.totalNoPayloadChannels
+                    + ", totalNoTransportChannels="
+                    + videobridgeStatistics.totalNoTransportChannels
+                    + ", totalChannels="
+                    + videobridgeStatistics.totalChannels
+                    + ", hasFailed=" + hasFailed
+                    + ", hasPartiallyFailed=" + hasPartiallyFailed);
         }
     }
 
