@@ -716,18 +716,18 @@ public class Conference
                         durationSeconds);
 
                 videobridgeStatistics.totalNoPayloadChannels.addAndGet(
-                        statistics.totalNoPayloadChannels.intValue());
+                        statistics.totalNoPayloadChannels.get());
                 videobridgeStatistics.totalNoTransportChannels.addAndGet(
-                        statistics.totalNoTransportChannels.intValue());
+                        statistics.totalNoTransportChannels.get());
 
                 videobridgeStatistics.totalChannels.addAndGet(
-                        statistics.totalChannels.intValue());
+                        statistics.totalChannels.get());
 
                 boolean hasFailed
-                    = statistics.totalNoPayloadChannels.intValue()
-                        >= statistics.totalChannels.intValue();
+                    = statistics.totalNoPayloadChannels.get()
+                        >= statistics.totalChannels.get();
                 boolean hasPartiallyFailed
-                    = statistics.totalNoPayloadChannels.intValue() != 0;
+                    = statistics.totalNoPayloadChannels.get() != 0;
 
                 if (hasPartiallyFailed)
                 {

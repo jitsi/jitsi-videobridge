@@ -361,21 +361,19 @@ public class VideobridgeStatistics
             {
                 Videobridge.Statistics jvbStats = videobridge.getStatistics();
                 totalConferencesCreated
-                    += jvbStats.totalConferencesCreated.intValue();
+                    += jvbStats.totalConferencesCreated.get();
                 totalConferencesCompleted
-                    += jvbStats.totalConferencesCompleted.intValue();
+                    += jvbStats.totalConferencesCompleted.get();
                 totalConferenceSeconds
-                    += jvbStats.totalConferenceSeconds.intValue();
+                    += jvbStats.totalConferenceSeconds.get();
                 totalFailedConferences
-                    += jvbStats.totalFailedConferences.intValue();
+                    += jvbStats.totalFailedConferences.get();
                 totalPartiallyFailedConferences
-                    += jvbStats.totalPartiallyFailedConferences.intValue();
+                    += jvbStats.totalPartiallyFailedConferences.get();
                 totalNoTransportChannels
-                    += jvbStats.totalNoTransportChannels.intValue();
-                totalNoPayloadChannels
-                    += jvbStats.totalNoPayloadChannels.intValue();
-                totalChannels
-                    += jvbStats.totalChannels.intValue();
+                    += jvbStats.totalNoTransportChannels.get();
+                totalNoPayloadChannels += jvbStats.totalNoPayloadChannels.get();
+                totalChannels += jvbStats.totalChannels.get();
 
                 for (Conference conference : videobridge.getConferences())
                 {
