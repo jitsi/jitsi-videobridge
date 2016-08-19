@@ -14,6 +14,7 @@ JVB_CONFIG_FILE="/etc/jitsi/videobridge/config"
 JVB_HOME_DIR_NAME="videobridge"
 JVB_HOME_DIR_LOCATION="/etc/jitsi"
 JVB_DATA_LOCATION="${HOME}/.jitsi-videobridge"
+JVB_APIS="xmpp,rest"
 JVB_MVN_REPO_LOCAL="${JVB_DATA_LOCATION}/m2"
 JVB_LOG_DIR_LOCATION="${JVB_DATA_LOCATION}/log"
 JVB_ARCHIVE_LOCATION="${JVB_DATA_LOCATION}/archive"
@@ -110,4 +111,4 @@ if [ ! ${JVB_MVN_REBUILD} = "" ]; then
 fi
 
 # Execute.
-exec mvn -f "${JVB_MVN_POM_FILE}" exec:exec -Dmaven.repo.local="${JVB_MVN_REPO_LOCAL}" -Dexec.outputFile="${JVB_LOG_DIR_LOCATION}/jvb.log" -Dexec.executable=java -Dexec.args="-cp %classpath ${JVB_EXTRA_JVM_PARAMS} -Djava.util.logging.config.file=\"${JVB_LOGGING_CONFIG_FILE}\" -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=\"${JVB_HOME_DIR_NAME}\" -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=\"${JVB_HOME_DIR_LOCATION}\" -Dnet.java.sip.communicator.SC_LOG_DIR_LOCATION=\"${JVB_LOG_DIR_LOCATION}\" -Djna.nosys=true -Djava.net.preferIPv4Stack=\"${JVB_JAVA_PREFER_IPV4}\" org.jitsi.videobridge.Main --domain=\"${JVB_HOSTNAME}\" --host=\"${JVB_HOST}\" --port=\"${JVB_PORT}\" --secret=\"${JVB_SECRET}\" --apis=xmpp,rest"
+exec mvn -f "${JVB_MVN_POM_FILE}" exec:exec -Dmaven.repo.local="${JVB_MVN_REPO_LOCAL}" -Dexec.outputFile="${JVB_LOG_DIR_LOCATION}/jvb.log" -Dexec.executable=java -Dexec.args="-cp %classpath ${JVB_EXTRA_JVM_PARAMS} -Djava.util.logging.config.file=\"${JVB_LOGGING_CONFIG_FILE}\" -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=\"${JVB_HOME_DIR_NAME}\" -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=\"${JVB_HOME_DIR_LOCATION}\" -Dnet.java.sip.communicator.SC_LOG_DIR_LOCATION=\"${JVB_LOG_DIR_LOCATION}\" -Djna.nosys=true -Djava.net.preferIPv4Stack=\"${JVB_JAVA_PREFER_IPV4}\" org.jitsi.videobridge.Main --domain=\"${JVB_HOSTNAME}\" --host=\"${JVB_HOST}\" --port=\"${JVB_PORT}\" --secret=\"${JVB_SECRET}\" --apis=${JVB_APIS}"
