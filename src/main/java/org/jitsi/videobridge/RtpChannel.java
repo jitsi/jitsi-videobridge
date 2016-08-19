@@ -119,27 +119,6 @@ public class RtpChannel
     private final long initialLocalSSRC;
 
     /**
-     * The last known number of lost packets for this channel.
-     */
-    private long lastKnownPacketsLostNB = 0;
-
-    /**
-     * The last known number of packets that are received or sent for this
-     * channel.
-     */
-    private long lastKnownPacketsNB = 0;
-
-    /**
-     * The last known number of received bytes.
-     */
-    private long lastKnownReceivedBytes = 0;
-
-    /**
-     * The last known number of sent bytes.
-     */
-    private long lastKnownSentBytes = 0;
-
-    /**
      * The <tt>PropertyChangeListener</tt> which listens to
      * <tt>PropertyChangeEvent</tt>s.
      */
