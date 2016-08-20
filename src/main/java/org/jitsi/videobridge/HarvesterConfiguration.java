@@ -115,8 +115,11 @@ public class HarvesterConfiguration
      */
     public static HarvesterConfiguration getInstance(ConfigurationService cfg)
     {
-        if(instance == null)
-            instance = new HarvesterConfiguration(cfg);
+        synchronized (HarvesterConfiguration.class)
+        {
+            if (instance == null)
+                instance = new HarvesterConfiguration(cfg);
+        }
 
         return instance;
     }
