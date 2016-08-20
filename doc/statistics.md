@@ -3,16 +3,16 @@ Introduction
 **Jitsi Videobridge implements reports for the following statistics:**
 
  * Number of threads used by the JVM.
- * Total and memory
- * CPU usage
- * Bitrate and packet rate
- * Loss rate
- * Number of audio and video channels
- * Number of conferences and participants
- * Estimated number of video streams
- * The size of the largest conference
- * The distribution of conference sizes
- * Aggregates of RTT and jitter across all users
+ * Current CPU and memory usage.
+ * Current bitrate, packet rate, and packet loss rate.
+ * Current number of audio and video channels, and conferences.
+ * Current estimated number of video streams.
+ * The size of the largest conference in progress.
+ * The distribution of the sizes of the conferences currently in progress.
+ * Aggregates of RTT and jitter across all users.
+ * The total number of created and completed conferences.
+ * The total duration of all completed conferences.
+ * The number of ICE sessions established over UDP or TCP.
 
 Implementation
 ==============
@@ -23,7 +23,7 @@ generated (in UTC).
  * **threads** - The number of Java threads that the video bridge is using.
  * **used_memory** - Total used memory on the machine (i.e. what 'free' would return) in megabytes (10^6 B).
  * **total_memory** - The total memory of the machine in megabytes.
- * **cpu_usage** - CPU usage for the machine. The value is between 0 and 1 and is the fraction of the last interval that the CPU spent in either user, nice, system or iowait state (what would appear in the 'cpu' line in 'top')
+ * **cpu_usage** - CPU usage for the machine. The value is between 0 and 1 and is the fraction of the last interval that the CPU spent in either user, nice, system or iowait state (what would appear in the 'cpu' line in 'top').
  * **bit_rate_download / bit_rate_upload** - the total incoming and outgoing (respectively) bitrate for the video bridge in kilobits per second.
  * **packet_rate_download / packet_rate_upload** - the total incoming and outgoing (respectively) packet rate for the video bridge in packets per second.
  * **loss_rate_download** - The fraction of lost incoming RTP packets. This is based on RTP sequence numbers and is relatively accurate.
@@ -31,13 +31,16 @@ generated (in UTC).
  * **rtp_loss** - Deprecated. The sum of **loss_rate_download** and **loss_rate_upload**.
  * **jitter_aggregate** - Experimental. An average value (in milliseconds) of the jitter calculated for incoming and outgoing streams. This hasn't been tested and it is currently not known whether the values are correct or not.
  * **rtt_aggregate** - An average value (in milliseconds) of the RTT across all streams.
- * **largest_conference** - The number of participants in the largest conference hosted on the bridge.
+ * **largest_conference** - The number of participants in the largest conference currently hosted on the bridge.
  * **conference_sizes** - The distribution of conference sizes hosted on the bridge. It is an array of integers of size 15, and the value at (zero-based) index *i* is the number of conferences with *i* participants. The last element (index 14) also includes conferences with more than 14 participants.
- * **audiochannels** - Number of audio channels
- * **videochannels** - Number of video channels
- * **conferences** - Number of conferences
- * **participants** - Number of participants
- * **videostreams** - Number of video streams, there can be more than one per channel
+ * **audiochannels** - The current number of audio channels.
+ * **videochannels** - The current number of video channels.
+ * **conferences** - The current number of conferences.
+ * **participants** - The current number of participants.
+ * **videostreams** - An estimation of the number of current video streams forwarded by the bridge.
+ * **total_udp_connections / total_tcp_connections** - The total number of ICE sessions established over UDP or TCP.
+ * **total_conference_seconds** - The sum of the lengths of all completed conferences, in seconds.
+ * **total_conferences_created** - The total number of conferences created on the bridge.
 
 If Jitsi Videobridge is using XMPP it sends the statistics reports by COLIBRI
 protocol or by PubSub (XEP-0060).
