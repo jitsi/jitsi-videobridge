@@ -739,15 +739,17 @@ public class Videobridge
              * mentioned, it does not need explicit creation (in contrast to
              * the conference and channel elements).
              */
-            Content content
-                = conference.getOrCreateContent(contentIQ.getName());
-
+            String contentName = contentIQ.getName();
+            Content content = conference.getOrCreateContent(contentName);
             if (content == null)
             {
-                responseConferenceIQ = null;
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.interna_server_error,
+                        "Failed to create new content for name: "
+                            + contentName);
             }
-            else
-            {
+
                 ColibriConferenceIQ.Content responseContentIQ
                     = new ColibriConferenceIQ.Content(content.getName());
 
@@ -1049,7 +1051,6 @@ public class Videobridge
 
                     responseContentIQ.addSctpConnection(responseSctpIq);
                 }
-            }
 
             if (responseConferenceIQ == null)
                 break;
