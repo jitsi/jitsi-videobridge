@@ -688,9 +688,7 @@ public class Videobridge
             conference.setLastKnownFocus(conferenceIQ.getFrom());
         }
 
-        ColibriConferenceIQ responseConferenceIQ;
-
-        responseConferenceIQ = new ColibriConferenceIQ();
+        ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
 
         responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
@@ -761,7 +759,7 @@ public class Videobridge
                 String channelID = channelIQ.getID();
                 int channelExpire = channelIQ.getExpire();
                 String channelBundleId = channelIQ.getChannelBundleId();
-                RtpChannel channel = null;
+                RtpChannel channel;
                 boolean channelCreated = false;
                 String transportNamespace
                     = channelIQ.getTransport() != null ?
@@ -774,6 +772,15 @@ public class Videobridge
                  */
                 if (channelID == null)
                 {
+                    // What ? Wants to expire a channel while not providing
+                    // it's ID ?
+                    if (channelExpire == 0)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "Channel expire request for empty ID");
+                    }
                     /*
                      * An expire attribute in the channel element with
                      * value equal to zero requests the immediate
@@ -781,45 +788,59 @@ public class Videobridge
                      * Consequently, it does not make sense to have it
                      * in a channel allocation request.
                      */
-                    if (channelExpire != 0)
+                    channel
+                        = content.createRtpChannel(
+                                channelBundleId,
+                                transportNamespace,
+                                channelIQ.isInitiator(),
+                                channelIQ.getRTPLevelRelayType());
+
+                    if (channel instanceof VideoChannel)
                     {
-                        channel
-                            = content.createRtpChannel(
-                                    channelBundleId,
-                                    transportNamespace,
-                                    channelIQ.isInitiator(),
-                                    channelIQ.getRTPLevelRelayType());
+                        VideoChannel videoChannel
+                            = (VideoChannel)channel;
 
-                        if (channel instanceof VideoChannel)
-                        {
-                            VideoChannel videoChannel
-                                = (VideoChannel)channel;
+                        Integer receiveSimulcastLayer =
+                            channelIQ.getReceivingSimulcastLayer();
 
-                            Integer receiveSimulcastLayer =
-                                channelIQ.getReceivingSimulcastLayer();
-
-                            videoChannel.setReceiveSimulcastLayer(
-                                    receiveSimulcastLayer);
-                        }
-
-                        channelCreated = true;
+                        videoChannel.setReceiveSimulcastLayer(
+                                receiveSimulcastLayer);
                     }
+
+                    if (channel == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.interna_server_error,
+                                "Failed to allocate new RTP Channel");
+                    }
+
+                    channelCreated = true;
                 }
                 else
                 {
                     channel
                         = (RtpChannel) content.getChannel(channelID);
+                    if (channel == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "No RTP channel found for ID: " + channelID);
+                    }
                 }
 
-                if (channel == null)
-                {
-                    responseConferenceIQ = null;
-                }
-                else
-                {
                     if (channelExpire
                             != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
                     {
+                        if (channelExpire < 0)
+                        {
+                            return IQUtils.createError(
+                                    conferenceIQ,
+                                    XMPPError.Condition.bad_request,
+                                    "Invalid 'expire' value: " + channelExpire);
+                        }
+
                         channel.setExpire(channelExpire);
                         /*
                          * If the request indicates that it wants
@@ -937,10 +958,6 @@ public class Videobridge
                     // like sourceGroupsChanged or PayloadTypesChanged,
                     // etc.
                     content.fireChannelChanged(channel);
-                }
-
-                if (responseConferenceIQ == null)
-                    break;
             }
 
             for (ColibriConferenceIQ.SctpConnection sctpConnIq
@@ -1049,9 +1066,6 @@ public class Videobridge
 
                 responseContentIQ.addSctpConnection(responseSctpIq);
             }
-
-            if (responseConferenceIQ == null)
-                break;
         }
         for (ColibriConferenceIQ.ChannelBundle channelBundleIq
                 : conferenceIQ.getChannelBundles())
@@ -1075,14 +1089,11 @@ public class Videobridge
             conference.updateEndpoint(colibriEndpoint);
         }
 
-        if (responseConferenceIQ != null)
-            conference.describeChannelBundles(responseConferenceIQ);
+        conference.describeChannelBundles(responseConferenceIQ);
 
-        if (responseConferenceIQ != null)
-        {
-            responseConferenceIQ.setType(
-                    org.jivesoftware.smack.packet.IQ.Type.RESULT);
-        }
+        responseConferenceIQ.setType(
+                org.jivesoftware.smack.packet.IQ.Type.RESULT);
+
         return responseConferenceIQ;
     }
 
