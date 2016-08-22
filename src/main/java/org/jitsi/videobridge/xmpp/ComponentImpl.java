@@ -386,7 +386,10 @@ public class ComponentImpl
         Videobridge videobridge = getVideobridge();
         if (videobridge == null)
         {
-            return null;
+            return IQUtils.createError(
+                    request,
+                    XMPPError.Condition.interna_server_error,
+                    "No Videobridge service is running");
         }
 
         org.jivesoftware.smack.packet.IQ response;
