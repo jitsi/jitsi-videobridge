@@ -830,134 +830,118 @@ public class Videobridge
                     }
                 }
 
-                    if (channelExpire
-                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                if (channelExpire
+                        != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                {
+                    if (channelExpire < 0)
                     {
-                        if (channelExpire < 0)
-                        {
-                            return IQUtils.createError(
-                                    conferenceIQ,
-                                    XMPPError.Condition.bad_request,
-                                    "Invalid 'expire' value: " + channelExpire);
-                        }
-
-                        channel.setExpire(channelExpire);
-                        /*
-                         * If the request indicates that it wants
-                         * the channel expired and the channel is
-                         * indeed expired, then the request is valid
-                         * and has correctly been acted upon.
-                         */
-                        if ((channelExpire == 0) && channel.isExpired())
-                            continue;
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "Invalid 'expire' value: " + channelExpire);
                     }
 
-                    // endpoint
-                    // The attribute endpoint is optional. If a value is
-                    // not specified, then the Channel endpoint is to
-                    // not be changed.
-                    String endpoint = channelIQ.getEndpoint();
-
-                    if (endpoint != null)
-                        channel.setEndpoint(endpoint);
-
+                    channel.setExpire(channelExpire);
                     /*
-                     * The attribute last-n is optional. If a value is
-                     * not specified, then the Channel lastN is to not
-                     * be changed.
+                     * If the request indicates that it wants the channel
+                     * expired and the channel is indeed expired, then
+                     * the request is valid and has correctly been acted upon.
                      */
-                    Integer lastN = channelIQ.getLastN();
+                    if ((channelExpire == 0) && channel.isExpired())
+                        continue;
+                }
 
-                    if (lastN != null)
-                        channel.setLastN(lastN);
+                // endpoint
+                // The attribute endpoint is optional. If a value is not
+                // specified, then the Channel endpoint is to not be changed.
+                String endpoint = channelIQ.getEndpoint();
 
-                    Boolean adaptiveLastN
-                            = channelIQ.getAdaptiveLastN();
-                    if (adaptiveLastN != null)
-                        channel.setAdaptiveLastN(adaptiveLastN);
+                if (endpoint != null)
+                    channel.setEndpoint(endpoint);
 
-                    Boolean adaptiveSimulcast
-                            = channelIQ.getAdaptiveSimulcast();
-                    if (adaptiveSimulcast != null)
-                        channel.setAdaptiveSimulcast(adaptiveSimulcast);
+                /*
+                 * The attribute last-n is optional. If a value is not
+                 * specified, then the Channel lastN is to not be changed.
+                 */
+                Integer lastN = channelIQ.getLastN();
 
-                    // Packet delay - for automated testing purpose only
-                    Integer packetDelay = channelIQ.getPacketDelay();
-                    if (packetDelay != null)
+                if (lastN != null)
+                    channel.setLastN(lastN);
+
+                Boolean adaptiveLastN = channelIQ.getAdaptiveLastN();
+                if (adaptiveLastN != null)
+                    channel.setAdaptiveLastN(adaptiveLastN);
+
+                Boolean adaptiveSimulcast = channelIQ.getAdaptiveSimulcast();
+                if (adaptiveSimulcast != null)
+                    channel.setAdaptiveSimulcast(adaptiveSimulcast);
+
+                // Packet delay - for automated testing purpose only
+                Integer packetDelay = channelIQ.getPacketDelay();
+                if (packetDelay != null)
+                {
+                    channel.setPacketDelay(packetDelay);
+                }
+
+                /*
+                 * XXX The attribute initiator is optional. If a value is not
+                 * specified, then the Channel initiator is to be assumed
+                 * default or to not be changed.
+                 */
+                Boolean initiator = channelIQ.isInitiator();
+
+                if (initiator != null)
+                    channel.setInitiator(initiator);
+
+                channel.setPayloadTypes(channelIQ.getPayloadTypes());
+                channel.setRtpHeaderExtensions(
+                        channelIQ.getRtpHeaderExtensions());
+
+                channel.setDirection(channelIQ.getDirection());
+
+                channel.setSources(channelIQ.getSources());
+
+                channel.setSourceGroups(channelIQ.getSourceGroups());
+
+                if (channel instanceof VideoChannel)
+                {
+                    SimulcastMode simulcastMode = channelIQ.getSimulcastMode();
+
+                    if (simulcastMode != null)
                     {
-                        channel.setPacketDelay(packetDelay);
+                        ((VideoChannel)channel).setSimulcastMode(simulcastMode);
                     }
+                }
 
-                    /*
-                     * XXX The attribute initiator is optional. If a
-                     * value is not specified, then the Channel
-                     * initiator is to be assumed default or to not be
-                     * changed.
-                     */
-                    Boolean initiator = channelIQ.isInitiator();
+                if (channelBundleId != null)
+                {
+                    TransportManager transportManager
+                        = conference.getTransportManager(channelBundleId, true);
 
-                    if (initiator != null)
-                        channel.setInitiator(initiator);
+                    transportManager.addChannel(channel);
+                }
 
-                    channel.setPayloadTypes(
-                            channelIQ.getPayloadTypes());
-                    channel.setRtpHeaderExtensions(
-                            channelIQ.getRtpHeaderExtensions());
+                channel.setTransport(channelIQ.getTransport());
 
-                    channel.setDirection(channelIQ.getDirection());
+                /*
+                 * Provide (a description of) the current state of the channel
+                 * as part of the response.
+                 */
+                ColibriConferenceIQ.Channel responseChannelIQ
+                    = new ColibriConferenceIQ.Channel();
 
-                    channel.setSources(channelIQ.getSources());
+                channel.describe(responseChannelIQ);
+                responseContentIQ.addChannel(responseChannelIQ);
 
-                    channel.setSourceGroups(
-                        channelIQ.getSourceGroups());
+                EventAdmin eventAdmin;
+                if (channelCreated && (eventAdmin = getEventAdmin()) != null)
+                {
+                    eventAdmin.sendEvent(EventFactory.channelCreated(channel));
+                }
 
-                    if (channel instanceof VideoChannel)
-                    {
-                        SimulcastMode simulcastMode
-                            = channelIQ.getSimulcastMode();
-
-                        if (simulcastMode != null)
-                        {
-                            ((VideoChannel)channel)
-                                .setSimulcastMode(simulcastMode);
-                        }
-                    }
-
-                    if (channelBundleId != null)
-                    {
-                        TransportManager transportManager
-                            = conference.getTransportManager(
-                                    channelBundleId,
-                                    true);
-
-                        transportManager.addChannel(channel);
-                    }
-
-                    channel.setTransport(channelIQ.getTransport());
-
-                    /*
-                     * Provide (a description of) the current state of
-                     * the channel as part of the response.
-                     */
-                    ColibriConferenceIQ.Channel responseChannelIQ
-                        = new ColibriConferenceIQ.Channel();
-
-                    channel.describe(responseChannelIQ);
-                    responseContentIQ.addChannel(responseChannelIQ);
-
-                    EventAdmin eventAdmin;
-                    if (channelCreated
-                            && (eventAdmin = getEventAdmin()) != null)
-
-                    {
-                        eventAdmin.sendEvent(
-                                EventFactory.channelCreated(channel));
-                    }
-
-                    // XXX we might want to fire more precise events,
-                    // like sourceGroupsChanged or PayloadTypesChanged,
-                    // etc.
-                    content.fireChannelChanged(channel);
+                // XXX we might want to fire more precise events, like
+                // sourceGroupsChanged or PayloadTypesChanged, etc.
+                content.fireChannelChanged(channel);
             }
 
             for (ColibriConferenceIQ.SctpConnection sctpConnIq
