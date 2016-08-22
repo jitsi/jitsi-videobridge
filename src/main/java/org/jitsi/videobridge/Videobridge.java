@@ -959,7 +959,12 @@ public class Videobridge
                 {
                     // Expire an expired/non-existing SCTP connection.
                     if (expire == 0)
-                        continue;
+                    {
+                        return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.bad_request,
+                            "SCTP connection expire request for empty ID");
+                    }
 
                     if (endpointID == null)
                     {
@@ -1005,23 +1010,41 @@ public class Videobridge
                     sctpConn = content.getSctpConnection(id);
                     // Expire an expired/non-existing SCTP connection.
                     if (sctpConn == null && expire == 0)
+                    {
+                        // Nothing to be done here
                         continue;
+                    }
+                    else if (sctpConn == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "No SCTP connection found for ID: " + id);
+                    }
+
+                    // expire
+                    if (expire
+                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                    {
+                        if (expire < 0)
+                        {
+                            return IQUtils.createError(
+                                    conferenceIQ,
+                                    XMPPError.Condition.bad_request,
+                                    "Invalid 'expire' value: " + expire);
+                        }
+
+                        // Check if SCTP connection has expired.
+                        if (expire == 0 && sctpConn.isExpired())
+                            continue;
+
+                        sctpConn.setExpire(expire);
+                    }
+
                     // endpoint
                     if (endpointID != null)
                         sctpConn.setEndpoint(endpointID);
                 }
-
-                // expire
-                if (expire
-                        != ColibriConferenceIQ.Channel
-                                .EXPIRE_NOT_SPECIFIED)
-                {
-                    sctpConn.setExpire(expire);
-                }
-
-                // Check if SCTP connection has expired.
-                if (sctpConn.isExpired())
-                    continue;
 
                 // initiator
                 Boolean initiator = sctpConnIq.isInitiator();
