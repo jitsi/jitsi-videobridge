@@ -659,6 +659,13 @@ public class Videobridge
                 {
                     conference
                         = createConference(focus, conferenceIQ.getName());
+                    if (conference == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.interna_server_error,
+                                "Failed to create new conference");
+                    }
                 }
                 else
                 {
@@ -669,26 +676,20 @@ public class Videobridge
             else
             {
                 conference = getConference(id, focus);
+                if (conference == null)
+                {
+                    return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.bad_request,
+                            "Conference not found for ID: " + id);
+                }
             }
 
-            if (conference != null)
-                conference.setLastKnownFocus(conferenceIQ.getFrom());
+            conference.setLastKnownFocus(conferenceIQ.getFrom());
         }
 
         ColibriConferenceIQ responseConferenceIQ;
 
-        if (conference == null)
-        {
-            /*
-             * Possible reasons for having no Conference instance include
-             * failure to produce an ID which identifies an existing Conference
-             * instance or the JID of a conference focus which owns an existing
-             * Conference instance with a valid ID.
-             */
-            responseConferenceIQ = null;
-        }
-        else
-        {
             responseConferenceIQ = new ColibriConferenceIQ();
             conference.describeShallow(responseConferenceIQ);
 
@@ -1068,21 +1069,17 @@ public class Videobridge
                             transportIq);
                 }
             }
-        }
 
         // Update the endpoint information of Videobridge with the endpoint
         // information of the IQ.
-        if (conference != null)
+        for (ColibriConferenceIQ.Endpoint colibriEndpoint
+                : conferenceIQ.getEndpoints())
         {
-            for (ColibriConferenceIQ.Endpoint colibriEndpoint
-                    : conferenceIQ.getEndpoints())
-            {
-                conference.updateEndpoint(colibriEndpoint);
-            }
-
-            if (responseConferenceIQ != null)
-                conference.describeChannelBundles(responseConferenceIQ);
+            conference.updateEndpoint(colibriEndpoint);
         }
+
+        if (responseConferenceIQ != null)
+            conference.describeChannelBundles(responseConferenceIQ);
 
         if (responseConferenceIQ != null)
         {

@@ -137,7 +137,14 @@ public class FocusControlTest
         // Only focus can access this conference now
         confIq.setFrom("someOtherJid");
         respIq = bridge.handleColibriConferenceIQ(confIq);
-        assertNull(respIq);
+        assertNotNull(respIq);
+        XMPPError error = respIq.getError();
+        assertNotNull(error);
+        // Should be 'not-allowed', but not easy to distinguish between
+        // "conference not found"and "invalid focus" errors in the Videobridge
+        // class without more refactoring
+        assertEquals(
+            XMPPError.Condition.bad_request.toString(), error.getCondition());
 
         // Expect 'not_authorized' error when no focus is provided
         // with default options
