@@ -38,6 +38,7 @@ import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
@@ -633,17 +634,15 @@ public class Videobridge
 
         if (focus == null && (options & OPTION_ALLOW_NO_FOCUS) == 0)
         {
-            return IQ.createErrorResponse(
-                conferenceIQ,
-                new XMPPError(XMPPError.Condition.not_authorized));
+            return IQUtils.createError(
+                    conferenceIQ, XMPPError.Condition.not_authorized);
         }
         else if (authorizedSourcePattern != null
                 && (focus == null
                     || !authorizedSourcePattern.matcher(focus).matches()))
         {
-            return IQ.createErrorResponse(
-                conferenceIQ,
-                new XMPPError(XMPPError.Condition.not_authorized));
+            return IQUtils.createError(
+                    conferenceIQ, XMPPError.Condition.not_authorized);
         }
         else
         {
@@ -1099,9 +1098,8 @@ public class Videobridge
                         .matches())
         {
             return
-                IQ.createErrorResponse(
-                        healthCheckIQ,
-                        new XMPPError(XMPPError.Condition.not_authorized));
+                IQUtils.createError(
+                    healthCheckIQ, XMPPError.Condition.not_authorized);
         }
 
         try
@@ -1113,11 +1111,10 @@ public class Videobridge
         catch (Exception e)
         {
             return
-                IQ.createErrorResponse(
+                IQUtils.createError(
                         healthCheckIQ,
-                        new XMPPError(
-                                XMPPError.Condition.interna_server_error,
-                                e.getMessage()));
+                        XMPPError.Condition.interna_server_error,
+                        e.getMessage());
         }
     }
 
@@ -1135,9 +1132,8 @@ public class Videobridge
         // Security not configured - service unavailable
         if (shutdownSourcePattern == null)
         {
-            return IQ.createErrorResponse(
-                shutdownIQ,
-                new XMPPError(XMPPError.Condition.service_unavailable));
+            return IQUtils.createError(
+                    shutdownIQ, XMPPError.Condition.service_unavailable);
         }
         // Check if source matches pattern
         String from = shutdownIQ.getFrom();
@@ -1179,9 +1175,8 @@ public class Videobridge
         {
             // Unauthorized
             logger.error("Rejected shutdown request from: " + from);
-            return IQ.createErrorResponse(
-                shutdownIQ,
-                new XMPPError(XMPPError.Condition.not_authorized));
+            return IQUtils.createError(
+                    shutdownIQ, XMPPError.Condition.not_authorized);
         }
     }
 
