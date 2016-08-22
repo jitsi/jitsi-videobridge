@@ -956,25 +956,31 @@ public class Videobridge
                         // or focus uses endpoint identity.
                         if (id == null)
                         {
-                            // FIXME The method
-                            // Content.getSctpConnection(Endpoint) is annotated
-                            // as deprecated but SctpConnection identification
-                            // by Endpoint (ID) is to continue to be supported
-                            // for legacy purposes.
-                            Endpoint endpoint
-                                = (endpointID == null)
-                                    ? null
-                                    : conference.getOrCreateEndpoint(
-                                            endpointID);
+                            // Expire an expired/non-existing SCTP connection.
+                            if (expire == 0)
+                                continue;
 
-                            sctpConn = content.getSctpConnection(endpoint);
-                            if (sctpConn == null)
+                            if (endpointID == null)
                             {
-                                // Expire an expired/non-existing SCTP
-                                // connection.
-                                if (expire == 0)
-                                    continue;
+                                return IQUtils.createError(
+                                    conferenceIQ,
+                                    XMPPError.Condition.bad_request,
+                                    "No endpoint ID specified for "
+                                        + "the new SCTP connection");
+                            }
 
+                            Endpoint endpoint
+                                = conference.getOrCreateEndpoint(endpointID);
+                            if (endpoint == null)
+                            {
+                                return IQUtils.createError(
+                                    conferenceIQ,
+                                    XMPPError.Condition.interna_server_error,
+                                    "Failed to create new endpoint for ID: "
+                                        + endpointID);
+                            }
+                            else
+                            {
                                 int sctpPort = sctpConnIq.getPort();
 
                                 sctpConn
@@ -983,6 +989,14 @@ public class Videobridge
                                             sctpPort,
                                             channelBundleId,
                                             sctpConnIq.isInitiator());
+                                if (sctpConn == null)
+                                {
+                                    return IQUtils.createError(
+                                        conferenceIQ,
+                                        XMPPError.Condition
+                                            .interna_server_error,
+                                        "Failed to create new SCTP connection");
+                                }
                             }
                         }
                         else
