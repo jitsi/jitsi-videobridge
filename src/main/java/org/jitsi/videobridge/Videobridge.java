@@ -23,16 +23,19 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.JingleUtils;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
 
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.impl.neomedia.rtp.translator.Payload;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
@@ -799,6 +802,29 @@ public class Videobridge
 
                                     videoChannel.setReceiveSimulcastLayer(
                                             receiveSimulcastLayer);
+                                }
+
+                                if (channel instanceof AudioChannel &&
+                                        channel.getRTPLevelRelayType() == RTPLevelRelayType.MIXER)
+                                {
+                                    /*
+                                     * If the channel is set to use the mixer, set the mixer
+                                     * media format to the first format signaled
+                                     */
+                                    if (!channelIQ.getPayloadTypes().isEmpty())
+                                    {
+                                        /*
+                                         * XXX: instead pick pt with highest clockrate? choose via some other means?
+                                         */
+                                        PayloadTypePacketExtension pt = channelIQ.getPayloadTypes().get(0);
+                                        MediaFormat mf =
+                                                JingleUtils.payloadTypeToMediaFormat(
+                                                        pt,
+                                                        content.getMediaService(),
+                                                        null);
+                                        channel.getStream().setFormat(mf);
+                                    }
+
                                 }
 
                                 channelCreated = true;

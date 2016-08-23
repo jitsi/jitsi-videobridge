@@ -527,35 +527,6 @@ public class RtpChannel
                         }
                     }
 
-                    /*
-                     * When performing content mixing (rather than RTP
-                     * translation/relay), the MediaStream needs a MediaFormat
-                     * to be set in order to make it capable of sending media
-                     * data.
-                     */
-                    if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
-                    {
-                        Map<Byte, MediaFormat> payloadTypes
-                            = stream.getDynamicRTPPayloadTypes();
-
-                        if (payloadTypes != null)
-                        {
-                            int pt = data[off + 1] & 0x7f;
-                            MediaFormat format = payloadTypes.get((byte) pt);
-
-                            if ((format != null)
-                                    && !format.equals(stream.getFormat()))
-                            {
-                                stream.setFormat(format);
-                                synchronized (streamSyncRoot)
-                                {   // otherwise races with stream.start()
-                                    stream.setDirection(MediaDirection.SENDRECV);
-                                }
-                                notify = true;
-                            }
-                        }
-                    }
-
                     if (notify)
                         notifyFocus();
                 }
@@ -1520,14 +1491,6 @@ public class RtpChannel
                 MediaDevice device = getContent().getMixer();
 
                 stream.setDevice(device);
-
-                /*
-                 * It is necessary to start receiving media in order to
-                 * determine the MediaFormat in which the stream will send the
-                 * media it generates.
-                 */
-                if (stream.getFormat() == null)
-                    stream.setDirection(MediaDirection.RECVONLY);
                 break;
 
             case TRANSLATOR:
