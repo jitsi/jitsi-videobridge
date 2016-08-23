@@ -1199,13 +1199,13 @@ public class VideoChannel
         }
 
         logger.debug("Updating our view of the peer video channel.");
-        final Set<Integer> ssrcGroup = new HashSet<>();
-        final Map<Integer, Integer> rtxGroups = new HashMap<>();
+        final Set<Long> ssrcGroup = new HashSet<>();
+        final Map<Long, Long> rtxGroups = new HashMap<>();
 
         for (SimulcastStream stream : streams)
         {
-            int primarySSRC = (int) stream.getPrimarySSRC();
-            int rtxSSRC = (int) stream.getRTXSSRC();
+            long primarySSRC = stream.getPrimarySSRC();
+            long rtxSSRC = stream.getRTXSSRC();
 
             ssrcGroup.add(primarySSRC);
 
@@ -1216,12 +1216,12 @@ public class VideoChannel
         }
 
         SimulcastStream baseStream = streams[0];
-        final Integer ssrcTargetPrimary = (int) baseStream.getPrimarySSRC();
-        final Integer ssrcTargetRTX = (int) baseStream.getRTXSSRC();
+        final Long ssrcTargetPrimary = baseStream.getPrimarySSRC();
+        final Long ssrcTargetRTX = baseStream.getRTXSSRC();
 
         // Update the SSRC rewriting engine from the media stream state.
-        final Map<Integer, Byte> ssrc2fec = new HashMap<>();
-        final Map<Integer, Byte> ssrc2red = new HashMap<>();
+        final Map<Long, Byte> ssrc2fec = new HashMap<>();
+        final Map<Long, Byte> ssrc2red = new HashMap<>();
 
         for (Map.Entry<Byte, MediaFormat> entry :
             peerVideoChannel.getStream().getDynamicRTPPayloadTypes().entrySet())
@@ -1230,24 +1230,24 @@ public class VideoChannel
             String encoding = entry.getValue().getEncoding();
             if (Constants.RED.equals(encoding))
             {
-                for (Integer ssrc : ssrcGroup)
+                for (Long ssrc : ssrcGroup)
                 {
                     ssrc2red.put(ssrc, pt);
                 }
 
-                for (Integer ssrc : rtxGroups.keySet())
+                for (Long ssrc : rtxGroups.keySet())
                 {
                     ssrc2red.put(ssrc, pt);
                 }
             }
             else if (Constants.ULPFEC.equals(encoding))
             {
-                for (Integer ssrc : ssrcGroup)
+                for (Long ssrc : ssrcGroup)
                 {
                     ssrc2fec.put(ssrc, pt);
                 }
 
-                for (Integer ssrc : rtxGroups.keySet())
+                for (Long ssrc : rtxGroups.keySet())
                 {
                     ssrc2fec.put(ssrc, pt);
                 }
