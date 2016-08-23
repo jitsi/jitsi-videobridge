@@ -355,7 +355,7 @@ public class CallStatsIOTransport
             long measurementInterval)
     {
         // Queuing is not implemented by CallStats at the time of this writing.
-        if (callStats.isInitialized())
+        if (callStats != null && callStats.isInitialized())
         {
             BridgeStatusInfoBuilder bridgeStatusInfoBuilder
                 = this.bridgeStatusInfoBuilder;
