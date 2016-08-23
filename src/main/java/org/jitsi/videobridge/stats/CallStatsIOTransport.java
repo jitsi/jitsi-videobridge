@@ -23,6 +23,7 @@ import net.java.sip.communicator.util.Logger;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.version.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.stats.callstats.*;
 import org.osgi.framework.*;
 
 /**
@@ -41,12 +42,27 @@ public class CallStatsIOTransport
     private static final Logger logger
         = Logger.getLogger(CallStatsIOTransport.class);
 
+    /**
+     * The callstats AppID.
+     */
     private static final String PNAME_CALLSTATS_IO_APP_ID
         = "io.callstats.sdk.CallStats.appId";
 
-    private static final String PNAME_CALLSTATS_IO_APP_SECRET
-        = "io.callstats.sdk.CallStats.appSecret";
+    /**
+     * ID of the key that was used to generate token.
+     */
+    private static final String PNAME_CALLSTATS_IO_KEY_ID
+        = "io.callstats.sdk.CallStats.keyId";
 
+    /**
+     * The path to private key file.
+     */
+    private static final String PNAME_CALLSTATS_IO_KEY_PATH
+        = "io.callstats.sdk.CallStats.keyPath";
+
+    /**
+     * The bridge id to report to callstats.io.
+     */
     private static final String PNAME_CALLSTATS_IO_BRIDGE_ID
         = "io.callstats.sdk.CallStats.bridgeId";
 
@@ -218,8 +234,18 @@ public class CallStatsIOTransport
     private void init(BundleContext bundleContext, ConfigurationService cfg)
     {
         int appId = ConfigUtils.getInt(cfg, PNAME_CALLSTATS_IO_APP_ID, 0);
-        String appSecret
-            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_APP_SECRET, null);
+        String keyId
+            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_KEY_ID, null);
+        String keyPath
+            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_KEY_PATH, null);
+
+        if(keyId == null || keyPath == null)
+        {
+            logger.warn(
+                "KeyID and keyPath missing, not skipping callstats init");
+            return;
+        }
+
         String bridgeId
             = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_BRIDGE_ID, null);
         ServerInfo serverInfo = createServerInfo(bundleContext);
@@ -234,7 +260,8 @@ public class CallStatsIOTransport
 
         callStats.initialize(
                 appId,
-                appSecret,
+                new TokenGenerator(
+                    String.valueOf(appId), keyId, bridgeId, keyPath),
                 bridgeId,
                 serverInfo,
                 new CallStatsInitListener()
