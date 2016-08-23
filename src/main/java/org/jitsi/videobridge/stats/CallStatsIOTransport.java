@@ -242,7 +242,7 @@ public class CallStatsIOTransport
         if(keyId == null || keyPath == null)
         {
             logger.warn(
-                "KeyID and keyPath missing, not skipping callstats init");
+                "KeyID and keyPath missing, now skipping callstats init");
             return;
         }
 
