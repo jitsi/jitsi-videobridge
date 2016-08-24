@@ -655,7 +655,12 @@ public class Videobridge
 
             if (id == null)
             {
-                if (!isShutdownInProgress())
+                if (isShutdownInProgress())
+                {
+                    return ColibriConferenceIQ
+                        .createGracefulShutdownErrorResponse(conferenceIQ);
+                }
+                else
                 {
                     conference
                         = createConference(focus, conferenceIQ.getName());
@@ -666,11 +671,6 @@ public class Videobridge
                                 XMPPError.Condition.interna_server_error,
                                 "Failed to create new conference");
                     }
-                }
-                else
-                {
-                    return ColibriConferenceIQ
-                        .createGracefulShutdownErrorResponse(conferenceIQ);
                 }
             }
             else
