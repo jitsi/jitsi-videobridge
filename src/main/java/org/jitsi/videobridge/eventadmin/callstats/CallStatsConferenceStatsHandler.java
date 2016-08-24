@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.eventadmin.callstats;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 import io.callstats.sdk.*;
 import io.callstats.sdk.data.*;
@@ -81,7 +82,7 @@ class CallStatsConferenceStatsHandler
      */
     private final Map<Conference,ConferencePeriodicProcessible>
         statisticsProcessors
-            = new HashMap<>();
+            = new ConcurrentHashMap<>();
 
     /**
      * The interval to poll for stats and to push them to the callstats service.
