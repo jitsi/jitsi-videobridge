@@ -795,18 +795,6 @@ public class Videobridge
                                 channelIQ.isInitiator(),
                                 channelIQ.getRTPLevelRelayType());
 
-                    if (channel instanceof VideoChannel)
-                    {
-                        VideoChannel videoChannel
-                            = (VideoChannel)channel;
-
-                        Integer receiveSimulcastLayer =
-                            channelIQ.getReceivingSimulcastLayer();
-
-                        videoChannel.setReceiveSimulcastLayer(
-                                receiveSimulcastLayer);
-                    }
-
                     if (channel == null)
                     {
                         return IQUtils.createError(
@@ -849,6 +837,18 @@ public class Videobridge
                      */
                     if ((channelExpire == 0) && channel.isExpired())
                         continue;
+                }
+
+                if (channelCreated && channel instanceof VideoChannel)
+                {
+                    VideoChannel videoChannel
+                        = (VideoChannel)channel;
+
+                    Integer receiveSimulcastLayer =
+                        channelIQ.getReceivingSimulcastLayer();
+
+                    videoChannel.setReceiveSimulcastLayer(
+                        receiveSimulcastLayer);
                 }
 
                 // endpoint

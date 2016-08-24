@@ -145,6 +145,11 @@ public class VideoChannel
      *
      * This value can be set through colibri channel IQ with
      * receive-simulcast-layer attribute.
+     *
+     * XXX(boris) I cannot find the semantics of this field documented anywhere.
+     * It is used inconsistently (only when a SimulcastSender is created, but
+     * not when the targetOrder changes for another reason), and the original
+     * intention seems lost.
      */
     private int receiveSimulcastLayer
             = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
