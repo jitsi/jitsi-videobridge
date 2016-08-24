@@ -264,6 +264,27 @@ public class ComponentImpl
             logd("RECV: " + iq.toXML());
 
             org.jivesoftware.smack.packet.IQ smackIQ = IQUtils.convert(iq);
+            // Failed to convert to Smack IQ ?
+            if (smackIQ == null)
+            {
+                if (iq.isRequest())
+                {
+                    IQ error = new IQ(IQ.Type.error, iq.getID());
+                    error.setFrom(iq.getTo());
+                    error.setTo(iq.getFrom());
+                    error.setError(
+                            new PacketError(
+                                    PacketError.Condition.bad_request,
+                                    PacketError.Type.modify,
+                                    "Failed to parse incoming stanza"));
+                    return error;
+                }
+                else
+                {
+                    logger.error("Failed to convert stanza: " + iq.toXML());
+                }
+            }
+
             org.jivesoftware.smack.packet.IQ resultSmackIQ = handleIQ(smackIQ);
             IQ resultIQ;
 
@@ -386,7 +407,10 @@ public class ComponentImpl
         Videobridge videobridge = getVideobridge();
         if (videobridge == null)
         {
-            return null;
+            return IQUtils.createError(
+                    request,
+                    XMPPError.Condition.interna_server_error,
+                    "No Videobridge service is running");
         }
 
         org.jivesoftware.smack.packet.IQ response;

@@ -38,6 +38,7 @@ import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
@@ -633,17 +634,15 @@ public class Videobridge
 
         if (focus == null && (options & OPTION_ALLOW_NO_FOCUS) == 0)
         {
-            return IQ.createErrorResponse(
-                conferenceIQ,
-                new XMPPError(XMPPError.Condition.not_authorized));
+            return IQUtils.createError(
+                    conferenceIQ, XMPPError.Condition.not_authorized);
         }
         else if (authorizedSourcePattern != null
                 && (focus == null
                     || !authorizedSourcePattern.matcher(focus).matches()))
         {
-            return IQ.createErrorResponse(
-                conferenceIQ,
-                new XMPPError(XMPPError.Condition.not_authorized));
+            return IQUtils.createError(
+                    conferenceIQ, XMPPError.Condition.not_authorized);
         }
         else
         {
@@ -656,426 +655,461 @@ public class Videobridge
 
             if (id == null)
             {
-                if (!isShutdownInProgress())
-                {
-                    conference
-                        = createConference(focus, conferenceIQ.getName());
-                }
-                else
+                if (isShutdownInProgress())
                 {
                     return ColibriConferenceIQ
                         .createGracefulShutdownErrorResponse(conferenceIQ);
+                }
+                else
+                {
+                    conference
+                        = createConference(focus, conferenceIQ.getName());
+                    if (conference == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.interna_server_error,
+                                "Failed to create new conference");
+                    }
                 }
             }
             else
             {
                 conference = getConference(id, focus);
-            }
-
-            if (conference != null)
-                conference.setLastKnownFocus(conferenceIQ.getFrom());
-        }
-
-        ColibriConferenceIQ responseConferenceIQ;
-
-        if (conference == null)
-        {
-            /*
-             * Possible reasons for having no Conference instance include
-             * failure to produce an ID which identifies an existing Conference
-             * instance or the JID of a conference focus which owns an existing
-             * Conference instance with a valid ID.
-             */
-            responseConferenceIQ = null;
-        }
-        else
-        {
-            responseConferenceIQ = new ColibriConferenceIQ();
-            conference.describeShallow(responseConferenceIQ);
-
-            responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
-
-            ColibriConferenceIQ.Recording recordingIQ
-                = conferenceIQ.getRecording();
-
-            if (recordingIQ != null)
-            {
-                String tokenIQ = recordingIQ.getToken();
-
-                if (tokenIQ != null)
+                if (conference == null)
                 {
-                    String tokenConfig
-                        = getConfigurationService().getString(
-                                Videobridge.MEDIA_RECORDING_TOKEN_PNAME);
-
-                    if (tokenIQ.equals(tokenConfig))
-                    {
-                        ColibriConferenceIQ.Recording.State recState
-                            = recordingIQ.getState();
-                        boolean recording
-                            = conference.setRecording(
-                                    ColibriConferenceIQ.Recording.State.ON
-                                            .equals(recState)
-                                        || ColibriConferenceIQ.Recording.State
-                                                .PENDING.equals(recState));
-                        ColibriConferenceIQ.Recording responseRecordingIq
-                                = new ColibriConferenceIQ.Recording(recState);
-
-                        if (recording)
-                        {
-                            responseRecordingIq.setDirectory(
-                                    conference.getRecordingDirectory());
-                        }
-                        responseConferenceIQ.setRecording(responseRecordingIq);
-                    }
+                    return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.bad_request,
+                            "Conference not found for ID: " + id);
                 }
             }
 
-            // TODO(gp) Remove ColibriConferenceIQ.RTCPTerminationStrategy
-            for (ColibriConferenceIQ.Content contentIQ
-                    : conferenceIQ.getContents())
-            {
-                /*
-                 * The content element springs into existence whenever it gets
-                 * mentioned, it does not need explicit creation (in contrast to
-                 * the conference and channel elements).
-                 */
-                Content content
-                    = conference.getOrCreateContent(contentIQ.getName());
+            conference.setLastKnownFocus(conferenceIQ.getFrom());
+        }
 
-                if (content == null)
+        ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
+        conference.describeShallow(responseConferenceIQ);
+
+        responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
+
+        ColibriConferenceIQ.Recording recordingIQ = conferenceIQ.getRecording();
+
+        if (recordingIQ != null)
+        {
+            String tokenIQ = recordingIQ.getToken();
+
+            if (tokenIQ != null)
+            {
+                String tokenConfig
+                    = getConfigurationService().getString(
+                            Videobridge.MEDIA_RECORDING_TOKEN_PNAME);
+
+                if (tokenIQ.equals(tokenConfig))
                 {
-                    responseConferenceIQ = null;
+                    ColibriConferenceIQ.Recording.State recState
+                        = recordingIQ.getState();
+                    boolean recording
+                        = conference.setRecording(
+                                ColibriConferenceIQ.Recording.State.ON
+                                        .equals(recState)
+                                    || ColibriConferenceIQ.Recording.State
+                                            .PENDING.equals(recState));
+                    ColibriConferenceIQ.Recording responseRecordingIq
+                            = new ColibriConferenceIQ.Recording(recState);
+
+                    if (recording)
+                    {
+                        responseRecordingIq.setDirectory(
+                                conference.getRecordingDirectory());
+                    }
+                    responseConferenceIQ.setRecording(responseRecordingIq);
+                }
+            }
+        }
+
+        // TODO(gp) Remove ColibriConferenceIQ.RTCPTerminationStrategy
+        for (ColibriConferenceIQ.Content contentIQ
+                : conferenceIQ.getContents())
+        {
+            /*
+             * The content element springs into existence whenever it gets
+             * mentioned, it does not need explicit creation (in contrast to
+             * the conference and channel elements).
+             */
+            String contentName = contentIQ.getName();
+            Content content = conference.getOrCreateContent(contentName);
+            if (content == null)
+            {
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.interna_server_error,
+                        "Failed to create new content for name: "
+                            + contentName);
+            }
+
+            ColibriConferenceIQ.Content responseContentIQ
+                = new ColibriConferenceIQ.Content(content.getName());
+
+            responseConferenceIQ.addContent(responseContentIQ);
+
+            for (ColibriConferenceIQ.Channel channelIQ
+                    : contentIQ.getChannels())
+            {
+                String channelID = channelIQ.getID();
+                int channelExpire = channelIQ.getExpire();
+                String channelBundleId = channelIQ.getChannelBundleId();
+                RtpChannel channel;
+                boolean channelCreated = false;
+                String transportNamespace
+                    = channelIQ.getTransport() != null ?
+                        channelIQ.getTransport().getNamespace() : null;
+
+                /*
+                 * The presence of the id attribute in the channel
+                 * element signals whether a new channel is to be
+                 * created or an existing channel is to be modified.
+                 */
+                if (channelID == null)
+                {
+                    // What ? Wants to expire a channel while not providing
+                    // it's ID ?
+                    if (channelExpire == 0)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "Channel expire request for empty ID");
+                    }
+                    /*
+                     * An expire attribute in the channel element with
+                     * value equal to zero requests the immediate
+                     * expiration of the channel in question.
+                     * Consequently, it does not make sense to have it
+                     * in a channel allocation request.
+                     */
+                    channel
+                        = content.createRtpChannel(
+                                channelBundleId,
+                                transportNamespace,
+                                channelIQ.isInitiator(),
+                                channelIQ.getRTPLevelRelayType());
+
+                    if (channel == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.interna_server_error,
+                                "Failed to allocate new RTP Channel");
+                    }
+
+                    channelCreated = true;
                 }
                 else
                 {
-                    ColibriConferenceIQ.Content responseContentIQ
-                        = new ColibriConferenceIQ.Content(content.getName());
-
-                    responseConferenceIQ.addContent(responseContentIQ);
-
-                    for (ColibriConferenceIQ.Channel channelIQ
-                            : contentIQ.getChannels())
+                    // Request for an existing channel.
+                    channel
+                        = (RtpChannel) content.getChannel(channelID);
+                    if (channel == null)
                     {
-                        String channelID = channelIQ.getID();
-                        int channelExpire = channelIQ.getExpire();
-                        String channelBundleId = channelIQ.getChannelBundleId();
-                        RtpChannel channel = null;
-                        boolean channelCreated = false;
-                        String transportNamespace
-                            = channelIQ.getTransport() != null ?
-                                channelIQ.getTransport().getNamespace() : null;
-
-                        /*
-                         * The presence of the id attribute in the channel
-                         * element signals whether a new channel is to be
-                         * created or an existing channel is to be modified.
-                         */
-                        if (channelID == null)
+                        if (channelExpire == 0)
                         {
-                            /*
-                             * An expire attribute in the channel element with
-                             * value equal to zero requests the immediate
-                             * expiration of the channel in question.
-                             * Consequently, it does not make sense to have it
-                             * in a channel allocation request.
-                             */
-                            if (channelExpire != 0)
-                            {
-                                channel
-                                    = content.createRtpChannel(
-                                        channelBundleId,
-                                        transportNamespace,
-                                        channelIQ.isInitiator(),
-                                        channelIQ.getRTPLevelRelayType());
-
-                                if (channel instanceof VideoChannel)
-                                {
-                                    VideoChannel videoChannel
-                                        = (VideoChannel)channel;
-
-                                    Integer receiveSimulcastLayer =
-                                        channelIQ.getReceivingSimulcastLayer();
-
-                                    videoChannel.setReceiveSimulcastLayer(
-                                            receiveSimulcastLayer);
-                                }
-
-                                channelCreated = true;
-                            }
+                            // Channel already expired?
+                            continue;
                         }
                         else
                         {
-                            channel
-                                = (RtpChannel) content.getChannel(channelID);
+                            return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "No RTP channel found for ID: " + channelID);
                         }
+                    }
+                }
 
-                        if (channel == null)
-                        {
-                            responseConferenceIQ = null;
-                        }
-                        else
-                        {
-                            if (channelExpire
-                                    != ColibriConferenceIQ.Channel
-                                            .EXPIRE_NOT_SPECIFIED)
-                            {
-                                channel.setExpire(channelExpire);
-                                /*
-                                 * If the request indicates that it wants
-                                 * the channel expired and the channel is
-                                 * indeed expired, then the request is valid
-                                 * and has correctly been acted upon.
-                                 */
-                                if ((channelExpire == 0)
-                                        && channel.isExpired())
-                                    continue;
-                            }
-
-                            // endpoint
-                            // The attribute endpoint is optional. If a value is
-                            // not specified, then the Channel endpoint is to
-                            // not be changed.
-                            String endpoint = channelIQ.getEndpoint();
-
-                            if (endpoint != null)
-                                channel.setEndpoint(endpoint);
-
-                            /*
-                             * The attribute last-n is optional. If a value is
-                             * not specified, then the Channel lastN is to not
-                             * be changed.
-                             */
-                            Integer lastN = channelIQ.getLastN();
-
-                            if (lastN != null)
-                                channel.setLastN(lastN);
-
-                            Boolean adaptiveLastN
-                                    = channelIQ.getAdaptiveLastN();
-                            if (adaptiveLastN != null)
-                                channel.setAdaptiveLastN(adaptiveLastN);
-
-                            Boolean adaptiveSimulcast
-                                    = channelIQ.getAdaptiveSimulcast();
-                            if (adaptiveSimulcast != null)
-                                channel.setAdaptiveSimulcast(adaptiveSimulcast);
-
-                            // Packet delay - for automated testing purpose only
-                            Integer packetDelay = channelIQ.getPacketDelay();
-                            if (packetDelay != null)
-                            {
-                                channel.setPacketDelay(packetDelay);
-                            }
-
-                            /*
-                             * XXX The attribute initiator is optional. If a
-                             * value is not specified, then the Channel
-                             * initiator is to be assumed default or to not be
-                             * changed.
-                             */
-                            Boolean initiator = channelIQ.isInitiator();
-
-                            if (initiator != null)
-                                channel.setInitiator(initiator);
-
-                            channel.setPayloadTypes(
-                                    channelIQ.getPayloadTypes());
-                            channel.setRtpHeaderExtensions(
-                                    channelIQ.getRtpHeaderExtensions());
-
-                            channel.setDirection(channelIQ.getDirection());
-
-                            channel.setSources(channelIQ.getSources());
-
-                            channel.setSourceGroups(
-                                channelIQ.getSourceGroups());
-
-                            if (channel instanceof VideoChannel)
-                            {
-                                SimulcastMode simulcastMode
-                                    = channelIQ.getSimulcastMode();
-
-                                if (simulcastMode != null)
-                                {
-                                    ((VideoChannel)channel)
-                                        .setSimulcastMode(simulcastMode);
-                                }
-                            }
-
-                            if (channelBundleId != null)
-                            {
-                                TransportManager transportManager
-                                        = conference.getTransportManager(
-                                        channelBundleId,
-                                        true);
-
-                                transportManager.addChannel(channel);
-                            }
-
-                            channel.setTransport(channelIQ.getTransport());
-
-                            /*
-                             * Provide (a description of) the current state of
-                             * the channel as part of the response.
-                             */
-                            ColibriConferenceIQ.Channel responseChannelIQ
-                                = new ColibriConferenceIQ.Channel();
-
-                            channel.describe(responseChannelIQ);
-                            responseContentIQ.addChannel(responseChannelIQ);
-
-                            EventAdmin eventAdmin;
-                            if (channelCreated
-                                    && (eventAdmin = getEventAdmin()) != null)
-
-                            {
-                                eventAdmin.sendEvent(
-                                        EventFactory.channelCreated(channel));
-                            }
-
-                            // XXX we might want to fire more precise events,
-                            // like sourceGroupsChanged or PayloadTypesChanged,
-                            // etc.
-                            content.fireChannelChanged(channel);
-                        }
-
-                        if (responseConferenceIQ == null)
-                            break;
+                if (channelExpire
+                        != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                {
+                    if (channelExpire < 0)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "Invalid 'expire' value: " + channelExpire);
                     }
 
-                    for (ColibriConferenceIQ.SctpConnection sctpConnIq
-                            : contentIQ.getSctpConnections())
+                    channel.setExpire(channelExpire);
+                    /*
+                     * If the request indicates that it wants the channel
+                     * expired and the channel is indeed expired, then
+                     * the request is valid and has correctly been acted upon.
+                     */
+                    if ((channelExpire == 0) && channel.isExpired())
+                        continue;
+                }
+
+                if (channelCreated && channel instanceof VideoChannel)
+                {
+                    VideoChannel videoChannel
+                        = (VideoChannel)channel;
+
+                    Integer receiveSimulcastLayer =
+                        channelIQ.getReceivingSimulcastLayer();
+
+                    videoChannel.setReceiveSimulcastLayer(
+                        receiveSimulcastLayer);
+                }
+
+                // endpoint
+                // The attribute endpoint is optional. If a value is not
+                // specified, then the Channel endpoint is to not be changed.
+                String endpoint = channelIQ.getEndpoint();
+
+                if (endpoint != null)
+                    channel.setEndpoint(endpoint);
+
+                /*
+                 * The attribute last-n is optional. If a value is not
+                 * specified, then the Channel lastN is to not be changed.
+                 */
+                Integer lastN = channelIQ.getLastN();
+
+                if (lastN != null)
+                    channel.setLastN(lastN);
+
+                Boolean adaptiveLastN = channelIQ.getAdaptiveLastN();
+                if (adaptiveLastN != null)
+                    channel.setAdaptiveLastN(adaptiveLastN);
+
+                Boolean adaptiveSimulcast = channelIQ.getAdaptiveSimulcast();
+                if (adaptiveSimulcast != null)
+                    channel.setAdaptiveSimulcast(adaptiveSimulcast);
+
+                // Packet delay - for automated testing purpose only
+                Integer packetDelay = channelIQ.getPacketDelay();
+                if (packetDelay != null)
+                {
+                    channel.setPacketDelay(packetDelay);
+                }
+
+                /*
+                 * XXX The attribute initiator is optional. If a value is not
+                 * specified, then the Channel initiator is to be assumed
+                 * default or to not be changed.
+                 */
+                Boolean initiator = channelIQ.isInitiator();
+
+                if (initiator != null)
+                    channel.setInitiator(initiator);
+
+                channel.setPayloadTypes(channelIQ.getPayloadTypes());
+                channel.setRtpHeaderExtensions(
+                        channelIQ.getRtpHeaderExtensions());
+
+                channel.setDirection(channelIQ.getDirection());
+
+                channel.setSources(channelIQ.getSources());
+
+                channel.setSourceGroups(channelIQ.getSourceGroups());
+
+                if (channel instanceof VideoChannel)
+                {
+                    SimulcastMode simulcastMode = channelIQ.getSimulcastMode();
+
+                    if (simulcastMode != null)
                     {
-                        String id = sctpConnIq.getID();
-                        String endpointID = sctpConnIq.getEndpoint();
-                        SctpConnection sctpConn;
-                        int expire = sctpConnIq.getExpire();
-                        String channelBundleId = sctpConnIq.getChannelBundleId();
+                        ((VideoChannel)channel).setSimulcastMode(simulcastMode);
+                    }
+                }
 
-                        // No ID means SCTP connection is to either be created
-                        // or focus uses endpoint identity.
-                        if (id == null)
+                if (channelBundleId != null)
+                {
+                    TransportManager transportManager
+                        = conference.getTransportManager(channelBundleId, true);
+
+                    transportManager.addChannel(channel);
+                }
+
+                channel.setTransport(channelIQ.getTransport());
+
+                /*
+                 * Provide (a description of) the current state of the channel
+                 * as part of the response.
+                 */
+                ColibriConferenceIQ.Channel responseChannelIQ
+                    = new ColibriConferenceIQ.Channel();
+
+                channel.describe(responseChannelIQ);
+                responseContentIQ.addChannel(responseChannelIQ);
+
+                EventAdmin eventAdmin;
+                if (channelCreated && (eventAdmin = getEventAdmin()) != null)
+                {
+                    eventAdmin.sendEvent(EventFactory.channelCreated(channel));
+                }
+
+                // XXX we might want to fire more precise events, like
+                // sourceGroupsChanged or PayloadTypesChanged, etc.
+                content.fireChannelChanged(channel);
+            }
+
+            for (ColibriConferenceIQ.SctpConnection sctpConnIq
+                    : contentIQ.getSctpConnections())
+            {
+                String id = sctpConnIq.getID();
+                String endpointID = sctpConnIq.getEndpoint();
+                SctpConnection sctpConn;
+                int expire = sctpConnIq.getExpire();
+                String channelBundleId = sctpConnIq.getChannelBundleId();
+
+                // No ID means SCTP connection is to either be created
+                // or focus uses endpoint identity.
+                if (id == null)
+                {
+                    // Expire an expired/non-existing SCTP connection.
+                    if (expire == 0)
+                    {
+                        return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.bad_request,
+                            "SCTP connection expire request for empty ID");
+                    }
+
+                    if (endpointID == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "No endpoint ID specified for "
+                                    + "the new SCTP connection");
+                    }
+
+                    Endpoint endpoint
+                        = conference.getOrCreateEndpoint(endpointID);
+                    if (endpoint == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.interna_server_error,
+                                "Failed to create new endpoint for ID: "
+                                    + endpointID);
+                    }
+                    else
+                    {
+                        int sctpPort = sctpConnIq.getPort();
+
+                        sctpConn
+                            = content.createSctpConnection(
+                                    endpoint,
+                                    sctpPort,
+                                    channelBundleId,
+                                    sctpConnIq.isInitiator());
+                        if (sctpConn == null)
                         {
-                            // FIXME The method
-                            // Content.getSctpConnection(Endpoint) is annotated
-                            // as deprecated but SctpConnection identification
-                            // by Endpoint (ID) is to continue to be supported
-                            // for legacy purposes.
-                            Endpoint endpoint
-                                = (endpointID == null)
-                                    ? null
-                                    : conference.getOrCreateEndpoint(
-                                            endpointID);
-
-                            sctpConn = content.getSctpConnection(endpoint);
-                            if (sctpConn == null)
-                            {
-                                // Expire an expired/non-existing SCTP
-                                // connection.
-                                if (expire == 0)
-                                    continue;
-
-                                int sctpPort = sctpConnIq.getPort();
-
-                                sctpConn
-                                    = content.createSctpConnection(
-                                            endpoint,
-                                            sctpPort,
-                                            channelBundleId,
-                                            sctpConnIq.isInitiator());
-                            }
+                            return IQUtils.createError(
+                                    conferenceIQ,
+                                    XMPPError.Condition
+                                        .interna_server_error,
+                                    "Failed to create new SCTP connection");
                         }
-                        else
-                        {
-                            sctpConn = content.getSctpConnection(id);
-                            // Expire an expired/non-existing SCTP connection.
-                            if (sctpConn == null && expire == 0)
-                                continue;
-                            // endpoint
-                            if (endpointID != null)
-                                sctpConn.setEndpoint(endpointID);
-                        }
+                    }
+                }
+                else
+                {
+                    sctpConn = content.getSctpConnection(id);
+                    // Expire an expired/non-existing SCTP connection.
+                    if (sctpConn == null && expire == 0)
+                    {
+                        // Nothing to be done here
+                        continue;
+                    }
+                    else if (sctpConn == null)
+                    {
+                        return IQUtils.createError(
+                                conferenceIQ,
+                                XMPPError.Condition.bad_request,
+                                "No SCTP connection found for ID: " + id);
+                    }
 
-                        // expire
-                        if (expire
-                                != ColibriConferenceIQ.Channel
-                                        .EXPIRE_NOT_SPECIFIED)
+                    // expire
+                    if (expire
+                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                    {
+                        if (expire < 0)
                         {
-                            sctpConn.setExpire(expire);
+                            return IQUtils.createError(
+                                    conferenceIQ,
+                                    XMPPError.Condition.bad_request,
+                                    "Invalid 'expire' value: " + expire);
                         }
 
                         // Check if SCTP connection has expired.
-                        if (sctpConn.isExpired())
+                        if (expire == 0 && sctpConn.isExpired())
                             continue;
 
-                        // initiator
-                        Boolean initiator = sctpConnIq.isInitiator();
-
-                        if (initiator != null)
-                            sctpConn.setInitiator(initiator);
-
-                        // transport
-                        sctpConn.setTransport(sctpConnIq.getTransport());
-
-                        if (channelBundleId != null)
-                        {
-                            TransportManager transportManager
-                                = conference.getTransportManager(
-                                        channelBundleId,
-                                        true);
-
-                            transportManager.addChannel(sctpConn);
-                        }
-
-                        // response
-                        ColibriConferenceIQ.SctpConnection responseSctpIq
-                            = new ColibriConferenceIQ.SctpConnection();
-
-                        sctpConn.describe(responseSctpIq);
-
-                        responseContentIQ.addSctpConnection(responseSctpIq);
+                        sctpConn.setExpire(expire);
                     }
+
+                    // endpoint
+                    if (endpointID != null)
+                        sctpConn.setEndpoint(endpointID);
                 }
 
-                if (responseConferenceIQ == null)
-                    break;
-            }
-            for (ColibriConferenceIQ.ChannelBundle channelBundleIq
-                    : conferenceIQ.getChannelBundles())
-            {
-                TransportManager transportManager
-                    = conference.getTransportManager(channelBundleIq.getId());
-                IceUdpTransportPacketExtension transportIq
-                    = channelBundleIq.getTransport();
+                // initiator
+                Boolean initiator = sctpConnIq.isInitiator();
 
-                if (transportManager != null && transportIq != null)
+                if (initiator != null)
+                    sctpConn.setInitiator(initiator);
+
+                // transport
+                sctpConn.setTransport(sctpConnIq.getTransport());
+
+                if (channelBundleId != null)
                 {
-                    transportManager.startConnectivityEstablishment(
-                            transportIq);
+                    TransportManager transportManager
+                        = conference.getTransportManager(
+                                channelBundleId,
+                                true);
+
+                    transportManager.addChannel(sctpConn);
                 }
+
+                // response
+                ColibriConferenceIQ.SctpConnection responseSctpIq
+                    = new ColibriConferenceIQ.SctpConnection();
+
+                sctpConn.describe(responseSctpIq);
+
+                responseContentIQ.addSctpConnection(responseSctpIq);
+            }
+        }
+        for (ColibriConferenceIQ.ChannelBundle channelBundleIq
+                : conferenceIQ.getChannelBundles())
+        {
+            TransportManager transportManager
+                = conference.getTransportManager(channelBundleIq.getId());
+            IceUdpTransportPacketExtension transportIq
+                = channelBundleIq.getTransport();
+
+            if (transportManager != null && transportIq != null)
+            {
+                transportManager.startConnectivityEstablishment(transportIq);
             }
         }
 
         // Update the endpoint information of Videobridge with the endpoint
         // information of the IQ.
-        if (conference != null)
+        for (ColibriConferenceIQ.Endpoint colibriEndpoint
+                : conferenceIQ.getEndpoints())
         {
-            for (ColibriConferenceIQ.Endpoint colibriEndpoint
-                    : conferenceIQ.getEndpoints())
-            {
-                conference.updateEndpoint(colibriEndpoint);
-            }
-
-            if (responseConferenceIQ != null)
-                conference.describeChannelBundles(responseConferenceIQ);
+            conference.updateEndpoint(colibriEndpoint);
         }
 
-        if (responseConferenceIQ != null)
-        {
-            responseConferenceIQ.setType(
-                    org.jivesoftware.smack.packet.IQ.Type.RESULT);
-        }
+        conference.describeChannelBundles(responseConferenceIQ);
+
+        responseConferenceIQ.setType(
+                org.jivesoftware.smack.packet.IQ.Type.RESULT);
+
         return responseConferenceIQ;
     }
 
@@ -1099,9 +1133,8 @@ public class Videobridge
                         .matches())
         {
             return
-                IQ.createErrorResponse(
-                        healthCheckIQ,
-                        new XMPPError(XMPPError.Condition.not_authorized));
+                IQUtils.createError(
+                    healthCheckIQ, XMPPError.Condition.not_authorized);
         }
 
         try
@@ -1113,11 +1146,10 @@ public class Videobridge
         catch (Exception e)
         {
             return
-                IQ.createErrorResponse(
+                IQUtils.createError(
                         healthCheckIQ,
-                        new XMPPError(
-                                XMPPError.Condition.interna_server_error,
-                                e.getMessage()));
+                        XMPPError.Condition.interna_server_error,
+                        e.getMessage());
         }
     }
 
@@ -1135,9 +1167,8 @@ public class Videobridge
         // Security not configured - service unavailable
         if (shutdownSourcePattern == null)
         {
-            return IQ.createErrorResponse(
-                shutdownIQ,
-                new XMPPError(XMPPError.Condition.service_unavailable));
+            return IQUtils.createError(
+                    shutdownIQ, XMPPError.Condition.service_unavailable);
         }
         // Check if source matches pattern
         String from = shutdownIQ.getFrom();
@@ -1179,9 +1210,8 @@ public class Videobridge
         {
             // Unauthorized
             logger.error("Rejected shutdown request from: " + from);
-            return IQ.createErrorResponse(
-                shutdownIQ,
-                new XMPPError(XMPPError.Condition.not_authorized));
+            return IQUtils.createError(
+                    shutdownIQ, XMPPError.Condition.not_authorized);
         }
     }
 

@@ -846,22 +846,6 @@ public class Content
     /**
      * Returns <tt>SctpConnection</tt> for given <tt>Endpoint</tt>.
      *
-     * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt> that
-     * we're looking for.
-     * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any or
-     * <tt>null</tt> otherwise.
-     */
-    @Deprecated
-    public SctpConnection getSctpConnection(Endpoint endpoint)
-    {
-        // SCTP connection is bound to an Endpoint just after gets created
-        // (in the constructor), so expect to find it there
-        return (endpoint == null) ? null : endpoint.getSctpConnection();
-    }
-
-    /**
-     * Returns <tt>SctpConnection</tt> for given <tt>Endpoint</tt>.
-     *
      * @param id the <tt>id</tt> of <tt>SctpConnection</tt> that we're looking
      * for.
      * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any or
