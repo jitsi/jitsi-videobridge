@@ -14,11 +14,13 @@ in /etc/jitsi/videobridge/sip-communicator.properties
     org.jitsi.videobridge.STATISTICS_INTERVAL.callstats.io=30000
     org.jitsi.videobridge.STATISTICS_TRANSPORT=callstats.io
 
-You can use [pem-to-jwk](https://www.npmjs.com/package/pem-to-jwk) to convert PEM encoded EC private key to JWK.
+You can use [pem-to-jwk](https://www.npmjs.com/package/pem-to-jwk) to convert PEM encoded EC private key to JWK.  
 To generate a jwk file that needs to be supplied as
 io.callstats.sdk.CallStats.keyPath parameter, follow these steps:
+    
     # Generate EC key
     openssl ecparam -name prime256v1 -genkey > ecpriv.key
     cat ecpriv.key | pem-to-jwk > ecpriv.jwk
+    
     # Generate a public key from private key
     openssl ec -in ecpriv.key -pubout -out ecpubkey.pem
