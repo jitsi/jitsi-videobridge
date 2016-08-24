@@ -1826,6 +1826,8 @@ public class RtpChannel
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Closes {@link #transformEngine}. Normally this would be done by
      * {@link #stream} when it is being closed, but we have observed cases (e.g.
      * when running health checks) where it doesn't happen, and since
@@ -1833,8 +1835,14 @@ public class RtpChannel
      * assumes the responsibility of releasing its resources.
      */
     @Override
-    public void expire()
+    public boolean expire()
     {
+        if (!super.expire())
+        {
+            // Already expired.
+            return false;
+        }
+
         if (getContent().getConference().includeInStatistics())
         {
             Conference.Statistics conferenceStatistics
@@ -1872,7 +1880,7 @@ public class RtpChannel
             }
         }
 
-        super.expire();
+        return true;
     }
 
     /**

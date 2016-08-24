@@ -344,16 +344,17 @@ public class SctpConnection
      * {@inheritDoc}
      */
     @Override
-    public void expire()
+    public boolean expire()
     {
-        try
+        if (!super.expire())
         {
-            eventDispatcher.shutdown();
+            // Already expired.
+            return false;
         }
-        finally
-        {
-            super.expire();
-        }
+
+        eventDispatcher.shutdown();
+
+        return true;
     }
 
     /**
