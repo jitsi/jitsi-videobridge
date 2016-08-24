@@ -807,14 +807,23 @@ public class Videobridge
                 }
                 else
                 {
+                    // Request for an existing channel.
                     channel
                         = (RtpChannel) content.getChannel(channelID);
                     if (channel == null)
                     {
-                        return IQUtils.createError(
+                        if (channelExpire == 0)
+                        {
+                            // Channel already expired?
+                            continue;
+                        }
+                        else
+                        {
+                            return IQUtils.createError(
                                 conferenceIQ,
                                 XMPPError.Condition.bad_request,
                                 "No RTP channel found for ID: " + channelID);
+                        }
                     }
                 }
 
