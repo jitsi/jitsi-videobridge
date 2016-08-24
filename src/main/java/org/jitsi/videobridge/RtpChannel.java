@@ -1826,6 +1826,8 @@ public class RtpChannel
     }
 
     /**
+     * {@inheritDoc}
+     *
      * Closes {@link #transformEngine}. Normally this would be done by
      * {@link #stream} when it is being closed, but we have observed cases (e.g.
      * when running health checks) where it doesn't happen, and since
