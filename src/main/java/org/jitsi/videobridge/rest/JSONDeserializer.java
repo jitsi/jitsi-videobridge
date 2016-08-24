@@ -154,6 +154,7 @@ final class JSONDeserializer
                 = channel.get(
                         ColibriConferenceIQ.Channel
                             .RTP_LEVEL_RELAY_TYPE_ATTR_NAME);
+            Object generate_sources = channel.get(JSONSerializer.GENERATE_SOURCES);
             Object sources = channel.get(JSONSerializer.SOURCES);
             Object sourceGroups = channel.get(JSONSerializer.SOURCE_GROUPS);
             Object ssrcs = channel.get(JSONSerializer.SSRCS);
@@ -207,6 +208,9 @@ final class JSONDeserializer
             // rtpLevelRelayType
             if (rtpLevelRelayType != null)
                 channelIQ.setRTPLevelRelayType(rtpLevelRelayType.toString());
+            if ((Boolean)generate_sources) {
+            	channelIQ.setGenerateSource(true);
+            }
             // sources
             if (sources != null)
                 deserializeSources((JSONArray) sources, channelIQ);

@@ -168,6 +168,9 @@ public class Conference
      */
     private final Map<String, IceUdpTransportManager> transportManagers
         = new HashMap<>();
+    
+    
+   private long lastGeneratedSSRC = 1;
 
     /**
      * The <tt>Videobridge</tt> which has initialized this <tt>Conference</tt>.
@@ -1818,6 +1821,15 @@ public class Conference
         return eventAdmin;
     }
 
+    /**
+     * Generates unique SSRC for the conference.
+     * 
+     * @return unique SSRC value 
+     */
+    public synchronized long generateUniqueSSRC() {
+    	return lastGeneratedSSRC++;
+    }
+    
     /**
      * @return the {@link Logger} used by this instance.
      */

@@ -525,9 +525,11 @@ public class MetricLoggingHandler
             RtpChannel rtpChannel
                 = (RtpChannel) event.getProperty(EventFactory.EVENT_SOURCE);
 
-            publishStringMetric(
-                rtpChannel.getClass().getName() + METRIC_CHANNELSTART_POSTFIX,
-                rtpChannel.getStreamTarget().getDataAddress().getHostAddress());
+            if (rtpChannel.getStreamTarget().getDataAddress() != null) {
+                publishStringMetric(
+                        rtpChannel.getClass().getName() + METRIC_CHANNELSTART_POSTFIX,
+                        rtpChannel.getStreamTarget().getDataAddress().getHostAddress());
+            }            
         }
     }
 }

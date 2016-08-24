@@ -886,6 +886,10 @@ public class Videobridge
 
                             channel.setDirection(channelIQ.getDirection());
 
+                            if (channelIQ.generateSource()) {
+                            	generateSources(conference, channel);
+                            }
+                            
                             channel.setSources(channelIQ.getSources());
 
                             channel.setSourceGroups(
@@ -1079,7 +1083,15 @@ public class Videobridge
         return responseConferenceIQ;
     }
 
-    /**
+    private void generateSources(Conference conference, RtpChannel channel) {
+		List<SourcePacketExtension> sources = new ArrayList<>();
+		SourcePacketExtension spe = new SourcePacketExtension();
+		spe.setSSRC(conference.generateUniqueSSRC());
+		sources.add(spe);
+		channel.setSources(sources);	
+    }
+
+	/**
      * Handles <tt>HealthCheckIQ</tt> by performing health check on this
      * <tt>Videobridge</tt> instance.
      *
