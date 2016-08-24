@@ -15,7 +15,9 @@
  */
 package org.jitsi.videobridge.eventadmin.callstats;
 
+import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import io.callstats.sdk.*;
 import io.callstats.sdk.data.*;
@@ -81,7 +83,7 @@ class CallStatsConferenceStatsHandler
      */
     private final Map<Conference,ConferencePeriodicProcessible>
         statisticsProcessors
-            = new HashMap<>();
+            = new ConcurrentHashMap<>();
 
     /**
      * The interval to poll for stats and to push them to the callstats service.
@@ -166,8 +168,11 @@ class CallStatsConferenceStatsHandler
         // Create a new PeriodicProcessible and start it.
         ConferencePeriodicProcessible cpp
             = new ConferencePeriodicProcessible(conference, interval);
-
         cpp.start();
+
+        // register for periodic execution.
+        this.statisticsProcessors.put(conference, cpp);
+        this.statisticsExecutor.registerRecurringProcessible(cpp);
     }
 
     /**
@@ -205,7 +210,7 @@ class CallStatsConferenceStatsHandler
          * The user info object used to identify the reports to callstats. Holds
          * the conference, the bridgeID and user callstats ID.
          */
-        private UserInfo userInfo;
+        private UserInfo userInfo = null;
 
         /**
          * The conference ID to use when reporting stats.
@@ -241,6 +246,12 @@ class CallStatsConferenceStatsHandler
         @Override
         protected void doProcess()
         {
+            // if userInfo is missing the method conferenceSetupResponse
+            // is not called, means callstats still has not setup internally
+            // this conference, and no stats will be processed for it
+            if(userInfo == null)
+                return;
+
             for (Endpoint e : o.getEndpoints())
             {
                 for (MediaType mediaType : MEDIA_TYPES)
@@ -266,31 +277,7 @@ class CallStatsConferenceStatsHandler
             callStats.sendCallStatsConferenceEvent(
                     CallStatsConferenceEvents.CONFERENCE_SETUP,
                     conferenceInfo,
-                    new CallStatsStartConferenceListener()
-                    {
-                        @Override
-                        public void onResponse(String ucid)
-                        {
-                            userInfo
-                                = new UserInfo(conferenceID, bridgeId, ucid);
-                            // Successful setup from callstats' perspective. Add
-                            // it to statisticsProcessors map and register it
-                            // for periodic execution.
-                            statisticsProcessors.put(
-                                    o,
-                                    ConferencePeriodicProcessible.this);
-                            statisticsExecutor.registerRecurringProcessible(
-                                    ConferencePeriodicProcessible.this);
-                        }
-
-                        @Override
-                        public void onError(
-                                CallStatsErrors callStatsErrors,
-                                String s)
-                        {
-                            logger.error(s + "," + callStatsErrors);
-                        }
-                    });
+                    new CSStartConferenceListener(new WeakReference<>(this)));
         }
 
         /**
@@ -301,6 +288,17 @@ class CallStatsConferenceStatsHandler
             callStats.sendCallStatsConferenceEvent(
                     CallStatsConferenceEvents.CONFERENCE_TERMINATED,
                     userInfo);
+        }
+
+        /**
+         * Callstats has finished setting up the conference and we can start
+         * sending stats.
+         * @param ucid the id used to identify the conference inside callstats.
+         */
+        void conferenceSetupResponse(String ucid)
+        {
+            userInfo
+                = new UserInfo(conferenceID, bridgeId, ucid);
         }
 
         /**
@@ -376,6 +374,49 @@ class CallStatsConferenceStatsHandler
             }
 
             callStats.stopStatsReportingForUser(endpointID, this.conferenceID);
+        }
+    }
+
+    /**
+     * Listener that get notified when conference had been processed
+     * by callstats and we have the identifier for it and we can start sending
+     * stats for it.
+     */
+    private static class CSStartConferenceListener
+        implements CallStatsStartConferenceListener
+    {
+        /**
+         * Weak reference for the ConferencePeriodicProcessible, to make sure
+         * if this listener got leaked somwehere in callstats we will not keep
+         * reference to conferences and such.
+         */
+        private final WeakReference<ConferencePeriodicProcessible> processible;
+
+        /**
+         * Creates listener.
+         * @param processible the processible interested in ucid value on
+         * successful setup of conference in callstats.
+         */
+        CSStartConferenceListener(
+            WeakReference<ConferencePeriodicProcessible> processible)
+        {
+            this.processible = processible;
+        }
+
+        @Override
+        public void onResponse(String ucid)
+        {
+            ConferencePeriodicProcessible p = processible.get();
+
+            // maybe null cause it was garbage collected
+            if(p != null)
+                p.conferenceSetupResponse(ucid);
+        }
+
+        @Override
+        public void onError(CallStatsErrors callStatsErrors, String s)
+        {
+            logger.error(s + "," + callStatsErrors);
         }
     }
 }
