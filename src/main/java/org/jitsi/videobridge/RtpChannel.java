@@ -1833,8 +1833,14 @@ public class RtpChannel
      * assumes the responsibility of releasing its resources.
      */
     @Override
-    public void expire()
+    public boolean expire()
     {
+        if (!super.expire())
+        {
+            // Already expired.
+            return false;
+        }
+
         if (getContent().getConference().includeInStatistics())
         {
             Conference.Statistics conferenceStatistics
@@ -1872,7 +1878,7 @@ public class RtpChannel
             }
         }
 
-        super.expire();
+        return true;
     }
 
     /**

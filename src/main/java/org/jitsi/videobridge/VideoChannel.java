@@ -586,14 +586,20 @@ public class VideoChannel
      * Closes the {@link LastNController} before expiring the channel.
      */
     @Override
-    public void expire()
+    public boolean expire()
     {
+        if (!super.expire())
+        {
+            // Already expired.
+            return false;
+        }
+
         if (lastNController != null)
         {
             lastNController.close();
         }
 
-        super.expire();
+        return true;
     }
 
     /**

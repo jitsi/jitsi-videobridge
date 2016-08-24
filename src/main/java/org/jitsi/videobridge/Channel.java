@@ -346,13 +346,15 @@ public abstract class Channel
      * Expires this <tt>Channel</tt>. Releases the resources acquired by this
      * instance throughout its life time and prepares it to be garbage
      * collected.
+     * @return {@code true} if the channel was expired as a result of this
+     * call, and {@code false} if the channel was already expired.
      */
-    public void expire()
+    public boolean expire()
     {
         synchronized (this)
         {
             if (expired)
-                return;
+                return false;
             else
                 expired = true;
         }
@@ -433,6 +435,8 @@ public abstract class Channel
                             + videobridge.getConferenceCountString());
             }
         }
+
+        return true;
     }
 
     /**
