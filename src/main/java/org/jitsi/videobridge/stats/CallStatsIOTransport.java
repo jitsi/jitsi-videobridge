@@ -304,8 +304,10 @@ public class CallStatsIOTransport
     {
         bsib.audioFabricCount(
                 s.getStatAsInt(VideobridgeStatistics.AUDIOCHANNELS));
-        // TODO avgIntervalJitter
-        // TODO avgIntervalRtt
+        bsib.avgIntervalJitter(
+            s.getStatAsInt(VideobridgeStatistics.JITTER_AGGREGATE));
+        bsib.avgIntervalRtt(
+            s.getStatAsInt(VideobridgeStatistics.RTT_AGGREGATE));
         bsib.conferenceCount(s.getStatAsInt(VideobridgeStatistics.CONFERENCES));
         bsib.cpuUsage(
                 (float) s.getStatAsDouble(VideobridgeStatistics.CPU_USAGE));
@@ -315,8 +317,10 @@ public class CallStatsIOTransport
                             s.getStatAsDouble(
                                     VideobridgeStatistics.BITRATE_DOWNLOAD)));
         // TODO intervalReceivedBytes
+        // uses download loss rate, as the upload is not properly measured
+        // currently and vary a lot, which also breaks RTP_LOSS value.
         bsib.intervalRtpFractionLoss(
-                (float) s.getStatAsDouble(VideobridgeStatistics.RTP_LOSS));
+            (float)s.getStatAsDouble(VideobridgeStatistics.LOSS_RATE_DOWNLOAD));
         // TODO intervalSentBytes
         bsib.intervalUploadBitRate(
                 (int)
