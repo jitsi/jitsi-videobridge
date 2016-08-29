@@ -720,13 +720,8 @@ public class RtpChannel
      * identified a speaker switch event in the multipoint conference and there
      * is now a new dominant speaker.
      */
-    private void dominantSpeakerChanged()
+    protected void dominantSpeakerChanged()
     {
-        /*
-         * TODO Invoke conferenceSpeechActivity.getDominantEndpoint() and, for
-         * example, notify the Jitsi Videobridge client about the dominance
-         * switch to a new speaker.
-         */
     }
 
     /**
@@ -1123,8 +1118,6 @@ public class RtpChannel
     {
         Object source = ev.getSource();
 
-        // At the time of writing this doesn't do anything (dominantSpeakerChanged
-        // is empty in all Channel implementations). Should we remove it if it is unused?
         if ((conferenceSpeechActivity == source)
                 && (conferenceSpeechActivity != null))
         {

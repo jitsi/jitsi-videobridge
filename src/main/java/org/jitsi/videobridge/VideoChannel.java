@@ -95,6 +95,13 @@ public class VideoChannel
         = Logger.getLogger(VideoChannel.class);
 
     /**
+     * The {@link Timer} used to execute sending of delayed FIR requests for all
+     * {@link VideoChannel}s.
+     */
+    private static final Timer delayedFirTimer = new Timer();
+
+
+    /**
      * Updates the values of the property <tt>inLastN</tt> of all
      * <tt>VideoChannel</tt>s in the <tt>Content</tt> of a specific
      * <tt>VideoChannel</tt>.
@@ -169,6 +176,7 @@ public class VideoChannel
     /**
      * The instance which will be computing the incoming bitrate for this
      * <tt>VideoChannel</tt>.
+     * @deprecated We should use the statistics from the media stream for this.
      */
     private final RateStatistics incomingBitrate
         = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
@@ -190,6 +198,16 @@ public class VideoChannel
      * information.
      */
     private final Logger logger;
+
+    /**
+     * The task which is to send a FIR on this channel, after a delay.
+     */
+    private TimerTask delayedFirTask;
+
+    /**
+     * The object used to synchronize access to {@link #delayedFirTask}.
+     */
+    private final Object delayedFirTaskSyncRoot = new Object();
 
     /**
      * Initializes a new <tt>VideoChannel</tt> instance which is to have a
@@ -411,6 +429,7 @@ public class VideoChannel
      * <tt>VideoChannel</tt> (computed as the average bitrate over the last
      * {@link #INCOMING_BITRATE_INTERVAL_MS} milliseconds).
      *
+     * @deprecated We should use the statistics from the media stream for this.
      * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
      */
     public long getIncomingBitrate()
@@ -597,6 +616,15 @@ public class VideoChannel
         if (lastNController != null)
         {
             lastNController.close();
+        }
+
+        synchronized (delayedFirTaskSyncRoot)
+        {
+            if (delayedFirTask != null)
+            {
+                delayedFirTask.cancel();
+                delayedFirTask = null;
+            }
         }
 
         return true;
@@ -1296,5 +1324,136 @@ public class VideoChannel
     public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
     {
         lastNController.setAdaptiveSimulcast(adaptiveSimulcast);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void dominantSpeakerChanged()
+    {
+        Endpoint dominantEndpoint = conferenceSpeechActivity.getDominantEndpoint();
+
+        if (getEndpoint().equals(dominantEndpoint))
+        {
+            // We are the new dominant speaker. We expect other endpoints to
+            // mark us as a selected endpoint as soon as they receive the
+            // notification.
+
+            if (getContent().getChannelCount() < 3)
+            {
+                // If there is only one other endpoint in the conference, it
+                // already has us selected.
+                return;
+            }
+
+            long senderRtt = getRtt();
+            long maxReceiverRtt = getMaxReceiverDelay();
+
+            if (maxReceiverRtt > 0 && senderRtt > 0)
+            {
+                // 23ms = d1 - d2, where
+                // d1 = 33ms is a delay the sender to generate a keyframe (with
+                // an assumed frame rate of 30fps).
+                // d2 = 10ms is an additional delay to reduce the risk of the kf
+                // arriving too early.
+                long firDelay = maxReceiverRtt - senderRtt - 23;
+                if (logger.isInfoEnabled())
+                {
+                    logger.info("Scheduling a keyframe request for endpoint "
+                                    + getEndpoint().getID() + " with a delay of "
+                                    + firDelay + "ms.");
+                }
+                scheduleFir(firDelay);
+            }
+        }
+        else
+        {
+            synchronized (delayedFirTaskSyncRoot)
+            {
+                if (delayedFirTask != null)
+                {
+                    delayedFirTask.cancel();
+                }
+            }
+        }
+    }
+
+    /**
+     * @return the RTT in milliseconds.
+     */
+    private long getRtt()
+    {
+        long rtt = -1;
+        MediaStream stream = getStream();
+        if (stream != null)
+        {
+            rtt = stream.getMediaStreamStats().getReceiveStats().getRtt();
+        }
+        return rtt;
+    }
+
+    /**
+     * @return the maximum round trip time in milliseconds from other video
+     * channels in this channel's content.
+     */
+    private long getMaxReceiverDelay()
+    {
+        long maxRtt = -1;
+        for (Channel channel : getContent().getChannels())
+        {
+            if (channel instanceof VideoChannel && !this.equals(channel))
+            {
+                long rtt = ((VideoChannel) channel).getRtt();
+                if (maxRtt < rtt)
+                    maxRtt = rtt;
+            }
+        }
+
+        return maxRtt;
+    }
+
+    /**
+     * Schedules a FIR to be sent to the remote side for the SSRC of the high
+     * quality simulcast stream, after a delay given in milliseconds.
+     * @param delay the delay in milliseconds before the FIR is to be sent.
+     */
+    private void scheduleFir(final long delay)
+    {
+        TimerTask task = new TimerTask()
+        {
+            @Override
+            public void run()
+            {
+                if (isExpired())
+                    return;
+
+                SimulcastReceiver simulcastReceiver
+                    = getTransformEngine().getSimulcastEngine()
+                            .getSimulcastReceiver();
+                SimulcastStream[] streams
+                    = simulcastReceiver.getSimulcastStreams();
+                if (streams != null && streams.length > 0)
+                {
+                    // The ssrc for the HQ layer.
+                    int ssrc
+                        = (int) streams[streams.length - 1].getPrimarySSRC();
+                    askForKeyframes(new int[]{ ssrc });
+                }
+            }
+        };
+
+        synchronized (delayedFirTaskSyncRoot)
+        {
+            if (delayedFirTask != null)
+            {
+                logger.warn("Canceling an existing delayed FIR task for "
+                                + "endpoint " + getEndpoint().getID() + ".");
+                delayedFirTask.cancel();
+            }
+            delayedFirTask = task;
+        }
+
+        delayedFirTimer.schedule(task, Math.max(0, delay));
     }
 }
