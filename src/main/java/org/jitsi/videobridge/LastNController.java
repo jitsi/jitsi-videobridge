@@ -455,11 +455,12 @@ public class LastNController
      * @param newConferenceEndpoints A list of endpoints which entered the
      * conference since the last call to this method. They need not be asked
      * for keyframes, because they were never filtered by this
-     * {@link #LastNController(VideoChannel)}.
+     * {@link #LastNController(VideoChannel)}. Used by extending classes.
      *
      * @return list of endpoints that should be forwarded, not necessarily in any
      * particular order
      */
+    @SuppressWarnings("unused")
     protected List<String> determineLastNList(List<String> newConferenceEndpoints)
     {
         List<String> newForwardedEndpoints = new LinkedList<>();
@@ -469,7 +470,6 @@ public class LastNController
         {
             conferenceSpeechActivityEndpoints
                     = getIDs(channel.getConferenceSpeechActivity().getEndpoints());
-            newConferenceEndpoints = conferenceSpeechActivityEndpoints;
         }
 
         if (lastN < 0 && currentLastN < 0)
