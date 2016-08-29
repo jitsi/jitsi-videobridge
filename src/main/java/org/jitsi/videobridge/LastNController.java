@@ -651,16 +651,13 @@ public class LastNController
     {
         Endpoint endpoint = null;
 
-        if (channel != null)
+        Content content = channel.getContent();
+        if (content != null)
         {
-            Content content = channel.getContent();
-            if (content != null)
+            Conference conference = content.getConference();
+            if (conference != null)
             {
-                Conference conference = content.getConference();
-                if (conference != null)
-                {
-                    endpoint = conference.getEndpoint(id);
-                }
+                endpoint = conference.getEndpoint(id);
             }
         }
 
