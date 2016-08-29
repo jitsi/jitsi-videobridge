@@ -169,6 +169,7 @@ public class VideoChannel
     /**
      * The instance which will be computing the incoming bitrate for this
      * <tt>VideoChannel</tt>.
+     * @deprecated We should use the statistics from the media stream for this.
      */
     private final RateStatistics incomingBitrate
         = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
@@ -411,6 +412,7 @@ public class VideoChannel
      * <tt>VideoChannel</tt> (computed as the average bitrate over the last
      * {@link #INCOMING_BITRATE_INTERVAL_MS} milliseconds).
      *
+     * @deprecated We should use the statistics from the media stream for this.
      * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
      */
     public long getIncomingBitrate()
