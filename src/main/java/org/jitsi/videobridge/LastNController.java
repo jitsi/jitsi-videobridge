@@ -491,15 +491,14 @@ public class LastNController
             // As long as they are still endpoints in the conference.
             newForwardedEndpoints.retainAll(conferenceSpeechActivityEndpoints);
 
-            if (newForwardedEndpoints.size() > currentLastN)
+            // Don't exceed the last-n value no matter what the client has
+            // pinned.
+            while (newForwardedEndpoints.size() > currentLastN)
             {
-                // What do we want in this case? It looks like a contradictory
-                // request from the client, but maybe it makes for a good API
-                // on the client to allow the pinned to override last-n.
-                // Unfortunately, this will not play well with Adaptive-Last-N
-                // or changes to Last-N for other reasons.
+                newForwardedEndpoints.remove(newForwardedEndpoints.size() - 1);
             }
-            else if (newForwardedEndpoints.size() < currentLastN)
+
+            if (newForwardedEndpoints.size() < currentLastN)
             {
                 for (String endpointId : conferenceSpeechActivityEndpoints)
                 {
