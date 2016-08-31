@@ -59,7 +59,7 @@ public class LipSyncHack
     /**
      * A constant defining the maximum number of black key frames to send.
      */
-    private static final int MAX_KEY_FRAMES = 20;
+    private static final int MAX_KEY_FRAMES = 10;
 
     /**
      * The rate (in ms) at which we are to send black key frames.
@@ -75,7 +75,7 @@ public class LipSyncHack
     /**
      * Wait for media for WAIT_MS before sending frames.
      */
-    private static final long WAIT_MS = 1000;
+    private static final long WAIT_MS = 2000;
 
     /**
      * The <tt>Logger</tt> used by the <tt>LipSyncHack</tt> class and
