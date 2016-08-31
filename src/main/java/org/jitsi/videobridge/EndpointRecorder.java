@@ -77,16 +77,20 @@ public class EndpointRecorder
     public void updateEndpoint(Endpoint endpoint)
     {
         String id = endpoint.getID();
-        EndpointInfo endpointInfo = endpoints.get(id);
 
-        if (endpointInfo == null)
+        synchronized(endpoints)
         {
-            endpointInfo = new EndpointInfo(endpoint);
-            endpoints.put(id, endpointInfo);
-        }
-        else
-        {
-            endpointInfo.displayName = endpoint.getDisplayName();
+            EndpointInfo endpointInfo = endpoints.get(id);
+
+            if (endpointInfo == null)
+            {
+                endpointInfo = new EndpointInfo(endpoint);
+                endpoints.put(id, endpointInfo);
+            }
+            else
+            {
+                endpointInfo.displayName = endpoint.getDisplayName();
+            }
         }
 
         writeEndpoints();
@@ -115,15 +119,18 @@ public class EndpointRecorder
             FileWriter writer = new FileWriter(file, false);
             writer.write("[\n");
 
-            int size = endpoints.size();
-            int idx = 0;
-            for (EndpointInfo endpointInfo : endpoints.values())
+            synchronized (endpoints)
             {
-                writer.write("    ");
-                writer.write(endpointInfo.getJSON());
-                if (++idx != size)
-                    writer.write(",");
-                writer.write("\n");
+                int size = endpoints.size();
+                int idx = 0;
+                for (EndpointInfo endpointInfo : endpoints.values())
+                {
+                    writer.write("    ");
+                    writer.write(endpointInfo.getJSON());
+                    if (++idx != size)
+                        writer.write(",");
+                    writer.write("\n");
+                }
             }
 
             writer.write("]\n");
