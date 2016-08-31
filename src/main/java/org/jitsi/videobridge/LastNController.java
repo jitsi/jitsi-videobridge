@@ -455,11 +455,12 @@ public class LastNController
      * @param newConferenceEndpoints A list of endpoints which entered the
      * conference since the last call to this method. They need not be asked
      * for keyframes, because they were never filtered by this
-     * {@link #LastNController(VideoChannel)}.
+     * {@link #LastNController(VideoChannel)}. Used by extending classes.
      *
      * @return list of endpoints that should be forwarded, not necessarily in any
      * particular order
      */
+    @SuppressWarnings("unused")
     protected List<String> determineLastNList(List<String> newConferenceEndpoints)
     {
         List<String> newForwardedEndpoints = new LinkedList<>();
@@ -469,7 +470,6 @@ public class LastNController
         {
             conferenceSpeechActivityEndpoints
                     = getIDs(channel.getConferenceSpeechActivity().getEndpoints());
-            newConferenceEndpoints = conferenceSpeechActivityEndpoints;
         }
 
         if (lastN < 0 && currentLastN < 0)
@@ -491,15 +491,14 @@ public class LastNController
             // As long as they are still endpoints in the conference.
             newForwardedEndpoints.retainAll(conferenceSpeechActivityEndpoints);
 
-            if (newForwardedEndpoints.size() > currentLastN)
+            // Don't exceed the last-n value no matter what the client has
+            // pinned.
+            while (newForwardedEndpoints.size() > currentLastN)
             {
-                // What do we want in this case? It looks like a contradictory
-                // request from the client, but maybe it makes for a good API
-                // on the client to allow the pinned to override last-n.
-                // Unfortunately, this will not play well with Adaptive-Last-N
-                // or changes to Last-N for other reasons.
+                newForwardedEndpoints.remove(newForwardedEndpoints.size() - 1);
             }
-            else if (newForwardedEndpoints.size() < currentLastN)
+
+            if (newForwardedEndpoints.size() < currentLastN)
             {
                 for (String endpointId : conferenceSpeechActivityEndpoints)
                 {
@@ -651,16 +650,13 @@ public class LastNController
     {
         Endpoint endpoint = null;
 
-        if (channel != null)
+        Content content = channel.getContent();
+        if (content != null)
         {
-            Content content = channel.getContent();
-            if (content != null)
+            Conference conference = content.getConference();
+            if (conference != null)
             {
-                Conference conference = content.getConference();
-                if (conference != null)
-                {
-                    endpoint = conference.getEndpoint(id);
-                }
+                endpoint = conference.getEndpoint(id);
             }
         }
 
