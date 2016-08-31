@@ -562,7 +562,7 @@ public class LastNBitrateController
          * @param time the time of reception.
          * @param rate the value.
          */
-        private void add(long time, long rate)
+        private synchronized void add(long time, long rate)
         {
             sum += rate;
             receivedRembs.put(time, rate);
@@ -573,8 +573,16 @@ public class LastNBitrateController
         /**
          * Removes values added before <tt>time - period</tt>.
          */
-        private void clean(long time)
+        private synchronized void clean(long time)
         {
+            // Comments from Lyubomir Marinov:
+            // * toRemove is an unnecessary collection that takes up instance
+            // space, grows and shrinks;
+            // * toRemove retains elements even after it has lived up its
+            // purpose;
+            // * Because of toRemove, more auto(un)boxing happens;
+            // * receivedRembs is searched upon removal.
+
             long oldest = time - period;
 
             toRemove.clear();
@@ -598,7 +606,7 @@ public class LastNBitrateController
          * @return  the average of the values in this with timestamps between
          * <tt>time - period</tt> and <tt>time</tt>.
          */
-        private long getAverage(long time)
+        private synchronized long getAverage(long time)
         {
             clean(time);
 
