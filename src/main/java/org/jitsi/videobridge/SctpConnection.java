@@ -153,7 +153,8 @@ public class SctpConnection
     /**
      * Data channels mapped by SCTP stream identified(sid).
      */
-    private final Map<Integer,WebRtcDataStream> channels = new HashMap<>();
+    private final Map<Integer,WebRtcDataStream> channels
+        = new ConcurrentHashMap<>();
 
     /**
      * Debug ID used to distinguish SCTP sockets in packet logs.
@@ -674,10 +675,11 @@ public class SctpConnection
             }
 
             WebRtcDataStream.DataCallback oldCallback = null;
-            if (channels.containsKey(sid))
+            WebRtcDataStream webRtcDataStream = channels.get(sid);
+            if (webRtcDataStream != null)
             {
                 logger.warn("Channel on sid: " + sid + " already exists");
-                oldCallback = channels.get(sid).getDataCallback();
+                oldCallback = webRtcDataStream.getDataCallback();
             }
 
             WebRtcDataStream newChannel
