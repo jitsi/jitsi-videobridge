@@ -476,9 +476,9 @@ public class SimulcastReceiver
                 {
                     // It looks like at least one pkt was lost (or delayed). We
                     // cannot rely on lastPktMarker.
-                    if (logger.isInfoEnabled())
+                    if (logger.isDebugEnabled())
                     {
-                        logger.info("It looks like at least one pkt was lost " +
+                        logger.debug("It looks like at least one pkt was lost " +
                             "(or delayed). Last pkt sequence number=" +
                             acceptedStream.lastPktSequenceNumber +
                             ", expected sequence number="
