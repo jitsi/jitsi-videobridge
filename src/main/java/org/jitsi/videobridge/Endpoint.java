@@ -202,7 +202,7 @@ public class Endpoint
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
         this.lipSyncHack
-            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, false)
+            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, true)
                 ? new LipSyncHack(this) : null;
     }
 
