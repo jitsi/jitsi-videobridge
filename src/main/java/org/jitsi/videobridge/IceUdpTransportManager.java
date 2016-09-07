@@ -139,7 +139,7 @@ public class IceUdpTransportManager
      * in the static fields {@link #tcpHostHarvester} and
      * {@link #singlePortHarvesters} have been initialized.
      */
-    private static boolean staticHarvestersInitialized = false;
+    private static boolean staticConfigurationInitialized = false;
 
     /**
      * The "mapped port" added to {@link #tcpHostHarvester}, or -1.
@@ -519,7 +519,7 @@ public class IceUdpTransportManager
             // the order of the binding is important at the time of this
             // writing. That's why TcpHarvester is left to initialize as late as
             // possible right now.
-            initializeStaticHarvesters(cfg);
+            initializeStaticConfiguration(cfg);
 
             if (tcpHostHarvester != null)
                 iceAgent.addCandidateHarvester(tcpHostHarvester);
@@ -1714,13 +1714,15 @@ public class IceUdpTransportManager
      * configurable properties of the behavior/logic of the method
      * implementation
      */
-    static void initializeStaticHarvesters(ConfigurationService cfg)
+    static void initializeStaticConfiguration(ConfigurationService cfg)
     {
         synchronized (IceUdpTransportManager.class)
         {
-            if (staticHarvestersInitialized)
+            if (staticConfigurationInitialized)
+            {
                 return;
-            staticHarvestersInitialized = true;
+            }
+            staticConfigurationInitialized = true;
 
             int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
                                         SINGLE_PORT_DEFAULT_VALUE);
