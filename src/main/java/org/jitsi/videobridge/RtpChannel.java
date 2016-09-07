@@ -211,7 +211,8 @@ public class RtpChannel
      * The FID (flow ID) groupings used by the remote side of this
      * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
      */
-    protected Map<Long,Long> fidSourceGroups = new HashMap<>();
+    protected final Map<Long,Long> fidSourceGroups
+        = new HashMap<>();
 
     /**
      * The payload type number configured for RTX (RFC-4588) for this channel,
@@ -1397,8 +1398,13 @@ public class RtpChannel
                     = stream.getRetransmissionRequester();
                 if (retransmissionRequester != null)
                 {
+                    Map<Long, Long> copy;
+                    synchronized (fidSourceGroups)
+                    {
+                        copy = new HashMap<>(fidSourceGroups);
+                    }
                     retransmissionRequester.configureRtx(rtxPayloadType,
-                                                         fidSourceGroups);
+                                                         copy);
                 }
             }
         }
@@ -1793,7 +1799,10 @@ public class RtpChannel
                 // Here we assume that the first source in the group is the
                 // SSRC for the media stream, and the second source is the
                 // one for the RTX stream.
-                fidSourceGroups.put(first, second);
+                synchronized (fidSourceGroups)
+                {
+                    fidSourceGroups.put(first, second);
+                }
             }
         }
 
@@ -1802,8 +1811,13 @@ public class RtpChannel
             = stream.getRetransmissionRequester();
         if (retransmissionRequester != null)
         {
+            Map<Long, Long> copy;
+            synchronized (fidSourceGroups)
+            {
+                copy = new HashMap<>(fidSourceGroups);
+            }
             retransmissionRequester.configureRtx(rtxPayloadType,
-                                                 fidSourceGroups);
+                                                 copy);
         }
     }
 
@@ -1916,20 +1930,23 @@ public class RtpChannel
      */
     public long getFidPairedSsrc(long ssrc)
     {
-        Long paired = fidSourceGroups.get(ssrc);
-        if (paired != null)
+        synchronized (fidSourceGroups)
         {
-            return paired;
-        }
+            Long paired = fidSourceGroups.get(ssrc);
+            if (paired != null)
+            {
+                return paired;
+            }
 
-        // Maybe 'ssrc' is one of the values.
-        for (Map.Entry<Long, Long> entry : fidSourceGroups.entrySet())
-        {
-            if (entry.getValue() == ssrc)
-                return entry.getKey();
-        }
+            // Maybe 'ssrc' is one of the values.
+            for (Map.Entry<Long, Long> entry : fidSourceGroups.entrySet())
+            {
+                if (entry.getValue() == ssrc)
+                    return entry.getKey();
+            }
 
-        return -1;
+            return -1;
+        }
     }
 
     /**

@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.pubsub;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 import net.java.sip.communicator.util.*;
 
@@ -40,7 +41,7 @@ public class PubSubPublisher
      * <tt>PubSubPublisher</tt> instance responsible for it.
      */
     private static final Map<String, PubSubPublisher> instances
-        = new HashMap<>();
+        = new ConcurrentHashMap<>();
 
     /**
      * The <tt>Logger</tt> used by the <tt>PubSubPublisher</tt> class and its
@@ -132,17 +133,20 @@ public class PubSubPublisher
     /**
      * Map with the requests for configuring a node.
      */
-    private Map<String, String> pendingConfigureRequests = new HashMap<>();
+    private Map<String, String> pendingConfigureRequests
+        = new ConcurrentHashMap<>();
 
     /**
      * Map with the requests for node creation.
      */
-    private Map<String, String> pendingCreateRequests = new HashMap<>();
+    private Map<String, String> pendingCreateRequests
+        = new ConcurrentHashMap<>();
 
     /**
      * Map with the publish requests.
      */
-    private Map<String, String> pendingPublishRequests = new HashMap<>();
+    private Map<String, String> pendingPublishRequests
+        = new ConcurrentHashMap<>();
 
     /**
      * The name of the PubSub service.
