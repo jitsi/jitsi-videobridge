@@ -118,6 +118,18 @@ public class IceUdpTransportManager
         = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
 
     /**
+     * The name of the property that can be used to control the value of
+     * {@link #ICE_UFRAG_PREFIX}.
+     */
+    private static final String ICE_UFRAG_PREFIX_PNAME
+        = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
+
+    /**
+     * The optional prefix to use for generated ICE local username fragments.
+     */
+    private static String ICE_UFRAG_PREFIX;
+
+    /**
      * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
      */
     private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
@@ -139,7 +151,7 @@ public class IceUdpTransportManager
      * in the static fields {@link #tcpHostHarvester} and
      * {@link #singlePortHarvesters} have been initialized.
      */
-    private static boolean staticHarvestersInitialized = false;
+    private static boolean staticConfigurationInitialized = false;
 
     /**
      * The "mapped port" added to {@link #tcpHostHarvester}, or -1.
@@ -519,7 +531,7 @@ public class IceUdpTransportManager
             // the order of the binding is important at the time of this
             // writing. That's why TcpHarvester is left to initialize as late as
             // possible right now.
-            initializeStaticHarvesters(cfg);
+            initializeStaticConfiguration(cfg);
 
             if (tcpHostHarvester != null)
                 iceAgent.addCandidateHarvester(tcpHostHarvester);
@@ -827,8 +839,7 @@ public class IceUdpTransportManager
             = ServiceUtils.getService(
                     getBundleContext(),
                     NetworkAddressManagerService.class);
-        Agent iceAgent = new Agent();
-        iceAgent.setLoggingLevel(logger.getLevel());
+        Agent iceAgent = new Agent(logger.getLevel(), ICE_UFRAG_PREFIX);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
@@ -1714,13 +1725,17 @@ public class IceUdpTransportManager
      * configurable properties of the behavior/logic of the method
      * implementation
      */
-    static void initializeStaticHarvesters(ConfigurationService cfg)
+    static void initializeStaticConfiguration(ConfigurationService cfg)
     {
         synchronized (IceUdpTransportManager.class)
         {
-            if (staticHarvestersInitialized)
+            if (staticConfigurationInitialized)
+            {
                 return;
-            staticHarvestersInitialized = true;
+            }
+            staticConfigurationInitialized = true;
+
+            ICE_UFRAG_PREFIX = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
 
             int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
                                         SINGLE_PORT_DEFAULT_VALUE);
