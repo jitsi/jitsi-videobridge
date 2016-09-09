@@ -129,7 +129,7 @@ public class VideobridgeStatistics
     /**
      * The number of buckets to use for conference sizes.
      */
-    private static final int CONFERENCE_SIZE_BUCKETS = 15;
+    private static final int CONFERENCE_SIZE_BUCKETS = 22;
 
     /**
      * The name of the stat that indicates the bridge has entered graceful
