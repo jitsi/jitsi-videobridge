@@ -1311,7 +1311,53 @@ public class Conference
                 transportManagers.put(channelBundleId, transportManager);
                 logger.info("Created an ICE agent with local ufrag "
                                 + transportManager.getLocalUfrag()
-                                + " for endpoint " + channelBundleId + ".");
+                                + " for endpoint " + channelBundleId + ". Initiator is forced to true");
+            }
+        }
+
+        return transportManager;
+    }
+
+    /**
+     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>. If no instance exists and
+     * <tt>create</tt> is <tt>true</tt>, one will be created.
+     *
+     * @param channelBundleId the ID of the channel-bundle for which to return
+     * the <tt>TransportManager</tt>.
+     * @param create whether to create a new instance, if one doesn't exist.
+     * @param initiator determines ICE controlling/controlled and DTLS role. 
+     * @return the <tt>TransportManager</tt> instance for the channel-bundle
+     * with ID <tt>channelBundleId</tt>.
+     */
+    IceUdpTransportManager getTransportManager(
+            String channelBundleId,
+            boolean create,
+            boolean initiator)
+    {
+        IceUdpTransportManager transportManager;
+
+        synchronized (transportManagers)
+        {
+            transportManager = transportManagers.get(channelBundleId);
+            if (transportManager == null && create && !isExpired())
+            {
+                try
+                {
+                    //FIXME: the initiator is hard-coded
+                    // We assume rtcp-mux when bundle is used, so we make only
+                    // one component.
+                    transportManager
+                        = new IceUdpTransportManager(this, initiator, 1);
+                }
+                catch (IOException ioe)
+                {
+                    throw new UndeclaredThrowableException(ioe);
+                }
+                transportManagers.put(channelBundleId, transportManager);
+                logger.info("Created an ICE agent with local ufrag "
+                                + transportManager.getLocalUfrag()
+                                + " for endpoint " + channelBundleId + ". Is initiator: " + initiator + ".");
             }
         }
 
