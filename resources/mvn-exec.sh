@@ -9,15 +9,13 @@ usage() {
   error_exit "Usage: $0 [-p JVB_PORT] [-r] [-f JVB_MVN_POM_FILE] [-d JVB_HOSTNAME] [-h JVB_HOST] [-s JVB_SECRET]"
 }
 
-JVB_LOGGING_CONFIG_FILE="/etc/jitsi/videobridge/logging.properties"
-JVB_CONFIG_FILE="/etc/jitsi/videobridge/config"
+JVB_LOGGING_CONFIG_FILE="${PREFIX}/etc/jitsi/videobridge/logging.properties"
+JVB_CONFIG_FILE="${PREFIX}/etc/jitsi/videobridge/config"
 JVB_HOME_DIR_NAME="videobridge"
-JVB_HOME_DIR_LOCATION="/etc/jitsi"
-JVB_DATA_LOCATION="${HOME}/.jitsi-videobridge"
-JVB_APIS="xmpp,rest"
-JVB_MVN_REPO_LOCAL="${JVB_DATA_LOCATION}/m2"
-JVB_LOG_DIR_LOCATION="${JVB_DATA_LOCATION}/log"
-JVB_ARCHIVE_LOCATION="${JVB_DATA_LOCATION}/archive"
+JVB_HOME_DIR_LOCATION="${PREFIX}/etc/jitsi"
+JVB_APIS="xmpp"
+JVB_MVN_REPO_LOCAL="${PREFIX}/share/jitsi-videobridge/m2"
+JVB_LOG_DIR_LOCATION="${PREFIX}/var/log/jitsi"
 JVB_HOSTNAME=
 JVB_HOST=
 JVB_PORT=
@@ -89,18 +87,6 @@ if [ ! -e "${JVB_MVN_POM_FILE}" ]; then
   error_exit "The maven pom file was not found."
 fi
 
-# Archive old logs.
-if [ ! -d "${JVB_ARCHIVE_LOCATION}" ] ; then
-  mkdir -p "${JVB_ARCHIVE_LOCATION}"
-fi
-
-if [ -d "${JVB_LOG_DIR_LOCATION}" ] ; then
-  ARCHIVE_NAME="$(date '+%Y-%m-%d-%H-%M-%S')"
-  mv "${JVB_LOG_DIR_LOCATION}" "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
-  tar jcvf "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}.tar.bz2" "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
-  rm -rf "${JVB_ARCHIVE_LOCATION}/${ARCHIVE_NAME}"
-fi
-
 if [ ! -d "${JVB_LOG_DIR_LOCATION}" ] ; then
   mkdir "${JVB_LOG_DIR_LOCATION}"
 fi
@@ -111,4 +97,4 @@ if [ ! ${JVB_MVN_REBUILD} = "" ]; then
 fi
 
 # Execute.
-exec mvn -f "${JVB_MVN_POM_FILE}" exec:exec -Dmaven.repo.local="${JVB_MVN_REPO_LOCAL}" -Dexec.outputFile="${JVB_LOG_DIR_LOCATION}/jvb.log" -Dexec.executable=java -Dexec.args="-cp %classpath ${JVB_EXTRA_JVM_PARAMS} -Djava.util.logging.config.file=\"${JVB_LOGGING_CONFIG_FILE}\" -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=\"${JVB_HOME_DIR_NAME}\" -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=\"${JVB_HOME_DIR_LOCATION}\" -Dnet.java.sip.communicator.SC_LOG_DIR_LOCATION=\"${JVB_LOG_DIR_LOCATION}\" -Djna.nosys=true -Djava.net.preferIPv4Stack=\"${JVB_JAVA_PREFER_IPV4}\" org.jitsi.videobridge.Main --domain=\"${JVB_HOSTNAME}\" --host=\"${JVB_HOST}\" --port=\"${JVB_PORT}\" --secret=\"${JVB_SECRET}\" --apis=${JVB_APIS}"
+exec mvn -f "${JVB_MVN_POM_FILE}" exec:exec -Dmaven.repo.local="${JVB_MVN_REPO_LOCAL}" -Dexec.executable=java -Dexec.args="-cp %classpath ${JVB_EXTRA_JVM_PARAMS} -Djava.util.logging.config.file=\"${JVB_LOGGING_CONFIG_FILE}\" -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=\"${JVB_HOME_DIR_NAME}\" -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=\"${JVB_HOME_DIR_LOCATION}\" -Dnet.java.sip.communicator.SC_LOG_DIR_LOCATION=\"${JVB_LOG_DIR_LOCATION}\" -Djna.nosys=true -Djava.net.preferIPv4Stack=\"${JVB_JAVA_PREFER_IPV4}\" org.jitsi.videobridge.Main --domain=\"${JVB_HOSTNAME}\" --host=\"${JVB_HOST}\" --port=\"${JVB_PORT}\" --secret=\"${JVB_SECRET}\" --apis=${JVB_APIS}"
