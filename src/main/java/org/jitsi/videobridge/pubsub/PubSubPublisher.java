@@ -53,7 +53,7 @@ public class PubSubPublisher
     /**
      * The default timeout of the packets in milliseconds.
      */
-    private static final int PACKET_TIMEOUT = 500;
+    private static final int PACKET_TIMEOUT = 5000;
 
     /**
      * Gets a <tt>PubSubPublisher</tt> instance for a specific service (name).
