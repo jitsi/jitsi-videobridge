@@ -53,7 +53,7 @@ public class PubSubPublisher
     /**
      * The default timeout of the packets in milliseconds.
      */
-    private static final int PACKET_TIMEOUT = 500;
+    private static final int PACKET_TIMEOUT = 5000;
 
     /**
      * Gets a <tt>PubSubPublisher</tt> instance for a specific service (name).
@@ -227,8 +227,9 @@ public class PubSubPublisher
                         if(nodeName != null)
                         {
                             logger.error(
-                                    "Configuration of the node failed: "
-                                        + nodeName);
+                                    "Timed out a configuration request "
+                                        + "(packetID=: " + packetID
+                                        + " nodeName=" + nodeName + ")");
                             fireResponseCreateEvent(
                                     PubSubResponseListener.Response.SUCCESS);
                         }
@@ -264,7 +265,12 @@ public class PubSubPublisher
                     @Override
                     public void run()
                     {
-                        pendingCreateRequests.remove(packetID);
+                        String nodeName = pendingCreateRequests.remove(packetID);
+                        if (nodeName != null)
+                        {
+                            logger.warn("Timed out a create request with ID "
+                                            + packetID);
+                        }
                     }
                 },
                 PACKET_TIMEOUT);
@@ -375,6 +381,8 @@ public class PubSubPublisher
                 }
 
                 String nodeName = pendingCreateRequests.remove(packetID);
+                logger.info("PubSub node already exists (packetID=" + packetID
+                        + " nodeName=" + nodeName +")");
 
                 if (nodeName != null)
                 {
@@ -482,7 +490,7 @@ public class PubSubPublisher
                         if(nodeName != null)
                         {
                             logger.error(
-                                    "Publish request timeout: " + nodeName);
+                                    "Times out a publish request: " + nodeName);
                         }
                     }
                 },
