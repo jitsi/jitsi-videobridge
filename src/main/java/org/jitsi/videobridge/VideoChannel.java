@@ -1356,12 +1356,9 @@ public class VideoChannel
 
             if (maxReceiverRtt > 0 && senderRtt > 0)
             {
-                // 23ms = d1 - d2, where
-                // d1 = 33ms is a delay the sender to generate a keyframe (with
-                // an assumed frame rate of 30fps).
-                // d2 = 10ms is an additional delay to reduce the risk of the kf
+                // We add an additional 10ms delay to reduce the risk of the kf
                 // arriving too early.
-                long firDelay = maxReceiverRtt - senderRtt - 23;
+                long firDelay = maxReceiverRtt - senderRtt + 10;
                 if (logger.isInfoEnabled())
                 {
                     logger.info("Scheduling a keyframe request for endpoint "
