@@ -1271,51 +1271,9 @@ public class Conference
      */
     TransportManager getTransportManager(String channelBundleId)
     {
-        return getTransportManager(channelBundleId, false);
-    }
-
-    /**
-     * Returns, the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>. If no instance exists and
-     * <tt>create</tt> is <tt>true</tt>, one will be created.
-     *
-     * @param channelBundleId the ID of the channel-bundle for which to return
-     * the <tt>TransportManager</tt>.
-     * @param create whether to create a new instance, if one doesn't exist.
-     * @return the <tt>TransportManager</tt> instance for the channel-bundle
-     * with ID <tt>channelBundleId</tt>.
-     */
-    IceUdpTransportManager getTransportManager(
-            String channelBundleId,
-            boolean create)
-    {
-        IceUdpTransportManager transportManager;
-
-        synchronized (transportManagers)
-        {
-            transportManager = transportManagers.get(channelBundleId);
-            if (transportManager == null && create && !isExpired())
-            {
-                try
-                {
-                    //FIXME: the initiator is hard-coded
-                    // We assume rtcp-mux when bundle is used, so we make only
-                    // one component.
-                    transportManager
-                        = new IceUdpTransportManager(this, true, 1);
-                }
-                catch (IOException ioe)
-                {
-                    throw new UndeclaredThrowableException(ioe);
-                }
-                transportManagers.put(channelBundleId, transportManager);
-                logger.info("Created an ICE agent with local ufrag "
-                                + transportManager.getLocalUfrag()
-                                + " for endpoint " + channelBundleId + ". Initiator is forced to true");
-            }
-        }
-
-        return transportManager;
+        // If create is false then initiator parametr will not be used.
+        // So here it doesnt matter it is true, or false.
+        return getTransportManager(channelBundleId, false, true);
     }
 
     /**
@@ -1344,9 +1302,6 @@ public class Conference
             {
                 try
                 {
-                    //FIXME: the initiator is hard-coded
-                    // We assume rtcp-mux when bundle is used, so we make only
-                    // one component.
                     transportManager
                         = new IceUdpTransportManager(this, initiator, 1);
                 }
