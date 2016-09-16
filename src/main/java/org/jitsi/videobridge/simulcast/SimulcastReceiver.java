@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge.simulcast;
 
-import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
@@ -402,7 +401,9 @@ public class SimulcastReceiver
         boolean frameStarted = false;
         Boolean isKeyFrame = null;
 
-        if (logger.isInfoEnabled() && (isKeyFrame = isKeyFrame(pkt)))
+        if (logger.isInfoEnabled() && (isKeyFrame = getSimulcastEngine()
+            .getVideoChannel().getStream().isKeyFrame(
+                pkt.getBuffer(), pkt.getOffset(), pkt.getLength())))
         {
             logger.info("Received a keyframe on SSRC=" + acceptedSSRC);
         }
@@ -828,17 +829,5 @@ public class SimulcastReceiver
                 }
             }
         }
-    }
-
-    /**
-     * Checks whether {@code pkt} is the first RTP packet of a VP8 keyframe.
-     * @param pkt the packet to check.
-     * @return true if {@code pkt} is the first RTP packet of a VP8 keyframe.
-     */
-    boolean isKeyFrame(RawPacket pkt)
-    {
-        byte redPT = getSimulcastEngine().getVideoChannel().getRedPayloadType();
-        byte vp8PT = getSimulcastEngine().getVideoChannel().getVP8PayloadType();
-        return Utils.isKeyFrame(pkt, redPT, vp8PT);
     }
 }

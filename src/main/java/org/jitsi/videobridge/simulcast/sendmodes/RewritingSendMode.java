@@ -112,7 +112,10 @@ public class RewritingSendMode
         }
 
         boolean accept = false;
-        if (next != null && next.matches(pkt) && next.isKeyFrame(pkt))
+        if (next != null && next.matches(pkt) && getSimulcastSender()
+            .getSimulcastReceiver().getSimulcastEngine()
+            .getVideoChannel().getStream().isKeyFrame(
+                pkt.getBuffer(), pkt.getOffset(), pkt.getLength()))
         {
             // This is the first packet of a keyframe.
             if (diff >= 0)
