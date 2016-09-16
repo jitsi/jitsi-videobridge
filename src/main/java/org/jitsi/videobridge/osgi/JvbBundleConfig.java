@@ -100,7 +100,8 @@ public class JvbBundleConfig
             // before the HTTP/JSON API because the HTTP/JSON API (1) exposes
             // the vital, non-optional, non-additional pieces of functionality
             // of the Videobridge and (2) it pulls, does not push.
-            "org/jitsi/videobridge/stats/StatsManagerBundleActivator"
+            "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
+            "org/jitsi/videobridge/EndpointConnectionStatus"
         }
     };
 
@@ -217,6 +218,20 @@ public class JvbBundleConfig
                     .DROP_MUTED_AUDIO_SOURCE_IN_REVERSE_TRANSFORM,
                 true_);
         defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
+
+        // Sends "consent freshness" check every 3 seconds
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_INTERVAL, "3000");
+        // Retry every 500ms by setting original and max wait intervals
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_ORIGINAL_WAIT_INTERVAL,
+                "500");
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_MAX_WAIT_INTERVAL, "500");
+        // Retry max 5 times which will take up to 2500ms, that is before
+        // the next "consent freshness" transaction starts
+        defaults.put(
+                StackProperties.CONSENT_FRESHNESS_MAX_RETRANSMISSIONS, "5");
 
         // In the majority of use-cases the clients which connect to Jitsi
         // Videobridge are not in the same network, so we don't need to

@@ -80,6 +80,14 @@ public class EventFactory
         = "org/jitsi/videobridge/Endpoint/STREAM_STARTED";
 
     /**
+     * The name of the topic of a "SCTP connection ready" event triggered on
+     * an endpoint instance when it's SCTP connection is ready for
+     * sending/receiving data.
+     */
+    public static final String SCTP_CONN_READY_TOPIC
+        = "org/jitsi/videobridge/Endpoint/SCTP_CONN_READY";
+
+    /**
      * The name of the topic of a "transport channel created" event.
      */
     public static final String TRANSPORT_CHANNEL_ADDED_TOPIC
@@ -209,6 +217,23 @@ public class EventFactory
             new Event(
                     ENDPOINT_DISPLAY_NAME_CHANGED_TOPIC,
                     makeProperties(endpoint));
+    }
+
+    /**
+     * Creates a new "SCTP connection ready" <tt>Event</tt>, which means that
+     * the endpoint passed in {@link #EVENT_SOURCE} property has now it's SCTP
+     * connection ready for sending/receiving data.
+     *
+     * @param endpoint the endpoint for which SCTP connection is now ready.
+     *
+     * @return the <tt>Event</tt> which was created.
+     */
+    public static Event endpointSctpConnReady(Endpoint endpoint)
+    {
+        Dictionary<String, Object> properties = new Hashtable<>(1);
+
+        properties.put(EVENT_SOURCE, endpoint);
+        return new Event(SCTP_CONN_READY_TOPIC, properties);
     }
 
     public static Event streamStarted(RtpChannel rtpChannel)

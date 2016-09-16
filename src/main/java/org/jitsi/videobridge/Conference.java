@@ -317,7 +317,7 @@ public class Conference
      *
      * @param msg the message to be advertised across conference peers.
      */
-    private void broadcastMessageOnDataChannels(String msg)
+    public void broadcastMessageOnDataChannels(String msg)
     {
         sendMessageOnDataChannels(msg, getEndpoints());
     }
@@ -1513,6 +1513,12 @@ public class Conference
                  * implement it as well.
                  */
                 endpoint.sctpConnectionReady(sctpConnection);
+                // Trigger SCTP connection ready event
+                if (eventAdmin != null)
+                {
+                    eventAdmin.postEvent(
+                            EventFactory.endpointSctpConnReady(endpoint));
+                }
             }
         }
     }
