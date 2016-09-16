@@ -17,6 +17,7 @@ package org.jitsi.videobridge.simulcast;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.impl.neomedia.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import java.util.concurrent.*;
 
@@ -401,9 +402,10 @@ public class SimulcastReceiver
         boolean frameStarted = false;
         Boolean isKeyFrame = null;
 
-        if (logger.isInfoEnabled() && (isKeyFrame = getSimulcastEngine()
-            .getVideoChannel().getStream().isKeyFrame(
-                pkt.getBuffer(), pkt.getOffset(), pkt.getLength())))
+        if (logger.isInfoEnabled() && (isKeyFrame
+            = ((VideoMediaStream) getSimulcastEngine()
+                .getVideoChannel().getStream()).isKeyFrame(
+                    pkt.getBuffer(), pkt.getOffset(), pkt.getLength())))
         {
             logger.info("Received a keyframe on SSRC=" + acceptedSSRC);
         }
