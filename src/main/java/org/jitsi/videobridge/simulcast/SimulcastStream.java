@@ -211,16 +211,6 @@ public class SimulcastStream
     }
 
     /**
-     * Checks whether {@code pkt} is the first RTP packet of a VP8 keyframe.
-     * @param pkt the packet to check.
-     * @return true if {@code pkt} is the first RTP packet of a VP8 keyframe.
-     */
-    public boolean isKeyFrame(RawPacket pkt)
-    {
-        return simulcastReceiver.isKeyFrame(pkt);
-    }
-
-    /**
      * Utility method that asks for a keyframe for a specific simulcast stream.
      * This is typically done when switching streams. This method is executed in
      * the same thread that processes incoming packets. We must not block packet
