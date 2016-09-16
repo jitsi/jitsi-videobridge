@@ -604,7 +604,7 @@ public abstract class Channel
             {
                 transportManager
                     = getContent().getConference()
-                        .getTransportManager(channelBundleId, true);
+                        .getTransportManager(channelBundleId, true, isInitiator());
             }
 
             if (transportManager == null)

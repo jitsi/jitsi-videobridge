@@ -1271,7 +1271,9 @@ public class Conference
      */
     TransportManager getTransportManager(String channelBundleId)
     {
-        return getTransportManager(channelBundleId, false);
+        // If create is false then initiator parametr will not be used.
+        // So here it doesnt matter it is true, or false.
+        return getTransportManager(channelBundleId, false, true);
     }
 
     /**
@@ -1282,12 +1284,14 @@ public class Conference
      * @param channelBundleId the ID of the channel-bundle for which to return
      * the <tt>TransportManager</tt>.
      * @param create whether to create a new instance, if one doesn't exist.
+     * @param initiator determines ICE controlling/controlled and DTLS role. 
      * @return the <tt>TransportManager</tt> instance for the channel-bundle
      * with ID <tt>channelBundleId</tt>.
      */
     IceUdpTransportManager getTransportManager(
             String channelBundleId,
-            boolean create)
+            boolean create,
+            boolean initiator)
     {
         IceUdpTransportManager transportManager;
 
@@ -1298,11 +1302,8 @@ public class Conference
             {
                 try
                 {
-                    //FIXME: the initiator is hard-coded
-                    // We assume rtcp-mux when bundle is used, so we make only
-                    // one component.
                     transportManager
-                        = new IceUdpTransportManager(this, true, 1);
+                        = new IceUdpTransportManager(this, initiator, 1);
                 }
                 catch (IOException ioe)
                 {
@@ -1311,7 +1312,7 @@ public class Conference
                 transportManagers.put(channelBundleId, transportManager);
                 logger.info("Created an ICE agent with local ufrag "
                                 + transportManager.getLocalUfrag()
-                                + " for endpoint " + channelBundleId + ".");
+                                + " for endpoint " + channelBundleId + ". Is initiator: " + initiator + ".");
             }
         }
 
