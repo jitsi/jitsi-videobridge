@@ -34,7 +34,7 @@ import org.jitsi.videobridge.transform.*;
 public class AdaptiveSimulcastBitrateController
     extends BitrateController
     implements BandwidthEstimator.Listener,
-               RecurringProcessible
+               RecurringRunnable
 {
     /**
      * Whether the values for the constants have been initialized or not.
@@ -42,7 +42,7 @@ public class AdaptiveSimulcastBitrateController
     private static boolean configurationInitialized = false;
 
     /**
-     * The interval at which {@link #process()} should be called, in
+     * The interval at which {@link #run()} should be called, in
      * milliseconds.
      */
     private static int PROCESS_INTERVAL_MS = 500;
@@ -160,11 +160,11 @@ public class AdaptiveSimulcastBitrateController
                 AdaptiveSimulcastBitrateController.class);
 
     /**
-     * The {@link RecurringProcessibleExecutor} which will periodically call
-     * {@link #process()} on active {@link AdaptiveSimulcastBitrateController}
+     * The {@link RecurringRunnableExecutor} which will periodically call
+     * {@link #run()} on active {@link AdaptiveSimulcastBitrateController}
      * instances.
      */
-    private static RecurringProcessibleExecutor recurringProcessibleExecutor;
+    private static RecurringRunnableExecutor recurringRunnablesExecutor;
 
     /**
      * Initializes the constants used by this class from the configuration.
@@ -196,8 +196,8 @@ public class AdaptiveSimulcastBitrateController
                     = cfg.getBoolean(ENABLE_TRIGGER_PNAME, ENABLE_TRIGGER);
             }
 
-            recurringProcessibleExecutor
-                = new RecurringProcessibleExecutor(
+            recurringRunnablesExecutor
+                = new RecurringRunnableExecutor(
                     AdaptiveSimulcastBitrateController.class.getSimpleName());
         }
     }
@@ -215,7 +215,7 @@ public class AdaptiveSimulcastBitrateController
     private long latestBwe = -1;
 
     /**
-     * The time that {@link #process()} was last called.
+     * The time that {@link #run()} was last called.
      */
     private long lastUpdateTime = -1;
 
@@ -255,17 +255,17 @@ public class AdaptiveSimulcastBitrateController
                 .getOrCreateBandwidthEstimator();
         be.addListener(this);
 
-        recurringProcessibleExecutor.registerRecurringProcessible(this);
+        recurringRunnablesExecutor.registerRecurringRunnable(this);
     }
 
     /**
      * Releases resources used by this instance and stops the periodic execution
-     * of {@link #process()}.
+     * of {@link #run()}.
      */
     @Override
     public void close()
     {
-        recurringProcessibleExecutor.deRegisterRecurringProcessible(this);
+        recurringRunnablesExecutor.deRegisterRecurringRunnable(this);
     }
 
     /**
@@ -335,7 +335,7 @@ public class AdaptiveSimulcastBitrateController
      * @return Zero.
      */
     @Override
-    public long process()
+    public void run()
     {
         long now = System.currentTimeMillis();
         lastUpdateTime = now;
@@ -351,7 +351,7 @@ public class AdaptiveSimulcastBitrateController
         long sbr = getSendingBitrate();
         if (bwe == -1 || sbr == -1)
         {
-            return 0; //no data yet
+            return; //no data yet
         }
 
         history.add(bwe, sbr, now);
@@ -396,8 +396,6 @@ public class AdaptiveSimulcastBitrateController
         {
             enableHQLayer(false);
         }
-
-        return 0;
     }
 
     /**
@@ -443,7 +441,7 @@ public class AdaptiveSimulcastBitrateController
     }
 
     @Override
-    public long getTimeUntilNextProcess()
+    public long getTimeUntilNextRun()
     {
         return
                 (lastUpdateTime < 0L)
