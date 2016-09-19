@@ -38,7 +38,6 @@ import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger; // Disambiguation.
-import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.transform.*;
 import org.json.simple.*;
@@ -305,16 +304,7 @@ public class VideoChannel
             if (strategy != null)
             {
                 logger.debug("Initializing RTCP termination.");
-                MediaStream stream = getStream();
-
-                // Initialize the RTCP termination strategy.
-                if (strategy instanceof VideoChannelRTCPTerminationStrategy)
-                {
-                    ((VideoChannelRTCPTerminationStrategy) strategy)
-                        .initialize(this);
-                }
-
-                stream.setRTCPTerminationStrategy(strategy);
+                getStream().setRTCPTerminationStrategy(strategy);
             }
 
         }
