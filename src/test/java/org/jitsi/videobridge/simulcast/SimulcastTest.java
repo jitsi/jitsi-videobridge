@@ -151,8 +151,8 @@ public class SimulcastTest
             anyObject(PropertyChangeListener.class));
         expectLastCall().anyTimes();
         VideoChannel sendViC = createMock(VideoChannel.class);
-        expect(sendViC.getRedPayloadType()).andReturn(REDPT).anyTimes();
-        expect(sendViC.getVP8PayloadType()).andReturn(VP8PT).anyTimes();
+        //expect(sendViC.getRedPayloadType()).andReturn(REDPT).anyTimes();
+        //expect(sendViC.getVP8PayloadType()).andReturn(VP8PT).anyTimes();
         expect(sendViC.getContent()).andReturn(cnt).anyTimes();
         expect(sendViC.getSimulcastMode())
             .andReturn(SimulcastMode.REWRITING)
@@ -191,12 +191,12 @@ public class SimulcastTest
         expectLastCall().anyTimes();
         Endpoint sendEndpoint = createMock(Endpoint.class);
         expect(recvViC.getEndpoint()).andReturn(sendEndpoint).anyTimes();
-        expect(recvViC.getRedPayloadType())
-            .andReturn(REDPT)
-            .anyTimes();
-        expect(recvViC.getVP8PayloadType())
-            .andReturn(VP8PT)
-            .anyTimes();
+        //expect(recvViC.getRedPayloadType())
+          //  .andReturn(REDPT)
+            //.anyTimes();
+        //expect(recvViC.getVP8PayloadType())
+          //  .andReturn(VP8PT)
+            //.anyTimes();
         expect(recvViC.getContent())
             .andReturn(cnt)
             .anyTimes();
