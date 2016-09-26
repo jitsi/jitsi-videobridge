@@ -155,7 +155,7 @@ Example
 ==============
 
 1. Create the conference by posting an empty json object:
-Post "[]" to <bridge_base_url>/colibri/conferences/
+Post "{}" to <bridge_base_url>/colibri/conferences/
 
 2. Bridge will respond with a json response that contains the colibri conference id:
 ```json
