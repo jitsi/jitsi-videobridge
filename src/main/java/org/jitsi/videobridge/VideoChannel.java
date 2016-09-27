@@ -842,7 +842,7 @@ public class VideoChannel
         RtxTransformer rtxTransformer;
 
         if ((cache = getStream().getPacketCache()) != null
-                && (rtxTransformer = transformEngine.getRtxTransformer())
+                && (rtxTransformer = getStream().getRtxTransformer())
                         != null)
         {
             // XXX The retransmission of packets MUST take into account SSRC
@@ -974,13 +974,11 @@ public class VideoChannel
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the SSRC groupings for this <tt>RtpChannel</tt>.
+     * @param sourceGroups
      */
-    @Override
     public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
     {
-        super.setSourceGroups(sourceGroups);
-
         // TODO(gp) how does one clear source groups? We need a special value
         // that indicates we need to clear the groups.
         if (sourceGroups == null || sourceGroups.isEmpty())
@@ -1018,36 +1016,6 @@ public class VideoChannel
         if (simulcastTriplets == null || simulcastTriplets.length == 0)
         {
             return;
-        }
-
-        // FID groups have been saved in RtpChannel. Make sure any changes are
-        // propagated to the appropriate SimulcastStream-s.
-        synchronized (fidSourceGroups)
-        {
-            if (!fidSourceGroups.isEmpty())
-            {
-                for (Map.Entry<Long, Long> entry : this.fidSourceGroups
-                    .entrySet())
-                {
-                    if (entry.getKey() == null || entry.getValue() == null)
-                    {
-                        continue;
-                    }
-
-                    // autoboxing.
-                    long primarySSRC = entry.getKey();
-                    long fidSSRC = entry.getValue();
-
-                    for (int i = 0; i < simulcastTriplets.length; i++)
-                    {
-                        if (simulcastTriplets[i][0] == primarySSRC)
-                        {
-                            simulcastTriplets[i][1] = fidSSRC;
-                            break;
-                        }
-                    }
-                }
-            }
         }
 
         SimulcastStream[] simulcastStreams
