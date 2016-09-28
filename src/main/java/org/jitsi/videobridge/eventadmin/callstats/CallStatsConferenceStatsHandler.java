@@ -244,7 +244,7 @@ class CallStatsConferenceStatsHandler
          * Invokes {@link Statistics#generate()} on {@link #o}.
          */
         @Override
-        protected void doProcess()
+        protected void doRun()
         {
             // if userInfo is missing the method conferenceSetupResponse
             // is not called, means callstats still has not setup internally

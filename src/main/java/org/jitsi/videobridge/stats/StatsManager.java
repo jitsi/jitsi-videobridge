@@ -316,7 +316,7 @@ public class StatsManager
          * Invokes {@link Statistics#generate()} on {@link #o}.
          */
         @Override
-        protected void doProcess()
+        protected void doRun()
         {
             o.generate();
         }
@@ -351,7 +351,7 @@ public class StatsManager
          * Invokes {@link StatsTransport#publishStatistics(Statistics, long)} on
          * {@link #o}.
          */
-        protected void doProcess()
+        protected void doRun()
         {
             long transportPeriod = getPeriod();
 

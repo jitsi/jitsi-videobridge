@@ -504,7 +504,7 @@ public class LastNBitrateController
     }
 
     @Override
-    public long getTimeUntilNextProcess()
+    public long getTimeUntilNextRun()
     {
         return
                 (lastUpdateTime < 0L)

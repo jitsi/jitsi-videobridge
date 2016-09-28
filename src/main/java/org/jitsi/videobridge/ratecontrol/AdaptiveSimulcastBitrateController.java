@@ -441,7 +441,7 @@ public class AdaptiveSimulcastBitrateController
     }
 
     @Override
-    public long getTimeUntilNextProcess()
+    public long getTimeUntilNextRun()
     {
         return
                 (lastUpdateTime < 0L)
