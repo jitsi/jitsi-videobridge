@@ -148,10 +148,10 @@ public class LastNBitrateController
             = LastNBitrateController.class.getName() + ".REMB_MULT_CONSTANT";
 
     /**
-     * The {@link RecurringRunnablesExecutor} which will periodically call
+     * The {@link RecurringRunnableExecutor} which will periodically call
      * {@link #run()} on active {@link LastNBitrateController} instances.
      */
-    private static RecurringRunnablesExecutor recurringRunnablesExecutor;
+    private static RecurringRunnableExecutor recurringRunnablesExecutor;
 
     /**
      * Initializes the constants used by this class from the configuration.
@@ -165,7 +165,7 @@ public class LastNBitrateController
             configurationInitialized = true;
 
             recurringRunnablesExecutor
-                = new RecurringRunnablesExecutor(
+                = new RecurringRunnableExecutor(
                         LastNBitrateController.class.getSimpleName());
 
             if (cfg != null)

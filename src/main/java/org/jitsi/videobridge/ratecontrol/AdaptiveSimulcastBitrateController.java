@@ -160,11 +160,11 @@ public class AdaptiveSimulcastBitrateController
                 AdaptiveSimulcastBitrateController.class);
 
     /**
-     * The {@link RecurringRunnablesExecutor} which will periodically call
+     * The {@link RecurringRunnableExecutor} which will periodically call
      * {@link #run()} on active {@link AdaptiveSimulcastBitrateController}
      * instances.
      */
-    private static RecurringRunnablesExecutor recurringRunnablesExecutor;
+    private static RecurringRunnableExecutor recurringRunnablesExecutor;
 
     /**
      * Initializes the constants used by this class from the configuration.
@@ -197,7 +197,7 @@ public class AdaptiveSimulcastBitrateController
             }
 
             recurringRunnablesExecutor
-                = new RecurringRunnablesExecutor(
+                = new RecurringRunnableExecutor(
                     AdaptiveSimulcastBitrateController.class.getSimpleName());
         }
     }

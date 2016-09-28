@@ -54,11 +54,11 @@ class CallStatsConferenceStatsHandler
         = { MediaType.AUDIO, MediaType.VIDEO };
 
     /**
-     * The {@link RecurringRunnablesExecutor} which periodically invokes
+     * The {@link RecurringRunnableExecutor} which periodically invokes
      * generating and pushing statistics per conference for every Channel.
      */
-    private static final RecurringRunnablesExecutor statisticsExecutor
-        = new RecurringRunnablesExecutor(
+    private static final RecurringRunnableExecutor statisticsExecutor
+        = new RecurringRunnableExecutor(
         CallStatsConferenceStatsHandler.class.getSimpleName()
             + "-statisticsExecutor");
 

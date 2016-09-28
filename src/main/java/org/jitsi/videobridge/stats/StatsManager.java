@@ -38,20 +38,20 @@ public class StatsManager
         = new CopyOnWriteArrayList<>();
 
     /**
-     * The {@link RecurringRunnablesExecutor} which periodically invokes
+     * The {@link RecurringRunnableExecutor} which periodically invokes
      * {@link Statistics#generate()} on {@link #statistics}.
      */
-    private final RecurringRunnablesExecutor statisticsExecutor
-        = new RecurringRunnablesExecutor(
+    private final RecurringRunnableExecutor statisticsExecutor
+        = new RecurringRunnableExecutor(
                 StatsManager.class.getSimpleName() + "-statisticsExecutor");
 
     /**
-     * The {@link RecurringRunnablesExecutor} which periodically invokes
+     * The {@link RecurringRunnableExecutor} which periodically invokes
      * {@link StatsTransport#publishStatistics(Statistics, long)} on
      * {@link #transports}.
      */
-    private final RecurringRunnablesExecutor transportExecutor
-        = new RecurringRunnablesExecutor(
+    private final RecurringRunnableExecutor transportExecutor
+        = new RecurringRunnableExecutor(
                 StatsManager.class.getSimpleName() + "-transportExecutor");
 
     /**
@@ -242,7 +242,7 @@ public class StatsManager
         super.start(bundleContext);
 
         // Register statistics and transports with their respective
-        // RecurringRunnablesExecutor in order to have them periodically
+        // RecurringRunnableExecutor in order to have them periodically
         // executed.
         for (StatisticsPeriodicRunnable spp : statistics)
         {
@@ -271,7 +271,7 @@ public class StatsManager
         super.stop(bundleContext);
 
         // De-register statistics and transports from their respective
-        // RecurringRunnablesExecutor in order to have them no longer
+        // RecurringRunnableExecutor in order to have them no longer
         // periodically executed.
         for (StatisticsPeriodicRunnable spp : statistics)
         {
