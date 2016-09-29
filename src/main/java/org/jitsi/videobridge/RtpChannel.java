@@ -2067,18 +2067,19 @@ public class RtpChannel
             track.addEncoding(encoding[0], encoding[2], -1, (int) encoding[1]);
         }
 
-        stream.clearRemoteTracks();
-        for (MediaStreamTrack track : tracksBySSRC.values())
-        {
-            stream.addRemoteTrack(track);
-        }
+        Map<Long, MediaStreamTrack> remoteTracks = stream.getRemoteTracks();
 
-        for (Long primarySSRC : freeSSRCs)
+        synchronized (remoteTracks)
         {
-            MediaStreamTrack mst = new MediaStreamTrack();
-            stream.addRemoteTrack(mst);
+            remoteTracks.clear();
+            remoteTracks.putAll(tracksBySSRC);
 
-            mst.addEncoding(primarySSRC, -1, -1, RTPEncoding.BASE_ORDER);
+            for (Long primarySSRC : freeSSRCs)
+            {
+                MediaStreamTrack mst = new MediaStreamTrack();
+                mst.addEncoding(primarySSRC, -1, -1, RTPEncoding.BASE_ORDER);
+                remoteTracks.put(primarySSRC, mst);
+            }
         }
     }
 
