@@ -208,30 +208,6 @@ public class RtpChannel
     private final Logger logger;
 
     /**
-     * The FID (flow ID) groupings used by the remote side of this
-     * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
-     */
-    protected final Map<Long,Long> fidSourceGroups
-        = new HashMap<>();
-
-    /**
-     * The payload type number configured for RTX (RFC-4588) for this channel,
-     * or -1 if none is configured (the other end does not support rtx).
-     */
-    private byte rtxPayloadType = -1;
-
-    /**
-     * The "associated payload type" number for RTX on this channel.
-     */
-    private byte rtxAssociatedPayloadType = -1;
-
-    /**
-     * The payload type number configured for RED (RFC-2198) for this channel,
-     * or -1 if none is configured (the other end does not support red).
-     */
-    private byte redPayloadType = -1;
-
-    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -1371,41 +1347,6 @@ public class RtpChannel
                 {
                     transportManager.payloadTypesChanged(this);
                 }
-
-                rtxPayloadType = -1;
-                redPayloadType = -1;
-                for (PayloadTypePacketExtension ext : payloadTypes)
-                {
-                    if (Constants.RTX.equalsIgnoreCase(ext.getName()))
-                    {
-                        rtxPayloadType = (byte) ext.getID();
-                        for (ParameterPacketExtension ppe : ext.getParameters())
-                        {
-                            if ("apt".equalsIgnoreCase(ppe.getName()))
-                                rtxAssociatedPayloadType
-                                        = Byte.valueOf(ppe.getValue());
-
-                        }
-                    }
-
-                    if (Constants.RED.equalsIgnoreCase(ext.getName()))
-                    {
-                        redPayloadType = (byte) ext.getID();
-                    }
-                }
-
-                RetransmissionRequester retransmissionRequester
-                    = stream.getRetransmissionRequester();
-                if (retransmissionRequester != null)
-                {
-                    Map<Long, Long> copy;
-                    synchronized (fidSourceGroups)
-                    {
-                        copy = new HashMap<>(fidSourceGroups);
-                    }
-                    retransmissionRequester.configureRtx(rtxPayloadType,
-                                                         copy);
-                }
             }
         }
 
@@ -1756,72 +1697,6 @@ public class RtpChannel
     }
 
     /**
-     * Sets the SSRC groupings for this <tt>RtpChannel</tt>.
-     * @param sourceGroups
-     */
-    public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
-    {
-        if (sourceGroups == null || sourceGroups.isEmpty())
-            return;
-
-        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
-        {
-            List<SourcePacketExtension> sources = sourceGroup.getSources();
-            if (sources != null && !sources.isEmpty() &&
-                    SourceGroupPacketExtension.SEMANTICS_FID
-                        .equalsIgnoreCase(sourceGroup.getSemantics()))
-            {
-                Long first = null, second = null;
-                for (SourcePacketExtension source : sources)
-                {
-                    if (first == null)
-                    {
-                        first = source.getSSRC();
-                    }
-                    else if (second == null)
-                    {
-                        second = source.getSSRC();
-                    }
-                    else
-                    {
-                        logger.warn("Received a FID sourceGroup with more " +
-                                    " than two sources: " + sourceGroup.toXML());
-                    }
-                }
-
-                if (first == null || second == null)
-                {
-                    logger.warn("Received a FID sourceGroup with less " +
-                                " than two sources: " + sourceGroup.toXML());
-                    continue;
-                }
-
-                // Here we assume that the first source in the group is the
-                // SSRC for the media stream, and the second source is the
-                // one for the RTX stream.
-                synchronized (fidSourceGroups)
-                {
-                    fidSourceGroups.put(first, second);
-                }
-            }
-        }
-
-        // The RTX configuration (PT and SSRC maps) may have changed.
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
-        if (retransmissionRequester != null)
-        {
-            Map<Long, Long> copy;
-            synchronized (fidSourceGroups)
-            {
-                copy = new HashMap<>(fidSourceGroups);
-            }
-            retransmissionRequester.configureRtx(rtxPayloadType,
-                                                 copy);
-        }
-    }
-
-    /**
      * Returns the RTP Payload Type numbers which this channel is configured
      * to receive.
      * @return the RTP Payload Type numbers which this channel is configured
@@ -1891,65 +1766,6 @@ public class RtpChannel
     }
 
     /**
-     * Returns the payload type number for the RTX payload type (RFC-4588) for
-     * this channel.
-     * @return the payload type number for the RTX payload type (RFC-4588) for
-     * this channel.
-     */
-    public byte getRtxPayloadType()
-    {
-        return rtxPayloadType;
-    }
-
-    /**
-     * Returns the payload type number associated with RTX for this channel.
-     * @return the payload type number associated with RTX for this channel.
-     */
-    public byte getRtxAssociatedPayloadType()
-    {
-        return rtxAssociatedPayloadType;
-    }
-
-    /**
-     * Returns the payload type number for the RED payload type (RFC-2198) for
-     * this channel.
-     * @return the payload type number for the RED payload type (RFC-2198) for
-     * this channel.
-     */
-    public byte getRedPayloadType()
-    {
-        return redPayloadType;
-    }
-
-    /**
-     * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
-     * any. If none is found, returns -1.
-     *
-     * @return the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
-     * any. If none is found, returns -1.
-     */
-    public long getFidPairedSsrc(long ssrc)
-    {
-        synchronized (fidSourceGroups)
-        {
-            Long paired = fidSourceGroups.get(ssrc);
-            if (paired != null)
-            {
-                return paired;
-            }
-
-            // Maybe 'ssrc' is one of the values.
-            for (Map.Entry<Long, Long> entry : fidSourceGroups.entrySet())
-            {
-                if (entry.getValue() == ssrc)
-                    return entry.getKey();
-            }
-
-            return -1;
-        }
-    }
-
-    /**
      * @return the {@link ConferenceSpeechActivity} for this channel.
      */
     public ConferenceSpeechActivity getConferenceSpeechActivity()
@@ -1989,6 +1805,125 @@ public class RtpChannel
     public RtpChannelTransformEngine getTransformEngine()
     {
         return this.transformEngine;
+    }
+
+    /**
+     * Creates the {@code MediaStreamTrack}s from signaling and adds them to the
+     * {@code MediaStream} that is associated to this {@code RtpChannel}.
+     *
+     * @param sources  The <tt>List</tt> of <tt>SourcePacketExtension</tt> that
+     * describes the list of sources of this <tt>RtpChannel</tt> and that is
+     * used as the input in the update of the Sets the <tt>Set</tt> of the SSRCs
+     * that this <tt>RtpChannel</tt> has signaled.
+     * @param sourceGroups
+     */
+    public void setMediaStreamTracks(
+        List<SourcePacketExtension> sources,
+        List<SourceGroupPacketExtension> sourceGroups)
+    {
+        if ((sources == null || sources.isEmpty())
+            && (sourceGroups == null || sourceGroups.isEmpty()))
+        {
+            return;
+        }
+
+        this.setSources(sources); // TODO remove and rely on MSTs.
+        if (this instanceof VideoChannel)
+        {
+            // TODO remove and rely on MSTs.
+            ((VideoChannel) this).setSourceGroups(sourceGroups);
+        }
+
+        Map<Long, MediaStreamTrack> tracksBySSRC = new TreeMap<>();
+        Map<Long, long[]> encodings = new TreeMap<>();
+
+        List<Long> freeSSRCs = new ArrayList<>();
+
+        if (sources != null && sources.size() != 0)
+        {
+            for (SourcePacketExtension spe : sources)
+            {
+                freeSSRCs.add(spe.getSSRC());
+            }
+        }
+
+        if (sourceGroups != null && sourceGroups.size() != 0)
+        {
+            for (SourceGroupPacketExtension sgpe : sourceGroups)
+            {
+                if ("sim".equalsIgnoreCase(sgpe.getSemantics())
+                    && sgpe.getSources() != null
+                    && sgpe.getSources().size() >= 2)
+                {
+                    // Every simulcast group determines an mst with a bunch of
+                    // encodings.
+                    MediaStreamTrack track = new MediaStreamTrack();
+
+                    int order = RTPEncoding.BASE_ORDER;
+                    for (SourcePacketExtension spe : sgpe.getSources())
+                    {
+                        long primarySSRC = spe.getSSRC();
+                        freeSSRCs.remove(primarySSRC);
+
+                        long[] encoding = new long[] { -1, -1, -1 };
+                        encoding[0] = primarySSRC;
+                        encoding[1] = order++;
+
+                        encodings.put(primarySSRC, encoding);
+                        tracksBySSRC.put(primarySSRC, track);
+                    }
+                }
+                else if ("fid".equalsIgnoreCase(sgpe.getSemantics())
+                    && sgpe.getSources() != null
+                    && sgpe.getSources().size() == 2)
+                {
+                    Long primarySSRC = sgpe.getSources().get(0).getSSRC();
+                    freeSSRCs.remove(primarySSRC);
+                    Long rtxSSRC = sgpe.getSources().get(1).getSSRC();
+                    freeSSRCs.remove(rtxSSRC);
+
+                    long[] encoding = encodings.get(primarySSRC);
+                    if (encoding == null)
+                    {
+                        // if we don't have an encoding, then we don't have
+                        // an mst. create both.
+                        MediaStreamTrack track = new MediaStreamTrack();
+                        tracksBySSRC.put(primarySSRC, track);
+
+                        encoding = new long[] { -1, -1, -1 };
+                        encoding[0] = primarySSRC;
+                        encoding[1] = RTPEncoding.BASE_ORDER;
+
+                        encodings.put(primarySSRC, encoding);
+                        tracksBySSRC.put(primarySSRC, track);
+                    }
+
+                    encoding[2] = rtxSSRC;
+                }
+            }
+        }
+
+        for (Map.Entry<Long, MediaStreamTrack> entry : tracksBySSRC.entrySet())
+        {
+            MediaStreamTrack track = entry.getValue();
+            long[] encoding = encodings.get(entry.getKey());
+            track.addEncoding(encoding[0], encoding[2], -1, (int) encoding[1]);
+        }
+
+        Map<Long, MediaStreamTrack> remoteTracks = stream.getRemoteTracks();
+
+        synchronized (remoteTracks)
+        {
+            remoteTracks.clear();
+            remoteTracks.putAll(tracksBySSRC);
+
+            for (Long primarySSRC : freeSSRCs)
+            {
+                MediaStreamTrack mst = new MediaStreamTrack();
+                mst.addEncoding(primarySSRC, -1, -1, RTPEncoding.BASE_ORDER);
+                remoteTracks.put(primarySSRC, mst);
+            }
+        }
     }
 
 

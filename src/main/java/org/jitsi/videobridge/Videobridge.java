@@ -901,7 +901,7 @@ public class Videobridge
 
                 if (initiator != null)
                 {
-                    channel.setInitiator(initiator); 
+                    channel.setInitiator(initiator);
                 }
                 else
                 {
@@ -914,9 +914,8 @@ public class Videobridge
 
                 channel.setDirection(channelIQ.getDirection());
 
-                channel.setSources(channelIQ.getSources());
-
-                channel.setSourceGroups(channelIQ.getSourceGroups());
+                channel.setMediaStreamTracks(
+                    channelIQ.getSources(), channelIQ.getSourceGroups());
 
                 if (channel instanceof VideoChannel)
                 {
@@ -932,8 +931,8 @@ public class Videobridge
                 {
                     TransportManager transportManager
                         = conference.getTransportManager(
-                            channelBundleId, 
-                            true, 
+                            channelBundleId,
+                            true,
                             initiator);
 
                     transportManager.addChannel(channel);

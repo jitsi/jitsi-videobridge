@@ -38,7 +38,6 @@ import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger; // Disambiguation.
-import org.jitsi.videobridge.rtcp.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.transform.*;
 import org.json.simple.*;
@@ -78,7 +77,7 @@ public class VideoChannel
      * The name of the property used to disable NACK termination.
      */
     public static final String DISABLE_NACK_TERMINATION_PNAME
-            = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
+        = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
      * The name of the property used to disable the logic which detects and
@@ -133,12 +132,6 @@ public class VideoChannel
             }
         }
     }
-
-    /**
-     * The payload type number configured for VP8 for this channel,
-     * or -1 if none is configured (the other end does not support VP8).
-     */
-    private byte vp8PayloadType = -1;
 
     /**
      * XXX Defaulting to the lowest-quality simulcast stream until we are
@@ -305,16 +298,7 @@ public class VideoChannel
             if (strategy != null)
             {
                 logger.debug("Initializing RTCP termination.");
-                MediaStream stream = getStream();
-
-                // Initialize the RTCP termination strategy.
-                if (strategy instanceof VideoChannelRTCPTerminationStrategy)
-                {
-                    ((VideoChannelRTCPTerminationStrategy) strategy)
-                        .initialize(this);
-                }
-
-                stream.setRTCPTerminationStrategy(strategy);
+                getStream().setRTCPTerminationStrategy(strategy);
             }
 
         }
@@ -453,7 +437,7 @@ public class VideoChannel
 
     public int getReceiveSimulcastLayer()
     {
-        return  receiveSimulcastLayer;
+        return receiveSimulcastLayer;
     }
 
     public void setReceiveSimulcastLayer(Integer receiveSimulcastLayer)
@@ -536,16 +520,6 @@ public class VideoChannel
         {
             lastNController.setPinnedEndpointIds((List<String>)ev.getNewValue());
         }
-        else if (Content.CHANNEL_MODIFIED_PROPERTY_NAME.equals(propertyName))
-        {
-            // Another channel in this content has been modified (
-            // added/removed/modified source group, same with payload types, etc)
-            // This has implications in SSRC rewriting, we need to update our
-            // engine.
-            logger.debug("Handling CHANNEL_MODIFIED_PROPERTY_NAME");
-            VideoChannel videoChannel = (VideoChannel) ev.getNewValue();
-            updateTranslatedVideoChannel(videoChannel);
-        }
     }
 
     /**
@@ -553,9 +527,9 @@ public class VideoChannel
      */
     @Override
     boolean rtpTranslatorWillWrite(
-            boolean data,
-            byte[] buffer, int offset, int length,
-            Channel source)
+        boolean data,
+        byte[] buffer, int offset, int length,
+        Channel source)
     {
         // XXX(gp) we could potentially move this into a TransformEngine.
         boolean accept = lastNController.isForwarded(source);
@@ -823,6 +797,7 @@ public class VideoChannel
     {
         super.setPayloadTypes(payloadTypes);
 
+        // TODO remove this whole method.
         boolean enableRedFilter = true;
 
         // If we're not given any PTs at all, assume that we shouldn't touch
@@ -830,7 +805,6 @@ public class VideoChannel
         if (payloadTypes == null || payloadTypes.isEmpty())
             return;
 
-        vp8PayloadType = -1;
         for (PayloadTypePacketExtension payloadType : payloadTypes)
         {
             if (Constants.RED.equals(payloadType.getName()))
@@ -838,10 +812,6 @@ public class VideoChannel
                 enableRedFilter = false;
             }
 
-            if (Constants.VP8.equalsIgnoreCase(payloadType.getName()))
-            {
-                vp8PayloadType = (byte) payloadType.getID();
-            }
         }
 
         // If the endpoint supports RED we disable the filter (e.g. leave RED).
@@ -872,7 +842,7 @@ public class VideoChannel
         RtxTransformer rtxTransformer;
 
         if ((cache = getStream().getPacketCache()) != null
-                && (rtxTransformer = transformEngine.getRtxTransformer())
+                && (rtxTransformer = getStream().getRtxTransformer())
                         != null)
         {
             // XXX The retransmission of packets MUST take into account SSRC
@@ -1004,13 +974,11 @@ public class VideoChannel
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the SSRC groupings for this <tt>RtpChannel</tt>.
+     * @param sourceGroups
      */
-    @Override
     public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
     {
-        super.setSourceGroups(sourceGroups);
-
         // TODO(gp) how does one clear source groups? We need a special value
         // that indicates we need to clear the groups.
         if (sourceGroups == null || sourceGroups.isEmpty())
@@ -1030,7 +998,7 @@ public class VideoChannel
 
             if (sources == null || sources.isEmpty()
                 || !SourceGroupPacketExtension.SEMANTICS_SIMULCAST
-                        .equalsIgnoreCase(sourceGroup.getSemantics()))
+                .equalsIgnoreCase(sourceGroup.getSemantics()))
             {
                 continue;
             }
@@ -1048,36 +1016,6 @@ public class VideoChannel
         if (simulcastTriplets == null || simulcastTriplets.length == 0)
         {
             return;
-        }
-
-        // FID groups have been saved in RtpChannel. Make sure any changes are
-        // propagated to the appropriate SimulcastStream-s.
-        synchronized (fidSourceGroups)
-        {
-            if (!fidSourceGroups.isEmpty())
-            {
-                for (Map.Entry<Long, Long> entry : this.fidSourceGroups
-                    .entrySet())
-                {
-                    if (entry.getKey() == null || entry.getValue() == null)
-                    {
-                        continue;
-                    }
-
-                    // autoboxing.
-                    long primarySSRC = entry.getKey();
-                    long fidSSRC = entry.getValue();
-
-                    for (int i = 0; i < simulcastTriplets.length; i++)
-                    {
-                        if (simulcastTriplets[i][0] == primarySSRC)
-                        {
-                            simulcastTriplets[i][1] = fidSSRC;
-                            break;
-                        }
-                    }
-                }
-            }
         }
 
         SimulcastStream[] simulcastStreams
@@ -1118,26 +1056,8 @@ public class VideoChannel
 
         simulcastMode = newSimulcastMode;
 
-        // Since the simulcast mode has changed, we need to update the
-        // translated video channels, in particular the SSRC rewriting engine
-        // needs to be updated/configured to actually perform SSRC rewriting of
-        // the rewritten streams.
-
-        this.updateTranslatedVideoChannels();
-
         firePropertyChange(
             SIMULCAST_MODE_PNAME, oldSimulcastMode, newSimulcastMode);
-    }
-
-    /**
-     * Returns the payload type number for the VP8 payload type for
-     * this channel.
-     * @return the payload type number for the VP8 payload type for
-     * this channel.
-     */
-    public byte getVP8PayloadType()
-    {
-        return vp8PayloadType;
     }
 
     /**
@@ -1148,168 +1068,6 @@ public class VideoChannel
     public SimulcastMode getSimulcastMode()
     {
         return simulcastMode;
-    }
-
-    /**
-     * Updates the simulcast-related configuration of this {@link VideoChannel}
-     * with the current state of all other channels in its {@link Content}.
-     */
-    public void updateTranslatedVideoChannels()
-    {
-        logger.debug("Updating the translated channels.");
-        for (Channel peerVideoChannel : getContent().getChannels())
-        {
-            if (peerVideoChannel instanceof VideoChannel
-                    && !equals(peerVideoChannel))
-            {
-                updateTranslatedVideoChannel((VideoChannel) peerVideoChannel);
-            }
-        }
-    }
-
-    /**
-     * Updates the simulcast-related configuration of this {@link VideoChannel}
-     * with the current state of {@code peerVideoChannel}.
-     *
-     * @param peerVideoChannel
-     */
-    public void updateTranslatedVideoChannel(VideoChannel peerVideoChannel)
-    {
-        if (peerVideoChannel == null)
-        {
-            logger.warn("Can't update our view of the peer video channel because " +
-                    "the peerVideoChannel is null.");
-            return;
-        }
-
-        if (peerVideoChannel == this)
-        {
-            logger.debug("Won't update our view of the peer video channel because" +
-                    " peerVideoChannel is this.");
-            return;
-        }
-
-        if (simulcastMode == null)
-        {
-            // FIXME Instead we should do something like this.
-            // setSimulcastMode(SimulcastMode.REWRITING);
-            logger.debug("Won't update our view of the peer video channel" +
-                    " because the simulcast mode is not set.");
-            return;
-        }
-
-        // In the same spirit as MediaStreamImpl.update() but for signaling.
-        if (simulcastMode != SimulcastMode.REWRITING)
-        {
-            logger.debug("Simulcast mode is not rewriting.");
-            return;
-        }
-
-        // The rewriting mode requires SSRC rewriting, RTCP termination and NACK
-        // termination (packet caching and retransmission requests).
-
-        // Update the SSRC rewriting engine from the peer simulcast engine
-        // state.
-        SimulcastEngine sim
-            = peerVideoChannel.getTransformEngine().getSimulcastEngine();
-
-        if (sim == null)
-        {
-            logger.debug("Can't update our view of the peer video channel because" +
-                    " peerSimulcastEngine is null.");
-            return;
-        }
-
-        SimulcastStream[] streams
-            = sim.getSimulcastReceiver().getSimulcastStreams();
-
-        if (streams == null || streams.length == 0)
-        {
-            logger.debug("Can't update our view of the peer video channel because" +
-                    " the peer doesn't have any simulcast streams.");
-            return;
-        }
-
-        logger.debug("Updating our view of the peer video channel.");
-        final Set<Long> ssrcGroup = new HashSet<>();
-        final Map<Long, Long> rtxGroups = new HashMap<>();
-
-        for (SimulcastStream stream : streams)
-        {
-            long primarySSRC = stream.getPrimarySSRC();
-            long rtxSSRC = stream.getRTXSSRC();
-
-            ssrcGroup.add(primarySSRC);
-
-            if (rtxSSRC != -1)
-            {
-                rtxGroups.put(rtxSSRC, primarySSRC);
-            }
-        }
-
-        SimulcastStream baseStream = streams[0];
-        final Long ssrcTargetPrimary = baseStream.getPrimarySSRC();
-        final Long ssrcTargetRTX = baseStream.getRTXSSRC();
-
-        // Update the SSRC rewriting engine from the media stream state.
-        final Map<Long, Byte> ssrc2fec = new HashMap<>();
-        final Map<Long, Byte> ssrc2red = new HashMap<>();
-
-        for (Map.Entry<Byte, MediaFormat> entry :
-            peerVideoChannel.getStream().getDynamicRTPPayloadTypes().entrySet())
-        {
-            Byte pt = entry.getKey();
-            String encoding = entry.getValue().getEncoding();
-            if (Constants.RED.equals(encoding))
-            {
-                for (Long ssrc : ssrcGroup)
-                {
-                    ssrc2red.put(ssrc, pt);
-                }
-
-                for (Long ssrc : rtxGroups.keySet())
-                {
-                    ssrc2red.put(ssrc, pt);
-                }
-            }
-            else if (Constants.ULPFEC.equals(encoding))
-            {
-                for (Long ssrc : ssrcGroup)
-                {
-                    ssrc2fec.put(ssrc, pt);
-                }
-
-                for (Long ssrc : rtxGroups.keySet())
-                {
-                    ssrc2fec.put(ssrc, pt);
-                }
-            }
-        }
-
-
-        MediaStream mediaStream = getStream();
-        mediaStream.configureSSRCRewriting(ssrcGroup, ssrcTargetPrimary,
-            ssrc2fec, ssrc2red, rtxGroups, ssrcTargetRTX);
-
-        // The rewriting mode requires RTCP termination.
-        RTCPTerminationStrategy oldStrategy
-            = mediaStream.getRTCPTerminationStrategy();
-        if (!(oldStrategy instanceof BasicRTCPTerminationStrategy))
-        {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug("Setting RTCP termination strategy to " +
-                    "BasicRTCPTerminationStrategy because it is required.");
-            }
-
-            BasicRTCPTerminationStrategy
-                newStrategy = new BasicRTCPTerminationStrategy();
-            newStrategy.initialize(mediaStream);
-            mediaStream.setRTCPTerminationStrategy(newStrategy);
-        }
-
-        // FIXME Force NACK termination. Postponing because this will require a
-        // few changes here and there, and it's enabled by default anyway.
     }
 
     /**
