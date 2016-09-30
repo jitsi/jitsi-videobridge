@@ -1982,8 +1982,9 @@ public class RtpChannel
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
-        if ((sources == null || sources.isEmpty())
-            && (sourceGroups == null || sourceGroups.isEmpty()))
+        boolean hasSources, hasGroups = false;
+        if (!(hasSources = sources != null && !sources.isEmpty())
+            && !(hasGroups = sourceGroups != null && !sourceGroups.isEmpty()))
         {
             return;
         }
@@ -1996,7 +1997,7 @@ public class RtpChannel
 
         List<Long> freeSSRCs = new ArrayList<>();
 
-        if (sources != null && sources.size() != 0)
+        if (hasSources)
         {
             for (SourcePacketExtension spe : sources)
             {
@@ -2004,39 +2005,42 @@ public class RtpChannel
             }
         }
 
-        if (sourceGroups != null && sourceGroups.size() != 0)
+        if (hasGroups)
         {
             for (SourceGroupPacketExtension sgpe : sourceGroups)
             {
+                List<SourcePacketExtension> sgpeSources = sgpe.getSources();
+                if (sgpeSources == null || sgpeSources.isEmpty())
+                {
+                    continue;
+                }
+
                 if ("sim".equalsIgnoreCase(sgpe.getSemantics())
-                    && sgpe.getSources() != null
-                    && sgpe.getSources().size() >= 2)
+                    && sgpeSources.size() >= 2)
                 {
                     // Every simulcast group determines an mst with a bunch of
                     // encodings.
                     MediaStreamTrack track = new MediaStreamTrack();
 
                     int order = RTPEncoding.BASE_ORDER;
-                    for (SourcePacketExtension spe : sgpe.getSources())
+                    for (SourcePacketExtension spe : sgpeSources)
                     {
                         long primarySSRC = spe.getSSRC();
                         freeSSRCs.remove(primarySSRC);
 
-                        long[] encoding = new long[] { -1, -1, -1 };
-                        encoding[0] = primarySSRC;
-                        encoding[1] = order++;
+                        long[] encoding
+                            = new long[] { primarySSRC, order++, -1 };
 
                         encodings.put(primarySSRC, encoding);
                         tracksBySSRC.put(primarySSRC, track);
                     }
                 }
                 else if ("fid".equalsIgnoreCase(sgpe.getSemantics())
-                    && sgpe.getSources() != null
-                    && sgpe.getSources().size() == 2)
+                    && sgpeSources.size() == 2)
                 {
-                    Long primarySSRC = sgpe.getSources().get(0).getSSRC();
+                    Long primarySSRC = sgpeSources.get(0).getSSRC();
                     freeSSRCs.remove(primarySSRC);
-                    Long rtxSSRC = sgpe.getSources().get(1).getSSRC();
+                    Long rtxSSRC = sgpeSources.get(1).getSSRC();
                     freeSSRCs.remove(rtxSSRC);
 
                     long[] encoding = encodings.get(primarySSRC);
@@ -2047,15 +2051,16 @@ public class RtpChannel
                         MediaStreamTrack track = new MediaStreamTrack();
                         tracksBySSRC.put(primarySSRC, track);
 
-                        encoding = new long[] { -1, -1, -1 };
-                        encoding[0] = primarySSRC;
-                        encoding[1] = RTPEncoding.BASE_ORDER;
+                        encoding = new long[]
+                            { primarySSRC, RTPEncoding.BASE_ORDER, rtxSSRC };
 
                         encodings.put(primarySSRC, encoding);
                         tracksBySSRC.put(primarySSRC, track);
                     }
-
-                    encoding[2] = rtxSSRC;
+                    else
+                    {
+                        encoding[2] = rtxSSRC;
+                    }
                 }
             }
         }
