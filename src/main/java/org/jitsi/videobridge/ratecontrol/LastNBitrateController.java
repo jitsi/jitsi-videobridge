@@ -45,7 +45,7 @@ import org.jitsi.videobridge.simulcast.*;
 public class LastNBitrateController
     extends BitrateController
     implements BandwidthEstimator.Listener,
-               RecurringProcessible
+               RecurringRunnable
 {
     /**
      * Whether the values for the constants have been initialized or not.
@@ -53,7 +53,7 @@ public class LastNBitrateController
     private static boolean configurationInitialized = false;
 
     /**
-     * The interval at which {@link #process()} should be called, in
+     * The interval at which {@link #run()} should be called, in
      * milliseconds.
      */
     private static final int PROCESS_INTERVAL_MS = 200;
@@ -148,10 +148,10 @@ public class LastNBitrateController
             = LastNBitrateController.class.getName() + ".REMB_MULT_CONSTANT";
 
     /**
-     * The {@link RecurringProcessibleExecutor} which will periodically call
-     * {@link #process()} on active {@link LastNBitrateController} instances.
+     * The {@link RecurringRunnableExecutor} which will periodically call
+     * {@link #run()} on active {@link LastNBitrateController} instances.
      */
-    private static RecurringProcessibleExecutor recurringProcessibleExecutor;
+    private static RecurringRunnableExecutor recurringRunnablesExecutor;
 
     /**
      * Initializes the constants used by this class from the configuration.
@@ -164,8 +164,8 @@ public class LastNBitrateController
                 return;
             configurationInitialized = true;
 
-            recurringProcessibleExecutor
-                = new RecurringProcessibleExecutor(
+            recurringRunnablesExecutor
+                = new RecurringRunnableExecutor(
                         LastNBitrateController.class.getSimpleName());
 
             if (cfg != null)
@@ -256,7 +256,7 @@ public class LastNBitrateController
     private long latestBwe = -1;
 
     /**
-     * The time that {@link #process()} was last called.
+     * The time that {@link #run()} was last called.
      */
     private long lastUpdateTime = -1;
 
@@ -284,17 +284,17 @@ public class LastNBitrateController
                 .getOrCreateBandwidthEstimator();
         be.addListener(this);
 
-        recurringProcessibleExecutor.registerRecurringProcessible(this);
+        recurringRunnablesExecutor.registerRecurringRunnable(this);
     }
 
     /**
      * Releases resources used by this instance and stops the periodic execution
-     * of {@link #process()}.
+     * of {@link #run()}.
      */
     @Override
     public void close()
     {
-        recurringProcessibleExecutor.deRegisterRecurringProcessible(this);
+        recurringRunnablesExecutor.deRegisterRecurringRunnable(this);
     }
 
     int calcNumEndpointsThatFitIn()
@@ -421,7 +421,7 @@ public class LastNBitrateController
      * @return Zero.
      */
     @Override
-    public long process()
+    public void run()
     {
         long remb = latestBwe;
         long now = System.currentTimeMillis();
@@ -431,7 +431,7 @@ public class LastNBitrateController
         if (bitrateAdaptor == null)
         {
             // A bitrate adaptor is not set. It makes no sense to continue.
-            return 0;
+            return;
         }
 
         // The number of endpoints this channel is currently receiving
@@ -449,12 +449,12 @@ public class LastNBitrateController
         // incoming REMBs to "ramp-up").
         if (now - firstRemb <= INITIAL_INTERVAL_MS)
         {
-            return 0;
+            return;
         }
 
         // Touch the adaptor and give it a chance to prevent bitrate adaptation.
         if (!bitrateAdaptor.touch())
-            return 0;
+            return;
 
         int numEndpointsThatFitIn = calcNumEndpointsThatFitIn();
         if (numEndpointsThatFitIn < receivingEndpointCount)
@@ -495,7 +495,7 @@ public class LastNBitrateController
             }
         }
 
-        return 0;
+        return;
     }
 
     LastNController getLastNController()
@@ -504,7 +504,7 @@ public class LastNBitrateController
     }
 
     @Override
-    public long getTimeUntilNextProcess()
+    public long getTimeUntilNextRun()
     {
         return
                 (lastUpdateTime < 0L)
