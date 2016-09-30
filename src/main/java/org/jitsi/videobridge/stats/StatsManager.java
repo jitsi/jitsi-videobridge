@@ -34,31 +34,31 @@ public class StatsManager
     /**
      * The <tt>Statistics</tt> added to this <tt>StatsManager</tt>.
      */
-    private final List<StatisticsPeriodicRunnable> statistics
+    private final List<StatisticsPeriodicProcessible> statistics
         = new CopyOnWriteArrayList<>();
 
     /**
-     * The {@link RecurringRunnableExecutor} which periodically invokes
+     * The {@link RecurringProcessibleExecutor} which periodically invokes
      * {@link Statistics#generate()} on {@link #statistics}.
      */
-    private final RecurringRunnableExecutor statisticsExecutor
-        = new RecurringRunnableExecutor(
+    private final RecurringProcessibleExecutor statisticsExecutor
+        = new RecurringProcessibleExecutor(
                 StatsManager.class.getSimpleName() + "-statisticsExecutor");
 
     /**
-     * The {@link RecurringRunnableExecutor} which periodically invokes
+     * The {@link RecurringProcessibleExecutor} which periodically invokes
      * {@link StatsTransport#publishStatistics(Statistics, long)} on
      * {@link #transports}.
      */
-    private final RecurringRunnableExecutor transportExecutor
-        = new RecurringRunnableExecutor(
+    private final RecurringProcessibleExecutor transportExecutor
+        = new RecurringProcessibleExecutor(
                 StatsManager.class.getSimpleName() + "-transportExecutor");
 
     /**
      * The <tt>StatsTransport</tt>s added to this <tt>StatsManager</tt> to
      * transport {@link #statistics}.
      */
-    private final List<TransportPeriodicRunnable> transports
+    private final List<TransportPeriodicProcessible> transports
         = new CopyOnWriteArrayList<>();
 
     /**
@@ -86,7 +86,7 @@ public class StatsManager
         // XXX The field statistics is a CopyOnWriteArrayList in order to avoid
         // synchronization here.
         this.statistics.add(
-                new StatisticsPeriodicRunnable(statistics, period));
+                new StatisticsPeriodicProcessible(statistics, period));
     }
 
     /**
@@ -114,7 +114,7 @@ public class StatsManager
 
         // XXX The field transport is a CopyOnWriteArrayList in order to avoid
         // synchronization here.
-        transports.add(new TransportPeriodicRunnable(transport, period));
+        transports.add(new TransportPeriodicProcessible(transport, period));
     }
 
     /**
@@ -133,7 +133,7 @@ public class StatsManager
     {
         // XXX The field statistics is a CopyOnWriteArrayList in order to avoid
         // synchronization here.
-        for (StatisticsPeriodicRunnable spp : statistics)
+        for (StatisticsPeriodicProcessible spp : statistics)
         {
             if (spp.getPeriod() == period && clazz.isInstance(spp.o))
             {
@@ -170,7 +170,7 @@ public class StatsManager
         else
         {
             ret = new ArrayList<>(count);
-            for (StatisticsPeriodicRunnable spp : statistics)
+            for (StatisticsPeriodicProcessible spp : statistics)
                 ret.add(spp.o);
         }
         return ret;
@@ -216,7 +216,7 @@ public class StatsManager
         else
         {
             ret = new ArrayList<>(count);
-            for (TransportPeriodicRunnable tpp : transports)
+            for (TransportPeriodicProcessible tpp : transports)
                 ret.add(tpp.o);
         }
         return ret;
@@ -242,19 +242,19 @@ public class StatsManager
         super.start(bundleContext);
 
         // Register statistics and transports with their respective
-        // RecurringRunnableExecutor in order to have them periodically
+        // RecurringProcessibleExecutor in order to have them periodically
         // executed.
-        for (StatisticsPeriodicRunnable spp : statistics)
+        for (StatisticsPeriodicProcessible spp : statistics)
         {
-            statisticsExecutor.registerRecurringRunnable(spp);
+            statisticsExecutor.registerRecurringProcessible(spp);
         }
         // Start the StatTransports added to this StatsManager in the specified
         // bundleContext.
-        for (TransportPeriodicRunnable tpp : transports)
+        for (TransportPeriodicProcessible tpp : transports)
         {
             tpp.o.start(bundleContext);
 
-            transportExecutor.registerRecurringRunnable(tpp);
+            transportExecutor.registerRecurringProcessible(tpp);
         }
     }
 
@@ -271,31 +271,31 @@ public class StatsManager
         super.stop(bundleContext);
 
         // De-register statistics and transports from their respective
-        // RecurringRunnableExecutor in order to have them no longer
+        // RecurringProcessibleExecutor in order to have them no longer
         // periodically executed.
-        for (StatisticsPeriodicRunnable spp : statistics)
+        for (StatisticsPeriodicProcessible spp : statistics)
         {
-            statisticsExecutor.deRegisterRecurringRunnable(spp);
+            statisticsExecutor.deRegisterRecurringProcessible(spp);
         }
         // Stop the StatTransports added to this StatsManager in the specified
         // bundleContext.
-        for (TransportPeriodicRunnable tpp : transports)
+        for (TransportPeriodicProcessible tpp : transports)
         {
-            transportExecutor.deRegisterRecurringRunnable(tpp);
+            transportExecutor.deRegisterRecurringProcessible(tpp);
 
             tpp.o.stop(bundleContext);
         }
     }
 
     /**
-     * Implements a {@link RecurringRunnable} which periodically generates a
+     * Implements a {@link RecurringProcessible} which periodically generates a
      * specific (set of) {@link Statistics}.
      */
-    private static class StatisticsPeriodicRunnable
-        extends PeriodicRunnableWithObject<Statistics>
+    private static class StatisticsPeriodicProcessible
+        extends PeriodicProcessibleWithObject<Statistics>
     {
         /**
-         * Initializes a new {@code StatisticsPeriodicRunnable} instance
+         * Initializes a new {@code StatisticsPeriodicProcessible} instance
          * which is to {@code period}ically generate {@code statistics}.
          *
          * @param statistics the {@code Statistics} to be {@code period}ically
@@ -303,7 +303,7 @@ public class StatsManager
          * @param period the time in milliseconds between consecutive
          * generations of {@code statistics}
          */
-        public StatisticsPeriodicRunnable(
+        public StatisticsPeriodicProcessible(
                 Statistics statistics,
                 long period)
         {
@@ -316,21 +316,21 @@ public class StatsManager
          * Invokes {@link Statistics#generate()} on {@link #o}.
          */
         @Override
-        protected void doRun()
+        protected void doProcess()
         {
             o.generate();
         }
     }
 
     /**
-     * Implements a {@link RecurringRunnable} which periodically publishes
+     * Implements a {@link RecurringProcessible} which periodically publishes
      * {@link #statistics} through a specific {@link StatsTransport}.
      */
-    private class TransportPeriodicRunnable
-        extends PeriodicRunnableWithObject<StatsTransport>
+    private class TransportPeriodicProcessible
+        extends PeriodicProcessibleWithObject<StatsTransport>
     {
         /**
-         * Initializes a new {@code StatisticsPeriodicRunnable} instance
+         * Initializes a new {@code StatisticsPeriodicProcessible} instance
          * which is to {@code period}ically generate {@code statistics}.
          *
          * @param transport the {@code StatsTransport} to {@code period}ically
@@ -338,7 +338,7 @@ public class StatsManager
          * @param period the time in milliseconds between consecutive
          * invocations of {@code publishStatistics()} on {@code transport}
          */
-        public TransportPeriodicRunnable(
+        public TransportPeriodicProcessible(
                 StatsTransport transport,
                 long period)
         {
@@ -351,13 +351,13 @@ public class StatsManager
          * Invokes {@link StatsTransport#publishStatistics(Statistics, long)} on
          * {@link #o}.
          */
-        protected void doRun()
+        protected void doProcess()
         {
             long transportPeriod = getPeriod();
 
             // XXX The field statistics is a CopyOnWriteArrayList in order to
             // avoid synchronization here.
-            for (StatisticsPeriodicRunnable spp
+            for (StatisticsPeriodicProcessible spp
                     : StatsManager.this.statistics)
             {
                 // A Statistics instance is associated with a period and a

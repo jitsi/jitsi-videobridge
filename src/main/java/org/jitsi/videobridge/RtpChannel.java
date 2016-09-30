@@ -226,6 +226,12 @@ public class RtpChannel
     private byte rtxAssociatedPayloadType = -1;
 
     /**
+     * The payload type number configured for RED (RFC-2198) for this channel,
+     * or -1 if none is configured (the other end does not support red).
+     */
+    private byte redPayloadType = -1;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -1367,6 +1373,7 @@ public class RtpChannel
                 }
 
                 rtxPayloadType = -1;
+                redPayloadType = -1;
                 for (PayloadTypePacketExtension ext : payloadTypes)
                 {
                     if (Constants.RTX.equalsIgnoreCase(ext.getName()))
@@ -1379,6 +1386,11 @@ public class RtpChannel
                                         = Byte.valueOf(ppe.getValue());
 
                         }
+                    }
+
+                    if (Constants.RED.equalsIgnoreCase(ext.getName()))
+                    {
+                        redPayloadType = (byte) ext.getID();
                     }
                 }
 
@@ -1899,6 +1911,17 @@ public class RtpChannel
     }
 
     /**
+     * Returns the payload type number for the RED payload type (RFC-2198) for
+     * this channel.
+     * @return the payload type number for the RED payload type (RFC-2198) for
+     * this channel.
+     */
+    public byte getRedPayloadType()
+    {
+        return redPayloadType;
+    }
+
+    /**
      * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
      * any. If none is found, returns -1.
      *
@@ -1966,121 +1989,6 @@ public class RtpChannel
     public RtpChannelTransformEngine getTransformEngine()
     {
         return this.transformEngine;
-    }
-
-    /**
-     * Creates the {@code MediaStreamTrack}s from signaling and adds them to the
-     * {@code MediaStream} that is associated to this {@code RtpChannel}.
-     *
-     * @param sources  The <tt>List</tt> of <tt>SourcePacketExtension</tt> that
-     * describes the list of sources of this <tt>RtpChannel</tt> and that is
-     * used as the input in the update of the Sets the <tt>Set</tt> of the SSRCs
-     * that this <tt>RtpChannel</tt> has signaled.
-     * @param sourceGroups
-     */
-    public void setMediaStreamTracks(
-        List<SourcePacketExtension> sources,
-        List<SourceGroupPacketExtension> sourceGroups)
-    {
-        if ((sources == null || sources.isEmpty())
-            && (sourceGroups == null || sourceGroups.isEmpty()))
-        {
-            return;
-        }
-
-        this.setSources(sources); // TODO remove and rely on MSTs.
-        this.setSourceGroups(sourceGroups); // TODO remove and rely on MSTs.
-
-        Map<Long, MediaStreamTrack> tracksBySSRC = new TreeMap<>();
-        Map<Long, long[]> encodings = new TreeMap<>();
-
-        List<Long> freeSSRCs = new ArrayList<>();
-
-        if (sources != null && sources.size() != 0)
-        {
-            for (SourcePacketExtension spe : sources)
-            {
-                freeSSRCs.add(spe.getSSRC());
-            }
-        }
-
-        if (sourceGroups != null && sourceGroups.size() != 0)
-        {
-            for (SourceGroupPacketExtension sgpe : sourceGroups)
-            {
-                if ("sim".equalsIgnoreCase(sgpe.getSemantics())
-                    && sgpe.getSources() != null
-                    && sgpe.getSources().size() >= 2)
-                {
-                    // Every simulcast group determines an mst with a bunch of
-                    // encodings.
-                    MediaStreamTrack track = new MediaStreamTrack();
-
-                    int order = RTPEncoding.BASE_ORDER;
-                    for (SourcePacketExtension spe : sgpe.getSources())
-                    {
-                        long primarySSRC = spe.getSSRC();
-                        freeSSRCs.remove(primarySSRC);
-
-                        long[] encoding = new long[] { -1, -1, -1 };
-                        encoding[0] = primarySSRC;
-                        encoding[1] = order++;
-
-                        encodings.put(primarySSRC, encoding);
-                        tracksBySSRC.put(primarySSRC, track);
-                    }
-                }
-                else if ("fid".equalsIgnoreCase(sgpe.getSemantics())
-                    && sgpe.getSources() != null
-                    && sgpe.getSources().size() == 2)
-                {
-                    Long primarySSRC = sgpe.getSources().get(0).getSSRC();
-                    freeSSRCs.remove(primarySSRC);
-                    Long rtxSSRC = sgpe.getSources().get(1).getSSRC();
-                    freeSSRCs.remove(rtxSSRC);
-
-                    long[] encoding = encodings.get(primarySSRC);
-                    if (encoding == null)
-                    {
-                        // if we don't have an encoding, then we don't have
-                        // an mst. create both.
-                        MediaStreamTrack track = new MediaStreamTrack();
-                        tracksBySSRC.put(primarySSRC, track);
-
-                        encoding = new long[] { -1, -1, -1 };
-                        encoding[0] = primarySSRC;
-                        encoding[1] = RTPEncoding.BASE_ORDER;
-
-                        encodings.put(primarySSRC, encoding);
-                        tracksBySSRC.put(primarySSRC, track);
-                    }
-
-                    encoding[2] = rtxSSRC;
-                }
-            }
-        }
-
-        for (Map.Entry<Long, MediaStreamTrack> entry : tracksBySSRC.entrySet())
-        {
-            MediaStreamTrack track = entry.getValue();
-            long[] encoding = encodings.get(entry.getKey());
-            track.addEncoding(encoding[0], encoding[2], -1, (int) encoding[1]);
-        }
-
-        Map<Long, MediaStreamTrack> remoteTracks = stream.getRemoteTracks();
-
-        synchronized (remoteTracks)
-        {
-            remoteTracks.clear();
-            remoteTracks.putAll(tracksBySSRC);
-
-            for (Long primarySSRC : freeSSRCs)
-            {
-                MediaStreamTrack mst = new MediaStreamTrack();
-                mst.addEncoding(primarySSRC, -1, -1, RTPEncoding.BASE_ORDER);
-                remoteTracks.put(primarySSRC, mst);
-            }
-        }
     }
 
 

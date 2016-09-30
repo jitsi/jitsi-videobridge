@@ -54,11 +54,11 @@ class CallStatsConferenceStatsHandler
         = { MediaType.AUDIO, MediaType.VIDEO };
 
     /**
-     * The {@link RecurringRunnableExecutor} which periodically invokes
+     * The {@link RecurringProcessibleExecutor} which periodically invokes
      * generating and pushing statistics per conference for every Channel.
      */
-    private static final RecurringRunnableExecutor statisticsExecutor
-        = new RecurringRunnableExecutor(
+    private static final RecurringProcessibleExecutor statisticsExecutor
+        = new RecurringProcessibleExecutor(
         CallStatsConferenceStatsHandler.class.getSimpleName()
             + "-statisticsExecutor");
 
@@ -81,7 +81,7 @@ class CallStatsConferenceStatsHandler
      * List of the processor per conference. Kept in order to stop and
      * deRegister them from the executor.
      */
-    private final Map<Conference,ConferencePeriodicRunnable>
+    private final Map<Conference,ConferencePeriodicProcessible>
         statisticsProcessors
             = new ConcurrentHashMap<>();
 
@@ -117,10 +117,10 @@ class CallStatsConferenceStatsHandler
      */
     void stop()
     {
-        // Let's stop all left runnables.
-        for (ConferencePeriodicRunnable cpr : statisticsProcessors.values())
+        // Let's stop all left processibles.
+        for (ConferencePeriodicProcessible cpp : statisticsProcessors.values())
         {
-            statisticsExecutor.deRegisterRecurringRunnable(cpr);
+            statisticsExecutor.deRegisterRecurringProcessible(cpp);
         }
     }
 
@@ -165,14 +165,14 @@ class CallStatsConferenceStatsHandler
             return;
         }
 
-        // Create a new PeriodicRunnable and start it.
-        ConferencePeriodicRunnable cpr
-            = new ConferencePeriodicRunnable(conference, interval);
-        cpr.start();
+        // Create a new PeriodicProcessible and start it.
+        ConferencePeriodicProcessible cpp
+            = new ConferencePeriodicProcessible(conference, interval);
+        cpp.start();
 
         // register for periodic execution.
-        this.statisticsProcessors.put(conference, cpr);
-        this.statisticsExecutor.registerRecurringRunnable(cpr);
+        this.statisticsProcessors.put(conference, cpp);
+        this.statisticsExecutor.registerRecurringProcessible(cpp);
     }
 
     /**
@@ -189,22 +189,22 @@ class CallStatsConferenceStatsHandler
             return;
         }
 
-        ConferencePeriodicRunnable cpr
+        ConferencePeriodicProcessible cpp
             = statisticsProcessors.remove(conference);
 
-        if (cpr == null)
+        if (cpp == null)
             return;
 
-        cpr.stop();
-        statisticsExecutor.deRegisterRecurringRunnable(cpr);
+        cpp.stop();
+        statisticsExecutor.deRegisterRecurringProcessible(cpp);
     }
 
     /**
-     * Implements a {@link RecurringRunnable} which periodically generates a
+     * Implements a {@link RecurringProcessible} which periodically generates a
      * statistics for the conference channels.
      */
-    private class ConferencePeriodicRunnable
-        extends PeriodicRunnableWithObject<Conference>
+    private class ConferencePeriodicProcessible
+        extends PeriodicProcessibleWithObject<Conference>
     {
         /**
          * The user info object used to identify the reports to callstats. Holds
@@ -218,7 +218,7 @@ class CallStatsConferenceStatsHandler
         private final String conferenceID;
 
         /**
-         * Initializes a new {@code ConferencePeriodicRunnable} instance
+         * Initializes a new {@code ConferencePeriodicProcessible} instance
          * which is to {@code period}ically generate statistics for the
          * conference channels.
          *
@@ -227,7 +227,7 @@ class CallStatsConferenceStatsHandler
          * @param period the time in milliseconds between consecutive
          * generations of statistics
          */
-        public ConferencePeriodicRunnable(
+        public ConferencePeriodicProcessible(
                 Conference conference,
                 long period)
         {
@@ -244,7 +244,7 @@ class CallStatsConferenceStatsHandler
          * Invokes {@link Statistics#generate()} on {@link #o}.
          */
         @Override
-        protected void doRun()
+        protected void doProcess()
         {
             // if userInfo is missing the method conferenceSetupResponse
             // is not called, means callstats still has not setup internally
@@ -386,11 +386,11 @@ class CallStatsConferenceStatsHandler
         implements CallStatsStartConferenceListener
     {
         /**
-         * Weak reference for the ConferencePeriodicRunnable, to make sure
+         * Weak reference for the ConferencePeriodicProcessible, to make sure
          * if this listener got leaked somwehere in callstats we will not keep
          * reference to conferences and such.
          */
-        private final WeakReference<ConferencePeriodicRunnable> processible;
+        private final WeakReference<ConferencePeriodicProcessible> processible;
 
         /**
          * Creates listener.
@@ -398,7 +398,7 @@ class CallStatsConferenceStatsHandler
          * successful setup of conference in callstats.
          */
         CSStartConferenceListener(
-            WeakReference<ConferencePeriodicRunnable> processible)
+            WeakReference<ConferencePeriodicProcessible> processible)
         {
             this.processible = processible;
         }
@@ -406,7 +406,7 @@ class CallStatsConferenceStatsHandler
         @Override
         public void onResponse(String ucid)
         {
-            ConferencePeriodicRunnable p = processible.get();
+            ConferencePeriodicProcessible p = processible.get();
 
             // maybe null cause it was garbage collected
             if(p != null)
