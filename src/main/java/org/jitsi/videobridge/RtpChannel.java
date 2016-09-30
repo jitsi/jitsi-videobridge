@@ -1982,8 +1982,9 @@ public class RtpChannel
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
-        if ((sources == null || sources.isEmpty())
-            && (sourceGroups == null || sourceGroups.isEmpty()))
+        boolean hasSources, hasGroups = false;
+        if (!(hasSources = sources != null && !sources.isEmpty())
+            && !(hasGroups = sourceGroups != null && !sourceGroups.isEmpty()))
         {
             return;
         }
@@ -1996,7 +1997,7 @@ public class RtpChannel
 
         List<Long> freeSSRCs = new ArrayList<>();
 
-        if (sources != null && sources.size() != 0)
+        if (hasSources)
         {
             for (SourcePacketExtension spe : sources)
             {
@@ -2004,20 +2005,25 @@ public class RtpChannel
             }
         }
 
-        if (sourceGroups != null && sourceGroups.size() != 0)
+        if (hasGroups)
         {
             for (SourceGroupPacketExtension sgpe : sourceGroups)
             {
+                List<SourcePacketExtension> sgpeSources = sgpe.getSources();
+                if (sgpeSources == null || sgpeSources.isEmpty())
+                {
+                    continue;
+                }
+
                 if ("sim".equalsIgnoreCase(sgpe.getSemantics())
-                    && sgpe.getSources() != null
-                    && sgpe.getSources().size() >= 2)
+                    && sgpeSources.size() >= 2)
                 {
                     // Every simulcast group determines an mst with a bunch of
                     // encodings.
                     MediaStreamTrack track = new MediaStreamTrack();
 
                     int order = RTPEncoding.BASE_ORDER;
-                    for (SourcePacketExtension spe : sgpe.getSources())
+                    for (SourcePacketExtension spe : sgpeSources)
                     {
                         long primarySSRC = spe.getSSRC();
                         freeSSRCs.remove(primarySSRC);
@@ -2031,12 +2037,11 @@ public class RtpChannel
                     }
                 }
                 else if ("fid".equalsIgnoreCase(sgpe.getSemantics())
-                    && sgpe.getSources() != null
-                    && sgpe.getSources().size() == 2)
+                    && sgpeSources.size() == 2)
                 {
-                    Long primarySSRC = sgpe.getSources().get(0).getSSRC();
+                    Long primarySSRC = sgpeSources.get(0).getSSRC();
                     freeSSRCs.remove(primarySSRC);
-                    Long rtxSSRC = sgpe.getSources().get(1).getSSRC();
+                    Long rtxSSRC = sgpeSources.get(1).getSSRC();
                     freeSSRCs.remove(rtxSSRC);
 
                     long[] encoding = encodings.get(primarySSRC);
