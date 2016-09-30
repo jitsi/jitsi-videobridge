@@ -2028,9 +2028,8 @@ public class RtpChannel
                         long primarySSRC = spe.getSSRC();
                         freeSSRCs.remove(primarySSRC);
 
-                        long[] encoding = new long[] { -1, -1, -1 };
-                        encoding[0] = primarySSRC;
-                        encoding[1] = order++;
+                        long[] encoding
+                            = new long[] { primarySSRC, order++, -1 };
 
                         encodings.put(primarySSRC, encoding);
                         tracksBySSRC.put(primarySSRC, track);
@@ -2052,15 +2051,16 @@ public class RtpChannel
                         MediaStreamTrack track = new MediaStreamTrack();
                         tracksBySSRC.put(primarySSRC, track);
 
-                        encoding = new long[] { -1, -1, -1 };
-                        encoding[0] = primarySSRC;
-                        encoding[1] = RTPEncoding.BASE_ORDER;
+                        encoding = new long[]
+                            { primarySSRC, RTPEncoding.BASE_ORDER, rtxSSRC };
 
                         encodings.put(primarySSRC, encoding);
                         tracksBySSRC.put(primarySSRC, track);
                     }
-
-                    encoding[2] = rtxSSRC;
+                    else
+                    {
+                        encoding[2] = rtxSSRC;
+                    }
                 }
             }
         }
