@@ -217,7 +217,7 @@ public class JvbBundleConfig
                 SsrcTransformEngine
                     .DROP_MUTED_AUDIO_SOURCE_IN_REVERSE_TRANSFORM,
                 true_);
-        defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, false_);
+        defaults.put(SRTPCryptoContext.CHECK_REPLAY_PNAME, true_);
 
         // Sends "consent freshness" check every 3 seconds
         defaults.put(
