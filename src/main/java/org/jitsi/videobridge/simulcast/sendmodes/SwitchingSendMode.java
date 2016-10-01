@@ -332,7 +332,9 @@ public class SwitchingSendMode
             return;
         }
 
-        SimulcastStream next = simulcastReceiver.getSimulcastStream(nextOrder);
+        SimulcastStream next = simulcastReceiver.getSimulcastStream(
+            nextOrder, getSimulcastSender().getSimulcastSenderManager()
+                .getSimulcastEngine().getVideoChannel().getStream());
 
         // Do NOT switch to hq if it's not streaming.
         if (next == null
@@ -665,7 +667,10 @@ public class SwitchingSendMode
         else
         {
             SimulcastStream override
-                = simulcastReceiver.getSimulcastStream(overrideOrder);
+                = simulcastReceiver.getSimulcastStream(
+                    overrideOrder, getSimulcastSender()
+                    .getSimulcastSenderManager().getSimulcastEngine()
+                    .getVideoChannel().getStream());
             if (override != null)
             {
                 synchronized (sendStreamsSyncRoot)
