@@ -217,7 +217,7 @@ public class LipSyncHack
         // FIXME this is a little ugly
         Long receiveVideoSSRC = sourceVC.getTransformEngine()
             .getSimulcastEngine().getSimulcastReceiver()
-            .getSimulcastStream(0).getPrimarySSRC();
+            .getSimulcastStream(0, targetVC.getStream()).getPrimarySSRC();
 
         synchronized (states)
         {

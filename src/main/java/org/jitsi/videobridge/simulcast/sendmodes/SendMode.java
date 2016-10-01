@@ -58,7 +58,9 @@ public abstract class SendMode
     public void receive(int targetOrder)
     {
         SimulcastStream closestMatch = this.simulcastSender
-            .getSimulcastReceiver().getSimulcastStream(targetOrder);
+            .getSimulcastReceiver().getSimulcastStream(
+                targetOrder, simulcastSender.getSimulcastSenderManager()
+                    .getSimulcastEngine().getVideoChannel().getStream());
 
         receive(closestMatch);
     }

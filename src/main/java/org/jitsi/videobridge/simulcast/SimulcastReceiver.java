@@ -17,6 +17,7 @@ package org.jitsi.videobridge.simulcast;
 
 import org.jitsi.service.configuration.*;
 import org.jitsi.impl.neomedia.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import java.util.concurrent.*;
 
@@ -185,7 +186,7 @@ public class SimulcastReceiver
      * @return a <tt>SimulcastStream</tt> that is the closest match to the
      * target order, or null.
      */
-    public SimulcastStream getSimulcastStream(int targetOrder)
+    public SimulcastStream getSimulcastStream(int targetOrder, MediaStream sender)
     {
         SimulcastStream[] simStreams = getSimulcastStreams();
         if (simStreams == null || simStreams.length == 0)
@@ -197,14 +198,24 @@ public class SimulcastReceiver
         // that matches the targetOrder parameter best.
         SimulcastStream next = simStreams[0];
 
+        if (sender.getStreamRTPManager().getRemoteClockEstimator()
+            .getRemoteClock(next.getPrimarySSRC()) == null)
+        {
+            return next;
+        }
+
         for (int i = 1, end = Math.min(targetOrder + 1, simStreams.length);
                 i < end;
                 i++)
         {
             SimulcastStream ss = simStreams[i];
 
-            if (ss.isStreaming())
+            if (ss.isStreaming() && sender.getStreamRTPManager()
+                .getRemoteClockEstimator()
+                .getRemoteClock(ss.getPrimarySSRC()) != null)
+            {
                 next = ss;
+            }
             else
                 break;
         }

@@ -231,7 +231,8 @@ public class SimulcastSenderManager
             if (senderTargetOrder >= max)
             {
                 SimulcastStream ss
-                    = entry.getKey().getSimulcastStream(senderTargetOrder);
+                    = entry.getKey().getSimulcastStream(senderTargetOrder,
+                    simulcastEngine.getVideoChannel().getStream());
                 if (ss != null && ss.isStreaming())
                     max = senderTargetOrder;
             }
