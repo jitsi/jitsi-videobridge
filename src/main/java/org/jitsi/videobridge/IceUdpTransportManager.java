@@ -1839,21 +1839,24 @@ public class IceUdpTransportManager
     {
         iceConnected = true;
 
-        Transport transport = getTransport();
-        if (transport == null)
+        if (conference.includeInStatistics())
         {
-            logger.warn("Cannot get transport type.");
-        }
-        else
-        {
-            Conference.Statistics statistics = conference.getStatistics();
-            if (transport == Transport.TCP || transport == Transport.SSLTCP)
+            Transport transport = getTransport();
+            if (transport == null)
             {
-                statistics.totalTcpTransportManagers.incrementAndGet();
+                logger.warn("Cannot get transport type.");
             }
-            else if (transport == Transport.UDP)
+            else
             {
-                statistics.totalUdpTransportManagers.incrementAndGet();
+                Conference.Statistics statistics = conference.getStatistics();
+                if (transport == Transport.TCP || transport == Transport.SSLTCP)
+                {
+                    statistics.totalTcpTransportManagers.incrementAndGet();
+                }
+                else if (transport == Transport.UDP)
+                {
+                    statistics.totalUdpTransportManagers.incrementAndGet();
+                }
             }
         }
 
