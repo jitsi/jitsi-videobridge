@@ -226,12 +226,6 @@ public class RtpChannel
     private byte rtxAssociatedPayloadType = -1;
 
     /**
-     * The payload type number configured for RED (RFC-2198) for this channel,
-     * or -1 if none is configured (the other end does not support red).
-     */
-    private byte redPayloadType = -1;
-
-    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -1373,7 +1367,6 @@ public class RtpChannel
                 }
 
                 rtxPayloadType = -1;
-                redPayloadType = -1;
                 for (PayloadTypePacketExtension ext : payloadTypes)
                 {
                     if (Constants.RTX.equalsIgnoreCase(ext.getName()))
@@ -1386,11 +1379,6 @@ public class RtpChannel
                                         = Byte.valueOf(ppe.getValue());
 
                         }
-                    }
-
-                    if (Constants.RED.equalsIgnoreCase(ext.getName()))
-                    {
-                        redPayloadType = (byte) ext.getID();
                     }
                 }
 
@@ -1911,17 +1899,6 @@ public class RtpChannel
     }
 
     /**
-     * Returns the payload type number for the RED payload type (RFC-2198) for
-     * this channel.
-     * @return the payload type number for the RED payload type (RFC-2198) for
-     * this channel.
-     */
-    public byte getRedPayloadType()
-    {
-        return redPayloadType;
-    }
-
-    /**
      * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
      * any. If none is found, returns -1.
      *
@@ -1989,6 +1966,124 @@ public class RtpChannel
     public RtpChannelTransformEngine getTransformEngine()
     {
         return this.transformEngine;
+    }
+
+    /**
+     * Creates the {@code MediaStreamTrack}s from signaling and adds them to the
+     * {@code MediaStream} that is associated to this {@code RtpChannel}.
+     *
+     * @param sources  The <tt>List</tt> of <tt>SourcePacketExtension</tt> that
+     * describes the list of sources of this <tt>RtpChannel</tt> and that is
+     * used as the input in the update of the Sets the <tt>Set</tt> of the SSRCs
+     * that this <tt>RtpChannel</tt> has signaled.
+     * @param sourceGroups
+     */
+    public void setMediaStreamTracks(
+        List<SourcePacketExtension> sources,
+        List<SourceGroupPacketExtension> sourceGroups)
+    {
+        boolean hasSources = sources != null && !sources.isEmpty();
+        boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
+        if (!hasSources && !hasGroups)
+        {
+            return;
+        }
+
+        this.setSources(sources); // TODO remove and rely on MSTs.
+        this.setSourceGroups(sourceGroups); // TODO remove and rely on MSTs.
+
+        Map<Long, MediaStreamTrack> tracks = new TreeMap<>();
+        if (hasGroups)
+        {
+            List<SourceGroupPacketExtension> simGroups = new ArrayList<>();
+            Map<Long, Long> rtxPairs = new TreeMap<>();
+
+            for (SourceGroupPacketExtension sg : sourceGroups)
+            {
+                List<SourcePacketExtension> groupSources = sg.getSources();
+                if (groupSources == null || groupSources.isEmpty())
+                {
+                    continue;
+                }
+
+                if ("sim".equalsIgnoreCase(sg.getSemantics())
+                    && groupSources.size() >= 2)
+                {
+                    simGroups.add(sg);
+                }
+                else if ("fid".equalsIgnoreCase(sg.getSemantics())
+                    && groupSources.size() == 2)
+                {
+                    rtxPairs.put(
+                        groupSources.get(0).getSSRC(),
+                        groupSources.get(1).getSSRC());
+                }
+            }
+
+            if (!simGroups.isEmpty())
+            {
+                for (SourceGroupPacketExtension simGroup : simGroups)
+                {
+                    MediaStreamTrack track = new MediaStreamTrack();
+
+                    int order = RTPEncoding.BASE_ORDER;
+                    for (SourcePacketExtension spe : simGroup.getSources())
+                    {
+                        Long primarySSRC = spe.getSSRC();
+                        Long rtxSSRC = rtxPairs.remove(primarySSRC);
+                        if (rtxSSRC != null)
+                        {
+                            track.addEncoding(primarySSRC, rtxSSRC, -1, order);
+                            tracks.put(primarySSRC, track);
+                            tracks.put(rtxSSRC, track);
+                        }
+                        else
+                        {
+                            track.addEncoding(primarySSRC, -1, -1, order);
+                            tracks.put(primarySSRC, track);
+                        }
+
+                        order++;
+                    }
+                }
+            }
+
+            if (!rtxPairs.isEmpty())
+            {
+                for (Map.Entry<Long, Long> fidEntry : rtxPairs.entrySet())
+                {
+                    MediaStreamTrack track = new MediaStreamTrack();
+                    Long primarySSRC = fidEntry.getKey();
+                    Long rtxSSRC = fidEntry.getValue();
+
+                    track.addEncoding(
+                        primarySSRC, rtxSSRC, -1, RTPEncoding.BASE_ORDER);
+                }
+            }
+        }
+
+        Map<Long, MediaStreamTrack> remoteTracks = stream.getRemoteTracks();
+        synchronized (remoteTracks)
+        {
+            remoteTracks.clear();
+            remoteTracks.putAll(tracks);
+
+            if (hasSources)
+            {
+                for (SourcePacketExtension spe : sources)
+                {
+                    long mediaSSRC = spe.getSSRC();
+                    if (remoteTracks.get(mediaSSRC) != null)
+                    {
+                        continue;
+                    }
+
+                    MediaStreamTrack mst = new MediaStreamTrack();
+                    mst.addEncoding(mediaSSRC, -1, -1, RTPEncoding.BASE_ORDER);
+                    remoteTracks.put(mediaSSRC, mst);
+                }
+            }
+        }
     }
 
 

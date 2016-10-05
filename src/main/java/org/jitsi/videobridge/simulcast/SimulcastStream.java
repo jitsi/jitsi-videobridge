@@ -16,7 +16,6 @@
 package org.jitsi.videobridge.simulcast;
 
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.codec.video.vp8.*;
 
 /**
  * The <tt>SimulcastStream</tt> of a <tt>SimulcastReceiver</tt> represents a
