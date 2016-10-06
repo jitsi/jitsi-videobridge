@@ -259,6 +259,12 @@ public class PubSubPublisher
                 new NodeExtension(PubSubElementType.CREATE, nodeName));
 
         pendingCreateRequests.put(packetID, nodeName);
+
+        // Send the request before starting the timer, as we have observed
+        // sending to be significantly delayed (possibly waiting for the XMPP
+        // component connection to become ready).
+        send(request);
+
         timeoutTimer.schedule(
                 new TimerTask()
                 {
@@ -274,8 +280,6 @@ public class PubSubPublisher
                     }
                 },
                 PACKET_TIMEOUT);
-
-        send(request);
     }
 
     /**
