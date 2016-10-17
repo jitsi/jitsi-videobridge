@@ -7,8 +7,9 @@ import java.util.*;
 /**
  * OSGi bundles description for the Openfire Jitsi Videobridge plugin.
  *
- * This implementation takes the bundle that ships with the Jitsi Videobridge plugin, and filters out the bundles that
- * are not applicable to the Openfire plugin.
+ * This implementation takes the bundle that ships with the Jitsi Videobridge
+ * plugin, and filters out the bundles that are not applicable to the Openfire
+ * plugin.
  *
  * @author Guus der Kinderen, guus.der.kinderen@gmail.com
  */
@@ -24,7 +25,8 @@ public class JvbOpenfireBundleConfig extends JvbBundleConfig
 
         // Very first activator: logging!
         final List<String> logging = new ArrayList<>();
-        logging.add( "org.jitsi.videobridge.openfire.SLF4JBridgeHandlerBundleActivator" );
+        logging.add(
+            "org.jitsi.videobridge.openfire.SLF4JBridgeHandlerBundleActivator");
         logging.add( "org.slf4j.osgi.logservice.impl.Activator" );
         result.add( 0, logging );
 
@@ -33,9 +35,10 @@ public class JvbOpenfireBundleConfig extends JvbBundleConfig
         while ( iterator.hasNext() )
         {
             final List<String> bundles = iterator.next();
-            if ( bundles.remove( "org/jitsi/videobridge/rest/RESTBundleActivator" ) && bundles.isEmpty() )
+            if (bundles.remove("org/jitsi/videobridge/rest/RESTBundleActivator")
+                && bundles.isEmpty() )
             {
-                // Delete the bundle if we removed the only activator that was in it.
+                // Delete the bundle if we removed the only activator.
                 iterator.remove();
             }
         }
@@ -49,7 +52,8 @@ public class JvbOpenfireBundleConfig extends JvbBundleConfig
         final List<List<String>> result = new ArrayList<>();
         for ( final String[] array : matrix )
         {
-            // Can't use Arrays.asList(), as the returned list does not implement List#remove()
+            // Can't use Arrays.asList(), as the returned list does not
+            // implement List#remove()
             final List<String> entries = new ArrayList<>();
             Collections.addAll( entries, array );
             result.add( entries );

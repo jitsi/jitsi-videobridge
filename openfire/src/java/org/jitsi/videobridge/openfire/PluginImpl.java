@@ -27,6 +27,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.openfire.XMPPServer;
+import org.jivesoftware.openfire.XMPPServerInfo;
 import org.jivesoftware.openfire.container.*;
 import org.jivesoftware.util.*;
 import org.slf4j.*;
@@ -137,7 +138,15 @@ public class PluginImpl
                 DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
                 minVal);
 
-        checkNatives();
+        try
+        {
+            checkNatives();
+        }
+        catch ( Exception e )
+        {
+            Log.warn( "An unexpected error occurred while checking the " +
+                "native libraries.", e );
+        }
 
         ComponentManager componentManager
             = ComponentManagerFactory.getComponentManager();
@@ -149,9 +158,10 @@ public class PluginImpl
         // deployed as an Openfire plugin. None of the values below are expected
         // to be used (but where possible, valid values are provided for good
         // measure).
-        final String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
+        final XMPPServerInfo info = XMPPServer.getInstance().getServerInfo();
+        final String hostname = info.getHostname();
         final int port = -1;
-        final String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        final String domain = info.getXMPPDomain();
         final String secret = null;
 
         // The ComponentImpl implementation depends on OSGI-based loading of
@@ -161,7 +171,8 @@ public class PluginImpl
         final OSGiBundleConfig osgiBundles = new JvbOpenfireBundleConfig();
         OSGi.setBundleConfig(osgiBundles);
 
-        ComponentImpl component = new ComponentImpl( hostname, port, domain, subdomain, secret );
+        ComponentImpl component =
+            new ComponentImpl( hostname, port, domain, subdomain, secret );
 
         boolean added = false;
 
@@ -172,7 +183,8 @@ public class PluginImpl
         }
         catch (ComponentException ce)
         {
-            Log.error( "An exception occurred when loading the plugin: the component could not be added.", ce );
+            Log.error( "An exception occurred when loading the plugin: " +
+                "the component could not be added.", ce );
         }
         if (added)
         {
@@ -193,110 +205,110 @@ public class PluginImpl
      * If folder with natives exist add it to the java.library.path so
      * libjitsi can use those native libs.
      */
-    private void checkNatives()
+    private void checkNatives() throws Exception
     {
         // Find the root path of the class that will be our plugin lib folder.
-        try
+        String binaryPath =
+            (new URL(ComponentImpl.class.getProtectionDomain()
+                .getCodeSource().getLocation(), ".")).openConnection()
+                .getPermission().getName();
+
+        File pluginJarfile = new File(binaryPath);
+        File nativeLibFolder =
+            new File(pluginJarfile.getParentFile(), "native");
+
+        if(!nativeLibFolder.exists())
         {
-            String binaryPath =
-                (new URL(ComponentImpl.class.getProtectionDomain()
-                    .getCodeSource().getLocation(), ".")).openConnection()
-                    .getPermission().getName();
-
-            File pluginJarfile = new File(binaryPath);
-            File nativeLibFolder =
-                new File(pluginJarfile.getParentFile(), "native");
-
-            if(!nativeLibFolder.exists())
+            // lets find the appropriate jar file to extract and
+            // extract it
+            String jarFileSuffix = null;
+            if ( OSUtils.IS_LINUX32 )
             {
-                // lets find the appropriate jar file to extract and
-                // extract it
-                String jarFileSuffix = null;
-                if ( OSUtils.IS_LINUX32 )
-                {
-                    jarFileSuffix = "-native-linux-32.jar";
-                }
-                else if ( OSUtils.IS_LINUX64 )
-                {
-                    jarFileSuffix = "-native-linux-64.jar";
-                }
-                else if ( OSUtils.IS_WINDOWS32 )
-                {
-                    jarFileSuffix = "-native-windows-32.jar";
-                }
-                else if ( OSUtils.IS_WINDOWS64 )
-                {
-                    jarFileSuffix = "-native-windows-64.jar";
-                }
-                else if ( OSUtils.IS_MAC )
-                {
-                    jarFileSuffix = "-native-macosx.jar";
-                }
+                jarFileSuffix = "-native-linux-32.jar";
+            }
+            else if ( OSUtils.IS_LINUX64 )
+            {
+                jarFileSuffix = "-native-linux-64.jar";
+            }
+            else if ( OSUtils.IS_WINDOWS32 )
+            {
+                jarFileSuffix = "-native-windows-32.jar";
+            }
+            else if ( OSUtils.IS_WINDOWS64 )
+            {
+                jarFileSuffix = "-native-windows-64.jar";
+            }
+            else if ( OSUtils.IS_MAC )
+            {
+                jarFileSuffix = "-native-macosx.jar";
+            }
 
-                if ( jarFileSuffix == null )
+            if ( jarFileSuffix == null )
+            {
+                Log.warn( "Unable to determine what the native libraries are " +
+                    "for this OS." );
+            }
+            else if ( nativeLibFolder.mkdirs() )
+            {
+                String nativeLibsJarPath = pluginJarfile.getCanonicalPath();
+                nativeLibsJarPath = nativeLibsJarPath.replaceFirst( "\\.jar",
+                    jarFileSuffix );
+                Log.debug("Applicable native jar: '{}'", nativeLibsJarPath);
+                JarFile jar = new JarFile( nativeLibsJarPath );
+                Enumeration en = jar.entries();
+                while ( en.hasMoreElements() )
                 {
-                    Log.warn( "Unable to determine what the native libraries are for this OS." );
-                }
-                else if ( nativeLibFolder.mkdirs() )
-                {
-
-                    String nativeLibsJarPath = pluginJarfile.getCanonicalPath();
-                    nativeLibsJarPath = nativeLibsJarPath.replaceFirst( "\\.jar", jarFileSuffix );
-                    Log.debug( "Applicable native jar: '{}'.", nativeLibsJarPath );
-                    JarFile jar = new JarFile( nativeLibsJarPath );
-                    Enumeration en = jar.entries();
-                    while ( en.hasMoreElements() )
+                    try
                     {
-                        try
+                        JarEntry jarEntry = (JarEntry) en.nextElement();
+                        if ( jarEntry.isDirectory() || jarEntry.getName()
+                                                            .contains( "/" ) )
                         {
-                            final JarEntry jarEntry = (JarEntry) en.nextElement();
-                            if ( jarEntry.isDirectory() || jarEntry.getName().contains( "/" ) )
-                            {
-                                // Skip everything that's not in the root of the jar-file.
-                                continue;
-                            }
-                            final File extractedFile = new File( nativeLibFolder, jarEntry.getName() );
-                            Log.debug( "Copying file '{}' from native library into '{}'.", jarEntry, extractedFile );
-
-                            try ( final InputStream is = jar.getInputStream( jarEntry );
-                                  final FileOutputStream fos = new FileOutputStream( extractedFile ) )
-                            {
-                                while ( is.available() > 0 )
-                                {
-                                    fos.write( is.read() );
-                                }
-                            }
+                            // Skip everything that's not in the root of the
+                            // jar-file.
+                            continue;
                         }
-                        catch ( Throwable t )
+                        final File extractedFile = new File( nativeLibFolder,
+                                                        jarEntry.getName() );
+                        Log.debug( "Copying file '{}' from native library " +
+                            "into '{}'.", jarEntry, extractedFile );
+
+                        try ( InputStream is = jar.getInputStream( jarEntry );
+                              FileOutputStream fos = new FileOutputStream(
+                                  extractedFile ) )
                         {
-                            Log.warn( "An unexpected error occurred while copying native libraries.", t );
+                            while ( is.available() > 0 )
+                            {
+                                fos.write( is.read() );
+                            }
                         }
                     }
-                    Log.info( "Native lib folder created and natives extracted" );
+                    catch ( Throwable t )
+                    {
+                        Log.warn( "An unexpected error occurred while copying" +
+                            " native libraries.", t );
+                    }
                 }
-                else
-                {
-                    Log.warn( "Unable to create native lib folder." );
-                }
+                Log.info( "Native lib folder created and natives extracted" );
             }
             else
-                Log.info("Native lib folder already exist.");
-
-            String newLibPath =
-                nativeLibFolder.getCanonicalPath() + File.pathSeparator +
-                    System.getProperty("java.library.path");
-
-            System.setProperty("java.library.path", newLibPath);
-
-            // this will reload the new setting
-            Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
-            fieldSysPath.setAccessible(true);
-            fieldSysPath.set(System.class.getClassLoader(), null);
+            {
+                Log.warn( "Unable to create native lib folder." );
+            }
         }
-        catch (Exception e)
-        {
-            Log.error(e.getMessage(), e);
-        }
+        else
+            Log.info("Native lib folder already exist.");
+
+        String newLibPath =
+            nativeLibFolder.getCanonicalPath() + File.pathSeparator +
+                System.getProperty("java.library.path");
+
+        System.setProperty("java.library.path", newLibPath);
+
+        // this will reload the new setting
+        Field fieldSysPath = ClassLoader.class.getDeclaredField("sys_paths");
+        fieldSysPath.setAccessible(true);
+        fieldSysPath.set(System.class.getClassLoader(), null);
     }
 
     /**
@@ -396,8 +408,8 @@ public class PluginImpl
     }
 
     /**
-     * An XML property was set. The parameter map <tt>params</tt> will contain the
-     * the value of the property under the key <tt>value</tt>.
+     * An XML property was set. The parameter map <tt>params</tt> will contain
+     * the the value of the property under the key <tt>value</tt>.
      *
      * @param property the name of the property.
      * @param params event parameters.
