@@ -6,7 +6,8 @@
     <licenseType>other</licenseType>
     <minServerVersion>3.0.0</minServerVersion>
     <name>Jitsi Video Bridge</name>
-    <version>1.0</version>
+    <version>2.0</version>
+    <date>10/17/2016</date>
 
    <adminconsole>
         <tab id="tab-server">

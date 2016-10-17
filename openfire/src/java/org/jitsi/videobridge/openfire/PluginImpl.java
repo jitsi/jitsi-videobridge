@@ -21,9 +21,12 @@ import java.net.*;
 import java.util.*;
 import java.util.jar.*;
 
+import org.jitsi.meet.OSGi;
+import org.jitsi.meet.OSGiBundleConfig;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.container.*;
 import org.jivesoftware.util.*;
 import org.slf4j.*;
@@ -71,19 +74,13 @@ public class PluginImpl
     public static final int MAX_PORT_DEFAULT_VALUE = 6000;
 
     /**
-     * The Jabber component which has been added to {@link #componentManager}
-     * i.e. Openfire.
-     */
-    private Component component;
-
-    /**
-     * The <tt>ComponentManager</tt> to which the {@link #component} of this
+     * The <tt>ComponentManager</tt> to which the component of this
      * <tt>Plugin</tt> has been added.
      */
     private ComponentManager componentManager;
 
     /**
-     * The subdomain of the address of {@link #component} with which it has been
+     * The subdomain of the address of component with which it has been
      * added to {@link #componentManager}.
      */
     private String subdomain;
@@ -111,7 +108,6 @@ public class PluginImpl
             }
             componentManager = null;
             subdomain = null;
-            component = null;
         }
     }
 
@@ -146,7 +142,27 @@ public class PluginImpl
         ComponentManager componentManager
             = ComponentManagerFactory.getComponentManager();
         String subdomain = ComponentImpl.SUBDOMAIN;
-        Component component = new ComponentImpl();
+
+        // The ComponentImpl implementation expects to be an External Component,
+        // which in the case of an Openfire plugin is untrue. As a result, most
+        // of its constructor arguments are unneeded when the instance is
+        // deployed as an Openfire plugin. None of the values below are expected
+        // to be used (but where possible, valid values are provided for good
+        // measure).
+        final String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
+        final int port = -1;
+        final String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        final String secret = null;
+
+        // The ComponentImpl implementation depends on OSGI-based loading of
+        // Components, which is prepared for here. Note that a configuration
+        // is used that is slightly different from the default configuration
+        // for Jitsi Videobridge: the REST API is not loaded.
+        final OSGiBundleConfig osgiBundles = new JvbOpenfireBundleConfig();
+        OSGi.setBundleConfig(osgiBundles);
+
+        ComponentImpl component = new ComponentImpl( hostname, port, domain, subdomain, secret );
+
         boolean added = false;
 
         try
@@ -156,19 +172,17 @@ public class PluginImpl
         }
         catch (ComponentException ce)
         {
-            ce.printStackTrace(System.err);
+            Log.error( "An exception occurred when loading the plugin: the component could not be added.", ce );
         }
         if (added)
         {
             this.componentManager = componentManager;
             this.subdomain = subdomain;
-            this.component = component;
         }
         else
         {
             this.componentManager = null;
             this.subdomain = null;
-            this.component = null;
         }
     }
 
@@ -195,64 +209,74 @@ public class PluginImpl
 
             if(!nativeLibFolder.exists())
             {
-                nativeLibFolder.mkdirs();
-
                 // lets find the appropriate jar file to extract and
                 // extract it
                 String jarFileSuffix = null;
-                if(OSUtils.IS_LINUX32)
+                if ( OSUtils.IS_LINUX32 )
                 {
                     jarFileSuffix = "-native-linux-32.jar";
                 }
-                else if(OSUtils.IS_LINUX64)
+                else if ( OSUtils.IS_LINUX64 )
                 {
                     jarFileSuffix = "-native-linux-64.jar";
                 }
-                else if(OSUtils.IS_WINDOWS32)
+                else if ( OSUtils.IS_WINDOWS32 )
                 {
                     jarFileSuffix = "-native-windows-32.jar";
                 }
-                else if(OSUtils.IS_WINDOWS64)
+                else if ( OSUtils.IS_WINDOWS64 )
                 {
                     jarFileSuffix = "-native-windows-64.jar";
                 }
-                else if(OSUtils.IS_MAC)
+                else if ( OSUtils.IS_MAC )
                 {
                     jarFileSuffix = "-native-macosx.jar";
                 }
 
-                String nativeLibsJarPath =
-                    pluginJarfile.getCanonicalPath();
-                nativeLibsJarPath =
-                    nativeLibsJarPath.replaceFirst("\\.jar", jarFileSuffix);
-
-                JarFile jar = new JarFile(nativeLibsJarPath);
-                Enumeration en = jar.entries();
-                while (en.hasMoreElements())
+                if ( jarFileSuffix == null )
                 {
-                    try
-                    {
-                        JarEntry file = (JarEntry) en.nextElement();
-                        File f = new File(nativeLibFolder, file.getName());
-                        if (file.isDirectory())
-                        {
-                            continue;
-                        }
-
-                        InputStream is = jar.getInputStream(file);
-                        FileOutputStream fos = new FileOutputStream(f);
-                        while (is.available() > 0)
-                        {
-                            fos.write(is.read());
-                        }
-                        fos.close();
-                        is.close();
-                    }
-                    catch(Throwable t)
-                    {}
+                    Log.warn( "Unable to determine what the native libraries are for this OS." );
                 }
+                else if ( nativeLibFolder.mkdirs() )
+                {
+                    String nativeLibsJarPath =
+                        pluginJarfile.getCanonicalPath();
+                    nativeLibsJarPath =
+                        nativeLibsJarPath.replaceFirst( "\\.jar", jarFileSuffix );
 
-                Log.info("Native lib folder created and natives extracted");
+                    JarFile jar = new JarFile( nativeLibsJarPath );
+                    Enumeration en = jar.entries();
+                    while ( en.hasMoreElements() )
+                    {
+                        try
+                        {
+                            JarEntry file = (JarEntry) en.nextElement();
+                            File f = new File( nativeLibFolder, file.getName() );
+                            if ( file.isDirectory() )
+                            {
+                                continue;
+                            }
+
+                            InputStream is = jar.getInputStream( file );
+                            FileOutputStream fos = new FileOutputStream( f );
+                            while ( is.available() > 0 )
+                            {
+                                fos.write( is.read() );
+                            }
+                            fos.close();
+                            is.close();
+                        }
+                        catch ( Throwable t )
+                        {
+                            Log.warn( "An unexpected error occurred while copying native libraries.", t );
+                        }
+                    }
+                    Log.info( "Native lib folder created and natives extracted" );
+                }
+                else
+                {
+                    Log.warn( "Unable to create native lib folder." );
+                }
             }
             else
                 Log.info("Native lib folder already exist.");

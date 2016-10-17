@@ -347,8 +347,21 @@
         <copy todir="${dist}/openfire/jitsiVideobridge/lib">
             <fileset dir="lib">
                 <exclude name="native/**"/>
-                <exclude name="bouncycastle.jar"/>
+                <exclude name="bcpg-jdk15on.jar"/>
+                <exclude name="bcpkix-jdk15on.jar"/>
+                <exclude name="bcprov-jdk15on.jar"/>
+                <exclude name="commons-codec-*.jar"/>
+                <exclude name="commons-lang-*.jar"/>
+                <exclude name="commons-logging-*.jar"/>
+                <exclude name="concurrentlinkedhashmap-lru-*.jar"/>
+                <exclude name="dom4j-*.jar"/>
                 <exclude name="jetty-*.jar"/>
+                <exclude name="jzlib-*.jar"/>
+                <exclude name="libidn-*.jar"/>
+                <exclude name="log4j-*.jar"/>
+                <exclude name="slf4j-*.jar"/>
+                <exclude name="xpp3-*.jar"/>
+                <exclude name="tinder-*.jar"/>
             </fileset>
         </copy>
         <jar compress="true"
