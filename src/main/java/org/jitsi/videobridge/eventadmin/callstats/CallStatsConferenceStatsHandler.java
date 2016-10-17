@@ -54,11 +54,6 @@ class CallStatsConferenceStatsHandler
         = { MediaType.AUDIO, MediaType.VIDEO };
 
     /**
-     * The default bridge id to use if setting is missing.
-     */
-    private static final String DEFAULT_BRIDGE_ID = "jitsi";
-
-    /**
      * The {@link RecurringRunnableExecutor} which periodically invokes
      * generating and pushing statistics per conference for every Channel.
      */
@@ -108,10 +103,8 @@ class CallStatsConferenceStatsHandler
         int interval)
     {
         this.callStats = callStats;
+        this.bridgeId = bridgeId;
         this.interval = interval;
-
-        this.bridgeId = StringUtils.isNullOrEmpty(bridgeId) ?
-            DEFAULT_BRIDGE_ID : bridgeId;
 
         this.conferenceIDPrefix = conferenceIDPrefix;
         if(this.conferenceIDPrefix != null
