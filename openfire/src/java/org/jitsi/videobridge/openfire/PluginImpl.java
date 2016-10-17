@@ -21,6 +21,8 @@ import java.net.*;
 import java.util.*;
 import java.util.jar.*;
 
+import org.jitsi.meet.OSGi;
+import org.jitsi.meet.OSGiBundleConfig;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -159,7 +161,15 @@ public class PluginImpl
         final String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
         final String secret = null;
 
-        Component component = new ComponentImpl( hostname, port, domain, subdomain, secret );
+        // The ComponentImpl implementation depends on OSGI-based loading of
+        // Components, which is prepared for here. Note that a configuration
+        // is used that is slightly different from the default configuration
+        // for Jitsi Videobridge: the REST API is not loaded.
+        final OSGiBundleConfig osgiBundles = new JvbOpenfireBundleConfig();
+        OSGi.setBundleConfig(osgiBundles);
+
+        ComponentImpl component = new ComponentImpl( hostname, port, domain, subdomain, secret );
+
         boolean added = false;
 
         try
