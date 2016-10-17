@@ -55,7 +55,7 @@ public abstract class SendMode
      *
      * @param targetOrder
      */
-    public void receive(int targetOrder)
+    public boolean receive(int targetOrder)
     {
         SimulcastStream closestMatch = this.simulcastSender
             .getSimulcastReceiver().getSimulcastStream(
@@ -63,6 +63,8 @@ public abstract class SendMode
                     .getSimulcastEngine().getVideoChannel().getStream());
 
         receive(closestMatch);
+
+        return closestMatch.getOrder() == targetOrder;
     }
     /**
      * Gets a boolean indicating whether the packet has to be accepted or not.

@@ -95,6 +95,11 @@ public class SimulcastSender
     private final Logger logger;
 
     /**
+     * Remembers whether we switched to the desired simulcast order.
+     */
+    private boolean retry = false;
+
+    /**
      * Ctor.
      *
      * @param simulcastSenderManager the <tt>SimulcastSender</tt> that owns this
@@ -385,7 +390,7 @@ public class SimulcastSender
             SendMode sm = this.sendMode;
             if (sm != null)
             {
-                this.sendMode.receive(newTargetOrder);
+                retry = !this.sendMode.receive(newTargetOrder);
             }
         }
     }
@@ -413,6 +418,10 @@ public class SimulcastSender
         }
         else
         {
+            if (retry)
+            {
+                retry = !this.sendMode.receive(targetOrder);
+            }
             return sendMode.accept(pkt);
         }
     }
@@ -482,7 +491,7 @@ public class SimulcastSender
             sendMode = new SwitchingSendMode(this);
         }
 
-        this.sendMode.receive(targetOrder);
+        retry = !this.sendMode.receive(targetOrder);
     }
 
     /**
@@ -571,7 +580,7 @@ public class SimulcastSender
                 return;
             }
 
-            sm.receive(targetOrder);
+            retry = !sm.receive(targetOrder);
         }
     }
 }
