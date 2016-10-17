@@ -119,8 +119,8 @@ public class Activator
                 bundleContext, ConfigurationService.class);
             String bridgeId = ConfigUtils.getString(
                 cfg,
-                "io.callstats.sdk.CallStats.bridgeId",
-                null);
+                CallStatsIOTransport.PNAME_CALLSTATS_IO_BRIDGE_ID,
+                CallStatsIOTransport.DEFAULT_BRIDGE_ID);
             int interval = ConfigUtils.getInt(
                 cfg,
                 StatsManagerBundleActivator.STATISTICS_INTERVAL_PNAME,
@@ -135,7 +135,7 @@ public class Activator
                 interval);
             String conferenceIDPrefix = ConfigUtils.getString(
                 cfg,
-                "io.callstats.sdk.CallStats.conferenceIDPrefix",
+                CallStatsIOTransport.PNAME_CALLSTATS_IO_CONF_PREFIX,
                 null);
 
             conferenceStatsHandler = new CallStatsConferenceStatsHandler();
