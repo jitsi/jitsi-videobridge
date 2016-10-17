@@ -24,6 +24,7 @@ import java.util.jar.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.container.*;
 import org.jivesoftware.util.*;
 import org.slf4j.*;
@@ -146,7 +147,19 @@ public class PluginImpl
         ComponentManager componentManager
             = ComponentManagerFactory.getComponentManager();
         String subdomain = ComponentImpl.SUBDOMAIN;
-        Component component = new ComponentImpl();
+
+        // The ComponentImpl implementation expects to be an External Component,
+        // which in the case of an Openfire plugin is untrue. As a result, most
+        // of its constructor arguments are unneeded when the instance is
+        // deployed as an Openfire plugin. None of the values below are expected
+        // to be used (but where possible, valid values are provided for good
+        // measure).
+        final String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
+        final int port = -1;
+        final String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        final String secret = null;
+
+        Component component = new ComponentImpl( hostname, port, domain, subdomain, secret );
         boolean added = false;
 
         try
