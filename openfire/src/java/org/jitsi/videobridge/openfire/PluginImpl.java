@@ -74,19 +74,13 @@ public class PluginImpl
     public static final int MAX_PORT_DEFAULT_VALUE = 6000;
 
     /**
-     * The Jabber component which has been added to {@link #componentManager}
-     * i.e. Openfire.
-     */
-    private Component component;
-
-    /**
-     * The <tt>ComponentManager</tt> to which the {@link #component} of this
+     * The <tt>ComponentManager</tt> to which the component of this
      * <tt>Plugin</tt> has been added.
      */
     private ComponentManager componentManager;
 
     /**
-     * The subdomain of the address of {@link #component} with which it has been
+     * The subdomain of the address of component with which it has been
      * added to {@link #componentManager}.
      */
     private String subdomain;
@@ -114,7 +108,6 @@ public class PluginImpl
             }
             componentManager = null;
             subdomain = null;
-            component = null;
         }
     }
 
@@ -185,13 +178,11 @@ public class PluginImpl
         {
             this.componentManager = componentManager;
             this.subdomain = subdomain;
-            this.component = component;
         }
         else
         {
             this.componentManager = null;
             this.subdomain = null;
-            this.component = null;
         }
     }
 
