@@ -209,32 +209,36 @@ public class PluginImpl
 
             if(!nativeLibFolder.exists())
             {
-                if (nativeLibFolder.mkdirs())
+                // lets find the appropriate jar file to extract and
+                // extract it
+                String jarFileSuffix = null;
+                if ( OSUtils.IS_LINUX32 )
                 {
-                    // lets find the appropriate jar file to extract and
-                    // extract it
-                    String jarFileSuffix = null;
-                    if ( OSUtils.IS_LINUX32 )
-                    {
-                        jarFileSuffix = "-native-linux-32.jar";
-                    }
-                    else if ( OSUtils.IS_LINUX64 )
-                    {
-                        jarFileSuffix = "-native-linux-64.jar";
-                    }
-                    else if ( OSUtils.IS_WINDOWS32 )
-                    {
-                        jarFileSuffix = "-native-windows-32.jar";
-                    }
-                    else if ( OSUtils.IS_WINDOWS64 )
-                    {
-                        jarFileSuffix = "-native-windows-64.jar";
-                    }
-                    else if ( OSUtils.IS_MAC )
-                    {
-                        jarFileSuffix = "-native-macosx.jar";
-                    }
+                    jarFileSuffix = "-native-linux-32.jar";
+                }
+                else if ( OSUtils.IS_LINUX64 )
+                {
+                    jarFileSuffix = "-native-linux-64.jar";
+                }
+                else if ( OSUtils.IS_WINDOWS32 )
+                {
+                    jarFileSuffix = "-native-windows-32.jar";
+                }
+                else if ( OSUtils.IS_WINDOWS64 )
+                {
+                    jarFileSuffix = "-native-windows-64.jar";
+                }
+                else if ( OSUtils.IS_MAC )
+                {
+                    jarFileSuffix = "-native-macosx.jar";
+                }
 
+                if ( jarFileSuffix == null )
+                {
+                    Log.warn( "Unable to determine what the native libraries are for this OS." );
+                }
+                else if ( nativeLibFolder.mkdirs() )
+                {
                     String nativeLibsJarPath =
                         pluginJarfile.getCanonicalPath();
                     nativeLibsJarPath =
@@ -266,7 +270,6 @@ public class PluginImpl
                         {
                         }
                     }
-
                     Log.info( "Native lib folder created and natives extracted" );
                 }
                 else
