@@ -63,8 +63,19 @@ public class CallStatsIOTransport
     /**
      * The bridge id to report to callstats.io.
      */
-    private static final String PNAME_CALLSTATS_IO_BRIDGE_ID
+    public static final String PNAME_CALLSTATS_IO_BRIDGE_ID
         = "io.callstats.sdk.CallStats.bridgeId";
+
+    /**
+     * The default bridge id to use if setting is missing.
+     */
+    public static final String DEFAULT_BRIDGE_ID = "jitsi";
+
+    /**
+     * The bridge conference prefix to report to callstats.io.
+     */
+    public static final String PNAME_CALLSTATS_IO_CONF_PREFIX
+        = "io.callstats.sdk.CallStats.conferenceIDPrefix";
 
     /**
      * The {@code BridgeStatusInfoBuilder} which initializes new
@@ -246,8 +257,9 @@ public class CallStatsIOTransport
             return;
         }
 
-        String bridgeId
-            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_BRIDGE_ID, null);
+        String bridgeId = ConfigUtils.getString(
+            cfg, PNAME_CALLSTATS_IO_BRIDGE_ID, DEFAULT_BRIDGE_ID);
+
         ServerInfo serverInfo = createServerInfo(bundleContext);
 
         final CallStats callStats = new CallStats();
