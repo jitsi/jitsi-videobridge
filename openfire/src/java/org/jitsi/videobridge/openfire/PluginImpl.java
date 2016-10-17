@@ -172,7 +172,7 @@ public class PluginImpl
         }
         catch (ComponentException ce)
         {
-            ce.printStackTrace(System.err);
+            Log.error( "An exception occurred when loading the plugin: the component could not be added.", ce );
         }
         if (added)
         {
