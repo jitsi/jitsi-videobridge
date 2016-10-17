@@ -82,20 +82,30 @@
 </head>
 <body>
 <% if (errorMessage != null) { %>
-<div class="error">
-    <%= errorMessage%>
+<div class="jive-error">
+    <table cellpadding="0" cellspacing="0" border="0">
+        <tbody>
+        <tr>
+            <td class="jive-icon"><img src="/images/error-16x16.gif" width="16" height="16" border="0" alt=""/></td>
+            <td class="jive-icon-label">
+                <%= errorMessage%>
+            </td>
+        </tr>
+        </tbody>
+    </table>
 </div>
 <br/>
 <% } %>
 
-<div class="jive-table">
-    <form action="jitsi-videobridge.jsp" method="post">
-        <table class="jive-table" cellpadding="0" cellspacing="0" border="0" width="50%">
-            <thead>
-            <tr>
-                <th colspan="2"><fmt:message key="config.page.configuration.title"/></th>
-            </tr>
-            </thead>
+<p>
+    <fmt:message key="config.page.description"/>
+</p>
+<form action="jitsi-videobridge.jsp" method="post">
+    <div class="jive-contentBoxHeader">
+        <fmt:message key="config.page.configuration.title"/>
+    </div>
+    <div class="jive-contentBox">
+        <table cellpadding="0" cellspacing="0" border="0">
             <tbody>
             <tr>
                 <td><label class="jive-label"><fmt:message key="config.page.configuration.min.port"/>:</label><br>
@@ -113,14 +123,11 @@
                            value="<%=plugin.getMaxPort()%>"/>
                 </td>
             </tr>
-            <tr>
-                <th colspan="2"><input type="submit" name="update"
-                                       value="<fmt:message key="config.page.configuration.submit" />"></th>
-            </tr>
             </tbody>
         </table>
-    </form>
-</div>
+    </div>
+    <input type="submit" name="update" value="<fmt:message key="config.page.configuration.submit" />">
+</form>
 
 </body>
 </html>
