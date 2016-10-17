@@ -268,6 +268,7 @@ public class PluginImpl
                         }
                         catch ( Throwable t )
                         {
+                            Log.warn( "An unexpected error occurred while copying native libraries.", t );
                         }
                     }
                     Log.info( "Native lib folder created and natives extracted" );
