@@ -47,6 +47,12 @@ public class JvbOpenfireBundleConfig extends JvbBundleConfig
         return listsToMatrix( result );
     }
 
+    /**
+     * Converts an array-of-arrays into a list-of-lists.
+     *
+     * @param matrix an array-of-arrays.
+     * @return A list-of-lists.
+     */
     public static List<List<String>> matrixToLists( String[][] matrix )
     {
         final List<List<String>> result = new ArrayList<>();
@@ -61,6 +67,12 @@ public class JvbOpenfireBundleConfig extends JvbBundleConfig
         return result;
     }
 
+    /**
+     * Converts a list-of-lists into an array-of-arrays.
+     *
+     * @param lists a list-of-lists.
+     * @return an array-of-arrays.
+     */
     public static String[][] listsToMatrix( List<List<String>> lists )
     {
         final String[][] result = new String[ lists.size() ][];

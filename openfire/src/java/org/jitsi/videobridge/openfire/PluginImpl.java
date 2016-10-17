@@ -409,7 +409,7 @@ public class PluginImpl
 
     /**
      * An XML property was set. The parameter map <tt>params</tt> will contain
-     * the the value of the property under the key <tt>value</tt>.
+     * the value of the property under the key <tt>value</tt>.
      *
      * @param property the name of the property.
      * @param params event parameters.
