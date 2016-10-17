@@ -239,32 +239,33 @@ public class PluginImpl
                 }
                 else if ( nativeLibFolder.mkdirs() )
                 {
-                    String nativeLibsJarPath =
-                        pluginJarfile.getCanonicalPath();
-                    nativeLibsJarPath =
-                        nativeLibsJarPath.replaceFirst( "\\.jar", jarFileSuffix );
 
+                    String nativeLibsJarPath = pluginJarfile.getCanonicalPath();
+                    nativeLibsJarPath = nativeLibsJarPath.replaceFirst( "\\.jar", jarFileSuffix );
+                    Log.debug( "Applicable native jar: '{}'.", nativeLibsJarPath );
                     JarFile jar = new JarFile( nativeLibsJarPath );
                     Enumeration en = jar.entries();
                     while ( en.hasMoreElements() )
                     {
                         try
                         {
-                            JarEntry file = (JarEntry) en.nextElement();
-                            File f = new File( nativeLibFolder, file.getName() );
-                            if ( file.isDirectory() )
+                            final JarEntry jarEntry = (JarEntry) en.nextElement();
+                            if ( jarEntry.isDirectory() || jarEntry.getName().contains( "/" ) )
                             {
+                                // Skip everything that's not in the root of the jar-file.
                                 continue;
                             }
+                            final File extractedFile = new File( nativeLibFolder, jarEntry.getName() );
+                            Log.debug( "Copying file '{}' from native library into '{}'.", jarEntry, extractedFile );
 
-                            InputStream is = jar.getInputStream( file );
-                            FileOutputStream fos = new FileOutputStream( f );
-                            while ( is.available() > 0 )
+                            try ( final InputStream is = jar.getInputStream( jarEntry );
+                                  final FileOutputStream fos = new FileOutputStream( extractedFile ) )
                             {
-                                fos.write( is.read() );
+                                while ( is.available() > 0 )
+                                {
+                                    fos.write( is.read() );
+                                }
                             }
-                            fos.close();
-                            is.close();
                         }
                         catch ( Throwable t )
                         {
