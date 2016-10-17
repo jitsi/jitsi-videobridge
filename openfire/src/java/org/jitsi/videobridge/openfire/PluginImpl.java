@@ -209,64 +209,70 @@ public class PluginImpl
 
             if(!nativeLibFolder.exists())
             {
-                nativeLibFolder.mkdirs();
-
-                // lets find the appropriate jar file to extract and
-                // extract it
-                String jarFileSuffix = null;
-                if(OSUtils.IS_LINUX32)
+                if (nativeLibFolder.mkdirs())
                 {
-                    jarFileSuffix = "-native-linux-32.jar";
-                }
-                else if(OSUtils.IS_LINUX64)
-                {
-                    jarFileSuffix = "-native-linux-64.jar";
-                }
-                else if(OSUtils.IS_WINDOWS32)
-                {
-                    jarFileSuffix = "-native-windows-32.jar";
-                }
-                else if(OSUtils.IS_WINDOWS64)
-                {
-                    jarFileSuffix = "-native-windows-64.jar";
-                }
-                else if(OSUtils.IS_MAC)
-                {
-                    jarFileSuffix = "-native-macosx.jar";
-                }
-
-                String nativeLibsJarPath =
-                    pluginJarfile.getCanonicalPath();
-                nativeLibsJarPath =
-                    nativeLibsJarPath.replaceFirst("\\.jar", jarFileSuffix);
-
-                JarFile jar = new JarFile(nativeLibsJarPath);
-                Enumeration en = jar.entries();
-                while (en.hasMoreElements())
-                {
-                    try
+                    // lets find the appropriate jar file to extract and
+                    // extract it
+                    String jarFileSuffix = null;
+                    if ( OSUtils.IS_LINUX32 )
                     {
-                        JarEntry file = (JarEntry) en.nextElement();
-                        File f = new File(nativeLibFolder, file.getName());
-                        if (file.isDirectory())
-                        {
-                            continue;
-                        }
-
-                        InputStream is = jar.getInputStream(file);
-                        FileOutputStream fos = new FileOutputStream(f);
-                        while (is.available() > 0)
-                        {
-                            fos.write(is.read());
-                        }
-                        fos.close();
-                        is.close();
+                        jarFileSuffix = "-native-linux-32.jar";
                     }
-                    catch(Throwable t)
-                    {}
-                }
+                    else if ( OSUtils.IS_LINUX64 )
+                    {
+                        jarFileSuffix = "-native-linux-64.jar";
+                    }
+                    else if ( OSUtils.IS_WINDOWS32 )
+                    {
+                        jarFileSuffix = "-native-windows-32.jar";
+                    }
+                    else if ( OSUtils.IS_WINDOWS64 )
+                    {
+                        jarFileSuffix = "-native-windows-64.jar";
+                    }
+                    else if ( OSUtils.IS_MAC )
+                    {
+                        jarFileSuffix = "-native-macosx.jar";
+                    }
 
-                Log.info("Native lib folder created and natives extracted");
+                    String nativeLibsJarPath =
+                        pluginJarfile.getCanonicalPath();
+                    nativeLibsJarPath =
+                        nativeLibsJarPath.replaceFirst( "\\.jar", jarFileSuffix );
+
+                    JarFile jar = new JarFile( nativeLibsJarPath );
+                    Enumeration en = jar.entries();
+                    while ( en.hasMoreElements() )
+                    {
+                        try
+                        {
+                            JarEntry file = (JarEntry) en.nextElement();
+                            File f = new File( nativeLibFolder, file.getName() );
+                            if ( file.isDirectory() )
+                            {
+                                continue;
+                            }
+
+                            InputStream is = jar.getInputStream( file );
+                            FileOutputStream fos = new FileOutputStream( f );
+                            while ( is.available() > 0 )
+                            {
+                                fos.write( is.read() );
+                            }
+                            fos.close();
+                            is.close();
+                        }
+                        catch ( Throwable t )
+                        {
+                        }
+                    }
+
+                    Log.info( "Native lib folder created and natives extracted" );
+                }
+                else
+                {
+                    Log.warn( "Unable to create native lib folder." );
+                }
             }
             else
                 Log.info("Native lib folder already exist.");
