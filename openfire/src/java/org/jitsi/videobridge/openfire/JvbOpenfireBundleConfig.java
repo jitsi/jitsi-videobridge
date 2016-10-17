@@ -2,8 +2,7 @@ package org.jitsi.videobridge.openfire;
 
 import org.jitsi.videobridge.osgi.JvbBundleConfig;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * OSGi bundles description for the Openfire Jitsi Videobridge plugin.
@@ -19,18 +18,52 @@ public class JvbOpenfireBundleConfig extends JvbBundleConfig
     protected String[][] getBundlesImpl()
     {
         final String[][] parentBundles = super.getBundlesImpl();
-        final String[][] result = new String[ parentBundles.length ][];
-        for ( int i = 0; i < parentBundles.length; i++)
+
+        // Convert to a 'list-of-lists', as lists are easier to manipulate.
+        final List<List<String>> result = matrixToLists( parentBundles );
+
+        // Very first activator: logging!
+        final List<String> logging = new ArrayList<>();
+        logging.add( "org.jitsi.videobridge.openfire.SLF4JBridgeHandlerBundleActivator" );
+        logging.add( "org.slf4j.osgi.logservice.impl.Activator" );
+        result.add( 0, logging );
+
+        // Remove all activators that we don't want.
+        final Iterator<List<String>> iterator = result.iterator();
+        while ( iterator.hasNext() )
         {
-            final List<String> bundles = new ArrayList<>();
-            for ( int j = 0; j < parentBundles[i].length; j++ )
+            final List<String> bundles = iterator.next();
+            if ( bundles.remove( "org/jitsi/videobridge/rest/RESTBundleActivator" ) && bundles.isEmpty() )
             {
-                if ( ! "org/jitsi/videobridge/rest/RESTBundleActivator".equals( parentBundles[i][j] ) )
-                {
-                    bundles.add( parentBundles[ i ][ j ] );
-                }
+                // Delete the bundle if we removed the only activator that was in it.
+                iterator.remove();
             }
-            result[i] = bundles.toArray( new String[0] );
+        }
+
+        // Convert back to an 'array-of-arrays' and return.
+        return listsToMatrix( result );
+    }
+
+    public static List<List<String>> matrixToLists( String[][] matrix )
+    {
+        final List<List<String>> result = new ArrayList<>();
+        for ( final String[] array : matrix )
+        {
+            // Can't use Arrays.asList(), as the returned list does not implement List#remove()
+            final List<String> entries = new ArrayList<>();
+            Collections.addAll( entries, array );
+            result.add( entries );
+        }
+        return result;
+    }
+
+    public static String[][] listsToMatrix( List<List<String>> lists )
+    {
+        final String[][] result = new String[ lists.size() ][];
+        for ( int i = 0; i < lists.size(); i++ )
+        {
+            final List<String> list = lists.get( i );
+            result[ i ] = list.toArray( new String[ list.size() ] );
         }
         return result;
     }
