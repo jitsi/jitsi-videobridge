@@ -8,5 +8,5 @@
 *.jar
 /.project
 *.swp
-.idea/
-jitsi-videobridge.iml
+**/.idea/
+*.iml
