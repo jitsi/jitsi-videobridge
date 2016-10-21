@@ -324,12 +324,15 @@ public class PubSubStatsTransport
                 }
                 catch (IllegalArgumentException ex)
                 {
+                    logger.debug( "An unexpected exception occurred.", ex );
                 }
                 catch (IllegalStateException ex)
                 {
+                    logger.debug( "An unexpected exception occurred.", ex );
                 }
                 catch (SecurityException ex)
                 {
+                    logger.debug( "An unexpected exception occurred.", ex );
                 }
                 if (service instanceof ComponentImpl)
                 {

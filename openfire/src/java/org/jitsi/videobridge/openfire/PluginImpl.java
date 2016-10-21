@@ -105,7 +105,8 @@ public class PluginImpl
             }
             catch (ComponentException ce)
             {
-                // TODO Auto-generated method stub
+                Log.warn( "An unexpected exception occurred while " +
+                          "destroying the plugin.", ce );
             }
             componentManager = null;
             subdomain = null;

@@ -1524,7 +1524,9 @@ public class IceUdpTransportManager
                                 rtpChannel.getDatagramFilter(false /* RTP */));
                 }
                 catch (SocketException se) // never thrown
-                {}
+                {
+                    logger.error( "An unexpected exception occurred.", se );
+                }
             }
 
             Socket iceSocket1 = rtcpmux ? iceSocket0 : iceSockets[1];
@@ -1542,7 +1544,9 @@ public class IceUdpTransportManager
                                 rtpChannel.getDatagramFilter(true /* RTCP */));
                 }
                 catch (SocketException se) // never thrown
-                {}
+                {
+                    logger.error( "An unexpected exception occurred.", se );
+                }
             }
 
             if (channelSocket0 != null || channelSocket1 != null)
@@ -1597,7 +1601,9 @@ public class IceUdpTransportManager
                                 rtpChannel.getDatagramFilter(false /* RTP */));
                 }
                 catch (SocketException se) // never thrown
-                {}
+                {
+                    logger.error( "An unexpected exception occurred.", se );
+                }
             }
 
             DatagramSocket iceSocket1 = rtcpmux ? iceSocket0 : iceSockets[1];
@@ -1616,7 +1622,9 @@ public class IceUdpTransportManager
                                 rtpChannel.getDatagramFilter(true /* RTCP */));
                 }
                 catch (SocketException se) // never thrown
-                {}
+                {
+                    logger.error( "An unexpected exception occurred.", se );
+                }
             }
 
             if (channelSocket0 != null || channelSocket1 != null)
@@ -1942,6 +1950,7 @@ public class IceUdpTransportManager
                         }
                         catch (IllegalArgumentException e)
                         {
+                            logger.debug( "Unable to parse: " + aSetupStr, e );
                             // The value of aSetup will remain null and will
                             // thus signal the exception.
                         }

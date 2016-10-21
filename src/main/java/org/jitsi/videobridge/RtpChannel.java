@@ -1723,6 +1723,7 @@ public class RtpChannel
                 catch (SizeExceededException see)
                 {
                     // Never thrown with checkLimit=false.
+                    logger.error( "An unexpected exception occurred.", see );
                 }
             }
         }
