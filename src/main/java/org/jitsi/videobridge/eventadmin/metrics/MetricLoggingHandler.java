@@ -122,8 +122,8 @@ public class MetricLoggingHandler
     public static final String METRIC_UPLOAD_AVG_JITTER
         = "Avg upload jitter";
 
-    /** 
-     * Total number or endpoints connected to a conference 
+    /**
+     * Total number or endpoints connected to a conference
      */
     public static final String METRIC_ENDPOINTS = "Endpoints";
 
