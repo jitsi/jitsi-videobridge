@@ -38,7 +38,7 @@ import org.xmpp.packet.Packet;
 
 /**
  * Implements <tt>org.xmpp.component.Component</tt> to provide Jitsi Videobridge
- * as an internal Jabber component.
+ * as a Jabber component.
  *
  * @author Lyubomir Marinov
  */
