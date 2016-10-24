@@ -43,7 +43,7 @@ public class HarvesterConfiguration
      * address mapping as one of our NAT traversal options as well as the local
      * address that we should be mapping.
      */
-    private static final String NAT_HARVESTER_LOCAL_ADDRESS
+    public static final String NAT_HARVESTER_LOCAL_ADDRESS
         = "org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS";
 
     /**
@@ -51,21 +51,21 @@ public class HarvesterConfiguration
      * address mapping as one of our NAT traversal options as well as the public
      * address that we should be using in addition to our local one.
      */
-    private static final String NAT_HARVESTER_PUBLIC_ADDRESS
+    public static final String NAT_HARVESTER_PUBLIC_ADDRESS
         = "org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS";
 
     /**
      * Contains the name of the property flag that may indicate that AWS address
      * harvesting should be explicitly disabled.
      */
-    private static final String DISABLE_AWS_HARVESTER
+    public static final String DISABLE_AWS_HARVESTER
         = "org.jitsi.videobridge.DISABLE_AWS_HARVESTER";
 
     /**
      * Contains the name of the property flag that may indicate that AWS address
      * harvesting should be forced without first trying to auto detect it.
      */
-    private static final String FORCE_AWS_HARVESTER
+    public static final String FORCE_AWS_HARVESTER
         = "org.jitsi.videobridge.FORCE_AWS_HARVESTER";
 
     /**
@@ -74,7 +74,7 @@ public class HarvesterConfiguration
      * Setting this property enables searching for our public address using
      * the specified stun servers.
      */
-    private static final String STUN_MAPPING_HARVESTER_ADDRESSES
+    public static final String STUN_MAPPING_HARVESTER_ADDRESSES
         = "org.jitsi.videobridge.STUN_MAPPING_HARVESTER_ADDRESSES";
 
     /**
