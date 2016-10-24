@@ -81,6 +81,12 @@ public class PluginImpl
     private ComponentManager componentManager;
 
     /**
+     * The <tt>Component</tt> that has been registered by this plugin. This
+     * wraps the Videobridge service.
+     */
+    private ComponentImpl component;
+
+    /**
      * The subdomain of the address of component with which it has been
      * added to {@link #componentManager}.
      */
@@ -108,6 +114,7 @@ public class PluginImpl
                 // TODO Auto-generated method stub
             }
             componentManager = null;
+            component = null;
             subdomain = null;
         }
     }
@@ -174,28 +181,34 @@ public class PluginImpl
         ComponentImpl component =
             new ComponentImpl( hostname, port, domain, subdomain, secret );
 
-        boolean added = false;
-
         try
         {
             componentManager.addComponent(subdomain, component);
-            added = true;
+            this.componentManager = componentManager;
+            this.component = component;
+            this.subdomain = subdomain;
         }
         catch (ComponentException ce)
         {
             Log.error( "An exception occurred when loading the plugin: " +
                 "the component could not be added.", ce );
-        }
-        if (added)
-        {
-            this.componentManager = componentManager;
-            this.subdomain = subdomain;
-        }
-        else
-        {
             this.componentManager = null;
+            this.component = null;
             this.subdomain = null;
         }
+    }
+
+    /**
+     * Returns the <tt>Component</tt> that has been registered by this plugin.
+     * This wraps the Videobridge service.
+     *
+     * When the plugin is not running, <tt>null</tt> will be returned.
+     *
+     * @return The Videobridge component, or <tt>null</tt> when not running.
+     */
+    public ComponentImpl getComponent()
+    {
+        return component;
     }
 
     /**
