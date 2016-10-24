@@ -93,13 +93,9 @@ final class JSONDeserializer
             {
                 candidateIQ = candidateIQClass.newInstance();
             }
-            catch (IllegalAccessException iae)
+            catch (IllegalAccessException | InstantiationException iae)
             {
                 throw new UndeclaredThrowableException(iae);
-            }
-            catch (InstantiationException ie)
-            {
-                throw new UndeclaredThrowableException(ie);
             }
             // attributes
             deserializeAbstractPacketExtensionAttributes(

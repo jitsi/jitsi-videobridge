@@ -322,14 +322,10 @@ public class PubSubStatsTransport
                     service
                         = bundleContext.getService(ev.getServiceReference());
                 }
-                catch (IllegalArgumentException ex)
+                catch ( IllegalArgumentException
+                        | IllegalStateException | SecurityException ex )
                 {
-                }
-                catch (IllegalStateException ex)
-                {
-                }
-                catch (SecurityException ex)
-                {
+                    logger.debug( "An unexpected exception occurred.", ex );
                 }
                 if (service instanceof ComponentImpl)
                 {

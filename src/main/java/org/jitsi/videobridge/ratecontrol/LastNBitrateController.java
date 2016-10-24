@@ -192,6 +192,7 @@ public class LastNBitrateController
                     catch (Exception e)
                     {
                         // Whatever, use the default
+                        logger.debug("Cannot parse: " + rembMultConstantStr, e);
                     }
                 }
 
