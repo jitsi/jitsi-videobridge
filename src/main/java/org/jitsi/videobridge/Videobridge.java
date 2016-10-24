@@ -62,7 +62,7 @@ public class Videobridge
      * options passed as the second argument to
      * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)}.
      */
-    private static final String DEFAULT_OPTIONS_PROPERTY_NAME
+    public static final String DEFAULT_OPTIONS_PROPERTY_NAME
         = "org.jitsi.videobridge.defaultOptions";
 
     /**
@@ -75,7 +75,7 @@ public class Videobridge
     * The name of the property which specifies the path to the directory in
     * which media recordings will be stored.
     */
-    static final String ENABLE_MEDIA_RECORDING_PNAME
+    public static final String ENABLE_MEDIA_RECORDING_PNAME
         = "org.jitsi.videobridge.ENABLE_MEDIA_RECORDING";
 
     /**
@@ -88,14 +88,14 @@ public class Videobridge
      * The name of the property which controls whether media recording is
      * enabled.
      */
-    static final String MEDIA_RECORDING_PATH_PNAME
+    public static final String MEDIA_RECORDING_PATH_PNAME
         = "org.jitsi.videobridge.MEDIA_RECORDING_PATH";
 
     /**
      * The name of the property which specifies the token used to authenticate
      * requests to enable media recording.
      */
-    static final String MEDIA_RECORDING_TOKEN_PNAME
+    public static final String MEDIA_RECORDING_TOKEN_PNAME
         = "org.jitsi.videobridge.MEDIA_RECORDING_TOKEN";
 
     /**
@@ -138,7 +138,7 @@ public class Videobridge
      * shutdown mode. For XMPP API this is "from" JID. In case of REST
      * the source IP is being copied into the "from" field of the IQ.
      */
-    static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
+    public static final String SHUTDOWN_ALLOWED_SOURCE_REGEXP_PNAME
         = "org.jitsi.videobridge.shutdown.ALLOWED_SOURCE_REGEXP";
 
     /**
@@ -146,7 +146,7 @@ public class Videobridge
      * For XMPP API this is "from" JID. In case of REST the source IP is being
      * copied into the "from" field of the IQ.
      */
-    static final String AUTHORIZED_SOURCE_REGEXP_PNAME
+    public static final String AUTHORIZED_SOURCE_REGEXP_PNAME
         = "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP";
 
     /**
