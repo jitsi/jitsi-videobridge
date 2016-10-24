@@ -928,14 +928,9 @@ public class Content
             recorder.start(format, recordingPath);
             started = true;
         }
-        catch (IOException ioe)
+        catch (IOException | MediaException ioe)
         {
             logger.error("Failed to start recorder: " + ioe);
-            started = false;
-        }
-        catch (MediaException me)
-        {
-            logger.error("Failed to start recorder: " + me);
             started = false;
         }
 
