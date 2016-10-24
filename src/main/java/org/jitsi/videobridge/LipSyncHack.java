@@ -21,10 +21,10 @@ import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.util.concurrent.*;
 
 import java.lang.ref.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Implements a hack for
@@ -59,7 +59,7 @@ public class LipSyncHack
     /**
      * A constant defining the maximum number of black key frames to send.
      */
-    private static final int MAX_KEY_FRAMES = 10;
+    private static final int MAX_KEY_FRAMES = 30;
 
     /**
      * The rate (in ms) at which we are to send black key frames.
@@ -105,8 +105,8 @@ public class LipSyncHack
      * The executor service that takes care of black key frame scheduling
      * and injection.
      */
-    private final ScheduledExecutorService scheduler =
-        Executors.newScheduledThreadPool(1);
+    private final RecurringRunnableExecutor scheduler =
+        new RecurringRunnableExecutor();
 
     /**
      * The remote audio SSRCs that have been accepted by the translator and
@@ -233,7 +233,7 @@ public class LipSyncHack
             states.put(receiveVideoSSRC, injectState);
 
             InjectTask injectTask = new InjectTask(injectState);
-            injectTask.schedule();
+            scheduler.registerRecurringRunnable(injectTask);
         }
     }
 
@@ -410,7 +410,7 @@ public class LipSyncHack
     /**
      * The {@link Runnable} that injects the black video key frame packets.
      */
-    class InjectTask implements Runnable
+    class InjectTask implements RecurringRunnable
     {
         /**
          * The state for this injector.
@@ -418,9 +418,9 @@ public class LipSyncHack
         private final InjectState injectState;
 
         /**
-         * The {@link ScheduledFuture} for this task.
+         * The last time in miliseconds that this task has run.
          */
-        private ScheduledFuture<?> scheduledFuture;
+        private long lastRunTime = -1;
 
         /**
          * Ctor.
@@ -438,12 +438,13 @@ public class LipSyncHack
         @Override
         public void run()
         {
+            lastRunTime = System.currentTimeMillis();
+
             synchronized (injectState)
             {
                 if (!injectState.active
                     || injectState.numOfKeyframesSent >= MAX_KEY_FRAMES)
                 {
-                    scheduledFuture.cancel(true);
                     return;
                 }
 
@@ -497,12 +498,33 @@ public class LipSyncHack
         }
 
         /**
-         * Schedules this instance for execution at a fixed rate.
+         * {@inheritDoc}
          */
-        public void schedule()
+        @Override
+        public long getTimeUntilNextRun()
         {
-            this.scheduledFuture = scheduler.scheduleAtFixedRate(
-                this, WAIT_MS , KEY_FRAME_RATE_MS, TimeUnit.MILLISECONDS);
+            synchronized (injectState)
+            {
+                if (!injectState.active
+                    || injectState.numOfKeyframesSent >= MAX_KEY_FRAMES)
+                {
+                    return -1L;
+                }
+
+                // send 3 "waves" of 10 packet bursts every 1 second. This makes
+                // sure that the signaling has propagated and that eventually a
+                // packet gets through SRTP.
+                long delay = 0;
+                if (injectState.numOfKeyframesSent % 10 == 0)
+                {
+                    delay = WAIT_MS;
+                }
+
+                return (lastRunTime < 0L)
+                    ? 0L
+                    : lastRunTime + KEY_FRAME_RATE_MS + delay
+                    - System.currentTimeMillis();
+            }
         }
     }
 
