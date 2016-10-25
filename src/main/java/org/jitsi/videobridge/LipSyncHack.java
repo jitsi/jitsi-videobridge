@@ -17,13 +17,11 @@ package org.jitsi.videobridge;
 
 import net.sf.fmj.media.rtp.*;
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 
-import java.lang.ref.*;
 import java.util.*;
 
 /**
@@ -239,7 +237,7 @@ public class LipSyncHack
 
             if (DEBUG)
             {
-                logger.debug("ls_hack_rerister,ssrc=" + injectState.ssrc);
+                logger.debug("ls_hack_register,ssrc=" + injectState.ssrc);
             }
         }
     }
@@ -454,7 +452,7 @@ public class LipSyncHack
                     return;
                 }
 
-                if (endpoint == null)
+                if (endpoint == null || endpoint.isExpired())
                 {
                     deregister("endpoint_expired");
                     return;
@@ -570,7 +568,7 @@ public class LipSyncHack
         {
             if (DEBUG)
             {
-                logger.debug("ls_hack_dererister"
+                logger.debug("ls_hack_deregister"
                     + ",ssrc=" + injectState.ssrc
                     + " reason=" + reason);
             }
