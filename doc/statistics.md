@@ -10,7 +10,7 @@ Introduction
  * The size of the largest conference in progress.
  * The distribution of the sizes of the conferences currently in progress.
  * Aggregates of RTT and jitter across all users.
- * The total number of created and completed conferences.
+ * The total number of created, completed, failed and partially failed conferences.
  * The total duration of all completed conferences.
  * The number of ICE sessions established over UDP or TCP.
 
@@ -41,6 +41,11 @@ generated (in UTC).
  * **total_udp_connections / total_tcp_connections** - The total number of ICE sessions established over UDP or TCP.
  * **total_conference_seconds** - The sum of the lengths of all completed conferences, in seconds.
  * **total_conferences_created** - The total number of conferences created on the bridge.
+ * **total_failed_conferences** - The total number of failed conferences on the bridge. A conference is marked as failed when all of its channels have failed. A channel is marked as failed if it had no payload activity.
+ * **total_partially_failed_conferences** - The total number of partially failed conferences on the bridge. A conference is marked as partially failed when some of its channels has failed. A channel is marked as failed if it had no payload activity.
+ * **total_no_payload_channels** - The total number of channels with no payload activity.
+ * **total_no_transport_channels** - The total number of channels with no transport activity.
+ * **total_channels** - The total number of channels created on the bridge.
 
 If Jitsi Videobridge is using XMPP it sends the statistics reports by COLIBRI
 protocol or by PubSub (XEP-0060).
@@ -61,6 +66,11 @@ This is an example COLIBRI packet of a statistics report:
 		<stat value='2' name='conferences'/>
 		<stat value='4' name='videochannels'/>
 		<stat value='4' name='participants'/>
+		<stat value='1' name='total_failed_conferences'/>
+		<stat value='1' name='total_partially_failed_conferences'/>
+		<stat value='1' name='total_no_payload_channels'/>
+		<stat value='2' name='total_no_transport_channels'/>
+		<stat value='8' name='total_channels'/>
 	</stats>
 </iq>
 ```
@@ -87,6 +97,11 @@ packet:
 					<stat value='2' name='conferences'/>
 					<stat value='4' name='videochannels'/>
 					<stat value='4' name='participants'/>
+					<stat value='1' name='total_failed_conferences'/>
+					<stat value='1' name='total_partially_failed_conferences'/>
+					<stat value='1' name='total_no_payload_channels'/>
+					<stat value='2' name='total_no_transport_channels'/>
+					<stat value='8' name='total_channels'/>
 				</stats>
 			</item>
 		</publish>
@@ -114,6 +129,11 @@ the Pubsub node with the following packet:
 					<stat value='2' name='conferences'/>
 					<stat value='4' name='videochannels'/>
 					<stat value='4' name='participants'/>
+					<stat value='1' name='total_failed_conferences'/>
+					<stat value='1' name='total_partially_failed_conferences'/>
+					<stat value='1' name='total_no_payload_channels'/>
+					<stat value='2' name='total_no_transport_channels'/>
+					<stat value='8' name='total_channels'/>
 				</stats>
 			</item>
 		</items>
@@ -150,7 +170,12 @@ Server: Jetty(9.1.5.v20140505)
 "rtt_aggregate": 50,
 "videostreams": 80,
 "largest_conference": 7,
-"conference_sizes": [0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+"conference_sizes": [0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+"total_failed_conferences": 1,
+"total_partially_failed_conferences": 1,
+"total_no_payload_channels": 1,
+"total_no_transport_channels": 2,
+"total_channels": 8,
 }
 ```
 
@@ -213,6 +238,11 @@ Stats will now be published to the component on the interval set below
                <stat name="total_memory" value="0" />
                <stat name="videochannels" value="0" />
                <stat name="videostreams" value="0" />
+               <stat value='1' name='total_failed_conferences'/>
+               <stat value='1' name='total_partially_failed_conferences'/>
+               <stat value='1' name='total_no_payload_channels'/>
+               <stat value='2' name='total_no_transport_channels'/>
+               <stat value='8' name='total_channels'/>
             </stats>
          </item>
       </publish>
