@@ -21,10 +21,9 @@ import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.util.concurrent.*;
 
-import java.lang.ref.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Implements a hack for
@@ -59,7 +58,7 @@ public class LipSyncHack
     /**
      * A constant defining the maximum number of black key frames to send.
      */
-    private static final int MAX_KEY_FRAMES = 10;
+    private static final int MAX_KEY_FRAMES = 30;
 
     /**
      * The rate (in ms) at which we are to send black key frames.
@@ -105,8 +104,8 @@ public class LipSyncHack
      * The executor service that takes care of black key frame scheduling
      * and injection.
      */
-    private final ScheduledExecutorService scheduler =
-        Executors.newScheduledThreadPool(1);
+    private final RecurringRunnableExecutor scheduler =
+        new RecurringRunnableExecutor();
 
     /**
      * The remote audio SSRCs that have been accepted by the translator and
@@ -190,8 +189,11 @@ public class LipSyncHack
         }
 
         VideoChannel targetVC = (VideoChannel) targetVideoChannels.get(0);
-        if (targetVC == null)
+        MediaStream stream;
+        if (targetVC == null || (stream = targetVC.getStream()) == null
+            || !stream.isStarted())
         {
+            // It seems like we're not ready yet to trigger the hack.
             return;
         }
 
@@ -227,13 +229,17 @@ public class LipSyncHack
                 return;
             }
 
-            InjectState injectState = new InjectState(
-                receiveVideoSSRC, targetVC.getStream(), true);
+            InjectState injectState = new InjectState(receiveVideoSSRC, true);
 
             states.put(receiveVideoSSRC, injectState);
 
             InjectTask injectTask = new InjectTask(injectState);
-            injectTask.schedule();
+            scheduler.registerRecurringRunnable(injectTask);
+
+            if (DEBUG)
+            {
+                logger.debug("ls_hack_register,ssrc=" + injectState.ssrc);
+            }
         }
     }
 
@@ -342,7 +348,7 @@ public class LipSyncHack
             {
                 // The hack has never been triggered for this stream.
                 states.put(acceptedVideoSSRC, new InjectState(acceptedVideoSSRC,
-                    targetVC.getStream(), false));
+                    false));
 
                 return;
             }
@@ -410,7 +416,7 @@ public class LipSyncHack
     /**
      * The {@link Runnable} that injects the black video key frame packets.
      */
-    class InjectTask implements Runnable
+    class InjectTask implements RecurringRunnable
     {
         /**
          * The state for this injector.
@@ -418,9 +424,9 @@ public class LipSyncHack
         private final InjectState injectState;
 
         /**
-         * The {@link ScheduledFuture} for this task.
+         * The last time in miliseconds that this task has run.
          */
-        private ScheduledFuture<?> scheduledFuture;
+        private long lastRunTime = -1L;
 
         /**
          * Ctor.
@@ -443,20 +449,40 @@ public class LipSyncHack
                 if (!injectState.active
                     || injectState.numOfKeyframesSent >= MAX_KEY_FRAMES)
                 {
-                    scheduledFuture.cancel(true);
+                    deregister("completed");
                     return;
                 }
 
-                MediaStream mediaStream = injectState.target.get();
-                if (mediaStream == null || !mediaStream.isStarted())
+                if (endpoint == null || endpoint.isExpired())
                 {
-                    if (DEBUG)
-                    {
-                        logger.debug("Waiting for the media stream to become" +
-                            "available.");
-                    }
+                    deregister("endpoint_expired");
                     return;
                 }
+
+                List<RtpChannel> channels
+                    = endpoint.getChannels(MediaType.VIDEO);
+
+                if (channels == null || channels.isEmpty())
+                {
+                    deregister("channel_unavailable");
+                    return;
+                }
+
+                RtpChannel channel = channels.get(0);
+                if (channel == null || channel.isExpired())
+                {
+                    deregister("channel_expired");
+                    return;
+                }
+
+                MediaStream mediaStream = channel.getStream();
+                if (mediaStream == null || !mediaStream.isStarted())
+                {
+                    deregister("stream_unavailable");
+                    return;
+                }
+
+                lastRunTime = System.currentTimeMillis();
 
                 try
                 {
@@ -479,11 +505,11 @@ public class LipSyncHack
 
                     if (DEBUG)
                     {
-                        logger.debug("Injecting black key frame ssrc="
-                            + injectState.ssrc + ", seqnum="
-                            + seqnum + ", timestamp="
-                            + timestamp + ", streamHashCode="
-                            + mediaStream.hashCode());
+                        logger.debug("ls_hack_inject,"
+                            + "ssrc=" + injectState.ssrc
+                            + ",hash=" + mediaStream.hashCode()
+                            + " seqnum=" + seqnum
+                            + ",ts=" + timestamp);
                     }
 
                     mediaStream.injectPacket(keyframe, true, null);
@@ -497,12 +523,58 @@ public class LipSyncHack
         }
 
         /**
-         * Schedules this instance for execution at a fixed rate.
+         * {@inheritDoc}
          */
-        public void schedule()
+        @Override
+        public long getTimeUntilNextRun()
         {
-            this.scheduledFuture = scheduler.scheduleAtFixedRate(
-                this, WAIT_MS , KEY_FRAME_RATE_MS, TimeUnit.MILLISECONDS);
+            synchronized (injectState)
+            {
+                if (!injectState.active
+                    || injectState.numOfKeyframesSent >= MAX_KEY_FRAMES)
+                {
+                    deregister("complete");
+                    return Long.MAX_VALUE;
+                }
+
+                // send 3 "waves" of 10 packet bursts every 1 second. This makes
+                // sure that the signaling has propagated and that eventually a
+                // packet gets through SRTP.
+                long delay = 0;
+                if (injectState.numOfKeyframesSent % 10 == 0)
+                {
+                    delay = WAIT_MS;
+                }
+
+                long timeUntilNextRun =  lastRunTime
+                    + KEY_FRAME_RATE_MS + delay - System.currentTimeMillis();
+
+                if (DEBUG)
+                {
+                    logger.debug(
+                        "ls_hack_schedule timeUntilNextRun=" + timeUntilNextRun);
+                }
+
+                return timeUntilNextRun;
+            }
+        }
+
+        /**
+         * De-registers this {@code RecurringRunnable} and optionally prints a
+         * debug message.
+         *
+         * @param reason the de-registration reason
+         */
+        private void deregister(String reason)
+        {
+            if (DEBUG)
+            {
+                logger.debug("ls_hack_deregister"
+                    + ",ssrc=" + injectState.ssrc
+                    + " reason=" + reason);
+            }
+
+            scheduler.deRegisterRecurringRunnable(this);
         }
     }
 
@@ -515,11 +587,6 @@ public class LipSyncHack
          * The SSRC to send black key frames with.
          */
         private final Long ssrc;
-
-        /**
-         * The target to inject RTP packets to.
-         */
-        private final WeakReference<MediaStream> target;
 
         /**
          * The random offset for the sequence numbers.
@@ -571,13 +638,11 @@ public class LipSyncHack
          * Ctor.
          *
          * @param ssrc
-         * @param target
          */
-        public InjectState(Long ssrc, MediaStream target, boolean active)
+        public InjectState(Long ssrc, boolean active)
         {
             this.ssrc = ssrc;
             this.active = active;
-            this.target = new WeakReference<>(target);
             this.seqnumOffset = RANDOM.nextInt(0xffff);
             this.timestampOffset = RANDOM.nextInt() & 0xffffffffl;
         }
