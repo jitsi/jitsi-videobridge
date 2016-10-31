@@ -24,3 +24,9 @@ org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePassword=changeit
 following to jvb config in etc:
 JVB_OPTS="--apis=rest,xmpp"
 AUTHBIND=yes
+
+It's also possible to disable the Colibri REST API endpoints with:
+
+```
+org.jitsi.videobridge.ENABLE_REST_COLIBRI=false
+```

@@ -238,6 +238,13 @@ class HandlerImpl
     private final boolean shutdownEnabled;
 
     /**
+     * Indicates if /colibri/* REST endpoints are enabled. If not then 
+     * SC_SERVICE_UNAVAILABLE status will be returned for 
+     * {@link #COLIBRI_TARGET} requests.
+     */
+    private final boolean colibriEnabled;
+
+    /**
      * Initializes a new {@code HandlerImpl} instance within a specific
      * {@code BundleContext}.
      *
@@ -245,8 +252,11 @@ class HandlerImpl
      * instance is to be initialized
      * @param enableShutdown {@code true} if graceful shutdown is to be
      * enabled; otherwise, {@code false}
+     * @param enableColibri {@code true} if /colibri/* endpoints are to be 
+     * enabled; otherwise, {@code false}
      */
-    public HandlerImpl(BundleContext bundleContext, boolean enableShutdown)
+    public HandlerImpl(BundleContext bundleContext, boolean enableShutdown,
+        boolean enableColibri)
     {
         super(bundleContext);
 
@@ -254,6 +264,11 @@ class HandlerImpl
 
         if (shutdownEnabled)
             logger.info("Graceful shutdown over REST is enabled");
+        
+        colibriEnabled = enableColibri;
+
+        if (colibriEnabled)
+            logger.info("Colibri REST endpoints are enabled");
     }
 
     /**
@@ -848,6 +863,12 @@ class HandlerImpl
         throws IOException,
                ServletException
     {
+        if (!colibriEnabled)
+        {
+          response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+          return;
+        }
+
         if (target == null)
         {
             // TODO Auto-generated method stub
