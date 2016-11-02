@@ -22,6 +22,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
+import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
 
@@ -210,16 +211,36 @@ public class LipSyncHack
             return;
         }
 
+        SimulcastReceiver recv = sourceVC.getTransformEngine()
+            .getSimulcastEngine().getSimulcastReceiver();
+
+        Long receiveVideoSSRC;
+        if (recv != null && recv.isSimulcastSignaled())
+        {
+            // FIXME this is a little ugly
+            receiveVideoSSRC = sourceVC.getTransformEngine()
+                .getSimulcastEngine().getSimulcastReceiver()
+                .getSimulcastStream(0, targetVC.getStream()).getPrimarySSRC();
+        }
+        else
+        {
+            int[] receiveSSRCs = sourceVC.getReceiveSSRCs();
+            if (receiveSSRCs == null || receiveSSRCs.length == 0)
+            {
+                // It seems like we're not ready yet to trigger the hack.
+                return;
+            }
+            else
+            {
+                receiveVideoSSRC = receiveSSRCs[0] & 0xffffffffL;
+            }
+        }
+
         // XXX we do this here (i.e. below the sanity checks), in order to avoid
         // any race conditions with a video channel being created and added to
         // its Endpoint. The disadvantage being that endpoints that only have an
         // audio channel will never reach this.
         acceptedAudioSSRCs.add(acceptedAudioSSRC);
-
-        // FIXME this is a little ugly
-        Long receiveVideoSSRC = sourceVC.getTransformEngine()
-            .getSimulcastEngine().getSimulcastReceiver()
-            .getSimulcastStream(0, targetVC.getStream()).getPrimarySSRC();
 
         synchronized (states)
         {
