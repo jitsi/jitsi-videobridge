@@ -41,7 +41,6 @@ import org.xmpp.packet.Packet;
  * as a Jabber component.
  *
  * @author Lyubomir Marinov
- * @author Pawel Domas
  */
 public class ComponentImpl
     extends ComponentBase
@@ -359,9 +358,9 @@ public class ComponentImpl
     }
 
     @Override
-    protected void handleIQErrorImpl(IQ iq)
+    protected void handleIQError(IQ iq)
     {
-        super.handleIQErrorImpl(iq);
+        super.handleIQError(iq);
 
         try
         {
@@ -388,12 +387,12 @@ public class ComponentImpl
      * @see AbstractComponent#handleIQGet(IQ)
      */
     @Override
-    protected IQ handleIQGetImpl(IQ iq)
+    protected IQ handleIQGet(IQ iq)
         throws Exception
     {
         IQ resultIQ = handleIQ(iq);
 
-        return (resultIQ == null) ? super.handleIQGetImpl(iq) : resultIQ;
+        return (resultIQ == null) ? super.handleIQGet(iq) : resultIQ;
     }
 
     private org.jivesoftware.smack.packet.IQ handleIQRequest(
@@ -506,9 +505,9 @@ public class ComponentImpl
     }
 
     @Override
-    protected void handleIQResultImpl(IQ iq)
+    protected void handleIQResult(IQ iq)
     {
-        super.handleIQResultImpl(iq);
+        super.handleIQResult(iq);
 
         try
         {
@@ -535,12 +534,12 @@ public class ComponentImpl
      * @see AbstractComponent#handleIQSet(IQ)
      */
     @Override
-    protected IQ handleIQSetImpl(IQ iq)
+    protected IQ handleIQSet(IQ iq)
         throws Exception
     {
         IQ resultIQ = handleIQ(iq);
 
-        return (resultIQ == null) ? super.handleIQSetImpl(iq) : resultIQ;
+        return (resultIQ == null) ? super.handleIQSet(iq) : resultIQ;
     }
 
     /**
