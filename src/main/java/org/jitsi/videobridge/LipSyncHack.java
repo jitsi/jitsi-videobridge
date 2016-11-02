@@ -218,9 +218,8 @@ public class LipSyncHack
         if (recv != null && recv.isSimulcastSignaled())
         {
             // FIXME this is a little ugly
-            receiveVideoSSRC = sourceVC.getTransformEngine()
-                .getSimulcastEngine().getSimulcastReceiver()
-                .getSimulcastStream(0, targetVC.getStream()).getPrimarySSRC();
+            receiveVideoSSRC = recv.getSimulcastStream(
+                0, targetVC.getStream()).getPrimarySSRC();
         }
         else
         {
