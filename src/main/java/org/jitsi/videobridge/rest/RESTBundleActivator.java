@@ -51,6 +51,13 @@ public class RESTBundleActivator
     private static final String ENABLE_REST_SHUTDOWN_PNAME
         = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
 
+    /**
+     * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
+     * boolean property which enables <tt>/colibri/*</tt> REST API endpoints.
+     */
+    private static final String ENABLE_REST_COLIBRI_PNAME
+      = "org.jitsi.videobridge.ENABLE_REST_COLIBRI";
+
     private static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.hostHeader";
 
@@ -121,7 +128,8 @@ public class RESTBundleActivator
         return
             new HandlerImpl(
                     bundleContext,
-                    getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false));
+                    getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false),
+                    getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true));
     }
 
     /**
