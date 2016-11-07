@@ -255,9 +255,7 @@ public class ConferenceSpeechActivity
      */
     public ConferenceSpeechActivity(Conference conference)
     {
-        Objects.requireNonNull(conference, "conference");
-
-        this.conference = conference;
+        this.conference = Objects.requireNonNull(conference, "conference");
 
         /*
          * The PropertyChangeListener will weakly reference this instance and

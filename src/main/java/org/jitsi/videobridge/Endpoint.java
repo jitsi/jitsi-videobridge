@@ -192,11 +192,9 @@ public class Endpoint
      */
     public Endpoint(String id, Conference conference)
     {
-        Objects.requireNonNull(id, "id");
-        Objects.requireNonNull(conference, "conference");
+        this.conference = Objects.requireNonNull(conference, "conference");
+        this.id = Objects.requireNonNull(id, "id");
 
-        this.conference = conference;
-        this.id = id;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
