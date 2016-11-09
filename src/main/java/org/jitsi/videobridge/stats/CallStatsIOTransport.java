@@ -49,6 +49,12 @@ public class CallStatsIOTransport
         = "io.callstats.sdk.CallStats.appId";
 
     /**
+     * Shared Secret for authentication on Callstats.io
+     */
+    private static final String PNAME_CALLSTATS_IO_APP_SECRET 
+        = "io.callstats.sdk.CallStats.appSecret";
+
+    /**
      * ID of the key that was used to generate token.
      */
     private static final String PNAME_CALLSTATS_IO_KEY_ID
@@ -245,20 +251,28 @@ public class CallStatsIOTransport
     private void init(BundleContext bundleContext, ConfigurationService cfg)
     {
         int appId = ConfigUtils.getInt(cfg, PNAME_CALLSTATS_IO_APP_ID, 0);
+        String appSecret
+            = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_APP_SECRET, null);
         String keyId
             = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_KEY_ID, null);
         String keyPath
             = ConfigUtils.getString(cfg, PNAME_CALLSTATS_IO_KEY_PATH, null);
-
-        if(keyId == null || keyPath == null)
-        {
-            logger.warn(
-                "KeyID and keyPath missing, now skipping callstats init");
-            return;
-        }
-
         String bridgeId = ConfigUtils.getString(
             cfg, PNAME_CALLSTATS_IO_BRIDGE_ID, DEFAULT_BRIDGE_ID);
+        
+        /**
+         * prefer appSecret over keyId/keyPath
+         */
+        if(appSecret == null)
+        {
+            logger.warn("appSecret missing, will try using keyId and keyPath");
+
+            if(keyId == null || keyPath == null)
+            {
+                logger.warn("KeyID/keyPath missing. Skipping callstats init");
+                return;
+            }
+        }
 
         ServerInfo serverInfo = createServerInfo(bundleContext);
 
@@ -270,12 +284,7 @@ public class CallStatsIOTransport
         // returns even if it may fail.
         this.callStats = callStats;
 
-        callStats.initialize(
-                appId,
-                new TokenGenerator(
-                    String.valueOf(appId), keyId, bridgeId, keyPath),
-                bridgeId,
-                serverInfo,
+        CallStatsInitListener callStatsInitListener = 
                 new CallStatsInitListener()
                 {
                     /**
@@ -295,7 +304,27 @@ public class CallStatsIOTransport
                     {
                         callStatsOnInitialized(callStats, msg);
                     }
-                });
+                };
+
+        if(appSecret != null)
+        {
+            callStats.initialize(
+                    appId,
+                    appSecret, 
+                    bridgeId, 
+                    serverInfo, 
+                    callStatsInitListener);
+        }
+        else
+        {
+            callStats.initialize(
+                    appId,
+                    new TokenGenerator(
+                            String.valueOf(appId), keyId, bridgeId, keyPath),
+                    bridgeId,
+                    serverInfo,
+                    callStatsInitListener);
+        }
     }
 
     /**
