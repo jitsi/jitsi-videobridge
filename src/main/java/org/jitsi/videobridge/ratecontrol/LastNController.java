@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.ratecontrol;
 
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.ratecontrol.*;
+import org.jitsi.videobridge.*;
 
 import java.util.*;
 
@@ -31,6 +31,7 @@ import java.util.*;
  * @author Boris Grozev
  */
 public class LastNController
+    implements BitrateController
 {
     /**
      * The {@link Logger} used by the {@link LastNController} class to print
@@ -72,34 +73,9 @@ public class LastNController
     private int lastN = -1;
 
     /**
-     * The current limit to the number of endpoints whose video streams will be
-     * forwarded to the endpoint. This value can be changed by videobridge
-     * (i.e. when Adaptive Last N is used), but it must not exceed the value
-     * of {@link #lastN}. A value of {@code -1} means that there is no limit, and
-     * all endpoints' video streams will be forwarded.
-     */
-    private int currentLastN = -1;
-
-    /**
-     * Whether or not adaptive lastN is in use.
-     */
-    private boolean adaptiveLastN = false;
-
-    /**
-     * Whether or not adaptive simulcast is in use.
-     */
-    private boolean adaptiveSimulcast = false;
-
-    /**
-     * The instance which implements <tt>Adaptive LastN</tt> or
-     * <tt>Adaptive Simulcast</tt> on our behalf.
-     */
-    private BitrateController bitrateController = null;
-
-    /**
      * The {@link VideoChannel} which owns this {@link LastNController}.
      */
-    private final VideoChannel channel;
+    final VideoChannel channel;
 
     /**
      * The ID of the endpoint of {@link #channel}.
@@ -127,10 +103,9 @@ public class LastNController
     }
 
     /**
-     * @return the maximum number of endpoints whose video streams will be
-     * forwarded to the endpoint. A value of {@code -1} means that there is no
-     * limit.
+     * {@inheritDoc}
      */
+    @Override
     public int getLastN()
     {
         return lastN;
@@ -146,11 +121,9 @@ public class LastNController
     }
 
     /**
-     * Sets the value of {@code lastN}, that is, the maximum number of endpoints
-     * whose video streams will be forwarded to the endpoint. A value of
-     * {@code -1} means that there is no limit.
-     * @param lastN the value to set.
+     * {@inheritDoc}
      */
+    @Override
     public void setLastN(int lastN)
     {
         if (logger.isDebugEnabled())
@@ -173,11 +146,6 @@ public class LastNController
 
                 this.lastN = lastN;
 
-                if (lastN >= 0 && (currentLastN < 0 || currentLastN > lastN))
-                {
-                    currentLastN = lastN;
-                }
-
                 if (update)
                 {
                     endpointsToAskForKeyframe = update();
@@ -189,28 +157,9 @@ public class LastNController
     }
 
     /**
-     * Closes this {@link LastNController}.
+     * {@inheritDoc}
      */
-    public void close()
-    {
-        if (bitrateController != null)
-        {
-            try
-            {
-                bitrateController.close();
-            }
-            finally
-            {
-                bitrateController = null;
-            }
-        }
-    }
-
-    /**
-     * Sets the list of "pinned" endpoints (i.e. endpoints for which video
-     * should always be forwarded, regardless of {@code lastN}).
-     * @param newPinnedEndpointIds the list of endpoint IDs to set.
-     */
+    @Override
     public void setPinnedEndpointIds(List<String> newPinnedEndpointIds)
     {
         if (logger.isDebugEnabled())
@@ -237,15 +186,20 @@ public class LastNController
     }
 
     /**
-     * Checks whether RTP packets from {@code sourceChannel} should be forwarded
-     * to {@link #channel}.
-     * @param sourceChannel the channel.
-     * @return {@code true} iff RTP packets from {@code sourceChannel} should
-     * be forwarded to {@link #channel}.
+     * {@inheritDoc}
      */
+    @Override
+    public void setSelectedEndpointIds(List<String> newValue)
+    {
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isForwarded(Channel sourceChannel)
     {
-        if (lastN < 0 && currentLastN < 0)
+        if (lastN < 0)
         {
             // If Last-N is disabled, we forward everything.
             return true;
@@ -278,6 +232,17 @@ public class LastNController
         return forwardedEndpoints.contains(channelEndpoint.getID());
     }
 
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean rtpTranslatorWillWrite(
+        boolean data, byte[] buffer, int offset, int length, RtpChannel source)
+    {
+        return isForwarded(source);
+    }
+
     /**
      * @return the number of streams currently being forwarded.
      */
@@ -295,13 +260,9 @@ public class LastNController
     }
 
     /**
-     * Notifies this instance that the ordered list of endpoints in the
-     * conference has changed.
-     *
-     * @param endpoints the new ordered list of endpoints in the conference.
-     * @return the list of endpoints which were added to the list of forwarded
-     * endpoints as a result of the call, or {@code null} if none were added.
+     * {@inheritDoc}
      */
+    @Override
     public List<Endpoint> speechActivityEndpointsChanged(
             List<Endpoint> endpoints)
     {
@@ -334,6 +295,24 @@ public class LastNController
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void rtpEncodingParametersChanged(RtpChannel rtpChannel)
+    {
+
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long getOptimalBitrateBps()
+    {
+        return 0L;
+    }
+
+    /**
      * Notifies this instance that the ordered list of endpoints (specified
      * as a list of endpoint IDs) in the conference has changed.
      *
@@ -345,9 +324,10 @@ public class LastNController
     private synchronized List<String> speechActivityEndpointIdsChanged(
             List<String> endpointIds)
     {
-        // This comparison needs to care about order because you could have the same set of active endpoints,
-        //  but have one that moved from outside the last-n range to inside the last-n range, so there needs to
-        //  be an update.
+        // This comparison needs to care about order because you could have the
+        // same set of active endpoints, but have one that moved from outside
+        // the last-n range to inside the last-n range, so there needs to be an
+        // update.
         if (conferenceSpeechActivityEndpoints.equals(endpointIds))
         {
             if (logger.isDebugEnabled())
@@ -368,74 +348,6 @@ public class LastNController
     }
 
     /**
-     * Enables or disables the "adaptive last-n" mode, depending on the value of
-     * {@code adaptiveLastN}.
-     * @param adaptiveLastN {@code true} to enable, {@code false} to disable
-     */
-    public void setAdaptiveLastN(boolean adaptiveLastN)
-    {
-        if (this.adaptiveLastN != adaptiveLastN)
-        {
-            if (adaptiveLastN && adaptiveSimulcast)
-            {
-                //adaptive LastN and adaptive simulcast cannot be used together.
-                logger.error("Not enabling adaptive lastN, because adaptive" +
-                                     " simulcast is in use.");
-                return;
-            }
-            else if (adaptiveLastN && bitrateController == null)
-            {
-                bitrateController = new LastNBitrateController(this, channel);
-            }
-
-            this.adaptiveLastN = adaptiveLastN;
-        }
-    }
-
-    /**
-     * Enables or disables the "adaptive simulcast" mod, depending on the value
-     * of {@code adaptiveLastN}.
-     * @param adaptiveSimulcast {@code true} to enable, {@code false} to
-     * disable.
-     */
-    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
-    {
-        if (this.adaptiveSimulcast != adaptiveSimulcast)
-        {
-            if (adaptiveSimulcast && adaptiveLastN)
-            {
-                //adaptive LastN and adaptive simulcast cannot be used together.
-                logger.error("Not enabling adaptive simulcast, because " +
-                             "adaptive lastN is in use.");
-                return;
-            }
-            else if (adaptiveSimulcast && bitrateController == null)
-            {
-                bitrateController
-                    = new AdaptiveSimulcastBitrateController(this, channel);
-            }
-
-            this.adaptiveSimulcast = adaptiveSimulcast;
-        }
-    }
-
-    /**
-     * @return {@code true} iff the "adaptive last-n" mode is enabled.
-     */
-    public boolean getAdaptiveLastN()
-    {
-        return adaptiveLastN;
-    }
-
-    /**
-     * @return {@code true} iff the "adaptive simulcast" mode is enabled.
-     */
-    public boolean getAdaptiveSimulcast()
-    {
-        return adaptiveSimulcast;
-    }
-
-    /**
      * Recalculates the list of forwarded endpoints based on the current values
      * of the various parameters of this instance ({@link #lastN},
      * {@link #conferenceSpeechActivityEndpoints}, {@link #pinnedEndpoints}).
@@ -444,7 +356,7 @@ public class LastNController
      * {@link #forwardedEndpoints} (i.e. of endpoints * "entering last-n") as a
      * result of this call. Returns {@code null} if no endpoints were added.
      */
-    private synchronized List<String> update()
+    synchronized List<String> update()
     {
         return update(null);
     }
@@ -472,7 +384,7 @@ public class LastNController
                     = getIDs(channel.getConferenceSpeechActivity().getEndpoints());
         }
 
-        if (lastN < 0 && currentLastN < 0)
+        if (lastN < 0)
         {
             // Last-N is disabled, we forward everything.
             newForwardedEndpoints.addAll(conferenceSpeechActivityEndpoints);
@@ -493,16 +405,16 @@ public class LastNController
 
             // Don't exceed the last-n value no matter what the client has
             // pinned.
-            while (newForwardedEndpoints.size() > currentLastN)
+            while (newForwardedEndpoints.size() > lastN)
             {
                 newForwardedEndpoints.remove(newForwardedEndpoints.size() - 1);
             }
 
-            if (newForwardedEndpoints.size() < currentLastN)
+            if (newForwardedEndpoints.size() < lastN)
             {
                 for (String endpointId : conferenceSpeechActivityEndpoints)
                 {
-                    if (newForwardedEndpoints.size() < currentLastN)
+                    if (newForwardedEndpoints.size() < lastN)
                     {
                         if (!endpointId.equals(ourEndpointId)
                                 && !newForwardedEndpoints.contains(endpointId))
@@ -520,21 +432,8 @@ public class LastNController
         return newForwardedEndpoints;
     }
 
-    /**
-     * Recalculates the list of forwarded endpoints based on the current values
-     * of the various parameters of this instance ({@link #lastN},
-     * {@link #conferenceSpeechActivityEndpoints}, {@link #pinnedEndpoints}).
-     *
-     * @param newConferenceEndpoints A list of endpoints which entered the
-     * conference since the last call to this method. They need not be asked
-     * for keyframes, because they were never filtered by this
-     * {@link #LastNController(VideoChannel)}.
-     *
-     * @return the list of IDs of endpoints which were added to
-     * {@link #forwardedEndpoints} (i.e. of endpoints * "entering last-n") as a
-     * result of this call. Returns {@code null} if no endpoints were added.
-     */
-    private synchronized List<String> update(List<String> newConferenceEndpoints)
+
+    synchronized List<String> update(List<String> newConferenceEndpoints)
     {
         List<String> newForwardedEndpoints = determineLastNList(newConferenceEndpoints);
 
@@ -572,7 +471,7 @@ public class LastNController
             forwardedEndpoints
                     = Collections.unmodifiableList(newForwardedEndpoints);
 
-            if (lastN >= 0 || currentLastN >= 0)
+            if (lastN >= 0)
             {
                 List<String> conferenceEndpoints
                     = conferenceSpeechActivityEndpoints.
@@ -590,7 +489,7 @@ public class LastNController
 
         // If lastN is disabled, the endpoints entering forwardedEndpoints were
         // never filtered, so they don't need to be asked for keyframes.
-        if (lastN < 0 && currentLastN < 0)
+        if (lastN < 0)
         {
             enteringEndpoints = null;
         }
@@ -693,7 +592,7 @@ public class LastNController
      * @param endpointIds the list of IDs of endpoints to which to send a
      * request for a keyframe.
      */
-    private void askForKeyframes(List<String> endpointIds)
+    void askForKeyframes(List<String> endpointIds)
     {
         // TODO: Execute asynchronously.
         if (endpointIds != null && !endpointIds.isEmpty())
@@ -755,41 +654,11 @@ public class LastNController
         return null;
     }
 
-    public int getCurrentLastN()
-    {
-        return currentLastN;
-    }
-
-    public int setCurrentLastN(int currentLastN)
-    {
-        List<String> endpointsToAskForKeyframe;
-
-        synchronized (this)
-        {
-            // Since we have the lock anyway, call update() inside, so it
-            // doesn't have to obtain it again. But keep the call to
-            // askForKeyframes() outside.
-
-            if (lastN >= 0 && lastN < currentLastN)
-            {
-                currentLastN = lastN;
-            }
-
-            this.currentLastN = currentLastN;
-
-            endpointsToAskForKeyframe = update();
-        }
-
-        askForKeyframes(endpointsToAskForKeyframe);
-
-        return currentLastN;
-    }
-
     /**
      * @return true if and only if the two lists {@code l1} and {@code l2}
      * contains the same elements (regardless of their order).
      */
-    private boolean equalAsSets(List<?> l1, List<?> l2)
+    static boolean equalAsSets(List<?> l1, List<?> l2)
     {
         Set<Object> s1 = new HashSet<>();
         s1.addAll(l1);

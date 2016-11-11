@@ -22,7 +22,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
-import org.jitsi.videobridge.simulcast.*;
+import org.jitsi.videobridge.ratecontrol.*;
 
 import java.util.*;
 
@@ -211,28 +211,13 @@ public class LipSyncHack
             return;
         }
 
-        SimulcastReceiver recv = sourceVC.getTransformEngine()
-            .getSimulcastEngine().getSimulcastReceiver();
+        RTPEncodingImpl defaultEncoding = sourceVC
+            .getMediaStreamTrackReceiver().getDefaultEncoding();
 
-        Long receiveVideoSSRC;
-        if (recv != null && recv.isSimulcastSignaled())
+        if (defaultEncoding == null)
         {
-            // FIXME this is a little ugly
-            receiveVideoSSRC = recv.getSimulcastStream(
-                0, targetVC.getStream()).getPrimarySSRC();
-        }
-        else
-        {
-            int[] receiveSSRCs = sourceVC.getReceiveSSRCs();
-            if (receiveSSRCs == null || receiveSSRCs.length == 0)
-            {
-                // It seems like we're not ready yet to trigger the hack.
-                return;
-            }
-            else
-            {
-                receiveVideoSSRC = receiveSSRCs[0] & 0xffffffffL;
-            }
+            // It seems like we're not ready yet to trigger the hack.
+            return;
         }
 
         // XXX we do this here (i.e. below the sanity checks), in order to avoid
@@ -240,6 +225,8 @@ public class LipSyncHack
         // its Endpoint. The disadvantage being that endpoints that only have an
         // audio channel will never reach this.
         acceptedAudioSSRCs.add(acceptedAudioSSRC);
+
+        long receiveVideoSSRC = defaultEncoding.getPrimarySSRC();
 
         synchronized (states)
         {
@@ -278,16 +265,16 @@ public class LipSyncHack
      */
     public void onRTPTranslatorWillWriteVideo(
         boolean accept, boolean data, byte[] buffer,
-        int offset, int length, Channel target)
+        int offset, int length, RtpChannel target)
     {
         if (!accept)
         {
             return;
         }
 
-        Long acceptedVideoSSRC /* box early */;
-        long timestamp;
-        int seqnum;
+        long acceptedVideoSSRC = -1;
+        long timestamp = -1;
+        int seqnum = -1;
 
         if (data)
         {
@@ -315,45 +302,43 @@ public class LipSyncHack
         }
         else
         {
-            // The correct thing to do here is a loop because the RTCP packet
-            // can be compound. However, in practice we haven't seen multiple
-            // SRs being bundled in the same compound packet, and we're only
-            // interested in SRs.
-
-            // Check RTCP packet validity. This makes sure that pktLen > 0
-            // so this loop will eventually terminate.
-            if (!RTCPHeaderUtils.isValid(buffer, offset, length))
+            boolean found = false;
+            RTCPIterator it = new RTCPIterator(buffer, offset, length);
+            while (it.hasNext() && !found)
             {
-                return;
-            }
+                // The correct thing to do here is a loop because the RTCP packet
+                // can be compound. However, in practice we haven't seen multiple
+                // SRs being bundled in the same compound packet, and we're only
+                // interested in SRs.
+                ByteArrayBuffer baf = it.next();
 
-            int pktLen = RTCPHeaderUtils.getLength(buffer, offset, length);
-
-            int pt = RTCPHeaderUtils.getPacketType(buffer, offset, pktLen);
-            if (pt == RTCPPacket.SR)
-            {
-                acceptedVideoSSRC
-                    = RTCPHeaderUtils.getSenderSSRC(buffer, offset, pktLen);
-
-                // In order to minimize the synchronization overhead, we process
-                // only the first data packet of a given RTP stream.
-                //
-                // XXX No synchronization is required to r/w the acceptedVideoSSRCs
-                // because in the current architecture this method is called by
-                // a single thread at the time.
-                if (acceptedVideoSSRCsRTCP.contains(acceptedVideoSSRC))
+                int pt = RTCPHeaderUtils.getPacketType(baf);
+                if (pt == RTCPPacket.SR)
                 {
-                    return;
+                    acceptedVideoSSRC
+                        = RTCPHeaderUtils.getSenderSSRC(baf);
+
+                    // In order to minimize the synchronization overhead, we
+                    // process only the first data packet of a given RTP stream.
+                    //
+                    // XXX No synchronization is required to r/w the
+                    // acceptedVideoSSRCs because in the current architecture
+                    // this method is called by a single thread at the time.
+                    if (acceptedVideoSSRCsRTCP.contains(acceptedVideoSSRC))
+                    {
+                        continue;
+                    }
+
+                    acceptedVideoSSRCsRTCP.add(acceptedVideoSSRC);
+                    found = true;
+
+                    timestamp = RTCPSenderInfoUtils.getTimestamp(baf);
+
+                    seqnum = -1;
                 }
-
-                acceptedVideoSSRCsRTCP.add(acceptedVideoSSRC);
-
-                timestamp = RTCPSenderInfoUtils.getTimestamp(
-                    buffer, offset + RTCPHeader.SIZE, pktLen - RTCPHeader.SIZE);
-
-                seqnum = -1;
             }
-            else
+
+            if (!found)
             {
                 return;
             }

@@ -961,36 +961,6 @@ public class Content
         firePropertyChange(CHANNEL_MODIFIED_PROPERTY_NAME, channel, channel);
     }
 
-    /**
-     * Tries to find an <tt>RtpChannel</tt> from this <tt>Content</tt> which
-     * has <tt>ssrc</tt> in one of its FID source groups.
-     * @param ssrc the SSRC to search for.
-     * @return an <tt>RtpChannel</tt> with <tt>ssrc</tt> in one of its FID
-     * source groups, or <tt>null</tt> if there is no such <tt>RtpChannel</tt>
-     * in this <tt>Content</tt>.
-     */
-    public RtpChannel findChannelByFidSsrc(long ssrc)
-    {
-        if (expired)
-            return null;
-
-        for (Channel channel : getChannels())
-        {
-            if (! (channel instanceof RtpChannel))
-            {
-                continue;
-            }
-            RtpChannel rtpChannel = (RtpChannel) channel;
-
-            if (rtpChannel.getFidPairedSsrc(ssrc) != -1)
-            {
-                return rtpChannel;
-            }
-        }
-
-        return null;
-    }
-
     private static class RTPTranslatorWriteFilter
         implements RTPTranslator.WriteFilter
     {

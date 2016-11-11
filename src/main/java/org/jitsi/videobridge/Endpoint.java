@@ -73,8 +73,8 @@ public class Endpoint
      * which specifies the JID of the currently selected <tt>Endpoint</tt> of
      * this <tt>Endpoint</tt>.
      */
-    public static final String SELECTED_ENDPOINT_PROPERTY_NAME
-        = Endpoint.class.getName() + ".selectedEndpoint";
+    public static final String SELECTED_ENDPOINTS_PROPERTY_NAME
+        = Endpoint.class.getName() + ".selectedEndpoints";
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
@@ -82,6 +82,13 @@ public class Endpoint
      */
     private static final String COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED
         = "SelectedEndpointChangedEvent";
+
+    /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code SelectedEndpointChangedEvent}.
+     */
+    private static final String COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED
+        = "SelectedEndpointsChangedEvent";
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
@@ -174,7 +181,7 @@ public class Endpoint
      * The list of currently selected <tt>Endpoint</tt>s at this
      * <tt>Endpoint</tt>.
      */
-    private Set<Endpoint> selectedEndpoints = new HashSet<>();
+    private List<String> selectedEndpoints = new LinkedList<>();
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -378,26 +385,6 @@ public class Endpoint
         return lipSyncHack;
     }
 
-    /**
-     * Gets the currently selected <tt>Endpoint</tt>s at this <tt>Endpoint</tt>
-     *
-     * @return the currently selected <tt>Endpoint</tt>s at this
-     * <tt>Endpoint</tt>.
-     */
-    public Set<Endpoint> getSelectedEndpoints()
-    {
-        Set<Endpoint> result = new HashSet<>();
-        for (Endpoint endpoint : selectedEndpoints)
-        {
-            if (!endpoint.isExpired())
-            {
-                result.add(endpoint);
-            }
-        }
-
-        return result;
-    }
-
 
     /**
      * @return the list of pinned endpoints, represented as a list of endpoint
@@ -485,6 +472,8 @@ public class Endpoint
     {
         if (COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED.equals(colibriClass))
             onSelectedEndpointChangedEvent(src, jsonObject);
+        else if (COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED.equals(colibriClass))
+            onSelectedEndpointsChangedEvent(src, jsonObject);
         else if (COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED.equals(colibriClass))
             onPinnedEndpointChangedEvent(src, jsonObject);
         else if (COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED.equals(colibriClass))
@@ -590,16 +579,6 @@ public class Endpoint
         // Find the new pinned endpoint.
         String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
 
-        if (logger.isDebugEnabled())
-        {
-            StringCompiler sc = new StringCompiler();
-            sc.bind("pinnedId", newPinnedEndpointID);
-            sc.bind("this", this);
-            logger.debug(sc.c(
-                    "Endpoint {this.id} notified us that it has pinned"
-                            + " {pinnedId}."));
-        }
-
         List<String> newPinnedIDList = Collections.EMPTY_LIST;
         if (newPinnedEndpointID != null && !"".equals(newPinnedEndpointID))
         {
@@ -641,16 +620,6 @@ public class Endpoint
             }
         }
 
-        if (logger.isDebugEnabled())
-        {
-            StringCompiler sc = new StringCompiler();
-            sc.bind("pinned", newPinnedEndpoints);
-            sc.bind("this", this);
-            logger.debug(sc.c(
-                    "Endpoint {this.id} notified us that it has pinned"
-                            + " {pinned}."));
-        }
-
         pinnedEndpointsChanged(newPinnedEndpoints);
     }
 
@@ -679,13 +648,6 @@ public class Endpoint
                 List<String> oldPinnedEndpoints = this.pinnedEndpoints;
                 this.pinnedEndpoints = pinnedEndpoints;
 
-                if (logger.isDebugEnabled())
-                {
-                    StringCompiler sc = new StringCompiler();
-                    sc.bind("pinned", pinnedEndpoints);
-                    sc.bind("this", this);
-                    logger.debug(sc.c("Endpoint {this.id} pinned {pinned}."));
-                }
                 firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
                                    oldPinnedEndpoints, pinnedEndpoints);
             }
@@ -693,9 +655,8 @@ public class Endpoint
     }
 
     /**
-     * Notifies this {@code Endpoint} that a
-     * {@code SelectedEndpointChangedEvent} has been received by the associated
-     * {@code SctpConnection}.
+     * Notifies this {@code Endpoint} that a {@code SelectedEndpointChangedEvent}
+     * has been received by the associated {@code SctpConnection}.
      *
      * @param src the {@code WebRtcDataStream} by which {@code jsonObject} has
      * been received
@@ -704,64 +665,85 @@ public class Endpoint
      * associated {@code SctpConnection}
      */
     private void onSelectedEndpointChangedEvent(
+        WebRtcDataStream src,
+        JSONObject jsonObject)
+    {
+        // Find the new pinned endpoint.
+        String newSelectedEndpointID = (String) jsonObject.get("selectedEndpoint");
+
+        List<String> newSelectedIDList = Collections.EMPTY_LIST;
+        if (newSelectedEndpointID != null && !"".equals(newSelectedEndpointID))
+        {
+            newSelectedIDList = Collections.singletonList(newSelectedEndpointID);
+        }
+
+        selectedEndpointsChanged(newSelectedIDList);
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a
+     * {@code SelectedEndpointsChangedEvent} has been received by the associated
+     * {@code SctpConnection}.
+     *
+     * @param src the {@code WebRtcDataStream} by which {@code jsonObject} has
+     * been received
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code SelectedEndpointChangedEvent} which has been received by the
+     * associated {@code SctpConnection}
+     */
+    private void onSelectedEndpointsChangedEvent(
             WebRtcDataStream src,
             JSONObject jsonObject)
     {
-        List<String> newSelectedEndpointIDs
-                = readSelectedEndpointID(jsonObject);
-
-        if (logger.isDebugEnabled())
+        // Find the new pinned endpoint.
+        Object o = jsonObject.get("selectedEndpoints");
+        if (!(o instanceof JSONArray))
         {
-            StringCompiler sc = new StringCompiler();
-            sc.bind("selectedIds", newSelectedEndpointIDs);
-            sc.bind("this", this);
-            logger.debug(sc.c(
-                    "Endpoint {this.id} notified us that its big screen"
-                        + " displays endpoint {selectedIds}."));
+            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
+            return;
         }
 
-        Set<Endpoint> newSelectedEndpoints = new HashSet<>();
-
-        if (!newSelectedEndpointIDs.isEmpty() && !conference.isExpired()) {
-            for (String endpointId : newSelectedEndpointIDs) {
-                Endpoint endpoint = conference.getEndpoint(endpointId);
-                if (endpoint != null) {
-                    newSelectedEndpoints.add(endpoint);
-                }
+        JSONArray jsonArray = (JSONArray) o;
+        List<String> newSelectedEndpoints = new LinkedList<>();
+        for (Object endpointId : jsonArray)
+        {
+            if (endpointId != null && endpointId instanceof String)
+            {
+                newSelectedEndpoints.add((String)endpointId);
             }
         }
 
+        selectedEndpointsChanged(newSelectedEndpoints);
+    }
+
+    private void selectedEndpointsChanged(List<String> selectedEndpoints)
+    {
+        // Check if that's different to what we think the pinned endpoints are.
         boolean changed;
-        Set<Endpoint> oldSelectedEndpoints = this.getSelectedEndpoints();
         synchronized (selectedEndpointSyncRoot)
         {
-            // Compare the collections
-            changed = !(oldSelectedEndpoints.equals(newSelectedEndpoints));
+            changed = selectedEndpoints.size() != this.selectedEndpoints.size();
+            if (!changed)
+            {
+                for (int i = 0; i < selectedEndpoints.size(); i++)
+                {
+                    if (!selectedEndpoints.get(i).
+                        equals(this.selectedEndpoints.get(i)))
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
 
             if (changed)
             {
-                this.selectedEndpoints = new HashSet<>(newSelectedEndpoints);
-            }
-        }
+                List<String> oldSelectedEndpoints = this.selectedEndpoints;
+                this.selectedEndpoints = selectedEndpoints;
 
-        // NOTE(gp) This won't guarantee that property change events are fired
-        // in the correct order. We should probably call the
-        // firePropertyChange() method from inside the synchronized _and_ the
-        // underlying PropertyChangeNotifier should have a dedicated events
-        // queue and a thread for firing PropertyChangeEvents from the queue.
-
-        if (changed)
-        {
-            if (logger.isDebugEnabled())
-            {
-                StringCompiler sc = new StringCompiler();
-                sc.bind("newSelectedEndpoints", newSelectedEndpoints);
-                sc.bind("this", this);
-                logger.debug(sc.c(
-                        "Endpoint {this.id} selected {newSelectedEndpoints}."));
+                firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
+                    oldSelectedEndpoints, selectedEndpoints);
             }
-            firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
-                oldSelectedEndpoints, newSelectedEndpoints);
         }
     }
 
