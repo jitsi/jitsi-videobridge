@@ -545,39 +545,8 @@ public class IceUdpTransportManager
             }
         }
 
-        // Use dynamic ports iff we're not sing "single port".
+        // Use dynamic ports iff we're not using "single port".
         iceAgent.setUseHostHarvester(enableDynamicHostHarvester);
-
-        //if no configuration is found then we simply log and bail
-        if (cfg == null)
-        {
-            logger.info("No configuration found. "
-                        + "Will continue without custom candidate harvesters");
-            return;
-        }
-
-        HarvesterConfiguration addressesConfig
-            = HarvesterConfiguration.getInstance(cfg);
-        MappingCandidateHarvester mappingHarvester
-            = addressesConfig.getCandidateHarvester();
-
-        //append the mapping harvester
-        if( mappingHarvester != null)
-        {
-            iceAgent.addCandidateHarvester(mappingHarvester);
-        }
-
-        if(addressesConfig.getPublicAddress() != null
-            && addressesConfig.getLocalAddress() != null)
-        {
-            //if configured, append a mapping harvester.
-            MappingCandidateHarvester natHarvester
-                = new MappingCandidateHarvester(
-                addressesConfig.getPublicAddress(),
-                addressesConfig.getLocalAddress());
-
-            iceAgent.addCandidateHarvester(natHarvester);
-        }
     }
 
     /**
@@ -1813,18 +1782,6 @@ public class IceUdpTransportManager
                 {
                     classLogger.info("Initialized TCP harvester on port " + port
                                         + ", using SSLTCP:" + ssltcp);
-                }
-
-                HarvesterConfiguration addressesConfig
-                    = HarvesterConfiguration.getInstance(cfg);
-                // if there is mapping addresses configured or discovered
-                // use them
-                if(addressesConfig.getPublicAddress() != null
-                    && addressesConfig.getLocalAddress() != null)
-                {
-                    tcpHostHarvester.addMappedAddress(
-                        addressesConfig.getPublicAddress().getAddress(),
-                        addressesConfig.getLocalAddress().getAddress());
                 }
 
                 int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
