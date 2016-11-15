@@ -1499,6 +1499,17 @@ public class Videobridge
                         + " initialization.",
                     e);
         }
+
+        // Start the initialization of the mapping candidate harvesters.
+        // Asynchronous, because the AWS and STUN harvester may take a long
+        // time to initialize.
+        new Thread()
+        {
+            public void run()
+            {
+                MappingCandidateHarvesters.initialize();
+            }
+        }.start();
     }
 
     /**
