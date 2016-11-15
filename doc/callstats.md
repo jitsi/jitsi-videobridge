@@ -5,6 +5,7 @@ in /etc/jitsi/videobridge/sip-communicator.properties
     io.callstats.sdk.CallStats.appId=
     io.callstats.sdk.CallStats.keyId=
     io.callstats.sdk.CallStats.keyPath=
+    #io.callstats.sdk.CallStats.appSecret=
 
     # the id of the videobridge
     io.callstats.sdk.CallStats.bridgeId=
@@ -13,6 +14,8 @@ in /etc/jitsi/videobridge/sip-communicator.properties
     org.jitsi.videobridge.ENABLE_STATISTICS=true
     org.jitsi.videobridge.STATISTICS_INTERVAL.callstats.io=30000
     org.jitsi.videobridge.STATISTICS_TRANSPORT=callstats.io
+
+Callstats.io supports authentication via shared secret and public/private keys.
 
 You can use [pem-to-jwk](https://www.npmjs.com/package/pem-to-jwk) to convert PEM encoded EC private key to JWK.  
 To generate a jwk file that needs to be supplied as
