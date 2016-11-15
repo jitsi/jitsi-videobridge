@@ -3,9 +3,9 @@ in /etc/jitsi/videobridge/sip-communicator.properties
 
     # the callstats credentials
     io.callstats.sdk.CallStats.appId=
-    io.callstats.sdk.CallStats.appSecret=
-    #io.callstats.sdk.CallStats.keyId=
-    #io.callstats.sdk.CallStats.keyPath=
+    io.callstats.sdk.CallStats.keyId=
+    io.callstats.sdk.CallStats.keyPath=
+    #io.callstats.sdk.CallStats.appSecret=
 
     # the id of the videobridge
     io.callstats.sdk.CallStats.bridgeId=

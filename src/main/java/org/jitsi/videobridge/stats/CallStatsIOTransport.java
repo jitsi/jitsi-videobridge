@@ -261,19 +261,19 @@ public class CallStatsIOTransport
             cfg, PNAME_CALLSTATS_IO_BRIDGE_ID, DEFAULT_BRIDGE_ID);
         
         /**
-         * prefer appSecret over keyId/keyPath
+         * prefer keyId/keyPath over appSecret
          */
-        if(appSecret == null)
+        if(keyId == null || keyPath == null)
         {
-            logger.warn("appSecret missing, will try using keyId and keyPath");
+            logger.warn("KeyID/keyPath missing, will try using appSecret");
 
-            if(keyId == null || keyPath == null)
+            if(appSecret == null)
             {
-                logger.warn("KeyID/keyPath missing. Skipping callstats init");
+                logger.warn("appSecret missing. Skipping callstats init");
                 return;
             }
         }
-
+        
         ServerInfo serverInfo = createServerInfo(bundleContext);
 
         final CallStats callStats = new CallStats();
@@ -306,16 +306,7 @@ public class CallStatsIOTransport
                     }
                 };
 
-        if(appSecret != null)
-        {
-            callStats.initialize(
-                    appId,
-                    appSecret, 
-                    bridgeId, 
-                    serverInfo, 
-                    callStatsInitListener);
-        }
-        else
+        if(keyId != null && keyPath != null)
         {
             callStats.initialize(
                     appId,
@@ -323,6 +314,15 @@ public class CallStatsIOTransport
                             String.valueOf(appId), keyId, bridgeId, keyPath),
                     bridgeId,
                     serverInfo,
+                    callStatsInitListener);
+        }
+        else
+        {
+            callStats.initialize(
+                    appId,
+                    appSecret, 
+                    bridgeId, 
+                    serverInfo, 
                     callStatsInitListener);
         }
     }
