@@ -24,6 +24,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.util.*;
 
+import org.ice4j.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
@@ -337,23 +338,24 @@ public class RawUdpTransportManager
 
         if (bindAddr == null)
         {
+            // Note that this is only kept to preserve the previous behaviour
+            // of using the address configured as NAT_HARVESTER_LOCAL_ADDRESS,
+            // which doesn't seem correct.
             ConfigurationService cfg
                     = ServiceUtils.getService(
                     bundleContext,
                     ConfigurationService.class);
 
-            HarvesterConfiguration addressesConfig
-                    = HarvesterConfiguration.getInstance(cfg);
-
             InetAddress localAddress = null;
-
-            /*if the harverster local address is configured,
-             *use this as the bind address.
-             *NOTE: both public and local addresses need to be configured
-             */
-            if (addressesConfig != null && addressesConfig.getLocalAddress() != null)
+            if (cfg != null)
             {
-                localAddress = addressesConfig.getLocalAddress().getAddress();
+                String localAddressStr
+                    = cfg.getString(
+                            HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS);
+                if (localAddressStr != null && !localAddressStr.isEmpty())
+                {
+                    localAddress = InetAddress.getByName(localAddressStr);
+                }
             }
 
             if (localAddress != null)
