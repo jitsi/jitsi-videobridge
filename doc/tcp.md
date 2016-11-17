@@ -11,8 +11,8 @@ candidates to be generated.
 #Configuration
 By default TCP support is enabled on port 443 with fallback 
 to port 4443. A fallback would occur in case something else, 
-like a web server is already listening on port 443. Note 
-however, that the very point of using TCP is to simulate http
+like a web server is already listening on port 443. Note,
+however, that the very point of using TCP is to simulate HTTP
 traffic in a number of environments where it is the only allowed 
 form of communication, so you may want to make sure that 
 port 443 will be free on the machine where you are running the 
@@ -26,9 +26,11 @@ See below for details.
 
 
 
-The following properties can be set in 
-$HOME/.sip-communicator/sip-communicator.properties to control 
-the TCP-related functionality, if running from source. If installed from a package the file is /etc/jitsi/videobridge/sip-communicator.properties.
+The following properties can be set in the jitsi-videobridge 
+properties file to control the TCP-related functionality.
+The file is usually located at
+```/etc/jitsi/videobridge/sip-communicator.properties``` or
+```$HOME/.sip-communicator/sip-communicator.properties```
 
 
 ### *org.jitsi.videobridge.DISABLE_TCP_HARVESTER*
@@ -65,39 +67,6 @@ If the option is disabled (the property is set to false), jitsi-videobridge
 will generate regular "tcp" candidates and will expect to receive STUN messages
 right away.
 
-
-### *org.ice4j.ice.harvest.ALLOWED_INTERFACES*
-Default: all interfaces are allowed.
-
-This property can be used to specify a ";"-separated list of interfaces which are
-allowed to be used for candidate allocations.
-
-### *org.ice4j.ice.harvest.BLOCKED_INTERFACES*
-Default: no interfaces are blocked.
-
-This property can be used to specify a ";"-separated list of interfaces which are
-not allowed to be used for candidate allocations.
-
-### *org.ice4j.ice.harvest.ALLOWED_ADDRESSES*
-Default: all addresses are allowed.
-
-This property can be used to specify a ";"-separated list of IP addresses which
-are allowed to be used for candidate allocations.
-
-### *org.ice4j.ice.harvest.BLOCKED_ADDRESSES*
-Default: no addresses are blocked.
-
-This property can be used to specify a ";"-separated list of IP addresses which
-are not allowed to be used for candidate allocations.
-
-### *org.ice4j.ipv6.DISABLED*
-Type: boolean
-
-Default: false
-
-This property can be used to disable binding on IPv6 addresses.
-
-
 ### *org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT*
 Default: none
 Type: integer between 1 and 65535
@@ -111,16 +80,21 @@ will not change.
 ### *org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS*
 Default: none
 
+DEPRECATED. Use [ice4j properties](https://github.com/jitsi/ice4j/blob/master/doc/configuration.md)
+instead.
 If these to properties are configured, Jitsi Videobridge will
 generate additional srflx candidates for each candidate with
 the local address configured.
 
-This is useful if Jitsi Videobridge is running behind a NAT with
-the necessary ports forwarded. For example, if Jitsi Videobridge
-is running on 10.0.0.1 behind a NAT, and the public address is 2.2.2.2,
-NAT_HARVESTER_LOCAL_ADDRESS=10.0.0.1 and
-NAT_HARVESTER_PUBLIC_ADDRESS=2.2.2.2
-should be configured.
+
+## Configuration of ice4j
+
+Some of the networking-related behavior of jitsi-videobridge can be configured 
+through properties for the ICE library -- [ice4j](https://github.com/jitsi/ice4j).
+These properties can also be set in the jitsi-videobridge properties file. See 
+[the documenation of ice4j](https://github.com/jitsi/ice4j/blob/master/doc/configuration.md)
+for details.
+
 
 
 # Examples
