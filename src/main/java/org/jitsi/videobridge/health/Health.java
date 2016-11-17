@@ -22,6 +22,7 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 
 import org.eclipse.jetty.server.*;
+import org.ice4j.ice.harvest.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -137,6 +138,11 @@ public class Health
     public static void check(Videobridge videobridge)
         throws Exception
     {
+        if (MappingCandidateHarvesters.stunDiscoveryFailed)
+        {
+            throw new Exception("Address discovery through STUN failed");
+        }
+
         // Conference
         Conference conference
             = videobridge.createConference(
