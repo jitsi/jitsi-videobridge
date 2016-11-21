@@ -226,6 +226,17 @@ public class RtpChannel
     private byte rtxAssociatedPayloadType = -1;
 
     /**
+     * Whether this {@link RtpChannel} should latch on to the remote address of
+     * the first received data packet (and control packet) and only received
+     * subsequent packets from this remote address.
+     * We want to enforce this if RAW-UDP is used, and in some of the cases
+     * when ICE is used because ice4j not always does the filtering for us.
+     * We only disable this if the ice4j virtual socket layer is used, because
+     * we know that in this mode ice4j will verify the remote address.
+     */
+    private boolean verifyRemoteAddress = true;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -282,6 +293,15 @@ public class RtpChannel
 
         content.addPropertyChangeListener(propertyChangeListener);
 
+        // Disable the remote address check iff we're using ICE with the ice4j
+        // virtual socket layer.
+        if (Videobridge.useIce4jVsl &&
+                IceUdpTransportPacketExtension.NAMESPACE.equals(
+                        this.transportNamespace))
+        {
+            this.verifyRemoteAddress = false;
+        }
+
         touch();
     }
 
@@ -330,7 +350,8 @@ public class RtpChannel
         else
         {
             accept
-                = ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort());
+                = !verifyRemoteAddress ||
+                (ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort()));
         }
 
         if (accept)
@@ -429,7 +450,8 @@ public class RtpChannel
         else
         {
             accept
-                = dataAddr.equals(p.getAddress()) && (dataPort == p.getPort());
+                = !verifyRemoteAddress ||
+                (dataAddr.equals(p.getAddress()) && (dataPort == p.getPort()));
         }
 
         if (accept)
