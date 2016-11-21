@@ -119,7 +119,7 @@ public class IceUdpTransportManager
 
     /**
      * The name of the property that can be used to control the value of
-     * {@link #ICE_UFRAG_PREFIX}.
+     * {@link #iceUfragPrefix}.
      */
     public static final String ICE_UFRAG_PREFIX_PNAME
         = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
@@ -127,7 +127,7 @@ public class IceUdpTransportManager
     /**
      * The optional prefix to use for generated ICE local username fragments.
      */
-    private static String ICE_UFRAG_PREFIX;
+    private static String iceUfragPrefix;
 
     /**
      * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
@@ -177,7 +177,7 @@ public class IceUdpTransportManager
             }
             staticConfigurationInitialized = true;
 
-            ICE_UFRAG_PREFIX = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
+            iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
 
             int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
                                         SINGLE_PORT_DEFAULT_VALUE);
@@ -952,7 +952,7 @@ public class IceUdpTransportManager
             = ServiceUtils.getService(
                     getBundleContext(),
                     NetworkAddressManagerService.class);
-        Agent iceAgent = new Agent(logger.getLevel(), ICE_UFRAG_PREFIX);
+        Agent iceAgent = new Agent(logger.getLevel(), iceUfragPrefix);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
