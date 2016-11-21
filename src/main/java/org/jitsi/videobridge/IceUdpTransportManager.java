@@ -1275,10 +1275,19 @@ public class IceUdpTransportManager
      */
     private IceSocketWrapper getSocketForComponent(Component component)
     {
-        CandidatePair selectedPair = component.getSelectedPair();
+        // This returns non-null iff the virtual socket layer is in use.
+        IceSocketWrapper socket = component.getSocketWrapper();
 
-        return
-            (selectedPair == null) ? null : selectedPair.getIceSocketWrapper();
+        if (socket == null)
+        {
+            CandidatePair selectedPair = component.getSelectedPair();
+
+            socket
+                = (selectedPair == null) ? null : selectedPair
+                        .getIceSocketWrapper();
+        }
+
+        return socket;
     }
 
     /**
