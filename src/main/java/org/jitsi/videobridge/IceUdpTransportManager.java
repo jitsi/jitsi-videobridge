@@ -159,6 +159,107 @@ public class IceUdpTransportManager
     private static int tcpHarvesterMappedPort = -1;
 
     /**
+     * Initializes the static <tt>Harvester</tt> instances used by all
+     * <tt>IceUdpTransportManager</tt> instances, that is
+     * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
+     *
+     * @param cfg the {@link ConfigurationService} which provides values to
+     * configurable properties of the behavior/logic of the method
+     * implementation
+     */
+    private static void initializeStaticConfiguration(ConfigurationService cfg)
+    {
+        synchronized (IceUdpTransportManager.class)
+        {
+            if (staticConfigurationInitialized)
+            {
+                return;
+            }
+            staticConfigurationInitialized = true;
+
+            ICE_UFRAG_PREFIX = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
+
+            int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
+                                        SINGLE_PORT_DEFAULT_VALUE);
+            if (singlePort != -1)
+            {
+                singlePortHarvesters
+                    = SinglePortUdpHarvester.createHarvesters(singlePort);
+                if (singlePortHarvesters.isEmpty())
+                {
+                    singlePortHarvesters = null;
+                    classLogger.info("No single-port harvesters created.");
+                }
+            }
+
+            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
+            {
+                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
+                boolean fallback = false;
+                boolean ssltcp = cfg.getBoolean(TCP_HARVESTER_SSLTCP,
+                                                TCP_HARVESTER_SSLTCP_DEFAULT);
+
+                if (port == -1)
+                {
+                    port = TCP_DEFAULT_PORT;
+                    fallback = true;
+                }
+
+                try
+                {
+                    tcpHarvester = new TcpHarvester(port, ssltcp);
+                }
+                catch (IOException ioe)
+                {
+                    classLogger.warn(
+                        "Failed to initialize TCP harvester on port " + port
+                            + ": " + ioe
+                            + (fallback
+                            ? ". Retrying on port " + TCP_FALLBACK_PORT
+                            : "")
+                            + ".");
+                    // If no fallback is allowed, the method will return.
+                }
+                if (tcpHarvester == null)
+                {
+                    // If TCP_HARVESTER_PORT specified a port, then fallback was
+                    // disabled. However, if the binding on the port (above)
+                    // fails, then the method should return.
+                    if (!fallback)
+                        return;
+
+                    port = TCP_FALLBACK_PORT;
+                    try
+                    {
+                        tcpHarvester
+                            = new TcpHarvester(port, ssltcp);
+                    }
+                    catch (IOException ioe)
+                    {
+                        classLogger.warn(
+                            "Failed to initialize TCP harvester on fallback"
+                                + " port " + port + ": " + ioe);
+                        return;
+                    }
+                }
+
+                if (classLogger.isInfoEnabled())
+                {
+                    classLogger.info("Initialized TCP harvester on port " + port
+                                         + ", using SSLTCP:" + ssltcp);
+                }
+
+                int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
+                if (mappedPort != -1)
+                {
+                    tcpHarvesterMappedPort = mappedPort;
+                    tcpHarvester.addMappedPort(mappedPort);
+                }
+            }
+        }
+    }
+
+    /**
      * The single (if any) <tt>Channel</tt> instance, whose sockets are
      * currently configured to accept DTLS packets.
      */
@@ -1699,107 +1800,6 @@ public class IceUdpTransportManager
             // the ICE connection.
             for (Channel channel : getChannels())
                 channel.touch(Channel.ActivityType.TRANSPORT);
-        }
-    }
-
-    /**
-     * Initializes the static <tt>Harvester</tt> instances used by all
-     * <tt>IceUdpTransportManager</tt> instances, that is
-     * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
-     *
-     * @param cfg the {@link ConfigurationService} which provides values to
-     * configurable properties of the behavior/logic of the method
-     * implementation
-     */
-    static void initializeStaticConfiguration(ConfigurationService cfg)
-    {
-        synchronized (IceUdpTransportManager.class)
-        {
-            if (staticConfigurationInitialized)
-            {
-                return;
-            }
-            staticConfigurationInitialized = true;
-
-            ICE_UFRAG_PREFIX = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
-
-            int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
-                                        SINGLE_PORT_DEFAULT_VALUE);
-            if (singlePort != -1)
-            {
-                singlePortHarvesters
-                    = SinglePortUdpHarvester.createHarvesters(singlePort);
-                if (singlePortHarvesters.isEmpty())
-                {
-                    singlePortHarvesters = null;
-                    classLogger.info("No single-port harvesters created.");
-                }
-            }
-
-            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
-            {
-                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
-                boolean fallback = false;
-                boolean ssltcp = cfg.getBoolean(TCP_HARVESTER_SSLTCP,
-                                                TCP_HARVESTER_SSLTCP_DEFAULT);
-
-                if (port == -1)
-                {
-                    port = TCP_DEFAULT_PORT;
-                    fallback = true;
-                }
-
-                try
-                {
-                    tcpHarvester = new TcpHarvester(port, ssltcp);
-                }
-                catch (IOException ioe)
-                {
-                    classLogger.warn(
-                            "Failed to initialize TCP harvester on port " + port
-                                + ": " + ioe
-                                + (fallback
-                                    ? ". Retrying on port " + TCP_FALLBACK_PORT
-                                    : "")
-                                + ".");
-                    // If no fallback is allowed, the method will return.
-                }
-                if (tcpHarvester == null)
-                {
-                    // If TCP_HARVESTER_PORT specified a port, then fallback was
-                    // disabled. However, if the binding on the port (above)
-                    // fails, then the method should return.
-                    if (!fallback)
-                        return;
-
-                    port = TCP_FALLBACK_PORT;
-                    try
-                    {
-                        tcpHarvester
-                            = new TcpHarvester(port, ssltcp);
-                    }
-                    catch (IOException ioe)
-                    {
-                        classLogger.warn(
-                                "Failed to initialize TCP harvester on fallback"
-                                    + " port " + port + ": " + ioe);
-                        return;
-                    }
-                }
-
-                if (classLogger.isInfoEnabled())
-                {
-                    classLogger.info("Initialized TCP harvester on port " + port
-                                        + ", using SSLTCP:" + ssltcp);
-                }
-
-                int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
-                if (mappedPort != -1)
-                {
-                    tcpHarvesterMappedPort = mappedPort;
-                    tcpHarvester.addMappedPort(mappedPort);
-                }
-            }
         }
     }
 
