@@ -58,14 +58,14 @@ public class IceUdpTransportManager
      * The name of the property which disables the use of a
      * <tt>TcpHarvester</tt>.
      */
-    private static final String DISABLE_TCP_HARVESTER
+    public static final String DISABLE_TCP_HARVESTER
         = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
 
     /**
      * The name of the property which controls the port number used for
      * <tt>SinglePortUdpHarvester</tt>s.
      */
-    private static final String SINGLE_PORT_HARVESTER_PORT
+    public static final String SINGLE_PORT_HARVESTER_PORT
             = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
 
     /**
@@ -100,28 +100,28 @@ public class IceUdpTransportManager
      * The name of the property which specifies an additional port to be
      * advertised by the TCP harvester.
      */
-    private static final String TCP_HARVESTER_MAPPED_PORT
+    public static final String TCP_HARVESTER_MAPPED_PORT
         = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
 
     /**
      * The name of the property which controls the port to which the
      * <tt>TcpHarvester</tt> will bind.
      */
-    private static final String TCP_HARVESTER_PORT
+    public static final String TCP_HARVESTER_PORT
         = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
 
     /**
      * The name of the property which controls the use of ssltcp candidates by
      * <tt>TcpHarvester</tt>.
      */
-    private static final String TCP_HARVESTER_SSLTCP
+    public static final String TCP_HARVESTER_SSLTCP
         = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
 
     /**
      * The name of the property that can be used to control the value of
      * {@link #ICE_UFRAG_PREFIX}.
      */
-    private static final String ICE_UFRAG_PREFIX_PNAME
+    public static final String ICE_UFRAG_PREFIX_PNAME
         = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
 
     /**
