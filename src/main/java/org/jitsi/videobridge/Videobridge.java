@@ -1489,6 +1489,7 @@ public class Videobridge
 
             if (cfg.getBoolean(USE_ICE4J_VSL_PNAME, false))
             {
+                logger.info("Enabling use of the ice4j VSL.");
                 useIce4jVsl = true;
                 System.setProperty(StackProperties.ENABLE_VIRTUAL_SOCKET_LAYER,
                                    "true");
