@@ -22,6 +22,7 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 
 import org.eclipse.jetty.server.*;
+import org.ice4j.ice.harvest.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
@@ -77,7 +78,7 @@ public class Health
 
             // Fail as quickly as possible.
             if (endpoint == null)
-                throw new NullPointerException();
+                throw new NullPointerException("Failed to create an endpoint.");
 
             endpoints[i] = endpoint;
 
@@ -101,7 +102,8 @@ public class Health
 
                 // Fail as quickly as possible.
                 if (rtpChannel == null)
-                    throw new NullPointerException();
+                    throw new NullPointerException(
+                            "Failed to create a channel.");
             }
 
             // SctpConnection
@@ -116,7 +118,8 @@ public class Health
             // Fail as quickly as possible.
             if (sctpConnection == null)
             {
-                throw new NullPointerException();
+                throw new NullPointerException(
+                    "Failed to create SCTP connection.");
             }
         }
 
@@ -137,6 +140,11 @@ public class Health
     public static void check(Videobridge videobridge)
         throws Exception
     {
+        if (MappingCandidateHarvesters.stunDiscoveryFailed)
+        {
+            throw new Exception("Address discovery through STUN failed");
+        }
+
         // Conference
         Conference conference
             = videobridge.createConference(
@@ -147,7 +155,7 @@ public class Health
         // Fail as quickly as possible.
         if (conference == null)
         {
-            throw new NullPointerException();
+            throw new NullPointerException("Failed to create a conference");
         }
         else
         {
@@ -224,13 +232,13 @@ public class Health
 
         // Fail as quickly as possible.
         if (aSctpConnection == null)
-            throw new NullPointerException();
+            throw new NullPointerException("aSctpConnection is null");
 
         SctpConnection bSctpConnection = b.getSctpConnection();
 
         // Fail as quickly as possible.
         if (bSctpConnection == null)
-            throw new NullPointerException();
+            throw new NullPointerException("bSctpConnection is null");
 
         connect(aSctpConnection, bSctpConnection);
     }
@@ -249,13 +257,13 @@ public class Health
 
         // Fail as quickly as possible.
         if (aTransport == null)
-            throw new NullPointerException();
+            throw new NullPointerException("Failed to describe transport.");
 
         IceUdpTransportPacketExtension bTransport = describeTransportManager(b);
 
         // Fail as quickly as possible.
         if (bTransport == null)
-            throw new NullPointerException();
+            throw new NullPointerException("Failed to describe transport.");
 
         b.setTransport(aTransport);
         a.setTransport(bTransport);
@@ -317,6 +325,7 @@ public class Health
                ServletException
     {
         int status;
+        String reason = null;
 
         try
         {
@@ -330,6 +339,7 @@ public class Health
             else
             {
                 status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+                reason = "XMPP component connection failure.";
             }
         }
         catch (Exception ex)
@@ -339,9 +349,16 @@ public class Health
             else if (ex instanceof ServletException)
                 throw (ServletException) ex;
             else
+            {
                 status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+                reason = ex.getMessage();
+            }
         }
 
+        if (reason != null)
+        {
+            response.getOutputStream().println(reason);
+        }
         response.setStatus(status);
     }
 

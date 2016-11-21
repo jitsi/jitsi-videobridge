@@ -138,7 +138,7 @@ public class IceUdpTransportManager
      * The single <tt>TcpHarvester</tt> instance for the
      * application.
      */
-    private static TcpHarvester tcpHostHarvester = null;
+    private static TcpHarvester tcpHarvester = null;
 
     /**
      * The <tt>SinglePortUdpHarvester</tt>s which will be appended to ICE
@@ -148,15 +148,15 @@ public class IceUdpTransportManager
 
     /**
      * The flag which indicates whether application-wide harvesters, stored
-     * in the static fields {@link #tcpHostHarvester} and
+     * in the static fields {@link #tcpHarvester} and
      * {@link #singlePortHarvesters} have been initialized.
      */
     private static boolean staticConfigurationInitialized = false;
 
     /**
-     * The "mapped port" added to {@link #tcpHostHarvester}, or -1.
+     * The "mapped port" added to {@link #tcpHarvester}, or -1.
      */
-    private static int tcpHostHarvesterMappedPort = -1;
+    private static int tcpHarvesterMappedPort = -1;
 
     /**
      * The single (if any) <tt>Channel</tt> instance, whose sockets are
@@ -533,8 +533,8 @@ public class IceUdpTransportManager
             // possible right now.
             initializeStaticConfiguration(cfg);
 
-            if (tcpHostHarvester != null)
-                iceAgent.addCandidateHarvester(tcpHostHarvester);
+            if (tcpHarvester != null)
+                iceAgent.addCandidateHarvester(tcpHarvester);
             if (singlePortHarvesters != null)
             {
                 for (CandidateHarvester harvester : singlePortHarvesters)
@@ -545,39 +545,8 @@ public class IceUdpTransportManager
             }
         }
 
-        // Use dynamic ports iff we're not sing "single port".
+        // Use dynamic ports iff we're not using "single port".
         iceAgent.setUseHostHarvester(enableDynamicHostHarvester);
-
-        //if no configuration is found then we simply log and bail
-        if (cfg == null)
-        {
-            logger.info("No configuration found. "
-                        + "Will continue without custom candidate harvesters");
-            return;
-        }
-
-        HarvesterConfiguration addressesConfig
-            = HarvesterConfiguration.getInstance(cfg);
-        MappingCandidateHarvester mappingHarvester
-            = addressesConfig.getCandidateHarvester();
-
-        //append the mapping harvester
-        if( mappingHarvester != null)
-        {
-            iceAgent.addCandidateHarvester(mappingHarvester);
-        }
-
-        if(addressesConfig.getPublicAddress() != null
-            && addressesConfig.getLocalAddress() != null)
-        {
-            //if configured, append a mapping harvester.
-            MappingCandidateHarvester natHarvester
-                = new MappingCandidateHarvester(
-                addressesConfig.getPublicAddress(),
-                addressesConfig.getLocalAddress());
-
-            iceAgent.addCandidateHarvester(natHarvester);
-        }
     }
 
     /**
@@ -942,9 +911,9 @@ public class IceUdpTransportManager
                     for (LocalCandidate candidate : candidates)
                     {
                         if (candidate.getTransport() == Transport.TCP
-                              && tcpHostHarvesterMappedPort != -1
+                              && tcpHarvesterMappedPort != -1
                               && candidate.getTransportAddress().getPort()
-                                   != tcpHostHarvesterMappedPort)
+                                   != tcpHarvesterMappedPort)
                         {
                             // In case we use a mapped port with the TCP
                             // harvester, do not advertise the candidates with
@@ -1727,7 +1696,7 @@ public class IceUdpTransportManager
     /**
      * Initializes the static <tt>Harvester</tt> instances used by all
      * <tt>IceUdpTransportManager</tt> instances, that is
-     * {@link #tcpHostHarvester} and {@link #singlePortHarvesters}.
+     * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
      *
      * @param cfg the {@link ConfigurationService} which provides values to
      * configurable properties of the behavior/logic of the method
@@ -1773,7 +1742,7 @@ public class IceUdpTransportManager
 
                 try
                 {
-                    tcpHostHarvester = new TcpHarvester(port, ssltcp);
+                    tcpHarvester = new TcpHarvester(port, ssltcp);
                 }
                 catch (IOException ioe)
                 {
@@ -1786,7 +1755,7 @@ public class IceUdpTransportManager
                                 + ".");
                     // If no fallback is allowed, the method will return.
                 }
-                if (tcpHostHarvester == null)
+                if (tcpHarvester == null)
                 {
                     // If TCP_HARVESTER_PORT specified a port, then fallback was
                     // disabled. However, if the binding on the port (above)
@@ -1797,7 +1766,7 @@ public class IceUdpTransportManager
                     port = TCP_FALLBACK_PORT;
                     try
                     {
-                        tcpHostHarvester
+                        tcpHarvester
                             = new TcpHarvester(port, ssltcp);
                     }
                     catch (IOException ioe)
@@ -1815,23 +1784,11 @@ public class IceUdpTransportManager
                                         + ", using SSLTCP:" + ssltcp);
                 }
 
-                HarvesterConfiguration addressesConfig
-                    = HarvesterConfiguration.getInstance(cfg);
-                // if there is mapping addresses configured or discovered
-                // use them
-                if(addressesConfig.getPublicAddress() != null
-                    && addressesConfig.getLocalAddress() != null)
-                {
-                    tcpHostHarvester.addMappedAddress(
-                        addressesConfig.getPublicAddress().getAddress(),
-                        addressesConfig.getLocalAddress().getAddress());
-                }
-
                 int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
                 if (mappedPort != -1)
                 {
-                    tcpHostHarvesterMappedPort = mappedPort;
-                    tcpHostHarvester.addMappedPort(mappedPort);
+                    tcpHarvesterMappedPort = mappedPort;
+                    tcpHarvester.addMappedPort(mappedPort);
                 }
             }
         }
