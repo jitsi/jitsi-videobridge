@@ -19,7 +19,6 @@ import java.util.*;
 
 import org.ice4j.ice.*;
 import org.jitsi.eventadmin.*;
-import org.jitsi.influxdb.*;
 
 /**
  * A utility class with static methods which initialize <tt>Event</tt> instances
