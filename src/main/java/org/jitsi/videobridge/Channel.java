@@ -711,17 +711,26 @@ public abstract class Channel
             Endpoint newValue
                 = getContent().getConference()
                         .getOrCreateEndpoint(newEndpointId);
-
-            if (oldValue != newValue)
-            {
-                this.endpoint = newValue;
-
-                onEndpointChanged(oldValue, newValue);
-            }
+            setEndpoint(newValue);
         }
         finally
         {
             touch(); // It seems this Channel is still active.
+        }
+    }
+
+    /**
+     * Sets the {@link Endpoint} of this {@link Channel} to a particular
+     * instance.
+     * @param endpoint the new {@link Endpoint} instance.
+     */
+    public void setEndpoint(Endpoint endpoint)
+    {
+        Endpoint oldEndpoint = this.endpoint;
+        if (oldEndpoint != endpoint)
+        {
+            this.endpoint = endpoint;
+            onEndpointChanged(oldEndpoint, endpoint);
         }
     }
 
