@@ -254,7 +254,7 @@ public class SctpConnection
 
         logger
             = Logger.getLogger(classLogger, content.getConference().getLogger());
-        setEndpoint(endpoint.getID());
+        setEndpoint(endpoint);
         packetQueue
             = new RawPacketQueue(
                 false,

@@ -684,13 +684,13 @@ public abstract class Channel
     }
 
     /**
-     * Sets the identifier of the endpoint of the conference participant
+     * Sets the identifier of the newEndpointId of the conference participant
      * associated with this <tt>Channel</tt>.
      *
-     * @param endpoint the identifier of the endpoint of the conference
+     * @param newEndpointId the identifier of the newEndpointId of the conference
      * participant associated with this <tt>Channel</tt>
      */
-    public void setEndpoint(String endpoint)
+    public void setEndpoint(String newEndpointId)
     {
         try
         {
@@ -699,28 +699,38 @@ public abstract class Channel
             // Is the endpoint really changing?
             if (oldValue == null)
             {
-                if (endpoint == null)
+                if (newEndpointId == null)
                     return;
             }
-            else if (oldValue.getID().equals(endpoint))
+            else if (oldValue.getID().equals(newEndpointId))
             {
                 return;
             }
 
             // The endpoint is really changing.
             Endpoint newValue
-                = getContent().getConference().getOrCreateEndpoint(endpoint);
-
-            if (oldValue != newValue)
-            {
-                this.endpoint = newValue;
-
-                onEndpointChanged(oldValue, newValue);
-            }
+                = getContent().getConference()
+                        .getOrCreateEndpoint(newEndpointId);
+            setEndpoint(newValue);
         }
         finally
         {
             touch(); // It seems this Channel is still active.
+        }
+    }
+
+    /**
+     * Sets the {@link Endpoint} of this {@link Channel} to a particular
+     * instance.
+     * @param endpoint the new {@link Endpoint} instance.
+     */
+    public void setEndpoint(Endpoint endpoint)
+    {
+        Endpoint oldEndpoint = this.endpoint;
+        if (oldEndpoint != endpoint)
+        {
+            this.endpoint = endpoint;
+            onEndpointChanged(oldEndpoint, endpoint);
         }
     }
 
