@@ -12,6 +12,7 @@ org.jitsi.videobridge.rest.jetty.ProxyServlet.pathSpec=/http-bind
 org.jitsi.videobridge.rest.jetty.ProxyServlet.proxyTo=http://localhost:5280/http-bind
 org.jitsi.videobridge.rest.jetty.ResourceHandler.resourceBase=/usr/share/jitsi-meet
 org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./config.js=/etc/jitsi/meet/example.meet.jit.si-config.js
+org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./interface_config.js=/usr/share/jitsi-meet/interface_config.js
 org.jitsi.videobridge.rest.jetty.RewriteHandler.regex=^/([a-zA-Z0-9]+)$
 org.jitsi.videobridge.rest.jetty.RewriteHandler.replacement=/
 org.jitsi.videobridge.rest.api.jetty.SSIResourceHandler.paths=/
