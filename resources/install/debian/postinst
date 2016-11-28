@@ -70,10 +70,13 @@ case "$1" in
             echo '# extra options to pass to the JVB daemon' >> $CONFIG
             echo "JVB_OPTS=\"\"" >> $CONFIG
             echo >> $CONFIG
-            echo '# extra jvm params' >> $CONFIG
-            echo "#JVB_EXTRA_JVM_PARAMS=\"-javaagent:/usr/share/newrelic/newrelic.jar -Dnewrelic.config.file=/etc/jitsi/videobridge/newrelic.yml\"" >> $CONFIG
 
         fi
+
+        # Store it, so we can use it if xmpp server is on same machine
+        # we are currently doing this on every upgrade in order to be able to succesfully upgrade
+        # from old packages, otherwise we can do it only when secret is first time generated
+        db_set jitsi-videobridge/jvbsecret $JVB_SECRET
 
         # and we're done with debconf
         db_stop
@@ -92,7 +95,7 @@ case "$1" in
 
         # let's check whether there is a setting in the $CONFIG
         # for home folder and logging props file, if missing add it
-        if [ ! -n "$JAVA_SYS_PROPS" ]; then
+        if ! grep -q "JAVA_SYS_PROPS" "$CONFIG"; then
             echo >> $CONFIG
             echo '# adds java system props that are passed to jvb (default are for home and logging config file)' >> $CONFIG
             echo "JAVA_SYS_PROPS=\"\$JVB_EXTRA_JVM_PARAMS -Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=/etc/jitsi\
@@ -142,7 +145,7 @@ case "$1" in
         ls /var/log/jitsi/jvb* 1>/dev/null 2>&1 && chmod -f -R 640 /var/log/jitsi/jvb*
 
         # ensure videobridge is not running - it will be started at the end
-        if invoke-rc.d jitsi-videobridge >/dev/null 2>&1 ; then
+        if invoke-rc.d jitsi-videobridge status >/dev/null 2>&1 ; then
             invoke-rc.d jitsi-videobridge stop || true
         fi
 
