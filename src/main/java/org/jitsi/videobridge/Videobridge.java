@@ -162,20 +162,6 @@ public class Videobridge
     public static final String XMPP_API_PNAME
         = "org.jitsi.videobridge." + XMPP_API;
 
-    /**
-     * The name of the property which determines whether jitsi-videobridge
-     * will use the virtual socket layer of ice4j. The mode is global for the
-     * ice4j library, so all {@link Videobridge} instances will either use it
-     * or not.
-     */
-    public static final String USE_ICE4J_VSL_PNAME
-        = "org.jitsi.videobridge.USE_ICE4J_VSL";
-
-    /**
-     * Whether the ice4j virtual socket layer is enabled or not.
-     */
-    public static boolean useIce4jVsl = false;
-
     public static Collection<Videobridge> getVideobridges(
             BundleContext bundleContext)
     {
@@ -1486,14 +1472,6 @@ public class Videobridge
         {
             List<String> ice4jPropertyNames
                 = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
-
-            if (cfg.getBoolean(USE_ICE4J_VSL_PNAME, false))
-            {
-                logger.info("Enabling use of the ice4j VSL.");
-                useIce4jVsl = true;
-                System.setProperty(StackProperties.ENABLE_VIRTUAL_SOCKET_LAYER,
-                                   "true");
-            }
 
             if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
             {
