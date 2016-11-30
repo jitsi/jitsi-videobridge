@@ -22,7 +22,6 @@ import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-import net.java.sip.communicator.service.netaddr.*;
 import net.java.sip.communicator.service.protocol.*;
 import net.java.sip.communicator.util.*;
 
@@ -604,8 +603,8 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Adds to {@link iceAgent} the
-     * {@link org.ice4j.ice.harvestCandidateHarvester} instances managed by
+     * Adds to {@link #iceAgent} the
+     * {@link org.ice4j.ice.harvest.CandidateHarvester} instances managed by
      * jitsi-videobridge (the TCP and SinglePort harvesters), and configures the
      * use of the dynamic host harvester.
      *
@@ -893,10 +892,6 @@ public class IceUdpTransportManager
                                  boolean rtcpmux)
             throws IOException
     {
-        NetworkAddressManagerService nams
-            = ServiceUtils.getService(
-                    getBundleContext(),
-                    NetworkAddressManagerService.class);
         Agent iceAgent = new Agent(logger.getLevel(), iceUfragPrefix);
 
         //add videobridge specific harvesters such as a mapping and an Amazon
@@ -905,15 +900,20 @@ public class IceUdpTransportManager
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 
-        PortTracker portTracker = JitsiTransportManager.getPortTracker(null);
         int portBase = portTracker.getPort();
 
-        IceMediaStream iceStream
-            = nams.createIceStream(
-                    numComponents,
-                    portBase,
-                    iceStreamName,
-                    iceAgent);
+        IceMediaStream iceStream = iceAgent.createMediaStream(iceStreamName);
+
+        iceAgent.createComponent(
+            iceStream, Transport.UDP,
+            portBase, portBase, portBase + 100);
+
+        if (numComponents > 1)
+        {
+            iceAgent.createComponent(
+                iceStream, Transport.UDP,
+                portBase + 1, portBase + 1, portBase + 101);
+        }
 
         // Attempt to minimize subsequent bind retries: see if we have allocated
         // any ports from the dynamic range, and if so update the port tracker.

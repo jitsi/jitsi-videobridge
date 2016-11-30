@@ -15,7 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.service.protocol.*;
 import org.jitsi.cmd.*;
 import org.jitsi.meet.*;
 import org.jitsi.service.neomedia.*;
@@ -66,29 +65,33 @@ public class Main
 
     /**
      * The name of the command-line argument which specifies the value of the
-     * <tt>System</tt> property
-     * {@link DefaultStreamConnector#MAX_PORT_NUMBER_PROPERTY_NAME}.
+     * maximum port to use for dynamic allocation.
+     * @deprecated We should replace this with a property.
      */
     private static final String MAX_PORT_ARG_NAME = "--max-port";
 
     /**
      * The default value of the {@link #MAX_PORT_ARG_NAME} command-line argument
      * if it is not explicitly provided.
+     * @deprecated We should replace this with a property.
      */
-    private static final int MAX_PORT_ARG_VALUE = 20000;
+    private static final int MAX_PORT_ARG_VALUE
+        = TransportManager.DEFAULT_MAX_PORT;
 
     /**
      * The name of the command-line argument which specifies the value of the
-     * <tt>System</tt> property
-     * {@link DefaultStreamConnector#MIN_PORT_NUMBER_PROPERTY_NAME}.
+     * minimum port to use for dynamic allocation.
+     * @deprecated We should replace this with a property.
      */
     private static final String MIN_PORT_ARG_NAME = "--min-port";
 
     /**
      * The default value of the {@link #MIN_PORT_ARG_NAME} command-line argument
      * if it is not explicitly provided.
+     * @deprecated We should replace this with a property.
      */
-    private static final int MIN_PORT_ARG_VALUE = 10001;
+    private static final int MIN_PORT_ARG_VALUE
+        = TransportManager.DEFAULT_MIN_PORT;
 
     /**
      * The name of the command-line argument which specifies the port of the
@@ -164,19 +167,16 @@ public class Main
         String minPort_ = String.valueOf(minPort);
 
         // Jingle Raw UDP transport
+        // TODO: Use the common TransportManager.portTracker for Raw UDP too
         System.setProperty(
                 DefaultStreamConnector.MAX_PORT_NUMBER_PROPERTY_NAME,
                 maxPort_);
         System.setProperty(
                 DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
                 minPort_);
+
         // Jingle ICE-UDP transport
-        System.setProperty(
-                OperationSetBasicTelephony.MAX_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                maxPort_);
-        System.setProperty(
-                OperationSetBasicTelephony.MIN_MEDIA_PORT_NUMBER_PROPERTY_NAME,
-                minPort_);
+        TransportManager.portTracker.tryRange(minPort_, maxPort_);
 
         ComponentMain main = new ComponentMain();
         JvbBundleConfig osgiBundles = new JvbBundleConfig();
