@@ -293,8 +293,7 @@ public class IceUdpTransportManager
     private final DtlsControlImpl dtlsControl;
 
     /**
-     * The <tt>Agent</tt> which implements the ICE protocol and which is used
-     * by this instance to implement the Jingle ICE-UDP transport.
+     * The ICE {@link Agent}.
      */
     private Agent iceAgent;
 
@@ -345,7 +344,7 @@ public class IceUdpTransportManager
     private final boolean controlling;
 
     /**
-     * The number of {@link org.ice4j.ice.Component}-s to create in
+     * The number of {@link Component}-s to create in
      * {@link #iceStream}.
      */
     private int numComponents;
@@ -469,7 +468,7 @@ public class IceUdpTransportManager
                 && sctpConnection != null
                 && sctpConnection != channel)
         {
-            logger.info(
+            logger.error(
                 "Not adding a second SctpConnection to TransportManager.");
             return false;
         }
@@ -605,16 +604,17 @@ public class IceUdpTransportManager
     }
 
     /**
-     * Adds to <tt>iceAgent</tt> videobridge specific candidate harvesters such
-     * as an Amazon AWS EC2 specific harvester.
+     * Adds to {@link iceAgent} the
+     * {@link org.ice4j.ice.harvestCandidateHarvester} instances managed by
+     * jitsi-videobridge (the TCP and SinglePort harvesters), and configures the
+     * use of the dynamic host harvester.
      *
      * @param iceAgent the {@link Agent} that we'd like to append new harvesters
      * to.
-     * @param rtcpmux whether rtcp will be used by this
+     * @param rtcpmux whether rtcpmux will be used by this
      * <tt>IceUdpTransportManager</tt>.
      */
-    private void appendVideobridgeHarvesters(Agent iceAgent,
-                                             boolean rtcpmux)
+    private void configureHarvesters(Agent iceAgent, boolean rtcpmux)
     {
         ConfigurationService cfg
             = ServiceUtils.getService(
@@ -913,7 +913,7 @@ public class IceUdpTransportManager
 
         //add videobridge specific harvesters such as a mapping and an Amazon
         //AWS EC2 harvester
-        appendVideobridgeHarvesters(iceAgent, rtcpmux);
+        configureHarvesters(iceAgent, rtcpmux);
         iceAgent.setControlling(controlling);
         iceAgent.setPerformConsentFreshness(true);
 

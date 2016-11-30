@@ -83,7 +83,7 @@ public abstract class TransportManager
      *
      * @param channel the <tt>Channel</tt> to add.
      * @return <tt>true</tt> if the <tt>Channel</tt> was added, <tt>false</tt>
-     * if the channel was already in the list.
+     * otherwise.
      */
     public boolean addChannel(Channel channel)
     {
