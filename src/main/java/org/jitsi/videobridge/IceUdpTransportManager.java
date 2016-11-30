@@ -735,18 +735,6 @@ public class IceUdpTransportManager
                 iceAgent = null;
             }
 
-            /*
-             * It seems that the ICE agent takes care of closing these.
-             *
-            if (datagramSockets != null)
-            {
-                if (datagramSockets[0] != null)
-                    datagramSockets[0].close();
-                if (datagramSockets[1] != null)
-                    datagramSockets[1].close();
-            }
-            */
-
             synchronized (connectThreadSyncRoot)
             {
                 if (connectThread != null)
