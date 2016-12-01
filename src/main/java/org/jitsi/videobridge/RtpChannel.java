@@ -193,6 +193,10 @@ public class RtpChannel
      * {@link #stream}. When <tt>DatagramPacket</tt>s are received through the
      * <tt>DatagramSocket</tt>s of this <tt>Channel</tt>, their first RTP and
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
+     * Note: this is effectively used for RAW UDP only. With ICE, ice4j takes
+     * care of verifying the source and setting the actual target for us.
+     * TODO: Maybe move this to RawUdpTransportManager (and stop using the
+     * SessionAddress class from FMJ).
      */
     private final SessionAddress streamTarget = new SessionAddress();
 
