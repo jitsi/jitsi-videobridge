@@ -1364,28 +1364,8 @@ public class IceUdpTransportManager
             }
             else
             {
-                Socket tcpSocket = iceSocket0.getTCPSocket();
-
-                if (tcpSocket != null
-                        && tcpSocket instanceof MultiplexingSocket)
-                {
-                    MultiplexingSocket multiplexing
-                        = (MultiplexingSocket) tcpSocket;
-
-                    try
-                    {
-                        Socket dtlsSocket
-                            = multiplexing.getSocket(new DTLSDatagramFilter());
-
-                        return new DefaultTCPStreamConnector(dtlsSocket, null);
-                    }
-                    catch(IOException ioe)
-                    {
-                        logger.warn("Failed to create DTLS socket: " + ioe);
-                    }
-                }
+                throw new IllegalStateException("no socket");
             }
-            return null;
         }
 
         if (! (channel instanceof RtpChannel))
@@ -1407,14 +1387,7 @@ public class IceUdpTransportManager
         }
         else
         {
-            Socket tcpSocket0 = iceSocket0.getTCPSocket();
-            Socket tcpSocket1
-                = (iceSocket1 == null) ? null : iceSocket1.getTCPSocket();
-
-            return
-                getTCPStreamConnector(
-                        rtpChannel,
-                        new Socket[]{tcpSocket0, tcpSocket1});
+            throw new IllegalStateException("no socket");
         }
     }
 
@@ -1526,82 +1499,6 @@ public class IceUdpTransportManager
     public MediaStreamTarget getStreamTarget(Channel channel)
     {
         return getStreamTarget();
-    }
-
-    /**
-     * Creates and returns a TCP <tt>StreamConnector</tt> to be used by a
-     * specific <tt>RtpChannel</tt>, using <tt>iceSockets</tt> as the
-     * underlying <tt>Socket</tt>s.
-     *
-     * Does not use <tt>iceSockets</tt> directly, but creates
-     * <tt>MultiplexedSocket</tt> instances on top of them.
-     *
-     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
-     * <tt>StreamConnector</tt>.
-     * @param iceSockets the <tt>Socket</tt>s which are to be used by the
-     * created <tt>StreamConnector</tt>.
-     * @return a TCP <tt>StreamConnector</tt> with the <tt>Socket</tt>s
-     * given in <tt>iceSockets</tt> to be used by a specific
-     * <tt>RtpChannel</tt>.
-     */
-    private StreamConnector getTCPStreamConnector(RtpChannel rtpChannel,
-                                                  Socket[] iceSockets)
-    {
-        StreamConnector connector = null;
-
-        if (iceSockets != null)
-        {
-            Socket iceSocket0 = iceSockets[0];
-            Socket channelSocket0 = null;
-
-            if (iceSocket0 != null && iceSocket0 instanceof MultiplexingSocket)
-            {
-                MultiplexingSocket multiplexing
-                    = (MultiplexingSocket) iceSocket0;
-
-                try
-                {
-                    channelSocket0
-                        = multiplexing.getSocket(
-                                rtpChannel.getDatagramFilter(false /* RTP */));
-                }
-                catch (SocketException se) // never thrown
-                {
-                    logger.error( "An unexpected exception occurred.", se );
-                }
-            }
-
-            Socket iceSocket1 = rtcpmux ? iceSocket0 : iceSockets[1];
-            Socket channelSocket1 = null;
-
-            if (iceSocket1 != null && iceSocket1 instanceof MultiplexingSocket)
-            {
-                MultiplexingSocket multiplexing
-                    = (MultiplexingSocket) iceSocket1;
-
-                try
-                {
-                    channelSocket1
-                        = multiplexing.getSocket(
-                                rtpChannel.getDatagramFilter(true /* RTCP */));
-                }
-                catch (SocketException se) // never thrown
-                {
-                    logger.error( "An unexpected exception occurred.", se );
-                }
-            }
-
-            if (channelSocket0 != null || channelSocket1 != null)
-            {
-                connector
-                    = new DefaultTCPStreamConnector(
-                            channelSocket0,
-                            channelSocket1,
-                            rtcpmux);
-            }
-        }
-
-        return connector;
     }
 
     /**
@@ -1812,7 +1709,7 @@ public class IceUdpTransportManager
     /**
      * @return the {@link Transport} (e.g. UDP or TCP) of the selected pair
      * of this {@link IceUdpTransportManager}. If the transport manager is
-     currently not connected, returns {@code null}.
+     * currently not connected, returns {@code null}.
      */
     private Transport getTransport()
     {
