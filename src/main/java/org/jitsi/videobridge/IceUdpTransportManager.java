@@ -1325,6 +1325,9 @@ public class IceUdpTransportManager
 
     /**
      * {@inheritDoc}
+     * </p>
+     * Note, that we don't cache any instances that we create here, so this
+     * method should be called no more than once!
      */
     @Override
     public StreamConnector getStreamConnector(Channel channel)
@@ -1332,98 +1335,64 @@ public class IceUdpTransportManager
         if (!getChannels().contains(channel))
             return null;
 
-        IceSocketWrapper[] iceSockets = getStreamConnectorSockets();
-        IceSocketWrapper iceSocket0;
+        MultiplexingDatagramSocket rtpSocket
+            =  iceStream.getComponent(Component.RTP).getSocket();
 
-        if (iceSockets == null || (iceSocket0 = iceSockets[0]) == null)
-            return null;
+        MultiplexingDatagramSocket rtcpSocket;
+        if (numComponents > 1 && !rtcpmux)
+        {
+            rtcpSocket = iceStream.getComponent(Component.RTCP).getSocket();
+        }
+        else
+        {
+            rtcpSocket = rtpSocket;
+        }
+
+        if (rtpSocket == null || rtcpSocket == null)
+        {
+            throw new IllegalStateException("No sockets from ice4j.");
+        }
+
 
         if (channel instanceof SctpConnection)
         {
-            DatagramSocket udpSocket = iceSocket0.getUDPSocket();
-
-            if (udpSocket != null)
+            try
             {
-                if (udpSocket instanceof MultiplexingDatagramSocket)
-                {
-                    MultiplexingDatagramSocket multiplexing
-                        = (MultiplexingDatagramSocket) udpSocket;
+                DatagramSocket dtlsSocket
+                    = rtpSocket.getSocket(new DTLSDatagramFilter());
 
-                    try
-                    {
-                        DatagramSocket dtlsSocket
-                            = multiplexing.getSocket(new DTLSDatagramFilter());
-
-                        return new DefaultStreamConnector(dtlsSocket, null);
-                    }
-                    catch (IOException ioe)
-                    {
-                        logger.warn("Failed to create DTLS socket: " + ioe);
-                    }
-                }
+                return new DefaultStreamConnector(dtlsSocket, null);
             }
-            else
+            catch (SocketException se)
             {
-                throw new IllegalStateException("no socket");
+                        logger.warn("Failed to create DTLS socket: " + se);
             }
         }
 
         if (! (channel instanceof RtpChannel))
             return null;
 
-        DatagramSocket udpSocket0;
-        IceSocketWrapper iceSocket1 = iceSockets[1];
         RtpChannel rtpChannel = (RtpChannel) channel;
-
-        if ((udpSocket0 = iceSocket0.getUDPSocket()) != null)
+        DatagramSocket channelRtpSocket, channelRtcpSocket;
+        try
         {
-            DatagramSocket udpSocket1
-                = (iceSocket1 == null) ? null : iceSocket1.getUDPSocket();
-
-            return
-                getUDPStreamConnector(
-                        rtpChannel,
-                        new DatagramSocket[] { udpSocket0, udpSocket1 });
+            channelRtpSocket
+                = rtpSocket.getSocket(
+                    rtpChannel.getDatagramFilter(false /* RTP */));
+            channelRtcpSocket
+                = rtcpSocket.getSocket(
+                    rtpChannel.getDatagramFilter(false /* RTCP */));
         }
-        else
+        catch (SocketException se)
         {
-            throw new IllegalStateException("no socket");
-        }
-    }
-
-    /**
-     * Gets the <tt>IceSocketWrapper</tt>s from the selected
-     * <tt>CandidatePair</tt>(s) of the ICE agent.
-     * TODO cache them in this instance?
-     * @return the <tt>IceSocketWrapper</tt>s from the selected
-     * <tt>CandidatePair</tt>(s) of the ICE agent.
-     */
-    private IceSocketWrapper[] getStreamConnectorSockets()
-    {
-        IceSocketWrapper[] streamConnectorSockets = new IceSocketWrapper[2];
-
-        // RTP
-        Component rtpComponent = iceStream.getComponent(Component.RTP);
-
-        if (rtpComponent != null)
-        {
-            streamConnectorSockets[0 /* RTP */]
-                = rtpComponent.getSocketWrapper();
+            throw new RuntimeException(
+                "Failed to create filtered sockets.", se);
         }
 
-        // RTCP
-        if (numComponents > 1 && !rtcpmux)
-        {
-            Component rtcpComponent = iceStream.getComponent(Component.RTCP);
-
-            if (rtcpComponent != null)
-            {
-                streamConnectorSockets[1 /* RTCP */]
-                   = rtcpComponent.getSocketWrapper();
-            }
-        }
-
-        return streamConnectorSockets;
+        return new DefaultStreamConnector(
+            channelRtpSocket,
+            channelRtcpSocket,
+            rtcpmux);
     }
 
     private MediaStreamTarget getStreamTarget()
@@ -1499,84 +1468,6 @@ public class IceUdpTransportManager
     public MediaStreamTarget getStreamTarget(Channel channel)
     {
         return getStreamTarget();
-    }
-
-    /**
-     * Creates and returns a UDP <tt>StreamConnector</tt> to be used by a
-     * specific <tt>RtpChannel</tt>, using <tt>iceSockets</tt> as the
-     * underlying <tt>DatagramSocket</tt>s.
-     *
-     * Does not use <tt>iceSockets</tt> directly, but creates
-     * <tt>MultiplexedDatagramSocket</tt> instances on top of them.
-     *
-     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
-     * <tt>StreamConnector</tt>.
-     * @param iceSockets the <tt>DatagramSocket</tt>s which are to be used by the
-     * created <tt>StreamConnector</tt>.
-     * @return a UDP <tt>StreamConnector</tt> with the <tt>DatagramSocket</tt>s
-     * given in <tt>iceSockets</tt> to be used by a specific
-     * <tt>RtpChannel</tt>.
-     */
-    private StreamConnector getUDPStreamConnector(RtpChannel rtpChannel,
-                                                  DatagramSocket[] iceSockets)
-    {
-        StreamConnector connector = null;
-
-        if (iceSockets != null)
-        {
-            DatagramSocket iceSocket0 = iceSockets[0];
-            DatagramSocket channelSocket0 = null;
-
-            if (iceSocket0 != null
-                    && iceSocket0 instanceof MultiplexingDatagramSocket)
-            {
-                MultiplexingDatagramSocket multiplexing
-                    = (MultiplexingDatagramSocket) iceSocket0;
-
-                try
-                {
-                    channelSocket0
-                        = multiplexing.getSocket(
-                                rtpChannel.getDatagramFilter(false /* RTP */));
-                }
-                catch (SocketException se) // never thrown
-                {
-                    logger.error( "An unexpected exception occurred.", se );
-                }
-            }
-
-            DatagramSocket iceSocket1 = rtcpmux ? iceSocket0 : iceSockets[1];
-            DatagramSocket channelSocket1 = null;
-
-            if (iceSocket1 != null
-                    && iceSocket1 instanceof MultiplexingDatagramSocket)
-            {
-                MultiplexingDatagramSocket multiplexing
-                    = (MultiplexingDatagramSocket) iceSocket1;
-
-                try
-                {
-                    channelSocket1
-                        = multiplexing.getSocket(
-                                rtpChannel.getDatagramFilter(true /* RTCP */));
-                }
-                catch (SocketException se) // never thrown
-                {
-                    logger.error( "An unexpected exception occurred.", se );
-                }
-            }
-
-            if (channelSocket0 != null || channelSocket1 != null)
-            {
-                connector
-                    = new DefaultStreamConnector(
-                            channelSocket0,
-                            channelSocket1,
-                            rtcpmux);
-            }
-        }
-
-        return connector;
     }
 
     /**
