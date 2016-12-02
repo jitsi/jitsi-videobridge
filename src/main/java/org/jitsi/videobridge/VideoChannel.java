@@ -471,7 +471,9 @@ public class VideoChannel
             }
             catch (IOException ex)
             {
-                logger.error("Failed to send message on data channel.", ex);
+                logger.error(
+                        "Failed to send \"in last-N\" update to: "
+                            + endpoint.getID(), ex);
             }
         }
     }

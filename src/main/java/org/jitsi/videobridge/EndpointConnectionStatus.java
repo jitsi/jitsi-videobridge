@@ -352,8 +352,10 @@ public class EndpointConnectionStatus
         }
         else
         {
-            logger.warn("Attempt to send connectivity status update for " +
-                    "endpoint without parent conference instance(expired?)");
+            logger.warn(
+                    "Attempt to send connectivity status update for"
+                        + " endpoint " + subjectEndpoint.getID()
+                        + " without parent conference instance (expired?)");
         }
     }
 
