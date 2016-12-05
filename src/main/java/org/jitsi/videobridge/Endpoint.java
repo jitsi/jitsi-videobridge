@@ -769,7 +769,7 @@ public class Endpoint
      * A helper function that reads the selected endpoint id list from the json
      * message. Accepts ID list and a single ID
      *
-     * @param jsonObject The whole message that contains a 'selectedEnpoint'
+     * @param jsonObject The whole message that contains a 'selectedEndpoint'
      *                   field
      * @return The list of the IDs or empty list if some problem happened
      */
