@@ -294,8 +294,9 @@ public class Conference
      * a message originating from the bridge and being sent to all endpoints in
      * the call, for that see broadcastMessageOnDataChannels below
      *
-     * @param msg
-     * @param endpoints
+     * @param msg the message to be sent
+     * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
+     * be sent.
      */
     public void sendMessageOnDataChannels(String msg, List<Endpoint> endpoints)
     {
@@ -307,7 +308,9 @@ public class Conference
             }
             catch (IOException e)
             {
-                logger.error("Failed to send message on data channel.", e);
+                logger.error(
+                    "Failed to send message on data channel to: "
+                        + endpoint.getID() + ", msg: " + msg, e);
             }
         }
     }
@@ -1500,7 +1503,9 @@ public class Conference
                     }
                     catch (IOException e)
                     {
-                        logger.error("Failed to send message on data channel.",
+                        logger.error(
+                                "Failed to send dominant speaker update"
+                                    + " on data channel to " + endpoint.getID(),
                                 e);
                     }
                 }
