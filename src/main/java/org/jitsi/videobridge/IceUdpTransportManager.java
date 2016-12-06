@@ -1327,13 +1327,15 @@ public class IceUdpTransportManager
      * {@inheritDoc}
      * </p>
      * Note, that we don't cache any instances that we create here, so this
-     * method should be called no more than once!
+     * method should be called no more than once for each channel!
      */
     @Override
     public StreamConnector getStreamConnector(Channel channel)
     {
         if (!getChannels().contains(channel))
+        {
             return null;
+        }
 
         MultiplexingDatagramSocket rtpSocket
             =  iceStream.getComponent(Component.RTP).getSocket();
@@ -1381,7 +1383,7 @@ public class IceUdpTransportManager
                     rtpChannel.getDatagramFilter(false /* RTP */));
             channelRtcpSocket
                 = rtcpSocket.getSocket(
-                    rtpChannel.getDatagramFilter(false /* RTCP */));
+                    rtpChannel.getDatagramFilter(true /* RTCP */));
         }
         catch (SocketException se)
         {
