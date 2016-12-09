@@ -11,14 +11,9 @@ You can find documentation in the doc/ directory in the source tree.
 
 # Running it
 
-We have packages for Debian/Ubuntu [here](https://download.jitsi.org/).
-
-```sh
-echo 'deb http://download.jitsi.org/nightly/deb unstable/' >> /etc/apt/sources.list
-wget -qO - https://download.jitsi.org/nightly/deb/unstable/archive.key | apt-key add -
-apt-get update
-apt-get -y install jitsi-videobridge
-```
+You can download binary packages for Debian/Ubuntu:
+* [stable](https://download.jitsi.org/stable/) ([instructions](https://jitsi.org/Main/InstallJitsiVideobridgeDebianStableRepository))
+* [nightly](https://download.jitsi.org/unstable/) ([instructions](https://jitsi.org/Main/InstallJitsiVideobridgeDebianNightlyRepository))
 
 Or you can clone the Git repo and run the JVB from source using maven.
 
