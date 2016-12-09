@@ -1725,5 +1725,17 @@ public class Videobridge
          * successfully connected over TCP.
          */
         public AtomicInteger totalTcpTransportManagers = new AtomicInteger();
+
+        /**
+         * The total number of messages received from the data channels of
+         * the {@link Endpoint}s of this conference.
+         */
+        public AtomicLong totalDataChannelMessagesReceived = new AtomicLong();
+
+        /**
+         * The total number of messages sent via the data channels of the
+         * {@link Endpoint}s of this conference.
+         */
+        public AtomicLong totalDataChannelMessagesSent = new AtomicLong();
     }
 }

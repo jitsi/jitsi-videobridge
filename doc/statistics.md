@@ -11,6 +11,7 @@ Introduction
  * The distribution of the sizes of the conferences currently in progress.
  * Aggregates of RTT and jitter across all users.
  * The total number of created, completed, failed and partially failed conferences.
+ * The total number of messages sent and received through data channels.
  * The total duration of all completed conferences.
  * The number of ICE sessions established over UDP or TCP.
 
@@ -46,6 +47,7 @@ generated (in UTC).
  * **total_no_payload_channels** - The total number of channels with no payload activity.
  * **total_no_transport_channels** - The total number of channels with no transport activity.
  * **total_channels** - The total number of channels created on the bridge.
+ * **total_data_channel_messages_received / total_data_channel_messages_sent** - The total number messages received and sent through data channels.
 
 If Jitsi Videobridge is using XMPP it sends the statistics reports by COLIBRI
 protocol or by PubSub (XEP-0060).

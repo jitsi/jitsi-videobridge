@@ -483,6 +483,9 @@ public class Endpoint
             JSONObject jsonObject,
             Object colibriClass)
     {
+        getConference().getVideobridge().getStatistics().
+            totalDataChannelMessagesReceived.incrementAndGet();
+
         if (COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED.equals(colibriClass))
             onSelectedEndpointChangedEvent(src, jsonObject);
         else if (COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED.equals(colibriClass))
@@ -939,6 +942,8 @@ public class Endpoint
                 else
                 {
                     dataStream.sendString(msg);
+                    getConference().getVideobridge().getStatistics()
+                            .totalDataChannelMessagesSent.incrementAndGet();
                 }
             }
             catch (IOException e)
