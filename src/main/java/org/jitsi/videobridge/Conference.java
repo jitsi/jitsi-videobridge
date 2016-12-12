@@ -177,7 +177,7 @@ public class Conference
     /**
      * Holds conference statistics.
      */
-    private Statistics statistics = new Statistics();
+    private final Statistics statistics = new Statistics();
 
     /**
      * The <tt>WebRtcpDataStreamListener</tt> which listens to the

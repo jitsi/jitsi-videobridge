@@ -215,6 +215,20 @@ public class VideobridgeStatistics
     private static final String TOTAL_TCP_CONNECTIONS = "total_tcp_connections";
 
     /**
+     * The name of the stat indicating the total number of messages received
+     * from data channels.
+     */
+    private static final String TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED
+        = "total_data_channel_messages_received";
+
+    /**
+     * The name of the stat indicating the total number of messages sent over
+     * data channels.
+     */
+    private static final String TOTAL_DATA_CHANNEL_MESSAGES_SENT
+        = "total_data_channel_messages_sent";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -364,6 +378,8 @@ public class VideobridgeStatistics
             totalChannels = 0;
         long totalConferenceSeconds = 0;
         int totalUdpConnections = 0, totalTcpConnections = 0;
+        long totalDataChannelMessagesReceived = 0;
+        long totalDataChannelMessagesSent = 0;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
@@ -383,6 +399,11 @@ public class VideobridgeStatistics
             totalChannels += jvbStats.totalChannels.get();
             totalUdpConnections += jvbStats.totalUdpTransportManagers.get();
             totalTcpConnections += jvbStats.totalTcpTransportManagers.get();
+            totalDataChannelMessagesReceived
+                += jvbStats.totalDataChannelMessagesReceived.get();
+            totalDataChannelMessagesSent
+                += jvbStats.totalDataChannelMessagesSent.get();
+
 
             for (Conference conference : videobridge.getConferences())
             {
@@ -588,6 +609,10 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_MEMORY, Math.max(totalMemory, 0));
             unlockedSetStat(USED_MEMORY, Math.max(usedMemory, 0));
             unlockedSetStat(SHUTDOWN_IN_PROGRESS, shutdownInProgress);
+            unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_RECEIVED,
+                            totalDataChannelMessagesReceived);
+            unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_SENT,
+                            totalDataChannelMessagesSent);
 
             unlockedSetStat(TIMESTAMP, timestamp);
         }
