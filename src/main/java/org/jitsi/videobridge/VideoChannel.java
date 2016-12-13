@@ -27,19 +27,12 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.ice4j.util.*;
-import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.rtcp.*;
-import org.jitsi.impl.neomedia.rtcp.termination.strategies.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.format.*;
-import org.jitsi.service.neomedia.rtp.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger; // Disambiguation.
-import org.jitsi.videobridge.simulcast.*;
-import org.jitsi.videobridge.transform.*;
+import org.jitsi.videobridge.ratecontrol.*;
 import org.json.simple.*;
 
 /**
@@ -50,7 +43,6 @@ import org.json.simple.*;
  */
 public class VideoChannel
     extends RtpChannel
-    implements NACKListener
 {
     /**
      * The length in milliseconds of the interval for which the average incoming
@@ -60,24 +52,11 @@ public class VideoChannel
     private static final int INCOMING_BITRATE_INTERVAL_MS = 5000;
 
     /**
-     * The name of the property which specifies the FQN name of the RTCP
-     * strategy to use by default.
-     */
-    public static final String RTCP_TERMINATION_STRATEGY_PNAME
-        = "org.jitsi.videobridge.rtcp.strategy";
-
-    /**
      * The name of the property which specifies the simulcast mode of a
      * <tt>VideoChannel</tt>.
      */
     public static final String SIMULCAST_MODE_PNAME
         = "org.jitsi.videobridge.VideoChannel.simulcastMode";
-
-    /**
-     * The name of the property used to disable NACK termination.
-     */
-    public static final String DISABLE_NACK_TERMINATION_PNAME
-        = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
      * The name of the property used to disable the logic which detects and
@@ -134,27 +113,6 @@ public class VideoChannel
     }
 
     /**
-     * XXX Defaulting to the lowest-quality simulcast stream until we are
-     * explicitly told to switch to a higher-quality simulcast stream is one way
-     * to go, of course. But such a default presents the problem that a remote
-     * peer will see the lowest quality possible for a noticeably long period of
-     * time because its command to switch to the highest quality possible can
-     * only come via its data/SCTP channel and that may take a very (and
-     * unpredictably) long time to set up. That is why we may default to the
-     * highest-quality simulcast stream here.
-     *
-     * This value can be set through colibri channel IQ with
-     * receive-simulcast-layer attribute.
-     *
-     * XXX(boris) I cannot find the semantics of this field documented anywhere.
-     * It is used inconsistently (only when a SimulcastSender is created, but
-     * not when the targetOrder changes for another reason), and the original
-     * intention seems lost.
-     */
-    private int receiveSimulcastLayer
-            = SimulcastStream.SIMULCAST_LAYER_ORDER_BASE; // Integer.MAX_VALUE;
-
-    /**
      * The <tt>SimulcastMode</tt> for this <tt>VideoChannel</tt>.
      */
     private SimulcastMode simulcastMode;
@@ -164,7 +122,15 @@ public class VideoChannel
      * forwarded on this {@link VideoChannel} (i.e. implements last-n and its
      * extensions (pinned endpoints, adaptation).
      */
-    private final LastNController lastNController = new LastNController(this);
+    private final AdaptiveBitrateController bitrateController
+        = new AdaptiveBitrateController(this);
+
+    /**
+     * The instance that is aware of all of the RTP encodings of the remote
+     * endpoint.
+     */
+    private final MediaStreamTrackReceiver mediaStreamTrackReceiver
+        = new MediaStreamTrackReceiver(this);
 
     /**
      * The instance which will be computing the incoming bitrate for this
@@ -179,12 +145,6 @@ public class VideoChannel
      * any <tt>VideoChannel</tt>/<tt>Endpoint</tt>'s <tt>lastN</tt>.
      */
     private final AtomicBoolean inLastN = new AtomicBoolean(true);
-
-    /**
-     * Whether the bridge should request retransmissions for missing packets
-     * on this channel.
-     */
-    private final boolean requestRetransmissions;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -237,14 +197,6 @@ public class VideoChannel
                     content.getConference().getLogger());
 
         initializeTransformerEngine();
-
-        ConfigurationService cfg
-            = content.getConference().getVideobridge()
-                        .getConfigurationService();
-        requestRetransmissions
-            = cfg != null
-                && cfg.getBoolean(
-                        VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false);
     }
 
     /**
@@ -257,71 +209,6 @@ public class VideoChannel
         throws IOException
     {
         initialize(null);
-    }
-
-    @Override
-    void initialize(RTPLevelRelayType rtpLevelRelayType)
-        throws IOException
-    {
-        super.initialize(rtpLevelRelayType);
-
-        ConfigurationService cfg
-            = getContent().getConference().getVideobridge()
-                .getConfigurationService();
-
-        if (cfg == null)
-        {
-            logger.warn("NOT initializing RTCP n' NACK termination because "
-                    + "the configuration service was not found.");
-            return;
-        }
-
-        // Initialize the RTCP termination strategy from the configuration.
-        String strategyFQN = cfg.getString(RTCP_TERMINATION_STRATEGY_PNAME, "");
-        if (!StringUtils.isNullOrEmpty(strategyFQN))
-        {
-
-            RTCPTerminationStrategy strategy = null;
-            try
-            {
-                strategy = (RTCPTerminationStrategy)
-                    Class.forName(strategyFQN).newInstance();
-            }
-            catch (Exception e)
-            {
-                logger.error(
-                        "Failed to configure the video channel RTCP termination"
-                        + " strategy.",
-                        e);
-            }
-
-            if (strategy != null)
-            {
-                logger.debug("Initializing RTCP termination.");
-                getStream().setRTCPTerminationStrategy(strategy);
-            }
-
-        }
-
-        boolean enableNackTermination
-                = !cfg.getBoolean(DISABLE_NACK_TERMINATION_PNAME, false);
-        if (enableNackTermination)
-        {
-            logger.debug("Initializing NACK termination.");
-            MediaStream stream = getStream();
-            RawPacketCache cache = stream.getPacketCache();
-            if (cache != null)
-            {
-                cache.setEnabled(true);
-            }
-            else
-            {
-                logger.warn("NACK termination is enabled, but we don't have" +
-                                    " a packet cache.");
-            }
-
-            stream.getMediaStreamStats().addNackListener(this);
-        }
     }
 
     /**
@@ -344,6 +231,15 @@ public class VideoChannel
         }
 
         return accept;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public MediaStreamTrackReceiver getMediaStreamTrackReceiver()
+    {
+        return mediaStreamTrackReceiver;
     }
 
     /**
@@ -404,7 +300,7 @@ public class VideoChannel
 
         super.describe(iq);
 
-        iq.setLastN(lastNController.getLastN());
+        iq.setLastN(bitrateController.getLastN());
         iq.setSimulcastMode(getSimulcastMode());
     }
 
@@ -432,20 +328,16 @@ public class VideoChannel
      */
     public int getLastN()
     {
-        return lastNController.getLastN();
+        return bitrateController.getLastN();
     }
 
-    public int getReceiveSimulcastLayer()
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public BitrateController getBitrateController()
     {
-        return receiveSimulcastLayer;
-    }
-
-    public void setReceiveSimulcastLayer(Integer receiveSimulcastLayer)
-    {
-        if (receiveSimulcastLayer != null)
-        {
-            this.receiveSimulcastLayer = receiveSimulcastLayer;
-        }
+        return bitrateController;
     }
 
     /**
@@ -508,7 +400,7 @@ public class VideoChannel
      */
     public boolean isInLastN(Channel channel)
     {
-        return lastNController.isForwarded(channel);
+        return bitrateController.isForwarded(channel);
     }
 
     @Override
@@ -520,7 +412,14 @@ public class VideoChannel
 
         if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            lastNController.setPinnedEndpointIds((List<String>)ev.getNewValue());
+            bitrateController
+                .setPinnedEndpointIds((List<String>)ev.getNewValue());
+        }
+        else if (
+            Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
+        {
+            bitrateController
+                .setSelectedEndpointIds((List<String>)ev.getNewValue());
         }
     }
 
@@ -531,10 +430,10 @@ public class VideoChannel
     boolean rtpTranslatorWillWrite(
         boolean data,
         byte[] buffer, int offset, int length,
-        Channel source)
+        RtpChannel source)
     {
-        // XXX(gp) we could potentially move this into a TransformEngine.
-        boolean accept = lastNController.isForwarded(source);
+        boolean accept = bitrateController
+            .rtpTranslatorWillWrite(data, buffer, offset, length, source);
 
         LipSyncHack lipSyncHack = getEndpoint().getLipSyncHack();
 
@@ -562,12 +461,11 @@ public class VideoChannel
 
         if (endpoint.equals(getEndpoint()))
         {
-            if (lastNController.getLastN() >= 0 ||
-                    lastNController.getCurrentLastN() >= 0)
+            if (bitrateController.getLastN() >= 0)
             {
-                lastNController.initializeConferenceEndpoints();
+                bitrateController.initializeConferenceEndpoints();
                 sendLastNEndpointsChangeEventOnDataChannel(
-                        lastNController.getForwardedEndpoints(),
+                        bitrateController.getForwardedEndpoints(),
                         null,
                         null);
             }
@@ -578,7 +476,7 @@ public class VideoChannel
 
     /**
      * {@inheritDoc}
-     * Closes the {@link LastNController} before expiring the channel.
+     * Closes the {@link AdaptiveBitrateController} before expiring the channel.
      */
     @Override
     public boolean expire()
@@ -589,9 +487,13 @@ public class VideoChannel
             return false;
         }
 
-        if (lastNController != null)
+        try
         {
-            lastNController.close();
+            bitrateController.close();
+        }
+        catch (Exception e)
+        {
+            logger.error(e);
         }
 
         synchronized (delayedFirTaskSyncRoot)
@@ -682,7 +584,7 @@ public class VideoChannel
     @Override
     public void setLastN(Integer lastN)
     {
-        lastNController.setLastN(lastN);
+        bitrateController.setLastN(lastN);
 
         touch(); // It seems this Channel is still active.
     }
@@ -693,7 +595,7 @@ public class VideoChannel
     @Override
     List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
-        return lastNController.speechActivityEndpointsChanged(endpoints);
+        return bitrateController.speechActivityEndpointsChanged(endpoints);
     }
 
     /**
@@ -772,7 +674,7 @@ public class VideoChannel
      * Sets the value of the {@code inLastN} property to {@code newValue}.
      * @param newValue the value to set.
      */
-    void setInLastN(boolean newValue)
+    public void setInLastN(boolean newValue)
     {
         if (this.inLastN.compareAndSet(!newValue, newValue))
         {
@@ -783,7 +685,7 @@ public class VideoChannel
     /**
      * Updates the {@code inLastN} property of this {@link VideoChannel}.
      */
-    void updateInLastN()
+    public void updateInLastN()
     {
         Channel[] channels = getContent().getChannels();
         updateInLastN(channels);
@@ -823,250 +725,33 @@ public class VideoChannel
     }
 
     /**
-     * Implements {@link NACKListener#nackReceived(NACKPacket)}.
-     *
-     * Handles an incoming RTCP NACK packet from a receiver.
-     */
-    @Override
-    public void nackReceived(NACKPacket nackPacket)
-    {
-        long ssrc = nackPacket.sourceSSRC;
-        Set<Integer> lostPackets = new TreeSet<>(nackPacket.getLostPackets());
-
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                    "Received NACK on channel " + getID() +" for SSRC " + ssrc
-                        + ". Packets reported lost: " + lostPackets);
-        }
-
-        RawPacketCache cache;
-        RtxTransformer rtxTransformer;
-
-        if ((cache = getStream().getPacketCache()) != null
-                && (rtxTransformer = transformEngine.getRtxTransformer())
-                        != null)
-        {
-            // XXX The retransmission of packets MUST take into account SSRC
-            // rewriting. Which it may do by injecting retransmitted packets
-            // AFTER the SsrcRewritingEngine. Since the retransmitted packets
-            // have been cached by cache and cache is a TransformEngine, the
-            // injection may as well happen after cache.
-            TransformEngine after
-                = (cache instanceof TransformEngine)
-                    ? (TransformEngine) cache
-                    : null;
-
-            for (Iterator<Integer> i = lostPackets.iterator(); i.hasNext();)
-            {
-                int seq = i.next();
-                RawPacket pkt = cache.get(ssrc, seq);
-
-                if (pkt != null)
-                {
-                    if (logger.isDebugEnabled())
-                    {
-                        logger.debug(
-                                "Retransmitting packet from cache. SSRC " + ssrc
-                                    + " seq " + seq);
-                    }
-                    if (rtxTransformer.retransmit(pkt, after))
-                    {
-                        i.remove();
-                    }
-                }
-            }
-        }
-
-        if (!lostPackets.isEmpty())
-        {
-            if (requestRetransmissions)
-            {
-                // If retransmission requests are enabled, videobridge assumes
-                // the responsibility of requesting missing packets.
-                logger.debug("Packets missing from the cache. Ignoring, because"
-                                     + " retransmission requests are enabled.");
-            }
-            else
-            {
-                // Otherwise, if retransmission requests are disabled, we send
-                // a NACK packet of our own.
-                sendNack(nackPacket.senderSSRC, ssrc, lostPackets);
-            }
-        }
-    }
-
-    /**
-     * Creates an RTCP NACK packet with the given Packet Sender and Media Source
-     * SSRCs and the given set of sequence numbers, and sends it to the
-     * appropriate channels depending on the Media Source SSRC.
-     * @param packetSenderSsrc the SSRC to use for the Packet Sender field.
-     * @param mediaSourceSsrc the SSRC to use for the Media Source field.
-     * @param seqs the set of sequence numbers to include in the NACK packet.
-     */
-    private void sendNack(long packetSenderSsrc,
-                          long mediaSourceSsrc,
-                          Set<Integer> seqs)
-    {
-        // Note: this does not execute when SSRC rewriting is in use, because
-        // the latter depends on retransmission requests being enabled. So we
-        // can send a NACK with the original SSRC and sequence numbers without
-        // worrying about them not matching what the sender actually sent.
-        NACKPacket newNack
-            = new NACKPacket(packetSenderSsrc, mediaSourceSsrc, seqs);
-        RawPacket pkt = null;
-        try
-        {
-            pkt = newNack.toRawPacket();
-        }
-        catch (IOException ioe)
-        {
-            logger.warn("Failed to create NACK packet: " + ioe);
-        }
-
-        if (pkt != null)
-        {
-            Set<RtpChannel> channelsToSendTo = new HashSet<>();
-            Channel channel
-                = getContent().findChannelByReceiveSSRC(mediaSourceSsrc);
-            if (channel != null && channel instanceof RtpChannel)
-            {
-                channelsToSendTo.add((RtpChannel) channel);
-            }
-            else
-            {
-                // If searching by SSRC fails, we transmit the NACK on all
-                // other channels.
-                // TODO: We might want to *always* send these to all channels,
-                // in order to not prevent the mechanism for avoidance of
-                // retransmission of multiple RTCP FB defined in AVPF:
-                // https://tools.ietf.org/html/rfc4585#section-3.2
-                // This is, unless/until we implement some mechanism of our own.
-                for (Channel c : getContent().getChannels())
-                {
-                    if (c != null && c instanceof RtpChannel && c != this)
-                    {
-                        channelsToSendTo.add((RtpChannel) c);
-                    }
-                }
-            }
-
-            for (RtpChannel c : channelsToSendTo)
-            {
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("Sending a NACK for SSRC " + mediaSourceSsrc
-                                         + " , packets " + seqs
-                                         + " on channel " + c.getID());
-                }
-
-                try
-                {
-                    c.getStream().injectPacket(
-                            pkt,
-                            /* data */ false,
-                            /* after */ null);
-                }
-                catch (TransmissionFailedException e)
-                {
-                    logger.warn("Failed to inject packet in MediaStream: " + e);
-                }
-            }
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
-    public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
+    public boolean setRtpEncodingParameters(
+        List<SourcePacketExtension> sources,
+        List<SourceGroupPacketExtension> sourceGroups)
     {
-        super.setSourceGroups(sourceGroups);
+        boolean changed = super.setRtpEncodingParameters(sources, sourceGroups);
 
-        // TODO(gp) how does one clear source groups? We need a special value
-        // that indicates we need to clear the groups.
-        if (sourceGroups == null || sourceGroups.isEmpty())
+        if (changed)
         {
-            return;
-        }
-
-        // Setup simulcast streams from source groups.
-        SimulcastEngine simulcastEngine
-            = getTransformEngine().getSimulcastEngine();
-
-        // Build the simulcast streams.
-        long[][] simulcastTriplets = null;
-        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
-        {
-            List<SourcePacketExtension> sources = sourceGroup.getSources();
-
-            if (sources == null || sources.isEmpty()
-                || !SourceGroupPacketExtension.SEMANTICS_SIMULCAST
-                .equalsIgnoreCase(sourceGroup.getSemantics()))
+            for (Channel channel : getContent().getChannels())
             {
-                continue;
-            }
-
-            // sources are in low to high order.
-            simulcastTriplets = new long[sources.size()][];
-            for (int i = 0; i < sources.size(); i++)
-            {
-                SourcePacketExtension source = sources.get(i);
-                // FIXME we need an INVALID_SSRC constant.
-                simulcastTriplets[i] = new long[] { source.getSSRC(), -1, -1 };
-            }
-        }
-
-        if (simulcastTriplets == null || simulcastTriplets.length == 0)
-        {
-            return;
-        }
-
-        // FID groups have been saved in RtpChannel. Make sure any changes are
-        // propagated to the appropriate SimulcastStream-s.
-        synchronized (fidSourceGroups)
-        {
-            if (!fidSourceGroups.isEmpty())
-            {
-                for (Map.Entry<Long, Long> entry : this.fidSourceGroups
-                    .entrySet())
+                if (channel != this)
                 {
-                    if (entry.getKey() == null || entry.getValue() == null)
-                    {
-                        continue;
-                    }
+                    BitrateController dstBitrateController
+                        = ((RtpChannel) channel).getBitrateController();
 
-                    // autoboxing.
-                    long primarySSRC = entry.getKey();
-                    long fidSSRC = entry.getValue();
-
-                    for (int i = 0; i < simulcastTriplets.length; i++)
+                    if (dstBitrateController != null)
                     {
-                        if (simulcastTriplets[i][0] == primarySSRC)
-                        {
-                            simulcastTriplets[i][1] = fidSSRC;
-                            break;
-                        }
+                        dstBitrateController.rtpEncodingParametersChanged(this);
                     }
                 }
             }
         }
 
-        SimulcastStream[] simulcastStreams
-            = new SimulcastStream[simulcastTriplets.length];
-
-        for (int i = 0; i < simulcastTriplets.length; i++)
-        {
-            simulcastStreams[i] = new SimulcastStream(
-                simulcastEngine.getSimulcastReceiver(),
-                simulcastTriplets[i][0],
-                simulcastTriplets[i][1],
-                simulcastTriplets[i][2],
-                i);
-        }
-
-        simulcastEngine
-            .getSimulcastReceiver().setSimulcastStreams(simulcastStreams);
+        return changed;
     }
 
     /**
@@ -1102,24 +787,6 @@ public class VideoChannel
     public SimulcastMode getSimulcastMode()
     {
         return simulcastMode;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setAdaptiveLastN(boolean adaptiveLastN)
-    {
-        lastNController.setAdaptiveLastN(adaptiveLastN);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
-    {
-        lastNController.setAdaptiveSimulcast(adaptiveSimulcast);
     }
 
     /**
@@ -1221,18 +888,18 @@ public class VideoChannel
                 if (isExpired())
                     return;
 
-                SimulcastReceiver simulcastReceiver
-                    = getTransformEngine().getSimulcastEngine()
-                            .getSimulcastReceiver();
-                SimulcastStream[] streams
-                    = simulcastReceiver.getSimulcastStreams();
-                if (streams != null && streams.length > 0)
+                RTPEncodingImpl defaultEncoding
+                    = mediaStreamTrackReceiver.getDefaultEncoding();
+
+                if (defaultEncoding == null)
                 {
-                    // The ssrc for the HQ layer.
-                    int ssrc
-                        = (int) streams[streams.length - 1].getPrimarySSRC();
-                    askForKeyframes(new int[]{ ssrc });
+                    logger.warn("Unable to schedule FIR" +
+                        ",stream_hash=" + getStream().hashCode());
+
+                    return;
                 }
+
+                askForKeyframes((int) defaultEncoding.getPrimarySSRC());
             }
         };
 

@@ -37,12 +37,12 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.ratecontrol.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -206,24 +206,6 @@ public class RtpChannel
      * information.
      */
     private final Logger logger;
-
-    /**
-     * The FID (flow ID) groupings used by the remote side of this
-     * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
-     */
-    protected final Map<Long,Long> fidSourceGroups
-        = new HashMap<>();
-
-    /**
-     * The payload type number configured for RTX (RFC-4588) for this channel,
-     * or -1 if none is configured (the other end does not support rtx).
-     */
-    private byte rtxPayloadType = -1;
-
-    /**
-     * The "associated payload type" number for RTX on this channel.
-     */
-    private byte rtxAssociatedPayloadType = -1;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -636,12 +618,8 @@ public class RtpChannel
      *
      * @param receiveSSRCs the SSRCs to request an FIR for.
      */
-    public void askForKeyframes(int[] receiveSSRCs)
+    public void askForKeyframes(int ... receiveSSRCs)
     {
-        // XXX(gp) does it make sense to repeatedly request key frames when we
-        // haven't received a key frame for a previous request? In some cases,
-        // maybe (the key frame might have been lost for example). This should
-        // be more intelligent.
         if (receiveSSRCs != null && receiveSSRCs.length != 0)
         {
             RTCPFeedbackMessageSender rtcpFeedbackMessageSender
@@ -660,7 +638,8 @@ public class RtpChannel
     {
         if (!streamClosed)
         {
-            stream.setProperty(Channel.class.getName(), null);
+            stream.setProperty(RtpChannel.class.getName(), null);
+            stream.setProperty(RTPEncodingResolver.class.getName(), null);
             removeStreamListeners();
             stream.close();
 
@@ -882,12 +861,20 @@ public class RtpChannel
                         mediaType,
                         getDtlsControl());
 
-             // Add the PropertyChangeListener to the MediaStream prior to
-             // performing further initialization so that we do not miss changes
-             // to the values of properties we may be interested in.
+            // Add the PropertyChangeListener to the MediaStream prior to
+            // performing further initialization so that we do not miss changes
+            // to the values of properties we may be interested in.
             stream.addPropertyChangeListener(streamPropertyChangeListener);
             stream.setName(getID());
             stream.setProperty(RtpChannel.class.getName(), this);
+
+            RTPEncodingResolver resolver = getMediaStreamTrackReceiver();
+            if (resolver != null)
+            {
+                stream.setProperty(
+                    RTPEncodingResolver.class.getName(), resolver);
+            }
+
             if (transformEngine != null)
                 stream.setExternalTransformer(transformEngine);
 
@@ -955,8 +942,8 @@ public class RtpChannel
                 return;
         }
 
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
+        RetransmissionRequesterImpl retransmissionRequester
+            = ((MediaStreamImpl) stream).getRetransmissionRequester();
         if (retransmissionRequester != null)
             retransmissionRequester.setSenderSsrc(getContent().getInitialLocalSSRC());
 
@@ -1243,7 +1230,7 @@ public class RtpChannel
     boolean rtpTranslatorWillWrite(
             boolean data,
             byte[] buffer, int offset, int length,
-            Channel source)
+            RtpChannel source)
     {
         return true;
     }
@@ -1260,28 +1247,6 @@ public class RtpChannel
     void sctpConnectionReady(Endpoint endpoint)
     {
     }
-
-    /**
-     * Enables or disables the adaptive lastN functionality.
-     *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveLastN <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive lastN.
-     */
-    public void setAdaptiveLastN(boolean adaptiveLastN)
-    {}
-
-    /**
-     * Enables or disables the adaptive simulcast functionality.
-     *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveSimulcast <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive simulcast.
-     */
-    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
-    {}
 
     /**
      * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
@@ -1364,35 +1329,6 @@ public class RtpChannel
                 if (transportManager != null)
                 {
                     transportManager.payloadTypesChanged(this);
-                }
-
-                rtxPayloadType = -1;
-                for (PayloadTypePacketExtension ext : payloadTypes)
-                {
-                    if (Constants.RTX.equalsIgnoreCase(ext.getName()))
-                    {
-                        rtxPayloadType = (byte) ext.getID();
-                        for (ParameterPacketExtension ppe : ext.getParameters())
-                        {
-                            if ("apt".equalsIgnoreCase(ppe.getName()))
-                                rtxAssociatedPayloadType
-                                        = Byte.valueOf(ppe.getValue());
-
-                        }
-                    }
-                }
-
-                RetransmissionRequester retransmissionRequester
-                    = stream.getRetransmissionRequester();
-                if (retransmissionRequester != null)
-                {
-                    Map<Long, Long> copy;
-                    synchronized (fidSourceGroups)
-                    {
-                        copy = new HashMap<>(fidSourceGroups);
-                    }
-                    retransmissionRequester.configureRtx(rtxPayloadType,
-                                                         copy);
                 }
             }
         }
@@ -1745,72 +1681,6 @@ public class RtpChannel
     }
 
     /**
-     * Sets the SSRC groupings for this <tt>RtpChannel</tt>.
-     * @param sourceGroups
-     */
-    public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
-    {
-        if (sourceGroups == null || sourceGroups.isEmpty())
-            return;
-
-        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
-        {
-            List<SourcePacketExtension> sources = sourceGroup.getSources();
-            if (sources != null && !sources.isEmpty() &&
-                    SourceGroupPacketExtension.SEMANTICS_FID
-                        .equalsIgnoreCase(sourceGroup.getSemantics()))
-            {
-                Long first = null, second = null;
-                for (SourcePacketExtension source : sources)
-                {
-                    if (first == null)
-                    {
-                        first = source.getSSRC();
-                    }
-                    else if (second == null)
-                    {
-                        second = source.getSSRC();
-                    }
-                    else
-                    {
-                        logger.warn("Received a FID sourceGroup with more " +
-                                    " than two sources: " + sourceGroup.toXML());
-                    }
-                }
-
-                if (first == null || second == null)
-                {
-                    logger.warn("Received a FID sourceGroup with less " +
-                                " than two sources: " + sourceGroup.toXML());
-                    continue;
-                }
-
-                // Here we assume that the first source in the group is the
-                // SSRC for the media stream, and the second source is the
-                // one for the RTX stream.
-                synchronized (fidSourceGroups)
-                {
-                    fidSourceGroups.put(first, second);
-                }
-            }
-        }
-
-        // The RTX configuration (PT and SSRC maps) may have changed.
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
-        if (retransmissionRequester != null)
-        {
-            Map<Long, Long> copy;
-            synchronized (fidSourceGroups)
-            {
-                copy = new HashMap<>(fidSourceGroups);
-            }
-            retransmissionRequester.configureRtx(rtxPayloadType,
-                                                 copy);
-        }
-    }
-
-    /**
      * Returns the RTP Payload Type numbers which this channel is configured
      * to receive.
      * @return the RTP Payload Type numbers which this channel is configured
@@ -1880,54 +1750,6 @@ public class RtpChannel
     }
 
     /**
-     * Returns the payload type number for the RTX payload type (RFC-4588) for
-     * this channel.
-     * @return the payload type number for the RTX payload type (RFC-4588) for
-     * this channel.
-     */
-    public byte getRtxPayloadType()
-    {
-        return rtxPayloadType;
-    }
-
-    /**
-     * Returns the payload type number associated with RTX for this channel.
-     * @return the payload type number associated with RTX for this channel.
-     */
-    public byte getRtxAssociatedPayloadType()
-    {
-        return rtxAssociatedPayloadType;
-    }
-
-    /**
-     * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
-     * any. If none is found, returns -1.
-     *
-     * @return the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
-     * any. If none is found, returns -1.
-     */
-    public long getFidPairedSsrc(long ssrc)
-    {
-        synchronized (fidSourceGroups)
-        {
-            Long paired = fidSourceGroups.get(ssrc);
-            if (paired != null)
-            {
-                return paired;
-            }
-
-            // Maybe 'ssrc' is one of the values.
-            for (Map.Entry<Long, Long> entry : fidSourceGroups.entrySet())
-            {
-                if (entry.getValue() == ssrc)
-                    return entry.getKey();
-            }
-
-            return -1;
-        }
-    }
-
-    /**
      * @return the {@link ConferenceSpeechActivity} for this channel.
      */
     public ConferenceSpeechActivity getConferenceSpeechActivity()
@@ -1970,16 +1792,16 @@ public class RtpChannel
     }
 
     /**
-     * Creates the {@code MediaStreamTrack}s from signaling and adds them to the
-     * {@code MediaStream} that is associated to this {@code RtpChannel}.
+     * Updates the {@code MediaStreamTrackReceiver} with the new RTP encoding
+     * parameters.
      *
-     * @param sources  The <tt>List</tt> of <tt>SourcePacketExtension</tt> that
+     *  @param sources  The <tt>List</tt> of <tt>SourcePacketExtension</tt> that
      * describes the list of sources of this <tt>RtpChannel</tt> and that is
      * used as the input in the update of the Sets the <tt>Set</tt> of the SSRCs
      * that this <tt>RtpChannel</tt> has signaled.
      * @param sourceGroups
      */
-    public void setMediaStreamTracks(
+    public boolean setRtpEncodingParameters(
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
@@ -1987,106 +1809,40 @@ public class RtpChannel
         boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
         if (!hasSources && !hasGroups)
         {
-            return;
+            return false;
         }
 
         this.setSources(sources); // TODO remove and rely on MSTs.
-        this.setSourceGroups(sourceGroups); // TODO remove and rely on MSTs.
 
-        Map<Long, MediaStreamTrack> tracks = new TreeMap<>();
-        if (hasGroups)
+        MediaStreamTrackReceiver
+            mediaStreamTrackReceiver = getMediaStreamTrackReceiver();
+
+        if (mediaStreamTrackReceiver != null)
         {
-            List<SourceGroupPacketExtension> simGroups = new ArrayList<>();
-            Map<Long, Long> rtxPairs = new TreeMap<>();
-
-            for (SourceGroupPacketExtension sg : sourceGroups)
-            {
-                List<SourcePacketExtension> groupSources = sg.getSources();
-                if (groupSources == null || groupSources.isEmpty())
-                {
-                    continue;
-                }
-
-                if ("sim".equalsIgnoreCase(sg.getSemantics())
-                    && groupSources.size() >= 2)
-                {
-                    simGroups.add(sg);
-                }
-                else if ("fid".equalsIgnoreCase(sg.getSemantics())
-                    && groupSources.size() == 2)
-                {
-                    rtxPairs.put(
-                        groupSources.get(0).getSSRC(),
-                        groupSources.get(1).getSSRC());
-                }
-            }
-
-            if (!simGroups.isEmpty())
-            {
-                for (SourceGroupPacketExtension simGroup : simGroups)
-                {
-                    MediaStreamTrack track = new MediaStreamTrack();
-
-                    int order = RTPEncoding.BASE_ORDER;
-                    for (SourcePacketExtension spe : simGroup.getSources())
-                    {
-                        Long primarySSRC = spe.getSSRC();
-                        Long rtxSSRC = rtxPairs.remove(primarySSRC);
-                        if (rtxSSRC != null)
-                        {
-                            track.addEncoding(primarySSRC, rtxSSRC, -1, order);
-                            tracks.put(primarySSRC, track);
-                            tracks.put(rtxSSRC, track);
-                        }
-                        else
-                        {
-                            track.addEncoding(primarySSRC, -1, -1, order);
-                            tracks.put(primarySSRC, track);
-                        }
-
-                        order++;
-                    }
-                }
-            }
-
-            if (!rtxPairs.isEmpty())
-            {
-                for (Map.Entry<Long, Long> fidEntry : rtxPairs.entrySet())
-                {
-                    MediaStreamTrack track = new MediaStreamTrack();
-                    Long primarySSRC = fidEntry.getKey();
-                    Long rtxSSRC = fidEntry.getValue();
-
-                    track.addEncoding(
-                        primarySSRC, rtxSSRC, -1, RTPEncoding.BASE_ORDER);
-                }
-            }
+            return mediaStreamTrackReceiver
+                .setRtpEncodingParameters(sources, sourceGroups);
         }
-
-        Map<Long, MediaStreamTrack> remoteTracks = stream.getRemoteTracks();
-        synchronized (remoteTracks)
+        else
         {
-            remoteTracks.clear();
-            remoteTracks.putAll(tracks);
-
-            if (hasSources)
-            {
-                for (SourcePacketExtension spe : sources)
-                {
-                    long mediaSSRC = spe.getSSRC();
-                    if (remoteTracks.get(mediaSSRC) != null)
-                    {
-                        continue;
-                    }
-
-                    MediaStreamTrack mst = new MediaStreamTrack();
-                    mst.addEncoding(mediaSSRC, -1, -1, RTPEncoding.BASE_ORDER);
-                    remoteTracks.put(mediaSSRC, mst);
-                }
-            }
+            return false;
         }
     }
 
+    /**
+     * Gets the {@code MediaStreamTrackReceiver} of this {@code RtpChannel}.
+     *
+     * @return the {@code MediaStreamTrackReceiver} of this {@code RtpChannel},
+     * or null.
+     */
+    public MediaStreamTrackReceiver getMediaStreamTrackReceiver()
+    {
+        return null;
+    }
+
+    public BitrateController getBitrateController()
+    {
+        return null;
+    }
 
     /**
      * An exception indicating that the maximum size of something was exceeded.

@@ -848,18 +848,6 @@ public class Videobridge
                         continue;
                 }
 
-                if (channelCreated && channel instanceof VideoChannel)
-                {
-                    VideoChannel videoChannel
-                        = (VideoChannel)channel;
-
-                    Integer receiveSimulcastLayer =
-                        channelIQ.getReceivingSimulcastLayer();
-
-                    videoChannel.setReceiveSimulcastLayer(
-                        receiveSimulcastLayer);
-                }
-
                 // endpoint
                 // The attribute endpoint is optional. If a value is not
                 // specified, then the Channel endpoint is to not be changed.
@@ -876,14 +864,6 @@ public class Videobridge
 
                 if (lastN != null)
                     channel.setLastN(lastN);
-
-                Boolean adaptiveLastN = channelIQ.getAdaptiveLastN();
-                if (adaptiveLastN != null)
-                    channel.setAdaptiveLastN(adaptiveLastN);
-
-                Boolean adaptiveSimulcast = channelIQ.getAdaptiveSimulcast();
-                if (adaptiveSimulcast != null)
-                    channel.setAdaptiveSimulcast(adaptiveSimulcast);
 
                 // Packet delay - for automated testing purpose only
                 Integer packetDelay = channelIQ.getPacketDelay();
@@ -914,7 +894,7 @@ public class Videobridge
 
                 channel.setDirection(channelIQ.getDirection());
 
-                channel.setMediaStreamTracks(
+                channel.setRtpEncodingParameters(
                     channelIQ.getSources(), channelIQ.getSourceGroups());
 
                 if (channel instanceof VideoChannel)

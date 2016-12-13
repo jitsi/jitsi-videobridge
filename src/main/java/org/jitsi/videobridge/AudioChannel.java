@@ -313,7 +313,7 @@ public class AudioChannel
     boolean rtpTranslatorWillWrite(
         boolean data,
         byte[] buffer, int offset, int length,
-        Channel source)
+        RtpChannel source)
     {
         LipSyncHack lsHack = getEndpoint().getLipSyncHack();
 
