@@ -74,7 +74,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>ice4j</artifactId>
-      <version>2.0-20161121.225043-1</version>
+      <version>2.0-20161213.171033-2</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
