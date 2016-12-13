@@ -37,16 +37,16 @@ if [ ! -z $RUNNING ]; then
 
     sudo -u jvb jstack ${PID} > ${THREADS_FILE}
     sudo -u jvb jmap -dump:live,format=b,file=${HEAP_FILE} ${PID}
-    tar zcf jvb-dumps-${STAMP}-${PID}.tgz ${THREADS_FILE} ${HEAP_FILE} ${HEAPDUMP_FILE} /var/log/jitsi/jvb.log /tmp/hs_err_*
+    tar zcvf jvb-dumps-${STAMP}-${PID}.tgz ${THREADS_FILE} ${HEAP_FILE} ${HEAPDUMP_FILE} /var/log/jitsi/jvb.log /tmp/hs_err_*
     rm ${HEAP_FILE} ${THREADS_FILE}
 else
     ls $JVB_HEAPDUMP_PATH >/dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo "JVB not running, but previous heap dump found."
-        tar zcf jvb-dumps-${STAMP}-crash.tgz $JVB_HEAPDUMP_PATH /var/log/jitsi/jvb.log /tmp/hs_err_*
+        tar zcvf jvb-dumps-${STAMP}-crash.tgz $JVB_HEAPDUMP_PATH /var/log/jitsi/jvb.log /tmp/hs_err_*
         rm ${JVB_HEAPDUMP_PATH}
     else
-        tar zcf jvb-dumps-${STAMP}-crash.tgz /var/log/jitsi/jvb.log /tmp/hs_err_*
+        tar zcvf jvb-dumps-${STAMP}-crash.tgz /var/log/jitsi/jvb.log /tmp/hs_err_*
         echo "JVB not running, previous heap dump not found. Archiving logs only."
     fi
 fi
