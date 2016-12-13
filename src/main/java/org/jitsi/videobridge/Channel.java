@@ -154,7 +154,7 @@ public abstract class Channel
      * Transport packet extension namespace used by {@link #transportManager}.
      * Indicates whether ICE or RAW transport is used by this channel.
      */
-    private final String transportNamespace;
+    protected final String transportNamespace;
 
     /**
      * The <tt>Object</tt> which synchronizes the access to

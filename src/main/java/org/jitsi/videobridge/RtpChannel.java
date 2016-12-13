@@ -226,6 +226,15 @@ public class RtpChannel
     private byte rtxAssociatedPayloadType = -1;
 
     /**
+     * Whether this {@link RtpChannel} should latch on to the remote address of
+     * the first received data packet (and control packet) and only received
+     * subsequent packets from this remote address.
+     * We want to enforce this if RAW-UDP is used. When ICE is used, ice4j does
+     * the filtering for us.
+     */
+    private boolean verifyRemoteAddress = true;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -282,6 +291,12 @@ public class RtpChannel
 
         content.addPropertyChangeListener(propertyChangeListener);
 
+        if (IceUdpTransportPacketExtension.NAMESPACE.equals(
+                        this.transportNamespace))
+        {
+            this.verifyRemoteAddress = false;
+        }
+
         touch();
     }
 
@@ -330,7 +345,8 @@ public class RtpChannel
         else
         {
             accept
-                = ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort());
+                = !verifyRemoteAddress ||
+                (ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort()));
         }
 
         if (accept)
@@ -429,7 +445,8 @@ public class RtpChannel
         else
         {
             accept
-                = dataAddr.equals(p.getAddress()) && (dataPort == p.getPort());
+                = !verifyRemoteAddress ||
+                (dataAddr.equals(p.getAddress()) && (dataPort == p.getPort()));
         }
 
         if (accept)
