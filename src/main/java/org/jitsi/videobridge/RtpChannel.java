@@ -193,6 +193,10 @@ public class RtpChannel
      * {@link #stream}. When <tt>DatagramPacket</tt>s are received through the
      * <tt>DatagramSocket</tt>s of this <tt>Channel</tt>, their first RTP and
      * RTCP sources will determine, respectively, the RTP and RTCP targets.
+     * Note: this is effectively used for RAW UDP only. With ICE, ice4j takes
+     * care of verifying the source and setting the actual target for us.
+     * TODO: Maybe move this to RawUdpTransportManager (and stop using the
+     * SessionAddress class from FMJ).
      */
     private final SessionAddress streamTarget = new SessionAddress();
 
@@ -224,6 +228,15 @@ public class RtpChannel
      * The "associated payload type" number for RTX on this channel.
      */
     private byte rtxAssociatedPayloadType = -1;
+
+    /**
+     * Whether this {@link RtpChannel} should latch on to the remote address of
+     * the first received data packet (and control packet) and only received
+     * subsequent packets from this remote address.
+     * We want to enforce this if RAW-UDP is used. When ICE is used, ice4j does
+     * the filtering for us.
+     */
+    private boolean verifyRemoteAddress = true;
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -282,6 +295,12 @@ public class RtpChannel
 
         content.addPropertyChangeListener(propertyChangeListener);
 
+        if (IceUdpTransportPacketExtension.NAMESPACE.equals(
+                        this.transportNamespace))
+        {
+            this.verifyRemoteAddress = false;
+        }
+
         touch();
     }
 
@@ -330,7 +349,8 @@ public class RtpChannel
         else
         {
             accept
-                = ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort());
+                = !verifyRemoteAddress ||
+                (ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort()));
         }
 
         if (accept)
@@ -429,7 +449,8 @@ public class RtpChannel
         else
         {
             accept
-                = dataAddr.equals(p.getAddress()) && (dataPort == p.getPort());
+                = !verifyRemoteAddress ||
+                (dataAddr.equals(p.getAddress()) && (dataPort == p.getPort()));
         }
 
         if (accept)

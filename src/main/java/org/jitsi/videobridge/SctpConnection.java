@@ -1158,8 +1158,11 @@ public class SctpConnection
         }
         catch (SocketException ex)
         {
-            if (!"Socket closed".equals(ex.getMessage()))
+            if (!"Socket closed".equals(ex.getMessage())
+                && !(ex instanceof SocketClosedException))
+            {
                 throw ex;
+            }
         }
         finally
         {

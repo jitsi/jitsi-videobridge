@@ -21,9 +21,10 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import net.java.sip.communicator.util.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
+import org.jitsi.util.Logger;
 
 /**
  * Represents the state of a Jingle transport.
@@ -44,6 +45,23 @@ public abstract class TransportManager
      */
     private static final Logger logger
         = Logger.getLogger(TransportManager.class);
+
+    /**
+     * The default value of the minimum port to use for dynamic allocation.
+     */
+    public static final int DEFAULT_MIN_PORT = 10001;
+
+    /**
+     * The default value of the maximum port to use for dynamic allocation.
+     */
+    public static final int DEFAULT_MAX_PORT = 20000;
+
+    /**
+     * The {@link PortTracker} instance used by jitsi-videobridge to manage
+     * dynamic port allocation.
+     */
+    public static final PortTracker portTracker
+        = new PortTracker(DEFAULT_MIN_PORT, DEFAULT_MAX_PORT);
 
     /**
      * The <tt>PropertyChangeListener</tt> which listens to changes in the
@@ -83,7 +101,7 @@ public abstract class TransportManager
      *
      * @param channel the <tt>Channel</tt> to add.
      * @return <tt>true</tt> if the <tt>Channel</tt> was added, <tt>false</tt>
-     * if the channel was already in the list.
+     * otherwise.
      */
     public boolean addChannel(Channel channel)
     {
