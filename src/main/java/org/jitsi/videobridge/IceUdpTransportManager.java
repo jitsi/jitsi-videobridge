@@ -68,6 +68,20 @@ public class IceUdpTransportManager
             = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
 
     /**
+     * The name of the property used to control {@link #keepAliveStrategy}.
+     */
+    public static final String KEEP_ALIVE_STRATEGY_PNAME
+            = "org.jitsi.videobridge.KEEP_ALIVE_STRATEGY";
+
+    /**
+     * The {@link KeepAliveStrategy} to configure for ice4j {@link Component}s,
+     * which will dictate which candidate pairs to keep alive.
+     * Default to keeping alive the selected pair and any TCP pairs.
+     */
+    private static KeepAliveStrategy keepAliveStrategy
+        = KeepAliveStrategy.SELECTED_AND_TCP;
+
+    /**
      * The default value of the port to be used for
      * {@code SinglePortUdpHarvester}.
      */
@@ -177,6 +191,19 @@ public class IceUdpTransportManager
             staticConfigurationInitialized = true;
 
             iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
+
+            String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
+            KeepAliveStrategy strategy
+                = KeepAliveStrategy.fromString(strategyName);
+            if (strategyName != null && strategy == null)
+            {
+                classLogger.warn("Invalid keep alive strategy name: "
+                                     + strategyName);
+            }
+            else if (strategy != null)
+            {
+                keepAliveStrategy = strategy;
+            }
 
             int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
                                         SINGLE_PORT_DEFAULT_VALUE);
@@ -904,15 +931,17 @@ public class IceUdpTransportManager
 
         IceMediaStream iceStream = iceAgent.createMediaStream(iceStreamName);
 
-        iceAgent.createComponent(
+        Component rtpComponent = iceAgent.createComponent(
             iceStream, Transport.UDP,
             portBase, portBase, portBase + 100);
+        rtpComponent.setKeepAliveStrategy(keepAliveStrategy);
 
         if (numComponents > 1)
         {
-            iceAgent.createComponent(
+            Component rtcpComponent = iceAgent.createComponent(
                 iceStream, Transport.UDP,
                 portBase + 1, portBase + 1, portBase + 101);
+            rtcpComponent.setKeepAliveStrategy(keepAliveStrategy);
         }
 
         // Attempt to minimize subsequent bind retries: see if we have allocated
