@@ -47,7 +47,7 @@ class CallStatsConferenceStatsHandler
     private static final Logger logger
         = Logger.getLogger(CallStatsConferenceStatsHandler.class);
 
-    /*
+   /**
     * The {@link MediaType}s for which we will report to callstats.
     */
     private static final MediaType[] MEDIA_TYPES
@@ -107,7 +107,7 @@ class CallStatsConferenceStatsHandler
         this.interval = interval;
 
         this.conferenceIDPrefix = conferenceIDPrefix;
-        if(this.conferenceIDPrefix != null
+        if (this.conferenceIDPrefix != null
             && !this.conferenceIDPrefix.endsWith("/"))
             this.conferenceIDPrefix += "/";
     }
@@ -171,8 +171,8 @@ class CallStatsConferenceStatsHandler
         cpr.start();
 
         // register for periodic execution.
-        this.statisticsProcessors.put(conference, cpr);
-        this.statisticsExecutor.registerRecurringRunnable(cpr);
+        statisticsProcessors.put(conference, cpr);
+        statisticsExecutor.registerRecurringRunnable(cpr);
     }
 
     /**
@@ -193,7 +193,9 @@ class CallStatsConferenceStatsHandler
             = statisticsProcessors.remove(conference);
 
         if (cpr == null)
+        {
             return;
+        }
 
         cpr.stop();
         statisticsExecutor.deRegisterRecurringRunnable(cpr);
@@ -246,18 +248,19 @@ class CallStatsConferenceStatsHandler
         @Override
         protected void doRun()
         {
-            // if userInfo is missing the method conferenceSetupResponse
-            // is not called, means callstats still has not setup internally
-            // this conference, and no stats will be processed for it
-            if(userInfo == null)
+            if (userInfo == null)
+            {
                 return;
+            }
 
             for (Endpoint e : o.getEndpoints())
             {
                 for (MediaType mediaType : MEDIA_TYPES)
                 {
                     for (RtpChannel rc : e.getChannels(mediaType))
+                    {
                         processChannelStats(rc);
+                    }
                 }
             }
         }
@@ -285,9 +288,12 @@ class CallStatsConferenceStatsHandler
          */
         void stop()
         {
-            callStats.sendCallStatsConferenceEvent(
+            if (userInfo != null)
+            {
+                callStats.sendCallStatsConferenceEvent(
                     CallStatsConferenceEvents.CONFERENCE_TERMINATED,
                     userInfo);
+            }
         }
 
         /**
@@ -315,16 +321,27 @@ class CallStatsConferenceStatsHandler
                 return;
             }
 
-            if (channel.getReceiveSSRCs().length == 0)
+            if (userInfo == null)
+            {
                 return;
+            }
+
+            if (channel.getReceiveSSRCs().length == 0)
+            {
+                return;
+            }
 
             MediaStream stream = channel.getStream();
             if (stream == null)
+            {
                 return;
+            }
 
             MediaStreamStats2 stats = stream.getMediaStreamStats();
             if (stats == null)
+            {
                 return;
+            }
 
             Endpoint endpoint = channel.getEndpoint();
             String endpointID = (endpoint == null) ? "" : endpoint.getID();
@@ -390,7 +407,7 @@ class CallStatsConferenceStatsHandler
     {
         /**
          * Weak reference for the ConferencePeriodicRunnable, to make sure
-         * if this listener got leaked somwehere in callstats we will not keep
+         * if this listener got leaked somewhere in callstats we will not keep
          * reference to conferences and such.
          */
         private final WeakReference<ConferencePeriodicRunnable> processible;
@@ -406,20 +423,30 @@ class CallStatsConferenceStatsHandler
             this.processible = processible;
         }
 
+        /**
+         * TODO
+         * @param ucid TODO
+         */
         @Override
         public void onResponse(String ucid)
         {
             ConferencePeriodicRunnable p = processible.get();
 
             // maybe null cause it was garbage collected
-            if(p != null)
+            if (p != null)
                 p.conferenceSetupResponse(ucid);
         }
 
+        /**
+         * TODO
+         * @param callStatsErrors TODO
+         * @param s TODO
+         */
         @Override
         public void onError(CallStatsErrors callStatsErrors, String s)
         {
-            logger.error(s + "," + callStatsErrors);
+            logger.error("Failed to start a callstats conference (???): "
+                             + s + ", " + callStatsErrors);
         }
     }
 }
