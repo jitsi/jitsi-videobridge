@@ -297,10 +297,12 @@ public class Endpoint
     }
 
     /**
-     * Gets a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
-     * a particular <tt>MediaType</tt>.
+     * Gets a list with the {@link RtpChannel}s of this {@link Endpoint} with a
+     * particular {@link MediaType} (or all of them, if {@code mediaType} is
+     * {@code null}).
      *
-     * @param mediaType the <tt>MediaType</tt>.
+     * @param mediaType the {@link MediaType} to match. If {@code null}, all
+     * channels of this endpoint will be returned.
      * @return a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
      * a particular <tt>MediaType</tt>.
      */

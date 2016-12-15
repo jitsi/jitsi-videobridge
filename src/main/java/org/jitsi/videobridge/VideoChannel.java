@@ -20,6 +20,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
+import java.util.logging.*;
 
 import javax.media.rtp.*;
 
@@ -34,8 +35,10 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.rtp.*;
+import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger; // Disambiguation.
+import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.simulcast.*;
 import org.jitsi.videobridge.transform.*;
 import org.json.simple.*;
@@ -85,6 +88,13 @@ public class VideoChannel
         = "org.jitsi.videobridge.DISABLE_LASTN_UNUSED_STREAM_DETECTION";
 
     /**
+     * The name of the property which controls whether {@link VideoChannel}s
+     * periodically log statistics related to oversending data.
+     */
+    public static final String LOG_OVERSENDING_STATS_PNAME
+        = "org.jitsi.videobridge.LOG_OVERSENDING_STATS";
+
+    /**
      * The {@link Logger} used by the {@link VideoChannel} class to print debug
      * information. Note that instances should use {@link #logger} instead.
      */
@@ -97,6 +107,26 @@ public class VideoChannel
      */
     private static final Timer delayedFirTimer = new Timer();
 
+    /**
+     * The {@link RecurringRunnableExecutor} instance for {@link VideoChannel}s.
+     */
+    private static RecurringRunnableExecutor recurringExecutor;
+
+    /**
+     * @return the {@link RecurringRunnableExecutor} instance for
+     * {@link VideoChannel}s. Uses lazy initialization.
+     */
+    private static synchronized RecurringRunnableExecutor getRecurringExecutor()
+    {
+        if (recurringExecutor == null)
+        {
+            recurringExecutor
+                = new RecurringRunnableExecutor(
+                VideoChannel.class.getSimpleName());
+        }
+
+        return recurringExecutor;
+    }
 
     /**
      * Updates the values of the property <tt>inLastN</tt> of all
@@ -201,6 +231,12 @@ public class VideoChannel
     private final Object delayedFirTaskSyncRoot = new Object();
 
     /**
+     * A {@link RecurringRunnable} which runs periodically and logs statistics
+     * related to oversending for this {@link VideoChannel}.
+     */
+    private final RecurringRunnable logOversendingStatsRunnable;
+
+    /**
      * Initializes a new <tt>VideoChannel</tt> instance which is to have a
      * specific ID. The initialization is to be considered requested by a
      * specific <tt>Content</tt>.
@@ -243,6 +279,17 @@ public class VideoChannel
             = cfg != null
                 && cfg.getBoolean(
                         VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false);
+
+        if (cfg != null && cfg.getBoolean(LOG_OVERSENDING_STATS_PNAME, false))
+        {
+            logOversendingStatsRunnable = createLogOversendingStatsRunnable();
+            getRecurringExecutor().registerRecurringRunnable(
+                logOversendingStatsRunnable);
+        }
+        else
+        {
+            logOversendingStatsRunnable = null;
+        }
     }
 
     /**
@@ -601,6 +648,11 @@ public class VideoChannel
             }
         }
 
+        if (recurringExecutor != null && logOversendingStatsRunnable != null)
+        {
+            recurringExecutor.
+                deRegisterRecurringRunnable(logOversendingStatsRunnable);
+        }
         return true;
     }
 
@@ -1246,5 +1298,74 @@ public class VideoChannel
         }
 
         delayedFirTimer.schedule(task, Math.max(0, delay));
+    }
+
+    /**
+     * Creates a {@link PeriodicRunnable} which logs statistics related to
+     * oversending for this {@link VideoChannel}.
+     *
+     * @return the created instance.
+     */
+    private RecurringRunnable createLogOversendingStatsRunnable()
+    {
+        return new PeriodicRunnable(1000)
+        {
+            private BandwidthEstimator bandwidthEstimator = null;
+
+            @Override
+            public void run()
+            {
+                super.run();
+
+                if (bandwidthEstimator == null)
+                {
+                    VideoMediaStream videoStream
+                        = (VideoMediaStream) getStream();
+                    if (videoStream != null)
+                    {
+                        bandwidthEstimator
+                            = videoStream.getOrCreateBandwidthEstimator();
+                    }
+                }
+
+                if (bandwidthEstimator == null)
+                {
+                    return;
+                }
+
+                long bwe = bandwidthEstimator.getLatestEstimate();
+                if (bwe <= 0)
+                {
+                    return;
+                }
+
+                long sendingBitrate = 0;
+                for (RtpChannel channel : getEndpoint().getChannels(null))
+                {
+                    sendingBitrate +=
+                        channel
+                            .getStream()
+                            .getMediaStreamStats()
+                            .getSendStats().getBitrate();
+                }
+
+                if (sendingBitrate <= 0)
+                {
+                    return;
+                }
+
+                double lossRate
+                    = getStream()
+                        .getMediaStreamStats().getSendStats().getLossRate();
+
+                String id
+                    = getContent().getConference().getID() + "-" + getID();
+
+                logger.log(Level.INFO, Logger.Category.STATISTICS,
+                           "sending_bitrate channel=" + id +
+                           " bwe=" + bwe + " sbr=" + sendingBitrate +
+                           " lossRate=" + lossRate);
+            }
+        };
     }
 }
