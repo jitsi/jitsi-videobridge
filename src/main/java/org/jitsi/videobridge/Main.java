@@ -31,7 +31,7 @@ import org.jitsi.videobridge.xmpp.*;
  * is a comma-separated list of <tt>xmpp</tt> and <tt>rest</tt>. The default
  * value is <tt>xmpp</tt> (i.e. if the command-line argument <tt>--apis=</tt> is
  * not explicitly specified, the application behaves as if <tt>--args=xmpp</tt>
- * is specified). For example, specify <tt>--apis=rest,xmpp</tt> on the comamnd
+ * is specified). For example, specify <tt>--apis=rest,xmpp</tt> on the command
  * line to simultaneously enable the two APIs.
  * </p>
  *
