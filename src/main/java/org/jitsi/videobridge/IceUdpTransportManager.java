@@ -698,7 +698,9 @@ public class IceUdpTransportManager
         for (LocalCandidate localCandidate : component.getLocalCandidates())
         {
             if (localCandidate.canReach(remoteCandidate))
+            {
                 return true;
+            }
         }
         return false;
     }
@@ -931,17 +933,17 @@ public class IceUdpTransportManager
 
         IceMediaStream iceStream = iceAgent.createMediaStream(iceStreamName);
 
-        Component rtpComponent = iceAgent.createComponent(
-            iceStream, Transport.UDP,
-            portBase, portBase, portBase + 100);
-        rtpComponent.setKeepAliveStrategy(keepAliveStrategy);
+        iceAgent.createComponent(
+                iceStream, Transport.UDP,
+                portBase, portBase, portBase + 100,
+                keepAliveStrategy);
 
         if (numComponents > 1)
         {
-            Component rtcpComponent = iceAgent.createComponent(
-                iceStream, Transport.UDP,
-                portBase + 1, portBase + 1, portBase + 101);
-            rtcpComponent.setKeepAliveStrategy(keepAliveStrategy);
+            iceAgent.createComponent(
+                    iceStream, Transport.UDP,
+                    portBase + 1, portBase + 1, portBase + 101,
+                    keepAliveStrategy);
         }
 
         // Attempt to minimize subsequent bind retries: see if we have allocated
