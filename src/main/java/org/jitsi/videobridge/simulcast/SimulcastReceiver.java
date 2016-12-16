@@ -425,7 +425,7 @@ public class SimulcastReceiver
         {
             String id = getSimulcastEngine().getVideoChannel().getFullId();
             logger.info(Logger.Category.STATISTICS,
-                        "keyframe_received id=" + id + " ssrc=" + acceptedSSRC);
+                        "keyframe_received id=" + id + ",ssrc=" + acceptedSSRC);
         }
 
         if (acceptedStream.lastPktTimestamp == -1 || TimeUtils

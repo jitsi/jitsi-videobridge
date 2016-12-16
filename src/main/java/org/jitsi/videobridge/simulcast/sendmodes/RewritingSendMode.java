@@ -129,9 +129,9 @@ public class RewritingSendMode
                         .getSimulcastSenderManager()
                             .getSimulcastEngine().getVideoChannel().getFullId();
                 logger.info(Logger.Category.STATISTICS,
-                            "layer_switch id=" + id + " ssrc="
-                                + next.getPrimarySSRC() + " order="
-                                + next.getOrder() + " delay=" + delay);
+                            "layer_switch id=" + id + ",ssrc="
+                                + next.getPrimarySSRC() + ",order="
+                                + next.getOrder() + ",delay=" + delay);
                 this.state = new State(new WeakReference<>(next), null);
                 accept = true;
             }

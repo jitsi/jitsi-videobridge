@@ -1360,8 +1360,8 @@ public class VideoChannel
 
                 logger.info(Logger.Category.STATISTICS,
                            "sending_bitrate channel=" + getFullId() +
-                           " bwe=" + bwe + " sbr=" + sendingBitrate +
-                           " lossRate=" + lossRate);
+                           ",bwe=" + bwe + " sbr=" + sendingBitrate +
+                           ",lossRate=" + lossRate);
             }
         };
     }
