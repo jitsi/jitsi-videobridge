@@ -423,7 +423,9 @@ public class SimulcastReceiver
             .getVideoChannel().getStream().isKeyFrame(
                 pkt.getBuffer(), pkt.getOffset(), pkt.getLength())))
         {
-            logger.info("Received a keyframe on SSRC=" + acceptedSSRC);
+            String id = getSimulcastEngine().getVideoChannel().getFullId();
+            logger.info(Logger.Category.STATISTICS,
+                        "keyframe_received id=" + id + " ssrc=" + acceptedSSRC);
         }
 
         if (acceptedStream.lastPktTimestamp == -1 || TimeUtils

@@ -124,9 +124,14 @@ public class RewritingSendMode
                     - timeOfLastAttemptToSwitch;
                 timeOfLastAttemptToSwitch += delay;
 
-                logger.info("Successfully switched to SSRC="
+                String id
+                    = getSimulcastSender()
+                        .getSimulcastSenderManager()
+                            .getSimulcastEngine().getVideoChannel().getFullId();
+                logger.info(Logger.Category.STATISTICS,
+                            "layer_switch id=" + id + " ssrc="
                                 + next.getPrimarySSRC() + " order="
-                                + next.getOrder() + " after " + delay + "ms.");
+                                + next.getOrder() + " delay=" + delay);
                 this.state = new State(new WeakReference<>(next), null);
                 accept = true;
             }
