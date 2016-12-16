@@ -2108,6 +2108,14 @@ public class RtpChannel
         }
     }
 
+    /**
+     * @return the full ID of this channel, which of the id of the conference
+     * and the ID of the channel.
+     */
+    public String getFullId()
+    {
+        return getContent().getConference().getID() + "-" + getID();
+    }
 
     /**
      * An exception indicating that the maximum size of something was exceeded.

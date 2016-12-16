@@ -1358,11 +1358,8 @@ public class VideoChannel
                     = getStream()
                         .getMediaStreamStats().getSendStats().getLossRate();
 
-                String id
-                    = getContent().getConference().getID() + "-" + getID();
-
-                logger.log(Level.INFO, Logger.Category.STATISTICS,
-                           "sending_bitrate channel=" + id +
+                logger.info(Logger.Category.STATISTICS,
+                           "sending_bitrate channel=" + getFullId() +
                            " bwe=" + bwe + " sbr=" + sendingBitrate +
                            " lossRate=" + lossRate);
             }
