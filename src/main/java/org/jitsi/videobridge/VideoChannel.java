@@ -610,11 +610,14 @@ public class VideoChannel
             if (lastNController.getLastN() >= 0 ||
                     lastNController.getCurrentLastN() >= 0)
             {
+                final List<String> forwardedEndpoints =
+                        lastNController.getForwardedEndpoints();
                 lastNController.initializeConferenceEndpoints();
                 sendLastNEndpointsChangeEventOnDataChannel(
-                        lastNController.getForwardedEndpoints(),
+                        forwardedEndpoints,
                         null,
                         null);
+                getContent().askForKeyframesById(forwardedEndpoints);
             }
 
             updateInLastN(this);
