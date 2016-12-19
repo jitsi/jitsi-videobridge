@@ -15,6 +15,9 @@ You can download binary packages for Debian/Ubuntu:
 * [stable](https://download.jitsi.org/stable/) ([instructions](https://jitsi.org/Main/InstallJitsiVideobridgeDebianStableRepository))
 * [nightly](https://download.jitsi.org/unstable/) ([instructions](https://jitsi.org/Main/InstallJitsiVideobridgeDebianNightlyRepository))
 
+Maven assembly binaries:
+* [assemblies](https://download.jitsi.org/jitsi-videobridge/)
+
 Or you can clone the Git repo and run the JVB from source using maven.
 
 ```sh
