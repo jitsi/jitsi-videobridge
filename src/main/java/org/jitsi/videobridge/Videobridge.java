@@ -26,7 +26,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
 
-import org.ice4j.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
@@ -283,15 +282,16 @@ public class Videobridge
         }
         while (conference == null);
 
-        // The method Videobridge.getChannelCount() should better be executed
-        // outside synchronized blocks in order to reduce the risks of causing
-        // deadlocks.
+        // The method Videobridge.getConferenceCountString() should better
+        // be executed outside synchronized blocks in order to reduce the
+        // risks of causing deadlocks.
         if (logger.isInfoEnabled())
         {
-            logger.info(
-                    "Created conference " + conference.getID()
-                        + " (enableLogging=" + enableLogging + "). "
-                        + getConferenceCountString());
+            logger.info(Logger.Category.STATISTICS,
+                        "create_conf," + conference.getLoggingId()
+                        + " conf_name=" + name
+                        + ",logging=" + enableLogging
+                        + "," + getConferenceCountString());
         }
 
         return conference;
@@ -1612,10 +1612,10 @@ public class Videobridge
     {
         int[] metrics = getConferenceChannelAndStreamCount();
 
-        StringBuilder sb
-            = new StringBuilder("The total number of conferences is now ");
-        sb.append(metrics[0]).append(", channels ").append(metrics[1]);
-        sb.append(", video streams ").append(metrics[2]).append(".");
+        StringBuilder sb = new StringBuilder();
+        sb.append("conf_count=").append(metrics[0])
+            .append(",ch_count=").append(metrics[1])
+            .append(",v_streams=").append(metrics[2]);
 
         return sb.toString();
     }

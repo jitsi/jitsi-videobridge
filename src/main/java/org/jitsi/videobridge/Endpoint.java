@@ -145,6 +145,11 @@ public class Endpoint
     private final String id;
 
     /**
+     * The string used to identify this endpoint for the purposes of logging.
+     */
+    private final String loggingId;
+
+    /**
      * The <tt>pinnedEndpointID</tt> SyncRoot.
      */
     private final Object pinnedEndpointSyncRoot = new Object();
@@ -194,6 +199,7 @@ public class Endpoint
     {
         this.conference = Objects.requireNonNull(conference, "conference");
         this.id = Objects.requireNonNull(id, "id");
+        loggingId = conference.getLoggingId() + ",endp_id=" + id;
 
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
@@ -595,16 +601,6 @@ public class Endpoint
         // Find the new pinned endpoint.
         String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
 
-        if (logger.isDebugEnabled())
-        {
-            StringCompiler sc = new StringCompiler();
-            sc.bind("pinnedId", newPinnedEndpointID);
-            sc.bind("this", this);
-            logger.debug(sc.c(
-                    "Endpoint {this.id} notified us that it has pinned"
-                            + " {pinnedId}."));
-        }
-
         List<String> newPinnedIDList = Collections.EMPTY_LIST;
         if (newPinnedEndpointID != null && !"".equals(newPinnedEndpointID))
         {
@@ -632,7 +628,8 @@ public class Endpoint
         Object o = jsonObject.get("pinnedEndpoints");
         if (!(o instanceof JSONArray))
         {
-            logger.warn("Received invalid or unexpected JSON: " + jsonObject);
+            logger.warn("Received invalid or unexpected JSON ("
+                            + getLoggingId() + "):" + jsonObject);
             return;
         }
 
@@ -648,14 +645,10 @@ public class Endpoint
 
         if (logger.isDebugEnabled())
         {
-            StringCompiler sc = new StringCompiler();
-            sc.bind("pinned", newPinnedEndpoints);
-            sc.bind("this", this);
-            logger.debug(sc.c(
-                    "Endpoint {this.id} notified us that it has pinned"
-                            + " {pinned}."));
+            logger.debug(Logger.Category.STATISTICS,
+                         "pinned," + getLoggingId()
+                             + " pinned=" + newPinnedEndpoints);
         }
-
         pinnedEndpointsChanged(newPinnedEndpoints);
     }
 
@@ -684,13 +677,6 @@ public class Endpoint
                 List<String> oldPinnedEndpoints = this.pinnedEndpoints;
                 this.pinnedEndpoints = pinnedEndpoints;
 
-                if (logger.isDebugEnabled())
-                {
-                    StringCompiler sc = new StringCompiler();
-                    sc.bind("pinned", pinnedEndpoints);
-                    sc.bind("this", this);
-                    logger.debug(sc.c("Endpoint {this.id} pinned {pinned}."));
-                }
                 firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
                                    oldPinnedEndpoints, pinnedEndpoints);
             }
@@ -717,12 +703,9 @@ public class Endpoint
 
         if (logger.isDebugEnabled())
         {
-            StringCompiler sc = new StringCompiler();
-            sc.bind("selectedIds", newSelectedEndpointIDs);
-            sc.bind("this", this);
-            logger.debug(sc.c(
-                    "Endpoint {this.id} notified us that its big screen"
-                        + " displays endpoint {selectedIds}."));
+            logger.debug(Logger.Category.STATISTICS,
+                         "selected_message," + getLoggingId()
+                         + " selected=" + newSelectedEndpointIDs);
         }
 
         Set<Endpoint> newSelectedEndpoints = new HashSet<>();
@@ -759,11 +742,9 @@ public class Endpoint
         {
             if (logger.isDebugEnabled())
             {
-                StringCompiler sc = new StringCompiler();
-                sc.bind("newSelectedEndpoints", newSelectedEndpoints);
-                sc.bind("this", this);
-                logger.debug(sc.c(
-                        "Endpoint {this.id} selected {newSelectedEndpoints}."));
+                logger.debug(Logger.Category.STATISTICS,
+                             "selected," + getLoggingId()
+                                 + " selected=" + newSelectedEndpoints);
             }
             firePropertyChange(SELECTED_ENDPOINT_PROPERTY_NAME,
                 oldSelectedEndpoints, newSelectedEndpoints);
@@ -924,18 +905,18 @@ public class Endpoint
         SctpConnection sctpConnection = getSctpConnection();
         String endpointId = getID();
 
-        if(sctpConnection == null)
+        if (sctpConnection == null)
         {
             logger.warn("No SCTP connection with " + endpointId + ".");
         }
-        else if(sctpConnection.isReady())
+        else if (sctpConnection.isReady())
         {
             try
             {
                 WebRtcDataStream dataStream
                     = sctpConnection.getDefaultDataStream();
 
-                if(dataStream == null)
+                if (dataStream == null)
                 {
                     logger.warn(
                             "WebRtc data channel with " + endpointId
@@ -1016,5 +997,15 @@ public class Endpoint
     public void expire()
     {
         this.expired = true;
+    }
+
+    /**
+     * @return a string which identifies this {@link Endpoint} for the
+     * purposes of logging. The string is a comma-separated list of "key=value"
+     * pairs.
+     */
+    public String getLoggingId()
+    {
+        return loggingId;
     }
 }

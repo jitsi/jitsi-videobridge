@@ -17,10 +17,13 @@ package org.jitsi.videobridge.simulcast.sendmodes;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.util.Logger;
+import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.lang.ref.*;
 import java.util.*;
+import java.util.logging.*;
 
 /**
  * The <tt>RewritingSendMode</tt> implements the streams rewriting mode in which
@@ -108,7 +111,8 @@ public class RewritingSendMode
 
         if (next != null && oldState.hasStalled())
         {
-            logger.warn("Switching has stalled.");
+            logger.log(Level.WARNING, Logger.Category.STATISTICS,
+                       "stalled," + getLoggingId());
         }
 
         boolean accept = false;
@@ -120,18 +124,15 @@ public class RewritingSendMode
             // This is the first packet of a keyframe.
             if (diff >= 0)
             {
-                long delay = System.currentTimeMillis()
-                    - timeOfLastAttemptToSwitch;
+                long delay
+                    = System.currentTimeMillis() - timeOfLastAttemptToSwitch;
                 timeOfLastAttemptToSwitch += delay;
 
-                String id
-                    = getSimulcastSender()
-                        .getSimulcastSenderManager()
-                            .getSimulcastEngine().getVideoChannel().getFullId();
                 logger.info(Logger.Category.STATISTICS,
-                            "layer_switch id=" + id + ",ssrc="
-                                + next.getPrimarySSRC() + ",order="
-                                + next.getOrder() + ",delay=" + delay);
+                            "layer_switch," + getLoggingId()
+                            + " ssrc=" + next.getPrimarySSRC()
+                            + ",order=" + next.getOrder()
+                            + ",delay=" + delay);
                 this.state = new State(new WeakReference<>(next), null);
                 accept = true;
             }
@@ -250,6 +251,16 @@ public class RewritingSendMode
             this.state
                 = new State(oldState.weakCurrent, new WeakReference<>(simStream));
         }
+    }
+
+    /**
+     * @return a string which identifies this {@link RewritingSendMode} (i.e.
+     * its corresponding {@link SimulcastSender}) for the purposes of logging.
+     * The string is a comma-separated list of "key=value" pairs.
+     */
+    private String getLoggingId()
+    {
+        return getSimulcastSender().getLoggingId();
     }
 
     /**

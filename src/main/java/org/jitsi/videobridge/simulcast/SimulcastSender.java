@@ -298,17 +298,19 @@ public class SimulcastSender
         if (logger.isDebugEnabled())
         {
             if (newEndpoints.isEmpty())
+            {
                 logger.debug("Now I'm not watching anybody. What?!");
+            }
             else
             {
-                StringBuilder newEndpointsIDList = new StringBuilder();
+                StringBuilder sb = new StringBuilder("selected_endpoints,");
+                sb.append(getLoggingId()).append(" selected=");
                 for (Endpoint e : newEndpoints)
                 {
-                    newEndpointsIDList.append(e.getID());
-                    newEndpointsIDList.append(", ");
+                    sb.append(e.getID());
+                    sb.append(";");
                 }
-                logger.debug(getReceiveEndpoint().getID() + " now I'm watching: "
-                        + newEndpointsIDList.toString());
+                logger.debug(Logger.Category.STATISTICS, sb.toString());
             }
         }
 
@@ -477,17 +479,34 @@ public class SimulcastSender
         {
             // Now, why would you want to do that?
             sendMode = null;
-            logger.debug("Setting simulcastMode to null.");
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(Logger.Category.STATISTICS,
+                             "set_send_mode," + getLoggingId()
+                                 + " send_mode=null");
+            }
             return;
         }
         else if (newMode == SimulcastMode.REWRITING)
         {
-            logger.debug("Setting simulcastMode to rewriting mode.");
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(Logger.Category.STATISTICS,
+                             "set_send_mode," + getLoggingId()
+                                 + " send_mode=" + SimulcastMode.REWRITING
+                                 .toString());
+            }
             sendMode = new RewritingSendMode(this);
         }
         else if (newMode == SimulcastMode.SWITCHING)
         {
-            logger.debug("Setting simulcastMode to switching mode.");
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(Logger.Category.STATISTICS,
+                             "set_send_mode," + getLoggingId()
+                                 + " send_mode=" + SimulcastMode.SWITCHING
+                                 .toString());
+            }
             sendMode = new SwitchingSendMode(this);
         }
 
@@ -582,5 +601,32 @@ public class SimulcastSender
 
             retry = !sm.receive(targetOrder);
         }
+    }
+
+    /**
+     * @return a string which identifies this {@link SimulcastSender} for the
+     * purposes of logging. The string is a comma-separated list of "key=value"
+     * pairs.
+     */
+    public String getLoggingId()
+    {
+        // The conference and endpoint IDs should be sufficient for debugging.
+        Endpoint receiveEndpoint = getReceiveEndpoint();
+        Endpoint sendEndpoint = getSendEndpoint();
+        Conference conference = null;
+        if (receiveEndpoint != null)
+        {
+            conference = receiveEndpoint.getConference();
+        }
+        else if (sendEndpoint != null)
+        {
+            conference = sendEndpoint.getConference();
+        }
+
+        return Conference.getLoggingId(conference)
+            + ",from_endp=" +
+                (receiveEndpoint == null ? "null" : receiveEndpoint.getID())
+            + ",to_endp="
+                + (sendEndpoint == null ? "null" : sendEndpoint.getID());
     }
 }

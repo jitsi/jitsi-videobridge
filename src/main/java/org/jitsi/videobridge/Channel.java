@@ -433,11 +433,8 @@ public abstract class Channel
             if (logger.isInfoEnabled())
             {
 
-                logger.info(
-                        "Expired channel " + getID() + " of content "
-                            + content.getName() + " of conference "
-                            + conference.getID() + ". "
-                            + videobridge.getConferenceCountString());
+                logger.info(Logger.Category.STATISTICS,
+                            "expire_ch," + getLoggingId());
             }
         }
 
@@ -889,10 +886,8 @@ public abstract class Channel
      */
     void transportConnected()
     {
-        logger.info("Transport connected for channel " + getID()
-                            + " of content " + getContent().getName()
-                            + " of conference "
-                            + getContent().getConference().getID());
+        logger.info(Logger.Category.STATISTICS,
+                    "transport_connected," + getLoggingId());
 
         // It seems this Channel is still active.
         touch(ActivityType.TRANSPORT /* transport connected */);
@@ -917,5 +912,36 @@ public abstract class Channel
     public String getChannelBundleId()
     {
         return channelBundleId;
+    }
+
+    /**
+     * @return a string which identifies this{@link Channel} for the purposes
+     * of logging (i.e. includes the ID of the channel, the ID of its
+     * conference and potentially other information). The string is a
+     * comma-separated list of "key=value" pairs.
+     */
+    public String getLoggingId()
+    {
+        return getLoggingId(this);
+    }
+
+    /**
+     * @return a string which identifies a specific {@link Channel} for the
+     * purposes of logging (i.e. includes the ID of the channel, the ID of its
+     * conference and potentially other information). The string is a
+     * comma-separated list of "key=value" pairs.
+     * @param channel The channel for which to return a string.
+     */
+    public static String getLoggingId(Channel channel)
+    {
+        String id = channel == null ? "null" : channel.getID();
+        Content content
+            = channel == null ? null : channel.getContent();
+        Endpoint endpoint
+            = channel == null ? null : channel.getEndpoint();
+
+        return Content.getLoggingId(content)
+            + ",ch_id=" + id
+            + ",endp_id=" + (endpoint == null ? "null" : endpoint.getID());
     }
 }
