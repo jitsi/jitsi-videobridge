@@ -20,6 +20,7 @@ import java.net.*;
 import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
@@ -602,8 +603,9 @@ public class SctpConnection
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug(
-                        getEndpoint().getID() + " ACK received SID: " + sid);
+                logger.debug(Logger.Category.STATISTICS,
+                             "sctp_ack_received," + getLoggingId()
+                                + " sid=" + sid);
             }
             // Open channel ACK
             WebRtcDataStream channel = channels.get(sid);
@@ -618,12 +620,16 @@ public class SctpConnection
                 }
                 else
                 {
-                    logger.warn("Redundant ACK received for SID: " + sid);
+                    logger.log(Level.WARNING, Logger.Category.STATISTICS,
+                                 "sctp_redundant_ack_received," + getLoggingId()
+                                     + " sid=" + sid);
                 }
             }
             else
             {
-                logger.error("No channel exists on sid: "+sid);
+                logger.error(Logger.Category.STATISTICS,
+                           "sctp_no_channel_for_sid," + getLoggingId()
+                               + " sid=" + sid);
             }
         }
         else if(messageType == MSG_OPEN_CHANNEL)
@@ -665,18 +671,22 @@ public class SctpConnection
 
             if (logger.isDebugEnabled())
             {
-                logger.debug(
-                            getEndpoint().getID()
-                            + " data channel open request on SID: " + sid
-                            + " type: " + channelType + " prio: " + priority
-                            + " reliab: " + reliability + " label: " + label
-                            + " proto: " + protocol);
+                logger.debug(Logger.Category.STATISTICS,
+                           "dc_open_request," + getLoggingId()
+                           + " sid=" + sid
+                           + ",type=" + channelType
+                           + ",prio=" + priority
+                           + ",reliab=" + reliability
+                           + ",label=" + label
+                           + ",proto=" + protocol);
             }
 
             WebRtcDataStream.DataCallback oldCallback = null;
             if (channels.containsKey(sid))
             {
-                logger.warn("Channel on sid: " + sid + " already exists");
+                logger.log(Level.WARNING, Logger.Category.STATISTICS,
+                           "sctp_channel_exists," + getLoggingId()
+                           + " sid=" + sid);
                 oldCallback = channels.get(sid).getDataCallback();
             }
 
@@ -732,10 +742,9 @@ public class SctpConnection
             // queue is now empty and we don't care.
             if (SctpNotification.SCTP_SENDER_DRY_EVENT != notification.sn_type)
             {
-                logger.info(
-                        "SCTP[ID=" + getID()
-                            + ", endpoint=" + endpointId
-                            + "; notification=" + notification);
+                logger.info(Logger.Category.STATISTICS,
+                            "sctp_notification," + getLoggingId()
+                            + " notification=" + notification);
             }
 
             switch (notification.sn_type)

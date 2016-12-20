@@ -19,6 +19,7 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.logging.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
@@ -962,7 +963,9 @@ public class IceUdpTransportManager
             int nextPort = 1 + maxAllocatedPort;
             portTracker.setNextPort(nextPort);
             if (logger.isDebugEnabled())
+            {
                 logger.debug("Updating the port tracker min port: " + nextPort);
+            }
         }
 
         return iceAgent;
@@ -1209,7 +1212,9 @@ public class IceUdpTransportManager
                 for (IceMediaStream stream : iceAgent.getStreams())
                 {
                     for (Component component : stream.getComponents())
+                    {
                         component.updateRemoteCandidates();
+                    }
                 }
             }
         }
@@ -1531,17 +1536,10 @@ public class IceUdpTransportManager
             IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
             IceProcessingState newState = (IceProcessingState) ev.getNewValue();
 
-            StringBuilder s
-                = new StringBuilder("ICE processing state of ")
-                    .append(getClass().getSimpleName()).append(" #")
-                    .append(Integer.toHexString(hashCode()))
-                    .append(" (for channels");
-            for (Channel channel : getChannels())
-                s.append(" ").append(channel.getID());
-            s.append(")  of conference ").append(conference.getID())
-                .append(" changed from ").append(oldState).append(" to ")
-                .append(newState).append(".");
-            logger.info(s.toString());
+            logger.info(Logger.Category.STATISTICS,
+                        "ice_state_change," + getLoggingId()
+                        + " old_state=" + oldState
+                        + ",new_state=" + newState);
 
             EventAdmin eventAdmin = conference.getEventAdmin();
             if (eventAdmin != null)
@@ -1556,14 +1554,20 @@ public class IceUdpTransportManager
         catch (Throwable t)
         {
             if (t instanceof InterruptedException)
+            {
                 interrupted = true;
+            }
             else if (t instanceof ThreadDeath)
+            {
                 throw (ThreadDeath) t;
+            }
         }
         finally
         {
             if (interrupted)
+            {
                 Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -1583,7 +1587,9 @@ public class IceUdpTransportManager
             // TODO we might not necessarily want to keep all channels alive by
             // the ICE connection.
             for (Channel channel : getChannels())
+            {
                 channel.touch(Channel.ActivityType.TRANSPORT);
+            }
         }
     }
 
@@ -1700,7 +1706,7 @@ public class IceUdpTransportManager
                         }
                         catch (IllegalArgumentException e)
                         {
-                            logger.debug( "Unable to parse: " + aSetupStr, e );
+                            logger.debug("Unable to parse: " + aSetupStr, e);
                             // The value of aSetup will remain null and will
                             // thus signal the exception.
                         }
@@ -1761,12 +1767,16 @@ public class IceUdpTransportManager
         String ufrag = transport.getUfrag();
 
         if (ufrag != null)
+        {
             iceStream.setRemoteUfrag(ufrag);
+        }
 
         String password = transport.getPassword();
 
         if (password != null)
+        {
             iceStream.setRemotePassword(password);
+        }
     }
 
     private void setRtcpmux(IceUdpTransportPacketExtension transport)
@@ -1836,8 +1846,10 @@ public class IceUdpTransportManager
                         }
                         else
                         {
-                            logger.warn("Failed to establish ICE connectivity,"
-                                        + " state: " + state);
+                            logger.log(Level.WARNING,
+                                       Logger.Category.STATISTICS,
+                                       "ice_failed," + getLoggingId()
+                                       + " state=" + state);
                         }
                     }
                 };
@@ -1946,5 +1958,18 @@ public class IceUdpTransportManager
     public boolean isConnected()
     {
         return iceConnected;
+    }
+
+    /**
+     * @return a string which identifies this {@link IceUdpTransportManager}
+     * for the purposes of logging. The string is a comma-separated list of
+     * "key=value" pairs.
+     */
+    private String getLoggingId()
+    {
+        // Only use the ID string for channelForDtls, because what we care
+        // about is the info for any of the channels, and channelForDtls
+        // always contains a channel when we have one.
+        return Channel.getLoggingId(channelForDtls);
     }
 }

@@ -106,6 +106,11 @@ public class Content
     private final String name;
 
     /**
+     * The string which identifies this content for the purposes of logging.
+     */
+    private final String loggingId;
+
+    /**
      * The <tt>Recorder</tt> instance used to record video.
      */
     private Recorder recorder = null;
@@ -160,6 +165,7 @@ public class Content
 
         this.conference = conference;
         this.name = name;
+        this.loggingId = conference.getLoggingId() + ",content=" + name;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
         mediaType = MediaType.parseString(this.name);
@@ -307,17 +313,29 @@ public class Content
 
         if (logger.isInfoEnabled())
         {
-            /*
-             * The method Videobridge.getChannelCount() should better be
-             * executed outside synchronized blocks in order to reduce the risks
-             * of causing deadlocks.
-             */
+            String transport = "unknown";
+            if (transportNamespace == null)
+            {
+                transport = "default";
+            }
+            else if (IceUdpTransportPacketExtension.NAMESPACE
+                .equals(transportNamespace))
+            {
+                transport = "ice";
+            }
+            else if (RawUdpTransportPacketExtension.NAMESPACE
+                .equals(transportNamespace))
+            {
+                transport = "rawudp";
+            }
 
-            Videobridge videobridge = getConference().getVideobridge();
-            logger.info(
-                    "Created channel " + channel.getID() + " of content "
-                        + getName() + " of conference " + conference.getID()
-                        + ". " + videobridge.getConferenceCountString());
+            logger.info(Logger.Category.STATISTICS,
+                        "create_channel," + channel.getLoggingId()
+                        + " transport=" + transport
+                        + ",bundle=" + channelBundleId
+                        + ",initiator=" + initiator
+                        + ",media_type=" + getMediaType()
+                        + ",relay_type=" + rtpLevelRelayType);
         }
 
         return channel;
@@ -418,12 +436,12 @@ public class Content
                 catch (Throwable t)
                 {
                     logger.warn(
-                            "Failed to expire channel " + channel.getID()
-                                + " of content " + getName() + " of conference "
-                                + conference.getID() + "!",
-                            t);
+                        "Failed to expire channel " + channel.getLoggingId(),
+                        t);
                     if (t instanceof ThreadDeath)
+                    {
                         throw (ThreadDeath) t;
+                    }
                 }
             }
 
@@ -436,12 +454,7 @@ public class Content
 
             if (logger.isInfoEnabled())
             {
-                Videobridge videobridge = conference.getVideobridge();
-
-                logger.info(
-                        "Expired content " + getName() + " of conference "
-                            + conference.getID()
-                            + ". " + videobridge.getConferenceCountString());
+                logger.info("expire_content," + getLoggingId());
             }
         }
     }
@@ -1036,5 +1049,30 @@ public class Content
             }
             return accept;
         }
+    }
+
+    /**
+     * @return a string which identifies this {@link Content} for the purposes
+     * of logging (i.e. includes the name of the content and ID of its
+     * conference). The string is a comma-separated list of "key=value" pairs.
+     */
+    String getLoggingId()
+    {
+        return loggingId;
+    }
+
+    /**
+     * @return a string which identifies a specific {@link Content} for the
+     * purposes of logging (i.e. includes the name of the content and ID of its
+     * conference). The string is a comma-separated list of "key=value" pairs.
+     * @param content The channel for which to return a string.
+     */
+    static String getLoggingId(Content content)
+    {
+        if (content == null)
+        {
+            return Conference.getLoggingId(null) + ",content=null";
+        }
+        return content.getLoggingId();
     }
 }

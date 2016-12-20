@@ -20,7 +20,6 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
-import java.util.logging.*;
 
 import javax.media.rtp.*;
 
@@ -35,7 +34,6 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.rtp.*;
-import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger; // Disambiguation.
 import org.jitsi.util.concurrent.*;
@@ -432,8 +430,7 @@ public class VideoChannel
         {
             if (logger.isDebugEnabled())
             {
-                logger.debug("Adding LastNTransformEngine for endpoint "
-                                 + getChannelBundleId());
+                logger.debug("Adding LastNTransformEngine " + getLoggingId());
             }
             chain.addEngine(new LastNTransformEngine(this));
         }
@@ -885,9 +882,10 @@ public class VideoChannel
 
         if (logger.isDebugEnabled())
         {
-            logger.debug(
-                    "Received NACK on channel " + getID() +" for SSRC " + ssrc
-                        + ". Packets reported lost: " + lostPackets);
+            logger.debug(Logger.Category.STATISTICS,
+                         "nack_received," + getLoggingId()
+                         + " ssrc=" + ssrc
+                         + ",lost_packets=" + lostPackets);
         }
 
         RawPacketCache cache;
@@ -916,9 +914,10 @@ public class VideoChannel
                 {
                     if (logger.isDebugEnabled())
                     {
-                        logger.debug(
-                                "Retransmitting packet from cache. SSRC " + ssrc
-                                    + " seq " + seq);
+                        logger.debug(Logger.Category.STATISTICS,
+                                     "retransmitting," + getLoggingId()
+                                     + " ssrc=" + ssrc
+                                     + ",seq=" + seq);
                     }
                     if (rtxTransformer.retransmit(pkt, after))
                     {
@@ -1005,9 +1004,10 @@ public class VideoChannel
             {
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Sending a NACK for SSRC " + mediaSourceSsrc
-                                         + " , packets " + seqs
-                                         + " on channel " + c.getID());
+                    logger.debug(Logger.Category.STATISTICS,
+                                 "sending_nack," + getLoggingId()
+                                 + " ssrc=" + mediaSourceSsrc
+                                 + ",seqs=" + seqs);
                 }
 
                 try
@@ -1203,9 +1203,9 @@ public class VideoChannel
                 long firDelay = maxReceiverRtt - senderRtt + 10;
                 if (logger.isInfoEnabled())
                 {
-                    logger.info("Scheduling a keyframe request for endpoint "
-                                    + getEndpoint().getID() + " with a delay of "
-                                    + firDelay + "ms.");
+                    logger.info(Logger.Category.STATISTICS,
+                                "schedule_fir," + getLoggingId()
+                                + " delay=" + firDelay);
                 }
                 scheduleFir(firDelay);
             }
@@ -1359,9 +1359,10 @@ public class VideoChannel
                         .getMediaStreamStats().getSendStats().getLossRate();
 
                 logger.info(Logger.Category.STATISTICS,
-                           "sending_bitrate channel=" + getFullId() +
-                           ",bwe=" + bwe + " sbr=" + sendingBitrate +
-                           ",lossRate=" + lossRate);
+                           "sending_bitrate," + getLoggingId()
+                           + " bwe=" + bwe
+                           + ",sbr=" + sendingBitrate
+                           + ",loss=" + lossRate);
             }
         };
     }

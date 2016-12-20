@@ -19,6 +19,7 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.logging.*;
 
 import javax.media.rtp.*;
 
@@ -910,7 +911,12 @@ public class RtpChannel
             stream.setName(getID());
             stream.setProperty(RtpChannel.class.getName(), this);
             if (transformEngine != null)
+            {
                 stream.setExternalTransformer(transformEngine);
+            }
+
+            logger.info(Logger.Category.STATISTICS,
+                        "create_stream," + getLoggingId());
 
             /*
              * The attribute rtp-level-relay-type specifies the
@@ -1042,11 +1048,9 @@ public class RtpChannel
 
         if (logger.isTraceEnabled())
         {
-            logger.trace(
-                    "Direction of channel " + getID() + " of content "
-                        + content.getName() + " of conference "
-                        + conference.getID() + " is "
-                        + stream.getDirection() + ".");
+            logger.debug(Logger.Category.STATISTICS,
+                       "ch_direction," + getLoggingId()
+                        + " direction=" + stream.getDirection());
         }
     }
 
@@ -2109,12 +2113,30 @@ public class RtpChannel
     }
 
     /**
-     * @return the full ID of this channel, which of the id of the conference
-     * and the ID of the channel.
+     * @return a string which identifies this {@link RtpChannel} for the
+     * purposes of logging (i.e. includes the ID of the channel, the ID of its
+     * conference and potentially other information). The string is a
+     * comma-separated list of "key=value" pairs.
      */
-    public String getFullId()
+    @Override
+    public String getLoggingId()
     {
-        return getContent().getConference().getID() + "-" + getID();
+        return RtpChannel.getLoggingId(this);
+    }
+
+    /**
+     * @return a string which identifies a specific {@link RtpChannel} for the
+     * purposes of logging (i.e. includes the ID of the channel, the ID of its
+     * conference and potentially other information). The string is a
+     * comma-separated list of "key=value" pairs.
+     * @param rtpChannel The {@link RtpChannel} for which to return a string.
+     */
+    public static String getLoggingId(RtpChannel rtpChannel)
+    {
+        String channelId = Channel.getLoggingId(rtpChannel);
+        MediaStream stream = rtpChannel == null ? null : rtpChannel.getStream();
+        return channelId +
+            ",stream=" + (stream == null ? "null" : stream.hashCode());
     }
 
     /**
