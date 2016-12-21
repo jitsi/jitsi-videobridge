@@ -1129,6 +1129,10 @@ public class SctpConnection
                 if (send == null || send.length == 0)
                     continue;
 
+                // We received data for the SCTP socket, this SctpConnection
+                // is still alive
+                touch(ActivityType.PAYLOAD);
+
                 if (LOG_SCTP_PACKETS)
                 {
                     PacketLoggingService pktLogging
