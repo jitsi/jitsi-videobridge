@@ -833,8 +833,10 @@ public abstract class Channel
         {
             case PAYLOAD:
                 lastPayloadActivityTime.increase(now);
+                // fall-through
             case TRANSPORT:
                 lastTransportActivityTime.increase(now);
+                // fall-through
             default:
                 lastActivityTime.increase(now);
         }

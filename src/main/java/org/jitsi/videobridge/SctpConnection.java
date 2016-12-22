@@ -565,8 +565,10 @@ public class SctpConnection
 
             if (ls != null)
             {
-                for(WebRtcDataStreamListener l : ls)
+                for (WebRtcDataStreamListener l : ls)
+                {
                     l.onSctpConnectionReady(this);
+                }
             }
         }
     }
@@ -613,7 +615,7 @@ public class SctpConnection
             {
                 // Ack check prevents from firing multiple notifications
                 // if we get more than one ACKs (by mistake/bug).
-                if(!channel.isAcknowledged())
+                if (!channel.isAcknowledged())
                 {
                     channel.ackReceived();
                     notifyChannelOpened(channel);
@@ -632,7 +634,7 @@ public class SctpConnection
                                + " sid=" + sid);
             }
         }
-        else if(messageType == MSG_OPEN_CHANNEL)
+        else if (messageType == MSG_OPEN_CHANNEL)
         {
             int channelType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
             int priority
@@ -787,7 +789,7 @@ public class SctpConnection
             byte[] data, int sid, int ssn, int tsn, long ppid, int context,
             int flags)
     {
-        if(ppid == WEB_RTC_PPID_CTRL)
+        if (ppid == WEB_RTC_PPID_CTRL)
         {
             // Channel control PPID
             try
@@ -799,7 +801,7 @@ public class SctpConnection
                 logger.error("IOException when processing ctrl packet", e);
             }
         }
-        else if(ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
+        else if (ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
         {
             WebRtcDataStream channel;
 
@@ -808,12 +810,12 @@ public class SctpConnection
                 channel = channels.get(sid);
             }
 
-            if(channel == null)
+            if (channel == null)
             {
                 logger.error("No channel found for sid: " + sid);
                 return;
             }
-            if(ppid == WEB_RTC_PPID_STRING)
+            if (ppid == WEB_RTC_PPID_STRING)
             {
                 // WebRTC String
                 String str;
@@ -938,7 +940,7 @@ public class SctpConnection
         // Protocol Length
         packet.putShort((short) protocolByteLength);
         // Label
-        if(labelByteLength != 0)
+        if (labelByteLength != 0)
             packet.put(labelBytes, 0, labelByteLength);
         // Protocol
         if (protocolByteLength != 0)
@@ -990,7 +992,7 @@ public class SctpConnection
 
         byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
 
-        if(LOG_SCTP_PACKETS)
+        if (LOG_SCTP_PACKETS)
         {
             System.setProperty(
                     ConfigurationService.PNAME_SC_HOME_DIR_LOCATION,
@@ -1127,7 +1129,11 @@ public class SctpConnection
                 if (send == null || send.length == 0)
                     continue;
 
-                if(LOG_SCTP_PACKETS)
+                // We received data for the SCTP socket, this SctpConnection
+                // is still alive
+                touch(ActivityType.PAYLOAD);
+
+                if (LOG_SCTP_PACKETS)
                 {
                     PacketLoggingService pktLogging
                         = LibJitsi.getPacketLoggingService();
