@@ -109,6 +109,12 @@ public class RtpChannelTransformEngine
 
             transformerList = new LinkedList<>();
 
+            LipSyncHack lipSyncHack = channel.getEndpoint().getLipSyncHack();
+            if (lipSyncHack != null)
+            {
+                transformerList.add(lipSyncHack);
+            }
+
             simulcastEngine = new SimulcastEngine(videoChannel);
             transformerList.add(simulcastEngine);
 
