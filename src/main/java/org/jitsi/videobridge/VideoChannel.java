@@ -279,19 +279,20 @@ public class VideoChannel
                     classLogger,
                     content.getConference().getLogger());
 
-        initializeTransformerEngine();
-
         ConfigurationService cfg
             = content.getConference().getVideobridge()
-                        .getConfigurationService();
-        requestRetransmissions
-            = cfg != null
-                && cfg.getBoolean(
-                        VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false);
+            .getConfigurationService();
 
         this.lipSyncHack
             = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, true)
             ? new LipSyncHack(this) : null;
+
+        initializeTransformerEngine();
+
+        requestRetransmissions
+            = cfg != null
+                && cfg.getBoolean(
+                        VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false);
 
         if (cfg != null && cfg.getBoolean(LOG_OVERSENDING_STATS_PNAME, false))
         {
