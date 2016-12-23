@@ -480,7 +480,10 @@ public class LipSyncHack
     @Override
     public RawPacket[] transform(RawPacket[] pkts)
     {
-        if (pkts == null || pkts.length == 0)
+        // If a packet needs to be prepended, then its SSRC needs to be in
+        // ssrcsWithoutBlackKeyframes already.
+        if (pkts == null || pkts.length == 0
+            || ssrcsWithoutBlackKeyframes.isEmpty())
         {
             return pkts;
         }
@@ -495,8 +498,7 @@ public class LipSyncHack
             }
 
             long ssrc = pkts[i].getSSRCAsLong();
-            if (!ssrcsWithoutBlackKeyframes.isEmpty()
-                && ssrcsWithoutBlackKeyframes.contains(ssrc))
+            if (ssrcsWithoutBlackKeyframes.contains(ssrc))
             {
                 ssrcsWithoutBlackKeyframes.remove(ssrc);
 
