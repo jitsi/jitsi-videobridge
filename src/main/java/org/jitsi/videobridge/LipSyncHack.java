@@ -502,12 +502,17 @@ public class LipSyncHack
             {
                 ssrcsWithoutBlackKeyframes.remove(ssrc);
 
+                boolean isSOF = channel.getStream().isStartOfFrame(
+                    pkts[i].getBuffer(), pkts[i].getOffset(), pkts[i].getLength());
+
+                int sofDistance = isSOF ? 0 : 10;
+
                 int seqNum = pkts[i].getSequenceNumber();
                 long ts = pkts[i].getTimestamp();
                 RawPacket[] kfs = new RawPacket[MAX_KEY_FRAMES];
                 for (int j = 0; j < kfs.length; j++)
                 {
-                    int relativeIdx = j - kfs.length;
+                    int relativeIdx = j - kfs.length - sofDistance;
                     byte[] buf = KEY_FRAME_BUFFER.clone();
                     RawPacket kf = new RawPacket(buf, 0, buf.length);
 
