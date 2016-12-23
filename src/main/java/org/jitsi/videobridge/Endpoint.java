@@ -114,6 +114,7 @@ public class Endpoint
     /**
      * Configuration property for number of streams to cache
      */
+    @Deprecated
     public final static String ENABLE_LIPSYNC_HACK_PNAME
         = Endpoint.class.getName() + ".ENABLE_LIPSYNC_HACK";
 
@@ -121,11 +122,6 @@ public class Endpoint
      * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
      */
     private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
-
-    /**
-     * The object that implements a hack for LS for this {@link Endpoint}.
-     */
-    private final LipSyncHack lipSyncHack;
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -202,12 +198,6 @@ public class Endpoint
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
 
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-
-        ConfigurationService cfg = LibJitsi.getConfigurationService();
-
-        this.lipSyncHack
-            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, true)
-                ? new LipSyncHack(this) : null;
     }
 
     /**
@@ -373,17 +363,6 @@ public class Endpoint
     public SctpConnection getSctpConnection()
     {
         return sctpConnection.get();
-    }
-
-    /**
-     * Gets the object that implements a hack for LS for this {@link Endpoint}.
-     *
-     * @return the object that implements a hack for LS for this
-     * {@link Endpoint}.
-     */
-    public LipSyncHack getLipSyncHack()
-    {
-        return lipSyncHack;
     }
 
     /**

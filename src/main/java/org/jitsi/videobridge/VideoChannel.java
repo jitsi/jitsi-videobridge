@@ -111,6 +111,17 @@ public class VideoChannel
     private static RecurringRunnableExecutor recurringExecutor;
 
     /**
+     * Configuration property for number of streams to cache
+     */
+    public final static String ENABLE_LIPSYNC_HACK_PNAME
+        = VideoChannel.class.getName() + ".ENABLE_LIPSYNC_HACK";
+
+    /**
+     * The object that implements a hack for LS for this {@link Endpoint}.
+     */
+    private final LipSyncHack lipSyncHack;
+
+    /**
      * @return the {@link RecurringRunnableExecutor} instance for
      * {@link VideoChannel}s. Uses lazy initialization.
      */
@@ -278,6 +289,10 @@ public class VideoChannel
                 && cfg.getBoolean(
                         VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, false);
 
+        this.lipSyncHack
+            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, true)
+            ? new LipSyncHack(this) : null;
+
         if (cfg != null && cfg.getBoolean(LOG_OVERSENDING_STATS_PNAME, false))
         {
             logOversendingStatsRunnable = createLogOversendingStatsRunnable();
@@ -387,6 +402,18 @@ public class VideoChannel
         }
 
         return accept;
+    }
+
+    /**
+     * Gets the object that implements a hack for LS for this
+     * {@link VideoChannel}.
+     *
+     * @return the object that implements a hack for LS for this
+     * {@link VideoChannel}.
+     */
+    public LipSyncHack getLipSyncHack()
+    {
+        return lipSyncHack;
     }
 
     /**
@@ -577,8 +604,6 @@ public class VideoChannel
     {
         // XXX(gp) we could potentially move this into a TransformEngine.
         boolean accept = lastNController.isForwarded(source);
-
-        LipSyncHack lipSyncHack = getEndpoint().getLipSyncHack();
 
         if (lipSyncHack != null)
         {

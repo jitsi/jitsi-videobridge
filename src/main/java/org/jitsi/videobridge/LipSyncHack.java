@@ -102,7 +102,7 @@ public class LipSyncHack
     /**
      * The owner of this hack.
      */
-    private final Endpoint endpoint;
+    private final VideoChannel channel;
 
     /**
      * The executor service that takes care of black key frame scheduling
@@ -145,11 +145,11 @@ public class LipSyncHack
     /**
      * Ctor.
      *
-     * @param endpoint the endpoint that owns this hack.
+     * @param channel the {@link VideoChannel} that owns this hack.
      */
-    public LipSyncHack(Endpoint endpoint)
+    public LipSyncHack(VideoChannel channel)
     {
-        this.endpoint = endpoint;
+        this.channel = channel;
     }
 
     /**
@@ -192,16 +192,8 @@ public class LipSyncHack
         }
 
         // New audio stream. Trigger the hack for the associated video stream.
-        List<RtpChannel> targetVideoChannels
-            = endpoint.getChannels(MediaType.VIDEO);
-        if (targetVideoChannels == null || targetVideoChannels.size() == 0)
-        {
-            return;
-        }
-
-        VideoChannel targetVC = (VideoChannel) targetVideoChannels.get(0);
         MediaStream stream;
-        if (targetVC == null || (stream = targetVC.getStream()) == null
+        if (channel == null || (stream = channel.getStream()) == null
             || !stream.isStarted())
         {
             // It seems like we're not ready yet to trigger the hack.
@@ -229,7 +221,7 @@ public class LipSyncHack
         {
             // FIXME this is a little ugly
             receiveVideoSSRC = recv.getSimulcastStream(
-                0, targetVC.getStream()).getPrimarySSRC();
+                0, channel.getStream()).getPrimarySSRC();
         }
         else
         {
@@ -582,28 +574,6 @@ public class LipSyncHack
                     || injectState.numOfKeyframesSent >= MAX_KEY_FRAMES)
                 {
                     deregister("completed");
-                    return;
-                }
-
-                if (endpoint == null || endpoint.isExpired())
-                {
-                    deregister("endpoint_expired");
-                    return;
-                }
-
-                List<RtpChannel> channels
-                    = endpoint.getChannels(MediaType.VIDEO);
-
-                if (channels == null || channels.isEmpty())
-                {
-                    deregister("channel_unavailable");
-                    return;
-                }
-
-                RtpChannel channel = channels.get(0);
-                if (channel == null || channel.isExpired())
-                {
-                    deregister("channel_expired");
                     return;
                 }
 

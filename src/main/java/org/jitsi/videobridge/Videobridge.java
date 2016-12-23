@@ -1507,6 +1507,11 @@ public class Videobridge
                     System.setProperty(newPropertyName, propertyValue);
                 }
             }
+
+            boolean enableLipSync
+                = cfg.getBoolean(Endpoint.ENABLE_LIPSYNC_HACK_PNAME, false);
+            System.setProperty(VideoChannel.ENABLE_LIPSYNC_HACK_PNAME,
+                Boolean.toString(enableLipSync));
         }
 
         // Initialize the the host candidate interface filters in the ice4j
