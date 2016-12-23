@@ -505,7 +505,7 @@ public class LipSyncHack
                 RawPacket[] kfs = new RawPacket[MAX_KEY_FRAMES];
                 for (int j = 0; j < kfs.length; j++)
                 {
-                    int relativeIdx = (j - 1 - kfs.length);
+                    int relativeIdx = j - kfs.length;
                     byte[] buf = KEY_FRAME_BUFFER.clone();
                     RawPacket kf = new RawPacket(buf, 0, buf.length);
 
