@@ -26,6 +26,7 @@ import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Implements a hack for
@@ -132,10 +133,11 @@ public class LipSyncHack
 
     /**
      * The collection of SSRCs for which we haven't sent out black VP8 key
-     * frames.
+     * frames. Access to the list needs to be thread. We expect far less writes
+     * than reads thus we use a {@link CopyOnWriteArrayList}.
      */
     private final Collection<Long> ssrcsWithoutBlackKeyframes
-        = new ArrayList<>();
+        = new CopyOnWriteArrayList<>();
 
     /**
      * A map that holds all the inject states.
