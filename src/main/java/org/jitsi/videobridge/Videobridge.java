@@ -1509,7 +1509,7 @@ public class Videobridge
             }
 
             boolean enableLipSync
-                = cfg.getBoolean(Endpoint.ENABLE_LIPSYNC_HACK_PNAME, false);
+                = cfg.getBoolean(Endpoint.ENABLE_LIPSYNC_HACK_PNAME, true);
             System.setProperty(VideoChannel.ENABLE_LIPSYNC_HACK_PNAME,
                 Boolean.toString(enableLipSync));
         }
