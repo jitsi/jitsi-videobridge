@@ -333,7 +333,7 @@ public class AudioChannel
             List<RtpChannel> channels = getEndpoint()
                 .getChannels(MediaType.VIDEO);
 
-            if (channels != null && channels.isEmpty())
+            if (channels != null && !channels.isEmpty())
             {
                 associatedLipSyncHack
                     = ((VideoChannel)channels.get(0)).getLipSyncHack();
