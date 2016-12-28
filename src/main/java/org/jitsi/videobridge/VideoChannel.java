@@ -931,10 +931,22 @@ public class VideoChannel
                                      + ",send=" + send);
                     }
 
-                    if (!send || rtxTransformer.retransmit(container.pkt, after))
+                    if (send && rtxTransformer.retransmit(container.pkt, after))
                     {
+                        statistics.packetsRetransmitted.incrementAndGet();
+                        statistics.bytesRetransmitted.addAndGet(
+                            container.pkt.getLength());
                         i.remove();
                     }
+
+                    if (!send)
+                    {
+                        statistics.packetsNotRetransmitted.incrementAndGet();
+                        statistics.bytesNotRetransmitted.addAndGet(
+                            container.pkt.getLength());
+                        i.remove();
+                    }
+
                 }
             }
         }
