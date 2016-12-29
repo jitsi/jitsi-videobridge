@@ -1386,7 +1386,10 @@ public class VideoChannel
                            "sending_bitrate," + getLoggingId()
                            + " bwe=" + bwe
                            + ",sbr=" + sendingBitrate
-                           + ",loss=" + lossRate);
+                           + ",loss=" + lossRate
+                           + ",remb=" + bandwidthEstimator.getLatestREMB()
+                           + ",rrLoss="
+                               + bandwidthEstimator.getLatestFractionLoss());
             }
         };
     }
