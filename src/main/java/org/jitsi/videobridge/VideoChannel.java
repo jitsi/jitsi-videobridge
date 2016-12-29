@@ -905,24 +905,48 @@ public class VideoChannel
                     ? (TransformEngine) cache
                     : null;
 
+            long rtt = getStream().getMediaStreamStats().getSendStats().getRtt();
+            long now = System.currentTimeMillis();
+
             for (Iterator<Integer> i = lostPackets.iterator(); i.hasNext();)
             {
                 int seq = i.next();
-                RawPacket pkt = cache.get(ssrc, seq);
+                RawPacketCache.Container container
+                    = cache.getContainer(ssrc, seq);
 
-                if (pkt != null)
+
+                if (container != null)
                 {
+                    // Cache hit.
+                    long delay = now - container.timeAdded;
+                    boolean send = (rtt == -1) ||
+                        (delay >= Math.min(rtt * 0.9, rtt - 5));
+
                     if (logger.isDebugEnabled())
                     {
                         logger.debug(Logger.Category.STATISTICS,
                                      "retransmitting," + getLoggingId()
                                      + " ssrc=" + ssrc
-                                     + ",seq=" + seq);
+                                     + ",seq=" + seq
+                                     + ",send=" + send);
                     }
-                    if (rtxTransformer.retransmit(pkt, after))
+
+                    if (send && rtxTransformer.retransmit(container.pkt, after))
                     {
+                        statistics.packetsRetransmitted.incrementAndGet();
+                        statistics.bytesRetransmitted.addAndGet(
+                            container.pkt.getLength());
                         i.remove();
                     }
+
+                    if (!send)
+                    {
+                        statistics.packetsNotRetransmitted.incrementAndGet();
+                        statistics.bytesNotRetransmitted.addAndGet(
+                            container.pkt.getLength());
+                        i.remove();
+                    }
+
                 }
             }
         }

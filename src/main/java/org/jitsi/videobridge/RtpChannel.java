@@ -19,7 +19,7 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.logging.*;
+import java.util.concurrent.atomic.*;
 
 import javax.media.rtp.*;
 
@@ -42,6 +42,7 @@ import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
+import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
@@ -238,6 +239,11 @@ public class RtpChannel
      * the filtering for us.
      */
     private boolean verifyRemoteAddress = true;
+
+    /**
+     * The instance which holds statistics for this {@link RtpChannel}instance.
+     */
+    protected final Statistics statistics = new Statistics();
 
     /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
@@ -682,6 +688,11 @@ public class RtpChannel
     {
         if (!streamClosed)
         {
+            MediaStreamStats2 mss = stream.getMediaStreamStats();
+            statistics.bytesReceived = mss.getReceiveStats().getBytes();
+            statistics.bytesSent = mss.getSendStats().getBytes();
+            statistics.packetsReceived = mss.getReceiveStats().getPackets();
+            statistics.packetsSent = mss.getSendStats().getPackets();
             stream.setProperty(Channel.class.getName(), null);
             removeStreamListeners();
             stream.close();
@@ -1884,6 +1895,17 @@ public class RtpChannel
                 // Check for payload.
                 conferenceStatistics.totalNoPayloadChannels.incrementAndGet();
             }
+
+            logger.info(Logger.Category.STATISTICS,
+                        "expire_ch_stats," + getLoggingId() +
+                            " bRecv=" + statistics.bytesReceived +
+                            ",bSent=" + statistics.bytesSent +
+                            ",pRecv=" + statistics.packetsReceived +
+                            ",pSent=" + statistics.packetsSent +
+                            ",bRetr=" + statistics.bytesRetransmitted +
+                            ",bNotRetr=" + statistics.bytesNotRetransmitted +
+                            ",pRetr=" + statistics.packetsRetransmitted +
+                            ",pNotRetr=" + statistics.packetsNotRetransmitted);
         }
         TransformEngine transformEngine = this.transformEngine;
         if (transformEngine != null)
@@ -2144,4 +2166,56 @@ public class RtpChannel
      */
     private static class SizeExceededException extends Exception
     {}
+
+    /**
+     * Holds statistics for an {@link RtpChannel}.
+     */
+    protected class Statistics
+    {
+        /**
+         * Number of bytes sent. Only updated when the {@link MediaStream} is
+         * closed.
+         */
+        protected long bytesSent = -1;
+
+        /**
+         * Number of bytes received. Only updated when the {@link MediaStream}
+         * is closed.
+         */
+        protected long bytesReceived = -1;
+
+        /**
+         * Number of packets sent. Only updated when the {@link MediaStream} is
+         * closed.
+         */
+        protected long packetsSent = -1;
+
+        /**
+         * Number of packets received. Only updated when the {@link MediaStream}
+         * is closed.
+         */
+        protected long packetsReceived = -1;
+
+        /**
+         * Number of bytes retransmitted.
+         */
+        protected AtomicLong bytesRetransmitted = new AtomicLong();
+
+        /**
+         * Number of bytes for packets which were requested and found in the
+         * cache, but were intentionally not retransmitted.
+         */
+        protected AtomicLong bytesNotRetransmitted = new AtomicLong();
+
+        /**
+         * Number of packets retransmitted.
+         */
+        protected AtomicLong packetsRetransmitted = new AtomicLong();
+
+        /**
+         * Number of packets which were requested and found in the cache, but
+         * were intentionally not retransmitted.
+         */
+        protected AtomicLong packetsNotRetransmitted = new AtomicLong();
+    }
 }
