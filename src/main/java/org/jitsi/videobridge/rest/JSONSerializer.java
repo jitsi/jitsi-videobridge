@@ -146,7 +146,7 @@ final class JSONSerializer
             /*
              * The JSON.simple library that is in use at the time of this
              * writing will fail to encode Enum values as JSON strings so
-             * convert the Enum value to a Java String. 
+             * convert the Enum value to a Java String.
              */
             if (value instanceof Enum)
                 value = value.toString();
@@ -225,7 +225,7 @@ final class JSONSerializer
                 /*
                  * The JSON.simple library that is in use at the time of this
                  * writing will fail to encode Enum values as JSON strings so
-                 * convert the Enum value to a Java String. 
+                 * convert the Enum value to a Java String.
                  */
                 jsonObject.put(
                         ColibriConferenceIQ.Channel.DIRECTION_ATTR_NAME,
@@ -265,7 +265,7 @@ final class JSONSerializer
                 /*
                  * The JSON.simple library that is in use at the time of this
                  * writing will fail to encode Enum values as JSON strings so
-                 * convert the Enum value to a Java String. 
+                 * convert the Enum value to a Java String.
                  */
                 jsonObject.put(
                         ColibriConferenceIQ.Channel
@@ -440,6 +440,7 @@ final class JSONSerializer
         else
         {
             String id = conference.getID();
+            String name = conference.getName();
             List<ColibriConferenceIQ.Content> contents
                 = conference.getContents();
             List<ColibriConferenceIQ.ChannelBundle> channelBundles
@@ -451,6 +452,10 @@ final class JSONSerializer
             // id
             if (id != null)
                 jsonObject.put(ColibriConferenceIQ.ID_ATTR_NAME, id);
+            // name
+            if (name != null) {
+                jsonObject.put(ColibriConferenceIQ.NAME_ATTR_NAME, name);
+            }
             // contents
             if ((contents != null) && !contents.isEmpty())
                 jsonObject.put(CONTENTS, serializeContents(contents));

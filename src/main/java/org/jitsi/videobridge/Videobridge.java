@@ -99,6 +99,20 @@ public class Videobridge
         = "org.jitsi.videobridge.MEDIA_RECORDING_TOKEN";
 
     /**
+     * If an endpoint is provided at time of channel creation, use the
+     * endpoint for the channel id
+     */
+    public static final String USE_ENDPOINT_FOR_CHANNEL_ID
+            = "org.jitsi.videobridge.useEndpointForChannelId";
+
+    /**
+     * If a name is provided at time of conference creation
+     * use the name for the conference id
+     */
+    public static final String USE_NAME_FOR_CONFERENCE_ID
+            = "org.jitsi.videobridge.useNameForConferenceId";
+
+    /**
      * The optional flag which specifies to
      * {@link #handleColibriConferenceIQ(ColibriConferenceIQ, int)} that
      * <tt>ColibriConferenceIQ</tt>s can be accessed by any peer(not only by the
@@ -192,6 +206,18 @@ public class Videobridge
     private int defaultProcessingOptions;
 
     /**
+     * If an endpoint is provided at time of channel creation, use the
+     * endpoint for the channel id
+     */
+    private boolean useEndpointForChannelId = false;
+
+    /**
+     * If a name is provided at time of conference creation
+     * use the name for the conference id
+     */
+    private boolean useNameForConferenceId = false;
+
+    /**
      * Indicates if this bridge instance has entered graceful shutdown mode.
      */
     private boolean shutdownInProgress;
@@ -263,7 +289,12 @@ public class Videobridge
 
         do
         {
-            String id = generateConferenceID();
+            String id;
+            if(useNameForConferenceId && !StringUtils.isNullOrEmpty(name)) {
+                id = name;
+            } else {
+                id = generateConferenceID();
+            }
 
             synchronized (conferences)
             {
@@ -794,7 +825,8 @@ public class Videobridge
                                 channelBundleId,
                                 transportNamespace,
                                 channelIQ.isInitiator(),
-                                channelIQ.getRTPLevelRelayType());
+                                channelIQ.getRTPLevelRelayType(),
+                            useEndpointForChannelId ? channelIQ.getEndpoint() : null);
 
                     if (channel == null)
                     {
@@ -1331,6 +1363,12 @@ public class Videobridge
             = ServiceUtils2.getService(
                     bundleContext,
                     ConfigurationService.class);
+
+        useEndpointForChannelId = (cfg != null) &&
+                cfg.getBoolean(USE_ENDPOINT_FOR_CHANNEL_ID, false);
+
+        useNameForConferenceId = (cfg != null) &&
+                cfg.getBoolean(USE_NAME_FOR_CONFERENCE_ID, false);
 
         defaultProcessingOptions
             = (cfg == null)

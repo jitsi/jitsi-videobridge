@@ -41,7 +41,7 @@ public class Health
      * The {@link MediaType}s of {@link RtpChannel}s supported by
      * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
      * by {@link
-     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
+     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType, String)}.
      */
     private static final MediaType[] MEDIA_TYPES
         = { MediaType.AUDIO, MediaType.VIDEO };
@@ -61,7 +61,7 @@ public class Health
      * {@code Videobridge} to check the health (status) of
      * @throws Exception if an error occurs while checking the health (status)
      * of the {@code videobridge} associated with {@code conference} or the
-     * check determines that the {@code Videobridge} is not healthy 
+     * check determines that the {@code Videobridge} is not healthy
      */
     private static void check(Conference conference)
         throws Exception
@@ -98,7 +98,8 @@ public class Health
                             channelBundleId,
                             /* transportNamespace */ null,
                             initiator,
-                            null);
+                            null,
+                            endpoint.getID());
 
                 // Fail as quickly as possible.
                 if (rtpChannel == null)
@@ -135,7 +136,7 @@ public class Health
      * of
      * @throws Exception if an error occurs while checking the health (status)
      * of {@code videobridge} or the check determines that {@code videobridge}
-     * is not healthy 
+     * is not healthy
      */
     public static void check(Videobridge videobridge)
         throws Exception

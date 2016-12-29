@@ -11,12 +11,12 @@ Implementation
 		<td>GET</td>
 		<td>/colibri/conferences</td>
 		<td>
-			200 OK with a JSON array/list of JSON objects which represent conferences with id only.<br /> 
-			For example: 
+			200 OK with a JSON array/list of JSON objects which represent conferences with id only.<br />
+			For example:
 <pre>
-[ 
-	{ "id" : "a1b2c3" }, 
-	{ "id" : "d4e5f6" } 
+[
+	{ "id" : "a1b2c3" },
+	{ "id" : "d4e5f6" }
 ]</pre>
 		</td>
 	</tr>
@@ -27,45 +27,47 @@ Implementation
 			200 OK with a JSON object which represents the created conference if the request was with Content-Type: application/json and was a JSON object which represented a conference without id and, optionally, with contents and channels without ids. <br />
 			For example, a request could look like:
 			<pre>
-{ 
-	"contents" : 
-	[ 
+{
+    "name" : "myConferenceName",
+	"contents" :
+	[
 		{
-			 "name" : "audio", 
-			 "channels" : [ { "expire" : 60 } ] 
-		}, 
-		{ 
-			"name" : "video", 
-			"channels" : [ { "expire" : 60 } ] 
-		} 
-	] 
+			 "name" : "audio",
+			 "channels" : [ { "expire" : 60 } ]
+		},
+		{
+			"name" : "video",
+			"channels" : [ { "expire" : 60 } ]
+		}
+	]
 }</pre>
 
 The respective response could look like:
 <pre>
-{ 
-	"id" : "conference1", 
-	"contents" : 
-		[ 
-			{ 
-				"name" : "audio", 
-				"channels" : 
+{
+	"id" : "conference1",
+	"name" : "myConferenceName",
+	"contents" :
+		[
+			{
+				"name" : "audio",
+				"channels" :
 					[
-						 { "id" : "channelA" }, 
-						 { "expire" : 60 }, 
-						 { "rtp-level-relay-type" : "translator" } 
+						 { "id" : "channelA" },
+						 { "expire" : 60 },
+						 { "rtp-level-relay-type" : "translator" }
 					 ]
-			 }, 
-			 { 
-			 	"name" : "video", 
-			 	"channels" : 
-			 		[ 
-			 			{ "id" : "channelV" }, 
-			 			{ "expire" : 60 }, 
-			 			{ "rtp-level-relay-type" : "translator" } 
-		 			] 
- 			} 
-		] 
+			 },
+			 {
+			 	"name" : "video",
+			 	"channels" :
+			 		[
+			 			{ "id" : "channelV" },
+			 			{ "expire" : 60 },
+			 			{ "rtp-level-relay-type" : "translator" }
+		 			]
+ 			}
+		]
 }</pre>
 		</td>
 	</tr>
@@ -74,31 +76,32 @@ The respective response could look like:
 		<td>/colibri/conferences{id}</td>
 		<td>
 			200 OK with a JSON object which represents the conference with the specified id. <br />
-			For example: 
+			For example:
 			<pre>
-{ 
-	"id" : "{id}", 
-	"contents" : 
-		[ 
-			{ 
-				"name" : "audio", 
-				"channels" : 
-					[ 
-						{ "id" : "channelA" }, 
-						{ "expire" : 60 }, 
-						{ "rtp-level-relay-type" : "translator" } 
-					] 
-			}, 
-			{ 
-				"name" : "video", 
-					"channels" : 
-						[ 
-							{ "id" : "channelV" }, 
-							{ "expire" : 60 }, 
-							{ "rtp-level-relay-type" : "translator" } 
-						] 
-			} 
-		] 
+{
+	"id" : "{id}",
+	"name" : "myConferenceName",
+	"contents" :
+		[
+			{
+				"name" : "audio",
+				"channels" :
+					[
+						{ "id" : "channelA" },
+						{ "expire" : 60 },
+						{ "rtp-level-relay-type" : "translator" }
+					]
+			},
+			{
+				"name" : "video",
+					"channels" :
+						[
+							{ "id" : "channelV" },
+							{ "expire" : 60 },
+							{ "rtp-level-relay-type" : "translator" }
+						]
+			}
+		]
 }</pre>
 		</td>
 	</tr>
@@ -140,17 +143,23 @@ Configuration
 
 **The following configuration properties can be added in the Jitsi Videobridge configuration file(HOME/.sip-communicator/sip-communicator.properties):**
 
- * **org.jitsi.videobridge.rest.jetty.port** - 
+ * **org.jitsi.videobridge.rest.jetty.port** -
  Specifies the port on which the REST API of Videobridge is to be served over HTTP. The default value is 8080.
- * **org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePassword** - 
+ * **org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePassword** -
  Specifies the keystore password to be utilized when the REST API of Videobridge is served over HTTPS.
- * **org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePath** - 
+ * **org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePath** -
  Specifies the keystore path to be utilized when the REST API of Videobridge is served over HTTPS.
- * **org.jitsi.videobridge.rest.jetty.sslContextFactory.needClientAuth** - 
+ * **org.jitsi.videobridge.rest.jetty.sslContextFactory.needClientAuth** -
  Specifies whether client certificate authentication is to be required when the REST API of Videobridge is served over HTTPS.
- * **org.jitsi.videobridge.rest.jetty.tls.port** - 
+ * **org.jitsi.videobridge.rest.jetty.tls.port** -
  Specifies the port on which the REST API of Videobridge is to be served over HTTPS. The default value is 8443.
-
+ * **org.jitsi.videobridge.useEndpointForChannelId** -
+ If set to true, videobridge will use the endpoint as the channel id when creating new channels. This is useful if you don't
+ want to have to maintain external mappings of channel ids to participants with a custom focus controller. Default
+ value is false
+ * **org.jitsi.videobridge.useNameForConferenceId** -
+ If set to true, videobridge will use the conference "name" value as the conference id. This is useful if you don't want to have
+ to maintain an external mapping to conference ids with a custom focus controller. Default value is false
 Example
 ==============
 
@@ -362,12 +371,12 @@ Post "[]" to <bridge_base_url>/colibri/conferences/
           "endpoint": "9f537ebb-1c2a-4ee9-9940-373304f9b260",
           "direction": "sendonly",
           "sources": [
-            
+
           ],
           "channel-bundle-id": "9f537ebb-1c2a-4ee9-9940-373304f9b260",
           "rtp-level-relay-type": "translator",
           "ssrc-groups": [
-            
+
           ],
           "payload-types": [
             {
@@ -406,7 +415,7 @@ Post "[]" to <bridge_base_url>/colibri/conferences/
           "channel-bundle-id": "9f537ebb-1c2a-4ee9-9940-373304f9b260",
           "rtp-level-relay-type": "translator",
           "ssrc-groups": [
-            
+
           ],
           "payload-types": [
             {
@@ -437,7 +446,7 @@ Post "[]" to <bridge_base_url>/colibri/conferences/
             }
           ],
           "rtp-hdrexts": [
-            
+
           ]
         }
       ]
@@ -461,7 +470,7 @@ Post "[]" to <bridge_base_url>/colibri/conferences/
       "id": "9f537ebb-1c2a-4ee9-9940-373304f9b260",
       "transport": {
         "candidates": [
-          
+
         ],
         "fingerprints": [
           {
