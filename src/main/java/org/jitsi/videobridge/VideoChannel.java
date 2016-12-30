@@ -890,20 +890,24 @@ public class VideoChannel
 
         RawPacketCache cache;
         RtxTransformer rtxTransformer;
+        MediaStream stream = getStream();
 
-        if ((cache = getStream().getPacketCache()) != null
+        if (stream != null && (cache = stream.getPacketCache()) != null
                 && (rtxTransformer = transformEngine.getRtxTransformer())
                         != null)
         {
             // XXX The retransmission of packets MUST take into account SSRC
             // rewriting. Which it may do by injecting retransmitted packets
-            // AFTER the SsrcRewritingEngine. Since the retransmitted packets
-            // have been cached by cache and cache is a TransformEngine, the
-            // injection may as well happen after cache.
+            // AFTER the SsrcRewritingEngine.
+            // Also, the cache MUST be notified of packets being retransmitted,
+            // in order for it to update their timestamp. We do this here by
+            // simply letting retransmitted packets pass through the cache again.
+            // We use the retransmission requester here simply because it is
+            // the transformer right before the cache, not because of anything
+            // intrinsic to it.
+            RetransmissionRequester rr = stream.getRetransmissionRequester();
             TransformEngine after
-                = (cache instanceof TransformEngine)
-                    ? (TransformEngine) cache
-                    : null;
+                = (rr instanceof TransformEngine) ? (TransformEngine) rr : null;
 
             long rtt = getStream().getMediaStreamStats().getSendStats().getRtt();
             long now = System.currentTimeMillis();
