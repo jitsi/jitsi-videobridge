@@ -103,14 +103,14 @@ public class Videobridge
      * endpoint for the channel id
      */
     public static final String USE_ENDPOINT_FOR_CHANNEL_ID
-            = "org.jitsi.videobridge.useEndpointForChannelId";
+            = "org.jitsi.videobridge.USE_ENDPOINT_FOR_CHANNEL_ID";
 
     /**
      * If a name is provided at time of conference creation
      * use the name for the conference id
      */
     public static final String USE_NAME_FOR_CONFERENCE_ID
-            = "org.jitsi.videobridge.useNameForConferenceId";
+            = "org.jitsi.videobridge.USE_NAME_FOR_CONFERENCE_ID";
 
     /**
      * The optional flag which specifies to
@@ -257,8 +257,11 @@ public class Videobridge
      * @param name world readable name of the conference to create.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
+     * @throws Exception throws an exception if a conference already
+     * exists by the name that is provided and the configuration is set to
+     * use the name as the id
      */
-    public Conference createConference(String focus, String name)
+    public Conference createConference(String focus, String name) throws Exception
     {
         return this.createConference(focus, name, /* enableLogging */ true);
     }
@@ -281,18 +284,30 @@ public class Videobridge
      * the {@link Conference}.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
+     * @throws Exception throws an exception if a conference already
+     * exists by the name that is provided and the configuration is set to
+     * use the name as the id
      */
     public Conference createConference(
-        String focus, String name, boolean enableLogging)
+        String focus, String name, boolean enableLogging) throws Exception
     {
         Conference conference = null;
 
         do
         {
             String id;
-            if(useNameForConferenceId && !StringUtils.isNullOrEmpty(name)) {
+            if(useNameForConferenceId && !StringUtils.isNullOrEmpty(name))
+            {
+                if (conferences.containsKey(name))
+                {
+                    throw new Exception(String.format("Cannot create " +
+                            "conference, conference already exists by id:" +
+                            " %s", name));
+                }
                 id = name;
-            } else {
+            }
+            else
+            {
                 id = generateConferenceID();
             }
 
