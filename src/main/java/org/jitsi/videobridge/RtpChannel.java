@@ -1905,7 +1905,8 @@ public class RtpChannel
                             ",bRetr=" + statistics.bytesRetransmitted +
                             ",bNotRetr=" + statistics.bytesNotRetransmitted +
                             ",pRetr=" + statistics.packetsRetransmitted +
-                            ",pNotRetr=" + statistics.packetsNotRetransmitted);
+                            ",pNotRetr=" + statistics.packetsNotRetransmitted +
+                            ",pMiss=" + statistics.packetsMissingFromCache);
         }
         TransformEngine transformEngine = this.transformEngine;
         if (transformEngine != null)
@@ -2217,5 +2218,11 @@ public class RtpChannel
          * were intentionally not retransmitted.
          */
         protected AtomicLong packetsNotRetransmitted = new AtomicLong();
+
+        /**
+         * The number of packets for which retransmission was requested, but
+         * they were missing from the cache.
+         */
+        protected AtomicLong packetsMissingFromCache = new AtomicLong();
     }
 }

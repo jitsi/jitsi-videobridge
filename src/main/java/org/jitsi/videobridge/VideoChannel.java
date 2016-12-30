@@ -948,6 +948,10 @@ public class VideoChannel
                     }
 
                 }
+                else
+                {
+                    statistics.packetsMissingFromCache.incrementAndGet();
+                }
             }
         }
 
