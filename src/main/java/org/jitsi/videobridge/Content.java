@@ -275,24 +275,24 @@ public class Content
 
         do
         {
-            String id;
-            if(!StringUtils.isNullOrEmpty(endpointId))
-            {
-                if (channels.containsKey(endpointId))
-                {
-                    throw new Exception(String.format("Cannot create channel " +
-                            "for endpoint %s, channel already exists",
-                            endpointId));
-                }
-                id = endpointId;
-            }
-            else
-            {
-                id = generateChannelID();
-            }
-
             synchronized (channels)
             {
+                String id;
+                if(!StringUtils.isNullOrEmpty(endpointId))
+                {
+                    if (channels.containsKey(endpointId))
+                    {
+                        throw new Exception(String.format("Cannot create channel " +
+                                        "for endpoint %s, channel already exists",
+                                endpointId));
+                    }
+                    id = endpointId;
+                }
+                else
+                {
+                    id = generateChannelID();
+                }
+
                 if (!channels.containsKey(id))
                 {
                     switch (getMediaType())

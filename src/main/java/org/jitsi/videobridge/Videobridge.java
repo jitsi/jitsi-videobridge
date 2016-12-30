@@ -295,24 +295,24 @@ public class Videobridge
 
         do
         {
-            String id;
-            if(useNameForConferenceId && !StringUtils.isNullOrEmpty(name))
-            {
-                if (conferences.containsKey(name))
-                {
-                    throw new Exception(String.format("Cannot create " +
-                            "conference, conference already exists by id:" +
-                            " %s", name));
-                }
-                id = name;
-            }
-            else
-            {
-                id = generateConferenceID();
-            }
-
             synchronized (conferences)
             {
+                String id;
+                if(useNameForConferenceId && !StringUtils.isNullOrEmpty(name))
+                {
+                    if (conferences.containsKey(name))
+                    {
+                        throw new Exception(String.format("Cannot create " +
+                                "conference, conference already exists by id:" +
+                                " %s", name));
+                    }
+                    id = name;
+                }
+                else
+                {
+                    id = generateConferenceID();
+                }
+
                 if (!conferences.containsKey(id))
                 {
                     conference
