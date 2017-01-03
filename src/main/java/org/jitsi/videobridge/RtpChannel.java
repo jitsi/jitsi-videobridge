@@ -693,7 +693,7 @@ public class RtpChannel
             statistics.bytesSent = mss.getSendStats().getBytes();
             statistics.packetsReceived = mss.getReceiveStats().getPackets();
             statistics.packetsSent = mss.getSendStats().getPackets();
-            stream.setProperty(Channel.class.getName(), null);
+            stream.setProperty(RtpChannel.class.getName(), null);
             removeStreamListeners();
             stream.close();
 
