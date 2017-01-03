@@ -6,6 +6,7 @@
 JVB_HEAPDUMP_PATH="/tmp/java_*.hprof"
 STAMP=`date +%Y-%m-%d-%H%M`
 PID_PATH="/var/run/jitsi-videobridge.pid"
+JVB_UID=`id -u jvb`
 
 RUNNING=""
 unset PID
@@ -15,6 +16,10 @@ if [ ! -z $PID ]; then
    ps -p $PID | grep -q java
    [ $? -eq 0 ] && RUNNING="true"
 fi
+
+#Find any crashes in /var/crash from our user in the past 20 minutes, if they exist
+CRASH_FILES=$(find /var/crash -name '*.crash' -uid $JVB_UID -mmin -20 -type f)
+
 if [ ! -z $RUNNING ]; then
     echo "Jvb at pid $PID"
     THREADS_FILE="/tmp/stack-${STAMP}-${PID}.threads"
@@ -37,16 +42,17 @@ if [ ! -z $RUNNING ]; then
 
     sudo -u jvb jstack ${PID} > ${THREADS_FILE}
     sudo -u jvb jmap -dump:live,format=b,file=${HEAP_FILE} ${PID}
-    tar zcvf jvb-dumps-${STAMP}-${PID}.tgz ${THREADS_FILE} ${HEAP_FILE} ${HEAPDUMP_FILE} /var/log/jitsi/jvb.log /tmp/hs_err_*
+
+    tar zcvf jvb-dumps-${STAMP}-${PID}.tgz ${THREADS_FILE} ${HEAP_FILE} ${HEAPDUMP_FILE} ${CRASH_FILES} /var/log/jitsi/jvb.log /tmp/hs_err_*
     rm ${HEAP_FILE} ${THREADS_FILE}
 else
     ls $JVB_HEAPDUMP_PATH >/dev/null 2>&1
     if [ $? -eq 0 ]; then
         echo "JVB not running, but previous heap dump found."
-        tar zcvf jvb-dumps-${STAMP}-crash.tgz $JVB_HEAPDUMP_PATH /var/log/jitsi/jvb.log /tmp/hs_err_*
+        tar zcvf jvb-dumps-${STAMP}-crash.tgz $JVB_HEAPDUMP_PATH ${CRASH_FILES} /var/log/jitsi/jvb.log /tmp/hs_err_*
         rm ${JVB_HEAPDUMP_PATH}
     else
-        tar zcvf jvb-dumps-${STAMP}-crash.tgz /var/log/jitsi/jvb.log /tmp/hs_err_*
+        tar zcvf jvb-dumps-${STAMP}-crash.tgz /var/log/jitsi/jvb.log ${CRASH_FILES} /tmp/hs_err_*
         echo "JVB not running, previous heap dump not found. Archiving logs only."
     fi
 fi
