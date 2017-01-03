@@ -167,10 +167,10 @@ public class SimulcastSenderManager
 
             if (receivingEndpoint != null && sendingEndpoint != null)
             {
-                Set<Endpoint> selectedEndpoints
+                Set<String> selectedEndpoints
                     = receivingEndpoint.getSelectedEndpoints(); // never null.
 
-                if (selectedEndpoints.contains(sendingEndpoint))
+                if (selectedEndpoints.contains(sendingEndpoint.getID()))
                 {
                     targetOrder = simulcastStreams.length - 1;
                 }
