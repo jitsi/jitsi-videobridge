@@ -52,6 +52,17 @@ public class AudioChannel
     private SimpleAudioLevelListener streamAudioLevelListener;
 
     /**
+     * The {@link LipSyncHack} from the {@link VideoChannel}.
+     */
+    private LipSyncHack associatedLipSyncHack;
+
+    /**
+     * A boolean that indicates whether or not we've fetched the
+     * {@link LipSyncHack} from the {@link VideoChannel}.
+     */
+    private boolean fetchedLipSyncHack = false;
+
+    /**
      * Initializes a new <tt>AudioChannel</tt> instance which is to have a
      * specific ID. The initialization is to be considered requested by a
      * specific <tt>Content</tt>.
@@ -315,11 +326,23 @@ public class AudioChannel
         byte[] buffer, int offset, int length,
         Channel source)
     {
-        LipSyncHack lsHack = getEndpoint().getLipSyncHack();
-
-        if (lsHack != null)
+        if (!fetchedLipSyncHack)
         {
-            getEndpoint().getLipSyncHack().onRTPTranslatorWillWriteAudio(
+            fetchedLipSyncHack = true;
+
+            List<RtpChannel> channels = getEndpoint()
+                .getChannels(MediaType.VIDEO);
+
+            if (channels != null && !channels.isEmpty())
+            {
+                associatedLipSyncHack
+                    = ((VideoChannel)channels.get(0)).getLipSyncHack();
+            }
+        }
+
+        if (associatedLipSyncHack != null)
+        {
+            associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
                 data, buffer, offset, length, source);
         }
 
