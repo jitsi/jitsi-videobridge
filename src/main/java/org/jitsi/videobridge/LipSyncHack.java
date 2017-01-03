@@ -19,12 +19,14 @@ import net.sf.fmj.media.rtp.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Implements a hack for
@@ -35,6 +37,8 @@ import java.util.*;
  * @author George Politis
  */
 public class LipSyncHack
+    implements TransformEngine,
+               PacketTransformer
 {
     /**
      * A byte array holding a black VP8 key frame. The byte array contains the
@@ -59,7 +63,7 @@ public class LipSyncHack
     /**
      * A constant defining the maximum number of black key frames to send.
      */
-    private static final int MAX_KEY_FRAMES = 30;
+    private static final int MAX_KEY_FRAMES = 10;
 
     /**
      * The rate (in ms) at which we are to send black key frames.
@@ -99,7 +103,7 @@ public class LipSyncHack
     /**
      * The owner of this hack.
      */
-    private final Endpoint endpoint;
+    private final VideoChannel channel;
 
     /**
      * The executor service that takes care of black key frame scheduling
@@ -128,6 +132,14 @@ public class LipSyncHack
     private final List<Long> acceptedVideoSSRCsRTP = new ArrayList<>();
 
     /**
+     * The collection of SSRCs for which we haven't sent out black VP8 key
+     * frames. Access to the list needs to be thread. We expect far less writes
+     * than reads thus we use a {@link CopyOnWriteArrayList}.
+     */
+    private final Collection<Long> ssrcsWithoutBlackKeyframes
+        = new CopyOnWriteArrayList<>();
+
+    /**
      * A map that holds all the inject states.
      */
     private final Map<Long, InjectState> states = new HashMap<>();
@@ -135,11 +147,11 @@ public class LipSyncHack
     /**
      * Ctor.
      *
-     * @param endpoint the endpoint that owns this hack.
+     * @param channel the {@link VideoChannel} that owns this hack.
      */
-    public LipSyncHack(Endpoint endpoint)
+    public LipSyncHack(VideoChannel channel)
     {
-        this.endpoint = endpoint;
+        this.channel = channel;
     }
 
     /**
@@ -182,16 +194,8 @@ public class LipSyncHack
         }
 
         // New audio stream. Trigger the hack for the associated video stream.
-        List<RtpChannel> targetVideoChannels
-            = endpoint.getChannels(MediaType.VIDEO);
-        if (targetVideoChannels == null || targetVideoChannels.size() == 0)
-        {
-            return;
-        }
-
-        VideoChannel targetVC = (VideoChannel) targetVideoChannels.get(0);
         MediaStream stream;
-        if (targetVC == null || (stream = targetVC.getStream()) == null
+        if (channel == null || (stream = channel.getStream()) == null
             || !stream.isStarted())
         {
             // It seems like we're not ready yet to trigger the hack.
@@ -219,7 +223,7 @@ public class LipSyncHack
         {
             // FIXME this is a little ugly
             receiveVideoSSRC = recv.getSimulcastStream(
-                0, targetVC.getStream()).getPrimarySSRC();
+                0, channel.getStream()).getPrimarySSRC();
         }
         else
         {
@@ -383,6 +387,7 @@ public class LipSyncHack
             {
                 // No key frames have been sent for this SSRC => No need to
                 // rewrite anything.
+                ssrcsWithoutBlackKeyframes.add(acceptedVideoSSRC);
                 return;
             }
 
@@ -434,6 +439,114 @@ public class LipSyncHack
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public PacketTransformer getRTPTransformer()
+    {
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public PacketTransformer getRTCPTransformer()
+    {
+        return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close()
+    {
+
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RawPacket[] reverseTransform(RawPacket[] pkts)
+    {
+        return pkts;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RawPacket[] transform(RawPacket[] pkts)
+    {
+        // If a packet needs to be prepended, then its SSRC needs to be in
+        // ssrcsWithoutBlackKeyframes already.
+        if (pkts == null || pkts.length == 0
+            || ssrcsWithoutBlackKeyframes.isEmpty())
+        {
+            return pkts;
+        }
+
+        RawPacket[] extra = null;
+
+        for (int i = 0; i < pkts.length; i++)
+        {
+            if (pkts[i] == null)
+            {
+                continue;
+            }
+
+            long ssrc = pkts[i].getSSRCAsLong();
+            if (ssrcsWithoutBlackKeyframes.contains(ssrc))
+            {
+                ssrcsWithoutBlackKeyframes.remove(ssrc);
+
+                boolean isSOF = channel.getStream().isStartOfFrame(
+                    pkts[i].getBuffer(), pkts[i].getOffset(), pkts[i].getLength());
+
+                int sofDistance = isSOF ? 0 : 10;
+
+                int seqNum = pkts[i].getSequenceNumber();
+                long ts = pkts[i].getTimestamp();
+                RawPacket[] kfs = new RawPacket[MAX_KEY_FRAMES];
+                for (int j = 0; j < kfs.length; j++)
+                {
+                    int relativeIdx = j - kfs.length - sofDistance;
+                    byte[] buf = KEY_FRAME_BUFFER.clone();
+                    RawPacket kf = new RawPacket(buf, 0, buf.length);
+
+                    // Set SSRC.
+                    kf.setSSRC((int) ssrc);
+
+                    // Set sequence number.
+                    int seqnum = (seqNum + relativeIdx) & 0xFFFF;
+                    kf.setSequenceNumber(seqnum);
+
+                    // Set RTP timestamp.
+                    long timestamp = ts + relativeIdx * TS_INCREMENT_PER_FRAME;
+                    kf.setTimestamp(timestamp);
+                    kfs[j] = kf;
+                }
+
+                extra = ArrayUtils.concat(extra, kfs);
+            }
+        }
+
+        if (extra != null && extra.length != 0)
+        {
+            RawPacket[] ret = new RawPacket[extra.length + pkts.length];
+            System.arraycopy(extra, 0, ret, 0, extra.length);
+            System.arraycopy(pkts, 0, ret, extra.length - 1, pkts.length);
+            return ret;
+        }
+        else
+        {
+            return pkts;
+        }
+    }
+
+    /**
      * The {@link Runnable} that injects the black video key frame packets.
      */
     class InjectTask implements RecurringRunnable
@@ -470,28 +583,6 @@ public class LipSyncHack
                     || injectState.numOfKeyframesSent >= MAX_KEY_FRAMES)
                 {
                     deregister("completed");
-                    return;
-                }
-
-                if (endpoint == null || endpoint.isExpired())
-                {
-                    deregister("endpoint_expired");
-                    return;
-                }
-
-                List<RtpChannel> channels
-                    = endpoint.getChannels(MediaType.VIDEO);
-
-                if (channels == null || channels.isEmpty())
-                {
-                    deregister("channel_unavailable");
-                    return;
-                }
-
-                RtpChannel channel = channels.get(0);
-                if (channel == null || channel.isExpired())
-                {
-                    deregister("channel_expired");
                     return;
                 }
 
