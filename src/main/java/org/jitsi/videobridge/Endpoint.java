@@ -174,12 +174,12 @@ public class Endpoint
     private final Conference conference;
 
     /**
-     * The list of IDs of the pinned endpoints of this {@code endpoint}.
+     * The set of IDs of the pinned endpoints of this {@code Endpoint}.
      */
     private Set<String> pinnedEndpoints = new HashSet<>();
 
     /**
-     * The list of currently selected <tt>Endpoint</tt>s at this
+     * The set of currently selected <tt>Endpoint</tt>s at this
      * <tt>Endpoint</tt>.
      */
     private Set<String> selectedEndpoints = new HashSet<>();
@@ -373,7 +373,7 @@ public class Endpoint
     }
 
     /**
-     * @return the {@link Set} of selected endpoints, represented as a list of
+     * @return the {@link Set} of selected endpoints, represented as a set of
      * endpoint IDs.
      */
     public Set<String> getSelectedEndpoints()
@@ -382,7 +382,7 @@ public class Endpoint
     }
 
     /**
-     * @return the {@link Set} of pinned endpoints, represented as a list of
+     * @return the {@link Set} of pinned endpoints, represented as a set of
      * endpoint IDs.
      */
     public Set<String> getPinnedEndpoints()
@@ -577,13 +577,13 @@ public class Endpoint
         // Find the new pinned endpoint.
         String newPinnedEndpointID = (String) jsonObject.get("pinnedEndpoint");
 
-        Set<String> newPinnedIDList = Collections.EMPTY_SET;
+        Set<String> newPinnedIDs = Collections.EMPTY_SET;
         if (newPinnedEndpointID != null && !"".equals(newPinnedEndpointID))
         {
-            newPinnedIDList = Collections.singleton(newPinnedEndpointID);
+            newPinnedIDs = Collections.singleton(newPinnedEndpointID);
         }
 
-        pinnedEndpointsChanged(newPinnedIDList);
+        pinnedEndpointsChanged(newPinnedIDs);
     }
 
     /**
@@ -658,13 +658,13 @@ public class Endpoint
         // Find the new pinned endpoint.
         String newSelectedEndpointID = (String) jsonObject.get("selectedEndpoint");
 
-        Set<String> newSelectedIDList = Collections.EMPTY_SET;
+        Set<String> newSelectedIDs = Collections.EMPTY_SET;
         if (newSelectedEndpointID != null && !"".equals(newSelectedEndpointID))
         {
-            newSelectedIDList = Collections.singleton(newSelectedEndpointID);
+            newSelectedIDs = Collections.singleton(newSelectedEndpointID);
         }
 
-        selectedEndpointsChanged(newSelectedIDList);
+        selectedEndpointsChanged(newSelectedIDs);
     }
 
     /**
