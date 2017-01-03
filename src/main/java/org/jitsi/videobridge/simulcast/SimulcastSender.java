@@ -257,10 +257,10 @@ public class SimulcastSender
     {
         String propertyName = ev.getPropertyName();
 
-        if (Endpoint.SELECTED_ENDPOINT_PROPERTY_NAME.equals(propertyName))
+        if (Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            Set<Endpoint> oldEndpoints = (Set<Endpoint>) ev.getOldValue();
-            Set<Endpoint> newEndpoints = (Set<Endpoint>) ev.getNewValue();
+            Set<String> oldEndpoints = (Set<String>) ev.getOldValue();
+            Set<String> newEndpoints = (Set<String>) ev.getNewValue();
 
             selectedEndpointChanged(oldEndpoints, newEndpoints);
         }
@@ -291,7 +291,7 @@ public class SimulcastSender
      * @param newEndpoints Set of the new selected endpoints.
      */
     private void selectedEndpointChanged(
-            Set<Endpoint> oldEndpoints, Set<Endpoint> newEndpoints)
+            Set<String> oldEndpoints, Set<String> newEndpoints)
     {
         // Here we update the targetOrder value.
 
@@ -305,9 +305,9 @@ public class SimulcastSender
             {
                 StringBuilder sb = new StringBuilder("selected_endpoints,");
                 sb.append(getLoggingId()).append(" selected=");
-                for (Endpoint e : newEndpoints)
+                for (String eId : newEndpoints)
                 {
-                    sb.append(e.getID());
+                    sb.append(eId);
                     sb.append(";");
                 }
                 logger.debug(Logger.Category.STATISTICS, sb.toString());
@@ -344,9 +344,9 @@ public class SimulcastSender
         int oldTargetOrder = targetOrder;
 
         boolean thisWasInTheSelectedEndpoints
-                = oldEndpoints.contains(sendEndpoint);
+                = oldEndpoints.contains(sendEndpoint.getID());
         boolean thisWillBeInTheSelectedEndpoints
-                = newEndpoints.contains(sendEndpoint);
+                = newEndpoints.contains(sendEndpoint.getID());
 
         if (thisWillBeInTheSelectedEndpoints)
         {
