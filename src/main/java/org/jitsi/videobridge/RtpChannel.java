@@ -2199,23 +2199,23 @@ public class RtpChannel
         /**
          * Number of bytes retransmitted.
          */
-        protected AtomicLong bytesRetransmitted = new AtomicLong();
+        protected final AtomicLong bytesRetransmitted = new AtomicLong();
 
         /**
          * Number of bytes for packets which were requested and found in the
          * cache, but were intentionally not retransmitted.
          */
-        protected AtomicLong bytesNotRetransmitted = new AtomicLong();
+        protected final AtomicLong bytesNotRetransmitted = new AtomicLong();
 
         /**
          * Number of packets retransmitted.
          */
-        protected AtomicLong packetsRetransmitted = new AtomicLong();
+        protected final AtomicLong packetsRetransmitted = new AtomicLong();
 
         /**
          * Number of packets which were requested and found in the cache, but
          * were intentionally not retransmitted.
          */
-        protected AtomicLong packetsNotRetransmitted = new AtomicLong();
+        protected final AtomicLong packetsNotRetransmitted = new AtomicLong();
     }
 }
