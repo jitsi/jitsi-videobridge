@@ -45,6 +45,7 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.adaptivity.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -1279,7 +1280,7 @@ public class RtpChannel
     boolean rtpTranslatorWillWrite(
             boolean data,
             byte[] buffer, int offset, int length,
-            Channel source)
+            RtpChannel source)
     {
         return true;
     }
@@ -2017,16 +2018,19 @@ public class RtpChannel
     }
 
     /**
-     * Creates the {@code MediaStreamTrack}s from signaling and adds them to the
-     * {@code MediaStream} that is associated to this {@code RtpChannel}.
+     * Updates the {@code MediaStreamTrackReceiver} with the new RTP encoding
+     * parameters.
      *
-     * @param sources  The <tt>List</tt> of <tt>SourcePacketExtension</tt> that
-     * describes the list of sources of this <tt>RtpChannel</tt> and that is
-     * used as the input in the update of the Sets the <tt>Set</tt> of the SSRCs
-     * that this <tt>RtpChannel</tt> has signaled.
-     * @param sourceGroups
+     * @param sources The {@link List} of {@link SourcePacketExtension} that
+     * describes the list of sources of this {@code RtpChannel} and that is
+     * used as the input in the update of the Sets the {@link Set} of the SSRCs
+     * that this {@link RtpChannel} has signaled.
+     *
+     * @param sourceGroups The {@link List} of
+     * {@link SourceGroupPacketExtension} that describes the list of source
+     * groups of this {@link RtpChannel}.
      */
-    public void setMediaStreamTracks(
+    public boolean setRtpEncodingParameters(
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
@@ -2034,103 +2038,26 @@ public class RtpChannel
         boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
         if (!hasSources && !hasGroups)
         {
-            return;
+            return false;
         }
 
         this.setSources(sources); // TODO remove and rely on MSTs.
         this.setSourceGroups(sourceGroups); // TODO remove and rely on MSTs.
 
-        Map<Long, MediaStreamTrack> tracks = new TreeMap<>();
-        if (hasGroups)
+        MediaStreamTrackReceiver
+            mediaStreamTrackReceiver = stream.getMediaStreamTrackReceiver();
+
+        if (mediaStreamTrackReceiver != null)
         {
-            List<SourceGroupPacketExtension> simGroups = new ArrayList<>();
-            Map<Long, Long> rtxPairs = new TreeMap<>();
+            MediaStreamTrackImpl[] newTracks
+                = MediaStreamTrackFactory.createMediaStreamTracks(
+                    mediaStreamTrackReceiver, sources, sourceGroups);
 
-            for (SourceGroupPacketExtension sg : sourceGroups)
-            {
-                List<SourcePacketExtension> groupSources = sg.getSources();
-                if (groupSources == null || groupSources.isEmpty())
-                {
-                    continue;
-                }
-
-                if ("sim".equalsIgnoreCase(sg.getSemantics())
-                    && groupSources.size() >= 2)
-                {
-                    simGroups.add(sg);
-                }
-                else if ("fid".equalsIgnoreCase(sg.getSemantics())
-                    && groupSources.size() == 2)
-                {
-                    rtxPairs.put(
-                        groupSources.get(0).getSSRC(),
-                        groupSources.get(1).getSSRC());
-                }
-            }
-
-            if (!simGroups.isEmpty())
-            {
-                for (SourceGroupPacketExtension simGroup : simGroups)
-                {
-                    MediaStreamTrack track = new MediaStreamTrack();
-
-                    int order = RTPEncoding.BASE_ORDER;
-                    for (SourcePacketExtension spe : simGroup.getSources())
-                    {
-                        Long primarySSRC = spe.getSSRC();
-                        Long rtxSSRC = rtxPairs.remove(primarySSRC);
-                        if (rtxSSRC != null)
-                        {
-                            track.addEncoding(primarySSRC, rtxSSRC, -1, order);
-                            tracks.put(primarySSRC, track);
-                            tracks.put(rtxSSRC, track);
-                        }
-                        else
-                        {
-                            track.addEncoding(primarySSRC, -1, -1, order);
-                            tracks.put(primarySSRC, track);
-                        }
-
-                        order++;
-                    }
-                }
-            }
-
-            if (!rtxPairs.isEmpty())
-            {
-                for (Map.Entry<Long, Long> fidEntry : rtxPairs.entrySet())
-                {
-                    MediaStreamTrack track = new MediaStreamTrack();
-                    Long primarySSRC = fidEntry.getKey();
-                    Long rtxSSRC = fidEntry.getValue();
-
-                    track.addEncoding(
-                        primarySSRC, rtxSSRC, -1, RTPEncoding.BASE_ORDER);
-                }
-            }
+            return mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
         }
-
-        Map<Long, MediaStreamTrack> remoteTracks = stream.getRemoteTracks();
-        synchronized (remoteTracks)
+        else
         {
-            remoteTracks.clear();
-            remoteTracks.putAll(tracks);
-
-            if (hasSources)
-            {
-                for (SourcePacketExtension spe : sources)
-                {
-                    long mediaSSRC = spe.getSSRC();
-                    if (remoteTracks.get(mediaSSRC) != null)
-                    {
-                        continue;
-                    }
-
-                    MediaStreamTrack mst = new MediaStreamTrack();
-                    mst.addEncoding(mediaSSRC, -1, -1, RTPEncoding.BASE_ORDER);
-                    remoteTracks.put(mediaSSRC, mst);
-                }
-            }
+            return false;
         }
     }
 

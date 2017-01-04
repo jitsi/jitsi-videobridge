@@ -915,7 +915,7 @@ public class Videobridge
 
                 channel.setDirection(channelIQ.getDirection());
 
-                channel.setMediaStreamTracks(
+                channel.setRtpEncodingParameters(
                     channelIQ.getSources(), channelIQ.getSourceGroups());
 
                 if (channel instanceof VideoChannel)

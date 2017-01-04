@@ -576,7 +576,7 @@ public class VideoChannel
      * <tt>false</tt>. The implementation of the <tt>RtpChannel</tt> class
      * always returns <tt>true</tt>.
      */
-    public boolean isInLastN(Channel channel)
+    public boolean isInLastN(RtpChannel channel)
     {
         return lastNController.isForwarded(channel);
     }
@@ -601,9 +601,8 @@ public class VideoChannel
     boolean rtpTranslatorWillWrite(
         boolean data,
         byte[] buffer, int offset, int length,
-        Channel source)
+        RtpChannel source)
     {
-        // XXX(gp) we could potentially move this into a TransformEngine.
         boolean accept = lastNController.isForwarded(source);
 
         if (lipSyncHack != null)

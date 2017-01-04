@@ -243,7 +243,7 @@ public class LastNController
      * @return {@code true} iff RTP packets from {@code sourceChannel} should
      * be forwarded to {@link #channel}.
      */
-    public boolean isForwarded(Channel sourceChannel)
+    public boolean isForwarded(RtpChannel sourceChannel)
     {
         if (lastN < 0 && currentLastN < 0)
         {
