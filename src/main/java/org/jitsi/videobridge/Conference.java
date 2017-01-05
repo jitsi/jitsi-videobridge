@@ -272,6 +272,8 @@ public class Conference
                 = videobridge.getStatistics();
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
+
+        touch();
     }
 
     /**
