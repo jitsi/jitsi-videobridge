@@ -1121,36 +1121,6 @@ public class VideoChannel
             return;
         }
 
-        // FID groups have been saved in RtpChannel. Make sure any changes are
-        // propagated to the appropriate SimulcastStream-s.
-        synchronized (fidSourceGroups)
-        {
-            if (!fidSourceGroups.isEmpty())
-            {
-                for (Map.Entry<Long, Long> entry : this.fidSourceGroups
-                    .entrySet())
-                {
-                    if (entry.getKey() == null || entry.getValue() == null)
-                    {
-                        continue;
-                    }
-
-                    // autoboxing.
-                    long primarySSRC = entry.getKey();
-                    long fidSSRC = entry.getValue();
-
-                    for (int i = 0; i < simulcastTriplets.length; i++)
-                    {
-                        if (simulcastTriplets[i][0] == primarySSRC)
-                        {
-                            simulcastTriplets[i][1] = fidSSRC;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
         SimulcastStream[] simulcastStreams
             = new SimulcastStream[simulcastTriplets.length];
 

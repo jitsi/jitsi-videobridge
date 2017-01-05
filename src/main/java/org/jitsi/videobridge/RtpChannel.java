@@ -38,7 +38,6 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -54,6 +53,7 @@ import org.jitsi.videobridge.xmpp.*;
  *
  * @author Lyubomir Marinov
  * @author Boris Grozev
+ * @author George Politis
  */
 public class RtpChannel
     extends Channel
@@ -213,24 +213,6 @@ public class RtpChannel
      * information.
      */
     private final Logger logger;
-
-    /**
-     * The FID (flow ID) groupings used by the remote side of this
-     * <tt>RtpChannel</tt>. We map a "media" SSRC to the "RTX" SSRC.
-     */
-    protected final Map<Long,Long> fidSourceGroups
-        = new HashMap<>();
-
-    /**
-     * The payload type number configured for RTX (RFC-4588) for this channel,
-     * or -1 if none is configured (the other end does not support rtx).
-     */
-    private byte rtxPayloadType = -1;
-
-    /**
-     * The "associated payload type" number for RTX on this channel.
-     */
-    private byte rtxAssociatedPayloadType = -1;
 
     /**
      * Whether this {@link RtpChannel} should latch on to the remote address of
@@ -1403,35 +1385,14 @@ public class RtpChannel
                     transportManager.payloadTypesChanged(this);
                 }
 
-                rtxPayloadType = -1;
-                for (PayloadTypePacketExtension ext : payloadTypes)
+                RtxTransformer rtxTransformer;
+                if (transformEngine != null && (rtxTransformer
+                    = transformEngine.getRtxTransformer()) != null)
                 {
-                    if (Constants.RTX.equalsIgnoreCase(ext.getName()))
-                    {
-                        rtxPayloadType = (byte) ext.getID();
-                        for (ParameterPacketExtension ppe : ext.getParameters())
-                        {
-                            if ("apt".equalsIgnoreCase(ppe.getName()))
-                                rtxAssociatedPayloadType
-                                        = Byte.valueOf(ppe.getValue());
-
-                        }
-                    }
-                }
-
-                RetransmissionRequester retransmissionRequester
-                    = stream.getRetransmissionRequester();
-                if (retransmissionRequester != null)
-                {
-                    Map<Long, Long> copy;
-                    synchronized (fidSourceGroups)
-                    {
-                        copy = new HashMap<>(fidSourceGroups);
-                    }
-                    retransmissionRequester.configureRtx(rtxPayloadType,
-                                                         copy);
+                    rtxTransformer.onDynamicPayloadTypesChanged();
                 }
             }
+
         }
 
         touch(); // It seems this Channel is still active.
@@ -1787,64 +1748,7 @@ public class RtpChannel
      */
     public void setSourceGroups(List<SourceGroupPacketExtension> sourceGroups)
     {
-        if (sourceGroups == null || sourceGroups.isEmpty())
-            return;
 
-        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
-        {
-            List<SourcePacketExtension> sources = sourceGroup.getSources();
-            if (sources != null && !sources.isEmpty() &&
-                    SourceGroupPacketExtension.SEMANTICS_FID
-                        .equalsIgnoreCase(sourceGroup.getSemantics()))
-            {
-                Long first = null, second = null;
-                for (SourcePacketExtension source : sources)
-                {
-                    if (first == null)
-                    {
-                        first = source.getSSRC();
-                    }
-                    else if (second == null)
-                    {
-                        second = source.getSSRC();
-                    }
-                    else
-                    {
-                        logger.warn("Received a FID sourceGroup with more " +
-                                    " than two sources: " + sourceGroup.toXML());
-                    }
-                }
-
-                if (first == null || second == null)
-                {
-                    logger.warn("Received a FID sourceGroup with less " +
-                                " than two sources: " + sourceGroup.toXML());
-                    continue;
-                }
-
-                // Here we assume that the first source in the group is the
-                // SSRC for the media stream, and the second source is the
-                // one for the RTX stream.
-                synchronized (fidSourceGroups)
-                {
-                    fidSourceGroups.put(first, second);
-                }
-            }
-        }
-
-        // The RTX configuration (PT and SSRC maps) may have changed.
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
-        if (retransmissionRequester != null)
-        {
-            Map<Long, Long> copy;
-            synchronized (fidSourceGroups)
-            {
-                copy = new HashMap<>(fidSourceGroups);
-            }
-            retransmissionRequester.configureRtx(rtxPayloadType,
-                                                 copy);
-        }
     }
 
     /**
@@ -1925,54 +1829,6 @@ public class RtpChannel
         }
 
         return true;
-    }
-
-    /**
-     * Returns the payload type number for the RTX payload type (RFC-4588) for
-     * this channel.
-     * @return the payload type number for the RTX payload type (RFC-4588) for
-     * this channel.
-     */
-    public byte getRtxPayloadType()
-    {
-        return rtxPayloadType;
-    }
-
-    /**
-     * Returns the payload type number associated with RTX for this channel.
-     * @return the payload type number associated with RTX for this channel.
-     */
-    public byte getRtxAssociatedPayloadType()
-    {
-        return rtxAssociatedPayloadType;
-    }
-
-    /**
-     * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
-     * any. If none is found, returns -1.
-     *
-     * @return the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
-     * any. If none is found, returns -1.
-     */
-    public long getFidPairedSsrc(long ssrc)
-    {
-        synchronized (fidSourceGroups)
-        {
-            Long paired = fidSourceGroups.get(ssrc);
-            if (paired != null)
-            {
-                return paired;
-            }
-
-            // Maybe 'ssrc' is one of the values.
-            for (Map.Entry<Long, Long> entry : fidSourceGroups.entrySet())
-            {
-                if (entry.getValue() == ssrc)
-                    return entry.getKey();
-            }
-
-            return -1;
-        }
     }
 
     /**
