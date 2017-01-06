@@ -70,12 +70,14 @@ public class MediaStreamTrackFactory
                     continue;
                 }
 
-                if ("sim".equalsIgnoreCase(sg.getSemantics())
+                if (SourceGroupPacketExtension
+                    .SEMANTICS_SIMULCAST.equalsIgnoreCase(sg.getSemantics())
                     && groupSources.size() >= 2)
                 {
                     simGroups.add(sg);
                 }
-                else if ("fid".equalsIgnoreCase(sg.getSemantics())
+                else if (SourceGroupPacketExtension.SEMANTICS_FID
+                    .equalsIgnoreCase(sg.getSemantics())
                     && groupSources.size() == 2)
                 {
                     rtxPairs.put(
