@@ -502,8 +502,32 @@ public class LipSyncHack
             {
                 ssrcsWithoutBlackKeyframes.remove(ssrc);
 
-                boolean isSOF = channel.getStream().isStartOfFrame(
-                    pkts[i].getBuffer(), pkts[i].getOffset(), pkts[i].getLength());
+                StreamRTPManager receiveRTPManager = channel
+                    .getStream()
+                    .getRTPTranslator()
+                    .findStreamRTPManagerByReceiveSSRC((int) ssrc);
+
+                MediaStreamTrackReceiver receiver = null;
+                if (receiveRTPManager != null)
+                {
+                    MediaStream receiveStream
+                        = receiveRTPManager.getMediaStream();
+                    if (receiveStream != null)
+                    {
+                        receiver = receiveStream.getMediaStreamTrackReceiver();
+                    }
+                }
+
+                if (receiver == null)
+                {
+                    continue;
+                }
+
+                SourceFrameDesc sourceFrameDesc
+                    = receiver.resolveFrameDesc(pkts[i]);
+
+                boolean isSOF
+                    = sourceFrameDesc.getStart() == pkts[i].getSequenceNumber();
 
                 int sofDistance = isSOF ? 0 : 10;
 
