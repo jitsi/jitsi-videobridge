@@ -137,7 +137,7 @@ public class RtxTransformer
             return null;
         }
 
-        long mediaSsrc = getFidPairedSsrc(pkt);
+        long mediaSsrc = getPrimarySsrc(pkt);
         if (mediaSsrc != -1)
         {
             if (rtxAssociatedPayloadType != -1)
@@ -228,7 +228,7 @@ public class RtxTransformer
      * which to find a paired SSRC.
      * @return An SSRC paired with {@code ssrc} in an FID group, or -1.
      */
-    private long getPairedSsrc(RawPacket pkt)
+    private long getRtxSsrc(RawPacket pkt)
     {
         StreamRTPManager receiveRTPManager = channel
             .getStream()
@@ -280,7 +280,7 @@ public class RtxTransformer
 
         if (destinationSupportsRtx)
         {
-            long rtxSsrc = getPairedSsrc(pkt);
+            long rtxSsrc = getRtxSsrc(pkt);
 
             if (rtxSsrc == -1)
             {
@@ -424,7 +424,7 @@ public class RtxTransformer
      * @return the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
      * any. If none is found, returns -1.
      */
-    private long getFidPairedSsrc(RawPacket pkt)
+    private long getPrimarySsrc(RawPacket pkt)
     {
         MediaStreamTrackReceiver receiver
             = channel.getStream().getMediaStreamTrackReceiver();
