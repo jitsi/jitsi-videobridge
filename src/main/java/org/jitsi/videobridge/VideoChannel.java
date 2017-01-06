@@ -603,6 +603,10 @@ public class VideoChannel
         byte[] buffer, int offset, int length,
         Channel source)
     {
+        if (!data || source == null)
+        {
+            return true;
+        }
         // XXX(gp) we could potentially move this into a TransformEngine.
         boolean accept = lastNController.isForwarded(source);
 
