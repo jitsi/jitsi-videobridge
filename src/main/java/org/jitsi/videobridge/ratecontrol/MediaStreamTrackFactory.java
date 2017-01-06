@@ -17,7 +17,7 @@ package org.jitsi.videobridge.ratecontrol;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.rtp.*;
 
 import java.util.*;
 
