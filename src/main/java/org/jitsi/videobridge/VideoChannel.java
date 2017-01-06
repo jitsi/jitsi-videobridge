@@ -590,7 +590,7 @@ public class VideoChannel
 
         if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            lastNController.setPinnedEndpointIds((List<String>)ev.getNewValue());
+            lastNController.setPinnedEndpointIds((Set<String>)ev.getNewValue());
         }
     }
 
