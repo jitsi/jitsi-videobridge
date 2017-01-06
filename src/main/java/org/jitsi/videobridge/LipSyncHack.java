@@ -523,11 +523,11 @@ public class LipSyncHack
                     continue;
                 }
 
-                SourceFrameDesc sourceFrameDesc
+                FrameDesc frameDesc
                     = receiver.resolveFrameDesc(pkts[i]);
 
                 boolean isSOF
-                    = sourceFrameDesc.getStart() == pkts[i].getSequenceNumber();
+                    = frameDesc.getStart() == pkts[i].getSequenceNumber();
 
                 int sofDistance = isSOF ? 0 : 10;
 
