@@ -19,8 +19,6 @@ import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
@@ -153,20 +151,10 @@ public class Endpoint
     private final String loggingId;
 
     /**
-     * The <tt>pinnedEndpointID</tt> SyncRoot.
-     */
-    private final Object pinnedEndpointSyncRoot = new Object();
-
-    /**
      * SCTP connection bound to this endpoint.
      */
     private WeakReference<SctpConnection> sctpConnection
         = new WeakReference<>(null);
-
-    /**
-     * The <tt>selectedEndpointID</tt> SyncRoot.
-     */
-    private final Object selectedEndpointSyncRoot = new Object();
 
     /**
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
@@ -706,46 +694,14 @@ public class Endpoint
     private void selectedEndpointsChanged(Set<String> newSelectedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
-        Set<String> oldSelecteddEndpoints = this.selectedEndpoints;
-        if (!oldSelecteddEndpoints.equals(newSelectedEndpoints))
+        Set<String> oldSelectedEndpoints = this.selectedEndpoints;
+        if (!oldSelectedEndpoints.equals(newSelectedEndpoints))
         {
             this.selectedEndpoints = newSelectedEndpoints;
 
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
-                oldSelecteddEndpoints, selectedEndpoints);
+                oldSelectedEndpoints, selectedEndpoints);
         }
-    }
-
-    /**
-     * A helper function that reads the selected endpoint id list from the json
-     * message. Accepts ID list and a single ID
-     *
-     * @param jsonObject The whole message that contains a 'selectedEndpoint'
-     *                   field
-     * @return The list of the IDs or empty list if some problem happened
-     */
-    static private List<String> readSelectedEndpointID(JSONObject jsonObject)
-    {
-        List<String> selectedEndpointIDs;
-        Object selectedEndpointJsonObject = jsonObject.get("selectedEndpoint");
-
-        if (selectedEndpointJsonObject != null &&
-                selectedEndpointJsonObject instanceof JSONArray)
-        {   // JSONArray is an ArrayList
-            selectedEndpointIDs = (List<String>) selectedEndpointJsonObject;
-        }
-        else if (selectedEndpointJsonObject != null &&
-                selectedEndpointJsonObject instanceof String)
-        {
-            selectedEndpointIDs = new ArrayList<>();
-            selectedEndpointIDs.add((String)selectedEndpointJsonObject);
-        }
-        else
-        {   // Unknown type
-            selectedEndpointIDs = new ArrayList<>();
-        }
-
-        return selectedEndpointIDs;
     }
 
     /**
