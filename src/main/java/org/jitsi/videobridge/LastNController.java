@@ -61,7 +61,7 @@ public class LastNController
      * The list of endpoints which have been explicitly marked as 'pinned'
      * and whose video streams should always be forwarded.
      */
-    private List<String> pinnedEndpoints = INITIAL_EMPTY_LIST;
+    private Set<String> pinnedEndpoints = Collections.EMPTY_SET;
 
     /**
      * The maximum number of endpoints whose video streams will be forwarded
@@ -211,7 +211,7 @@ public class LastNController
      * should always be forwarded, regardless of {@code lastN}).
      * @param newPinnedEndpointIds the list of endpoint IDs to set.
      */
-    public void setPinnedEndpointIds(List<String> newPinnedEndpointIds)
+    public void setPinnedEndpointIds(Set<String> newPinnedEndpointIds)
     {
         if (logger.isDebugEnabled())
         {
@@ -224,10 +224,10 @@ public class LastNController
             // Since we have the lock anyway, call update() inside, so it
             // doesn't have to obtain it again. But keep the call to
             // askForKeyframes() outside.
-            if (!equalAsSets(pinnedEndpoints, newPinnedEndpointIds))
+            if (!pinnedEndpoints.equals(newPinnedEndpointIds))
             {
                 pinnedEndpoints
-                        = Collections.unmodifiableList(newPinnedEndpointIds);
+                        = Collections.unmodifiableSet(newPinnedEndpointIds);
 
                 endpointsToAskForKeyframe = update();
             }
@@ -243,7 +243,7 @@ public class LastNController
      * @return {@code true} iff RTP packets from {@code sourceChannel} should
      * be forwarded to {@link #channel}.
      */
-    public boolean isForwarded(Channel sourceChannel)
+    public boolean isForwarded(RtpChannel sourceChannel)
     {
         if (lastN < 0 && currentLastN < 0)
         {
@@ -289,7 +289,7 @@ public class LastNController
     /**
      * @return the list of "pinned" endpoints.
      */
-    public List<String> getPinnedEndpoints()
+    public Set<String> getPinnedEndpoints()
     {
         return pinnedEndpoints;
     }

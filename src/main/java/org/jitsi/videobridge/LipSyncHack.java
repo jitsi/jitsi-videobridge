@@ -23,7 +23,6 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
-import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -209,35 +208,40 @@ public class LipSyncHack
             return;
         }
 
-        VideoChannel sourceVC = (VideoChannel) sourceVideoChannels.get(0);
-        if (sourceVC == null)
+        VideoChannel sourceVideoChannel
+            = (VideoChannel) sourceVideoChannels.get(0);
+        if (sourceVideoChannel == null)
         {
             return;
         }
 
-        SimulcastReceiver recv = sourceVC.getTransformEngine()
-            .getSimulcastEngine().getSimulcastReceiver();
+        MediaStream sourceVideoStream = sourceVideoChannel.getStream();
+        if (sourceVideoStream == null)
+        {
+            return;
+        }
 
-        Long receiveVideoSSRC;
-        if (recv != null && recv.isSimulcastSignaled())
+        MediaStreamTrackReceiver sourceReceiver
+            = sourceVideoStream.getMediaStreamTrackReceiver();
+
+        if (sourceReceiver == null)
         {
-            // FIXME this is a little ugly
-            receiveVideoSSRC = recv.getSimulcastStream(
-                0, channel.getStream()).getPrimarySSRC();
+            return;
         }
-        else
+
+        MediaStreamTrack[] sourceTracks = sourceReceiver.getMediaStreamTracks();
+        if (ArrayUtils.isNullOrEmpty(sourceTracks))
         {
-            int[] receiveSSRCs = sourceVC.getReceiveSSRCs();
-            if (receiveSSRCs == null || receiveSSRCs.length == 0)
-            {
-                // It seems like we're not ready yet to trigger the hack.
-                return;
-            }
-            else
-            {
-                receiveVideoSSRC = receiveSSRCs[0] & 0xffffffffL;
-            }
+            return;
         }
+
+        RTPEncoding[] sourceEncodings = sourceTracks[0].getRTPEncodings();
+        if (ArrayUtils.isNullOrEmpty(sourceEncodings))
+        {
+            return;
+        }
+
+        long receiveVideoSSRC = sourceEncodings[0].getPrimarySSRC();
 
         // XXX we do this here (i.e. below the sanity checks), in order to avoid
         // any race conditions with a video channel being created and added to
@@ -502,8 +506,32 @@ public class LipSyncHack
             {
                 ssrcsWithoutBlackKeyframes.remove(ssrc);
 
-                boolean isSOF = channel.getStream().isStartOfFrame(
-                    pkts[i].getBuffer(), pkts[i].getOffset(), pkts[i].getLength());
+                StreamRTPManager receiveRTPManager = channel
+                    .getStream()
+                    .getRTPTranslator()
+                    .findStreamRTPManagerByReceiveSSRC((int) ssrc);
+
+                MediaStreamTrackReceiver receiver = null;
+                if (receiveRTPManager != null)
+                {
+                    MediaStream receiveStream
+                        = receiveRTPManager.getMediaStream();
+                    if (receiveStream != null)
+                    {
+                        receiver = receiveStream.getMediaStreamTrackReceiver();
+                    }
+                }
+
+                if (receiver == null)
+                {
+                    continue;
+                }
+
+                FrameDesc frameDesc
+                    = receiver.resolveFrameDesc(pkts[i]);
+
+                boolean isSOF
+                    = frameDesc.getStart() == pkts[i].getSequenceNumber();
 
                 int sofDistance = isSOF ? 0 : 10;
 

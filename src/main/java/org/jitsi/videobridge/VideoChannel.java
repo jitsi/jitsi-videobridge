@@ -576,7 +576,7 @@ public class VideoChannel
      * <tt>false</tt>. The implementation of the <tt>RtpChannel</tt> class
      * always returns <tt>true</tt>.
      */
-    public boolean isInLastN(Channel channel)
+    public boolean isInLastN(RtpChannel channel)
     {
         return lastNController.isForwarded(channel);
     }
@@ -590,7 +590,7 @@ public class VideoChannel
 
         if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            lastNController.setPinnedEndpointIds((List<String>)ev.getNewValue());
+            lastNController.setPinnedEndpointIds((Set<String>)ev.getNewValue());
         }
     }
 
@@ -601,9 +601,8 @@ public class VideoChannel
     boolean rtpTranslatorWillWrite(
         boolean data,
         byte[] buffer, int offset, int length,
-        Channel source)
+        RtpChannel source)
     {
-        // XXX(gp) we could potentially move this into a TransformEngine.
         boolean accept = lastNController.isForwarded(source);
 
         if (lipSyncHack != null)
@@ -1128,36 +1127,6 @@ public class VideoChannel
         if (simulcastTriplets == null || simulcastTriplets.length == 0)
         {
             return;
-        }
-
-        // FID groups have been saved in RtpChannel. Make sure any changes are
-        // propagated to the appropriate SimulcastStream-s.
-        synchronized (fidSourceGroups)
-        {
-            if (!fidSourceGroups.isEmpty())
-            {
-                for (Map.Entry<Long, Long> entry : this.fidSourceGroups
-                    .entrySet())
-                {
-                    if (entry.getKey() == null || entry.getValue() == null)
-                    {
-                        continue;
-                    }
-
-                    // autoboxing.
-                    long primarySSRC = entry.getKey();
-                    long fidSSRC = entry.getValue();
-
-                    for (int i = 0; i < simulcastTriplets.length; i++)
-                    {
-                        if (simulcastTriplets[i][0] == primarySSRC)
-                        {
-                            simulcastTriplets[i][1] = fidSSRC;
-                            break;
-                        }
-                    }
-                }
-            }
         }
 
         SimulcastStream[] simulcastStreams

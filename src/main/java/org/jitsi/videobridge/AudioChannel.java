@@ -324,7 +324,7 @@ public class AudioChannel
     boolean rtpTranslatorWillWrite(
         boolean data,
         byte[] buffer, int offset, int length,
-        Channel source)
+        RtpChannel source)
     {
         if (!fetchedLipSyncHack)
         {

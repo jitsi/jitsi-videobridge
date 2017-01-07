@@ -17,8 +17,11 @@ package org.jitsi.videobridge.transform;
 
 import java.util.*;
 import org.jitsi.impl.neomedia.*;
+import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
+import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 
@@ -29,6 +32,7 @@ import org.jitsi.videobridge.*;
  * the destination supports it).
  *
  * @author Boris Grozev
+ * @author George Politis
  */
 public class RtxTransformer
     extends SinglePacketTransformerAdapter
@@ -57,6 +61,17 @@ public class RtxTransformer
      * information.
      */
     private final Logger logger;
+
+    /**
+     * The payload type number configured for RTX (RFC-4588), or -1 if none is
+     * configured (the other end does not support rtx).
+     */
+    private byte rtxPayloadType = -1;
+
+    /**
+     * The "associated payload type" number for RTX.
+     */
+    private byte rtxAssociatedPayloadType = -1;
 
     /**
      * Initializes a new <tt>RtxTransformer</tt> with a specific
@@ -97,7 +112,7 @@ public class RtxTransformer
      */
     private boolean isRtx(RawPacket pkt)
     {
-        byte rtxPt = channel.getRtxPayloadType();
+        byte rtxPt = rtxPayloadType;
         return rtxPt != -1 && rtxPt == pkt.getPayloadType();
     }
 
@@ -110,7 +125,6 @@ public class RtxTransformer
     private RawPacket deRtx(RawPacket pkt)
     {
         boolean success = false;
-        long rtxSsrc = pkt.getSSRCAsLong();
 
         if (pkt.getPayloadLength() - pkt.getPaddingSize() < 2)
         {
@@ -123,11 +137,10 @@ public class RtxTransformer
             return null;
         }
 
-        long mediaSsrc = channel.getFidPairedSsrc(rtxSsrc);
+        long mediaSsrc = getPrimarySsrc(pkt);
         if (mediaSsrc != -1)
         {
-            byte apt = channel.getRtxAssociatedPayloadType();
-            if (apt != -1)
+            if (rtxAssociatedPayloadType != -1)
             {
                 int osn = pkt.getOriginalSequenceNumber();
                 // Remove the RTX header by moving the RTP header two bytes
@@ -143,15 +156,15 @@ public class RtxTransformer
 
                 pkt.setSSRC((int) mediaSsrc);
                 pkt.setSequenceNumber(osn);
-                pkt.setPayloadType(apt);
+                pkt.setPayloadType(rtxAssociatedPayloadType);
                 success = true;
             }
             else
             {
                 logger.warn(
                     "RTX packet received, but no APT is defined. Packet "
-                        + "SSRC " + rtxSsrc + ", associated media SSRC "
-                        + mediaSsrc);
+                        + "SSRC " + pkt.getSSRCAsLong() + ", associated media" +
+                        " SSRC " + mediaSsrc);
             }
         }
 
@@ -211,18 +224,42 @@ public class RtxTransformer
      * Tries to find an SSRC paired with {@code ssrc} in an FID group in one
      * of the channels from {@link #channel}'s {@code Content}. Returns -1 on
      * failure.
-     * @param ssrc the SSRC for which to find a paired SSRC.
+     * @param pkt the {@code RawPacket} that holds the RTP packet for
+     * which to find a paired SSRC.
      * @return An SSRC paired with {@code ssrc} in an FID group, or -1.
      */
-    private long getPairedSsrc(long ssrc)
+    private long getRtxSsrc(RawPacket pkt)
     {
-        RtpChannel sourceChannel
-                = channel.getContent().findChannelByFidSsrc(ssrc);
-        if (sourceChannel != null)
+        StreamRTPManager receiveRTPManager = channel
+            .getStream()
+            .getRTPTranslator()
+            .findStreamRTPManagerByReceiveSSRC(pkt.getSSRC());
+
+        MediaStreamTrackReceiver receiver = null;
+        if (receiveRTPManager != null)
         {
-            return sourceChannel.getFidPairedSsrc(ssrc);
+            MediaStream receiveStream = receiveRTPManager.getMediaStream();
+            if (receiveStream != null)
+            {
+                receiver = receiveStream.getMediaStreamTrackReceiver();
+            }
         }
-        return -1;
+
+        if (receiver == null)
+        {
+            return -1;
+        }
+
+        RTPEncoding encoding = receiver.resolveRTPEncoding(pkt);
+        if (encoding == null)
+        {
+            logger.warn("encoding_not_found"
+                + ",stream_hash=" + channel.getStream().hashCode()
+                + " ssrc=" + pkt.getSSRCAsLong());
+            return -1;
+        }
+
+        return encoding.getRTXSSRC();
     }
     /**
      * Retransmits a packet to {@link #channel}. If the destination supports
@@ -238,12 +275,12 @@ public class RtxTransformer
      */
     public boolean retransmit(RawPacket pkt, TransformEngine after)
     {
-        boolean destinationSupportsRtx = channel.getRtxPayloadType() != -1;
+        boolean destinationSupportsRtx = rtxPayloadType != -1;
         boolean retransmitPlain;
 
         if (destinationSupportsRtx)
         {
-            long rtxSsrc = getPairedSsrc(pkt.getSSRCAsLong());
+            long rtxSsrc = getRtxSsrc(pkt);
 
             if (rtxSsrc == -1)
             {
@@ -281,6 +318,40 @@ public class RtxTransformer
         }
 
         return true;
+    }
+
+    /**
+     * Notifies this instance that the dynamic payload types of the associated
+     * {@link MediaStream} have changed.
+     */
+    public void onDynamicPayloadTypesChanged()
+    {
+        rtxPayloadType = -1;
+        rtxAssociatedPayloadType = -1;
+
+        MediaStream mediaStream = channel.getStream();
+
+        Map<Byte, MediaFormat> mediaFormatMap
+            = mediaStream.getDynamicRTPPayloadTypes();
+
+        Iterator<Map.Entry<Byte, MediaFormat>> it
+            = mediaFormatMap.entrySet().iterator();
+
+        while (it.hasNext() && rtxPayloadType == -1)
+        {
+            Map.Entry<Byte, MediaFormat> entry = it.next();
+            MediaFormat format = entry.getValue();
+            if (!Constants.RTX.equalsIgnoreCase(format.getEncoding()))
+            {
+                continue;
+            }
+
+            // XXX(gp) we freak out if multiple codecs with RTX support are
+            // present.
+            rtxPayloadType = entry.getKey();
+            rtxAssociatedPayloadType
+                = Byte.parseByte(format.getFormatParameters().get("apt"));
+        }
     }
 
     /**
@@ -325,7 +396,7 @@ public class RtxTransformer
         if (mediaStream != null)
         {
             rtxPkt.setSSRC((int) rtxSsrc);
-            rtxPkt.setPayloadType(channel.getRtxPayloadType());
+            rtxPkt.setPayloadType(rtxPayloadType);
             // Only call getNextRtxSequenceNumber() when we're sure we're going
             // to transmit a packet, because it consumes a sequence number.
             rtxPkt.setSequenceNumber(getNextRtxSequenceNumber(rtxSsrc));
@@ -344,5 +415,41 @@ public class RtxTransformer
         }
 
         return true;
+    }
+
+    /**
+     * Returns the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
+     * any. If none is found, returns -1.
+     *
+     * @return the SSRC paired with <tt>ssrc</tt> in an FID source-group, if
+     * any. If none is found, returns -1.
+     */
+    private long getPrimarySsrc(RawPacket pkt)
+    {
+        MediaStreamTrackReceiver receiver
+            = channel.getStream().getMediaStreamTrackReceiver();
+
+        if (receiver == null)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                    "Dropping an incoming RTX packet from an unknown source.");
+            }
+            return -1;
+        }
+
+        RTPEncoding encoding = receiver.resolveRTPEncoding(pkt);
+        if (encoding == null)
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(
+                    "Dropping an incoming RTX packet from an unknown source.");
+            }
+            return -1;
+        }
+
+        return encoding.getPrimarySSRC();
     }
 }
