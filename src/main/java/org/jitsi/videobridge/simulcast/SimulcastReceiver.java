@@ -427,9 +427,10 @@ public class SimulcastReceiver
         boolean frameStarted = false;
         Boolean isKeyFrame = null;
 
-        if (logger.isInfoEnabled() && (isKeyFrame = getSimulcastEngine()
-            .getVideoChannel().getStream().isKeyFrame(
-                pkt.getBuffer(), pkt.getOffset(), pkt.getLength())))
+        if (logger.isInfoEnabled() && (isKeyFrame
+            = ((VideoMediaStream) getSimulcastEngine()
+                .getVideoChannel().getStream()).isKeyFrame(
+                    pkt.getBuffer(), pkt.getOffset(), pkt.getLength())))
         {
             logger.info(Logger.Category.STATISTICS,
                         "keyframe_received," + getLoggingId()

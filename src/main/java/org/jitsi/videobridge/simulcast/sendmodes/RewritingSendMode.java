@@ -16,6 +16,7 @@
 package org.jitsi.videobridge.simulcast.sendmodes;
 
 import org.jitsi.impl.neomedia.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.*;
@@ -116,10 +117,11 @@ public class RewritingSendMode
         }
 
         boolean accept = false;
-        if (next != null && next.matches(pkt) && getSimulcastSender()
-            .getSimulcastReceiver().getSimulcastEngine()
-            .getVideoChannel().getStream().isKeyFrame(
-                pkt.getBuffer(), pkt.getOffset(), pkt.getLength()))
+        if (next != null && next.matches(pkt)
+            && ((VideoMediaStream) getSimulcastSender()
+                .getSimulcastReceiver().getSimulcastEngine()
+                .getVideoChannel().getStream()).isKeyFrame(
+                    pkt.getBuffer(), pkt.getOffset(), pkt.getLength()))
         {
             // This is the first packet of a keyframe.
             if (diff >= 0)
