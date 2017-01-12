@@ -43,6 +43,7 @@ import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.service.neomedia.stats.*;
+import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
@@ -630,15 +631,6 @@ public class RtpChannel
         return true;
 
         } // synchronized (receiveSSRCsSyncRoot)
-    }
-
-    /**
-     * Asks this <tt>Channel</tt> to request keyframes in the RTP video streams
-     * that it receives.
-     */
-    void askForKeyframes()
-    {
-        askForKeyframes(getReceiveSSRCs());
     }
 
     /**
@@ -1281,28 +1273,6 @@ public class RtpChannel
     }
 
     /**
-     * Enables or disables the adaptive lastN functionality.
-     *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveLastN <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive lastN.
-     */
-    public void setAdaptiveLastN(boolean adaptiveLastN)
-    {}
-
-    /**
-     * Enables or disables the adaptive simulcast functionality.
-     *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveSimulcast <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive simulcast.
-     */
-    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
-    {}
-
-    /**
      * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
      * <p>
      * <b>Warning</b>: The method does nothing if latching has not finished.
@@ -1328,7 +1298,7 @@ public class RtpChannel
      * Jitsi Videobridge to the endpoint associated with this video
      * <tt>Channel</tt>
      */
-    public void setLastN(Integer lastN)
+    public void setLastN(int lastN)
     {
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
@@ -1546,16 +1516,11 @@ public class RtpChannel
      *
      * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
      * <tt>conferenceSpeechActivity</tt>
-     * @return a list of the <tt>Endpoint</tt>s which should be asked for
-     * (video) keyframes because, for example, they are entering the set of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s of this <tt>Channel</tt>, or
-     * {@code null} if there are no such endpoints.
      */
-    List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
+    void speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
-        return null;
     }
 
     /**
@@ -1908,9 +1873,12 @@ public class RtpChannel
         {
             MediaStreamTrackImpl[] newTracks
                 = MediaStreamTrackFactory.createMediaStreamTracks(
-                    mediaStreamTrackReceiver, sources, sourceGroups);
+                    mediaStreamTrackReceiver, sources, sourceGroups, false);
 
-            return mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+            boolean changed
+                = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+
+            return changed;
         }
         else
         {

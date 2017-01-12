@@ -1692,40 +1692,18 @@ public class Conference
      */
     private void speechActivityEndpointsChanged()
     {
-        List<Endpoint> endpoints;
-
         for (Content content : getContents())
         {
             if (MediaType.VIDEO.equals(content.getMediaType()))
             {
-                Set<Endpoint> endpointsToAskForKeyframes = null;
-
-                endpoints = speechActivity.getEndpoints();
+                List<Endpoint> endpoints = speechActivity.getEndpoints();
                 for (Channel channel : content.getChannels())
                 {
                     if (!(channel instanceof RtpChannel))
                         continue;
 
                     RtpChannel rtpChannel = (RtpChannel) channel;
-                    List<Endpoint> channelEndpointsToAskForKeyframes
-                        = rtpChannel.speechActivityEndpointsChanged(endpoints);
-
-                    if ((channelEndpointsToAskForKeyframes != null)
-                            && !channelEndpointsToAskForKeyframes.isEmpty())
-                    {
-                        if (endpointsToAskForKeyframes == null)
-                        {
-                            endpointsToAskForKeyframes = new HashSet<>();
-                        }
-                        endpointsToAskForKeyframes.addAll(
-                                channelEndpointsToAskForKeyframes);
-                    }
-                }
-
-                if ((endpointsToAskForKeyframes != null)
-                        && !endpointsToAskForKeyframes.isEmpty())
-                {
-                    content.askForKeyframes(endpointsToAskForKeyframes);
+                    rtpChannel.speechActivityEndpointsChanged(endpoints);
                 }
             }
         }

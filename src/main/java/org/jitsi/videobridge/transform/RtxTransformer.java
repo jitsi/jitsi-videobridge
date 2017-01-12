@@ -31,6 +31,8 @@ import org.jitsi.videobridge.*;
  * Allows packets to be retransmitted to a channel (using the RTX format if
  * the destination supports it).
  *
+ * TODO move to LJ.
+ *
  * @author Boris Grozev
  * @author George Politis
  */
@@ -250,7 +252,7 @@ public class RtxTransformer
             return -1;
         }
 
-        RTPEncoding encoding = receiver.resolveRTPEncoding(pkt);
+        RTPEncoding encoding = receiver.findRTPEncoding(pkt);
         if (encoding == null)
         {
             logger.warn("encoding_not_found"
@@ -439,7 +441,7 @@ public class RtxTransformer
             return -1;
         }
 
-        RTPEncoding encoding = receiver.resolveRTPEncoding(pkt);
+        RTPEncoding encoding = receiver.findRTPEncoding(pkt);
         if (encoding == null)
         {
             if (logger.isDebugEnabled())

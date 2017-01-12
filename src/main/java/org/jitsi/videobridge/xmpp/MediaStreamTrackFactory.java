@@ -44,7 +44,8 @@ public class MediaStreamTrackFactory
     public static MediaStreamTrackImpl[] createMediaStreamTracks(
         MediaStreamTrackReceiver mediaStreamTrackReceiver,
         List<SourcePacketExtension> sources,
-        List<SourceGroupPacketExtension> sourceGroups)
+        List<SourceGroupPacketExtension> sourceGroups,
+        boolean includeTemporal)
     {
         boolean hasSources = sources != null && !sources.isEmpty();
         boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
@@ -93,8 +94,11 @@ public class MediaStreamTrackFactory
                     List<SourcePacketExtension> simSources
                         = simGroup.getSources();
 
+                    int encodingslen = includeTemporal
+                        ? simSources.size() * 3 : simSources.size();
+
                     RTPEncodingImpl[] rtpEncodings
-                        = new RTPEncodingImpl[simSources.size() * 3];
+                        = new RTPEncodingImpl[encodingslen];
                     MediaStreamTrackImpl track = new MediaStreamTrackImpl(
                         mediaStreamTrackReceiver, rtpEncodings);
 
@@ -111,24 +115,34 @@ public class MediaStreamTrackFactory
                             grouped.add(rtxSSRC);
                         }
 
-                        int subjectiveQualityIdx = i * 3;
-                        RTPEncodingImpl encoding = new RTPEncodingImpl(
-                            track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
-                            0, null);
+                        if (includeTemporal)
+                        {
+                            int subjectiveQualityIdx = i * 3;
+                            RTPEncodingImpl encoding = new RTPEncodingImpl(
+                                track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
+                                0, null);
 
-                        rtpEncodings[subjectiveQualityIdx] = encoding;
+                            rtpEncodings[subjectiveQualityIdx] = encoding;
 
-                        subjectiveQualityIdx = i * 3 + 1;
-                        encoding = new RTPEncodingImpl(
-                            track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
-                            1, new RTPEncodingImpl[] { encoding });
-                        rtpEncodings[subjectiveQualityIdx] = encoding;
+                            subjectiveQualityIdx = i * 3 + 1;
+                            encoding = new RTPEncodingImpl(
+                                track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
+                                1, new RTPEncodingImpl[]{encoding});
+                            rtpEncodings[subjectiveQualityIdx] = encoding;
 
-                        subjectiveQualityIdx = i * 3 + 2;
-                        encoding = new RTPEncodingImpl(
-                            track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
-                            2, new RTPEncodingImpl[] { encoding });
-                        rtpEncodings[subjectiveQualityIdx] = encoding;
+                            subjectiveQualityIdx = i * 3 + 2;
+                            encoding = new RTPEncodingImpl(
+                                track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
+                                2, new RTPEncodingImpl[]{encoding});
+                            rtpEncodings[subjectiveQualityIdx] = encoding;
+                        }
+                        else
+                        {
+                            RTPEncodingImpl encoding = new RTPEncodingImpl(
+                                track, i, primarySSRC, rtxSSRC, -1, null);
+
+                            rtpEncodings[i] = encoding;
+                        }
                     }
 
                     tracks.add(track);

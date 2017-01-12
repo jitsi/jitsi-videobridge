@@ -207,45 +207,6 @@ public class Content
     }
 
     /**
-     * Sends keyframe requests for all SSRCs in all video channels of the
-     * endpoints specified by ID in {@code endpointIds}.
-     * @param endpointIds the list of IDs of endpoints to send keyframe
-     * requests to.
-     */
-    public void askForKeyframesById(Collection<String> endpointIds)
-    {
-        List<Endpoint> endpoints = new LinkedList<>();
-        Conference conference = getConference();
-        for (String endpointId : endpointIds)
-        {
-            Endpoint endpoint = conference.getEndpoint(endpointId);
-            if (endpoint != null)
-            {
-                endpoints.add(endpoint);
-            }
-        }
-
-        if (!endpoints.isEmpty())
-        {
-            askForKeyframes(endpoints);
-        }
-    }
-
-    /**
-     * Sends keyframe requests for all SSRCs in all video channels of the
-     * endpoints in {@code endpoints}.
-     * @param endpoints the list of endpoints to send keyframe requests to.
-     */
-    void askForKeyframes(Collection<Endpoint> endpoints)
-    {
-        for (Endpoint endpoint : endpoints)
-        {
-            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
-                channel.askForKeyframes();
-        }
-    }
-
-    /**
      * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
      * <tt>RtpChannel</tt>s of this <tt>Content</tt>. The new
      * <tt>RtpChannel</tt> instance has an ID which is unique within the list of

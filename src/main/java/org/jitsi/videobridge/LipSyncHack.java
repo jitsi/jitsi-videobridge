@@ -148,7 +148,7 @@ public class LipSyncHack
      *
      * @param channel the {@link VideoChannel} that owns this hack.
      */
-    public LipSyncHack(VideoChannel channel)
+    LipSyncHack(VideoChannel channel)
     {
         this.channel = channel;
     }
@@ -166,7 +166,7 @@ public class LipSyncHack
      * <tt>offset</tt> which represent the received RTP or RTCP packet.
      * @param source the {@link Channel} where this packet came from.
      */
-    public void onRTPTranslatorWillWriteAudio(
+    void onRTPTranslatorWillWriteAudio(
         boolean data, byte[] buffer, int offset,
         int length, Channel source)
     {
@@ -201,41 +201,14 @@ public class LipSyncHack
             return;
         }
 
-        List<RtpChannel> sourceVideoChannels
-            = source.getEndpoint().getChannels(MediaType.VIDEO);
-        if (sourceVideoChannels == null || sourceVideoChannels.size() == 0)
-        {
-            return;
-        }
-
-        VideoChannel sourceVideoChannel
-            = (VideoChannel) sourceVideoChannels.get(0);
-        if (sourceVideoChannel == null)
-        {
-            return;
-        }
-
-        MediaStream sourceVideoStream = sourceVideoChannel.getStream();
-        if (sourceVideoStream == null)
-        {
-            return;
-        }
-
-        MediaStreamTrackReceiver sourceReceiver
-            = sourceVideoStream.getMediaStreamTrackReceiver();
-
-        if (sourceReceiver == null)
-        {
-            return;
-        }
-
-        MediaStreamTrack[] sourceTracks = sourceReceiver.getMediaStreamTracks();
+        MediaStreamTrackImpl[] sourceTracks
+            = source.getEndpoint().getMediaStreamTracks(MediaType.VIDEO);
         if (ArrayUtils.isNullOrEmpty(sourceTracks))
         {
             return;
         }
 
-        RTPEncoding[] sourceEncodings = sourceTracks[0].getRTPEncodings();
+        RTPEncodingImpl[] sourceEncodings = sourceTracks[0].getRTPEncodings();
         if (ArrayUtils.isNullOrEmpty(sourceEncodings))
         {
             return;
@@ -284,15 +257,10 @@ public class LipSyncHack
      * <tt>offset</tt> which represent the received RTP or RTCP packet.
      * @param target the {@link Channel} where this packet is going.
      */
-    public void onRTPTranslatorWillWriteVideo(
-        boolean accept, boolean data, byte[] buffer,
+    void onRTPTranslatorWillWriteVideo(
+        boolean data, byte[] buffer,
         int offset, int length, Channel target)
     {
-        if (!accept)
-        {
-            return;
-        }
-
         Long acceptedVideoSSRC /* box early */;
         long timestamp;
         int seqnum;
@@ -394,51 +362,6 @@ public class LipSyncHack
                 ssrcsWithoutBlackKeyframes.add(acceptedVideoSSRC);
                 return;
             }
-
-            StreamRTPManager streamRTPManager
-                = targetVC.getStream().getStreamRTPManager();
-
-            ResumableStreamRewriter rewriter = streamRTPManager
-                .getResumableStreamRewriter(acceptedVideoSSRC);
-
-            if (timestamp != -1)
-            {
-                // Timestamps are calculated.
-                long highestTimestampSent = state.getNextTimestamp();
-
-                long lastTimestampDropped
-                    = (timestamp - TS_INCREMENT_PER_FRAME) & 0xffffffffl;
-                long timestampDelta =
-                    (lastTimestampDropped - highestTimestampSent) & 0xffffffffl;
-
-                // timestamps might have already been updated, due to the
-                // reception of RTCP.
-                if (rewriter.getHighestTimestampSent() == -1)
-                {
-                    rewriter.setHighestTimestampSent(highestTimestampSent);
-                }
-
-                if (rewriter.getTimestampDelta() == 0)
-                {
-                    rewriter.setTimestampDelta(timestampDelta);
-                }
-            }
-
-            if (seqnum != -1)
-            {
-                // Pretend we have dropped all the packets prior to the one
-                // that's about to be written by the translator.
-                int highestSeqnumSent = state.getNextSequenceNumber();
-
-                // Pretend we have dropped all the packets prior to the one
-                // that's about to be written by the translator.
-                int lastSeqnumDropped = RTPUtils.subtractNumber(seqnum, 1);
-                int seqnumDelta = RTPUtils.subtractNumber(
-                    lastSeqnumDropped, highestSeqnumSent);
-
-                rewriter.setHighestSequenceNumberSent(highestSeqnumSent);
-                rewriter.setSeqnumDelta(seqnumDelta);
-            }
         }
     }
 
@@ -528,7 +451,7 @@ public class LipSyncHack
                 }
 
                 FrameDesc frameDesc
-                    = receiver.resolveFrameDesc(pkts[i]);
+                    = receiver.findFrameDesc(pkts[i]);
 
                 boolean isSOF
                     = frameDesc.getStart() == pkts[i].getSequenceNumber();
@@ -594,7 +517,7 @@ public class LipSyncHack
          *
          * @param injectState
          */
-        public InjectTask(InjectState injectState)
+        InjectTask(InjectState injectState)
         {
             this.injectState = injectState;
         }
@@ -755,7 +678,7 @@ public class LipSyncHack
          * @return the next sequence number to use based on the number of key
          * frames that have already been sent.
          */
-        public int getNextSequenceNumber()
+        int getNextSequenceNumber()
         {
             return (seqnumOffset + numOfKeyframesSent) & 0xffff;
         }
@@ -767,7 +690,7 @@ public class LipSyncHack
          * @return Gets the next timestamp to use based on the number of key
          * frames that have already been sent.
          */
-        public long getNextTimestamp()
+        long getNextTimestamp()
         {
             return (timestampOffset
                 + numOfKeyframesSent * TS_INCREMENT_PER_FRAME) & 0xffffffffl;
@@ -778,7 +701,7 @@ public class LipSyncHack
          *
          * @param ssrc
          */
-        public InjectState(Long ssrc, boolean active)
+        InjectState(Long ssrc, boolean active)
         {
             this.ssrc = ssrc;
             this.active = active;

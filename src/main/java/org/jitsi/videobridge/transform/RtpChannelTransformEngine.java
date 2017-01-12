@@ -19,7 +19,6 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.delay.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.simulcast.*;
 
 import java.util.*;
 
@@ -64,12 +63,6 @@ public class RtpChannelTransformEngine
     private RtxTransformer rtxTransformer;
 
     /**
-     * The <tt>SimulcastEngine</tt> instance, if any, used by the
-     * <tt>RtpChannel</tt>.
-     */
-    private SimulcastEngine simulcastEngine;
-
-    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -109,14 +102,17 @@ public class RtpChannelTransformEngine
 
             transformerList = new LinkedList<>();
 
+            BitrateController vrc = videoChannel.getBitrateController();
+            if (vrc != null)
+            {
+                transformerList.add(vrc);
+            }
+
             LipSyncHack lipSyncHack = videoChannel.getLipSyncHack();
             if (lipSyncHack != null)
             {
                 transformerList.add(lipSyncHack);
             }
-
-            simulcastEngine = new SimulcastEngine(videoChannel);
-            transformerList.add(simulcastEngine);
 
             redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
             transformerList.add(redFilter);
@@ -156,18 +152,6 @@ public class RtpChannelTransformEngine
     public RtxTransformer getRtxTransformer()
     {
         return rtxTransformer;
-    }
-
-    /**
-     * Gets the <tt>SimulcastEngine</tt> instance, if any, used by the
-     * <tt>RtpChannel</tt>.
-     *
-     * @return the <tt>SimulcastEngine</tt> instance used by the
-     * <tt>RtpChannel</tt>, or <tt>null</tt>.
-     */
-    public SimulcastEngine getSimulcastEngine()
-    {
-        return simulcastEngine;
     }
 
     /**
