@@ -23,15 +23,12 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.*;
 
 /**
- * Intercepts RTX (RFC-4588) packets coming from an {@link RtpChannel}, and
+ * Intercepts RTX (RFC-4588) packets coming from an {@link MediaStream}, and
  * removes their RTX encapsulation.
- * Allows packets to be retransmitted to a channel (using the RTX format if
+ * Allows packets to be retransmitted to a mediaStream (using the RTX format if
  * the destination supports it).
- *
- * TODO move to LJ.
  *
  * @author Boris Grozev
  * @author George Politis
@@ -41,17 +38,9 @@ public class RtxTransformer
     implements TransformEngine
 {
     /**
-     * The {@link Logger} used by the {@link RtxTransformer} class to print
-     * debug information. Note that {@link Conference} instances should use
-     * {@link #logger} instead.
+     * The <tt>MediaStream</tt> for the transformer.
      */
-    private static final Logger classLogger
-        = Logger.getLogger(RtxTransformer.class);
-
-    /**
-     * The <tt>RtpChannel</tt> for the transformer.
-     */
-    private RtpChannel channel;
+    private MediaStream mediaStream;
 
     /**
      * Maps an RTX SSRC to the last RTP sequence number sent with that SSRC.
@@ -62,7 +51,7 @@ public class RtxTransformer
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger;
+    private final Logger logger = Logger.getLogger(RtxTransformer.class);
 
     /**
      * The payload type number configured for RTX (RFC-4588), or -1 if none is
@@ -77,19 +66,15 @@ public class RtxTransformer
 
     /**
      * Initializes a new <tt>RtxTransformer</tt> with a specific
-     * <tt>RtpChannel</tt>.
+     * <tt>MediaStream</tt>.
      *
-     * @param channel the <tt>RtpChannel</tt> for the transformer.
+     * @param mediaStream the <tt>MediaStream</tt> for the transformer.
      */
-    RtxTransformer(RtpChannel channel)
+    RtxTransformer(MediaStream mediaStream)
     {
         super(RTPPacketPredicate.INSTANCE);
 
-        this.channel = channel;
-        this.logger
-            = Logger.getLogger(
-                    classLogger,
-                    channel.getContent().getConference().getLogger());
+        this.mediaStream = mediaStream;
     }
 
     /**
@@ -224,7 +209,7 @@ public class RtxTransformer
 
     /**
      * Tries to find an SSRC paired with {@code ssrc} in an FID group in one
-     * of the channels from {@link #channel}'s {@code Content}. Returns -1 on
+     * of the mediaStreams from {@link #mediaStream}'s {@code Content}. Returns -1 on
      * failure.
      * @param pkt the {@code RawPacket} that holds the RTP packet for
      * which to find a paired SSRC.
@@ -232,8 +217,7 @@ public class RtxTransformer
      */
     private long getRtxSsrc(RawPacket pkt)
     {
-        StreamRTPManager receiveRTPManager = channel
-            .getStream()
+        StreamRTPManager receiveRTPManager = mediaStream
             .getRTPTranslator()
             .findStreamRTPManagerByReceiveSSRC(pkt.getSSRC());
 
@@ -256,7 +240,7 @@ public class RtxTransformer
         if (encoding == null)
         {
             logger.warn("encoding_not_found"
-                + ",stream_hash=" + channel.getStream().hashCode()
+                + ",stream_hash=" + mediaStream.hashCode()
                 + " ssrc=" + pkt.getSSRCAsLong());
             return -1;
         }
@@ -264,7 +248,7 @@ public class RtxTransformer
         return encoding.getRTXSSRC();
     }
     /**
-     * Retransmits a packet to {@link #channel}. If the destination supports
+     * Retransmits a packet to {@link #mediaStream}. If the destination supports
      * the RTX format, the packet will be encapsulated in RTX, otherwise, the
      * packet will be retransmitted as-is.
      *
@@ -303,8 +287,6 @@ public class RtxTransformer
 
         if (retransmitPlain)
         {
-            MediaStream mediaStream = channel.getStream();
-
             if (mediaStream != null)
             {
                 try
@@ -331,8 +313,6 @@ public class RtxTransformer
         rtxPayloadType = -1;
         rtxAssociatedPayloadType = -1;
 
-        MediaStream mediaStream = channel.getStream();
-
         Map<Byte, MediaFormat> mediaFormatMap
             = mediaStream.getDynamicRTPPayloadTypes();
 
@@ -358,7 +338,7 @@ public class RtxTransformer
 
     /**
      * Encapsulates {@code pkt} in the RTX format, using {@code rtxSsrc} as its
-     * SSRC, and transmits it to {@link #channel} by injecting it in the
+     * SSRC, and transmits it to {@link #mediaStream} by injecting it in the
      * {@code MediaStream}.
      * @param pkt the packet to transmit.
      * @param rtxSsrc the SSRC for the RTX stream.
@@ -394,7 +374,6 @@ public class RtxTransformer
                          newBuf, headerLength + 2,
                          payloadLength );
 
-        MediaStream mediaStream = channel.getStream();
         if (mediaStream != null)
         {
             rtxPkt.setSSRC((int) rtxSsrc);
@@ -429,7 +408,7 @@ public class RtxTransformer
     private long getPrimarySsrc(RawPacket pkt)
     {
         MediaStreamTrackReceiver receiver
-            = channel.getStream().getMediaStreamTrackReceiver();
+            = mediaStream.getMediaStreamTrackReceiver();
 
         if (receiver == null)
         {
