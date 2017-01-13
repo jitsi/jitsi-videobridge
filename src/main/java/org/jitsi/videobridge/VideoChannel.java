@@ -259,15 +259,6 @@ public class VideoChannel
         initialize(null);
     }
 
-    @Override
-    void initialize(RTPLevelRelayType rtpLevelRelayType)
-        throws IOException
-    {
-        super.initialize(rtpLevelRelayType);
-
-        // TODO move to LJ
-        new RTCPTermination(this);
-    }
     /**
      * {@inheritDoc}
      */

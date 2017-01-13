@@ -57,12 +57,6 @@ public class RtpChannelTransformEngine
     private REDFilterTransformEngine redFilter;
 
     /**
-     * The transformer which handles outgoing rtx (RFC-4588) packets for this
-     * channel.
-     */
-    private RtxTransformer rtxTransformer;
-
-    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -116,9 +110,6 @@ public class RtpChannelTransformEngine
 
             redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
             transformerList.add(redFilter);
-
-            rtxTransformer = new RtxTransformer(channel);
-            transformerList.add(rtxTransformer);
         }
         else
         {
@@ -141,17 +132,6 @@ public class RtpChannelTransformEngine
     {
         if (redFilter != null)
             redFilter.setEnabled(enabled);
-    }
-
-    /**
-     * Gets the {@code RtxTransformer}, if any, used by the {@code RtpChannel}.
-     *
-     * @return the {@code RtxTransformer} used by the {@code RtpChannel} or
-     * {@code null}
-     */
-    public RtxTransformer getRtxTransformer()
-    {
-        return rtxTransformer;
     }
 
     /**

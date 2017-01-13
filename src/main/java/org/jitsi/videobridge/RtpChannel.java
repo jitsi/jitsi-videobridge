@@ -43,7 +43,6 @@ import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.service.neomedia.stats.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
@@ -226,6 +225,9 @@ public class RtpChannel
 
     /**
      * The instance which holds statistics for this {@link RtpChannel}instance.
+     *
+     * TODO(gp) we should think about separating stats collection and stats
+     * retrieval (stats snapshots)
      */
     protected final Statistics statistics = new Statistics();
 
@@ -1354,13 +1356,6 @@ public class RtpChannel
                 {
                     transportManager.payloadTypesChanged(this);
                 }
-
-                RtxTransformer rtxTransformer;
-                if (transformEngine != null && (rtxTransformer
-                    = transformEngine.getRtxTransformer()) != null)
-                {
-                    rtxTransformer.onDynamicPayloadTypesChanged();
-                }
             }
 
         }
@@ -1766,17 +1761,18 @@ public class RtpChannel
                 conferenceStatistics.totalNoPayloadChannels.incrementAndGet();
             }
 
+            MediaStreamStats streamStats = stream.getMediaStreamStats();
             logger.info(Logger.Category.STATISTICS,
                         "expire_ch_stats," + getLoggingId() +
                             " bRecv=" + statistics.bytesReceived +
                             ",bSent=" + statistics.bytesSent +
                             ",pRecv=" + statistics.packetsReceived +
                             ",pSent=" + statistics.packetsSent +
-                            ",bRetr=" + statistics.bytesRetransmitted +
-                            ",bNotRetr=" + statistics.bytesNotRetransmitted +
-                            ",pRetr=" + statistics.packetsRetransmitted +
-                            ",pNotRetr=" + statistics.packetsNotRetransmitted +
-                            ",pMiss=" + statistics.packetsMissingFromCache);
+                            ",bRetr=" + streamStats.getBytesRetransmitted() +
+                            ",bNotRetr=" + streamStats.getBytesNotRetransmitted() +
+                            ",pRetr=" + streamStats.getPacketsRetransmitted() +
+                            ",pNotRetr=" + streamStats.getPacketsNotRetransmitted() +
+                            ",pMiss=" + streamStats.getPacketsMissingFromCache());
         }
         TransformEngine transformEngine = this.transformEngine;
         if (transformEngine != null)
@@ -1947,33 +1943,5 @@ public class RtpChannel
          * is closed.
          */
         protected long packetsReceived = -1;
-
-        /**
-         * Number of bytes retransmitted.
-         */
-        protected final AtomicLong bytesRetransmitted = new AtomicLong();
-
-        /**
-         * Number of bytes for packets which were requested and found in the
-         * cache, but were intentionally not retransmitted.
-         */
-        protected final AtomicLong bytesNotRetransmitted = new AtomicLong();
-
-        /**
-         * Number of packets retransmitted.
-         */
-        protected final AtomicLong packetsRetransmitted = new AtomicLong();
-
-        /**
-         * Number of packets which were requested and found in the cache, but
-         * were intentionally not retransmitted.
-         */
-        protected AtomicLong packetsNotRetransmitted = new AtomicLong();
-
-        /**
-         * The number of packets for which retransmission was requested, but
-         * they were missing from the cache.
-         */
-        protected AtomicLong packetsMissingFromCache = new AtomicLong();
     }
 }
