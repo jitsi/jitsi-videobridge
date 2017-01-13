@@ -419,10 +419,9 @@ public class VideoChannel
         boolean accept = bitrateController
             .rtpTranslatorWillWrite(data, buffer, offset, length, source);
 
-        if (accept && lipSyncHack != null)
+        if (data && accept && lipSyncHack != null)
         {
-            lipSyncHack.onRTPTranslatorWillWriteVideo(
-                data, buffer, offset, length, this);
+            lipSyncHack.onRTPTranslatorWillWriteVideo(buffer, offset, length);
         }
 
         return accept;

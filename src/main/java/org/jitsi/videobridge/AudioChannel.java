@@ -326,6 +326,11 @@ public class AudioChannel
         byte[] buffer, int offset, int length,
         RtpChannel source)
     {
+        if (!data)
+        {
+            return true;
+        }
+
         if (!fetchedLipSyncHack)
         {
             fetchedLipSyncHack = true;
@@ -343,7 +348,7 @@ public class AudioChannel
         if (associatedLipSyncHack != null)
         {
             associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
-                data, buffer, offset, length, source);
+                buffer, offset, length, source);
         }
 
         return true;
