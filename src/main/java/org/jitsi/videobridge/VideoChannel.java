@@ -712,13 +712,13 @@ public class VideoChannel
                     return;
                 }
 
-                MediaStreamTrackImpl[] tracks = receiver.getMediaStreamTracks();
+                MediaStreamTrackDesc[] tracks = receiver.getMediaStreamTracks();
                 if (ArrayUtils.isNullOrEmpty(tracks))
                 {
                     return;
                 }
 
-                RTPEncodingImpl[] encodings = tracks[0].getRTPEncodings();
+                RTPEncodingDesc[] encodings = tracks[0].getRTPEncodings();
                 if (ArrayUtils.isNullOrEmpty(encodings))
                 {
                     return;

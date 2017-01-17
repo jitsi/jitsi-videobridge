@@ -19,7 +19,6 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.atomic.*;
 
 import javax.media.rtp.*;
 
@@ -1867,7 +1866,7 @@ public class RtpChannel
 
         if (mediaStreamTrackReceiver != null)
         {
-            MediaStreamTrackImpl[] newTracks
+            MediaStreamTrackDesc[] newTracks
                 = MediaStreamTrackFactory.createMediaStreamTracks(
                     mediaStreamTrackReceiver, sources, sourceGroups, false);
 

@@ -172,14 +172,14 @@ public class LipSyncHack
             return;
         }
 
-        MediaStreamTrackImpl[] sourceTracks
+        MediaStreamTrackDesc[] sourceTracks
             = source.getEndpoint().getMediaStreamTracks(MediaType.VIDEO);
         if (ArrayUtils.isNullOrEmpty(sourceTracks))
         {
             return;
         }
 
-        RTPEncodingImpl[] sourceEncodings = sourceTracks[0].getRTPEncodings();
+        RTPEncodingDesc[] sourceEncodings = sourceTracks[0].getRTPEncodings();
         if (ArrayUtils.isNullOrEmpty(sourceEncodings))
         {
             return;

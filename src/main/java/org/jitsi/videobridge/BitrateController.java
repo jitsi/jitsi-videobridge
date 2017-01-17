@@ -180,7 +180,7 @@ public class BitrateController
             {
                 ctrl = new SimulcastController(allocations[i].track);
 
-                RTPEncodingImpl[] rtpEncodings
+                RTPEncodingDesc[] rtpEncodings
                     = allocations[i].track.getRTPEncodings();
 
                 // Route all encodings to the specified bitrate controller.
@@ -463,7 +463,7 @@ public class BitrateController
         /**
          *
          */
-        private final MediaStreamTrackImpl track;
+        private final MediaStreamTrackDesc track;
 
         /**
          *
@@ -495,7 +495,7 @@ public class BitrateController
             // This assumes that the array is ordered by the subjective quality
             // ordering ex: one can argue that 360p@30fps looks better than
             // 720p@7.5fps.
-            MediaStreamTrackImpl[] tracks
+            MediaStreamTrackDesc[] tracks
                 = endpoint.getMediaStreamTracks(MediaType.VIDEO);
 
             if (ArrayUtils.isNullOrEmpty(tracks))
@@ -507,7 +507,7 @@ public class BitrateController
             }
 
 
-            RTPEncodingImpl[] encodings = tracks[0].getRTPEncodings();
+            RTPEncodingDesc[] encodings = tracks[0].getRTPEncodings();
 
             if (ArrayUtils.isNullOrEmpty(encodings))
             {

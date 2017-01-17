@@ -932,15 +932,15 @@ public class Endpoint
     }
 
     /**
-     * Gets an array that contains all the {@link MediaStreamTrackImpl} of the
+     * Gets an array that contains all the {@link MediaStreamTrackDesc} of the
      * specified media type associated with this {@link Endpoint}.
      *
-     * @param mediaType the media type of the {@link MediaStreamTrackImpl} to
+     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
      * get.
-     * @return an array that contains all the {@link MediaStreamTrackImpl} of
+     * @return an array that contains all the {@link MediaStreamTrackDesc} of
      * the specified media type associated with this {@link Endpoint}, or null.
      */
-    public MediaStreamTrackImpl[] getMediaStreamTracks(MediaType mediaType)
+    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
     {
         List<RtpChannel> videoChannels = getChannels(mediaType);
 
@@ -949,7 +949,7 @@ public class Endpoint
             return null;
         }
 
-        MediaStreamTrackImpl[] ret = videoChannels.get(0)
+        MediaStreamTrackDesc[] ret = videoChannels.get(0)
             .getStream().getMediaStreamTrackReceiver().getMediaStreamTracks();
 
         if (videoChannels.size() > 1)
