@@ -165,8 +165,8 @@ public class BitrateController
         long bweBps = Long.MAX_VALUE;
 
         // Compute the bitrate allocation.
-        EndpointBitrateAllocation[] allocations
-            = allocate(bweBps, conferenceEndpoints);
+        EndpointBitrateAllocation[]
+            allocations = allocate(bweBps, conferenceEndpoints);
 
         List<String> newForwardedEndpoints = new ArrayList<>();
 
@@ -267,6 +267,11 @@ public class BitrateController
         @Override
         public RawPacket[] transform(RawPacket[] pkts)
         {
+            if (ArrayUtils.isNullOrEmpty(pkts))
+            {
+                return pkts;
+            }
+
             for (int i = 0; i < pkts.length; i++)
             {
                 if (pkts[i] == null
@@ -327,6 +332,34 @@ public class BitrateController
         @Override
         public RawPacket[] transform(RawPacket[] pkts)
         {
+            if (ArrayUtils.isNullOrEmpty(pkts))
+            {
+                return pkts;
+            }
+
+            for (int i = 0; i < pkts.length; i++)
+            {
+                if (pkts[i] == null
+                    || !RTPPacketPredicate.INSTANCE.test(pkts[i]))
+                {
+                    continue;
+                }
+
+                int ssrc = (int) RTCPHeaderUtils.getSenderSSRC(pkts[i]);
+                SimulcastController subCtrl = subCtrls.get(ssrc);
+
+                if (subCtrl == null)
+                {
+                    pkts[i] = null;
+                    continue;
+                }
+
+                RawPacket[] transformedPkts = subCtrl
+                    .getRTCPTransformer().transform(new RawPacket[]{pkts[i]});
+
+                pkts[i] = transformedPkts[0];
+            }
+
             return pkts;
         }
     }

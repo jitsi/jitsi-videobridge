@@ -427,8 +427,7 @@ public class LipSyncHack
         @Override
         public RawPacket[] transform(RawPacket[] pkts)
         {
-            if (ArrayUtils.isNullOrEmpty(pkts)
-                || injections.isEmpty())
+            if (ArrayUtils.isNullOrEmpty(pkts) || injections.isEmpty())
             {
                 return pkts;
             }
