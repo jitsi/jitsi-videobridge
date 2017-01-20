@@ -29,6 +29,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -1478,10 +1479,22 @@ public class Videobridge
                 }
             }
 
-            boolean enableLipSync
-                = cfg.getBoolean(Endpoint.ENABLE_LIPSYNC_HACK_PNAME, true);
-            System.setProperty(VideoChannel.ENABLE_LIPSYNC_HACK_PNAME,
-                Boolean.toString(enableLipSync));
+            String enableLipSync
+                = cfg.getString(Endpoint.ENABLE_LIPSYNC_HACK_PNAME);
+            if (enableLipSync != null)
+            {
+                System.setProperty(
+                    VideoChannel.ENABLE_LIPSYNC_HACK_PNAME, enableLipSync);
+            }
+
+            String disableNackTerminaton
+                = cfg.getString(VideoChannel.DISABLE_NACK_TERMINATION_PNAME);
+            if (disableNackTerminaton != null)
+            {
+                System.setProperty(
+                    RTCPTermination.DISABLE_NACK_TERMINATION_PNAME,
+                    disableNackTerminaton);
+            }
         }
 
         // Initialize the the host candidate interface filters in the ice4j

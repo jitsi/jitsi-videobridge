@@ -51,13 +51,11 @@ public class VideoChannel
     private static final int INCOMING_BITRATE_INTERVAL_MS = 5000;
 
     /**
-     * The name of the property used to disable the logic which detects and
-     * marks/discards packets coming from "unused" streams.
-     *
-     * TODO move to MediaStreamTrackReceiver.
+     * The name of the property used to disable NACK termination.
      */
-    public static final String DISABLE_LASTN_UNUSED_STREAM_DETECTION
-        = "org.jitsi.videobridge.DISABLE_LASTN_UNUSED_STREAM_DETECTION";
+    @Deprecated
+    public static final String DISABLE_NACK_TERMINATION_PNAME
+        = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
      * The name of the property which controls whether {@link VideoChannel}s
@@ -225,21 +223,18 @@ public class VideoChannel
 
         if (changed)
         {
-            if (changed)
+            Channel[] peerChannels = getContent().getChannels();
+            if (!ArrayUtils.isNullOrEmpty(peerChannels))
             {
-                Channel[] peerChannels = getContent().getChannels();
-                if (!ArrayUtils.isNullOrEmpty(peerChannels))
+                for (int i = 0; i < peerChannels.length; i++)
                 {
-                    for (int i = 0; i < peerChannels.length; i++)
+                    if (peerChannels[i] == this)
                     {
-                        if (peerChannels[i] == this)
-                        {
-                            continue;
-                        }
-
-                        ((VideoChannel) peerChannels[i])
-                            .bitrateController.update(null);
+                        continue;
                     }
+
+                    ((VideoChannel) peerChannels[i])
+                        .bitrateController.update(null);
                 }
             }
         }

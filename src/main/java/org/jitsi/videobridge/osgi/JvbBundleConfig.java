@@ -246,14 +246,6 @@ public class JvbBundleConfig
                 PacketLoggingConfiguration.PACKET_LOGGING_ENABLED_PROPERTY_NAME,
                 false_);
 
-        // Disable discarding of unused LastN streams. It is suspected to cause
-        // problems, and needs to be reworked to skip decryption but not drop
-        // packets in order to work with sequence number rewriting for lastN.
-        // It is safe to (temporary) disable because it is only an optimization.
-        defaults.put(
-            VideoChannel.DISABLE_LASTN_UNUSED_STREAM_DETECTION,
-            true_);
-
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed
         // on without decryption and this leads to:
