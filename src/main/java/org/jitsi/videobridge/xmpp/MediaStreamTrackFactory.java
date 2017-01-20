@@ -29,6 +29,47 @@ import java.util.*;
 public class MediaStreamTrackFactory
 {
     /**
+     * The default number of temporal layers to use.
+     */
+    private static final int DEFAULT_NUM_TEMPORAL_LAYERS = 3;
+
+    /**
+     * Creates simulcast encodings.
+     *
+     * @param track the track that will own the temporal encodings.
+     * @param primary the array of the primary SSRCs for the simulcast streams.
+     * @param rtx the array of the RTX SSRCs for the simulcast streams.
+     * @param tempoLen the number of temporal encodings per simulcast stream.
+     * @return an array that holds the simulcast encodings.
+     */
+    public static RTPEncodingDesc[] createRTPEncodings(
+        MediaStreamTrackDesc track, long[] primary, long[] rtx, int tempoLen)
+    {
+        RTPEncodingDesc[] rtpEncodings
+            = new RTPEncodingDesc[primary.length * tempoLen];
+
+        for (int i = 0; i < rtpEncodings.length; i++)
+        {
+            int streamIdx = i / tempoLen, tempoIdx = i % tempoLen;
+
+            // The previous temporal layer is the dependency, if higher than
+            // base.
+            boolean hasDependency = tempoIdx % tempoLen != 0;
+
+            RTPEncodingDesc[] dependency = hasDependency
+                ? new RTPEncodingDesc[] { rtpEncodings[i - 1] } : null;
+
+            int temporalId = tempoLen > 1 ? tempoIdx : -1;
+
+            rtpEncodings[i] = new RTPEncodingDesc(
+                track, i, primary[streamIdx], rtx[streamIdx],
+                temporalId, dependency);
+        }
+
+        return rtpEncodings;
+    }
+
+    /**
      * Creates {@link MediaStreamTrackDesc}s from signaling params.
      *
      * @param mediaStreamTrackReceiver the {@link MediaStreamTrackReceiver} that
@@ -94,18 +135,15 @@ public class MediaStreamTrackFactory
                     List<SourcePacketExtension> simSources
                         = simGroup.getSources();
 
-                    int encodingslen = includeTemporal
-                        ? simSources.size() * 3 : simSources.size();
+                    int streamLen = simSources.size();
 
-                    RTPEncodingDesc[] rtpEncodings
-                        = new RTPEncodingDesc[encodingslen];
-                    MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-                        mediaStreamTrackReceiver, rtpEncodings);
+                    long[] primary = new long[streamLen],
+                        rtx = new long[streamLen];
 
-                    for (int i = 0; i < simSources.size(); i++)
+                    for (int i = 0; i < streamLen; i++)
                     {
-                        SourcePacketExtension spe = simSources.get(i);
-                        long primarySSRC = spe.getSSRC();
+                        long primarySSRC = simSources.get(i).getSSRC();
+                        primary[i] = primarySSRC;
                         grouped.add(primarySSRC);
 
                         long rtxSSRC = -1;
@@ -114,37 +152,24 @@ public class MediaStreamTrackFactory
                             rtxSSRC = rtxPairs.remove(primarySSRC);
                             grouped.add(rtxSSRC);
                         }
-
-                        if (includeTemporal)
-                        {
-                            int subjectiveQualityIdx = i * 3;
-                            RTPEncodingDesc encoding = new RTPEncodingDesc(
-                                track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
-                                0, null);
-
-                            rtpEncodings[subjectiveQualityIdx] = encoding;
-
-                            subjectiveQualityIdx = i * 3 + 1;
-                            encoding = new RTPEncodingDesc(
-                                track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
-                                1, new RTPEncodingDesc[]{encoding});
-                            rtpEncodings[subjectiveQualityIdx] = encoding;
-
-                            subjectiveQualityIdx = i * 3 + 2;
-                            encoding = new RTPEncodingDesc(
-                                track, subjectiveQualityIdx, primarySSRC, rtxSSRC,
-                                2, new RTPEncodingDesc[]{encoding});
-                            rtpEncodings[subjectiveQualityIdx] = encoding;
-                        }
-                        else
-                        {
-                            RTPEncodingDesc encoding = new RTPEncodingDesc(
-                                track, i, primarySSRC, rtxSSRC, -1, null);
-
-                            rtpEncodings[i] = encoding;
-                        }
+                        rtx[i] = rtxSSRC;
                     }
 
+                    int numOfTempo
+                        = includeTemporal ? DEFAULT_NUM_TEMPORAL_LAYERS : 1;
+                    int encodingsLen = streamLen * numOfTempo;
+
+                    RTPEncodingDesc[] rtpEncodings
+                        = new RTPEncodingDesc[encodingsLen];
+
+                    MediaStreamTrackDesc track = new MediaStreamTrackDesc(
+                        mediaStreamTrackReceiver, rtpEncodings);
+
+                    RTPEncodingDesc[] simulcastEncodings = createRTPEncodings(
+                        track, primary, rtx, numOfTempo);
+
+                    System.arraycopy(simulcastEncodings, 0, rtpEncodings, 0,
+                        simulcastEncodings.length);
                     tracks.add(track);
                 }
             }
