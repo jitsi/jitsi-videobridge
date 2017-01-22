@@ -411,8 +411,7 @@ public class VideoChannel
         byte[] buffer, int offset, int length,
         RtpChannel source)
     {
-        boolean accept = bitrateController
-            .rtpTranslatorWillWrite(data, buffer, offset, length, source);
+        boolean accept = bitrateController.accept(data, buffer, offset, length);
 
         if (data && accept && lipSyncHack != null)
         {

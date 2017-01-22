@@ -50,10 +50,10 @@ public class BitrateController
     private final VideoChannel dest;
 
     /**
-     * The bitrate controller of the {@link Conference}.
+     * The bitrate controllers for all SSRCs that this instance has seen.
      */
     private final Map<Integer, SimulcastController>
-        subCtrls = new ConcurrentHashMap<>();
+        ssrcToBitrateController = new ConcurrentHashMap<>();
 
     /**
      * The {@link PacketTransformer} that handles incoming/outgoing RTP
@@ -84,7 +84,7 @@ public class BitrateController
      *
      * @param dest the {@link VideoChannel} that owns this instance.
      */
-    public BitrateController(VideoChannel dest)
+    BitrateController(VideoChannel dest)
     {
         this.dest = dest;
     }
@@ -108,48 +108,59 @@ public class BitrateController
     }
 
     /**
+     * Defines a packet filter that controls which packets to be written into
+     * the {@link Channel} that owns this {@link BitrateController}.
      *
-     * @param data
-     * @param buf
-     * @param off
-     * @param len
-     * @param source
-     * @return
+     * @param data true if the specified packet/<tt>buffer</tt> is RTP, false if
+     * it is RTCP.
+     * @param buf the <tt>byte</tt> array that holds the packet.
+     * @param off the offset in <tt>buffer</tt> at which the actual data begins.
+     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
+     * constitute the actual data.
+     * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
+     * written into the {@link Channel} that owns this {@link BitrateController}
+     * ; otherwise, <tt>false</tt>
      */
-    public boolean rtpTranslatorWillWrite(
-        boolean data, byte[] buf, int off, int len, RtpChannel source)
+    public boolean accept(boolean data, byte[] buf, int off, int len)
     {
-        Integer ssrc;
+        long ssrc;
         if (data)
         {
 
-            long ret = RawPacket.getSSRCAsLong(buf, off, len);
-            if (ret < 0)
+            ssrc = RawPacket.getSSRCAsLong(buf, off, len);
+            if (ssrc < 0)
             {
                 return false;
             }
-            ssrc = (int) ret;
         }
         else
         {
-            long ret = RTCPHeaderUtils.getSenderSSRC(buf, off, len);
-            if (ret < 0)
+            ssrc = RTCPHeaderUtils.getSenderSSRC(buf, off, len);
+            if (ssrc < 0)
             {
                 return false;
             }
 
-            ssrc = (int) ret;
         }
 
-        SimulcastController simulcastController = subCtrls.get(ssrc);
+        SimulcastController simulcastController
+            = ssrcToBitrateController.get((int) ssrc);
 
         return simulcastController != null
             && simulcastController.rtpTranslatorWillWrite(data, buf, off, len);
     }
 
     /**
+     * Computes a new bitrate allocation for every endpoint in the conference,
+     * and updates the state of this instance so that bitrate allocation is
+     * eventually met.
      *
-     * @param conferenceEndpoints
+     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
+     * participating in the multipoint conference with the dominant (speaker)
+     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
+     * history. This parameter is optional but it can be used for performaance;
+     * if it's omitted it will be fetched from the
+     * {@link ConferenceSpeechActivity}.
      */
     public void update(List<Endpoint> conferenceEndpoints)
     {
@@ -173,7 +184,7 @@ public class BitrateController
             int ssrc = allocations[i].targetSSRC,
                 targetIdx = allocations[i].targetIdx;
 
-            SimulcastController ctrl = subCtrls.get(ssrc);
+            SimulcastController ctrl = ssrcToBitrateController.get(ssrc);
             if (ctrl == null && allocations[i].track != null)
             {
                 ctrl = new SimulcastController(allocations[i].track);
@@ -184,11 +195,13 @@ public class BitrateController
                 // Route all encodings to the specified bitrate controller.
                 for (int j = 0; j < rtpEncodings.length; j++)
                 {
-                    subCtrls.put((int) rtpEncodings[j].getPrimarySSRC(), ctrl);
+                    ssrcToBitrateController.put(
+                        (int) rtpEncodings[j].getPrimarySSRC(), ctrl);
 
                     if (rtpEncodings[j].getRTXSSRC() != -1)
                     {
-                        subCtrls.put((int) rtpEncodings[j].getRTXSSRC(), ctrl);
+                        ssrcToBitrateController.put(
+                            (int) rtpEncodings[j].getRTXSSRC(), ctrl);
                     }
                 }
             }
@@ -214,7 +227,7 @@ public class BitrateController
      * @return the {@link List} of endpoints that are currently being forwarded,
      * represented by their IDs.
      */
-    public List<String> getForwardedEndpoints()
+    List<String> getForwardedEndpoints()
     {
         return forwardedEndpoints;
     }
@@ -226,140 +239,10 @@ public class BitrateController
      * @return {@code true} iff RTP packets from {@code source} should
      * be forwarded to {@link #dest}.
      */
-    public boolean isForwarded(RtpChannel source)
+    boolean isForwarded(RtpChannel source)
     {
         String endpointID = source.getEndpoint().getID();
         return forwardedEndpoints.contains(endpointID);
-    }
-
-    /**
-     * The {@link PacketTransformer} that handles incoming/outgoing RTP
-     * packets for this {@link BitrateController} instance. Internally,
-     * it delegates this responsibility to the appropriate media stream track
-     * bitrate controller ({@link SimulcastController}, etc).
-     */
-    class RTPTransformer
-        implements PacketTransformer
-    {
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void close()
-        {
-            // TODO decrease counters.
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public RawPacket[] reverseTransform(RawPacket[] pkts)
-        {
-            return pkts;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public RawPacket[] transform(RawPacket[] pkts)
-        {
-            if (ArrayUtils.isNullOrEmpty(pkts))
-            {
-                return pkts;
-            }
-
-            for (int i = 0; i < pkts.length; i++)
-            {
-                if (pkts[i] == null
-                    || !RTPPacketPredicate.INSTANCE.test(pkts[i]))
-                {
-                    continue;
-                }
-
-                int ssrc = pkts[i].getSSRC();
-                SimulcastController subCtrl = subCtrls.get(ssrc);
-
-                if (subCtrl == null)
-                {
-                    pkts[i] = null;
-                    continue;
-                }
-
-                RawPacket[] transformedPkts = subCtrl
-                    .getRTPTransformer().transform(new RawPacket[]{pkts[i]});
-
-                pkts[i] = transformedPkts[0];
-            }
-
-            return pkts;
-        }
-    }
-
-    /**
-     * The {@link PacketTransformer} that handles incoming/outgoing RTCP
-     * packets for this {@link BitrateController} instance. Internally,
-     * it delegates this responsibility to the appropriate media stream track
-     * bitrate controller ({@link SimulcastController}, etc).
-     */
-    class RTCPTransformer
-        implements PacketTransformer
-    {
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void close()
-        {
-
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public RawPacket[] reverseTransform(RawPacket[] pkts)
-        {
-            return pkts;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public RawPacket[] transform(RawPacket[] pkts)
-        {
-            if (ArrayUtils.isNullOrEmpty(pkts))
-            {
-                return pkts;
-            }
-
-            for (int i = 0; i < pkts.length; i++)
-            {
-                if (pkts[i] == null
-                    || !RTPPacketPredicate.INSTANCE.test(pkts[i]))
-                {
-                    continue;
-                }
-
-                int ssrc = (int) RTCPHeaderUtils.getSenderSSRC(pkts[i]);
-                SimulcastController subCtrl = subCtrls.get(ssrc);
-
-                if (subCtrl == null)
-                {
-                    pkts[i] = null;
-                    continue;
-                }
-
-                RawPacket[] transformedPkts = subCtrl
-                    .getRTCPTransformer().transform(new RawPacket[]{pkts[i]});
-
-                pkts[i] = transformedPkts[0];
-            }
-
-            return pkts;
-        }
     }
 
     /**
@@ -457,7 +340,8 @@ public class BitrateController
                 bweBps
                     = bweBps + endpointBitrateAllocations[i].getTargetBitrate();
                 endpointBitrateAllocations[i].allocate(bweBps, maxQuality);
-                bweBps = bweBps - endpointBitrateAllocations[i].getTargetBitrate();
+                bweBps
+                    = bweBps - endpointBitrateAllocations[i].getTargetBitrate();
             }
 
             maxQuality++;
@@ -560,8 +444,8 @@ public class BitrateController
         }
 
         /**
-         * Computes the optimal and the target bitrate, limiting the target to be
-         * less than bandwidth estimation specified as an argument.
+         * Computes the optimal and the target bitrate, limiting the target to
+         * be less than bandwidth estimation specified as an argument.
          *
          * @param maxBps the maximum bitrate (in bps) that the target subjective
          * quality can have.
@@ -594,6 +478,136 @@ public class BitrateController
         long getTargetBitrate()
         {
             return targetIdx == -1 ? 0 : rates[targetIdx];
+        }
+    }
+
+    /**
+     * The {@link PacketTransformer} that handles incoming/outgoing RTP
+     * packets for this {@link BitrateController} instance. Internally,
+     * it delegates this responsibility to the appropriate media stream track
+     * bitrate controller ({@link SimulcastController}, etc).
+     */
+    private class RTPTransformer
+        implements PacketTransformer
+    {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void close()
+        {
+            // TODO decrease counters.
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RawPacket[] reverseTransform(RawPacket[] pkts)
+        {
+            return pkts;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RawPacket[] transform(RawPacket[] pkts)
+        {
+            if (ArrayUtils.isNullOrEmpty(pkts))
+            {
+                return pkts;
+            }
+
+            for (int i = 0; i < pkts.length; i++)
+            {
+                if (pkts[i] == null
+                    || !RTPPacketPredicate.INSTANCE.test(pkts[i]))
+                {
+                    continue;
+                }
+
+                int ssrc = pkts[i].getSSRC();
+                SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+
+                if (subCtrl == null)
+                {
+                    pkts[i] = null;
+                    continue;
+                }
+
+                RawPacket[] transformedPkts = subCtrl
+                    .getRTPTransformer().transform(new RawPacket[]{pkts[i]});
+
+                pkts[i] = transformedPkts[0];
+            }
+
+            return pkts;
+        }
+    }
+
+    /**
+     * The {@link PacketTransformer} that handles incoming/outgoing RTCP
+     * packets for this {@link BitrateController} instance. Internally,
+     * it delegates this responsibility to the appropriate media stream track
+     * bitrate controller ({@link SimulcastController}, etc).
+     */
+    private class RTCPTransformer
+        implements PacketTransformer
+    {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void close()
+        {
+
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RawPacket[] reverseTransform(RawPacket[] pkts)
+        {
+            return pkts;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RawPacket[] transform(RawPacket[] pkts)
+        {
+            if (ArrayUtils.isNullOrEmpty(pkts))
+            {
+                return pkts;
+            }
+
+            for (int i = 0; i < pkts.length; i++)
+            {
+                if (pkts[i] == null
+                    || !RTPPacketPredicate.INSTANCE.test(pkts[i]))
+                {
+                    continue;
+                }
+
+                int ssrc = (int) RTCPHeaderUtils.getSenderSSRC(pkts[i]);
+                SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+
+                if (subCtrl == null)
+                {
+                    pkts[i] = null;
+                    continue;
+                }
+
+                RawPacket[] transformedPkts = subCtrl
+                    .getRTCPTransformer().transform(new RawPacket[]{pkts[i]});
+
+                pkts[i] = transformedPkts[0];
+            }
+
+            return pkts;
         }
     }
 }
