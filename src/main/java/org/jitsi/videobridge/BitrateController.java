@@ -132,8 +132,6 @@ public class BitrateController
         }
         else
         {
-            // NOTE(gp) This will need to be adjusted when we enable
-            // reduced-size RTCP.
             long ret = RTCPHeaderUtils.getSenderSSRC(buf, off, len);
             if (ret < 0)
             {
