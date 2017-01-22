@@ -141,10 +141,10 @@ public class BitrateController
             ssrc = (int) ret;
         }
 
-        SimulcastController subStrl = subCtrls.get(ssrc);
+        SimulcastController simulcastController = subCtrls.get(ssrc);
 
-        return subStrl != null
-            && subStrl.rtpTranslatorWillWrite(data, buf, off, len);
+        return simulcastController != null
+            && simulcastController.rtpTranslatorWillWrite(data, buf, off, len);
     }
 
     /**
