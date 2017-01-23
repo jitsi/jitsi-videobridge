@@ -249,13 +249,13 @@ public class BitrateController
      * Computes the optimal and the target bitrate, limiting the target to be
      * less than bandwidth estimation specified as an argument.
      *
-     * @param bweBps the max bandwidth estimation that the target bitrate must
-     * not exceed.
+     * @param maxBandwidth the max bandwidth estimation that the target bitrate
+     * must not exceed.
      *
      * @return an array of {@link EndpointBitrateAllocation}.
      */
     private EndpointBitrateAllocation[] allocate(
-        long bweBps, List<Endpoint> conferenceEndpoints)
+        long maxBandwidth, List<Endpoint> conferenceEndpoints)
     {
         // Init.
         int szConference = conferenceEndpoints.size();
@@ -286,12 +286,11 @@ public class BitrateController
             = selectedEndpoints == null ? 0 : selectedEndpoints.size();
 
         int maxQuality = 0;
-        long oldBweBps = bweBps;
+        long oldMaxBandwidth = maxBandwidth;
 
         int idx = -1;
-        for (int i = 0; i < szConference; i++)
+        for (Endpoint sourceEndpoint : conferenceEndpoints)
         {
-            Endpoint sourceEndpoint = conferenceEndpoints.get(i);
             if (sourceEndpoint == destEndpoint)
             {
                 continue;
@@ -325,23 +324,24 @@ public class BitrateController
             endpointBitrateAllocations[priority] = endpointBitrateAllocation;
 
             // First pass.
-            endpointBitrateAllocation.allocate(bweBps, maxQuality);
-            bweBps = bweBps - endpointBitrateAllocation.getTargetBitrate();
-
+            endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
+            maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
         }
 
         maxQuality++;
-        while (oldBweBps != bweBps)
+        while (oldMaxBandwidth != maxBandwidth)
         {
-            oldBweBps = bweBps;
+            oldMaxBandwidth = maxBandwidth;
 
-            for (int i = 0; i < endpointBitrateAllocations.length; i++)
+            for (EndpointBitrateAllocation endpointBitrateAllocation
+                : endpointBitrateAllocations)
             {
-                bweBps
-                    = bweBps + endpointBitrateAllocations[i].getTargetBitrate();
-                endpointBitrateAllocations[i].allocate(bweBps, maxQuality);
-                bweBps
-                    = bweBps - endpointBitrateAllocations[i].getTargetBitrate();
+                maxBandwidth
+                    += endpointBitrateAllocation.getTargetBitrate();
+                endpointBitrateAllocation
+                    .allocate(maxBandwidth, maxQuality);
+                maxBandwidth
+                    -= endpointBitrateAllocation.getTargetBitrate();
             }
 
             maxQuality++;
