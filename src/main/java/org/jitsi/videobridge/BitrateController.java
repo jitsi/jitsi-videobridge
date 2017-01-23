@@ -488,8 +488,16 @@ public class BitrateController
      * bitrate controller ({@link SimulcastController}, etc).
      */
     private class RTPTransformer
-        implements PacketTransformer
+        extends SinglePacketTransformerAdapter
     {
+        /**
+         * Ctor.
+         */
+        public RTPTransformer()
+        {
+            super(RTPPacketPredicate.INSTANCE);
+        }
+
         /**
          * {@inheritDoc}
          */
@@ -503,46 +511,18 @@ public class BitrateController
          * {@inheritDoc}
          */
         @Override
-        public RawPacket[] reverseTransform(RawPacket[] pkts)
+        public RawPacket transform(RawPacket pkt)
         {
-            return pkts;
-        }
+            int ssrc = pkt.getSSRC();
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public RawPacket[] transform(RawPacket[] pkts)
-        {
-            if (ArrayUtils.isNullOrEmpty(pkts))
+            SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+
+            if (subCtrl == null)
             {
-                return pkts;
+                return null;
             }
 
-            for (int i = 0; i < pkts.length; i++)
-            {
-                if (pkts[i] == null
-                    || !RTPPacketPredicate.INSTANCE.test(pkts[i]))
-                {
-                    continue;
-                }
-
-                int ssrc = pkts[i].getSSRC();
-                SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
-
-                if (subCtrl == null)
-                {
-                    pkts[i] = null;
-                    continue;
-                }
-
-                RawPacket[] transformedPkts = subCtrl
-                    .getRTPTransformer().transform(new RawPacket[]{pkts[i]});
-
-                pkts[i] = transformedPkts[0];
-            }
-
-            return pkts;
+            return subCtrl.rtpTransform(pkt);
         }
     }
 
@@ -553,61 +533,32 @@ public class BitrateController
      * bitrate controller ({@link SimulcastController}, etc).
      */
     private class RTCPTransformer
-        implements PacketTransformer
+        extends SinglePacketTransformerAdapter
     {
         /**
-         * {@inheritDoc}
+         * Ctor.
          */
-        @Override
-        public void close()
+        RTCPTransformer()
         {
-
+            super(RTCPPacketPredicate.INSTANCE);
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public RawPacket[] reverseTransform(RawPacket[] pkts)
+        public RawPacket transform(RawPacket pkt)
         {
-            return pkts;
-        }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public RawPacket[] transform(RawPacket[] pkts)
-        {
-            if (ArrayUtils.isNullOrEmpty(pkts))
+            int ssrc = (int) RTCPHeaderUtils.getSenderSSRC(pkt);
+            SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+
+            if (subCtrl == null)
             {
-                return pkts;
+                return null;
             }
 
-            for (int i = 0; i < pkts.length; i++)
-            {
-                if (pkts[i] == null
-                    || !RTPPacketPredicate.INSTANCE.test(pkts[i]))
-                {
-                    continue;
-                }
-
-                int ssrc = (int) RTCPHeaderUtils.getSenderSSRC(pkts[i]);
-                SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
-
-                if (subCtrl == null)
-                {
-                    pkts[i] = null;
-                    continue;
-                }
-
-                RawPacket[] transformedPkts = subCtrl
-                    .getRTCPTransformer().transform(new RawPacket[]{pkts[i]});
-
-                pkts[i] = transformedPkts[0];
-            }
-
-            return pkts;
+            return subCtrl.rtcpTransform(pkt);
         }
     }
 }
