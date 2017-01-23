@@ -179,29 +179,29 @@ public class BitrateController
 
         List<String> newForwardedEndpoints = new ArrayList<>();
 
-        for (int i = 0; i < allocations.length; i++)
+        for (EndpointBitrateAllocation allocation : allocations)
         {
-            int ssrc = allocations[i].targetSSRC,
-                targetIdx = allocations[i].targetIdx;
+            int ssrc = allocation.targetSSRC,
+                targetIdx = allocation.targetIdx;
 
             SimulcastController ctrl = ssrcToBitrateController.get(ssrc);
-            if (ctrl == null && allocations[i].track != null)
+            if (ctrl == null && allocation.track != null)
             {
-                ctrl = new SimulcastController(allocations[i].track);
+                ctrl = new SimulcastController(allocation.track);
 
                 RTPEncodingDesc[] rtpEncodings
-                    = allocations[i].track.getRTPEncodings();
+                    = allocation.track.getRTPEncodings();
 
                 // Route all encodings to the specified bitrate controller.
-                for (int j = 0; j < rtpEncodings.length; j++)
+                for (RTPEncodingDesc rtpEncoding : rtpEncodings)
                 {
                     ssrcToBitrateController.put(
-                        (int) rtpEncodings[j].getPrimarySSRC(), ctrl);
+                        (int) rtpEncoding.getPrimarySSRC(), ctrl);
 
-                    if (rtpEncodings[j].getRTXSSRC() != -1)
+                    if (rtpEncoding.getRTXSSRC() != -1)
                     {
                         ssrcToBitrateController.put(
-                            (int) rtpEncodings[j].getRTXSSRC(), ctrl);
+                            (int) rtpEncoding.getRTXSSRC(), ctrl);
                     }
                 }
             }
@@ -213,7 +213,7 @@ public class BitrateController
 
             if (targetIdx > -1)
             {
-                newForwardedEndpoints.add(allocations[i].endpointID);
+                newForwardedEndpoints.add(allocation.endpointID);
             }
         }
 
