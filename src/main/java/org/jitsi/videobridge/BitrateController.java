@@ -328,9 +328,9 @@ public class BitrateController
             endpointBitrateAllocation.allocate(bweBps, maxQuality);
             bweBps = bweBps - endpointBitrateAllocation.getTargetBitrate();
 
-            maxQuality++;
         }
 
+        maxQuality++;
         while (oldBweBps != bweBps)
         {
             oldBweBps = bweBps;
@@ -499,7 +499,7 @@ public class BitrateController
         /**
          * Ctor.
          */
-        public RTPTransformer()
+        RTPTransformer()
         {
             super(RTPPacketPredicate.INSTANCE);
         }
