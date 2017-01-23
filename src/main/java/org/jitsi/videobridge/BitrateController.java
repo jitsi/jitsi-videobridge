@@ -147,7 +147,7 @@ public class BitrateController
             = ssrcToBitrateController.get((int) ssrc);
 
         return simulcastController != null
-            && simulcastController.rtpTranslatorWillWrite(data, buf, off, len);
+            && simulcastController.accept(data, buf, off, len);
     }
 
     /**
