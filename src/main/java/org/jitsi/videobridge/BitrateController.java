@@ -351,42 +351,48 @@ public class BitrateController
     }
 
     /**
+     * A bitrate allocation that pertains to a specific {@link Endpoint}.
+     *
      * @author George Politis
      */
     private class EndpointBitrateAllocation
     {
         /**
-         *
+         * The ID of the {@link Endpoint} that this instance pertains to.
          */
         private final String endpointID;
 
         /**
-         *
+         * Indicates whether this {@link Endpoint} is forwarded or not to the
+         * {@link VideoChannel} that owns this {@link BitrateController}.
          */
         private final boolean forwarded;
 
         /**
-         *
+         * Indicates whether this {@link Endpoint} is on-stage/selected or not
+         * at the {@link VideoChannel} that owns this {@link BitrateController}.
          */
         private final boolean selected;
 
         /**
-         *
+         * Helper field that keeps the SSRC of the target stream.
          */
         private final int targetSSRC;
 
         /**
-         *
+         * The first {@link MediaStreamTrackDesc} of the {@link Endpoint} that
+         * this instance pertains to.
          */
         private final MediaStreamTrackDesc track;
 
         /**
-         *
+         * An array that holds the stable bitrates of the
+         * {@link RTPEncodingDesc} of {@link #track}.
          */
         private final long[] rates;
 
         /**
-         *
+         * The target subjective quality index for this bitrate allocation.
          */
         private int targetIdx = -1;
 
