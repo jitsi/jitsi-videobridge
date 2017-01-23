@@ -455,8 +455,8 @@ public class BitrateController
          *
          * @param maxBps the maximum bitrate (in bps) that the target subjective
          * quality can have.
-         * @param maxQuality the maximum subjective quality that the target
-         * subjective quality can have.
+         * @param maxQuality the maximum subjective quality index that the
+         * target subjective quality can have. -1 suspends the track.
          */
         void allocate(long maxBps, int maxQuality)
         {
