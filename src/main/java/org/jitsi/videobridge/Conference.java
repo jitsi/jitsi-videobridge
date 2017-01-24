@@ -1696,7 +1696,9 @@ public class Conference
         {
             if (MediaType.VIDEO.equals(content.getMediaType()))
             {
-                List<Endpoint> endpoints = speechActivity.getEndpoints();
+                List<Endpoint> endpoints = Collections.unmodifiableList(
+                    speechActivity.getEndpoints());
+
                 for (Channel channel : content.getChannels())
                 {
                     if (!(channel instanceof RtpChannel))

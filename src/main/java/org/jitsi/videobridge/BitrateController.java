@@ -126,7 +126,6 @@ public class BitrateController
         long ssrc;
         if (data)
         {
-
             ssrc = RawPacket.getSSRCAsLong(buf, off, len);
             if (ssrc < 0)
             {
@@ -140,7 +139,6 @@ public class BitrateController
             {
                 return false;
             }
-
         }
 
         SimulcastController simulcastController
@@ -170,6 +168,11 @@ public class BitrateController
             conferenceEndpoints
                 = dest.getConferenceSpeechActivity().getEndpoints();
         }
+        else
+        {
+            // Create a copy as we may modify the list in the prioritize method.
+            conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
+        }
 
         long bweBps = Long.MAX_VALUE;
 
@@ -179,41 +182,44 @@ public class BitrateController
 
         List<String> newForwardedEndpoints = new ArrayList<>();
 
-        for (EndpointBitrateAllocation allocation : allocations)
+        if (!ArrayUtils.isNullOrEmpty(allocations))
         {
-            int ssrc = allocation.targetSSRC,
-                targetIdx = allocation.targetIdx;
-
-            SimulcastController ctrl = ssrcToBitrateController.get(ssrc);
-            if (ctrl == null && allocation.track != null)
+            for (EndpointBitrateAllocation allocation : allocations)
             {
-                ctrl = new SimulcastController(allocation.track);
+                int ssrc = allocation.targetSSRC,
+                    targetIdx = allocation.targetIdx;
 
-                RTPEncodingDesc[] rtpEncodings
-                    = allocation.track.getRTPEncodings();
-
-                // Route all encodings to the specified bitrate controller.
-                for (RTPEncodingDesc rtpEncoding : rtpEncodings)
+                SimulcastController ctrl = ssrcToBitrateController.get(ssrc);
+                if (ctrl == null && allocation.track != null)
                 {
-                    ssrcToBitrateController.put(
-                        (int) rtpEncoding.getPrimarySSRC(), ctrl);
+                    ctrl = new SimulcastController(allocation.track);
 
-                    if (rtpEncoding.getRTXSSRC() != -1)
+                    RTPEncodingDesc[] rtpEncodings
+                        = allocation.track.getRTPEncodings();
+
+                    // Route all encodings to the specified bitrate controller.
+                    for (RTPEncodingDesc rtpEncoding : rtpEncodings)
                     {
                         ssrcToBitrateController.put(
-                            (int) rtpEncoding.getRTXSSRC(), ctrl);
+                            (int) rtpEncoding.getPrimarySSRC(), ctrl);
+
+                        if (rtpEncoding.getRTXSSRC() != -1)
+                        {
+                            ssrcToBitrateController.put(
+                                (int) rtpEncoding.getRTXSSRC(), ctrl);
+                        }
                     }
                 }
-            }
 
-            if (ctrl != null)
-            {
-                ctrl.update(targetIdx);
-            }
+                if (ctrl != null)
+                {
+                    ctrl.update(targetIdx);
+                }
 
-            if (targetIdx > -1)
-            {
-                newForwardedEndpoints.add(allocation.endpointID);
+                if (targetIdx > -1)
+                {
+                    newForwardedEndpoints.add(allocation.endpointID);
+                }
             }
         }
 
@@ -251,11 +257,66 @@ public class BitrateController
      *
      * @param maxBandwidth the max bandwidth estimation that the target bitrate
      * must not exceed.
+     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
+     * participating in the multipoint conference with the dominant (speaker)
+     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
+     * history. This parameter is optional but it can be used for performaance;
+     * if it's omitted it will be fetched from the
+     * {@link ConferenceSpeechActivity}.
      *
      * @return an array of {@link EndpointBitrateAllocation}.
      */
     private EndpointBitrateAllocation[] allocate(
         long maxBandwidth, List<Endpoint> conferenceEndpoints)
+    {
+        EndpointBitrateAllocation[]
+            endpointBitrateAllocations = prioritize(conferenceEndpoints);
+
+        if (ArrayUtils.isNullOrEmpty(endpointBitrateAllocations))
+        {
+            return endpointBitrateAllocations;
+        }
+
+        int maxQuality = 0;
+        long oldMaxBandwidth = 0;
+        while (oldMaxBandwidth != maxBandwidth)
+        {
+            oldMaxBandwidth = maxBandwidth;
+
+            for (EndpointBitrateAllocation endpointBitrateAllocation
+                : endpointBitrateAllocations)
+            {
+                maxBandwidth += endpointBitrateAllocation.getTargetBitrate();
+                endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
+                maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
+            }
+
+            maxQuality++;
+        }
+
+        return endpointBitrateAllocations;
+    }
+
+    /**
+     * Returns a prioritized {@link EndpointBitrateAllocation} array where
+     * selected endpoint are at the top of the array, followed by the pinned
+     * endpoints, finally followed by any other remaining endpoints. The
+     * priority respects the order induced by the <tt>conferenceEndpoints</tt>
+     * parameter.
+     *
+     * @param conferenceEndpoints the ordered list of {@link Endpoint}s
+     * participating in the multipoint conference with the dominant (speaker)
+     * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
+     * history. This parameter is optional but it can be used for performaance;
+     * if it's omitted it will be fetched from the
+     * {@link ConferenceSpeechActivity}.
+     *
+     * @return a prioritized {@link EndpointBitrateAllocation} array where
+     * selected endpoint are at the top of the array, followed by the pinned
+     * endpoints, finally followed by any other remaining endpoints.
+     */
+    private EndpointBitrateAllocation[] prioritize(
+        List<Endpoint> conferenceEndpoints)
     {
         // Init.
         int szConference = conferenceEndpoints.size();
@@ -270,81 +331,81 @@ public class BitrateController
             // If lastN is disable, pretend lastN == szConference.
             lastN = endpointBitrateAllocations.length;
         }
+        else
+        {
+            // If lastN is enabled, pretend lastN at most as big as the size
+            // of the conference.
+            lastN = Math.min(lastN, endpointBitrateAllocations.length);
+        }
 
+        int priority = 0;
         Endpoint destEndpoint = dest.getEndpoint();
-        Set<String> pinnedEndpoints = destEndpoint.getPinnedEndpoints();
-        int szPinned = pinnedEndpoints == null ? 0 : pinnedEndpoints.size();
-        if (szPinned > 0)
-        {
-            // The lastN value should be large enough to accommodate all the
-            // pinned endpoints.
-            lastN = Math.max(lastN, szPinned);
-        }
 
+        // First, bubble-up the selected endpoints (whoever's on-stage needs to
+        // be visible).
         Set<String> selectedEndpoints = destEndpoint.getSelectedEndpoints();
-        int offPinned = 0, szSelected
-            = selectedEndpoints == null ? 0 : selectedEndpoints.size();
-
-        int maxQuality = 0;
-        long oldMaxBandwidth = maxBandwidth;
-
-        int idx = -1;
-        for (Endpoint sourceEndpoint : conferenceEndpoints)
+        if (!selectedEndpoints.isEmpty())
         {
-            if (sourceEndpoint == destEndpoint)
+            Iterator<Endpoint> it = conferenceEndpoints.iterator();
+            while (it.hasNext() && priority < lastN)
             {
-                continue;
+                Endpoint sourceEndpoint = it.next();
+                if (sourceEndpoint == destEndpoint
+                    || !selectedEndpoints.contains(sourceEndpoint.getID()))
+                {
+                    continue;
+                }
+
+                endpointBitrateAllocations[priority++]
+                    = new EndpointBitrateAllocation(
+                        sourceEndpoint,
+                        true /* forwarded */,
+                        true /* selected */);
+
+                it.remove();
             }
-
-            idx++;
-
-            boolean pinned = szPinned != 0
-                && pinnedEndpoints.contains(sourceEndpoint.getID());
-
-            int priority; // Higher priority endpoints are optimized first.
-            if (pinned)
-            {
-                priority = offPinned;
-                offPinned++;
-            }
-            else
-            {
-                priority = idx - offPinned + szPinned;
-            }
-
-            boolean selected = szSelected != 0
-                && selectedEndpoints.contains(sourceEndpoint.getID());
-
-            boolean forwarded = priority < lastN;
-
-            EndpointBitrateAllocation endpointBitrateAllocation
-                = new EndpointBitrateAllocation(
-                sourceEndpoint, forwarded, selected);
-
-            endpointBitrateAllocations[priority] = endpointBitrateAllocation;
-
-            // First pass.
-            endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
-            maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
         }
 
-        maxQuality++;
-        while (oldMaxBandwidth != maxBandwidth)
+        // Then, bubble-up the pinned endpoints.
+        Set<String> pinnedEndpoints = destEndpoint.getPinnedEndpoints();
+        if (!pinnedEndpoints.isEmpty())
         {
-            oldMaxBandwidth = maxBandwidth;
-
-            for (EndpointBitrateAllocation endpointBitrateAllocation
-                : endpointBitrateAllocations)
+            Iterator<Endpoint> it = conferenceEndpoints.iterator();
+            while (it.hasNext() && priority < lastN)
             {
-                maxBandwidth
-                    += endpointBitrateAllocation.getTargetBitrate();
-                endpointBitrateAllocation
-                    .allocate(maxBandwidth, maxQuality);
-                maxBandwidth
-                    -= endpointBitrateAllocation.getTargetBitrate();
-            }
+                Endpoint sourceEndpoint = it.next();
+                if (sourceEndpoint == destEndpoint
+                    || !pinnedEndpoints.contains(sourceEndpoint.getID()))
+                {
+                    continue;
+                }
 
-            maxQuality++;
+                endpointBitrateAllocations[priority++]
+                    = new EndpointBitrateAllocation(
+                        sourceEndpoint,
+                        true /* forwarded */,
+                        false /* selected */);
+
+                it.remove();
+            }
+        }
+
+        // Finally, deal with any remaining endpoints.
+        if (!conferenceEndpoints.isEmpty())
+        {
+            for (Endpoint sourceEndpoint : conferenceEndpoints)
+            {
+                if (sourceEndpoint == destEndpoint)
+                {
+                    continue;
+                }
+
+                boolean forwarded = priority < lastN;
+
+                endpointBitrateAllocations[priority++]
+                    = new EndpointBitrateAllocation(
+                        sourceEndpoint, forwarded, false /* selected */);
+            }
         }
 
         return endpointBitrateAllocations;
@@ -406,7 +467,7 @@ public class BitrateController
          * @param selected a flag indicating whether or not the endpoint is
          * selected.
          */
-        EndpointBitrateAllocation(
+        private EndpointBitrateAllocation(
             Endpoint endpoint, boolean forwarded, boolean selected)
         {
             this.endpointID = endpoint.getID();
