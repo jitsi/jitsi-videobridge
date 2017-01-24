@@ -127,8 +127,6 @@ public class Content
      */
     private String recordingPath = null;
 
-    private RTCPFeedbackMessageSender rtcpFeedbackMessageSender;
-
     /**
      * The <tt>Object</tt> which synchronizes the access to the RTP-level relays
      * (i.e. {@link #mixer} and {@link #rtpTranslator}) provided by this
@@ -411,7 +409,6 @@ public class Content
             {
                 if (rtpTranslator != null)
                     rtpTranslator.dispose();
-                rtcpFeedbackMessageSender = null;
             }
 
             if (logger.isInfoEnabled())
@@ -754,11 +751,6 @@ public class Content
         return recorder;
     }
 
-    RTCPFeedbackMessageSender getRTCPFeedbackMessageSender()
-    {
-        return rtcpFeedbackMessageSender;
-    }
-
     /**
      * Gets the <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
      * between the <tt>Channel</tt>s of this <tt>Content</tt> which use a
@@ -808,9 +800,6 @@ public class Content
                         initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffl;
 
                         rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
-
-                        rtcpFeedbackMessageSender
-                            = rtpTranslatorImpl.getRtcpFeedbackMessageSender();
                     }
                 }
             }

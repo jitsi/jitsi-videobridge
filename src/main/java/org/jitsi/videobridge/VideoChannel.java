@@ -25,6 +25,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.ice4j.util.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
@@ -448,7 +449,6 @@ public class VideoChannel
 
     /**
      * {@inheritDoc}
-     * Closes the {@link BitrateController} before expiring the channel.
      */
     @Override
     public boolean expire()
@@ -721,7 +721,13 @@ public class VideoChannel
                 // The ssrc for the HQ layer.
                 int ssrc
                     = (int) encodings[encodings.length - 1].getPrimarySSRC();
-                askForKeyframes(new int[]{ ssrc });
+
+                RTCPFeedbackMessageSender rtcpFeedbackMessageSender
+                    = ((RTPTranslatorImpl)getContent().getRTPTranslator())
+                    .getRtcpFeedbackMessageSender();
+
+                if (rtcpFeedbackMessageSender != null)
+                    rtcpFeedbackMessageSender.sendFIR(ssrc);
             }
         };
 
