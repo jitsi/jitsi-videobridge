@@ -59,10 +59,16 @@ public class VideoChannel
         = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
+     * Configuration property for number of streams to cache
+     */
+    final static String ENABLE_LIPSYNC_HACK_PNAME
+        = VideoChannel.class.getName() + ".ENABLE_LIPSYNC_HACK";
+
+    /**
      * The name of the property which controls whether {@link VideoChannel}s
      * periodically log statistics related to oversending data.
      */
-    public static final String LOG_OVERSENDING_STATS_PNAME
+    private static final String LOG_OVERSENDING_STATS_PNAME
         = "org.jitsi.videobridge.LOG_OVERSENDING_STATS";
 
     /**
@@ -82,12 +88,6 @@ public class VideoChannel
      * The {@link RecurringRunnableExecutor} instance for {@link VideoChannel}s.
      */
     private static RecurringRunnableExecutor recurringExecutor;
-
-    /**
-     * Configuration property for number of streams to cache
-     */
-    public final static String ENABLE_LIPSYNC_HACK_PNAME
-        = VideoChannel.class.getName() + ".ENABLE_LIPSYNC_HACK";
 
     /**
      * The object that implements a hack for LS for this {@link Endpoint}.
@@ -176,11 +176,11 @@ public class VideoChannel
      * <tt>null</tt> to use the default value.
      * @throws Exception if an error occurs while initializing the new instance
      */
-    public VideoChannel(Content content,
-                        String id,
-                        String channelBundleId,
-                        String transportNamespace,
-                        Boolean initiator)
+    VideoChannel(Content content,
+                 String id,
+                 String channelBundleId,
+                 String transportNamespace,
+                 Boolean initiator)
         throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
@@ -227,14 +227,14 @@ public class VideoChannel
             Channel[] peerChannels = getContent().getChannels();
             if (!ArrayUtils.isNullOrEmpty(peerChannels))
             {
-                for (int i = 0; i < peerChannels.length; i++)
+                for (Channel peerChannel : peerChannels)
                 {
-                    if (peerChannels[i] == this)
+                    if (peerChannel == this)
                     {
                         continue;
                     }
 
-                    ((VideoChannel) peerChannels[i])
+                    ((VideoChannel) peerChannel)
                         .bitrateController.update(null);
                 }
             }
@@ -339,56 +339,6 @@ public class VideoChannel
         return lastN;
     }
 
-    /**
-     * Notifies this <tt>VideoChannel</tt> that the value of its property
-     * <tt>inLastN</tt> has changed from <tt>oldValue</tt> to <tt>newValue</tt>.
-     *
-     * @param oldValue the old value of the property <tt>inLastN</tt> before the
-     * change
-     * @param newValue the new value of the property <tt>inLastN</tt> after the
-     * change
-     */
-    private void inLastNChanged(boolean oldValue, boolean newValue)
-    {
-        Endpoint endpoint = getEndpoint();
-
-        if (endpoint != null)
-        {
-            try
-            {
-                endpoint.sendMessageOnDataChannel(
-                        "{\"colibriClass\":\"InLastNChangeEvent\",\"oldValue\":"
-                            + oldValue + ",\"newValue\":" + newValue + "}");
-            }
-            catch (IOException ex)
-            {
-                logger.error(
-                        "Failed to send \"in last-N\" update to: "
-                            + endpoint.getID(), ex);
-            }
-        }
-    }
-
-    /**
-     * Determines whether a specific <tt>Channel</tt> is within the set of
-     * <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether the RTP video
-     * streams of the specified channel are to be sent to the remote endpoint of
-     * this <tt>Channel</tt>.
-     *
-     * @param channel the <tt>Channel</tt> to be checked whether it is within
-     * the set of <tt>Channel</tt>s limited by <tt>lastN</tt> i.e. whether its
-     * RTP streams are to be sent to the remote endpoint of this
-     * <tt>Channel</tt>
-     * @return <tt>true</tt> if the RTP streams of <tt>channel</tt> are to be
-     * sent to the remote endpoint of this <tt>Channel</tt>; otherwise,
-     * <tt>false</tt>. The implementation of the <tt>RtpChannel</tt> class
-     * always returns <tt>true</tt>.
-     */
-    public boolean isInLastN(RtpChannel channel)
-    {
-        return bitrateController.isForwarded(channel);
-    }
-
     @Override
     public void propertyChange(PropertyChangeEvent ev)
     {
@@ -425,31 +375,6 @@ public class VideoChannel
         }
 
         return accept;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Fires initial events over the WebRTC data channel of this
-     * <tt>VideoChannel</tt> such as the list of last-n <tt>Endpoint</tt>s whose
-     * video is sent/RTP translated by this <tt>RtpChannel</tt> to its
-     * <tt>Endpoint</tt>.
-     */
-    @Override
-    void sctpConnectionReady(Endpoint endpoint)
-    {
-        super.sctpConnectionReady(endpoint);
-
-        if (endpoint.equals(getEndpoint()))
-        {
-            if (lastN > 0)
-            {
-                sendLastNEndpointsChangeEventOnDataChannel(
-                        bitrateController.getForwardedEndpoints(),
-                        null,
-                        null);
-            }
-        }
     }
 
     /**
@@ -491,9 +416,9 @@ public class VideoChannel
      * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
      */
     public void sendLastNEndpointsChangeEventOnDataChannel(
-            List<String> forwardedEndpoints,
-            List<String> endpointsEnteringLastN,
-            List<String> conferenceEndpoints)
+        Collection<String> forwardedEndpoints,
+        Collection<String> endpointsEnteringLastN,
+        Collection<String> conferenceEndpoints)
     {
         Endpoint thisEndpoint = getEndpoint();
 
@@ -538,7 +463,7 @@ public class VideoChannel
         }
     }
 
-    private String getJsonString(List<String> strings)
+    private String getJsonString(Collection<String> strings)
     {
         JSONArray array = new JSONArray();
         if (strings != null && !strings.isEmpty())

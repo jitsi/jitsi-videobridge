@@ -16,7 +16,6 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.impl.neomedia.*;
-import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
@@ -41,8 +40,8 @@ public class BitrateController
     /**
      * An empty list instance.
      */
-    private static final List<String> INITIAL_EMPTY_LIST
-        = Collections.unmodifiableList(new LinkedList<String>());
+    private static final Set<String> INITIAL_EMPTY_SET
+        = Collections.unmodifiableSet(new HashSet<String>(0));
 
     /**
      * The {@link VideoChannel} which owns this {@link BitrateController}.
@@ -76,7 +75,7 @@ public class BitrateController
      * represented by their IDs. Required for backwards compatibility with
      * existing LastN code.
      */
-    private List<String> forwardedEndpoints = INITIAL_EMPTY_LIST;
+    private Set<String> forwardedEndpointIds = INITIAL_EMPTY_SET;
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -166,16 +165,23 @@ public class BitrateController
         EndpointBitrateAllocation[]
             allocations = allocate(bweBps, conferenceEndpoints);
 
-        List<String> newForwardedEndpoints = new ArrayList<>();
+        Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
+
+        Set<String> newForwardedEndpointIds = new HashSet<>();
+        Set<String> endpointsEnteringLastNIds = new HashSet<>();
+        Set<String> conferenceEndpointIds = new HashSet<>();
 
         if (!ArrayUtils.isNullOrEmpty(allocations))
         {
             for (EndpointBitrateAllocation allocation : allocations)
             {
+                conferenceEndpointIds.add(allocation.endpointID);
+
                 int ssrc = allocation.targetSSRC,
                     targetIdx = allocation.targetIdx;
 
-                SimulcastController ctrl = ssrcToBitrateController.get(ssrc);
+                SimulcastController ctrl
+                    = ssrcToBitrateController.get(ssrc);
                 if (ctrl == null && allocation.track != null)
                 {
                     ctrl = new SimulcastController(allocation.track);
@@ -183,18 +189,24 @@ public class BitrateController
                     RTPEncodingDesc[] rtpEncodings
                         = allocation.track.getRTPEncodings();
 
-                    // Route all encodings to the specified bitrate controller.
-                    for (RTPEncodingDesc rtpEncoding : rtpEncodings)
+                    synchronized (ssrcToBitrateController)
                     {
-                        ssrcToBitrateController.put(
-                            (int) rtpEncoding.getPrimarySSRC(), ctrl);
-
-                        if (rtpEncoding.getRTXSSRC() != -1)
+                        // Route all encodings to the specified bitrate
+                        // controller.
+                        for (RTPEncodingDesc rtpEncoding : rtpEncodings)
                         {
                             ssrcToBitrateController.put(
-                                (int) rtpEncoding.getRTXSSRC(), ctrl);
+                                (int) rtpEncoding.getPrimarySSRC(), ctrl);
+
+                            if (rtpEncoding.getRTXSSRC() != -1)
+                            {
+                                ssrcToBitrateController.put(
+                                    (int) rtpEncoding.getRTXSSRC(), ctrl);
+                            }
                         }
                     }
+
+                    ctrl = ssrcToBitrateController.get(ssrc);
                 }
 
                 if (ctrl != null)
@@ -204,37 +216,24 @@ public class BitrateController
 
                 if (targetIdx > -1)
                 {
-                    newForwardedEndpoints.add(allocation.endpointID);
+                    newForwardedEndpointIds.add(allocation.endpointID);
+                    if (!oldForwardedEndpointIds.contains(allocation.endpointID))
+                    {
+                        endpointsEnteringLastNIds.add(allocation.endpointID);
+                    }
                 }
             }
         }
 
-        this.forwardedEndpoints = newForwardedEndpoints;
-    }
+        if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
+        {
+            dest.sendLastNEndpointsChangeEventOnDataChannel(
+                newForwardedEndpointIds,
+                endpointsEnteringLastNIds,
+                conferenceEndpointIds);
+        }
 
-    /**
-     * Gets the {@link List} of endpoints that are currently being forwarded,
-     * represented by their IDs.
-     *
-     * @return the {@link List} of endpoints that are currently being forwarded,
-     * represented by their IDs.
-     */
-    List<String> getForwardedEndpoints()
-    {
-        return forwardedEndpoints;
-    }
-
-    /**
-     * Checks whether RTP packets from {@code source} should be forwarded
-     * to {@link #dest}.
-     * @param source the channel.
-     * @return {@code true} iff RTP packets from {@code source} should
-     * be forwarded to {@link #dest}.
-     */
-    boolean isForwarded(RtpChannel source)
-    {
-        String endpointID = source.getEndpoint().getID();
-        return forwardedEndpoints.contains(endpointID);
+        this.forwardedEndpointIds = newForwardedEndpointIds;
     }
 
     /**
