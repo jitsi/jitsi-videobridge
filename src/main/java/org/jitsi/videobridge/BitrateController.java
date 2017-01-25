@@ -224,6 +224,14 @@ public class BitrateController
                 }
             }
         }
+        else
+        {
+            for (SimulcastController simulcastController
+                : ssrcToBitrateController.values())
+            {
+                simulcastController.update(-1);
+            }
+        }
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
@@ -303,6 +311,17 @@ public class BitrateController
     private EndpointBitrateAllocation[] prioritize(
         List<Endpoint> conferenceEndpoints)
     {
+        if (dest.isExpired())
+        {
+            return null;
+        }
+
+        Endpoint destEndpoint = dest.getEndpoint();
+        if (destEndpoint == null || destEndpoint.isExpired())
+        {
+            return null;
+        }
+
         // Init.
         int szConference = conferenceEndpoints.size();
 
@@ -324,7 +343,6 @@ public class BitrateController
         }
 
         int priority = 0;
-        Endpoint destEndpoint = dest.getEndpoint();
 
         // First, bubble-up the selected endpoints (whoever's on-stage needs to
         // be visible).
