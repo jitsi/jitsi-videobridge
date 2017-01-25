@@ -64,6 +64,12 @@ public class LipSyncHack
     private static final int MAX_KEY_FRAMES = 10;
 
     /**
+     * Timestamp increment per frame.
+     */
+    private static final long TS_INCREMENT_PER_FRAME
+        = 90000 /* Hz */ / 30 /* fps */;
+
+    /**
      * The <tt>Logger</tt> used by the <tt>LipSyncHack</tt> class and
      * its instances to print debug information.
      */
@@ -220,7 +226,8 @@ public class LipSyncHack
 
             injections.put(receiveVideoSSRC,
                 new Injection((seqNumOff + MAX_KEY_FRAMES) & 0xFFFF,
-                    (tsOff + MAX_KEY_FRAMES * 3000) & 0xFFFFFFFFL));
+                    (tsOff + MAX_KEY_FRAMES * TS_INCREMENT_PER_FRAME)
+                        & 0xFFFFFFFFL));
         }
     }
 
