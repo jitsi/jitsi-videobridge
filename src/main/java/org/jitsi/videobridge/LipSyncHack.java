@@ -216,7 +216,7 @@ public class LipSyncHack
             {
                 try
                 {
-                    stream.injectPacket(kfs[i], true, null);
+                    stream.injectPacket(kfs[i], true, this);
                 }
                 catch (TransmissionFailedException e)
                 {
