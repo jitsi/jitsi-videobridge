@@ -96,10 +96,12 @@ public class RtpChannelTransformEngine
 
             transformerList = new LinkedList<>();
 
-            BitrateController vrc = videoChannel.getBitrateController();
-            if (vrc != null)
+            BitrateController bitrateController
+                = videoChannel.getBitrateController();
+
+            if (bitrateController != null)
             {
-                transformerList.add(vrc);
+                transformerList.add(bitrateController);
             }
 
             LipSyncHack lipSyncHack = videoChannel.getLipSyncHack();
