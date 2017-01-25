@@ -108,11 +108,9 @@ public class BitrateController
     }
 
     /**
-     * Defines a packet filter that controls which packets to be written into
-     * the {@link Channel} that owns this {@link BitrateController}.
+     * Defines a packet filter that controls which RTP packets to be written
+     * into the {@link Channel} that owns this {@link BitrateController}.
      *
-     * @param data true if the specified packet/<tt>buffer</tt> is RTP, false if
-     * it is RTCP.
      * @param buf the <tt>byte</tt> array that holds the packet.
      * @param off the offset in <tt>buffer</tt> at which the actual data begins.
      * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
@@ -121,31 +119,19 @@ public class BitrateController
      * written into the {@link Channel} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(boolean data, byte[] buf, int off, int len)
+    public boolean accept(byte[] buf, int off, int len)
     {
-        long ssrc;
-        if (data)
+        long ssrc = RawPacket.getSSRCAsLong(buf, off, len);
+        if (ssrc < 0)
         {
-            ssrc = RawPacket.getSSRCAsLong(buf, off, len);
-            if (ssrc < 0)
-            {
-                return false;
-            }
-        }
-        else
-        {
-            ssrc = RTCPHeaderUtils.getSenderSSRC(buf, off, len);
-            if (ssrc < 0)
-            {
-                return false;
-            }
+            return false;
         }
 
         SimulcastController simulcastController
             = ssrcToBitrateController.get((int) ssrc);
 
         return simulcastController != null
-            && simulcastController.accept(data, buf, off, len);
+            && simulcastController.accept(buf, off, len);
     }
 
     /**
@@ -616,13 +602,19 @@ public class BitrateController
         @Override
         public RawPacket transform(RawPacket pkt)
         {
+            long ssrc = pkt.getRTCPPacketType();
+            if (ssrc < 0)
+            {
+                return pkt;
+            }
 
-            int ssrc = (int) RTCPHeaderUtils.getSenderSSRC(pkt);
-            SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+            SimulcastController subCtrl
+                = ssrcToBitrateController.get((int) ssrc);
 
             if (subCtrl == null)
             {
-                return null;
+                // Do not drop packets from sources that we don't manage.
+                return pkt;
             }
 
             return subCtrl.rtcpTransform(pkt);

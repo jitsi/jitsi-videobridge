@@ -29,7 +29,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
-import org.jitsi.impl.neomedia.rtcp.*;
+import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -1492,7 +1492,7 @@ public class Videobridge
             if (disableNackTerminaton != null)
             {
                 System.setProperty(
-                    RTCPTermination.DISABLE_NACK_TERMINATION_PNAME,
+                    RtxTransformer.DISABLE_NACK_TERMINATION_PNAME,
                     disableNackTerminaton);
             }
         }
