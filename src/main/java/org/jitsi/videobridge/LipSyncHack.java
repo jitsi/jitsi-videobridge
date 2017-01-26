@@ -224,10 +224,18 @@ public class LipSyncHack
                 }
             }
 
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("new_injection" +
+                    ",stream=" + channel.getStream().hashCode() +
+                    " ssrc=" + receiveVideoSSRC +
+                    ",max_ts=" + kfs[kfs.length - 1].getTimestamp() +
+                    ",max_seq_num=" + kfs[kfs.length - 1].getSequenceNumber());
+            }
+
             injections.put(receiveVideoSSRC,
-                new Injection((seqNumOff + MAX_KEY_FRAMES) & 0xFFFF,
-                    (tsOff + MAX_KEY_FRAMES * TS_INCREMENT_PER_FRAME)
-                        & 0xFFFFFFFFL));
+                new Injection(kfs[kfs.length - 1].getSequenceNumber(),
+                    kfs[kfs.length - 1].getTimestamp()));
         }
     }
 
@@ -300,6 +308,14 @@ public class LipSyncHack
                 long tsDelta
                     = (injectState.maxTs + 10 * 3000 - ts) & 0xFFFFFFFFL;
 
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("new_translation" +
+                        ",stream=" + channel.getStream().hashCode() +
+                        " ssrc=" + acceptedVideoSSRC +
+                        ",ts_delta=" + tsDelta +
+                        ",seq_num_delta=" + seqNumDelta);
+                }
                 transformations.put(acceptedVideoSSRC,
                     new Transformation(tsDelta, seqNumDelta));
             }
@@ -372,31 +388,69 @@ public class LipSyncHack
                 Transformation state = transformations.get(ssrc);
                 if (state == null)
                 {
-                    // Prepend.
-                    int seqNumOff = (pkts[i].getSequenceNumber() - 10) & 0xFFFF;
-                    long tsOff = (pkts[i].getTimestamp() - 10 * 3000) & 0xFFFFFFFFL;
-                    RawPacket[] extras = make(ssrc.intValue(), seqNumOff, tsOff);
-                    cumulExtras = ArrayUtils.concat(cumulExtras, extras);
-                    state = new Transformation(0, 0);
+                    Injection injection = injections.get(ssrc);
+                    long tsDelta;
+                    int seqNumDelta;
+                    if (injection == null)
+                    {
+                        // Prepend.
+                        int seqNumOff
+                            = (pkts[i].getSequenceNumber() - 10) & 0xFFFF;
+                        long tsOff
+                            = (pkts[i].getTimestamp() - 10 * 3000) & 0xFFFFFFFFL;
+                        RawPacket[] extras
+                            = make(ssrc.intValue(), seqNumOff, tsOff);
+                        cumulExtras = ArrayUtils.concat(cumulExtras, extras);
+                        state = new Transformation(0, 0);
+                        tsDelta = 0; seqNumDelta = 0;
+                    }
+                    else
+                    {
+                        // Translate
+                        seqNumDelta = (injection.maxSeqNum
+                            + 10 - pkts[i].getSequenceNumber()) & 0xFFFF;
+                        tsDelta = (injection.maxTs
+                            + 10 * 3000 - pkts[i].getTimestamp()) & 0xFFFFFFFFL;
+                        state = new Transformation(tsDelta, seqNumDelta);
+                    }
+
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug("new_translation" +
+                            ",stream=" + channel.getStream().hashCode() +
+                            " ssrc=" + ssrc +
+                            ",ts_delta=" + tsDelta +
+                            ",seq_num_delta=" + seqNumDelta);
+                    }
+
                     transformations.put(ssrc, state);
                 }
-                else
+
+                int srcSeqNum = pkts[i].getSequenceNumber();
+                int dstSeqNum = state.rewriteSeqNum(srcSeqNum);
+
+                long srcTs = pkts[i].getTimestamp();
+                long dstTs = state.rewriteTimestamp(srcTs);
+
+                if (srcSeqNum != dstSeqNum)
                 {
-                    int srcSeqNum = pkts[i].getSequenceNumber();
-                    int dstSeqNum = state.rewriteSeqNum(srcSeqNum);
+                    pkts[i].setSequenceNumber(dstSeqNum);
+                }
 
-                    long srcTs = pkts[i].getTimestamp();
-                    long dstTs = state.rewriteTimestamp(srcTs);
+                if (dstTs != srcTs)
+                {
+                    pkts[i].setTimestamp(dstTs);
+                }
 
-                    if (srcSeqNum != dstSeqNum)
-                    {
-                        pkts[i].setSequenceNumber(dstSeqNum);
-                    }
 
-                    if (dstTs != srcTs)
-                    {
-                        pkts[i].setTimestamp(dstTs);
-                    }
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("src_ssrc=" + pkts[i].getSSRCAsLong()
+                        + ",src_seq=" + srcSeqNum
+                        + ",src_ts=" + srcTs
+                        + ",dst_ssrc=" + pkts[i].getSSRCAsLong()
+                        + ",dst_seq=" + dstSeqNum
+                        + ",dst_ts=" + dstTs);
                 }
             }
 
