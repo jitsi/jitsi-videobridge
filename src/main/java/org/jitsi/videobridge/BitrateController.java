@@ -180,17 +180,18 @@ public class BitrateController
                 int ssrc = allocation.targetSSRC,
                     targetIdx = allocation.targetIdx;
 
-                SimulcastController ctrl
-                    = ssrcToBitrateController.get(ssrc);
-                if (ctrl == null && allocation.track != null)
+                // Review this.
+                SimulcastController ctrl;
+                synchronized (ssrcToBitrateController)
                 {
-                    ctrl = new SimulcastController(allocation.track);
-
-                    RTPEncodingDesc[] rtpEncodings
-                        = allocation.track.getRTPEncodings();
-
-                    synchronized (ssrcToBitrateController)
+                    ctrl = ssrcToBitrateController.get(ssrc);
+                    if (ctrl == null && allocation.track != null)
                     {
+                        ctrl = new SimulcastController(allocation.track);
+
+                        RTPEncodingDesc[] rtpEncodings
+                            = allocation.track.getRTPEncodings();
+
                         // Route all encodings to the specified bitrate
                         // controller.
                         for (RTPEncodingDesc rtpEncoding : rtpEncodings)
@@ -205,8 +206,6 @@ public class BitrateController
                             }
                         }
                     }
-
-                    ctrl = ssrcToBitrateController.get(ssrc);
                 }
 
                 if (ctrl != null)
