@@ -638,7 +638,7 @@ public class BitrateController
         @Override
         public RawPacket transform(RawPacket pkt)
         {
-            long ssrc = pkt.getRTCPPacketType();
+            long ssrc = pkt.getRTCPSSRCAsLong();
             if (ssrc < 0)
             {
                 return pkt;
