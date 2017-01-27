@@ -141,7 +141,7 @@ public class BitrateController
      * @param conferenceEndpoints the ordered list of {@link Endpoint}s
      * participating in the multipoint conference with the dominant (speaker)
      * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performaance;
+     * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
      */
