@@ -43,7 +43,7 @@ public class BitrateController
      * The name of the property used to disable LastN notifications.
      */
     public static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
-        = " org.jitsi.videobridge.DISABLE_LASTN_NOTIFICATIONS";
+        = "org.jitsi.videobridge.DISABLE_LASTN_NOTIFICATIONS";
 
     /**
      * An empty list instance.
