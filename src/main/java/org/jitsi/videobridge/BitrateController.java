@@ -19,6 +19,8 @@ import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
@@ -37,6 +39,12 @@ import java.util.concurrent.*;
 public class BitrateController
     implements TransformEngine
 {
+    /**
+     * The name of the property used to disable LastN notifications.
+     */
+    public static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
+        = " org.jitsi.videobridge.DISABLE_LASTN_NOTIFICATIONS";
+
     /**
      * An empty list instance.
      */
@@ -78,6 +86,13 @@ public class BitrateController
     private Set<String> forwardedEndpointIds = INITIAL_EMPTY_SET;
 
     /**
+     * A boolean that indicates whether or not we should send data channel
+     * notifications to the endpoint about changes in the endpoints that it
+     * receives.
+     */
+    private final boolean disableLastNNotifications;
+
+    /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link VideoChannel}.
      *
@@ -86,6 +101,10 @@ public class BitrateController
     BitrateController(VideoChannel dest)
     {
         this.dest = dest;
+
+        ConfigurationService cfg = LibJitsi.getConfigurationService();
+        disableLastNNotifications = cfg == null
+            || cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, true);
     }
 
     /**
@@ -232,7 +251,8 @@ public class BitrateController
             }
         }
 
-        if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
+        if (!disableLastNNotifications
+            && !newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
             dest.sendLastNEndpointsChangeEventOnDataChannel(
                 newForwardedEndpointIds,
