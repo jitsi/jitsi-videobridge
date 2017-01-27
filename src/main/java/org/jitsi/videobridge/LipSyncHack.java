@@ -525,7 +525,7 @@ public class LipSyncHack
 
                             if (srcTs != dstTs)
                             {
-                                RTCPSenderInfoUtils.setTimestamp(baf, dstTs);
+                                RTCPSenderInfoUtils.setTimestamp(baf, (int) dstTs);
                             }
                         }
                     }
