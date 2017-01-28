@@ -59,7 +59,7 @@ public class BitrateController
     /**
      * The bitrate controllers for all SSRCs that this instance has seen.
      */
-    private final Map<Integer, SimulcastController>
+    private final Map<Long, SimulcastController>
         ssrcToBitrateController = new ConcurrentHashMap<>();
 
     /**
@@ -146,7 +146,7 @@ public class BitrateController
         }
 
         SimulcastController simulcastController
-            = ssrcToBitrateController.get((int) ssrc);
+            = ssrcToBitrateController.get(ssrc);
 
         return simulcastController != null
             && simulcastController.accept(buf, off, len);
@@ -203,7 +203,7 @@ public class BitrateController
                 SimulcastController ctrl;
                 synchronized (ssrcToBitrateController)
                 {
-                    ctrl = ssrcToBitrateController.get(ssrc);
+                    ctrl = ssrcToBitrateController.get(ssrc & 0xFFFFFFFFL);
                     if (ctrl == null && allocation.track != null)
                     {
                         ctrl = new SimulcastController(allocation.track);
@@ -216,12 +216,12 @@ public class BitrateController
                         for (RTPEncodingDesc rtpEncoding : rtpEncodings)
                         {
                             ssrcToBitrateController.put(
-                                (int) rtpEncoding.getPrimarySSRC(), ctrl);
+                                rtpEncoding.getPrimarySSRC(), ctrl);
 
                             if (rtpEncoding.getRTXSSRC() != -1)
                             {
                                 ssrcToBitrateController.put(
-                                    (int) rtpEncoding.getRTXSSRC(), ctrl);
+                                    rtpEncoding.getRTXSSRC(), ctrl);
                             }
                         }
                     }
@@ -602,7 +602,7 @@ public class BitrateController
         @Override
         public RawPacket transform(RawPacket pkt)
         {
-            int ssrc = pkt.getSSRC();
+            long ssrc = pkt.getSSRCAsLong();
 
             SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
 
@@ -645,7 +645,7 @@ public class BitrateController
             }
 
             SimulcastController subCtrl
-                = ssrcToBitrateController.get((int) ssrc);
+                = ssrcToBitrateController.get(ssrc);
 
             if (subCtrl == null)
             {
