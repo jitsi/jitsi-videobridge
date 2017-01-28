@@ -19,7 +19,6 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
-import java.util.concurrent.atomic.*;
 
 import javax.media.rtp.*;
 
@@ -225,6 +224,9 @@ public class RtpChannel
 
     /**
      * The instance which holds statistics for this {@link RtpChannel}instance.
+     *
+     * TODO(gp) we should think about separating stats collection and stats
+     * retrieval (stats snapshots)
      */
     protected final Statistics statistics = new Statistics();
 
@@ -630,37 +632,6 @@ public class RtpChannel
         return true;
 
         } // synchronized (receiveSSRCsSyncRoot)
-    }
-
-    /**
-     * Asks this <tt>Channel</tt> to request keyframes in the RTP video streams
-     * that it receives.
-     */
-    void askForKeyframes()
-    {
-        askForKeyframes(getReceiveSSRCs());
-    }
-
-    /**
-     * Asks this <tt>Channel</tt> to request keyframes in the RTP video streams
-     * that it receives.
-     *
-     * @param receiveSSRCs the SSRCs to request an FIR for.
-     */
-    public void askForKeyframes(int[] receiveSSRCs)
-    {
-        // XXX(gp) does it make sense to repeatedly request key frames when we
-        // haven't received a key frame for a previous request? In some cases,
-        // maybe (the key frame might have been lost for example). This should
-        // be more intelligent.
-        if (receiveSSRCs != null && receiveSSRCs.length != 0)
-        {
-            RTCPFeedbackMessageSender rtcpFeedbackMessageSender
-                = getContent().getRTCPFeedbackMessageSender();
-
-            if (rtcpFeedbackMessageSender != null)
-                rtcpFeedbackMessageSender.sendFIR(receiveSSRCs);
-        }
     }
 
     /**
@@ -1281,28 +1252,6 @@ public class RtpChannel
     }
 
     /**
-     * Enables or disables the adaptive lastN functionality.
-     *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveLastN <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive lastN.
-     */
-    public void setAdaptiveLastN(boolean adaptiveLastN)
-    {}
-
-    /**
-     * Enables or disables the adaptive simulcast functionality.
-     *
-     * Does nothing, allows extenders to implement.
-     *
-     * @param adaptiveSimulcast <tt>true</tt> to enable and <tt>false</tt> to
-     * disable adaptive simulcast.
-     */
-    public void setAdaptiveSimulcast(boolean adaptiveSimulcast)
-    {}
-
-    /**
      * Sets the direction of the <tt>MediaStream</tt> of this <tt>Channel</tt>.
      * <p>
      * <b>Warning</b>: The method does nothing if latching has not finished.
@@ -1328,7 +1277,7 @@ public class RtpChannel
      * Jitsi Videobridge to the endpoint associated with this video
      * <tt>Channel</tt>
      */
-    public void setLastN(Integer lastN)
+    public void setLastN(int lastN)
     {
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
@@ -1383,13 +1332,6 @@ public class RtpChannel
                 if (transportManager != null)
                 {
                     transportManager.payloadTypesChanged(this);
-                }
-
-                RtxTransformer rtxTransformer;
-                if (transformEngine != null && (rtxTransformer
-                    = transformEngine.getRtxTransformer()) != null)
-                {
-                    rtxTransformer.onDynamicPayloadTypesChanged();
                 }
             }
 
@@ -1546,16 +1488,11 @@ public class RtpChannel
      *
      * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
      * <tt>conferenceSpeechActivity</tt>
-     * @return a list of the <tt>Endpoint</tt>s which should be asked for
-     * (video) keyframes because, for example, they are entering the set of
-     * <tt>lastN</tt> <tt>Endpoint</tt>s of this <tt>Channel</tt>, or
-     * {@code null} if there are no such endpoints.
      */
-    List<Endpoint> speechActivityEndpointsChanged(List<Endpoint> endpoints)
+    void speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
-        return null;
     }
 
     /**
@@ -1801,17 +1738,18 @@ public class RtpChannel
                 conferenceStatistics.totalNoPayloadChannels.incrementAndGet();
             }
 
+            MediaStreamStats streamStats = stream.getMediaStreamStats();
             logger.info(Logger.Category.STATISTICS,
                         "expire_ch_stats," + getLoggingId() +
                             " bRecv=" + statistics.bytesReceived +
                             ",bSent=" + statistics.bytesSent +
                             ",pRecv=" + statistics.packetsReceived +
                             ",pSent=" + statistics.packetsSent +
-                            ",bRetr=" + statistics.bytesRetransmitted +
-                            ",bNotRetr=" + statistics.bytesNotRetransmitted +
-                            ",pRetr=" + statistics.packetsRetransmitted +
-                            ",pNotRetr=" + statistics.packetsNotRetransmitted +
-                            ",pMiss=" + statistics.packetsMissingFromCache);
+                            ",bRetr=" + streamStats.getBytesRetransmitted() +
+                            ",bNotRetr=" + streamStats.getBytesNotRetransmitted() +
+                            ",pRetr=" + streamStats.getPacketsRetransmitted() +
+                            ",pNotRetr=" + streamStats.getPacketsNotRetransmitted() +
+                            ",pMiss=" + streamStats.getPacketsMissingFromCache());
         }
         TransformEngine transformEngine = this.transformEngine;
         if (transformEngine != null)
@@ -1906,11 +1844,14 @@ public class RtpChannel
 
         if (mediaStreamTrackReceiver != null)
         {
-            MediaStreamTrackImpl[] newTracks
+            MediaStreamTrackDesc[] newTracks
                 = MediaStreamTrackFactory.createMediaStreamTracks(
-                    mediaStreamTrackReceiver, sources, sourceGroups);
+                    mediaStreamTrackReceiver, sources, sourceGroups, false);
 
-            return mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+            boolean changed
+                = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+
+            return changed;
         }
         else
         {
@@ -1979,33 +1920,5 @@ public class RtpChannel
          * is closed.
          */
         protected long packetsReceived = -1;
-
-        /**
-         * Number of bytes retransmitted.
-         */
-        protected final AtomicLong bytesRetransmitted = new AtomicLong();
-
-        /**
-         * Number of bytes for packets which were requested and found in the
-         * cache, but were intentionally not retransmitted.
-         */
-        protected final AtomicLong bytesNotRetransmitted = new AtomicLong();
-
-        /**
-         * Number of packets retransmitted.
-         */
-        protected final AtomicLong packetsRetransmitted = new AtomicLong();
-
-        /**
-         * Number of packets which were requested and found in the cache, but
-         * were intentionally not retransmitted.
-         */
-        protected AtomicLong packetsNotRetransmitted = new AtomicLong();
-
-        /**
-         * The number of packets for which retransmission was requested, but
-         * they were missing from the cache.
-         */
-        protected AtomicLong packetsMissingFromCache = new AtomicLong();
     }
 }

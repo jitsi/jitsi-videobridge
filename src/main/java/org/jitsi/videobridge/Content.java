@@ -127,8 +127,6 @@ public class Content
      */
     private String recordingPath = null;
 
-    private RTCPFeedbackMessageSender rtcpFeedbackMessageSender;
-
     /**
      * The <tt>Object</tt> which synchronizes the access to the RTP-level relays
      * (i.e. {@link #mixer} and {@link #rtpTranslator}) provided by this
@@ -204,45 +202,6 @@ public class Content
             }
         }
         return accept;
-    }
-
-    /**
-     * Sends keyframe requests for all SSRCs in all video channels of the
-     * endpoints specified by ID in {@code endpointIds}.
-     * @param endpointIds the list of IDs of endpoints to send keyframe
-     * requests to.
-     */
-    public void askForKeyframesById(Collection<String> endpointIds)
-    {
-        List<Endpoint> endpoints = new LinkedList<>();
-        Conference conference = getConference();
-        for (String endpointId : endpointIds)
-        {
-            Endpoint endpoint = conference.getEndpoint(endpointId);
-            if (endpoint != null)
-            {
-                endpoints.add(endpoint);
-            }
-        }
-
-        if (!endpoints.isEmpty())
-        {
-            askForKeyframes(endpoints);
-        }
-    }
-
-    /**
-     * Sends keyframe requests for all SSRCs in all video channels of the
-     * endpoints in {@code endpoints}.
-     * @param endpoints the list of endpoints to send keyframe requests to.
-     */
-    void askForKeyframes(Collection<Endpoint> endpoints)
-    {
-        for (Endpoint endpoint : endpoints)
-        {
-            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
-                channel.askForKeyframes();
-        }
     }
 
     /**
@@ -450,7 +409,6 @@ public class Content
             {
                 if (rtpTranslator != null)
                     rtpTranslator.dispose();
-                rtcpFeedbackMessageSender = null;
             }
 
             if (logger.isInfoEnabled())
@@ -793,11 +751,6 @@ public class Content
         return recorder;
     }
 
-    RTCPFeedbackMessageSender getRTCPFeedbackMessageSender()
-    {
-        return rtcpFeedbackMessageSender;
-    }
-
     /**
      * Gets the <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
      * between the <tt>Channel</tt>s of this <tt>Content</tt> which use a
@@ -847,9 +800,6 @@ public class Content
                         initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffl;
 
                         rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
-
-                        rtcpFeedbackMessageSender
-                            = rtpTranslatorImpl.getRtcpFeedbackMessageSender();
                     }
                 }
             }

@@ -29,6 +29,7 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -849,18 +850,6 @@ public class Videobridge
                         continue;
                 }
 
-                if (channelCreated && channel instanceof VideoChannel)
-                {
-                    VideoChannel videoChannel
-                        = (VideoChannel)channel;
-
-                    Integer receiveSimulcastLayer =
-                        channelIQ.getReceivingSimulcastLayer();
-
-                    videoChannel.setReceiveSimulcastLayer(
-                        receiveSimulcastLayer);
-                }
-
                 // endpoint
                 // The attribute endpoint is optional. If a value is not
                 // specified, then the Channel endpoint is to not be changed.
@@ -877,14 +866,6 @@ public class Videobridge
 
                 if (lastN != null)
                     channel.setLastN(lastN);
-
-                Boolean adaptiveLastN = channelIQ.getAdaptiveLastN();
-                if (adaptiveLastN != null)
-                    channel.setAdaptiveLastN(adaptiveLastN);
-
-                Boolean adaptiveSimulcast = channelIQ.getAdaptiveSimulcast();
-                if (adaptiveSimulcast != null)
-                    channel.setAdaptiveSimulcast(adaptiveSimulcast);
 
                 // Packet delay - for automated testing purpose only
                 Integer packetDelay = channelIQ.getPacketDelay();
@@ -917,16 +898,6 @@ public class Videobridge
 
                 channel.setRtpEncodingParameters(
                     channelIQ.getSources(), channelIQ.getSourceGroups());
-
-                if (channel instanceof VideoChannel)
-                {
-                    SimulcastMode simulcastMode = channelIQ.getSimulcastMode();
-
-                    if (simulcastMode != null)
-                    {
-                        ((VideoChannel)channel).setSimulcastMode(simulcastMode);
-                    }
-                }
 
                 if (channelBundleId != null)
                 {
@@ -1508,10 +1479,22 @@ public class Videobridge
                 }
             }
 
-            boolean enableLipSync
-                = cfg.getBoolean(Endpoint.ENABLE_LIPSYNC_HACK_PNAME, true);
-            System.setProperty(VideoChannel.ENABLE_LIPSYNC_HACK_PNAME,
-                Boolean.toString(enableLipSync));
+            String enableLipSync
+                = cfg.getString(Endpoint.ENABLE_LIPSYNC_HACK_PNAME);
+            if (enableLipSync != null)
+            {
+                System.setProperty(
+                    VideoChannel.ENABLE_LIPSYNC_HACK_PNAME, enableLipSync);
+            }
+
+            String disableNackTerminaton
+                = cfg.getString(VideoChannel.DISABLE_NACK_TERMINATION_PNAME);
+            if (disableNackTerminaton != null)
+            {
+                System.setProperty(
+                    RtxTransformer.DISABLE_NACK_TERMINATION_PNAME,
+                    disableNackTerminaton);
+            }
         }
 
         // Initialize the the host candidate interface filters in the ice4j
