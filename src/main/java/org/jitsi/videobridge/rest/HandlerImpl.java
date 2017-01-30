@@ -213,9 +213,7 @@ class HandlerImpl
      * The HTTP resource which is used to trigger graceful shutdown.
      */
     private static final String SHUTDOWN = "shutdown";
-
-    private static final String ERROR_HEADER = "Error";
-
+    
     /**
      * The HTTP resource which lists the JSON representation of the
      * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
@@ -562,7 +560,8 @@ class HandlerImpl
                 String message = String.format("Failed to patch" +
                         " conference: %s, conference not found", target);
                 logger.error(message);
-                response.addHeader(ERROR_HEADER, message);
+                response.getOutputStream().println(message);
+
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
             else if (RESTUtil.isJSONContentType(request.getContentType()))
@@ -581,7 +580,8 @@ class HandlerImpl
                                         " conference: %s, could not parse" +
                                         " JSON", target);
                         logger.error(message);
-                        response.addHeader(ERROR_HEADER, message);
+                        response.getOutputStream().println(message);
+
                         status = HttpServletResponse.SC_BAD_REQUEST;
                     }
                 }
@@ -592,7 +592,8 @@ class HandlerImpl
                             " JSON message: %s", target,
                             pe.getMessage());
                     logger.error(message);
-                    response.addHeader(ERROR_HEADER, message);
+                    response.getOutputStream().println(message);
+
                     status = HttpServletResponse.SC_BAD_REQUEST;
                 }
                 if (status == 0)
@@ -610,7 +611,8 @@ class HandlerImpl
                                         " conference: %s, conference JSON" +
                                 " has invalid conference id", target);
                         logger.error(message);
-                        response.addHeader(ERROR_HEADER, message);
+                        response.getOutputStream().println(message);
+
                         status = HttpServletResponse.SC_BAD_REQUEST;
                     }
                     else
@@ -639,7 +641,7 @@ class HandlerImpl
                                         " conference: %s, message: %s", target,
                                         responseIQ.getError().getMessage());
                                 logger.error(message);
-                                response.addHeader(ERROR_HEADER, message);
+                                response.getOutputStream().println(message);
                             }
 
                         }
@@ -649,7 +651,8 @@ class HandlerImpl
                                             " conference: %s, message: %s", target,
                                     e.getMessage());
                             logger.error(message);
-                            response.addHeader(ERROR_HEADER, message);
+                            response.getOutputStream().println(message);
+
                             status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                         }
                         if (status == 0 && responseConferenceIQ != null)
@@ -667,8 +670,9 @@ class HandlerImpl
                         }
                     }
                 }
-                if (status != 0)
+                else {
                     response.setStatus(status);
+            }
             }
             else
             {
@@ -676,7 +680,8 @@ class HandlerImpl
                                 " conference: %s, invalid content type, must be %s",
                         target, RESTUtil.JSON_CONTENT_TYPE);
                 logger.error(message);
-                response.addHeader(ERROR_HEADER, message);
+                response.getOutputStream().println(message);
+
                 response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
             }
         }
@@ -721,7 +726,8 @@ class HandlerImpl
                     String message = "Failed to create conference, could" +
                             " not parse JSON";
                     logger.error(message);
-                    response.addHeader(ERROR_HEADER, message);
+                    response.getOutputStream().println(message);
+
                     status = HttpServletResponse.SC_BAD_REQUEST;
                 }
             }
@@ -730,7 +736,8 @@ class HandlerImpl
                 String message = String.format("Failed to create conference," +
                         " could not parse JSON, message: %s", pe.getMessage());
                 logger.error(message);
-                response.addHeader(ERROR_HEADER, message);
+                response.getOutputStream().println(message);
+
                 status = HttpServletResponse.SC_BAD_REQUEST;
             }
             if (status == 0)
@@ -770,8 +777,8 @@ class HandlerImpl
                                     "conference, message: %s",responseIQ
                                     .getError().getMessage());
                             logger.error(message);
-                            response.addHeader(ERROR_HEADER, responseIQ
-                                    .getError().getMessage());
+                            response.getOutputStream().println(message);
+
                         }
                     }
                     catch (Exception e)
