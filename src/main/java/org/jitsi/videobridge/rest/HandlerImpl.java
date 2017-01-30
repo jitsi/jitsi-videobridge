@@ -670,9 +670,10 @@ class HandlerImpl
                         }
                     }
                 }
-                else {
+                else
+                {
                     response.setStatus(status);
-            }
+                }
             }
             else
             {
