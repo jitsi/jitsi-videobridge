@@ -73,31 +73,10 @@ public class Videobridge
     private static String defaultTransportManager;
 
     /**
-    * The name of the property which specifies the path to the directory in
-    * which media recordings will be stored.
-    */
-    public static final String ENABLE_MEDIA_RECORDING_PNAME
-        = "org.jitsi.videobridge.ENABLE_MEDIA_RECORDING";
-
-    /**
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
      * instances to print debug information.
      */
     private static final Logger logger = Logger.getLogger(Videobridge.class);
-
-    /**
-     * The name of the property which controls whether media recording is
-     * enabled.
-     */
-    public static final String MEDIA_RECORDING_PATH_PNAME
-        = "org.jitsi.videobridge.MEDIA_RECORDING_PATH";
-
-    /**
-     * The name of the property which specifies the token used to authenticate
-     * requests to enable media recording.
-     */
-    public static final String MEDIA_RECORDING_TOKEN_PNAME
-        = "org.jitsi.videobridge.MEDIA_RECORDING_TOKEN";
 
     /**
      * The optional flag which specifies to
@@ -694,41 +673,6 @@ public class Videobridge
         conference.describeShallow(responseConferenceIQ);
 
         responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
-
-        ColibriConferenceIQ.Recording recordingIQ = conferenceIQ.getRecording();
-
-        if (recordingIQ != null)
-        {
-            String tokenIQ = recordingIQ.getToken();
-
-            if (tokenIQ != null)
-            {
-                String tokenConfig
-                    = getConfigurationService().getString(
-                            Videobridge.MEDIA_RECORDING_TOKEN_PNAME);
-
-                if (tokenIQ.equals(tokenConfig))
-                {
-                    ColibriConferenceIQ.Recording.State recState
-                        = recordingIQ.getState();
-                    boolean recording
-                        = conference.setRecording(
-                                ColibriConferenceIQ.Recording.State.ON
-                                        .equals(recState)
-                                    || ColibriConferenceIQ.Recording.State
-                                            .PENDING.equals(recState));
-                    ColibriConferenceIQ.Recording responseRecordingIq
-                            = new ColibriConferenceIQ.Recording(recState);
-
-                    if (recording)
-                    {
-                        responseRecordingIq.setDirectory(
-                                conference.getRecordingDirectory());
-                    }
-                    responseConferenceIQ.setRecording(responseRecordingIq);
-                }
-            }
-        }
 
         // TODO(gp) Remove ColibriConferenceIQ.RTCPTerminationStrategy
         for (ColibriConferenceIQ.Content contentIQ
