@@ -114,7 +114,8 @@ public class Health
                         endpoint,
                         /* sctpPort */ RANDOM.nextInt(),
                         channelBundleId,
-                        initiator);
+                        initiator,
+                        endpoint.getID());
 
             // Fail as quickly as possible.
             if (sctpConnection == null)
