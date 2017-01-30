@@ -40,7 +40,6 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
-import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
@@ -505,34 +504,6 @@ public class RtpChannel
                         // because of it.
                         accept = false;
                         notify = false;
-                    }
-
-                    /*
-                     * If a new SSRC has been detected on this channel, and a
-                     * Recorder is running, it needs to be notified, so that it
-                     * can map the new SSRC to an endpoint.
-                     */
-                    if (notify && getContent().isRecording())
-                    {
-                        Recorder recorder = getContent().getRecorder();
-
-                        if (recorder != null)
-                        {
-                            Endpoint endpoint = getEndpoint();
-
-                            if (endpoint != null)
-                            {
-                                Synchronizer synchronizer
-                                    = recorder.getSynchronizer();
-
-                                if (synchronizer != null)
-                                {
-                                    synchronizer.setEndpoint(
-                                            ssrc & 0xffffffffL,
-                                            endpoint.getID());
-                                }
-                            }
-                        }
                     }
 
                     /*
@@ -1628,16 +1599,6 @@ public class RtpChannel
         if (!addedSSRCs.isEmpty())
         {
 
-            Recorder recorder = null;
-            Synchronizer synchronizer = null;
-            Endpoint endpoint = null;
-            if (getContent().isRecording())
-            {
-                recorder = getContent().getRecorder();
-                synchronizer = recorder.getSynchronizer();
-                endpoint = getEndpoint();
-            }
-
             for (Integer addedSSRC : addedSSRCs)
             {
                 try
@@ -1645,15 +1606,6 @@ public class RtpChannel
                     // Do allow the number of explicitly signalled SSRCs to
                     // exceed the limit.
                     addReceiveSSRC(addedSSRC, false);
-
-                    // If recording is enabled, we need to add the mapping from
-                    // SSRC to EndpointID into the Synchronizer
-                    // instance used by RecorderRtpImpl.
-                    if (recorder != null && endpoint != null && synchronizer != null)
-                    {
-                        synchronizer.setEndpoint(addedSSRC & 0xffffffffl,
-                            endpoint.getID());
-                    }
                 }
                 catch (SizeExceededException see)
                 {

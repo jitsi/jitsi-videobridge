@@ -349,8 +349,6 @@ final class JSONDeserializer
             Object contents = conference.get(JSONSerializer.CONTENTS);
             Object channelBundles
                 = conference.get(JSONSerializer.CHANNEL_BUNDLES);
-            Object recording
-                = conference.get(ColibriConferenceIQ.Recording.ELEMENT_NAME);
             Object strategy
                 = conference.get(ColibriConferenceIQ
                         .RTCPTerminationStrategy.ELEMENT_NAME);
@@ -372,9 +370,6 @@ final class JSONDeserializer
                         (JSONArray) channelBundles,
                         conferenceIQ);
             }
-            // recording
-            if (recording != null)
-                deserializeRecording((JSONObject) recording, conferenceIQ);
             if (strategy != null)
                 deserializeRTCPTerminationStrategy((JSONObject) strategy,
                         conferenceIQ);
@@ -618,30 +613,6 @@ final class JSONDeserializer
             for (Object payloadType : payloadTypes)
                 deserializePayloadType((JSONObject) payloadType, channelIQ);
         }
-    }
-
-    public static void deserializeRecording(JSONObject recording,
-                                            ColibriConferenceIQ conferenceIQ)
-    {
-        Object state
-            = recording.get(ColibriConferenceIQ.Recording.STATE_ATTR_NAME);
-        if (state == null)
-            return;
-
-        ColibriConferenceIQ.Recording recordingIQ
-                = new ColibriConferenceIQ.Recording(state.toString());
-
-        Object token
-            = recording.get(ColibriConferenceIQ.Recording.TOKEN_ATTR_NAME);
-        if (token != null)
-            recordingIQ.setToken(token.toString());
-
-        Object directory
-                = recording.get(ColibriConferenceIQ.Recording.DIRECTORY_ATTR_NAME);
-        if (directory != null)
-            recordingIQ.setDirectory(directory.toString());
-
-        conferenceIQ.setRecording(recordingIQ);
     }
 
     public static ColibriConferenceIQ.SctpConnection deserializeSctpConnection(
