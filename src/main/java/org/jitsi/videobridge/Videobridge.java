@@ -1059,7 +1059,8 @@ public class Videobridge
                                     endpoint,
                                     sctpPort,
                                     channelBundleId,
-                                    sctpConnIq.isInitiator());
+                                    sctpConnIq.isInitiator(),
+                                useEndpointForChannelId ? sctpConnIq.getEndpoint() : null);
                         if (sctpConn == null)
                         {
                             return IQUtils.createError(

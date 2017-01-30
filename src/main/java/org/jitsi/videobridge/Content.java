@@ -379,14 +379,29 @@ public class Content
             Endpoint endpoint,
             int sctpPort,
             String channelBundleId,
-            Boolean initiator)
+            Boolean initiator,
+            String endpointId)
         throws Exception
     {
         SctpConnection sctpConnection;
 
         synchronized (channels)
         {
-            String id = generateChannelID();
+            String id;
+            if(!StringUtils.isNullOrEmpty(endpointId))
+            {
+                if (channels.containsKey(endpointId))
+                {
+                    throw new Exception(String.format("Cannot create channel " +
+                                    "for endpoint %s, channel already exists",
+                            endpointId));
+                }
+                id = endpointId;
+            }
+            else
+            {
+                id = generateChannelID();
+            }
 
             sctpConnection
                 = new SctpConnection(id, this, endpoint, sctpPort,
