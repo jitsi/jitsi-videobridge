@@ -213,7 +213,7 @@ class HandlerImpl
      * The HTTP resource which is used to trigger graceful shutdown.
      */
     private static final String SHUTDOWN = "shutdown";
-    
+
     /**
      * The HTTP resource which lists the JSON representation of the
      * <tt>VideobridgeStatistics</tt>s of <tt>Videobridge</tt>.
