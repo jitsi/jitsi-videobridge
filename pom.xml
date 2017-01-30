@@ -97,17 +97,6 @@
       <version>2.9-20150723.181644-1</version>
     </dependency>
     <dependency>
-      <!--
-      The libjitsi Maven artifact optionally depends on the
-      jitsi-lgpl-dependencies Maven artifact and the jitsi-videobridge project
-      may require the latter at runtime (e.g. for legacy purposes such as audio
-      mixing).
-      -->
-      <groupId>${project.groupId}</groupId>
-      <artifactId>jitsi-lgpl-dependencies</artifactId>
-      <version>1.0-20150723.002855-1</version>
-    </dependency>
-    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-netaddr</artifactId>
       <version>2.9-20150723.181645-1</version>
