@@ -125,7 +125,7 @@ import org.osgi.framework.*;
  *       <td>GET</td>
  *       <td>/colibri/conferences/{id}</td>
  *       <td>
- *         200 OK with a JSON object which represents the conference with the 
+ *         200 OK with a JSON object which represents the conference with the
  *         specified <tt>id</tt>. For example:
  * <code>
  * {
@@ -238,8 +238,8 @@ class HandlerImpl
     private final boolean shutdownEnabled;
 
     /**
-     * Indicates if /colibri/* REST endpoints are enabled. If not then 
-     * SC_SERVICE_UNAVAILABLE status will be returned for 
+     * Indicates if /colibri/* REST endpoints are enabled. If not then
+     * SC_SERVICE_UNAVAILABLE status will be returned for
      * {@link #COLIBRI_TARGET} requests.
      */
     private final boolean colibriEnabled;
@@ -252,7 +252,7 @@ class HandlerImpl
      * instance is to be initialized
      * @param enableShutdown {@code true} if graceful shutdown is to be
      * enabled; otherwise, {@code false}
-     * @param enableColibri {@code true} if /colibri/* endpoints are to be 
+     * @param enableColibri {@code true} if /colibri/* endpoints are to be
      * enabled; otherwise, {@code false}
      */
     public HandlerImpl(BundleContext bundleContext, boolean enableShutdown,
@@ -264,7 +264,7 @@ class HandlerImpl
 
         if (shutdownEnabled)
             logger.info("Graceful shutdown over REST is enabled");
-        
+
         colibriEnabled = enableColibri;
 
         if (colibriEnabled)
@@ -557,6 +557,11 @@ class HandlerImpl
 
             if (conference == null)
             {
+                String message = String.format("Failed to patch" +
+                        " conference: %s, conference not found", target);
+                logger.error(message);
+                response.getOutputStream().println(message);
+
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
             else if (RESTUtil.isJSONContentType(request.getContentType()))
@@ -571,11 +576,24 @@ class HandlerImpl
                     if ((requestJSONObject == null)
                             || !(requestJSONObject instanceof JSONObject))
                     {
+                        String message = String.format("Failed to patch" +
+                                        " conference: %s, could not parse" +
+                                        " JSON", target);
+                        logger.error(message);
+                        response.getOutputStream().println(message);
+
                         status = HttpServletResponse.SC_BAD_REQUEST;
                     }
                 }
                 catch (ParseException pe)
                 {
+                    String message = String.format("Failed to patch" +
+                                    " conference: %s, could not parse" +
+                            " JSON message: %s", target,
+                            pe.getMessage());
+                    logger.error(message);
+                    response.getOutputStream().println(message);
+
                     status = HttpServletResponse.SC_BAD_REQUEST;
                 }
                 if (status == 0)
@@ -589,6 +607,12 @@ class HandlerImpl
                                     && !requestConferenceIQ.getID().equals(
                                             conference.getID())))
                     {
+                        String message = String.format("Failed to patch" +
+                                        " conference: %s, conference JSON" +
+                                " has invalid conference id", target);
+                        logger.error(message);
+                        response.getOutputStream().println(message);
+
                         status = HttpServletResponse.SC_BAD_REQUEST;
                     }
                     else
@@ -609,14 +633,27 @@ class HandlerImpl
                             }
                             else
                             {
-                                status
-                                    = getHttpStatusCodeForResultIq(responseIQ);
+                                status = getHttpStatusCodeForResultIq(responseIQ);
                             }
+                            if(responseIQ.getError() != null)
+                            {
+                                String message = String.format("Failed to patch" +
+                                        " conference: %s, message: %s", target,
+                                        responseIQ.getError().getMessage());
+                                logger.error(message);
+                                response.getOutputStream().println(message);
+                            }
+
                         }
                         catch (Exception e)
                         {
-                            status
-                                = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+                            String message = String.format("Failed to patch" +
+                                            " conference: %s, message: %s", target,
+                                    e.getMessage());
+                            logger.error(message);
+                            response.getOutputStream().println(message);
+
+                            status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
                         }
                         if (status == 0 && responseConferenceIQ != null)
                         {
@@ -633,11 +670,19 @@ class HandlerImpl
                         }
                     }
                 }
-                if (status != 0)
+                else
+                {
                     response.setStatus(status);
+                }
             }
             else
             {
+                String message = String.format("Failed to patch" +
+                                " conference: %s, invalid content type, must be %s",
+                        target, RESTUtil.JSON_CONTENT_TYPE);
+                logger.error(message);
+                response.getOutputStream().println(message);
+
                 response.setStatus(HttpServletResponse.SC_NOT_ACCEPTABLE);
             }
         }
@@ -679,11 +724,21 @@ class HandlerImpl
                 if ((requestJSONObject == null)
                         || !(requestJSONObject instanceof JSONObject))
                 {
+                    String message = "Failed to create conference, could" +
+                            " not parse JSON";
+                    logger.error(message);
+                    response.getOutputStream().println(message);
+
                     status = HttpServletResponse.SC_BAD_REQUEST;
                 }
             }
             catch (ParseException pe)
             {
+                String message = String.format("Failed to create conference," +
+                        " could not parse JSON, message: %s", pe.getMessage());
+                logger.error(message);
+                response.getOutputStream().println(message);
+
                 status = HttpServletResponse.SC_BAD_REQUEST;
             }
             if (status == 0)
@@ -717,6 +772,15 @@ class HandlerImpl
                         {
                             status = getHttpStatusCodeForResultIq(responseIQ);
                         }
+                        if(responseIQ.getError() != null)
+                        {
+                            String message = String.format("Failed to create " +
+                                    "conference, message: %s",responseIQ
+                                    .getError().getMessage());
+                            logger.error(message);
+                            response.getOutputStream().println(message);
+
+                        }
                     }
                     catch (Exception e)
                     {
@@ -737,8 +801,10 @@ class HandlerImpl
                     }
                 }
             }
-            if (status != 0)
+            else
+            {
                 response.setStatus(status);
+            }
         }
         else
         {
