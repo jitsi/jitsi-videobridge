@@ -641,7 +641,7 @@ public class BitrateController
                     System.arraycopy(
                         ret, 1, newExtras, extrasLen, ret.length - 1);
 
-                    if (extrasLen > 1)
+                    if (extrasLen > 0)
                     {
                         System.arraycopy(extras, 0, newExtras, 0, extrasLen);
                     }
