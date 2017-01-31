@@ -263,7 +263,7 @@ public class LipSyncHack
             kfs[i].setSequenceNumber(seqnum);
 
             // Set RTP timestamp.
-            long timestamp = (tsOff + i * 3000) & 0xFFFFFFFFL;
+            long timestamp = (tsOff + i * TS_INCREMENT_PER_FRAME) & 0xFFFFFFFFL;
             kfs[i].setTimestamp(timestamp);
         }
 
@@ -305,8 +305,8 @@ public class LipSyncHack
 
                 int seqNumDelta
                     = (injectState.maxSeqNum + 10 - seqNum) & 0xFFFF;
-                long tsDelta
-                    = (injectState.maxTs + 10 * 3000 - ts) & 0xFFFFFFFFL;
+                long tsDelta = (injectState.maxTs
+                    + 10 * TS_INCREMENT_PER_FRAME - ts) & 0xFFFFFFFFL;
 
                 if (logger.isDebugEnabled())
                 {
@@ -396,8 +396,8 @@ public class LipSyncHack
                         // Prepend.
                         int seqNumOff
                             = (pkts[i].getSequenceNumber() - 10) & 0xFFFF;
-                        long tsOff
-                            = (pkts[i].getTimestamp() - 10 * 3000) & 0xFFFFFFFFL;
+                        long tsOff = (pkts[i].getTimestamp()
+                            - 10 * TS_INCREMENT_PER_FRAME) & 0xFFFFFFFFL;
                         RawPacket[] extras
                             = make(ssrc.intValue(), seqNumOff, tsOff);
                         cumulExtras = ArrayUtils.concat(cumulExtras, extras);
@@ -409,8 +409,8 @@ public class LipSyncHack
                         // Translate
                         seqNumDelta = (injection.maxSeqNum
                             + 10 - pkts[i].getSequenceNumber()) & 0xFFFF;
-                        tsDelta = (injection.maxTs
-                            + 10 * 3000 - pkts[i].getTimestamp()) & 0xFFFFFFFFL;
+                        tsDelta = (injection.maxTs + 10 * TS_INCREMENT_PER_FRAME
+                            - pkts[i].getTimestamp()) & 0xFFFFFFFFL;
                         state = new Transformation(tsDelta, seqNumDelta);
                     }
 
@@ -525,7 +525,8 @@ public class LipSyncHack
 
                             if (srcTs != dstTs)
                             {
-                                RTCPSenderInfoUtils.setTimestamp(baf, (int) dstTs);
+                                RTCPSenderInfoUtils.
+                                    setTimestamp(baf, (int) dstTs);
                             }
                         }
                     }
