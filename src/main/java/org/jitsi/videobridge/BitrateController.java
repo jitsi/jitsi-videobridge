@@ -577,16 +577,8 @@ public class BitrateController
      * bitrate controller ({@link SimulcastController}, etc).
      */
     private class RTPTransformer
-        extends SinglePacketTransformerAdapter
+        implements PacketTransformer
     {
-        /**
-         * Ctor.
-         */
-        RTPTransformer()
-        {
-            super(RTPPacketPredicate.INSTANCE);
-        }
-
         /**
          * {@inheritDoc}
          */
@@ -600,18 +592,65 @@ public class BitrateController
          * {@inheritDoc}
          */
         @Override
-        public RawPacket transform(RawPacket pkt)
+        public RawPacket[] reverseTransform(RawPacket[] pkts)
         {
-            long ssrc = pkt.getSSRCAsLong();
+            return pkts;
+        }
 
-            SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
-
-            if (subCtrl == null)
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RawPacket[] transform(RawPacket[] pkts)
+        {
+            if (ArrayUtils.isNullOrEmpty(pkts))
             {
-                return null;
+                return pkts;
             }
 
-            return subCtrl.rtpTransform(pkt);
+            RawPacket[] extras = null;
+            for (int i = 0; i < pkts.length; i++)
+            {
+                if (!RTPPacketPredicate.INSTANCE.test(pkts[i]))
+                {
+                    continue;
+                }
+
+                long ssrc = pkts[i].getSSRCAsLong();
+
+                SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+
+                // FIXME properly support unannounced SSRCs.
+                RawPacket[] ret
+                    = subCtrl == null ? null : subCtrl.rtpTransform(pkts[i]);
+
+                if (ArrayUtils.isNullOrEmpty(ret))
+                {
+                    continue;
+                }
+
+                pkts[i] = ret[0];
+                if (ret.length > 1)
+                {
+                    int extrasLen
+                        = ArrayUtils.isNullOrEmpty(extras) ? 0 : extras.length;
+
+                    RawPacket[] newExtras
+                        = new RawPacket[extrasLen + ret.length - 1];
+
+                    System.arraycopy(
+                        ret, 1, newExtras, extrasLen, ret.length - 1);
+
+                    if (extrasLen > 1)
+                    {
+                        System.arraycopy(extras, 0, newExtras, 0, extrasLen);
+                    }
+
+                    extras = newExtras;
+                }
+            }
+
+            return ArrayUtils.concat(pkts, extras);
         }
     }
 
@@ -647,13 +686,7 @@ public class BitrateController
             SimulcastController subCtrl
                 = ssrcToBitrateController.get(ssrc);
 
-            if (subCtrl == null)
-            {
-                // Do not drop packets from sources that we don't manage.
-                return pkt;
-            }
-
-            return subCtrl.rtcpTransform(pkt);
+            return subCtrl == null ? pkt : subCtrl.rtcpTransform(pkt);
         }
     }
 }
