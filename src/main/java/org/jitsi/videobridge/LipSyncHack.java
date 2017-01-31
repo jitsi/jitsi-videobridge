@@ -513,7 +513,7 @@ public class LipSyncHack
                     switch (RTCPHeaderUtils.getPacketType(baf))
                     {
                     case RTCPPacket.SR:
-                        long ssrc = RawPacket.getRTCPSSRCAsLong(baf);
+                        long ssrc = RawPacket.getRTCPSSRC(baf);
                         if (transformations.containsKey(ssrc))
                         {
                             Transformation state
