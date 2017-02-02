@@ -1690,7 +1690,8 @@ public class RtpChannel
                 conferenceStatistics.totalNoPayloadChannels.incrementAndGet();
             }
 
-            MediaStreamStats streamStats = stream.getMediaStreamStats();
+            TrackStats streamStats
+                = stream.getMediaStreamStats().getSendStats();
             logger.info(Logger.Category.STATISTICS,
                         "expire_ch_stats," + getLoggingId() +
                             " bRecv=" + statistics.bytesReceived +
