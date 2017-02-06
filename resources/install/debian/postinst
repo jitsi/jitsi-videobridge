@@ -33,18 +33,6 @@ case "$1" in
         # and all install is different than current one
         if [ "$OLDCONFIG" = "false" ] || [ "$JVB_HOSTNAME" != "$JVB_HOSTNAME_IN" ]; then
 
-            LOCALNAME="$(hostname)"
-            LOCALIP="$(hostname -I)"
-            NAMEBYIP="$(host $LOCALNAME | cut -f4 -d ' ')"
-
-            # FIXME -- we have to check FQDN
-            NAMEVALID=false
-            for IP in $LOCALIP; do
-                if [ "$NAMEBYIP" = "$IP" ]; then
-                    NAMEVALID=true
-                fi
-            done
-
             JVB_HOSTNAME="$JVB_HOSTNAME_IN"
             if [ "$OLDCONFIG" = "false" ]; then
                 # 8-chars random secret, alternative to pwgen 8
