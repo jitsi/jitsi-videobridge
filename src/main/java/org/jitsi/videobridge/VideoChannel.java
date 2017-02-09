@@ -210,6 +210,8 @@ public class VideoChannel
         {
             logOversendingStatsRunnable = null;
         }
+
+        getRecurringExecutor().registerRecurringRunnable(bitrateController);
     }
 
     /**
@@ -235,7 +237,7 @@ public class VideoChannel
                     }
 
                     ((VideoChannel) peerChannel)
-                        .bitrateController.update(null);
+                        .bitrateController.update(null, -1);
                 }
             }
         }
@@ -253,6 +255,23 @@ public class VideoChannel
         throws IOException
     {
         initialize(null);
+    }
+
+    @Override
+    void initialize(RTPLevelRelayType rtpLevelRelayType)
+        throws IOException
+    {
+        super.initialize(rtpLevelRelayType);
+
+        ((VideoMediaStream) getStream()).getOrCreateBandwidthEstimator()
+            .addListener(new BandwidthEstimator.Listener()
+            {
+                @Override
+                public void bandwidthEstimationChanged(long newValueBps)
+                {
+                    bitrateController.update(null, newValueBps);
+                }
+            });
     }
 
     /**
@@ -349,7 +368,7 @@ public class VideoChannel
         if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
             || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            bitrateController.update(null);
+            bitrateController.update(null, -1);
         }
     }
 
@@ -403,6 +422,13 @@ public class VideoChannel
             recurringExecutor.
                 deRegisterRecurringRunnable(logOversendingStatsRunnable);
         }
+
+        if (recurringExecutor != null)
+        {
+            recurringExecutor
+                .deRegisterRecurringRunnable(bitrateController);
+        }
+
         return true;
     }
 
@@ -493,7 +519,7 @@ public class VideoChannel
     @Override
     void speechActivityEndpointsChanged(List<Endpoint> endpoints)
     {
-        bitrateController.update(endpoints);
+        bitrateController.update(endpoints, -1);
     }
 
     /**
