@@ -21,6 +21,8 @@ import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
@@ -89,15 +91,35 @@ public class LipSyncHack
     };
 
     /**
+     * Configuration property for  how many black key frames to send during an
+     * injection period.
+     */
+    public final static String KEY_FRAMES_PER_PERIOD_PNAME
+        = "org.jitsi.videobridge.LipSyncHack.KEY_FRAMES_PER_PERIOD_PNAME";
+
+    /**
+     * Configuration property for the black key frames send period (in ms).
+     */
+    public final static String PERIOD_MS_PNAME
+        = "org.jitsi.videobridge.LipSyncHack.PERIOD_MS_PNAME";
+
+    /**
+     * The <tt>ConfigurationService</tt> used to load LS hack configuration.
+     */
+    private final static ConfigurationService cfg
+        = LibJitsi.getConfigurationService();
+
+    /**
      * A constant defining how many black key frames to send during an injection
      * period.
      */
-    private static final int KEY_FRAMES_PER_PERIOD = 10;
+    private static final int KEY_FRAMES_PER_PERIOD
+        = cfg.getInt(KEY_FRAMES_PER_PERIOD_PNAME, 10);
 
     /**
      *  Black key frames send period (in ms).
      */
-    private static final int PERIOD_MS = 5000;
+    private static final int PERIOD_MS = cfg.getInt(PERIOD_MS_PNAME, 500);
 
     /**
      * Timestamp increment per frame.
