@@ -542,76 +542,52 @@ public class LipSyncHack
      *
      */
     private class RTCPTransformer
-        implements PacketTransformer
+        extends SinglePacketTransformerAdapter
     {
         /**
-         * {@inheritDoc}
+         * Ctor.
          */
-        @Override
-        public void close()
+        RTCPTransformer()
         {
-
+            super(RTCPPacketPredicate.INSTANCE);
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public RawPacket[] reverseTransform(RawPacket[] pkts)
+        public RawPacket transform(RawPacket pkt)
         {
-            return pkts;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public RawPacket[] transform(RawPacket[] pkts)
-        {
-            if (ArrayUtils.isNullOrEmpty(pkts) || injections.isEmpty())
+            if (injections.isEmpty())
             {
-                return pkts;
+                return pkt;
             }
 
-            return translate(pkts);
-        }
-
-        private RawPacket[] translate(RawPacket[] pkts)
-        {
-            for (int i = 0; i < pkts.length; i++)
+            RTCPIterator it = new RTCPIterator(pkt);
+            while (it.hasNext())
             {
-                if (pkts[i] == null
-                    || !RTCPPacketPredicate.INSTANCE.test(pkts[i]))
+                ByteArrayBuffer baf = it.next();
+                switch (RTCPHeaderUtils.getPacketType(baf))
                 {
-                    continue;
-                }
-
-                RTCPIterator it = new RTCPIterator(pkts[i]);
-                while (it.hasNext())
-                {
-                    ByteArrayBuffer baf = it.next();
-                    switch (RTCPHeaderUtils.getPacketType(baf))
+                case RTCPPacket.SR:
+                    long ssrc = RawPacket.getRTCPSSRC(baf);
+                    Transformation state = transformations.get(ssrc);
+                    if (state != null)
                     {
-                    case RTCPPacket.SR:
-                        long ssrc = RawPacket.getRTCPSSRC(baf);
-                        Transformation state = transformations.get(ssrc);
-                        if (state != null)
-                        {
-                            // Rewrite timestamp.
-                            long srcTs = RTCPSenderInfoUtils.getTimestamp(baf);
-                            long dstTs = state.rewriteTimestamp(srcTs);
+                        // Rewrite timestamp.
+                        long srcTs = RTCPSenderInfoUtils.getTimestamp(baf);
+                        long dstTs = state.rewriteTimestamp(srcTs);
 
-                            if (srcTs != dstTs)
-                            {
-                                RTCPSenderInfoUtils.
-                                    setTimestamp(baf, (int) dstTs);
-                            }
+                        if (srcTs != dstTs)
+                        {
+                            RTCPSenderInfoUtils.
+                                setTimestamp(baf, (int) dstTs);
                         }
                     }
                 }
             }
 
-            return pkts;
+            return pkt;
         }
     }
 
