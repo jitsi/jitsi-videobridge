@@ -40,8 +40,7 @@ import java.util.concurrent.*;
  * @author George Politis
  */
 public class LipSyncHack
-    implements TransformEngine,
-               AutoCloseable
+    implements TransformEngine
 {
     /**
      * A byte array holding a black VP8 key frame. The byte array contains the
@@ -424,16 +423,6 @@ public class LipSyncHack
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void close()
-        throws Exception
-    {
-        recurringRunnableExecutor.close();
-    }
-
-    /**
      *
      */
     private class RTPTransformer
@@ -445,7 +434,13 @@ public class LipSyncHack
         @Override
         public void close()
         {
+            recurringRunnableExecutor.close();
 
+            if (rtcpReportListener != null)
+            {
+                dest.getStream().getMediaStreamStats().getRTCPReports()
+                    .removeRTCPReportListener(rtcpReportListener);
+            }
         }
 
         /**
