@@ -800,7 +800,7 @@ public class BitrateController
         long bytes = PADDING_PERIOD_MS * paddingParams.bps / 1000 / 8;
 
         // Prioritize on stage participant protection.
-        rtxTransformer.pad(paddingParams.ssrc, bytes);
+        rtxTransformer.sendPadding(paddingParams.ssrc, bytes);
     }
 
     /**
