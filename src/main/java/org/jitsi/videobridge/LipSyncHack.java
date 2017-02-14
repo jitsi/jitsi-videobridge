@@ -94,8 +94,8 @@ public class LipSyncHack
      * Configuration property for  how many black key frames to send during an
      * injection period.
      */
-    public final static String KEY_FRAMES_PER_PERIOD_PNAME
-        = "org.jitsi.videobridge.LipSyncHack.KEY_FRAMES_PER_PERIOD_PNAME";
+    public final static String KEY_FRAMES_PER_INJECTION_PNAME
+        = "org.jitsi.videobridge.LipSyncHack.KEY_FRAMES_PER_INJECTION_PNAME";
 
     /**
      * Configuration property for the black key frames send period (in ms).
@@ -114,7 +114,7 @@ public class LipSyncHack
      * period.
      */
     private static final int KEY_FRAMES_PER_PERIOD
-        = cfg.getInt(KEY_FRAMES_PER_PERIOD_PNAME, 10);
+        = cfg.getInt(KEY_FRAMES_PER_INJECTION_PNAME, 10);
 
     /**
      *  Black key frames send period (in ms).
@@ -285,7 +285,11 @@ public class LipSyncHack
                 || injections.containsKey(receiveVideoSSRC))
             {
                 // No need to hack this SSRC, as it's either already accepted
-                // or we're already injecting.
+                // (in other words, media has started flowing for this SSRC) or
+                // we're already injecting (since we have an injection).
+                //
+                // In either case, we don't want to start another injection
+                // task.
                 return;
             }
 
@@ -306,15 +310,16 @@ public class LipSyncHack
 
     /**
      * Makes {@code sz} black key frame packets within the range specified by
-     * {@code snOff}.
+     * {@code seqNumOff}.
      *
-     * @param ssrc
-     * @param snOff
-     * @param tsOff
-     * @param sz
-     * @return
+     * @param ssrc the SSRC of the black key frame packets.
+     * @param seqNumOff the sequence number offset of the black key frame
+     * packets.
+     * @param tsOff the RTP timestamp offset of the black key frame packets.
+     * @param sz the number of black key frame packets to create.
+     * @return the array of black key frame packets that were created.
      */
-    private static RawPacket[] make(int ssrc, int snOff, long tsOff, int sz)
+    private static RawPacket[] make(int ssrc, int seqNumOff, long tsOff, int sz)
     {
         RawPacket[] kfs = new RawPacket[sz];
         for (int i = 0; i < sz; i++)
@@ -327,7 +332,7 @@ public class LipSyncHack
             kfs[i].setSSRC(ssrc);
 
             // Set sequence number.
-            int seqnum = (snOff + i) & 0xFFFF;
+            int seqnum = (seqNumOff + i) & 0xFFFF;
             kfs[i].setSequenceNumber(seqnum);
 
             // Set RTP timestamp.
