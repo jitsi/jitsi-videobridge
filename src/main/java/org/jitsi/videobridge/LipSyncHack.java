@@ -133,18 +133,18 @@ public class LipSyncHack
     private static final Logger logger = Logger.getLogger(LipSyncHack.class);
 
     /**
-     * The <tt>RecurringRunnableExecutor</tt> to be utilized by the
-     * <tt>LipSyncHack</tt> class and its instances. It drives the injectors.
-     */
-    private static final RecurringRunnableExecutor
-        recurringRunnableExecutor = new RecurringRunnableExecutor(
-            LipSyncHack.class.getSimpleName());
-
-    /**
      * The {@link Random} that will be used to generate the random sequence
      * number and RTP timestamp offsets.
      */
     private static final Random rnd = new Random();
+
+    /**
+     * The <tt>RecurringRunnableExecutor</tt> to be utilized by the
+     * <tt>LipSyncHack</tt> class and its instances. It drives the injectors.
+     */
+    private final RecurringRunnableExecutor
+        recurringRunnableExecutor = new RecurringRunnableExecutor(
+        LipSyncHack.class.getSimpleName());
 
     /**
      * The {@link PacketTransformer} that rewrites RTP or prepends RTP streams
