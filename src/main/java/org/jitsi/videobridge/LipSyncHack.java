@@ -671,6 +671,15 @@ public class LipSyncHack
                 return;
             }
 
+            // This is synchronized with the stop method (which updates the
+            // running field). The stop method is invoked when the video
+            // translator thread receives a video RTP packet and right before
+            // the maxSeqNum and maxTs fields are accessed by the video
+            // translator write thread.
+
+            // The idea here is to serialize r/w of maxSeqNum and maxTs, to make
+            // sure the video translator thread is not using an outdated
+            // maxSeqNum value.
             synchronized (this)
             {
                 if (!running)
@@ -727,7 +736,8 @@ public class LipSyncHack
         }
 
         /**
-         *
+         * After stop is called, the injection logic is stopped and maxSeqNum
+         * and maxTs will not be further modified.
          */
         public synchronized void stop()
         {
