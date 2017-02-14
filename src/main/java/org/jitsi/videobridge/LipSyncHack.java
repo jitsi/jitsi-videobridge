@@ -689,13 +689,15 @@ public class LipSyncHack
                     // Pre-allocate KEY_FRAMES_PER_PERIOD spots and exit the
                     // synchronize block to minimize contention.
                     maxSeqNum = (maxSeqNum + KEY_FRAMES_PER_PERIOD) & 0xFFFF;
-                    maxTs = (maxTs + KEY_FRAMES_PER_PERIOD * TS_INCREMENT_PER_FRAME)
-                        & 0xFFFFFFFFL;
+                    maxTs = (maxTs
+                        + KEY_FRAMES_PER_PERIOD * TS_INCREMENT_PER_FRAME)
+                            & 0xFFFFFFFFL;
                 }
             }
 
-            long tsOff = (maxTs - (KEY_FRAMES_PER_PERIOD - 1) * TS_INCREMENT_PER_FRAME)
-                & 0xFFFFFFFFL;
+            long tsOff
+                = (maxTs - (KEY_FRAMES_PER_PERIOD - 1) * TS_INCREMENT_PER_FRAME)
+                    & 0xFFFFFFFFL;
 
             int seqNumOff = (maxSeqNum - KEY_FRAMES_PER_PERIOD - 1) & 0xFFFF;
             RawPacket[] kfs = make(
