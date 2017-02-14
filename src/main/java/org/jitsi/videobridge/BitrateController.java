@@ -51,7 +51,7 @@ public class BitrateController
      * the interval/period in milliseconds at which {@link #run()} is to be
      * invoked.
      */
-    private static final long PADDING_PERIODICITY_MS = 15;
+    private static final long PADDING_PERIOD_MS = 15;
 
     /**
      * The name of the property used to disable LastN notifications.
@@ -63,7 +63,7 @@ public class BitrateController
      * The name of the property used to trust bandwidth estimations.
      */
     public static final String TRUST_BWE_PNAME
-        = "org.jitsi.videobridge.TRUST_BWE_NAME";
+        = "org.jitsi.videobridge.TRUST_BWE";
 
     /**
      * An empty list instance.
@@ -114,7 +114,8 @@ public class BitrateController
 
     /**
      * A boolean that indicates whether or not we should trust the bandwidth
-     * estimations.
+     * estimations. If this is se to false, then we assume a bandwidth
+     * estimation of Long.MAX_VALUE.
      */
     private final boolean trustBwe;
 
@@ -131,7 +132,7 @@ public class BitrateController
      */
     BitrateController(VideoChannel dest)
     {
-        super(PADDING_PERIODICITY_MS);
+        super(PADDING_PERIOD_MS);
         this.dest = dest;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
@@ -213,13 +214,13 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        if (bweBps == -1)
+        if (bweBps == -1 && trustBwe)
         {
             bweBps = ((VideoMediaStream) dest.getStream())
                 .getOrCreateBandwidthEstimator().getLatestEstimate();
         }
 
-        if (!trustBwe)
+        if (bweBps < 0)
         {
             bweBps = Long.MAX_VALUE;
         }
@@ -304,6 +305,7 @@ public class BitrateController
 
         long availablePaddingBps = bweBps - mediaBps;
         paddingParams.bps = Math.min(optimalBps - mediaBps, availablePaddingBps);
+        assert paddingParams.bps >= 0;
         this.paddingParams = paddingParams;
 
         if (logger.isInfoEnabled())
@@ -795,7 +797,7 @@ public class BitrateController
         MediaStreamImpl stream = (MediaStreamImpl) dest.getStream();
         RtxTransformer rtxTransformer = stream.getRtxTransformer();
 
-        long bytes = PADDING_PERIODICITY_MS * paddingParams.bps / 1000 / 8;
+        long bytes = PADDING_PERIOD_MS * paddingParams.bps / 1000 / 8;
 
         // Prioritize on stage participant protection.
         rtxTransformer.pad(paddingParams.ssrc, bytes);
