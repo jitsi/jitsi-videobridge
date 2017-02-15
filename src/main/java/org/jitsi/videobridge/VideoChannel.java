@@ -509,7 +509,11 @@ public class VideoChannel
     @Override
     public void setLastN(int lastN)
     {
-        this.lastN = lastN;
+        if (this.lastN != lastN)
+        {
+            this.lastN = lastN;
+            bitrateController.update(null, -1);
+        }
 
         touch(); // It seems this Channel is still active.
     }
