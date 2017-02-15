@@ -23,6 +23,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.util.concurrent.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -37,13 +38,32 @@ import java.util.concurrent.*;
  * @author George Politis
  */
 public class BitrateController
+    extends PeriodicRunnable
     implements TransformEngine
 {
+    /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger = Logger.getLogger(BitrateController.class);
+    
+    /**
+     * the interval/period in milliseconds at which {@link #run()} is to be
+     * invoked.
+     */
+    private static final long PADDING_PERIOD_MS = 15;
+
     /**
      * The name of the property used to disable LastN notifications.
      */
     public static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
         = "org.jitsi.videobridge.DISABLE_LASTN_NOTIFICATIONS";
+
+    /**
+     * The name of the property used to trust bandwidth estimations.
+     */
+    public static final String TRUST_BWE_PNAME
+        = "org.jitsi.videobridge.TRUST_BWE";
 
     /**
      * An empty list instance.
@@ -93,6 +113,18 @@ public class BitrateController
     private final boolean disableLastNNotifications;
 
     /**
+     * A boolean that indicates whether or not we should trust the bandwidth
+     * estimations. If this is se to false, then we assume a bandwidth
+     * estimation of Long.MAX_VALUE.
+     */
+    private final boolean trustBwe;
+
+    /**
+     * The current padding budget for {@link #dest}.
+     */
+    private PaddingParams paddingParams;
+
+    /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link VideoChannel}.
      *
@@ -100,11 +132,14 @@ public class BitrateController
      */
     BitrateController(VideoChannel dest)
     {
+        super(PADDING_PERIOD_MS);
         this.dest = dest;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
-        disableLastNNotifications = cfg == null
-            || cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, true);
+        disableLastNNotifications = cfg != null
+            && cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, false);
+
+        trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, false);
     }
 
     /**
@@ -163,8 +198,9 @@ public class BitrateController
      * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
+     * @param bweBps the current bandwidth estimation (in bps).
      */
-    public void update(List<Endpoint> conferenceEndpoints)
+    public void update(List<Endpoint> conferenceEndpoints, long bweBps)
     {
         // Gather the conference allocation input.
         if (conferenceEndpoints == null)
@@ -178,7 +214,16 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        long bweBps = Long.MAX_VALUE;
+        if (bweBps == -1 && trustBwe)
+        {
+            bweBps = ((VideoMediaStream) dest.getStream())
+                .getOrCreateBandwidthEstimator().getLatestEstimate();
+        }
+
+        if (bweBps < 0)
+        {
+            bweBps = Long.MAX_VALUE;
+        }
 
         // Compute the bitrate allocation.
         EndpointBitrateAllocation[]
@@ -190,10 +235,17 @@ public class BitrateController
         Set<String> endpointsEnteringLastNIds = new HashSet<>();
         Set<String> conferenceEndpointIds = new HashSet<>();
 
+        PaddingParams paddingParams = new PaddingParams();
+        long optimalBps = 0, mediaBps = 0;
         if (!ArrayUtils.isNullOrEmpty(allocations))
         {
+            paddingParams.ssrc = allocations[0].targetSSRC & 0xFFFFFFFFL;
+
             for (EndpointBitrateAllocation allocation : allocations)
             {
+                optimalBps += allocation.getOptimalBitrate();
+                mediaBps += allocation.getTargetBitrate();
+
                 conferenceEndpointIds.add(allocation.endpointID);
 
                 int ssrc = allocation.targetSSRC,
@@ -251,6 +303,21 @@ public class BitrateController
             }
         }
 
+        long availablePaddingBps = bweBps - mediaBps;
+        paddingParams.bps = Math.min(optimalBps - mediaBps, availablePaddingBps);
+        assert paddingParams.bps >= 0;
+        this.paddingParams = paddingParams;
+
+        if (logger.isInfoEnabled())
+        {
+            logger.info("bitrate_ctrl" +
+                ",stream=" + dest.getStream().hashCode() +
+                " media_bps=" + mediaBps +
+                ",padding_ssrc=" + paddingParams.ssrc +
+                ",padding_bps=" + paddingParams.bps +
+                ",bwe_bps=" + bweBps);
+        }
+
         if (!disableLastNNotifications
             && !newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
@@ -275,7 +342,6 @@ public class BitrateController
      * history. This parameter is optional but it can be used for performaance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
-     *
      * @return an array of {@link EndpointBitrateAllocation}.
      */
     private EndpointBitrateAllocation[] allocate(
@@ -322,7 +388,6 @@ public class BitrateController
      * history. This parameter is optional but it can be used for performaance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
-     *
      * @return a prioritized {@link EndpointBitrateAllocation} array where
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
@@ -380,9 +445,9 @@ public class BitrateController
 
                 endpointBitrateAllocations[priority++]
                     = new EndpointBitrateAllocation(
-                        sourceEndpoint,
-                        true /* forwarded */,
-                        true /* selected */);
+                    sourceEndpoint,
+                    true /* forwarded */,
+                    true /* selected */);
 
                 it.remove();
             }
@@ -404,9 +469,9 @@ public class BitrateController
 
                 endpointBitrateAllocations[priority++]
                     = new EndpointBitrateAllocation(
-                        sourceEndpoint,
-                        true /* forwarded */,
-                        false /* selected */);
+                    sourceEndpoint,
+                    true /* forwarded */,
+                    false /* selected */);
 
                 it.remove();
             }
@@ -426,7 +491,7 @@ public class BitrateController
 
                 endpointBitrateAllocations[priority++]
                     = new EndpointBitrateAllocation(
-                        sourceEndpoint, forwarded, false /* selected */);
+                    sourceEndpoint, forwarded, false /* selected */);
             }
         }
 
@@ -480,6 +545,11 @@ public class BitrateController
         private int targetIdx = -1;
 
         /**
+         * The optimal subjective quality index for this bitrate allocation.
+         */
+        private final int optimalIdx;
+
+        /**
          * Ctor.
          *
          * @param endpoint the {@link Endpoint} that this bitrate allocation
@@ -506,10 +576,10 @@ public class BitrateController
             {
                 rates = new long[0];
                 targetSSRC = -1;
+                optimalIdx = -1;
                 track = null;
                 return;
             }
-
 
             RTPEncodingDesc[] encodings = tracks[0].getRTPEncodings();
 
@@ -517,6 +587,7 @@ public class BitrateController
             {
                 rates = new long[0];
                 targetSSRC = -1;
+                optimalIdx = -1;
                 track = null;
                 return;
             }
@@ -526,10 +597,17 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
+            int highIdx = 0;
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
+                if (rates[i] > 0)
+                {
+                    highIdx = i;
+                }
             }
+
+            optimalIdx = selected ? highIdx : 0;
         }
 
         /**
@@ -561,12 +639,24 @@ public class BitrateController
         }
 
         /**
+         * Gets the target bitrate (in bps) for this endpoint allocation.
          *
          * @return the target bitrate (in bps) for this endpoint allocation.
          */
         long getTargetBitrate()
         {
             return targetIdx == -1 ? 0 : rates[targetIdx];
+        }
+
+
+        /**
+         * Gets the optimal bitrate (in bps) for this endpoint allocation.
+         *
+         * @return the optimal bitrate (in bps) for this endpoint allocation.
+         */
+        long getOptimalBitrate()
+        {
+            return optimalIdx >= 0 ? rates[optimalIdx] : 0;
         }
     }
 
@@ -688,5 +778,44 @@ public class BitrateController
 
             return subCtrl == null ? pkt : subCtrl.rtcpTransform(pkt);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void run()
+    {
+        super.run();
+
+        PaddingParams paddingParams = this.paddingParams;
+        if (paddingParams == null)
+        {
+            return;
+        }
+
+        MediaStreamImpl stream = (MediaStreamImpl) dest.getStream();
+        RtxTransformer rtxTransformer = stream.getRtxTransformer();
+
+        long bytes = PADDING_PERIOD_MS * paddingParams.bps / 1000 / 8;
+
+        // Prioritize on stage participant protection.
+        rtxTransformer.sendPadding(paddingParams.ssrc, bytes);
+    }
+
+    /**
+     * Helper class that holds the padding parameters.
+     */
+    class PaddingParams
+    {
+        /**
+         * The SSRC to protect.
+         */
+        long ssrc;
+
+        /**
+         * The padding bitrate for in bps.
+         */
+        long bps;
     }
 }
