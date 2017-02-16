@@ -390,7 +390,8 @@ public class VideoChannel
 
         if (accept && lipSyncHack != null)
         {
-            lipSyncHack.onRTPTranslatorWillWriteVideo(buffer, offset, length);
+            lipSyncHack
+                .onRTPTranslatorWillWriteVideo(buffer, offset, length, source);
         }
 
         return accept;

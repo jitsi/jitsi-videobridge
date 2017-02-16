@@ -301,7 +301,7 @@ public class LipSyncHack
                 // One way to stop the injection is to receive an RTCP report
                 // for the SSRC that we're hacking.
                 rtcpReportListener = new RTCPReportListener();
-                dest.getStream().getMediaStreamStats()
+                stream.getMediaStreamStats()
                     .getRTCPReports().addRTCPReportListener(rtcpReportListener);
             }
         }
@@ -353,8 +353,10 @@ public class LipSyncHack
      * of the received RTP or RTCP packet begin.
      * @param length the number of bytes in <tt>buffer</tt> beginning at
      * <tt>offset</tt> which represent the received RTP or RTCP packet.
+     * @param source the {@link RtpChannel} where this packet came from.
      */
-    void onRTPTranslatorWillWriteVideo(byte[] buffer, int offset, int length)
+    void onRTPTranslatorWillWriteVideo(
+        byte[] buffer, int offset, int length, RtpChannel source)
     {
         Long acceptedVideoSSRC
             = RawPacket.getSSRCAsLong(buffer, offset, length);
@@ -367,6 +369,30 @@ public class LipSyncHack
         synchronized (filterSyncRoot)
         {
             acceptedVideoSSRCs.add(acceptedVideoSSRC);
+
+            // Make sure we mark as accepted all simulcast SSRCs.
+            MediaStreamTrackDesc[] sourceTracks = source.getStream()
+                .getMediaStreamTrackReceiver().getMediaStreamTracks();
+
+            if (!ArrayUtils.isNullOrEmpty(sourceTracks))
+            {
+                RTPEncodingDesc[] sourceEncodings
+                    = sourceTracks[0].getRTPEncodings();
+                if (!ArrayUtils.isNullOrEmpty(sourceEncodings))
+                {
+                    // Override the accepted SSRC to be the SSRC of the first
+                    // encoding, so that we can find the injection in the map.
+                    acceptedVideoSSRC = sourceEncodings[0].getPrimarySSRC();
+                    for (RTPEncodingDesc sourceEncoding : sourceEncodings)
+                    {
+                        long primarySSRC = sourceEncoding.getPrimarySSRC();
+                        if (primarySSRC > -1)
+                        {
+                            acceptedVideoSSRCs.add(primarySSRC);
+                        }
+                    }
+                }
+            }
 
             Injection injectState = injections.get(acceptedVideoSSRC);
             if (injectState == null)
@@ -525,7 +551,7 @@ public class LipSyncHack
 
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("src_ssrc=" + pkts[i].getSSRCAsLong()
+                    logger.debug("ls_rewrite src_ssrc=" + pkts[i].getSSRCAsLong()
                         + ",src_seq=" + srcSeqNum
                         + ",src_ts=" + srcTs
                         + ",dst_ssrc=" + pkts[i].getSSRCAsLong()
@@ -716,8 +742,7 @@ public class LipSyncHack
             {
                 try
                 {
-                    dest.getStream()
-                        .injectPacket(kfs[i], true, LipSyncHack.this);
+                    stream.injectPacket(kfs[i], true, LipSyncHack.this);
                 }
                 catch (TransmissionFailedException e)
                 {
@@ -728,7 +753,7 @@ public class LipSyncHack
             if (logger.isDebugEnabled())
             {
                 logger.debug("new_injection" +
-                    ",stream=" + dest.getStream().hashCode() +
+                    ",stream=" + stream.hashCode() +
                     " ssrc=" + receiveVideoSSRC +
                     ",max_ts=" + kfs[kfs.length - 1].getTimestamp() +
                     ",max_seq_num=" + kfs[kfs.length - 1].getSequenceNumber());
