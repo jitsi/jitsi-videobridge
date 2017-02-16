@@ -220,7 +220,7 @@ public class BitrateController
                 .getOrCreateBandwidthEstimator().getLatestEstimate();
         }
 
-        if (bweBps < 0)
+        if (bweBps < 0 || !trustBwe)
         {
             bweBps = Long.MAX_VALUE;
         }
