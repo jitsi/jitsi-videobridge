@@ -119,6 +119,12 @@ public class VideoChannel
         = new BitrateController(this);
 
     /**
+     * The instance which probes for bandwidth on this {@link VideoChannel}.
+     */
+    private final BandwidthProbing bandwidthProbing
+        = new BandwidthProbing(this);
+
+    /**
      * The instance which will be computing the incoming bitrate for this
      * <tt>VideoChannel</tt>.
      * @deprecated We should use the statistics from the media stream for this.
@@ -211,7 +217,7 @@ public class VideoChannel
             logOversendingStatsRunnable = null;
         }
 
-        getRecurringExecutor().registerRecurringRunnable(bitrateController);
+        getRecurringExecutor().registerRecurringRunnable(bandwidthProbing);
     }
 
     /**
@@ -427,7 +433,7 @@ public class VideoChannel
         if (recurringExecutor != null)
         {
             recurringExecutor
-                .deRegisterRecurringRunnable(bitrateController);
+                .deRegisterRecurringRunnable(bandwidthProbing);
         }
 
         return true;
