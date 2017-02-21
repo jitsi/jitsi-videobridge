@@ -734,19 +734,17 @@ public class SctpConnection
     {
         synchronized (syncRoot)
         {
-            //if (logger.isDebugEnabled())
-            //{
-            // FIXME restore back to debug
-            //       once we fix the problem with SCTP connection being dropped
-            Endpoint endpoint = getEndpoint();
-            String endpointId = endpoint != null ? endpoint.getID() : "?";
-            // SCTP_SENDER_DRY_EVENT is logged too often. It means that the data
-            // queue is now empty and we don't care.
-            if (SctpNotification.SCTP_SENDER_DRY_EVENT != notification.sn_type)
+            if (logger.isDebugEnabled())
             {
-                logger.info(Logger.Category.STATISTICS,
-                            "sctp_notification," + getLoggingId()
-                            + " notification=" + notification);
+                // SCTP_SENDER_DRY_EVENT is logged too often. It means that the
+                // data queue is now empty and we don't care.
+                if (SctpNotification.SCTP_SENDER_DRY_EVENT
+                    != notification.sn_type)
+                {
+                    logger.info(Logger.Category.STATISTICS,
+                                "sctp_notification," + getLoggingId()
+                                    + " notification=" + notification);
+                }
             }
 
             switch (notification.sn_type)
