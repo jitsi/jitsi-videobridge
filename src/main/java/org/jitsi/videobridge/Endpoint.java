@@ -112,6 +112,13 @@ public class Endpoint
 
     /**
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code LastNChangedEvent}.
+     */
+    private static final String COLIBRI_CLASS_LASTN_CHANGED
+        = "LastNChangedEvent";
+
+    /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code EndpointMessage}.
      */
     private static final String COLIBRI_CLASS_ENDPOINT_MESSAGE
@@ -452,23 +459,37 @@ public class Endpoint
     private void onJSONData(
             WebRtcDataStream src,
             JSONObject jsonObject,
-            Object colibriClass)
+            String colibriClass)
     {
         getConference().getVideobridge().getStatistics().
             totalDataChannelMessagesReceived.incrementAndGet();
 
-        if (COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED.equals(colibriClass))
-            onSelectedEndpointChangedEvent(src, jsonObject);
-        else if (COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED.equals(colibriClass))
-            onSelectedEndpointsChangedEvent(src, jsonObject);
-        else if (COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED.equals(colibriClass))
-            onPinnedEndpointChangedEvent(src, jsonObject);
-        else if (COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED.equals(colibriClass))
-            onPinnedEndpointsChangedEvent(src, jsonObject);
-        else if (COLIBRI_CLASS_CLIENT_HELLO.equals(colibriClass))
-            onClientHello(src, jsonObject);
-        else if (COLIBRI_CLASS_ENDPOINT_MESSAGE.equals(colibriClass))
-            onClientEndpointMessage(src, jsonObject);
+        switch (colibriClass)
+        {
+            case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
+                onSelectedEndpointChangedEvent(src, jsonObject);
+                break;
+            case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
+                onSelectedEndpointsChangedEvent(src, jsonObject);
+                break;
+            case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
+                onPinnedEndpointChangedEvent(src, jsonObject);
+                break;
+            case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
+                onPinnedEndpointsChangedEvent(src, jsonObject);
+                break;
+            case COLIBRI_CLASS_CLIENT_HELLO:
+                onClientHello(src, jsonObject);
+                break;
+            case COLIBRI_CLASS_ENDPOINT_MESSAGE:
+                onClientEndpointMessage(src, jsonObject);
+                break;
+            case COLIBRI_CLASS_LASTN_CHANGED:
+                onLastNChangedEvent(src, jsonObject);
+                break;
+            default:
+                break;
+        }
     }
 
     /**
@@ -706,6 +727,33 @@ public class Endpoint
     }
 
     /**
+     * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}
+     * has been received by the associated {@code SctpConnection}.
+     *
+     * @param src the {@code WebRtcDataStream} by which {@code jsonObject} has
+     * been received
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code LastNChangedEvent} which has been received by the
+     * associated {@code SctpConnection}
+     */
+    private void onLastNChangedEvent(
+            WebRtcDataStream src,
+            JSONObject jsonObject)
+    {
+        // Find the new value for LastN.
+        Object o = jsonObject.get("lastN");
+        if (!(o instanceof Number))
+        {
+            return;
+        }
+        int lastN = ((Number) o).intValue();
+
+        for (RtpChannel channel : getChannels(MediaType.VIDEO)) {
+            channel.setLastN(lastN);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -729,7 +777,7 @@ public class Endpoint
         {
             JSONObject jsonObject = (JSONObject) obj;
             // We utilize JSONObjects with colibriClass only.
-            Object colibriClass = jsonObject.get(Videobridge.COLIBRI_CLASS);
+            String colibriClass = (String)jsonObject.get(Videobridge.COLIBRI_CLASS);
 
             if (colibriClass != null)
             {
