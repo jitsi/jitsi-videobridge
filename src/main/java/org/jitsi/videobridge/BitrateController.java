@@ -22,6 +22,7 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 
 import java.util.*;
@@ -115,12 +116,6 @@ public class BitrateController
      * The current padding parameters list for {@link #dest}.
      */
     private List<PaddingParams> paddingParamsList;
-
-    /**
-     * The time upon which we first received media. This is used to calculate
-     * the initial probing period.
-     */
-    private long firstMediaMs = -1;
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -220,16 +215,15 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        if (bweBps == -1 && trustBwe)
+        BandwidthEstimator bwe = ((VideoMediaStream) dest.getStream())
+            .getOrCreateBandwidthEstimator();
+
+        if (bwe != null && bweBps == -1 && trustBwe)
         {
-            bweBps = ((VideoMediaStream) dest.getStream())
-                .getOrCreateBandwidthEstimator().getLatestEstimate();
+            bweBps = bwe.getLatestEstimate();
         }
 
-        boolean isStarting = firstMediaMs == -1
-            || System.currentTimeMillis() - firstMediaMs < 10000;
-
-        if (bweBps < 0 || !trustBwe || isStarting)
+        if (bweBps < 0 || !trustBwe)
         {
             bweBps = Long.MAX_VALUE;
         }
@@ -314,10 +308,11 @@ public class BitrateController
         // The BandwidthProber will pick this up.
         this.paddingParamsList = simulcastControllers;
 
-        if (logger.isInfoEnabled())
+        MediaStream destStream;
+        if (logger.isInfoEnabled() && (destStream = dest.getStream()) != null)
         {
             logger.info("bitrate_ctrl" +
-                ",stream=" + dest.getStream().hashCode() +
+                ",stream=" + destStream.hashCode() +
                 " target_bps=" + targetBps +
                 ",bwe_bps=" + bweBps);
         }
@@ -684,11 +679,6 @@ public class BitrateController
             if (ArrayUtils.isNullOrEmpty(pkts))
             {
                 return pkts;
-            }
-
-            if (firstMediaMs == -1)
-            {
-                firstMediaMs = System.currentTimeMillis();
             }
 
             RawPacket[] extras = null;
