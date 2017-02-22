@@ -51,12 +51,12 @@ public class BandwidthProbing
     /**
      * The sequence number to use if probing with the JVB's SSRC.
      */
-    int seqNum = new Random().nextInt(0xFFFF);
+    private int seqNum = new Random().nextInt(0xFFFF);
 
     /**
      * The RTP timestamp to use if probing with the JVB's SSRC.
      */
-    long ts = new Random().nextInt() & 0xFFFFFFFFL;
+    private long ts = new Random().nextInt() & 0xFFFFFFFFL;
 
     /**
      *
@@ -112,9 +112,18 @@ public class BandwidthProbing
             return;
         }
 
-        // How much padding can we afford?
         long bweBps = ((VideoMediaStream) dest.getStream())
             .getOrCreateBandwidthEstimator().getLatestEstimate();
+
+        if (totalOptimalBps <= bweBps)
+        {
+            // it seems like the optimal bps fits in the bandwidth estimation,
+            // let's update the bitrate controller.
+            dest.getBitrateController().update(null, bweBps);
+            return;
+        }
+
+        // How much padding can we afford?
         long maxPaddingBps = bweBps - totalCurrentBps;
         long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
