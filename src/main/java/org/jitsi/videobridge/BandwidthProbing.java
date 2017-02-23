@@ -147,7 +147,10 @@ public class BandwidthProbing
 
 
         MediaStreamImpl stream = (MediaStreamImpl) dest.getStream();
-        long bytes = PADDING_PERIOD_MS * paddingBps / 1000 / 8;
+
+        // XXX a signed int is practically sufficient, as it can represent up to
+        // ~ 2GB
+        int bytes = (int) (PADDING_PERIOD_MS * paddingBps / 1000 / 8);
         RtxTransformer rtxTransformer = stream.getRtxTransformer();
 
         if (!ssrcsToProtect.isEmpty())
