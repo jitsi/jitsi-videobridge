@@ -89,7 +89,8 @@ public class BandwidthProbing
         List<Long> ssrcsToProtect = new ArrayList<>();
         for (PaddingParams paddingParams : paddingParamsList)
         {
-            long currentBps = paddingParams.getCurrentBps();
+            PaddingParams.Bitrates bitrates = paddingParams.getBitrates();
+            long currentBps = bitrates.getCurrentBps();
             if (currentBps > 0)
             {
                 // Do not protect SSRC if it's not streaming.
@@ -101,7 +102,7 @@ public class BandwidthProbing
                 }
             }
 
-            totalOptimalBps += paddingParams.getOptimalBps();
+            totalOptimalBps += bitrates.getOptimalBps();
         }
 
         // How much padding do we need?
