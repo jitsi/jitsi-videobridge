@@ -113,6 +113,11 @@ public class BitrateController
     private final boolean trustBwe;
 
     /**
+     * The time (in ms) when this instance first transformed any media.
+     */
+    private long firstMediaMs = -1;
+
+    /**
      * The current padding parameters list for {@link #dest}.
      */
     private List<PaddingParams> paddingParamsList;
@@ -217,6 +222,20 @@ public class BitrateController
 
         BandwidthEstimator bwe = ((VideoMediaStream) dest.getStream())
             .getOrCreateBandwidthEstimator();
+
+        boolean trustBwe = this.trustBwe;
+        if (trustBwe)
+        {
+            // Ignore the bandwidth estimations in the first 10 seconds because
+            // the REMBs don't ramp up fast enough. This needs to go but it's
+            // related to our GCC implementation that needs to be brought up to
+            // speed.
+            if (firstMediaMs == -1
+                || System.currentTimeMillis() - firstMediaMs < 10000)
+            {
+                trustBwe = false;
+            }
+        }
 
         if (bwe != null && bweBps == -1 && trustBwe)
         {
@@ -679,6 +698,11 @@ public class BitrateController
             if (ArrayUtils.isNullOrEmpty(pkts))
             {
                 return pkts;
+            }
+
+            if (firstMediaMs == -1)
+            {
+                firstMediaMs = System.currentTimeMillis();
             }
 
             RawPacket[] extras = null;
