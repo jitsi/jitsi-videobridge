@@ -220,8 +220,9 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        BandwidthEstimator bwe = ((VideoMediaStream) dest.getStream())
-            .getOrCreateBandwidthEstimator();
+        MediaStream destStream = dest.getStream();
+        BandwidthEstimator bwe = destStream == null ? null
+            : ((VideoMediaStream) destStream).getOrCreateBandwidthEstimator();
 
         boolean trustBwe = this.trustBwe;
         if (trustBwe)
@@ -327,8 +328,7 @@ public class BitrateController
         // The BandwidthProber will pick this up.
         this.paddingParamsList = simulcastControllers;
 
-        MediaStream destStream;
-        if (logger.isInfoEnabled() && (destStream = dest.getStream()) != null)
+        if (logger.isInfoEnabled() && destStream != null)
         {
             logger.info("bitrate_ctrl" +
                 ",stream=" + destStream.hashCode() +
