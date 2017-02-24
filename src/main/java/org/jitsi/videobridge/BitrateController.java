@@ -22,8 +22,8 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
-import org.jitsi.util.concurrent.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -38,7 +38,6 @@ import java.util.concurrent.*;
  * @author George Politis
  */
 public class BitrateController
-    extends PeriodicRunnable
     implements TransformEngine
 {
     /**
@@ -46,12 +45,6 @@ public class BitrateController
      * information.
      */
     private final Logger logger = Logger.getLogger(BitrateController.class);
-    
-    /**
-     * the interval/period in milliseconds at which {@link #run()} is to be
-     * invoked.
-     */
-    private static final long PADDING_PERIOD_MS = 15;
 
     /**
      * The name of the property used to disable LastN notifications.
@@ -120,9 +113,14 @@ public class BitrateController
     private final boolean trustBwe;
 
     /**
-     * The current padding budget for {@link #dest}.
+     * The time (in ms) when this instance first transformed any media.
      */
-    private PaddingParams paddingParams;
+    private long firstMediaMs = -1;
+
+    /**
+     * The current padding parameters list for {@link #dest}.
+     */
+    private List<PaddingParams> paddingParamsList;
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -132,7 +130,6 @@ public class BitrateController
      */
     BitrateController(VideoChannel dest)
     {
-        super(PADDING_PERIOD_MS);
         this.dest = dest;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
@@ -158,6 +155,15 @@ public class BitrateController
     public PacketTransformer getRTCPTransformer()
     {
         return rtcpTransformer;
+    }
+
+    /**
+     * Gets the current padding parameters list for {@link #dest}.
+     * @return the current padding parameters list for {@link #dest}.
+     */
+    public List<PaddingParams> getPaddingParamsList()
+    {
+        return paddingParamsList;
     }
 
     /**
@@ -214,10 +220,26 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        if (bweBps == -1 && trustBwe)
+        BandwidthEstimator bwe = ((VideoMediaStream) dest.getStream())
+            .getOrCreateBandwidthEstimator();
+
+        boolean trustBwe = this.trustBwe;
+        if (trustBwe)
         {
-            bweBps = ((VideoMediaStream) dest.getStream())
-                .getOrCreateBandwidthEstimator().getLatestEstimate();
+            // Ignore the bandwidth estimations in the first 10 seconds because
+            // the REMBs don't ramp up fast enough. This needs to go but it's
+            // related to our GCC implementation that needs to be brought up to
+            // speed.
+            if (firstMediaMs == -1
+                || System.currentTimeMillis() - firstMediaMs < 10000)
+            {
+                trustBwe = false;
+            }
+        }
+
+        if (bwe != null && bweBps == -1 && trustBwe)
+        {
+            bweBps = bwe.getLatestEstimate();
         }
 
         if (bweBps < 0 || !trustBwe)
@@ -235,21 +257,19 @@ public class BitrateController
         Set<String> endpointsEnteringLastNIds = new HashSet<>();
         Set<String> conferenceEndpointIds = new HashSet<>();
 
-        PaddingParams paddingParams = new PaddingParams();
-        long optimalBps = 0, mediaBps = 0;
+        List<PaddingParams> simulcastControllers = new ArrayList<>();
+        long targetBps = 0;
         if (!ArrayUtils.isNullOrEmpty(allocations))
         {
-            paddingParams.ssrc = allocations[0].targetSSRC & 0xFFFFFFFFL;
-
             for (EndpointBitrateAllocation allocation : allocations)
             {
-                optimalBps += allocation.getOptimalBitrate();
-                mediaBps += allocation.getTargetBitrate();
+                targetBps += allocation.getTargetBitrate();
 
                 conferenceEndpointIds.add(allocation.endpointID);
 
                 int ssrc = allocation.targetSSRC,
-                    targetIdx = allocation.targetIdx;
+                    targetIdx = allocation.targetIdx,
+                    optimalIdx = allocation.optimalIdx;
 
                 // Review this.
                 SimulcastController ctrl;
@@ -281,7 +301,8 @@ public class BitrateController
 
                 if (ctrl != null)
                 {
-                    ctrl.update(targetIdx);
+                    simulcastControllers.add(ctrl);
+                    ctrl.update(targetIdx, optimalIdx);
                 }
 
                 if (targetIdx > -1)
@@ -299,22 +320,19 @@ public class BitrateController
             for (SimulcastController simulcastController
                 : ssrcToBitrateController.values())
             {
-                simulcastController.update(-1);
+                simulcastController.update(-1, -1);
             }
         }
 
-        long availablePaddingBps = bweBps - mediaBps;
-        paddingParams.bps = Math.min(optimalBps - mediaBps, availablePaddingBps);
-        assert paddingParams.bps >= 0;
-        this.paddingParams = paddingParams;
+        // The BandwidthProber will pick this up.
+        this.paddingParamsList = simulcastControllers;
 
-        if (logger.isInfoEnabled())
+        MediaStream destStream;
+        if (logger.isInfoEnabled() && (destStream = dest.getStream()) != null)
         {
             logger.info("bitrate_ctrl" +
-                ",stream=" + dest.getStream().hashCode() +
-                " media_bps=" + mediaBps +
-                ",padding_ssrc=" + paddingParams.ssrc +
-                ",padding_bps=" + paddingParams.bps +
+                ",stream=" + destStream.hashCode() +
+                " target_bps=" + targetBps +
                 ",bwe_bps=" + bweBps);
         }
 
@@ -597,17 +615,12 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
-            int highIdx = 0;
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
-                if (rates[i] > 0)
-                {
-                    highIdx = i;
-                }
             }
 
-            optimalIdx = selected ? highIdx : 0;
+            optimalIdx = selected ? encodings.length - 1 : 0;
         }
 
         /**
@@ -647,17 +660,6 @@ public class BitrateController
         {
             return targetIdx == -1 ? 0 : rates[targetIdx];
         }
-
-
-        /**
-         * Gets the optimal bitrate (in bps) for this endpoint allocation.
-         *
-         * @return the optimal bitrate (in bps) for this endpoint allocation.
-         */
-        long getOptimalBitrate()
-        {
-            return optimalIdx >= 0 ? rates[optimalIdx] : 0;
-        }
     }
 
     /**
@@ -696,6 +698,11 @@ public class BitrateController
             if (ArrayUtils.isNullOrEmpty(pkts))
             {
                 return pkts;
+            }
+
+            if (firstMediaMs == -1)
+            {
+                firstMediaMs = System.currentTimeMillis();
             }
 
             RawPacket[] extras = null;
@@ -778,44 +785,5 @@ public class BitrateController
 
             return subCtrl == null ? pkt : subCtrl.rtcpTransform(pkt);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void run()
-    {
-        super.run();
-
-        PaddingParams paddingParams = this.paddingParams;
-        if (paddingParams == null)
-        {
-            return;
-        }
-
-        MediaStreamImpl stream = (MediaStreamImpl) dest.getStream();
-        RtxTransformer rtxTransformer = stream.getRtxTransformer();
-
-        long bytes = PADDING_PERIOD_MS * paddingParams.bps / 1000 / 8;
-
-        // Prioritize on stage participant protection.
-        rtxTransformer.sendPadding(paddingParams.ssrc, bytes);
-    }
-
-    /**
-     * Helper class that holds the padding parameters.
-     */
-    class PaddingParams
-    {
-        /**
-         * The SSRC to protect.
-         */
-        long ssrc;
-
-        /**
-         * The padding bitrate for in bps.
-         */
-        long bps;
     }
 }
