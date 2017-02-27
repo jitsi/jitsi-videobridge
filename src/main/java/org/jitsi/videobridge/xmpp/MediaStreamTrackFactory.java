@@ -18,6 +18,8 @@ package org.jitsi.videobridge.xmpp;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 
 import java.util.*;
 
@@ -29,9 +31,28 @@ import java.util.*;
 public class MediaStreamTrackFactory
 {
     /**
+     * The {@link ConfigurationService} to pull configuration options from.
+     */
+    private static ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+    /**
+     * The system property name that for a boolean that's controlling whether or
+     * not to enable temporal scalability filtering for VP8.
+     */
+    private static final String ENABLE_TEMPORAL_LAYERS_PNAME = "org.jitsi" +
+        ".videobridge.xmpp.MediaStreamTrackFactory.ENABLE_TEMPORAL_LAYERS";
+
+    /**
      * The default number of temporal layers to use.
      */
     private static final int DEFAULT_NUM_TEMPORAL_LAYERS = 3;
+
+    /**
+     * A boolean that's controlling whether or not to enable temporal
+     * scalability filtering for VP8.
+     */
+    private static final boolean ENABLE_TEMPORAL_LAYERS
+        = cfg.getBoolean(ENABLE_TEMPORAL_LAYERS_PNAME, false);
 
     /**
      * Creates simulcast encodings.
@@ -85,8 +106,7 @@ public class MediaStreamTrackFactory
     public static MediaStreamTrackDesc[] createMediaStreamTracks(
         MediaStreamTrackReceiver mediaStreamTrackReceiver,
         List<SourcePacketExtension> sources,
-        List<SourceGroupPacketExtension> sourceGroups,
-        boolean includeTemporal)
+        List<SourceGroupPacketExtension> sourceGroups)
     {
         boolean hasSources = sources != null && !sources.isEmpty();
         boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
@@ -155,8 +175,8 @@ public class MediaStreamTrackFactory
                         rtx[i] = rtxSSRC;
                     }
 
-                    int numOfTempo
-                        = includeTemporal ? DEFAULT_NUM_TEMPORAL_LAYERS : 1;
+                    int numOfTempo = ENABLE_TEMPORAL_LAYERS
+                        ? DEFAULT_NUM_TEMPORAL_LAYERS : 1;
                     int encodingsLen = streamLen * numOfTempo;
 
                     RTPEncodingDesc[] rtpEncodings
