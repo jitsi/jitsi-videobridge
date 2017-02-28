@@ -752,13 +752,17 @@ public class VideoChannel
                 }
 
                 long sendingBitrate = 0;
-                for (RtpChannel channel : getEndpoint().getChannels(null))
+                Endpoint endpoint = getEndpoint();
+                if (endpoint != null)
                 {
-                    sendingBitrate +=
-                        channel
-                            .getStream()
-                            .getMediaStreamStats()
-                            .getSendStats().getBitrate();
+                    for (RtpChannel channel : endpoint.getChannels(null))
+                    {
+                        sendingBitrate +=
+                            channel
+                                .getStream()
+                                .getMediaStreamStats()
+                                .getSendStats().getBitrate();
+                    }
                 }
 
                 if (sendingBitrate <= 0)
