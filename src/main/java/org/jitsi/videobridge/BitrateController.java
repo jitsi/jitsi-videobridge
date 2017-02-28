@@ -279,10 +279,11 @@ public class BitrateController
                     ctrl = ssrcToBitrateController.get(ssrc & 0xFFFFFFFFL);
                     if (ctrl == null && allocation.track != null)
                     {
-                        ctrl = new SimulcastController(allocation.track);
-
                         RTPEncodingDesc[] rtpEncodings
                             = allocation.track.getRTPEncodings();
+
+                        ctrl = new SimulcastController(
+                            allocation.track, rtpEncodings[0].getPrimarySSRC());
 
                         // Route all encodings to the specified bitrate
                         // controller.
