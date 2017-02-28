@@ -95,7 +95,7 @@ public class BandwidthProbing
             {
                 // Do not protect SSRC if it's not streaming.
                 totalCurrentBps += currentBps;
-                long ssrc = paddingParams.getTargetSSRC();
+                long ssrc = paddingParams.getProtectedSSRC();
                 if (ssrc > -1)
                 {
                     ssrcsToProtect.add(ssrc);
