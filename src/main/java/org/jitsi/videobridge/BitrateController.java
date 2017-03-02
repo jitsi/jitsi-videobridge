@@ -38,7 +38,7 @@ import java.util.concurrent.*;
  * @author George Politis
  */
 public class BitrateController
-    implements TransformEngine
+    implements TransformEngine, BufferFilter
 {
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -178,7 +178,8 @@ public class BitrateController
      * written into the {@link Channel} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(byte[] buf, int off, int len)
+    @Override
+    public boolean accept(FrameDesc sourceFrame, byte[] buf, int off, int len)
     {
         long ssrc = RawPacket.getSSRCAsLong(buf, off, len);
         if (ssrc < 0)
@@ -190,7 +191,7 @@ public class BitrateController
             = ssrcToBitrateController.get(ssrc);
 
         return simulcastController != null
-            && simulcastController.accept(buf, off, len);
+            && simulcastController.accept(sourceFrame, buf, off, len);
     }
 
     /**
@@ -283,7 +284,7 @@ public class BitrateController
                             = allocation.track.getRTPEncodings();
 
                         ctrl = new SimulcastController(
-                            allocation.track, rtpEncodings[0].getPrimarySSRC());
+                            allocation.track, -1, targetIdx, optimalIdx);
 
                         // Route all encodings to the specified bitrate
                         // controller.
@@ -304,7 +305,8 @@ public class BitrateController
                 if (ctrl != null)
                 {
                     simulcastControllers.add(ctrl);
-                    ctrl.update(targetIdx, optimalIdx);
+                    ctrl.setTargetIndex(targetIdx);
+                    ctrl.setOptimalIndex(optimalIdx);
                 }
 
                 if (targetIdx > -1)
@@ -322,7 +324,8 @@ public class BitrateController
             for (SimulcastController simulcastController
                 : ssrcToBitrateController.values())
             {
-                simulcastController.update(-1, -1);
+                simulcastController.setTargetIndex(-1);
+                simulcastController.setOptimalIndex(-1);
             }
         }
 
