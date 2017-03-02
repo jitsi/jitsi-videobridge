@@ -31,6 +31,7 @@ import org.ice4j.ice.*;
 import org.ice4j.ice.harvest.*;
 import org.ice4j.socket.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
@@ -396,6 +397,13 @@ public class IceUdpTransportManager
      * information.
      */
     private final Logger logger;
+
+    /**
+     * The {@link TransportCCEngine} instance for this transport channel. It
+     * handles transport-wide numbering of packets. It is shared among the
+     * {@link RtpChannel}s/{@link MediaStream}s of this transport manager.
+     */
+    private TransportCCEngine transportCCEngine = new TransportCCEngine();
 
     /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
@@ -1971,5 +1979,13 @@ public class IceUdpTransportManager
         // about is the info for any of the channels, and channelForDtls
         // always contains a channel when we have one.
         return Channel.getLoggingId(channelForDtls);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public TransportCCEngine getTransportCCEngine()
+    {
+        return transportCCEngine;
     }
 }

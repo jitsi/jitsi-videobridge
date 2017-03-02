@@ -22,6 +22,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import net.java.sip.communicator.util.*;
+import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
@@ -386,4 +387,13 @@ public abstract class TransportManager
      * connectivity.
      */
     public abstract boolean isConnected();
+
+    /**
+     * @return the {@link TransportCCEngine} instance, if any, associated with
+     * this transport channel.
+     */
+    public TransportCCEngine getTransportCCEngine()
+    {
+        return null;
+    }
 }
