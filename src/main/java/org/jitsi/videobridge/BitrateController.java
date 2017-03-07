@@ -38,7 +38,7 @@ import java.util.concurrent.*;
  * @author George Politis
  */
 public class BitrateController
-    implements TransformEngine, BufferFilter
+    implements TransformEngine
 {
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -178,8 +178,7 @@ public class BitrateController
      * written into the {@link Channel} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    @Override
-    public boolean accept(FrameDesc sourceFrame, byte[] buf, int off, int len)
+    public boolean accept(byte[] buf, int off, int len)
     {
         long ssrc = RawPacket.getSSRCAsLong(buf, off, len);
         if (ssrc < 0)
@@ -191,7 +190,7 @@ public class BitrateController
             = ssrcToBitrateController.get(ssrc);
 
         return simulcastController != null
-            && simulcastController.accept(sourceFrame, buf, off, len);
+            && simulcastController.accept(buf, off, len);
     }
 
     /**
@@ -340,6 +339,21 @@ public class BitrateController
                 ",bwe_bps=" + bweBps);
         }
 
+        if (logger.isDebugEnabled() && destStream != null)
+        {
+            if (dest.getStream() != null)
+            {
+                for (EndpointBitrateAllocation endpointBitrateAllocation
+                    : allocations)
+                {
+                    logger.debug("endpoint_allocation" +
+                        ",stream=" + dest.getStream().hashCode()
+                        + " endpoint_id=" + endpointBitrateAllocation.endpointID
+                        + ",target_idx=" + endpointBitrateAllocation.targetIdx);
+                }
+            }
+        }
+
         if (!disableLastNNotifications
             && !newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
@@ -434,6 +448,8 @@ public class BitrateController
         // subtract 1 for destEndpoint.
         EndpointBitrateAllocation[] endpointBitrateAllocations
             = new EndpointBitrateAllocation[szConference - 1];
+
+        // FIXME check for expired endpoints.
 
         int lastN = dest.getLastN();
         if (lastN < 0)

@@ -392,9 +392,7 @@ public class VideoChannel
             return true;
         }
 
-        FrameDesc sourceFrameDesc = source.getStream().getMediaStreamTrackReceiver().findFrameDesc(buffer, offset, length);
-
-        boolean accept = bitrateController.accept(sourceFrameDesc, buffer, offset, length);
+        boolean accept = bitrateController.accept(buffer, offset, length);
 
         if (accept && lipSyncHack != null)
         {
