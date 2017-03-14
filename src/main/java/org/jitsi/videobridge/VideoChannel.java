@@ -445,8 +445,11 @@ public class VideoChannel
      * <tt>VideoChannel</tt> in order to notify it that the list/set of
      * <tt>lastN</tt> has changed.
      *
+     * @param forwardedEndpoints the collection of forwarded endpoints.
      * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
      * the list of <tt>Endpoint</tt>s defined by <tt>lastN</tt>
+     * @param conferenceEndpoints the collection of all endpoints in the
+     * conference.
      */
     public void sendLastNEndpointsChangeEventOnDataChannel(
         Collection<String> forwardedEndpoints,
