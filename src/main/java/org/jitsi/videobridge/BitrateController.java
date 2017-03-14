@@ -283,7 +283,7 @@ public class BitrateController
                             = allocation.track.getRTPEncodings();
 
                         ctrl = new SimulcastController(
-                            allocation.track, -1, targetIdx, optimalIdx);
+                            allocation.track, 0, targetIdx, optimalIdx);
 
                         // Route all encodings to the specified bitrate
                         // controller.
@@ -339,15 +339,15 @@ public class BitrateController
                 ",bwe_bps=" + bweBps);
         }
 
-        if (logger.isDebugEnabled() && destStream != null)
+        if (logger.isDebugEnabled())
         {
-            if (dest.getStream() != null)
+            if (destStream != null && !ArrayUtils.isNullOrEmpty(allocations))
             {
                 for (EndpointBitrateAllocation endpointBitrateAllocation
                     : allocations)
                 {
                     logger.debug("endpoint_allocation" +
-                        ",stream=" + dest.getStream().hashCode()
+                        ",stream=" + destStream.hashCode()
                         + " endpoint_id=" + endpointBitrateAllocation.endpointID
                         + ",target_idx=" + endpointBitrateAllocation.targetIdx);
                 }
@@ -449,8 +449,6 @@ public class BitrateController
         EndpointBitrateAllocation[] endpointBitrateAllocations
             = new EndpointBitrateAllocation[szConference - 1];
 
-        // FIXME check for expired endpoints.
-
         int lastN = dest.getLastN();
         if (lastN < 0)
         {
@@ -471,11 +469,11 @@ public class BitrateController
         Set<String> selectedEndpoints = destEndpoint.getSelectedEndpoints();
         if (!selectedEndpoints.isEmpty())
         {
-            Iterator<Endpoint> it = conferenceEndpoints.iterator();
-            while (it.hasNext() && priority < lastN)
+            for (Iterator<Endpoint> it = conferenceEndpoints.iterator();
+                 it.hasNext() && priority < lastN;)
             {
                 Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint == destEndpoint
+                if (sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !selectedEndpoints.contains(sourceEndpoint.getID()))
                 {
                     continue;
@@ -495,11 +493,11 @@ public class BitrateController
         Set<String> pinnedEndpoints = destEndpoint.getPinnedEndpoints();
         if (!pinnedEndpoints.isEmpty())
         {
-            Iterator<Endpoint> it = conferenceEndpoints.iterator();
-            while (it.hasNext() && priority < lastN)
+            for (Iterator<Endpoint> it = conferenceEndpoints.iterator();
+                 it.hasNext() && priority < lastN;)
             {
                 Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint == destEndpoint
+                if (sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !pinnedEndpoints.contains(sourceEndpoint.getID()))
                 {
                     continue;
@@ -520,7 +518,7 @@ public class BitrateController
         {
             for (Endpoint sourceEndpoint : conferenceEndpoints)
             {
-                if (sourceEndpoint == destEndpoint)
+                if (sourceEndpoint.getID().equals(destEndpoint.getID()))
                 {
                     continue;
                 }
