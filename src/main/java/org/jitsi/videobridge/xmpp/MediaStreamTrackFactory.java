@@ -113,66 +113,42 @@ public class MediaStreamTrackFactory
         // scalability (VP9). Exotic cases might do simulcast + spatial
         // scalability.
 
-        if (spatialLen < 2 /* simulcast */)
-        {
-            // this O(n) loop is more efficient than the O(n^3) loop below, and
-            // it works well for the simulcast case, so we keep it.
-            for (int i = 0; i < rtpEncodings.length; i++)
-            {
-                int streamIdx = i / temporalLen, tempoIdx = i % temporalLen;
-
-                // The previous temporal layer is the dependency, if higher than
-                // base.
-                boolean hasDependency = tempoIdx % temporalLen != 0;
-
-                RTPEncodingDesc[] dependency = hasDependency
-                    ? new RTPEncodingDesc[]{rtpEncodings[i - 1]} : null;
-
-                int temporalId = temporalLen > 1 ? tempoIdx : -1;
-
-                rtpEncodings[i] = new RTPEncodingDesc(
-                    track, i, primary[streamIdx], rtx[streamIdx],
-                    temporalId, -1, dependency);
-            }
-            return rtpEncodings;
-
-        }
-
-        // this loop is less efficient but more general than the above loop, it
-        // can generate subjective quality arrays of any combination of streams
-        // spatial and temporal layers.
         for (int streamIdx = 0; streamIdx < primary.length; streamIdx++)
             for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
                 for (int temporalIdx = 0;
                      temporalIdx < temporalLen; temporalIdx++)
                 {
-                    int idx = streamIdx * (spatialIdx * temporalIdx)
-                        + spatialIdx * temporalLen + temporalIdx;
+                    int idx = qid(streamIdx, spatialIdx, temporalIdx,
+                        spatialLen, temporalLen);
 
                     RTPEncodingDesc[] dependencies;
                     if (spatialIdx > 0 && temporalIdx > 0)
                     {
                         // this layer depends on spatialIdx-1 and temporalIdx-1.
                         dependencies = new RTPEncodingDesc[]{
-                            rtpEncodings[streamIdx * (spatialLen * temporalLen)
-                                + (spatialIdx - 1) * temporalLen + temporalIdx],
-                            rtpEncodings[streamIdx * (spatialLen * temporalLen)
-                                + spatialIdx * temporalLen + (temporalIdx - 1)]
+                            rtpEncodings[
+                                qid(streamIdx, spatialIdx, temporalIdx - 1,
+                                    spatialLen, temporalLen)],
+                            rtpEncodings[
+                                qid(streamIdx, spatialIdx - 1, temporalIdx,
+                                    spatialLen, temporalLen)]
                         };
                     }
                     else if (spatialIdx > 0)
                     {
                         // this layer depends on spatialIdx-1.
                         dependencies = new RTPEncodingDesc[]
-                            {rtpEncodings[streamIdx * (spatialLen * temporalLen)
-                                + (spatialIdx - 1) * temporalLen]};
+                            {rtpEncodings[
+                                qid(streamIdx, spatialIdx - 1, temporalIdx,
+                                    spatialLen, temporalLen)]};
                     }
                     else if (temporalIdx > 0)
                     {
                         // this layer depends on temporalIdx-1.
                         dependencies = new RTPEncodingDesc[]
-                            {rtpEncodings[streamIdx * (spatialLen * temporalLen)
-                                + (temporalIdx - 1)]};
+                            {rtpEncodings[
+                                qid(streamIdx, spatialIdx, temporalIdx - 1,
+                                    spatialLen, temporalLen)]};
                     }
                     else
                     {
@@ -371,5 +347,23 @@ public class MediaStreamTrackFactory
         }
 
         return tracks.toArray(new MediaStreamTrackDesc[tracks.size()]);
+    }
+
+    /**
+     * Calculates the subjective quality index of an RTP flow specified by its
+     * stream index (simulcast), spatial index (SVC) and temporal index (SVC).
+     *
+     * @param streamIdx the stream index.
+     * @param spatialIdx the spatial layer index.
+     * @param temporalIdx the temporal layer index.
+     *
+     * @return the subjective quality index of the flow specified in the
+     * arguments.
+     */
+    private static int qid(int streamIdx, int spatialIdx, int temporalIdx,
+                           int spatialLen, int temporalLen)
+    {
+        return streamIdx * spatialLen * temporalLen
+            + spatialIdx * temporalLen + temporalIdx;
     }
 }
