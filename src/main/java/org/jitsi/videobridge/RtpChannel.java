@@ -1847,7 +1847,7 @@ public class RtpChannel
         {
             MediaStreamTrackDesc[] newTracks
                 = MediaStreamTrackFactory.createMediaStreamTracks(
-                    mediaStreamTrackReceiver, sources, sourceGroups, false);
+                    mediaStreamTrackReceiver, sources, sourceGroups);
 
             boolean changed
                 = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);

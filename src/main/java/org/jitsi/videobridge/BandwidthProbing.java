@@ -173,7 +173,7 @@ public class BandwidthProbing
         ts += 3000;
 
         int pktLen = RawPacket.FIXED_HEADER_SIZE + 0xFF;
-        int len = (int) (bytes / pktLen) + 1 /* account for the mod */;
+        int len = (bytes / pktLen) + 1 /* account for the mod */;
 
         for (int i = 0; i < len; i++)
         {

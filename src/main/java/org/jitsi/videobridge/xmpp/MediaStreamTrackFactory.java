@@ -18,6 +18,8 @@ package org.jitsi.videobridge.xmpp;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 
 import java.util.*;
 
@@ -29,43 +31,140 @@ import java.util.*;
 public class MediaStreamTrackFactory
 {
     /**
-     * The default number of temporal layers to use.
+     * The {@link ConfigurationService} to pull configuration options from.
      */
-    private static final int DEFAULT_NUM_TEMPORAL_LAYERS = 3;
+    private static ConfigurationService cfg = LibJitsi.getConfigurationService();
 
     /**
-     * Creates simulcast encodings.
+     * The system property name that for a boolean that's controlling whether or
+     * not to enable temporal scalability filtering for VP8.
+     */
+    public static final String ENABLE_SVC_PNAME = "org.jitsi" +
+        ".videobridge.ENABLE_SVC";
+
+    /**
+     * The system property name that for a boolean that's controlling whether or
+     * not to enable temporal scalability filtering for VP8.
+     */
+    public static final String ENABLE_VP9_SVC_PNAME = "org.jitsi" +
+        ".videobridge.ENABLE_VP9_SVC";
+
+    /**
+     * The default number of temporal layers to use for VP8 simulcast.
+     *
+     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
+     * in the RTP stream.
+     */
+    private static final int VP8_SIMULCAST_TEMPORAL_LAYERS = 3;
+
+    /**
+     * The default number of spatial layers to use for VP9 SVC.
+     *
+     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
+     * in the RTP stream.
+     */
+    private static final int VP9_SVC_SPATIAL_LAYERS = 3;
+
+    /**
+     * The default number of spatial layers to use for VP9 SVC.
+     *
+     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
+     * in the RTP stream.
+     */
+    private static final int VP9_SVC_TEMPORAL_LAYERS = 3;
+
+    /**
+     * A boolean that determines whether to enable support for VP9 SVC. This is
+     * experimental and is left disabled by default.
+     */
+    private static final boolean ENABLE_VP9_SVC
+        = cfg.getBoolean(ENABLE_VP9_SVC_PNAME, false);;
+
+    /**
+     * A boolean that's controlling whether or not to enable SVC filtering for
+     * scalable video codecs.
+     */
+    private static final boolean ENABLE_SVC
+        = cfg.getBoolean(ENABLE_SVC_PNAME, false);
+
+    /**
+     * Creates encodings.
      *
      * @param track the track that will own the temporal encodings.
      * @param primary the array of the primary SSRCs for the simulcast streams.
      * @param rtx the array of the RTX SSRCs for the simulcast streams.
-     * @param tempoLen the number of temporal encodings per simulcast stream.
+     * @param spatialLen the number of spatial encodings per simulcast stream.
+     * @param temporalLen the number of temporal encodings per simulcast stream.
      * @return an array that holds the simulcast encodings.
      */
-    public static RTPEncodingDesc[] createRTPEncodings(
-        MediaStreamTrackDesc track, long[] primary, long[] rtx, int tempoLen)
+    private static RTPEncodingDesc[] createRTPEncodings(
+        MediaStreamTrackDesc track, long[] primary, long[] rtx,
+        int spatialLen, int temporalLen)
     {
         RTPEncodingDesc[] rtpEncodings
-            = new RTPEncodingDesc[primary.length * tempoLen];
+            = new RTPEncodingDesc[primary.length * spatialLen * temporalLen];
 
-        for (int i = 0; i < rtpEncodings.length; i++)
-        {
-            int streamIdx = i / tempoLen, tempoIdx = i % tempoLen;
+        // this loop builds a subjective quality index array that looks like
+        // this:
+        //
+        // [s0t0, s0t1, s0t2, s1t0, s1t1, s1t2, s2t0, s2t1, s2t2]
+        //
+        // The spatial layer is offered either by simulcast (VP8) or spatial
+        // scalability (VP9). Exotic cases might do simulcast + spatial
+        // scalability.
 
-            // The previous temporal layer is the dependency, if higher than
-            // base.
-            boolean hasDependency = tempoIdx % tempoLen != 0;
+        for (int streamIdx = 0; streamIdx < primary.length; streamIdx++)
+            for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
+                for (int temporalIdx = 0;
+                     temporalIdx < temporalLen; temporalIdx++)
+                {
+                    int idx = qid(streamIdx, spatialIdx, temporalIdx,
+                        spatialLen, temporalLen);
 
-            RTPEncodingDesc[] dependency = hasDependency
-                ? new RTPEncodingDesc[] { rtpEncodings[i - 1] } : null;
+                    RTPEncodingDesc[] dependencies;
+                    if (spatialIdx > 0 && temporalIdx > 0)
+                    {
+                        // this layer depends on spatialIdx-1 and temporalIdx-1.
+                        dependencies = new RTPEncodingDesc[]{
+                            rtpEncodings[
+                                qid(streamIdx, spatialIdx, temporalIdx - 1,
+                                    spatialLen, temporalLen)],
+                            rtpEncodings[
+                                qid(streamIdx, spatialIdx - 1, temporalIdx,
+                                    spatialLen, temporalLen)]
+                        };
+                    }
+                    else if (spatialIdx > 0)
+                    {
+                        // this layer depends on spatialIdx-1.
+                        dependencies = new RTPEncodingDesc[]
+                            {rtpEncodings[
+                                qid(streamIdx, spatialIdx - 1, temporalIdx,
+                                    spatialLen, temporalLen)]};
+                    }
+                    else if (temporalIdx > 0)
+                    {
+                        // this layer depends on temporalIdx-1.
+                        dependencies = new RTPEncodingDesc[]
+                            {rtpEncodings[
+                                qid(streamIdx, spatialIdx, temporalIdx - 1,
+                                    spatialLen, temporalLen)]};
+                    }
+                    else
+                    {
+                        // this is a base layer without any dependencies.
+                        dependencies = null;
+                    }
 
-            int temporalId = tempoLen > 1 ? tempoIdx : -1;
+                    int temporalId = temporalLen > 1 ? temporalIdx : -1;
+                    int spatialId = spatialLen > 1 ? spatialIdx : -1;
 
-            rtpEncodings[i] = new RTPEncodingDesc(
-                track, i, primary[streamIdx], rtx[streamIdx],
-                temporalId, dependency);
-        }
-
+                    rtpEncodings[idx]
+                        = new RTPEncodingDesc(track, idx,
+                        primary[streamIdx],
+                        rtx == null || rtx.length == 0 ? -1 : rtx[streamIdx],
+                        temporalId, spatialId, dependencies);
+                }
         return rtpEncodings;
     }
 
@@ -85,8 +184,7 @@ public class MediaStreamTrackFactory
     public static MediaStreamTrackDesc[] createMediaStreamTracks(
         MediaStreamTrackReceiver mediaStreamTrackReceiver,
         List<SourcePacketExtension> sources,
-        List<SourceGroupPacketExtension> sourceGroups,
-        boolean includeTemporal)
+        List<SourceGroupPacketExtension> sourceGroups)
     {
         boolean hasSources = sources != null && !sources.isEmpty();
         boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
@@ -155,18 +253,18 @@ public class MediaStreamTrackFactory
                         rtx[i] = rtxSSRC;
                     }
 
-                    int numOfTempo
-                        = includeTemporal ? DEFAULT_NUM_TEMPORAL_LAYERS : 1;
-                    int encodingsLen = streamLen * numOfTempo;
+                    int numOfTemporal
+                        = ENABLE_SVC ? VP8_SIMULCAST_TEMPORAL_LAYERS : 1;
+                    int encodingsLen = streamLen * numOfTemporal;
 
                     RTPEncodingDesc[] rtpEncodings
                         = new RTPEncodingDesc[encodingsLen];
 
                     MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-                        mediaStreamTrackReceiver, rtpEncodings);
+                        mediaStreamTrackReceiver, rtpEncodings, true);
 
                     RTPEncodingDesc[] simulcastEncodings = createRTPEncodings(
-                        track, primary, rtx, numOfTempo);
+                        track, primary, rtx, 1, numOfTemporal);
 
                     System.arraycopy(simulcastEncodings, 0, rtpEncodings, 0,
                         simulcastEncodings.length);
@@ -181,11 +279,29 @@ public class MediaStreamTrackFactory
                     Long primarySSRC = fidEntry.getKey();
                     Long rtxSSRC = fidEntry.getValue();
 
-                    RTPEncodingDesc[] encodings = new RTPEncodingDesc[1];
+                    int numOfTemporal, numOfSpatial;
+                    if (ENABLE_VP9_SVC && ENABLE_SVC)
+                    {
+                        numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
+                        numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
+                    }
+                    else
+                    {
+                        numOfSpatial = 1;
+                        numOfTemporal = 1;
+                    }
+
+                    int encodingsLen = numOfSpatial * numOfTemporal;
+                    RTPEncodingDesc[] encodings
+                        = new RTPEncodingDesc[encodingsLen];
                     MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-                        mediaStreamTrackReceiver, encodings);
-                    encodings[0]
-                        = new RTPEncodingDesc(track, primarySSRC, rtxSSRC);
+                        mediaStreamTrackReceiver, encodings, false);
+
+                    RTPEncodingDesc[] ret = createRTPEncodings(track,
+                        new long[] { primarySSRC },
+                        new long[] { rtxSSRC }, numOfSpatial, numOfTemporal);
+
+                    System.arraycopy(ret, 0, encodings, 0, encodings.length);
 
                     grouped.add(primarySSRC);
                     grouped.add(rtxSSRC);
@@ -202,15 +318,52 @@ public class MediaStreamTrackFactory
 
                 if (!grouped.contains(mediaSSRC))
                 {
-                    RTPEncodingDesc[] encodings = new RTPEncodingDesc[1];
+                    int numOfTemporal, numOfSpatial;
+                    if (ENABLE_VP9_SVC && ENABLE_SVC)
+                    {
+                        numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
+                        numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
+                    }
+                    else
+                    {
+                        numOfSpatial = 1;
+                        numOfTemporal = 1;
+                    }
+
+                    int encodingsLen = numOfSpatial * numOfTemporal;
+                    RTPEncodingDesc[] encodings
+                        = new RTPEncodingDesc[encodingsLen];
                     MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-                        mediaStreamTrackReceiver, encodings);
-                    encodings[0] = new RTPEncodingDesc(track, mediaSSRC);
+                        mediaStreamTrackReceiver, encodings, false);
+
+                    RTPEncodingDesc[] ret = createRTPEncodings(track,
+                        new long[] { mediaSSRC }, null,
+                        numOfSpatial, numOfTemporal);
+
+                    System.arraycopy(ret, 0, encodings, 0, encodings.length);
                     tracks.add(track);
                 }
             }
         }
 
         return tracks.toArray(new MediaStreamTrackDesc[tracks.size()]);
+    }
+
+    /**
+     * Calculates the subjective quality index of an RTP flow specified by its
+     * stream index (simulcast), spatial index (SVC) and temporal index (SVC).
+     *
+     * @param streamIdx the stream index.
+     * @param spatialIdx the spatial layer index.
+     * @param temporalIdx the temporal layer index.
+     *
+     * @return the subjective quality index of the flow specified in the
+     * arguments.
+     */
+    private static int qid(int streamIdx, int spatialIdx, int temporalIdx,
+                           int spatialLen, int temporalLen)
+    {
+        return streamIdx * spatialLen * temporalLen
+            + spatialIdx * temporalLen + temporalIdx;
     }
 }

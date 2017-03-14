@@ -19,7 +19,6 @@ import net.sf.fmj.media.rtp.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -27,6 +26,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
+import org.jitsi.util.function.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -195,8 +195,8 @@ public class LipSyncHack
     /**
      * The {@link Map} of transformations necessary per video SSRCs.
      */
-    private final Map<Long, Transformation> transformations
-        = new ConcurrentHashMap<>();
+    private final Map<Long, AbstractFunction<RawPacket, RawPacket>>
+        transformations = new ConcurrentHashMap<>();
 
     /**
      * Ctor.
@@ -425,8 +425,9 @@ public class LipSyncHack
             }
 
             // Setup packet transformation.
-            transformations.put(
-                acceptedVideoSSRC, new Transformation(tsDelta, seqNumDelta));
+            transformations.put(acceptedVideoSSRC,
+                new SeqNumPacketTranslation(seqNumDelta)
+                    .andThen(new TimestampPacketTranslation(tsDelta)));
         }
     }
 
@@ -499,8 +500,10 @@ public class LipSyncHack
                 }
 
                 Long ssrc = pkts[i].getSSRCAsLong();
-                Transformation state = transformations.get(ssrc);
-                if (state == null)
+                AbstractFunction<RawPacket, RawPacket>
+                    transformation = transformations.get(ssrc);
+
+                if (transformation == null)
                 {
                     // if we have an injection, then that means that at this
                     // point we MUST have a transformation (because before
@@ -511,7 +514,7 @@ public class LipSyncHack
 
                     // Mark that this RTP stream has been prepended so that we
                     // don't run this block again.
-                    state = new Transformation(0, 0);
+                    transformation = RawPacketTransformation.identity;
 
                     // Prepend.
                     int seqNumOff = (pkts[i].getSequenceNumber() - 10) & 0xFFFF;
@@ -530,34 +533,10 @@ public class LipSyncHack
                             ",ts_delta=0,seq_num_delta=0");
                     }
 
-                    transformations.put(ssrc, state);
+                    transformations.put(ssrc, transformation);
                 }
 
-                int srcSeqNum = pkts[i].getSequenceNumber();
-                int dstSeqNum = state.rewriteSeqNum(srcSeqNum);
-
-                long srcTs = pkts[i].getTimestamp();
-                long dstTs = state.rewriteTimestamp(srcTs);
-
-                if (srcSeqNum != dstSeqNum)
-                {
-                    pkts[i].setSequenceNumber(dstSeqNum);
-                }
-
-                if (dstTs != srcTs)
-                {
-                    pkts[i].setTimestamp(dstTs);
-                }
-
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug("ls_rewrite src_ssrc=" + pkts[i].getSSRCAsLong()
-                        + ",src_seq=" + srcSeqNum
-                        + ",src_ts=" + srcTs
-                        + ",dst_ssrc=" + pkts[i].getSSRCAsLong()
-                        + ",dst_seq=" + dstSeqNum
-                        + ",dst_ts=" + dstTs);
-                }
+                pkts[i] = transformation.apply(pkts[i]);
             }
 
             return ArrayUtils.concat(cumulExtras, pkts);
@@ -589,28 +568,18 @@ public class LipSyncHack
                 return pkt;
             }
 
-            RTCPIterator it = new RTCPIterator(pkt);
-            while (it.hasNext())
+            switch (RTCPHeaderUtils.getPacketType(pkt))
             {
-                ByteArrayBuffer baf = it.next();
-                switch (RTCPHeaderUtils.getPacketType(baf))
-                {
-                case RTCPPacket.SR:
-                    long ssrc = RawPacket.getRTCPSSRC(baf);
-                    Transformation state = transformations.get(ssrc);
-                    if (state != null)
-                    {
-                        // Rewrite timestamp.
-                        long srcTs = RTCPSenderInfoUtils.getTimestamp(baf);
-                        long dstTs = state.rewriteTimestamp(srcTs);
+            case RTCPPacket.SR:
+                long ssrc = RawPacket.getRTCPSSRC(pkt);
+                AbstractFunction<RawPacket, RawPacket>
+                    transformation = transformations.get(ssrc);
 
-                        if (srcTs != dstTs)
-                        {
-                            RTCPSenderInfoUtils.
-                                setTimestamp(baf, (int) dstTs);
-                        }
-                    }
+                if (transformation != null)
+                {
+                    return transformation.apply(pkt);
                 }
+                break;
             }
 
             return pkt;
