@@ -39,8 +39,15 @@ public class MediaStreamTrackFactory
      * The system property name that for a boolean that's controlling whether or
      * not to enable temporal scalability filtering for VP8.
      */
-    private static final String ENABLE_SVC_PNAME = "org.jitsi" +
+    public static final String ENABLE_SVC_PNAME = "org.jitsi" +
         ".videobridge.ENABLE_SVC";
+
+    /**
+     * The system property name that for a boolean that's controlling whether or
+     * not to enable temporal scalability filtering for VP8.
+     */
+    public static final String ENABLE_VP9_SVC_PNAME = "org.jitsi" +
+        ".videobridge.ENABLE_VP9_SVC";
 
     /**
      * The default number of temporal layers to use for VP8 simulcast.
@@ -65,6 +72,13 @@ public class MediaStreamTrackFactory
      * in the RTP stream.
      */
     private static final int VP9_SVC_TEMPORAL_LAYERS = 3;
+
+    /**
+     * A boolean that determines whether to enable support for VP9 SVC. This is
+     * experimental and is left disabled by default.
+     */
+    private static final boolean ENABLE_VP9_SVC
+        = cfg.getBoolean(ENABLE_VP9_SVC_PNAME, false);;
 
     /**
      * A boolean that's controlling whether or not to enable SVC filtering for
@@ -290,11 +304,8 @@ public class MediaStreamTrackFactory
                     Long rtxSSRC = fidEntry.getValue();
 
                     int numOfTemporal, numOfSpatial;
-                    if (false && ENABLE_SVC)
+                    if (ENABLE_VP9_SVC && ENABLE_SVC)
                     {
-                        // FIXME the number of temporal/spatial layers is codec
-                        // specific. What if, for example, we're dealing with
-                        // plain VP9 or with H264? We can't just enable SVC.
                         numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
                         numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
                     }
@@ -332,11 +343,8 @@ public class MediaStreamTrackFactory
                 if (!grouped.contains(mediaSSRC))
                 {
                     int numOfTemporal, numOfSpatial;
-                    if (false && ENABLE_SVC)
+                    if (ENABLE_VP9_SVC && ENABLE_SVC)
                     {
-                        // FIXME the number of temporal/spatial layers is codec
-                        // specific. What if, for example, we're dealing with
-                        // plain VP9 or with H264? We can't just enable SVC.
                         numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
                         numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
                     }
