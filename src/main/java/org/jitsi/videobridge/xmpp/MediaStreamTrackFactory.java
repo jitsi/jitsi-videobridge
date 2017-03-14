@@ -39,54 +39,142 @@ public class MediaStreamTrackFactory
      * The system property name that for a boolean that's controlling whether or
      * not to enable temporal scalability filtering for VP8.
      */
-    private static final String ENABLE_TEMPORAL_LAYERS_PNAME = "org.jitsi" +
-        ".videobridge.xmpp.MediaStreamTrackFactory.ENABLE_TEMPORAL_LAYERS";
+    private static final String ENABLE_SVC_PNAME = "org.jitsi" +
+        ".videobridge.ENABLE_SVC";
 
     /**
-     * The default number of temporal layers to use.
+     * The default number of temporal layers to use for VP8 simulcast.
+     *
+     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
+     * in the RTP stream.
      */
-    private static final int DEFAULT_NUM_TEMPORAL_LAYERS = 3;
+    private static final int VP8_SIMULCAST_TEMPORAL_LAYERS = 3;
 
     /**
-     * A boolean that's controlling whether or not to enable temporal
-     * scalability filtering for VP8.
+     * The default number of spatial layers to use for VP9 SVC.
+     *
+     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
+     * in the RTP stream.
      */
-    private static final boolean ENABLE_TEMPORAL_LAYERS
-        = cfg.getBoolean(ENABLE_TEMPORAL_LAYERS_PNAME, false);
+    private static final int VP9_SVC_SPATIAL_LAYERS = 3;
 
     /**
-     * Creates simulcast encodings.
+     * The default number of spatial layers to use for VP9 SVC.
+     *
+     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
+     * in the RTP stream.
+     */
+    private static final int VP9_SVC_TEMPORAL_LAYERS = 3;
+
+    /**
+     * A boolean that's controlling whether or not to enable SVC filtering for
+     * scalable video codecs.
+     */
+    private static final boolean ENABLE_SVC
+        = cfg.getBoolean(ENABLE_SVC_PNAME, false);
+
+    /**
+     * Creates encodings.
      *
      * @param track the track that will own the temporal encodings.
      * @param primary the array of the primary SSRCs for the simulcast streams.
      * @param rtx the array of the RTX SSRCs for the simulcast streams.
-     * @param tempoLen the number of temporal encodings per simulcast stream.
+     * @param spatialLen the number of spatial encodings per simulcast stream.
+     * @param temporalLen the number of temporal encodings per simulcast stream.
      * @return an array that holds the simulcast encodings.
      */
-    public static RTPEncodingDesc[] createRTPEncodings(
-        MediaStreamTrackDesc track, long[] primary, long[] rtx, int tempoLen)
+    private static RTPEncodingDesc[] createRTPEncodings(
+        MediaStreamTrackDesc track, long[] primary, long[] rtx,
+        int spatialLen, int temporalLen)
     {
         RTPEncodingDesc[] rtpEncodings
-            = new RTPEncodingDesc[primary.length * tempoLen];
+            = new RTPEncodingDesc[primary.length * spatialLen * temporalLen];
 
-        for (int i = 0; i < rtpEncodings.length; i++)
+        // this loop builds a subjective quality index array that looks like
+        // this:
+        //
+        // [s0t0, s0t1, s0t2, s1t0, s1t1, s1t2, s2t0, s2t1, s2t2]
+        //
+        // The spatial layer is offered either by simulcast (VP8) or spatial
+        // scalability (VP9). Exotic cases might do simulcast + spatial
+        // scalability.
+
+        if (spatialLen < 2 /* simulcast */)
         {
-            int streamIdx = i / tempoLen, tempoIdx = i % tempoLen;
+            // this O(n) loop is more efficient than the O(n^3) loop below, and
+            // it works well for the simulcast case, so we keep it.
+            for (int i = 0; i < rtpEncodings.length; i++)
+            {
+                int streamIdx = i / temporalLen, tempoIdx = i % temporalLen;
 
-            // The previous temporal layer is the dependency, if higher than
-            // base.
-            boolean hasDependency = tempoIdx % tempoLen != 0;
+                // The previous temporal layer is the dependency, if higher than
+                // base.
+                boolean hasDependency = tempoIdx % temporalLen != 0;
 
-            RTPEncodingDesc[] dependency = hasDependency
-                ? new RTPEncodingDesc[] { rtpEncodings[i - 1] } : null;
+                RTPEncodingDesc[] dependency = hasDependency
+                    ? new RTPEncodingDesc[]{rtpEncodings[i - 1]} : null;
 
-            int temporalId = tempoLen > 1 ? tempoIdx : -1;
+                int temporalId = temporalLen > 1 ? tempoIdx : -1;
 
-            rtpEncodings[i] = new RTPEncodingDesc(
-                track, i, primary[streamIdx], rtx[streamIdx],
-                temporalId, dependency);
+                rtpEncodings[i] = new RTPEncodingDesc(
+                    track, i, primary[streamIdx], rtx[streamIdx],
+                    temporalId, -1, dependency);
+            }
+            return rtpEncodings;
+
         }
 
+        // this loop is less efficient but more general than the above loop, it
+        // can generate subjective quality arrays of any combination of streams
+        // spatial and temporal layers.
+        for (int streamIdx = 0; streamIdx < primary.length; streamIdx++)
+            for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
+                for (int temporalIdx = 0;
+                     temporalIdx < temporalLen; temporalIdx++)
+                {
+                    int idx = streamIdx * (spatialIdx * temporalIdx)
+                        + spatialIdx * temporalLen + temporalIdx;
+
+                    RTPEncodingDesc[] dependencies;
+                    if (spatialIdx > 0 && temporalIdx > 0)
+                    {
+                        // this layer depends on spatialIdx-1 and temporalIdx-1.
+                        dependencies = new RTPEncodingDesc[]{
+                            rtpEncodings[streamIdx * (spatialLen * temporalLen)
+                                + (spatialIdx - 1) * temporalLen + temporalIdx],
+                            rtpEncodings[streamIdx * (spatialLen * temporalLen)
+                                + spatialIdx * temporalLen + (temporalIdx - 1)]
+                        };
+                    }
+                    else if (spatialIdx > 0)
+                    {
+                        // this layer depends on spatialIdx-1.
+                        dependencies = new RTPEncodingDesc[]
+                            {rtpEncodings[streamIdx * (spatialLen * temporalLen)
+                                + (spatialIdx - 1) * temporalLen]};
+                    }
+                    else if (temporalIdx > 0)
+                    {
+                        // this layer depends on temporalIdx-1.
+                        dependencies = new RTPEncodingDesc[]
+                            {rtpEncodings[streamIdx * (spatialLen * temporalLen)
+                                + (temporalIdx - 1)]};
+                    }
+                    else
+                    {
+                        // this is a base layer without any dependencies.
+                        dependencies = null;
+                    }
+
+                    int temporalId = temporalLen > 1 ? temporalIdx : -1;
+                    int spatialId = spatialLen > 1 ? spatialIdx : -1;
+
+                    rtpEncodings[idx]
+                        = new RTPEncodingDesc(track, idx,
+                        primary[streamIdx],
+                        rtx == null || rtx.length == 0 ? -1 : rtx[streamIdx],
+                        temporalId, spatialId, dependencies);
+                }
         return rtpEncodings;
     }
 
@@ -175,18 +263,18 @@ public class MediaStreamTrackFactory
                         rtx[i] = rtxSSRC;
                     }
 
-                    int numOfTempo = ENABLE_TEMPORAL_LAYERS
-                        ? DEFAULT_NUM_TEMPORAL_LAYERS : 1;
-                    int encodingsLen = streamLen * numOfTempo;
+                    int numOfTemporal
+                        = ENABLE_SVC ? VP8_SIMULCAST_TEMPORAL_LAYERS : 1;
+                    int encodingsLen = streamLen * numOfTemporal;
 
                     RTPEncodingDesc[] rtpEncodings
                         = new RTPEncodingDesc[encodingsLen];
 
                     MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-                        mediaStreamTrackReceiver, rtpEncodings);
+                        mediaStreamTrackReceiver, rtpEncodings, true);
 
                     RTPEncodingDesc[] simulcastEncodings = createRTPEncodings(
-                        track, primary, rtx, numOfTempo);
+                        track, primary, rtx, 1, numOfTemporal);
 
                     System.arraycopy(simulcastEncodings, 0, rtpEncodings, 0,
                         simulcastEncodings.length);
@@ -201,11 +289,32 @@ public class MediaStreamTrackFactory
                     Long primarySSRC = fidEntry.getKey();
                     Long rtxSSRC = fidEntry.getValue();
 
-                    RTPEncodingDesc[] encodings = new RTPEncodingDesc[1];
+                    int numOfTemporal, numOfSpatial;
+                    if (false && ENABLE_SVC)
+                    {
+                        // FIXME the number of temporal/spatial layers is codec
+                        // specific. What if, for example, we're dealing with
+                        // plain VP9 or with H264? We can't just enable SVC.
+                        numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
+                        numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
+                    }
+                    else
+                    {
+                        numOfSpatial = 1;
+                        numOfTemporal = 1;
+                    }
+
+                    int encodingsLen = numOfSpatial * numOfTemporal;
+                    RTPEncodingDesc[] encodings
+                        = new RTPEncodingDesc[encodingsLen];
                     MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-                        mediaStreamTrackReceiver, encodings);
-                    encodings[0]
-                        = new RTPEncodingDesc(track, primarySSRC, rtxSSRC);
+                        mediaStreamTrackReceiver, encodings, false);
+
+                    RTPEncodingDesc[] ret = createRTPEncodings(track,
+                        new long[] { primarySSRC },
+                        new long[] { rtxSSRC }, numOfSpatial, numOfTemporal);
+
+                    System.arraycopy(ret, 0, encodings, 0, encodings.length);
 
                     grouped.add(primarySSRC);
                     grouped.add(rtxSSRC);
@@ -222,10 +331,32 @@ public class MediaStreamTrackFactory
 
                 if (!grouped.contains(mediaSSRC))
                 {
-                    RTPEncodingDesc[] encodings = new RTPEncodingDesc[1];
+                    int numOfTemporal, numOfSpatial;
+                    if (false && ENABLE_SVC)
+                    {
+                        // FIXME the number of temporal/spatial layers is codec
+                        // specific. What if, for example, we're dealing with
+                        // plain VP9 or with H264? We can't just enable SVC.
+                        numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
+                        numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
+                    }
+                    else
+                    {
+                        numOfSpatial = 1;
+                        numOfTemporal = 1;
+                    }
+
+                    int encodingsLen = numOfSpatial * numOfTemporal;
+                    RTPEncodingDesc[] encodings
+                        = new RTPEncodingDesc[encodingsLen];
                     MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-                        mediaStreamTrackReceiver, encodings);
-                    encodings[0] = new RTPEncodingDesc(track, mediaSSRC);
+                        mediaStreamTrackReceiver, encodings, false);
+
+                    RTPEncodingDesc[] ret = createRTPEncodings(track,
+                        new long[] { mediaSSRC }, null,
+                        numOfSpatial, numOfTemporal);
+
+                    System.arraycopy(ret, 0, encodings, 0, encodings.length);
                     tracks.add(track);
                 }
             }
