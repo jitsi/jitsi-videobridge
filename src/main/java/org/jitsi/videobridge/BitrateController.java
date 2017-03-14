@@ -47,15 +47,9 @@ public class BitrateController
     private final Logger logger = Logger.getLogger(BitrateController.class);
 
     /**
-     * The name of the property used to disable LastN notifications.
-     */
-    public static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
-        = "org.jitsi.videobridge.DISABLE_LASTN_NOTIFICATIONS";
-
-    /**
      * The name of the property used to trust bandwidth estimations.
      */
-    public static final String TRUST_BWE_PNAME
+    private static final String TRUST_BWE_PNAME
         = "org.jitsi.videobridge.TRUST_BWE";
 
     /**
@@ -98,12 +92,6 @@ public class BitrateController
      */
     private Set<String> forwardedEndpointIds = INITIAL_EMPTY_SET;
 
-    /**
-     * A boolean that indicates whether or not we should send data channel
-     * notifications to the endpoint about changes in the endpoints that it
-     * receives.
-     */
-    private final boolean disableLastNNotifications;
 
     /**
      * A boolean that indicates whether or not we should trust the bandwidth
@@ -133,8 +121,6 @@ public class BitrateController
         this.dest = dest;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
-        disableLastNNotifications = cfg != null
-            && cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, false);
 
         trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, false);
     }
@@ -161,7 +147,7 @@ public class BitrateController
      * Gets the current padding parameters list for {@link #dest}.
      * @return the current padding parameters list for {@link #dest}.
      */
-    public List<PaddingParams> getPaddingParamsList()
+    List<PaddingParams> getPaddingParamsList()
     {
         return paddingParamsList;
     }
@@ -354,8 +340,7 @@ public class BitrateController
             }
         }
 
-        if (!disableLastNNotifications
-            && !newForwardedEndpointIds.equals(oldForwardedEndpointIds))
+        if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
             dest.sendLastNEndpointsChangeEventOnDataChannel(
                 newForwardedEndpointIds,
@@ -532,6 +517,18 @@ public class BitrateController
         }
 
         return endpointBitrateAllocations;
+    }
+
+    /**
+     * Gets the {@link List} of endpoints that are currently being forwarded,
+     * represented by their IDs.
+     *
+     * @return the {@link List} of endpoints that are currently being forwarded,
+     * represented by their IDs.
+     */
+    Collection<String> getForwardedEndpoints()
+    {
+        return forwardedEndpointIds;
     }
 
     /**

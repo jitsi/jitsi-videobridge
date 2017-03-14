@@ -52,6 +52,12 @@ public class VideoChannel
     private static final int INCOMING_BITRATE_INTERVAL_MS = 5000;
 
     /**
+     * The name of the property used to disable LastN notifications.
+     */
+    private static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
+        = "org.jitsi.videobridge.DISABLE_LASTN_NOTIFICATIONS";
+
+    /**
      * The name of the property used to disable NACK termination.
      */
     @Deprecated
@@ -88,6 +94,13 @@ public class VideoChannel
      * The {@link RecurringRunnableExecutor} instance for {@link VideoChannel}s.
      */
     private static RecurringRunnableExecutor recurringExecutor;
+
+    /**
+     * A boolean that indicates whether or not we should send data channel
+     * notifications to the endpoint about changes in the endpoints that it
+     * receives.
+     */
+    private final boolean disableLastNNotifications;
 
     /**
      * The object that implements a hack for LS for this {@link Endpoint}.
@@ -203,6 +216,9 @@ public class VideoChannel
         this.lipSyncHack
             = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, true)
             ? new LipSyncHack(this) : null;
+
+        disableLastNNotifications = cfg != null
+            && cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, false);
 
         initializeTransformerEngine();
 
@@ -403,6 +419,29 @@ public class VideoChannel
         return accept;
     }
 
+
+    /**
+     * {@inheritDoc}
+     *
+     * Fires initial events over the WebRTC data channel of this
+     * <tt>VideoChannel</tt> such as the list of last-n <tt>Endpoint</tt>s whose
+     * video is sent/RTP translated by this <tt>RtpChannel</tt> to its
+     * <tt>Endpoint</tt>.
+     */
+    @Override
+    void sctpConnectionReady(Endpoint endpoint)
+    {
+        super.sctpConnectionReady(endpoint);
+
+        if (endpoint.equals(getEndpoint()))
+        {
+            sendLastNEndpointsChangeEventOnDataChannel(
+                bitrateController.getForwardedEndpoints(),
+                null,
+                null);
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -456,6 +495,11 @@ public class VideoChannel
         Collection<String> endpointsEnteringLastN,
         Collection<String> conferenceEndpoints)
     {
+        if (disableLastNNotifications)
+        {
+            return;
+        }
+
         Endpoint thisEndpoint = getEndpoint();
 
         if (thisEndpoint == null)
