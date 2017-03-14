@@ -49,7 +49,7 @@ public class BitrateController
     /**
      * The name of the property used to trust bandwidth estimations.
      */
-    private static final String TRUST_BWE_PNAME
+    public static final String TRUST_BWE_PNAME
         = "org.jitsi.videobridge.TRUST_BWE";
 
     /**
