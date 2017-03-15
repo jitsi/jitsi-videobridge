@@ -139,7 +139,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20170314.193143-259</version>
+      <version>1.0-20170315.020639-260</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
