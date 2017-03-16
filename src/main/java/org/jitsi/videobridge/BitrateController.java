@@ -635,7 +635,7 @@ public class BitrateController
                 rates[i] = encodings[i].getLastStableBitrateBps();
             }
 
-            optimalIdx = selected ? encodings.length - 1 : 0;
+            optimalIdx = selected ? encodings.length - 1 : (forwarded ? 0 : -1);
         }
 
         /**
