@@ -268,8 +268,7 @@ public class BitrateController
                         RTPEncodingDesc[] rtpEncodings
                             = allocation.track.getRTPEncodings();
 
-                        ctrl = new SimulcastController(
-                            allocation.track, 0, targetIdx, optimalIdx);
+                        ctrl = new SimulcastController(allocation.track);
 
                         // Route all encodings to the specified bitrate
                         // controller.
@@ -635,7 +634,7 @@ public class BitrateController
                 rates[i] = encodings[i].getLastStableBitrateBps();
             }
 
-            optimalIdx = selected ? encodings.length - 1 : 0;
+            optimalIdx = selected ? encodings.length - 1 : (forwarded ? 0 : -1);
         }
 
         /**
