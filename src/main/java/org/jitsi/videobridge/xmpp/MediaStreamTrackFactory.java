@@ -113,7 +113,9 @@ public class MediaStreamTrackFactory
         // scalability (VP9). Exotic cases might do simulcast + spatial
         // scalability.
 
+        int resolution = 180;
         for (int streamIdx = 0; streamIdx < primary.length; streamIdx++)
+        {
             for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
                 for (int temporalIdx = 0;
                      temporalIdx < temporalLen; temporalIdx++)
@@ -163,8 +165,11 @@ public class MediaStreamTrackFactory
                         = new RTPEncodingDesc(track, idx,
                         primary[streamIdx],
                         rtx == null || rtx.length == 0 ? -1 : rtx[streamIdx],
-                        temporalId, spatialId, dependencies);
+                        temporalId, spatialId, resolution, dependencies);
                 }
+
+            resolution *= 2;
+        }
         return rtpEncodings;
     }
 

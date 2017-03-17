@@ -685,12 +685,24 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
+            int optimal180Idx = 0;
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
+                if (encodings[i].getResolution() <= 180)
+                {
+                    optimal180Idx = i;
+                }
             }
 
-            optimalIdx = selected ? encodings.length - 1 : (forwarded ? 0 : -1);
+            // TODO Determining the optimal index needs some work. The optimal
+            // index is constrained by the viewport of the endpoint. For
+            // example, on a mobile device we should probably not send
+            // anything above 360p (not even the on-stage participant). On a
+            // laptop computer 720p seems reasonable and on a big screen 1080p
+            // or above.
+            optimalIdx = forwarded
+                ? (selected ? encodings.length - 1 : optimal180Idx) : -1;
         }
 
         /**
@@ -704,14 +716,16 @@ public class BitrateController
          */
         void allocate(long maxBps, int maxQuality)
         {
-            if (!forwarded || rates.length == 0)
+            if (rates.length == 0)
             {
                 return;
             }
 
-            maxQuality = selected ? Math.min(maxQuality, rates.length - 1) : 0;
+            maxQuality = Math.min(maxQuality, optimalIdx);
 
-            for (int i = maxQuality; i >= 0; i--)
+            // the targetIdx is initial equal to -1 and it is strictly
+            // increasing on every allocation loop.
+            for (int i = maxQuality; i > targetIdx; i--)
             {
                 if (maxBps >= rates[i])
                 {
