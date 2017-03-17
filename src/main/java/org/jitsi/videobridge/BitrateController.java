@@ -29,11 +29,57 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * The {@link BitrateController} is attached to a destination
- * {@link VideoChannel} and its purpose is to filter incoming packets based on
- * their source {@link VideoChannel} and modify RTCP packets. This task is
- * actually delegated to the individual {@link SimulcastController} of each
- * media stream track.
+ * The {@link BitrateController} is attached to a destination {@link
+ * VideoChannel} and its purpose is 1st to selectively drop incoming packets
+ * based on their source {@link VideoChannel} and 2nd to rewrite the accepted
+ * packets so that they form a correct RTP stream without gaps in their
+ * sequence numbers nor in their timestamps.
+ *
+ * In the Selective Forwarding Middlebox (SFM) topology [RFC7667], senders are
+ * sending multiple bitstreams of (they multistream) the same video source
+ * (using either with simulcast or scalable video coding) and the SFM decides
+ * which bitstream to send to which receiver.
+ *
+ * For example, suppose we're in a 3-way simulcast-enabled video call (so 3
+ * source {@link VideoChannel}s) where the endpoints are sending two
+ * non-scalable RTP streams of the same video source. The bitrate controller,
+ * will chose to forward only one RTP stream at a time to a specific destination
+ * endpoint.
+ *
+ * With scalable video coding (SVC) a bitstream can be broken down into multiple
+ * sub-bitstreams of lower frame rate (that we call temporal layers or TL)
+ * and/or lower resolution (that we call spatial layers or SL). The exact
+ * dependencies between the different layers of an SVC bitstream are codec
+ * specific but, as a general rule of thumb higher temporal/spatial layers
+ * depend on lower temporal/spatial layers creating a DAG of dependencies.
+ *
+ * For example, a 720p@30fps VP8 scalable bitstream can be broken down into 3
+ * sub-bitstreams: one 720p@30fps layer (the highest temporal layer), that
+ * depends on a 720p@15fps layer that depends on a 720p7.5fps layer (the lowest
+ * temporal layer). In order for the decoder to be able decode the highest
+ * temporal layer, it needs to get all the packets of its direct and transitive
+ * dependencies, so of both the other two layers. In this simple case we have a
+ * linked list of dependencies with the the lowest temporal layer as root and
+ * the highest temporal layer as a leaf.
+ *
+ * In order for the SFM to be able to filter the incoming packets we need to be
+ * able to assign incoming packets to "flows" with properties that allow us to
+ * define filtering rules. In this implementation a flow is represented by an
+ * {@link RTPEncodingDesc} and its properties are bitrate and subjective quality
+ * index. Specifically, the incoming packets belong to some {@link FrameDesc},
+ * which belongs to some {@link RTPEncodingDesc}, which belongs to some {@link
+ * MediaStreamTrackDesc}, which belongs to the source {@link VideoChannel}.
+ * This hierarchy allows for fine-grained filtering up to the {@link FrameDesc}
+ * level.
+ *
+ * The decision of whether to accept or drop a specific RTP packet of a
+ * specific {@link FrameDesc} of a specific {@link MediaStreamTrackDesc}
+ * depends on the bitrate allocation of the specific {@link
+ * MediaStreamTrackDesc} and on the state of the bitstream that is produced by
+ * this filter. For example, if we have a {@link MediaStreamTrackDesc} with 2
+ * {@link RTPEncodingDesc} in a simulcast configuration, then we can switch
+ * between the two {@link RTPEncodingDesc}s if it is mandated by the bitrate
+ * allocation and only if we see a refresh point.
  *
  * @author George Politis
  */
@@ -53,18 +99,20 @@ public class BitrateController
         = "org.jitsi.videobridge.TRUST_BWE";
 
     /**
-     * An empty list instance.
+     * An empty set of {@link String}s instance.
      */
     private static final Set<String> INITIAL_EMPTY_SET
         = Collections.unmodifiableSet(new HashSet<String>(0));
 
     /**
-     * The {@link VideoChannel} which owns this {@link BitrateController}.
+     * The {@link VideoChannel} which owns this {@link BitrateController} and
+     * is the destination of the packets that this instance accepts.
      */
     private final VideoChannel dest;
 
     /**
-     * The bitrate controllers for all SSRCs that this instance has seen.
+     * The {@link SimulcastController}s that this instance is mananaging. A
+     * {@link SimulcastController} is 
      */
     private final Map<Long, SimulcastController>
         ssrcToBitrateController = new ConcurrentHashMap<>();
