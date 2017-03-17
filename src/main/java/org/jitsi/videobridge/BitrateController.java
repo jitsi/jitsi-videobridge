@@ -140,7 +140,6 @@ public class BitrateController
      */
     private Set<String> forwardedEndpointIds = INITIAL_EMPTY_SET;
 
-
     /**
      * A boolean that indicates whether or not we should trust the bandwidth
      * estimations. If this is se to false, then we assume a bandwidth
@@ -149,7 +148,12 @@ public class BitrateController
     private final boolean trustBwe;
 
     /**
-     * The time (in ms) when this instance first transformed any media.
+     * The time (in ms) when this instance first transformed any media. This
+     * allows to ignore the CC during the early stages of the call and ramp up
+     * the send rate faster.
+     *
+     * NOTE This is only meant to be as a temporary hack and ideally this should
+     * be fixed in the CC.
      */
     private long firstMediaMs = -1;
 
@@ -193,6 +197,7 @@ public class BitrateController
 
     /**
      * Gets the current padding parameters list for {@link #dest}.
+     *
      * @return the current padding parameters list for {@link #dest}.
      */
     List<PaddingParams> getPaddingParamsList()
@@ -286,6 +291,9 @@ public class BitrateController
         EndpointBitrateAllocation[]
             allocations = allocate(bweBps, conferenceEndpoints);
 
+        // Update the the controllers based on the allocation and send a
+        // notification to the client the set of forwarded endpoints has
+        // changed.
         Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
 
         Set<String> newForwardedEndpointIds = new HashSet<>();
