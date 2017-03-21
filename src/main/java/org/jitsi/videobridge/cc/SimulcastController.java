@@ -62,7 +62,7 @@ class SimulcastController
      *
      * @param source the source {@link MediaStreamTrackDesc}
      */
-    public SimulcastController(MediaStreamTrackDesc source)
+    SimulcastController(MediaStreamTrackDesc source)
     {
         weakSource = new WeakReference<>(source);
 
@@ -153,6 +153,8 @@ class SimulcastController
         int targetIndex = bitstreamController.getTargetIndex()
             , currentIndex = bitstreamController.getCurrentIndex();
 
+        // if the target is set to suspend and it's not already suspended, then
+        // suspend the stream.
         if (targetIndex < 0 && currentIndex > -1)
         {
             bitstreamController.setTL0Idx(-1);
@@ -261,7 +263,7 @@ class SimulcastController
      *
      * @param newTargetIdx new target subjective quality index.
      */
-    public void setTargetIndex(int newTargetIdx)
+    void setTargetIndex(int newTargetIdx)
     {
         bitstreamController.setTargetIndex(newTargetIdx);
 
@@ -320,7 +322,7 @@ class SimulcastController
      *
      * @param optimalIndex new optimal subjective quality index.
      */
-    public void setOptimalIndex(int optimalIndex)
+    void setOptimalIndex(int optimalIndex)
     {
         bitstreamController.setOptimalIndex(optimalIndex);
     }
@@ -333,7 +335,7 @@ class SimulcastController
      * @return the transformed {@link RawPacket} or null if the packet needs
      * to be dropped.
      */
-    public RawPacket[] rtpTransform(RawPacket pktIn)
+    RawPacket[] rtpTransform(RawPacket pktIn)
     {
         if (!RTPPacketPredicate.INSTANCE.test(pktIn))
         {
@@ -365,7 +367,7 @@ class SimulcastController
      * @return the transformed RTCP {@link RawPacket}, or null if the packet
      * needs to be dropped.
      */
-    public RawPacket rtcpTransform(RawPacket pktIn)
+    RawPacket rtcpTransform(RawPacket pktIn)
     {
         if (!RTCPPacketPredicate.INSTANCE.test(pktIn))
         {
@@ -419,6 +421,12 @@ class SimulcastController
          * The available subjective quality indexes that this RTP stream offers.
          */
         private int[] availableIdx;
+
+        /**
+         * A boolean that indicates whether or not the current TL0 is adaptive
+         * or not.
+         */
+        private boolean adaptive;
 
         /**
          * The sequence number offset that this bitstream started.
@@ -558,17 +566,16 @@ class SimulcastController
             MediaStreamTrackDesc source = weakSource.get();
             assert source != null;
             RTPEncodingDesc[] rtpEncodings = source.getRTPEncodings();
-            if (ArrayUtils.isNullOrEmpty(rtpEncodings))
+            if (ArrayUtils.isNullOrEmpty(rtpEncodings) || tl0Idx < 0)
             {
                 this.availableIdx = null;
                 this.tl0SSRC = -1;
+                this.adaptive = false;
             }
             else
             {
-                if (tl0Idx > -1)
-                {
-                    tl0Idx = rtpEncodings[tl0Idx].getBaseLayer().getIndex();
-                }
+                tl0Idx = rtpEncodings[tl0Idx].getBaseLayer().getIndex();
+                tl0SSRC = rtpEncodings[tl0Idx].getPrimarySSRC();
 
                 // find the available qualities in this bitstream.
 
@@ -589,14 +596,7 @@ class SimulcastController
                     availableIdx[i] = iterator.next();
                 }
 
-                if (tl0Idx > -1)
-                {
-                    tl0SSRC = rtpEncodings[tl0Idx].getPrimarySSRC();
-                }
-                else
-                {
-                    tl0SSRC = -1;
-                }
+                this.adaptive = availableIdx.length > 1;
             }
         }
 
@@ -663,10 +663,11 @@ class SimulcastController
                 }
 
                 if (currentIdx > -1 && (maxSentFrame == null
-                    || TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0))
+                    || (!adaptive
+                        || TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0)))
                 {
-                    // the stream is not suspended and we're not dealing with a late
-                    // frame.
+                    // the stream is not suspended and we're not dealing with a
+                    // late frame or the stream is not adaptive.
 
                     RTPEncodingDesc sourceEncodings[] = sourceFrameDesc
                         .getRTPEncoding().getMediaStreamTrack().getRTPEncodings();
@@ -676,15 +677,14 @@ class SimulcastController
                     int sourceIdx = sourceFrameDesc.getRTPEncoding().getIndex();
                     if (sourceEncodings[currentIdx].requires(sourceIdx)
                         && (maxSentFrame == null
-                        || maxSentFrame.effectivelyComplete))
+                            || maxSentFrame.effectivelyComplete || !adaptive))
                     {
                         // the quality of the frame is a dependency of the
                         // forwarded quality and the max frame is effectively
                         // complete.
 
                         SeqNumTranslation seqNumTranslation;
-                        if (maxSentFrame == null
-                            || (availableIdx != null && availableIdx.length > 1))
+                        if (maxSentFrame == null || adaptive)
                         {
                             int maxSeqNum = getMaxSeqNum();
                             if (maxSeqNum > -1)
