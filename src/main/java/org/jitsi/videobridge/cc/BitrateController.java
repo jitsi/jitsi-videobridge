@@ -111,8 +111,8 @@ public class BitrateController
     private final VideoChannel dest;
 
     /**
-     * The {@link SimulcastController}s that this instance is mananaging. A
-     * {@link SimulcastController} is 
+     * The {@link SimulcastController}s that this instance is managing, keyed
+     * by the SSRCs of the associated {@link MediaStreamTrackDesc}.
      */
     private final Map<Long, SimulcastController>
         ssrcToBitrateController = new ConcurrentHashMap<>();
