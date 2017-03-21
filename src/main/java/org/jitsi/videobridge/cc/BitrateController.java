@@ -87,6 +87,13 @@ public class BitrateController
     implements TransformEngine
 {
     /**
+     * The max resolution to allocate for the thumbnails.
+     *
+     * XXX this should come from the client.
+     */
+    private static final int THUMBNAIL_MAX_RESOLUTION = 180;
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -685,13 +692,13 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
-            int optimal180Idx = 0;
+            int optimalThumbnailIndex = 0;
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
-                if (encodings[i].getResolution() <= 180)
+                if (encodings[i].getResolution() <= THUMBNAIL_MAX_RESOLUTION)
                 {
-                    optimal180Idx = i;
+                    optimalThumbnailIndex = i;
                 }
             }
 
@@ -702,7 +709,7 @@ public class BitrateController
             // laptop computer 720p seems reasonable and on a big screen 1080p
             // or above.
             optimalIdx = forwarded
-                ? (selected ? encodings.length - 1 : optimal180Idx) : -1;
+                ? (selected ? encodings.length - 1 : optimalThumbnailIndex) : -1;
         }
 
         /**
