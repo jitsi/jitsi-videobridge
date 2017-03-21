@@ -63,7 +63,7 @@ public class MediaStreamTrackFactory
      * FIXME: hardcoded ugh.. this should be either signaled or somehow included
      * in the RTP stream.
      */
-    private static final int VP8_SIMULCAST_BASE_RESOLTUION = 180;
+    private static final int VP8_SIMULCAST_BASE_LAYER_HEIGHT = 180;
 
     /**
      * The default number of spatial layers to use for VP9 SVC.
@@ -121,7 +121,7 @@ public class MediaStreamTrackFactory
         // scalability (VP9). Exotic cases might do simulcast + spatial
         // scalability.
 
-        int resolution = VP8_SIMULCAST_BASE_RESOLTUION;
+        int height = VP8_SIMULCAST_BASE_LAYER_HEIGHT;
         for (int streamIdx = 0; streamIdx < primary.length; streamIdx++)
         {
             for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
@@ -173,10 +173,10 @@ public class MediaStreamTrackFactory
                         = new RTPEncodingDesc(track, idx,
                         primary[streamIdx],
                         rtx == null || rtx.length == 0 ? -1 : rtx[streamIdx],
-                        temporalId, spatialId, resolution, dependencies);
+                        temporalId, spatialId, height, dependencies);
                 }
 
-            resolution *= 2;
+            height *= 2;
         }
         return rtpEncodings;
     }

@@ -91,7 +91,7 @@ public class BitrateController
      *
      * XXX this should come from the client.
      */
-    private static final int THUMBNAIL_MAX_RESOLUTION = 180;
+    private static final int THUMBNAIL_MAX_HEIGHT = 180;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -696,7 +696,7 @@ public class BitrateController
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
-                if (encodings[i].getResolution() <= THUMBNAIL_MAX_RESOLUTION)
+                if (encodings[i].getHeight() <= THUMBNAIL_MAX_HEIGHT)
                 {
                     optimalThumbnailIndex = i;
                 }
