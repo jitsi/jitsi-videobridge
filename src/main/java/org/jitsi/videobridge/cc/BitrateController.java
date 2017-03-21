@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.cc;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -168,7 +168,7 @@ public class BitrateController
      *
      * @param dest the {@link VideoChannel} that owns this instance.
      */
-    BitrateController(VideoChannel dest)
+    public BitrateController(VideoChannel dest)
     {
         this.dest = dest;
 
@@ -581,7 +581,7 @@ public class BitrateController
      * @return the {@link List} of endpoints that are currently being forwarded,
      * represented by their IDs.
      */
-    Collection<String> getForwardedEndpoints()
+    public Collection<String> getForwardedEndpoints()
     {
         return forwardedEndpointIds;
     }
