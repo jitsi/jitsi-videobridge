@@ -58,6 +58,14 @@ public class MediaStreamTrackFactory
     private static final int VP8_SIMULCAST_TEMPORAL_LAYERS = 3;
 
     /**
+     * The resolution of the base stream when activating simulcast for VP8.
+     *
+     * FIXME: hardcoded ugh.. this should be either signaled or somehow included
+     * in the RTP stream.
+     */
+    private static final int VP8_SIMULCAST_BASE_RESOLTUION = 180;
+
+    /**
      * The default number of spatial layers to use for VP9 SVC.
      *
      * FIXME: hardcoded ugh.. this should be either signaled or somehow included
@@ -113,7 +121,7 @@ public class MediaStreamTrackFactory
         // scalability (VP9). Exotic cases might do simulcast + spatial
         // scalability.
 
-        int resolution = 180;
+        int resolution = VP8_SIMULCAST_BASE_RESOLTUION;
         for (int streamIdx = 0; streamIdx < primary.length; streamIdx++)
         {
             for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
