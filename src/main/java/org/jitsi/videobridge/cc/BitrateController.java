@@ -718,21 +718,21 @@ public class BitrateController
          *
          * @param maxBps the maximum bitrate (in bps) that the target subjective
          * quality can have.
-         * @param maxQuality the maximum subjective quality index that the
+         * @param maxQualityIdx the maximum subjective quality index that the
          * target subjective quality can have. -1 suspends the track.
          */
-        void allocate(long maxBps, int maxQuality)
+        void allocate(long maxBps, int maxQualityIdx)
         {
             if (rates.length == 0)
             {
                 return;
             }
 
-            maxQuality = Math.min(maxQuality, optimalIdx);
+            maxQualityIdx = Math.min(maxQualityIdx, optimalIdx);
 
             // the targetIdx is initial equal to -1 and it is strictly
             // increasing on every allocation loop.
-            for (int i = maxQuality; i > targetIdx; i--)
+            for (int i = maxQualityIdx; i > targetIdx; i--)
             {
                 if (maxBps >= rates[i])
                 {
