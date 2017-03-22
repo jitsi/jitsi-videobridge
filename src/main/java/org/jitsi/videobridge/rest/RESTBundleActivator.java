@@ -99,10 +99,10 @@ public class RESTBundleActivator
     protected void doStop(BundleContext bundleContext)
         throws Exception
     {
-        if (server != null)
+        if (privateServer != null)
         {
             // FIXME graceful Jetty shutdown
-            // When shutdown request is accepted, empty response is sent back
+            // When a shutdown request is accepted, empty response is sent back
             // instead of 200, because Jetty is not being shutdown gracefully.
             Thread.sleep(1000);
         }
