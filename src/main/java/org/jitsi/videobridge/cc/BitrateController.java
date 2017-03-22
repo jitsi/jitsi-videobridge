@@ -13,17 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.cc;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -87,6 +87,13 @@ public class BitrateController
     implements TransformEngine
 {
     /**
+     * The max resolution to allocate for the thumbnails.
+     *
+     * XXX this should come from the client.
+     */
+    private static final int THUMBNAIL_MAX_HEIGHT = 180;
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -111,8 +118,8 @@ public class BitrateController
     private final VideoChannel dest;
 
     /**
-     * The {@link SimulcastController}s that this instance is mananaging. A
-     * {@link SimulcastController} is 
+     * The {@link SimulcastController}s that this instance is managing, keyed
+     * by the SSRCs of the associated {@link MediaStreamTrackDesc}.
      */
     private final Map<Long, SimulcastController>
         ssrcToBitrateController = new ConcurrentHashMap<>();
@@ -168,7 +175,7 @@ public class BitrateController
      *
      * @param dest the {@link VideoChannel} that owns this instance.
      */
-    BitrateController(VideoChannel dest)
+    public BitrateController(VideoChannel dest)
     {
         this.dest = dest;
 
@@ -581,7 +588,7 @@ public class BitrateController
      * @return the {@link List} of endpoints that are currently being forwarded,
      * represented by their IDs.
      */
-    Collection<String> getForwardedEndpoints()
+    public Collection<String> getForwardedEndpoints()
     {
         return forwardedEndpointIds;
     }
@@ -685,12 +692,24 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
+            int optimalThumbnailIndex = 0;
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
+                if (encodings[i].getHeight() <= THUMBNAIL_MAX_HEIGHT)
+                {
+                    optimalThumbnailIndex = i;
+                }
             }
 
-            optimalIdx = selected ? encodings.length - 1 : (forwarded ? 0 : -1);
+            // TODO Determining the optimal index needs some work. The optimal
+            // index is constrained by the viewport of the endpoint. For
+            // example, on a mobile device we should probably not send
+            // anything above 360p (not even the on-stage participant). On a
+            // laptop computer 720p seems reasonable and on a big screen 1080p
+            // or above.
+            optimalIdx = forwarded
+                ? (selected ? encodings.length - 1 : optimalThumbnailIndex) : -1;
         }
 
         /**
@@ -699,19 +718,21 @@ public class BitrateController
          *
          * @param maxBps the maximum bitrate (in bps) that the target subjective
          * quality can have.
-         * @param maxQuality the maximum subjective quality index that the
+         * @param maxQualityIdx the maximum subjective quality index that the
          * target subjective quality can have. -1 suspends the track.
          */
-        void allocate(long maxBps, int maxQuality)
+        void allocate(long maxBps, int maxQualityIdx)
         {
-            if (!forwarded || rates.length == 0)
+            if (rates.length == 0)
             {
                 return;
             }
 
-            maxQuality = selected ? Math.min(maxQuality, rates.length - 1) : 0;
+            maxQualityIdx = Math.min(maxQualityIdx, optimalIdx);
 
-            for (int i = maxQuality; i >= 0; i--)
+            // the targetIdx is initial equal to -1 and it is strictly
+            // increasing on every allocation loop.
+            for (int i = maxQualityIdx; i > targetIdx; i--)
             {
                 if (maxBps >= rates[i])
                 {

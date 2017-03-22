@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.videobridge;
+package org.jitsi.videobridge.cc;
 
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
+import org.jitsi.videobridge.*;
 
 import java.util.*;
 
@@ -44,7 +44,7 @@ public class BandwidthProbing
     private static final long PADDING_PERIOD_MS = 15;
 
     /**
-     *
+     * The {@link VideoChannel} to probe for available send bandwidth.
      */
     private final VideoChannel dest;
 
@@ -59,10 +59,12 @@ public class BandwidthProbing
     private long ts = new Random().nextInt() & 0xFFFFFFFFL;
 
     /**
+     * Ctor.
      *
-     * @param dest
+     * @param dest the {@link VideoChannel} to probe for available send
+     * bandwidth.
      */
-    BandwidthProbing(VideoChannel dest)
+    public BandwidthProbing(VideoChannel dest)
     {
         super(PADDING_PERIOD_MS);
         this.dest = dest;
@@ -196,7 +198,8 @@ public class BandwidthProbing
      * (attempts) to get the local SSRC that will be used in the media sender
      * SSRC field of the RTCP reports. TAG(cat4-local-ssrc-hurricane)
      *
-     * @return
+     * @return get the local SSRC that will be used in the media sender SSRC
+     * field of the RTCP reports.
      */
     private long getSenderSSRC()
     {

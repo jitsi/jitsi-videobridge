@@ -33,6 +33,7 @@ import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger; // Disambiguation.
 import org.jitsi.util.concurrent.*;
+import org.jitsi.videobridge.cc.*;
 import org.json.simple.*;
 
 /**

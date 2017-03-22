@@ -19,6 +19,7 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.delay.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.cc.*;
 
 import java.util.*;
 
