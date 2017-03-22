@@ -48,26 +48,26 @@ public class RESTBundleActivator
      * boolean property which enables graceful shutdown through REST API.
      * It is disabled by default.
      */
-    private static final String ENABLE_REST_SHUTDOWN_PNAME
+    public static final String ENABLE_REST_SHUTDOWN_PNAME
         = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
 
     /**
      * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
      * boolean property which enables <tt>/colibri/*</tt> REST API endpoints.
      */
-    private static final String ENABLE_REST_COLIBRI_PNAME
+    public static final String ENABLE_REST_COLIBRI_PNAME
       = "org.jitsi.videobridge.ENABLE_REST_COLIBRI";
 
-    private static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
+    public static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.hostHeader";
 
-    private static final String JETTY_PROXY_SERVLET_PATH_SPEC_PNAME
+    public static final String JETTY_PROXY_SERVLET_PATH_SPEC_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.pathSpec";
 
-    private static final String JETTY_PROXY_SERVLET_PROXY_TO_PNAME
+    public static final String JETTY_PROXY_SERVLET_PROXY_TO_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.proxyTo";
 
-    private static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
+    public static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.resourceBase";
 
     /**
@@ -78,10 +78,10 @@ public class RESTBundleActivator
     public static final String JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
         = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.alias";
 
-    private static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
+    public static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.regex";
 
-    private static final String JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME
+    public static final String JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.replacement";
 
     /**
