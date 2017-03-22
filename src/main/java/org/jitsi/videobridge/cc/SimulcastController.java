@@ -38,7 +38,6 @@ import java.util.*;
  * @author George Politis
  */
 class SimulcastController
-    implements PaddingParams
 {
     /**
      * A {@link WeakReference} to the {@link MediaStreamTrackDesc} that feeds
@@ -47,8 +46,8 @@ class SimulcastController
     private final WeakReference<MediaStreamTrackDesc> weakSource;
 
     /**
-     * The SSRC to protect when probing for bandwidth ({@see PaddingParams}) and
-     * for RTP/RTCP packet rewritting.
+     * The SSRC to protect when probing for bandwidth and for RTP/RTCP packet
+     * rewritting.
      */
     private final long targetSSRC;
 
@@ -80,28 +79,23 @@ class SimulcastController
     }
 
     /**
-     * {@inheritDoc}
+     * Gets the optimal bitrate (bps). Together with the current bitrate, it
+     * allows to calculate the probing bitrate.
+     *
+     * @return the optimal bitrate (bps).
      */
-    @Override
-    public Bitrates getBitrates()
+    public long getOptimalBps()
     {
-        long currentBps = 0;
         MediaStreamTrackDesc source = weakSource.get();
         if (source == null)
         {
-            return Bitrates.EMPTY;
+            return 0;
         }
 
         RTPEncodingDesc[] sourceEncodings = source.getRTPEncodings();
         if (ArrayUtils.isNullOrEmpty(sourceEncodings))
         {
-            return Bitrates.EMPTY;
-        }
-
-        int currentIdx = bitstreamController.getCurrentIndex();
-        if (currentIdx > -1 && sourceEncodings[currentIdx].isActive())
-        {
-            currentBps = sourceEncodings[currentIdx].getLastStableBitrateBps();
+            return 0;
         }
 
         long optimalBps = 0;
@@ -124,14 +118,47 @@ class SimulcastController
             }
         }
 
-        return new Bitrates(currentBps, optimalBps);
+        return optimalBps;
     }
 
     /**
-     * {@inheritDoc}
+     * Gets the current bitrate (bps). Together with the optimal bitrate, it
+     * allows to calculate the probing bitrate.
+     *
+     * @return the current bitrate (bps).
      */
-    @Override
-    public long getTargetSSRC()
+    long getCurrentBps()
+    {
+        MediaStreamTrackDesc source = weakSource.get();
+        if (source == null)
+        {
+            return 0;
+        }
+
+        RTPEncodingDesc[] sourceEncodings = source.getRTPEncodings();
+        if (ArrayUtils.isNullOrEmpty(sourceEncodings))
+        {
+            return 0;
+        }
+
+        long currentBps = 0;
+        int currentIdx = bitstreamController.getCurrentIndex();
+        if (currentIdx > -1 && sourceEncodings[currentIdx].isActive())
+        {
+            currentBps = sourceEncodings[currentIdx].getLastStableBitrateBps();
+        }
+
+        return currentBps;
+    }
+
+    /**
+     * Gets the SSRC to protect with RTX, in case the padding budget is
+     * positive.
+     *
+     * @return the SSRC to protect with RTX, in case the padding budget is
+     * positive.
+     */
+    long getTargetSSRC()
     {
         return targetSSRC;
     }

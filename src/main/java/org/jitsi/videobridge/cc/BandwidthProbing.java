@@ -78,10 +78,10 @@ public class BandwidthProbing
     {
         super.run();
 
-        List<PaddingParams> paddingParamsList
-            = dest.getBitrateController().getPaddingParamsList();
+        List<SimulcastController> simulcastControllerList
+            = dest.getBitrateController().getSimulcastControllers();
 
-        if (paddingParamsList == null || paddingParamsList.isEmpty())
+        if (simulcastControllerList == null || simulcastControllerList.isEmpty())
         {
             return;
         }
@@ -89,22 +89,21 @@ public class BandwidthProbing
         long totalCurrentBps = 0, totalOptimalBps = 0;
 
         List<Long> ssrcsToProtect = new ArrayList<>();
-        for (PaddingParams paddingParams : paddingParamsList)
+        for (SimulcastController simulcastController : simulcastControllerList)
         {
-            PaddingParams.Bitrates bitrates = paddingParams.getBitrates();
-            long currentBps = bitrates.getCurrentBps();
+            long currentBps = simulcastController.getCurrentBps();
             if (currentBps > 0)
             {
                 // Do not protect SSRC if it's not streaming.
                 totalCurrentBps += currentBps;
-                long ssrc = paddingParams.getTargetSSRC();
+                long ssrc = simulcastController.getTargetSSRC();
                 if (ssrc > -1)
                 {
                     ssrcsToProtect.add(ssrc);
                 }
             }
 
-            totalOptimalBps += bitrates.getOptimalBps();
+            totalOptimalBps += simulcastController.getOptimalBps();
         }
 
         // How much padding do we need?
