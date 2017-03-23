@@ -79,79 +79,6 @@ class SimulcastController
     }
 
     /**
-     * Gets the optimal bitrate (bps). Together with the current bitrate, it
-     * allows to calculate the probing bitrate.
-     *
-     * @return the optimal bitrate (bps).
-     */
-    public long getOptimalBps()
-    {
-        MediaStreamTrackDesc source = weakSource.get();
-        if (source == null)
-        {
-            return 0;
-        }
-
-        RTPEncodingDesc[] sourceEncodings = source.getRTPEncodings();
-        if (ArrayUtils.isNullOrEmpty(sourceEncodings))
-        {
-            return 0;
-        }
-
-        long optimalBps = 0;
-        int optimalIdx = bitstreamController.getOptimalIndex();
-        if (optimalIdx > -1)
-        {
-            for (int i = optimalIdx; i > -1; i--)
-            {
-                if (!sourceEncodings[i].isActive())
-                {
-                    continue;
-                }
-
-                long bps = sourceEncodings[i].getLastStableBitrateBps();
-                if (bps > 0)
-                {
-                    optimalBps = bps;
-                    break;
-                }
-            }
-        }
-
-        return optimalBps;
-    }
-
-    /**
-     * Gets the current bitrate (bps). Together with the optimal bitrate, it
-     * allows to calculate the probing bitrate.
-     *
-     * @return the current bitrate (bps).
-     */
-    long getCurrentBps()
-    {
-        MediaStreamTrackDesc source = weakSource.get();
-        if (source == null)
-        {
-            return 0;
-        }
-
-        RTPEncodingDesc[] sourceEncodings = source.getRTPEncodings();
-        if (ArrayUtils.isNullOrEmpty(sourceEncodings))
-        {
-            return 0;
-        }
-
-        long currentBps = 0;
-        int currentIdx = bitstreamController.getCurrentIndex();
-        if (currentIdx > -1 && sourceEncodings[currentIdx].isActive())
-        {
-            currentBps = sourceEncodings[currentIdx].getLastStableBitrateBps();
-        }
-
-        return currentBps;
-    }
-
-    /**
      * Gets the SSRC to protect with RTX, in case the padding budget is
      * positive.
      *
@@ -440,6 +367,39 @@ class SimulcastController
         }
 
         return pktIn.getLength() > 0 ? pktIn : null;
+    }
+
+    /**
+     * Gets the target subjective quality index for this instance.
+     */
+    int getTargetIndex()
+    {
+        return bitstreamController.getTargetIndex();
+    }
+
+    /**
+     * Gets the optimal subjective quality index for this instance.
+     */
+    int getOptimalIndex()
+    {
+        return bitstreamController.getOptimalIndex();
+    }
+
+    /**
+     * Gets the {@link MediaStreamTrackDesc} that feeds this instance with
+     * RTP/RTCP packets.
+     */
+    MediaStreamTrackDesc getSource()
+    {
+        return weakSource.get();
+    }
+
+    /**
+     * Gets the current subjective quality index for this instance.
+     */
+    int getCurrentIndex()
+    {
+        return bitstreamController.getCurrentIndex();
     }
 
     class BitstreamController

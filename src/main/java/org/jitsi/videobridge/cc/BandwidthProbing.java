@@ -86,12 +86,18 @@ public class BandwidthProbing
             return;
         }
 
-        long totalCurrentBps = 0, totalOptimalBps = 0;
+        // We calculate how much to probe for based on the total target bps
+        // (what we're able to reach), the total optimal bps (what we want to
+        // be able to reach) and the total current bps (what we currently send).
+
+        long totalCurrentBps = 0, totalTargetBps = 0, totalOptimalBps = 0;
 
         List<Long> ssrcsToProtect = new ArrayList<>();
         for (SimulcastController simulcastController : simulcastControllerList)
         {
-            long currentBps = simulcastController.getCurrentBps();
+            long currentBps = simulcastController.getSource()
+                .getBps(simulcastController.getCurrentIndex());
+
             if (currentBps > 0)
             {
                 // Do not protect SSRC if it's not streaming.
@@ -103,11 +109,15 @@ public class BandwidthProbing
                 }
             }
 
-            totalOptimalBps += simulcastController.getOptimalBps();
+            totalTargetBps += simulcastController
+                .getSource().getBps(simulcastController.getTargetIndex());
+            totalOptimalBps += simulcastController
+                .getSource().getBps(simulcastController.getOptimalIndex());
         }
 
         // How much padding do we need?
-        long totalNeededBps = totalOptimalBps - totalCurrentBps;
+        long totalNeededBps
+            = totalOptimalBps - Math.max(totalTargetBps, totalCurrentBps);
         if (totalNeededBps < 1)
         {
             // Not much.
@@ -126,7 +136,7 @@ public class BandwidthProbing
         }
 
         // How much padding can we afford?
-        long maxPaddingBps = bweBps - totalCurrentBps;
+        long maxPaddingBps = bweBps - Math.max(totalTargetBps, totalCurrentBps);
         long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
         if (logger.isDebugEnabled())
@@ -135,6 +145,7 @@ public class BandwidthProbing
                 + " padding_bps=" + paddingBps
                 + ",optimal_bps=" + totalOptimalBps
                 + ",current_bps=" + totalCurrentBps
+                + ",target_bps=" + totalTargetBps
                 + ",needed_bps=" + totalNeededBps
                 + ",max_padding_bps=" + maxPaddingBps
                 + ",bwe_bps=" + bweBps);
