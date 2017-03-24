@@ -51,6 +51,23 @@ For both the _private_ and the _public_ interfaces:
  * ```org.jitsi.videobridge.rest.jetty.host``` - 
  Specifies the server host.
 
+Specific parts of the _public_ interface can be configured with the following additional properties:
+ ```
+ # Configure a proxy 
+ org.jitsi.videobridge.rest.jetty.ProxyServlet.hostHeader=example.com
+ org.jitsi.videobridge.rest.jetty.ProxyServlet.pathSpec=/http-bind
+ org.jitsi.videobridge.rest.jetty.ProxyServlet.proxyTo=http://localhost:5280/http-bind
+
+ # Configure serving of static content (tuned for jitsi-meet)
+ org.jitsi.videobridge.rest.jetty.ResourceHandler.resourceBase=/usr/share/jitsi-meet
+ org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./config.js=/etc/jitsi/meet/example.com-config.js
+ org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./interface_config.js=/usr/share/jitsi-meet/interface_config.js
+ org.jitsi.videobridge.rest.jetty.ResourceHandler.alias./logging_config.js=/usr/share/jitsi-meet/logging_config.js
+ org.jitsi.videobridge.rest.jetty.RewriteHandler.regex=^/([a-zA-Z0-9]+)$
+ org.jitsi.videobridge.rest.jetty.RewriteHandler.replacement=/
+ org.jitsi.videobridge.rest.jetty.SSIResourceHandler.paths=/
+ ```
+
 
 Examples
 ==============
