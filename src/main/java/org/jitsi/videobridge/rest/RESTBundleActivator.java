@@ -160,7 +160,7 @@ public class RESTBundleActivator
             = super.initializeHandlers(
                 bundleContext, privateServer, publicServer);
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < handlers.length; i++)
         {
             if (handlers[i] != null)
             {
