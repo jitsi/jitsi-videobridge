@@ -2,7 +2,8 @@ Introduction
 ==============
 Jitsi-videobridge supports two HTTP(S) interfaces, a _public_ and a _private_ one. 
 The two interfaces use different ports. The _private_ interface exposes
-HTTP endpoints which are not meant to be publicly accessible, such as:
+HTTP endpoints which are not meant to be publicly accessible (but might be used
+by other components of the infrastructure, e.g. a signaling server), such as:
 
 * The [COLIBRI control interface](rest-colibri.md) (```/colibri/```)
 * The health-check interface (```/about/health```)
