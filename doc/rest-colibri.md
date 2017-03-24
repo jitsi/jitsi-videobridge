@@ -1,3 +1,11 @@
+Introduction
+==============
+
+This document describes the REST APIs and the JSON format used with
+the REST version of the [COLIBRI protocol](https://xmpp.org/extensions/xep-0340.html).
+
+See [this document](rest.md) for how to configure the HTTP(S) interfaces of jitsi-videobridge.
+
 Implementation
 ==============
 
@@ -133,23 +141,6 @@ The respective response could look like:
 		</td>
 	</tr>
 </table>
-
-Configuration
-==============
-**To enable the REST API you have to start Jitsi video bridge with parameter --apis=rest (or --apis=rest,xmpp to enable both REST and XMPP).**
-
-**The following configuration properties can be added in the Jitsi Videobridge configuration file(HOME/.sip-communicator/sip-communicator.properties):**
-
- * **org.jitsi.videobridge.rest.jetty.port** - 
- Specifies the port on which the REST API of Videobridge is to be served over HTTP. The default value is 8080.
- * **org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePassword** - 
- Specifies the keystore password to be utilized when the REST API of Videobridge is served over HTTPS.
- * **org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePath** - 
- Specifies the keystore path to be utilized when the REST API of Videobridge is served over HTTPS.
- * **org.jitsi.videobridge.rest.jetty.sslContextFactory.needClientAuth** - 
- Specifies whether client certificate authentication is to be required when the REST API of Videobridge is served over HTTPS.
- * **org.jitsi.videobridge.rest.jetty.tls.port** - 
- Specifies the port on which the REST API of Videobridge is to be served over HTTPS. The default value is 8443.
 
 Example
 ==============
