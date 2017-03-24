@@ -40,6 +40,11 @@ import java.util.*;
 class SimulcastController
 {
     /**
+     * The number of seen frames to keep track of.
+     */
+    private static final int SEEN_FRAME_HISTORY_SIZE = 120;
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -496,11 +501,34 @@ class SimulcastController
         private SeenFrame maxSentFrame;
 
         /**
-         * At 60fps, this holds 5 seconds worth of frames.
-         * At 30fps, this holds 10 seconds worth of frames.
+         * The {@link SeenFrameAllocator} for this {@link BitstreamController}.
+         */
+        private final SeenFrameAllocator seenFrameAllocator
+            = new SeenFrameAllocator();
+
+        /**
+         * At 60fps, this holds 2 seconds worth of frames.
+         * At 30fps, this holds 4 seconds worth of frames.
          */
         private final Map<Long, SeenFrame> seenFrames
-            = Collections.synchronizedMap(new LRUCache<Long, SeenFrame>(300));
+            = Collections.synchronizedMap(
+                new LRUCache<Long, SeenFrame>(SEEN_FRAME_HISTORY_SIZE)
+        {
+            /**
+             * {@inheritDoc}
+             */
+            protected boolean removeEldestEntry(Map.Entry<Long, SeenFrame> eldest)
+            {
+                boolean removeEldestEntry = super.removeEldestEntry(eldest);
+
+                if (removeEldestEntry)
+                {
+                    seenFrameAllocator.returnSeenFrame(eldest.getValue());
+                }
+
+                return removeEldestEntry;
+            }
+        });
 
         /**
          *
@@ -719,8 +747,8 @@ class SimulcastController
                             tsTranslation = maxSentFrame.tsTranslation;
                         }
 
-                        destFrame = new SeenFrame(
-                            srcTs, seqNumTranslation, tsTranslation);
+                        destFrame = seenFrameAllocator.getOrCreate();
+                        destFrame.reset(srcTs, seqNumTranslation, tsTranslation);
                         seenFrames.put(srcTs, destFrame);
                         maxSentFrame = destFrame;
                         if (sourceFrameDesc.isIndependent())
@@ -730,7 +758,8 @@ class SimulcastController
                     }
                     else
                     {
-                        destFrame = new SeenFrame(srcTs, null, null);
+                        destFrame = seenFrameAllocator.getOrCreate();
+                        destFrame.reset(srcTs, null, null);
                         seenFrames.put(srcTs, destFrame);
                     }
                 }
@@ -738,7 +767,8 @@ class SimulcastController
                 {
                     // TODO ask for independent frame if we're filtering a TL0.
 
-                    destFrame = new SeenFrame(srcTs, null, null);
+                    destFrame = seenFrameAllocator.getOrCreate();
+                    destFrame.reset(srcTs, null, null);
                     seenFrames.put(srcTs, destFrame);
                 }
             }
@@ -886,12 +916,12 @@ class SimulcastController
             /**
              * The sequence number translation to apply to accepted RTP packets.
              */
-            private final SeqNumTranslation seqNumTranslation;
+            private SeqNumTranslation seqNumTranslation;
 
             /**
              * The RTP timestamp translation to apply to accepted RTP/RTCP packets.
              */
-            private final TimestampTranslation tsTranslation;
+            private TimestampTranslation tsTranslation;
 
             /**
              * A boolean that indicates whether or not the transform thread should
@@ -902,7 +932,7 @@ class SimulcastController
             /**
              * The source timestamp of this frame.
              */
-            private final long srcTs;
+            private long srcTs;
 
             /**
              * The maximum source sequence number to accept. -1 means drop.
@@ -913,23 +943,6 @@ class SimulcastController
              * The start source sequence number of this frame.
              */
             private int srcSeqNumStart = -1;
-
-            /**
-             * Ctor.
-             *
-             * @param ts the timestamp of the seen frame.
-             * @param seqNumTranslation the {@link SeqNumTranslation} to apply to
-             * RTP packets of this frame.
-             * @param tsTranslation the {@link TimestampTranslation} to apply to
-             * RTP packets of this frame.
-             */
-            SeenFrame(long ts, SeqNumTranslation seqNumTranslation,
-                      TimestampTranslation tsTranslation)
-            {
-                this.srcTs = ts;
-                this.seqNumTranslation = seqNumTranslation;
-                this.tsTranslation = tsTranslation;
-            }
 
             /**
              * Defines an RTP packet filter that controls which packets to be
@@ -1077,6 +1090,61 @@ class SimulcastController
             long getTs()
             {
                 return tsTranslation == null ? srcTs : tsTranslation.apply(srcTs);
+            }
+
+            /**
+             * Resets this seen frame.
+             *
+             * @param srcTs the timestamp of the seen frame.
+             * @param seqNumTranslation the {@link SeqNumTranslation} to apply to
+             * RTP packets of this frame.
+             * @param tsTranslation the {@link TimestampTranslation} to apply to
+             * RTP packets of this frame.
+             */
+            public void reset(
+                long srcTs,
+                SeqNumTranslation seqNumTranslation,
+                TimestampTranslation tsTranslation)
+            {
+                this.maybeFixInitialIndependentFrame = true;
+                this.srcSeqNumLimit = -1;
+                this.srcSeqNumStart = -1;
+                this.srcTs = srcTs;
+                this.seqNumTranslation = seqNumTranslation;
+                this.tsTranslation = tsTranslation;
+            }
+        }
+
+        /**
+         * A very simple {@link SeenFrame} allocator. NOT multi-thread safe.
+         */
+        class SeenFrameAllocator
+        {
+            /**
+             * The pool of available {@link SeenFrame}.
+             */
+            private Queue<SeenFrame> pool = new LinkedList<>();
+
+            /**
+             * Gets a {@link SeenFrame} from the pool of available seen frames,
+             * or creates a new one, if none is available.
+             *
+             * @return a {@link SeenFrame} from the pool of available seen
+             * frames, or a new one, if none is available.
+             */
+            public SeenFrame getOrCreate()
+            {
+                return pool.isEmpty() ? new SeenFrame() : pool.remove();
+            }
+
+            /**
+             * Returns a {@link SeenFrame} to this allocator.
+             * 
+             * @param value the {@link SeenFrame} to return.
+             */
+            public void returnSeenFrame(SeenFrame value)
+            {
+                pool.add(value);
             }
         }
     }
