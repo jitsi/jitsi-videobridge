@@ -21,6 +21,7 @@ import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.rest.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.ssi.*;
 import org.osgi.framework.*;
@@ -45,17 +46,23 @@ public class PublicRESTBundleActivator
     public static final String JETTY_PROPERTY_PREFIX
         = "org.jitsi.videobridge.rest.public";
 
+    /**
+     * The old, deprecated prefix for some of the properties which configure
+     * the behavior of the public HTTP API. Kept for backward compatibility.
+     */
+    private static final String OLD_PREFIX = Videobridge.REST_API_PNAME;
+
     public static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
-        = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.hostHeader";
+        = ".jetty.ProxyServlet.hostHeader";
 
     public static final String JETTY_PROXY_SERVLET_PATH_SPEC_PNAME
-        = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.pathSpec";
+        = ".jetty.ProxyServlet.pathSpec";
 
     public static final String JETTY_PROXY_SERVLET_PROXY_TO_PNAME
-        = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.proxyTo";
+        = ".jetty.ProxyServlet.proxyTo";
 
     public static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
-        = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.resourceBase";
+        = ".jetty.ResourceHandler.resourceBase";
 
     /**
      * Prefix that can configure multiple location aliases.
@@ -63,13 +70,13 @@ public class PublicRESTBundleActivator
      * rest.api.jetty.ResourceHandler.alias./settings.js=/etc/jitsi/my-sets.js
      */
     public static final String JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
-        = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.alias";
+        = ".jetty.ResourceHandler.alias";
 
     public static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
-        = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.regex";
+        = ".jetty.RewriteHandler.regex";
 
     public static final String JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME
-        = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.replacement";
+        = ".jetty.RewriteHandler.replacement";
 
     /**
      * Initializes a new {@link PublicRESTBundleActivator}.
@@ -205,13 +212,21 @@ public class PublicRESTBundleActivator
             ServletContextHandler servletContextHandler)
     {
         String pathSpec
-            = getCfgString(JETTY_PROXY_SERVLET_PATH_SPEC_PNAME, null);
+            = ConfigUtils.getString(
+                cfg,
+                JETTY_PROPERTY_PREFIX + JETTY_PROXY_SERVLET_PATH_SPEC_PNAME,
+                OLD_PREFIX + JETTY_PROXY_SERVLET_PATH_SPEC_PNAME,
+                null);
         ServletHolder holder = null;
 
         if (pathSpec != null && pathSpec.length() != 0)
         {
             String proxyTo
-                = getCfgString(JETTY_PROXY_SERVLET_PROXY_TO_PNAME, null);
+                = ConfigUtils.getString(
+                    cfg,
+                    JETTY_PROPERTY_PREFIX + JETTY_PROXY_SERVLET_PROXY_TO_PNAME,
+                    OLD_PREFIX + JETTY_PROXY_SERVLET_PROXY_TO_PNAME,
+                    null);
 
             if (proxyTo != null && proxyTo.length() != 0)
             {
@@ -226,7 +241,12 @@ public class PublicRESTBundleActivator
 
                 // hostHeader
                 String hostHeader
-                    = getCfgString(JETTY_PROXY_SERVLET_HOST_HEADER_PNAME, null);
+                    = ConfigUtils.getString(
+                        cfg,
+                        JETTY_PROPERTY_PREFIX
+                            + JETTY_PROXY_SERVLET_HOST_HEADER_PNAME,
+                        OLD_PREFIX + JETTY_PROXY_SERVLET_HOST_HEADER_PNAME,
+                        null);
 
                 if (hostHeader != null && hostHeader.length() != 0)
                     holder.setInitParameter("hostHeader", hostHeader);
@@ -253,7 +273,12 @@ public class PublicRESTBundleActivator
             Server server)
     {
         String resourceBase
-            = getCfgString(JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME, null);
+            = ConfigUtils.getString(
+                cfg,
+                JETTY_PROPERTY_PREFIX
+                    + JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME,
+                OLD_PREFIX + JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME,
+                null);
         ContextHandler contextHandler;
 
         if (resourceBase == null || resourceBase.length() == 0)
@@ -266,7 +291,7 @@ public class PublicRESTBundleActivator
 
             resourceHandler.setResourceBase(resourceBase);
 
-            // Enable alisases so we can handle symlinks.
+            // Enable aliases so we can handle symlinks.
             contextHandler = new ContextHandler();
             contextHandler.setHandler(resourceHandler);
             contextHandler.addAliasCheck(new ContextHandler.ApproveAliases());
@@ -307,11 +332,14 @@ public class PublicRESTBundleActivator
                 public Resource getResource(String path)
                     throws MalformedURLException
                 {
+                    String property
+                        = JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "." + path;
                     String value
-                        = getCfgString(
-                                JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "."
-                                    + path,
-                                null);
+                        = ConfigUtils.getString(
+                            cfg,
+                            JETTY_PROPERTY_PREFIX + property,
+                            OLD_PREFIX + property,
+                            null);
 
                     return (value == null) ? null : Resource.newResource(value);
                 }
@@ -336,13 +364,22 @@ public class PublicRESTBundleActivator
             BundleContext bundleContext,
             Server server)
     {
-        String regex = getCfgString(JETTY_REWRITE_HANDLER_REGEX_PNAME, null);
+        String regex = ConfigUtils.getString(
+            cfg,
+            JETTY_PROPERTY_PREFIX + JETTY_REWRITE_HANDLER_REGEX_PNAME,
+            OLD_PREFIX + JETTY_REWRITE_HANDLER_REGEX_PNAME,
+            null);
         RewriteHandler handler = null;
 
         if (regex != null && regex.length() != 0)
         {
             String replacement
-                = getCfgString(JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME, null);
+                = ConfigUtils.getString(
+                    cfg,
+                    JETTY_PROPERTY_PREFIX +
+                        JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME,
+                    OLD_PREFIX + JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME,
+                    null);
 
             if (replacement != null)
             {
