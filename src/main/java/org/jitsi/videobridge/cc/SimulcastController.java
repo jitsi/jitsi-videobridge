@@ -40,6 +40,12 @@ import java.util.*;
 class SimulcastController
 {
     /**
+     * The {@link Logger} to be used by this instance to print debug
+     * information.
+     */
+    private final Logger logger = Logger.getLogger(SimulcastController.class);
+
+    /**
      * A {@link WeakReference} to the {@link MediaStreamTrackDesc} that feeds
      * this instance with RTP/RTCP packets.
      */
@@ -75,7 +81,7 @@ class SimulcastController
             targetSSRC = rtpEncodings[0].getPrimarySSRC();
         }
 
-        bitstreamController = new BitstreamController(weakSource.get());
+        bitstreamController = new BitstreamController();
     }
 
     /**
@@ -416,59 +422,73 @@ class SimulcastController
         private boolean adaptive;
 
         /**
-         * The sequence number offset that this bitstream started.
+         * The sequence number offset that this bitstream started. The initial
+         * value -1 is an indication to use the first accepted packet seqnum
+         * as the offset.
          */
-        private int seqNumOff;
+        private int seqNumOff = -1;
 
         /**
-         * The timestamp offset that this bitstream started.
+         * The timestamp offset that this bitstream started. The initial
+         * value -1 is an indication to use the first accepted packet timestamp
+         * as the offset.
          */
-        private long tsOff;
+        private long tsOff = -1;
 
         /**
          * The SSRC of the TL0 of the RTP stream that is currently being
          * forwarded. This is useful for simulcast and RTCP SR rewriting.
+         *
+         * The special value -1 indicates that we're not accepting (and hence
+         * not forwarding) anything.
          */
-        private long tl0SSRC;
+        private long tl0SSRC = -1;
 
         /**
          * The subjective quality index for of the TL0 of this instance.
+         *
+         * The special value -1 indicates that we're not accepting (and hence
+         * not forwarding) anything.
          */
-        private int tl0Idx = -2;
-
-        /**
-         * A weak reference to the {@link MediaStreamTrackDesc} that this controller
-         * is associated to.
-         */
-        private final WeakReference<MediaStreamTrackDesc> weakSource;
+        private int tl0Idx = -1;
 
         /**
          * The target subjective quality index for this instance. This instance
          * switches between the available RTP streams and sub-encodings until it
-         * reaches this target. -1 effectively means that the stream is suspended.
+         * reaches this target. -1 effectively means that the stream is
+         * suspended.
          */
-        private int targetIdx;
+        private int targetIdx = -1;
 
         /**
          * The optimal subjective quality index for this instance.
          */
-        private int optimalIdx;
+        private int optimalIdx = -1;
 
         /**
          * The current subjective quality index for this instance. If this is
          * different than the target, then a switch is pending.
+         *
+         * When SVC is enabled, currentIdx >= tl0Idx, otherwise
+         * currentIdx == tl0Idx.
          */
-        private int currentIdx;
+        private int currentIdx = -1;
 
         /**
          * The number of transmitted bytes.
          */
-        private long transmittedBytes;
+        private long transmittedBytes = 0;
 
         /**
          * The number of transmitted packets.
          */
-        private long transmittedPackets;
+        private long transmittedPackets = 0;
+
+        /**
+         * The most recent (mr) key frame that we've sent out. Anything that's
+         * accepted by this controller needs to be newer than this.
+         */
+        private SeenFrame mrKeyFrame;
 
         /**
          * The max (biggest timestamp) frame that we've sent out.
@@ -483,52 +503,6 @@ class SimulcastController
             = Collections.synchronizedMap(new LRUCache<Long, SeenFrame>(300));
 
         /**
-         * Ctor. The ctor sets all of the indices to -1.
-         *
-         * @param source the source {@link MediaStreamTrackDesc} for this instance.
-         */
-        BitstreamController(MediaStreamTrackDesc source)
-        {
-            this(new WeakReference<>(source), -1, -1, 0, 0, -1, -1, -1);
-        }
-
-        /**
-         * A private ctor that initializes all the fields of this instance.
-         *
-         * @param weakSource a weak reference to the source
-         * {@link MediaStreamTrackDesc} for this instance.
-         * @param seqNumOff the sequence number offset (rewritten sequence numbers
-         * will start from seqNumOff + 1).
-         * @param tsOff the timestamp offset (rewritten timestamps will start from
-         * tsOff + 1).
-         * @param transmittedBytesOff the transmitted bytes offset (the bytes that
-         * this instance sends will be added to this value).
-         * @param transmittedPacketsOff the transmitted packets offset (the packets
-         * that this instance sends will be added to this value).
-         * @param tl0Idx the TL0 of the RTP stream that this controller filters
-         * traffic from.
-         * @param targetIdx the target subjective quality index for this instance.
-         * @param optimalIdx the optimal subjective quality index for this instance.
-         */
-        private BitstreamController(
-            WeakReference<MediaStreamTrackDesc> weakSource,
-            int seqNumOff, long tsOff,
-            long transmittedBytesOff, long transmittedPacketsOff,
-            int tl0Idx, int targetIdx, int optimalIdx)
-        {
-            this.seqNumOff = seqNumOff;
-            this.tsOff = tsOff;
-            this.transmittedBytes = transmittedBytesOff;
-            this.transmittedPackets = transmittedPacketsOff;
-            this.optimalIdx = optimalIdx;
-            this.targetIdx = targetIdx;
-            // a stream always starts suspended (and resumes with a key frame).
-            this.currentIdx = -1;
-            this.weakSource = weakSource;
-            setTL0Idx(tl0Idx);
-        }
-
-        /**
          *
          * @param newTL0Idx
          */
@@ -539,8 +513,16 @@ class SimulcastController
                 return;
             }
 
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("tl0_changed,hash=" + hashCode()
+                    + " old_tl0=" + this.tl0Idx
+                    + ",new_tl0=" + newTL0Idx);
+            }
+
             this.seenFrames.clear();
 
+            this.mrKeyFrame = null;
             if (maxSentFrame != null)
             {
                 this.tsOff = getMaxTs();
@@ -549,6 +531,9 @@ class SimulcastController
             }
 
             this.tl0Idx = newTL0Idx;
+
+            // a stream always starts suspended (and resumes with a key frame).
+            this.currentIdx = -1;
 
             MediaStreamTrackDesc source = weakSource.get();
             assert source != null;
@@ -605,7 +590,7 @@ class SimulcastController
         public boolean accept(
             FrameDesc sourceFrameDesc, byte[] buf, int off, int len)
         {
-            if (sourceFrameDesc.getStart() == -1)
+            if (adaptive && sourceFrameDesc.getStart() == -1)
             {
                 return false;
             }
@@ -646,12 +631,28 @@ class SimulcastController
                         }
                     }
 
+                    if (currentIdx != this.currentIdx && logger.isDebugEnabled())
+                    {
+                        logger.debug("current_idx_changed,hash=" + hashCode()
+                            + " old_idx=" + this.currentIdx
+                            + ",new_idx=" + currentIdx);
+                    }
+
                     this.currentIdx = currentIdx;
                 }
 
-                if (currentIdx > -1 && (maxSentFrame == null
+                if (currentIdx > -1
+                    // we haven't seen anything yet and this is an independent
+                    // frame.
+                    && (maxSentFrame == null && sourceFrameDesc.isIndependent()
+                    // frames from non-adaptive streams need to be newer than
+                    // the most recent independent frame
                     || (!adaptive
-                        || TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0)))
+                        && TimeUtils.rtpDiff(srcTs, mrKeyFrame.srcTs) > 0)
+                    // frames from adaptive streams need to be newer than the
+                    // max
+                    || (adaptive
+                        && TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0)))
                 {
                     // the stream is not suspended and we're not dealing with a
                     // late frame or the stream is not adaptive.
@@ -662,9 +663,7 @@ class SimulcastController
                     // TODO ask for independent frame if we're skipping a TL0.
 
                     int sourceIdx = sourceFrameDesc.getRTPEncoding().getIndex();
-                    if (sourceEncodings[currentIdx].requires(sourceIdx)
-                        && (maxSentFrame == null
-                            || maxSentFrame.effectivelyComplete || !adaptive))
+                    if (sourceEncodings[currentIdx].requires(sourceIdx))
                     {
                         // the quality of the frame is a dependency of the
                         // forwarded quality and the max frame is effectively
@@ -724,6 +723,10 @@ class SimulcastController
                             srcTs, seqNumTranslation, tsTranslation);
                         seenFrames.put(srcTs, destFrame);
                         maxSentFrame = destFrame;
+                        if (sourceFrameDesc.isIndependent())
+                        {
+                            mrKeyFrame = destFrame;
+                        }
                     }
                     else
                     {
@@ -897,15 +900,6 @@ class SimulcastController
             private boolean maybeFixInitialIndependentFrame = true;
 
             /**
-             * A boolean that determines whether or not this seen frame is
-             * "effectively" complete. Effectively complete means that we've either
-             * seen its end sequence number (so we know its size), or it's not a
-             * TL0. This is important to know with temporal scalability because
-             * we want to be able to corrupt an effectively complete frame.
-             */
-            private boolean effectivelyComplete = false;
-
-            /**
              * The source timestamp of this frame.
              */
             private final long srcTs;
@@ -955,24 +949,13 @@ class SimulcastController
              */
             boolean accept(FrameDesc source, byte[] buf, int off, int len)
             {
-                // non TL0s (which are frames with dependencies) can be "corrupted",
-                // so they're effectively complete.
-                effectivelyComplete = !ArrayUtils.isNullOrEmpty(
-                    source.getRTPEncoding().getDependencyEncodings());
-
-                if (this == maxSentFrame /* the max frame can expand */
+               if (this == maxSentFrame /* the max frame can expand */
                     || availableIdx == null || availableIdx.length < 2)
                 {
                     if (srcSeqNumLimit == -1 || RTPUtils.sequenceNumberDiff(
                         source.getMaxSeen(), srcSeqNumLimit) > 0)
                     {
                         srcSeqNumLimit = source.getMaxSeen();
-                    }
-
-                    if (!effectivelyComplete
-                        && source.getMaxSeen() == source.getEnd())
-                    {
-                        effectivelyComplete = true;
                     }
                 }
 
