@@ -286,7 +286,7 @@ public class SSIResourceHandler
                 String aliasValue
                     = ConfigUtils.getString(
                             cfg,
-                            RESTBundleActivator
+                            PublicRESTBundleActivator
                                     .JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
                                 + "."
                                 + fileToInclude,
