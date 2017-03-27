@@ -167,7 +167,7 @@ public class BitrateController
     /**
      * The current padding parameters list for {@link #dest}.
      */
-    private List<PaddingParams> paddingParamsList;
+    private List<SimulcastController> simulcastControllers;
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -207,9 +207,9 @@ public class BitrateController
      *
      * @return the current padding parameters list for {@link #dest}.
      */
-    List<PaddingParams> getPaddingParamsList()
+    List<SimulcastController> getSimulcastControllers()
     {
-        return paddingParamsList;
+        return simulcastControllers;
     }
 
     /**
@@ -307,7 +307,7 @@ public class BitrateController
         Set<String> endpointsEnteringLastNIds = new HashSet<>();
         Set<String> conferenceEndpointIds = new HashSet<>();
 
-        List<PaddingParams> simulcastControllers = new ArrayList<>();
+        List<SimulcastController> simulcastControllers = new ArrayList<>();
         long targetBps = 0;
         if (!ArrayUtils.isNullOrEmpty(allocations))
         {
@@ -377,7 +377,7 @@ public class BitrateController
         }
 
         // The BandwidthProber will pick this up.
-        this.paddingParamsList = simulcastControllers;
+        this.simulcastControllers = simulcastControllers;
 
         if (logger.isInfoEnabled() && destStream != null)
         {

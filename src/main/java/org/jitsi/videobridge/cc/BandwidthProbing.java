@@ -78,37 +78,46 @@ public class BandwidthProbing
     {
         super.run();
 
-        List<PaddingParams> paddingParamsList
-            = dest.getBitrateController().getPaddingParamsList();
+        List<SimulcastController> simulcastControllerList
+            = dest.getBitrateController().getSimulcastControllers();
 
-        if (paddingParamsList == null || paddingParamsList.isEmpty())
+        if (simulcastControllerList == null || simulcastControllerList.isEmpty())
         {
             return;
         }
 
-        long totalCurrentBps = 0, totalOptimalBps = 0;
+        // We calculate how much to probe for based on the total target bps
+        // (what we're able to reach), the total optimal bps (what we want to
+        // be able to reach) and the total current bps (what we currently send).
+
+        long totalCurrentBps = 0, totalTargetBps = 0, totalOptimalBps = 0;
 
         List<Long> ssrcsToProtect = new ArrayList<>();
-        for (PaddingParams paddingParams : paddingParamsList)
+        for (SimulcastController simulcastController : simulcastControllerList)
         {
-            PaddingParams.Bitrates bitrates = paddingParams.getBitrates();
-            long currentBps = bitrates.getCurrentBps();
+            long currentBps = simulcastController.getSource()
+                .getBps(simulcastController.getCurrentIndex());
+
             if (currentBps > 0)
             {
                 // Do not protect SSRC if it's not streaming.
                 totalCurrentBps += currentBps;
-                long ssrc = paddingParams.getTargetSSRC();
+                long ssrc = simulcastController.getTargetSSRC();
                 if (ssrc > -1)
                 {
                     ssrcsToProtect.add(ssrc);
                 }
             }
 
-            totalOptimalBps += bitrates.getOptimalBps();
+            totalTargetBps += simulcastController
+                .getSource().getBps(simulcastController.getTargetIndex());
+            totalOptimalBps += simulcastController
+                .getSource().getBps(simulcastController.getOptimalIndex());
         }
 
         // How much padding do we need?
-        long totalNeededBps = totalOptimalBps - totalCurrentBps;
+        long totalNeededBps
+            = totalOptimalBps - Math.max(totalTargetBps, totalCurrentBps);
         if (totalNeededBps < 1)
         {
             // Not much.
@@ -127,7 +136,7 @@ public class BandwidthProbing
         }
 
         // How much padding can we afford?
-        long maxPaddingBps = bweBps - totalCurrentBps;
+        long maxPaddingBps = bweBps - Math.max(totalTargetBps, totalCurrentBps);
         long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
         if (logger.isDebugEnabled())
@@ -136,6 +145,7 @@ public class BandwidthProbing
                 + " padding_bps=" + paddingBps
                 + ",optimal_bps=" + totalOptimalBps
                 + ",current_bps=" + totalCurrentBps
+                + ",target_bps=" + totalTargetBps
                 + ",needed_bps=" + totalNeededBps
                 + ",max_padding_bps=" + maxPaddingBps
                 + ",bwe_bps=" + bweBps);
