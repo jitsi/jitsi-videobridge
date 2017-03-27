@@ -94,6 +94,12 @@ public class BitrateController
     private static final int THUMBNAIL_MAX_HEIGHT = 180;
 
     /**
+     * The min resolution to allocate for the onstage participant, before
+     * allocating bandwidth for the thumbnails.
+     */
+    private static final int ONSTAGE_MIN_HEIGHT = 360;
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -422,7 +428,7 @@ public class BitrateController
      * @param conferenceEndpoints the ordered list of {@link Endpoint}s
      * participating in the multipoint conference with the dominant (speaker)
      * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performaance;
+     * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link EndpointBitrateAllocation}.
@@ -438,7 +444,31 @@ public class BitrateController
             return endpointBitrateAllocations;
         }
 
-        int maxQuality = 0;
+        // Depth-first allocation, for the on-stage participants (give them at
+        // least 360p).
+
+        for (EndpointBitrateAllocation endpointBitrateAllocation
+            : endpointBitrateAllocations)
+        {
+            // on-stage participants have been bubbled up in the prioritization
+            // step. When we encounter a participant who's not on-stage, that
+            // means that we're done with the on-stage participants.
+            if (!endpointBitrateAllocation.selected)
+            {
+                break;
+            }
+
+            maxBandwidth += endpointBitrateAllocation.getTargetBitrate();
+
+            int maxQuality
+                = endpointBitrateAllocation.track.getMaxIndex(ONSTAGE_MIN_HEIGHT);
+            endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
+            maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
+        }
+
+        // Breadth-first allocation, try to give everybody some portion of the
+        // available bandwidth.
+
         long oldMaxBandwidth = 0;
         while (oldMaxBandwidth != maxBandwidth)
         {
@@ -447,13 +477,23 @@ public class BitrateController
             for (EndpointBitrateAllocation endpointBitrateAllocation
                 : endpointBitrateAllocations)
             {
+                if (!endpointBitrateAllocation.forwarded)
+                {
+                    // participants that are not forwarded are sunk in the
+                    // prioritization step. When we encounter a participant
+                    // who's not on-stage, that means that we're done with the
+                    // on-stage participants.
+                    break;
+                }
+
+                int maxQuality = endpointBitrateAllocation.targetIdx + 1;
                 maxBandwidth += endpointBitrateAllocation.getTargetBitrate();
                 endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
                 maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
             }
-
-            maxQuality++;
         }
+
+        // at this point, maxBandwidth is what we failed to allocate.
 
         return endpointBitrateAllocations;
     }
@@ -692,14 +732,10 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
-            int optimalThumbnailIndex = 0;
+            int optimalThumbnailIndex = track.getMaxIndex(THUMBNAIL_MAX_HEIGHT);
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
-                if (encodings[i].getHeight() <= THUMBNAIL_MAX_HEIGHT)
-                {
-                    optimalThumbnailIndex = i;
-                }
             }
 
             // TODO Determining the optimal index needs some work. The optimal
