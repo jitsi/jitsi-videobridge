@@ -477,7 +477,7 @@ public class BitrateController
             for (EndpointBitrateAllocation endpointBitrateAllocation
                 : endpointBitrateAllocations)
             {
-                if (!endpointBitrateAllocation.forwarded)
+                if (!endpointBitrateAllocation.fitsInLastN)
                 {
                     // participants that are not forwarded are sunk in the
                     // prioritization step. When we encounter a participant
@@ -569,7 +569,7 @@ public class BitrateController
                 endpointBitrateAllocations[priority++]
                     = new EndpointBitrateAllocation(
                     sourceEndpoint,
-                    true /* forwarded */,
+                    true /* fitsInLastN */,
                     true /* selected */);
 
                 it.remove();
@@ -593,7 +593,7 @@ public class BitrateController
                 endpointBitrateAllocations[priority++]
                     = new EndpointBitrateAllocation(
                     sourceEndpoint,
-                    true /* forwarded */,
+                    true /* fitsInLastN */,
                     false /* selected */);
 
                 it.remove();
@@ -649,7 +649,7 @@ public class BitrateController
          * Indicates whether this {@link Endpoint} is forwarded or not to the
          * {@link VideoChannel} that owns this {@link BitrateController}.
          */
-        private final boolean forwarded;
+        private final boolean fitsInLastN;
 
         /**
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
@@ -689,17 +689,17 @@ public class BitrateController
          *
          * @param endpoint the {@link Endpoint} that this bitrate allocation
          * pertains to.
-         * @param forwarded a flag indicating whether or not the endpoint is in
+         * @param fitsInLastN a flag indicating whether or not the endpoint is in
          * LastN.
          * @param selected a flag indicating whether or not the endpoint is
          * selected.
          */
         private EndpointBitrateAllocation(
-            Endpoint endpoint, boolean forwarded, boolean selected)
+            Endpoint endpoint, boolean fitsInLastN, boolean selected)
         {
             this.endpointID = endpoint.getID();
             this.selected = selected;
-            this.forwarded = forwarded;
+            this.fitsInLastN = fitsInLastN;
 
             // This assumes that the array is ordered by the subjective quality
             // ordering ex: one can argue that 360p@30fps looks better than
@@ -744,7 +744,7 @@ public class BitrateController
             // anything above 360p (not even the on-stage participant). On a
             // laptop computer 720p seems reasonable and on a big screen 1080p
             // or above.
-            optimalIdx = forwarded
+            optimalIdx = fitsInLastN
                 ? (selected ? encodings.length - 1 : optimalThumbnailIndex) : -1;
         }
 
