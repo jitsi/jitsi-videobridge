@@ -94,6 +94,12 @@ public class BitrateController
     private static final int THUMBNAIL_MAX_HEIGHT = 180;
 
     /**
+     * The min resolution to allocate for the onstage participant, before
+     * allocating bandwidth for the thumbnails.
+     */
+    private static final int ONSTAGE_MIN_HEIGHT = 360;
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -422,7 +428,7 @@ public class BitrateController
      * @param conferenceEndpoints the ordered list of {@link Endpoint}s
      * participating in the multipoint conference with the dominant (speaker)
      * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performaance;
+     * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link EndpointBitrateAllocation}.
@@ -438,7 +444,31 @@ public class BitrateController
             return endpointBitrateAllocations;
         }
 
-        int maxQuality = 0;
+        // Depth-first allocation, for the on-stage participants (give them at
+        // least 360p).
+
+        for (EndpointBitrateAllocation endpointBitrateAllocation
+            : endpointBitrateAllocations)
+        {
+            // on-stage participants have been bubbled up in the prioritization
+            // step. When we encounter a participant who's not on-stage, that
+            // means that we're done with the on-stage participants.
+            if (!endpointBitrateAllocation.selected)
+            {
+                break;
+            }
+
+            maxBandwidth += endpointBitrateAllocation.getTargetBitrate();
+
+            int maxQuality
+                = endpointBitrateAllocation.track.getMaxIndex(ONSTAGE_MIN_HEIGHT);
+            endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
+            maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
+        }
+
+        // Breadth-first allocation, try to give everybody some portion of the
+        // available bandwidth.
+
         long oldMaxBandwidth = 0;
         while (oldMaxBandwidth != maxBandwidth)
         {
@@ -447,13 +477,23 @@ public class BitrateController
             for (EndpointBitrateAllocation endpointBitrateAllocation
                 : endpointBitrateAllocations)
             {
+                if (!endpointBitrateAllocation.fitsInLastN)
+                {
+                    // participants that are not forwarded are sunk in the
+                    // prioritization step. When we encounter a participant
+                    // who's not on-stage, that means that we're done with the
+                    // on-stage participants.
+                    break;
+                }
+
+                int maxQuality = endpointBitrateAllocation.targetIdx + 1;
                 maxBandwidth += endpointBitrateAllocation.getTargetBitrate();
                 endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
                 maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
             }
-
-            maxQuality++;
         }
+
+        // at this point, maxBandwidth is what we failed to allocate.
 
         return endpointBitrateAllocations;
     }
@@ -529,7 +569,7 @@ public class BitrateController
                 endpointBitrateAllocations[priority++]
                     = new EndpointBitrateAllocation(
                     sourceEndpoint,
-                    true /* forwarded */,
+                    true /* fitsInLastN */,
                     true /* selected */);
 
                 it.remove();
@@ -553,7 +593,7 @@ public class BitrateController
                 endpointBitrateAllocations[priority++]
                     = new EndpointBitrateAllocation(
                     sourceEndpoint,
-                    true /* forwarded */,
+                    true /* fitsInLastN */,
                     false /* selected */);
 
                 it.remove();
@@ -609,7 +649,7 @@ public class BitrateController
          * Indicates whether this {@link Endpoint} is forwarded or not to the
          * {@link VideoChannel} that owns this {@link BitrateController}.
          */
-        private final boolean forwarded;
+        private final boolean fitsInLastN;
 
         /**
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
@@ -649,17 +689,17 @@ public class BitrateController
          *
          * @param endpoint the {@link Endpoint} that this bitrate allocation
          * pertains to.
-         * @param forwarded a flag indicating whether or not the endpoint is in
+         * @param fitsInLastN a flag indicating whether or not the endpoint is in
          * LastN.
          * @param selected a flag indicating whether or not the endpoint is
          * selected.
          */
         private EndpointBitrateAllocation(
-            Endpoint endpoint, boolean forwarded, boolean selected)
+            Endpoint endpoint, boolean fitsInLastN, boolean selected)
         {
             this.endpointID = endpoint.getID();
             this.selected = selected;
-            this.forwarded = forwarded;
+            this.fitsInLastN = fitsInLastN;
 
             // This assumes that the array is ordered by the subjective quality
             // ordering ex: one can argue that 360p@30fps looks better than
@@ -692,14 +732,10 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
-            int optimalThumbnailIndex = 0;
+            int optimalThumbnailIndex = track.getMaxIndex(THUMBNAIL_MAX_HEIGHT);
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
-                if (encodings[i].getHeight() <= THUMBNAIL_MAX_HEIGHT)
-                {
-                    optimalThumbnailIndex = i;
-                }
             }
 
             // TODO Determining the optimal index needs some work. The optimal
@@ -708,7 +744,7 @@ public class BitrateController
             // anything above 360p (not even the on-stage participant). On a
             // laptop computer 720p seems reasonable and on a big screen 1080p
             // or above.
-            optimalIdx = forwarded
+            optimalIdx = fitsInLastN
                 ? (selected ? encodings.length - 1 : optimalThumbnailIndex) : -1;
         }
 
