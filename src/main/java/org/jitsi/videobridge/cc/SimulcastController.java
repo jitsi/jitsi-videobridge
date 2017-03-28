@@ -962,14 +962,12 @@ class SimulcastController
              */
             boolean accept(FrameDesc source, byte[] buf, int off, int len)
             {
-               if (this == maxSentFrame /* the max frame can expand */
+                if (this == maxSentFrame /* the max frame can expand */
                     || availableIdx == null || availableIdx.length < 2)
                 {
-                    if (srcSeqNumLimit == -1 || RTPUtils.sequenceNumberDiff(
-                        source.getMaxSeen(), srcSeqNumLimit) > 0)
-                    {
-                        srcSeqNumLimit = source.getMaxSeen();
-                    }
+                    int end = source.getEnd();
+                    srcSeqNumLimit
+                        = end != -1 ? source.getEnd() : source.getMaxSeen() ;
                 }
 
                 if (srcSeqNumLimit == -1)
@@ -977,25 +975,33 @@ class SimulcastController
                     return false;
                 }
 
-                if (srcSeqNumStart == -1 || RTPUtils.sequenceNumberDiff(
-                    srcSeqNumStart, source.getMinSeen()) > 0)
-                {
-                    srcSeqNumStart = source.getMinSeen();
-                }
+                int start = source.getStart();
+                srcSeqNumStart
+                    = start != -1 ? source.getStart() : source.getMinSeen();
 
                 int seqNum = RawPacket.getSequenceNumber(buf, off, len);
 
-                return RTPUtils.sequenceNumberDiff(seqNum, srcSeqNumLimit) <= 0;
+                boolean accept
+                    = RTPUtils.sequenceNumberDiff(seqNum, srcSeqNumLimit) <= 0;
+
+                if (!accept && logger.isDebugEnabled())
+                {
+                    logger.debug("frame_corruption seq=" + seqNum
+                        + ",seq_start=" + srcSeqNumStart
+                        + ",seq_limit=" + srcSeqNumLimit);
+                }
+
+                return accept;
             }
 
             /**
-             * Translates accepted packets and drops packets that are not accepted
-             * (by this instance).
+             * Translates accepted packets and drops packets that are not
+             * accepted (by this instance).
              *
              * @param pktIn the packet to translate or drop.
              *
-             * @return the translated packet (along with any piggy backed packets),
-             * if the packet is accepted, null otherwise.
+             * @return the translated packet (along with any piggy backed
+             * packets), if the packet is accepted, null otherwise.
              */
             RawPacket[] rtpTransform(RawPacket pktIn)
             {
