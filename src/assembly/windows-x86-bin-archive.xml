@@ -8,14 +8,6 @@
   </formats>
   <includeBaseDirectory>true</includeBaseDirectory>
   <baseDirectory>${project.artifactId}-windows-x86-${project.version}</baseDirectory>
-  <dependencySets>
-    <dependencySet>
-      <outputDirectory>lib</outputDirectory>
-      <scope>runtime</scope>
-      <useProjectArtifact>false</useProjectArtifact>
-      <unpack>false</unpack>
-    </dependencySet>
-  </dependencySets>
   <fileSets>
     <fileSet>
       <directory>${project.build.directory}</directory>

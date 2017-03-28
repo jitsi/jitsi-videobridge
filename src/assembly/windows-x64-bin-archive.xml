@@ -8,14 +8,6 @@
   </formats>
   <includeBaseDirectory>true</includeBaseDirectory>
   <baseDirectory>${project.artifactId}-windows-x64-${project.version}</baseDirectory>
-  <dependencySets>
-    <dependencySet>
-      <outputDirectory>lib</outputDirectory>
-      <scope>runtime</scope>
-      <useProjectArtifact>false</useProjectArtifact>
-      <unpack>false</unpack>
-    </dependencySet>
-  </dependencySets>
   <fileSets>
     <fileSet>
       <directory>${project.build.directory}</directory>
@@ -23,6 +15,9 @@
       <includes>
         <include>*.jar</include>
       </includes>
+      <excludes>
+        <exclude>original-*.jar</exclude>
+      </excludes>
     </fileSet>
     <fileSet>
       <directory>${project.basedir}/lib</directory>
@@ -43,6 +38,10 @@
       <includes>
         <include>jvb.bat</include>
       </includes>
+    </fileSet>
+    <fileSet>
+      <directory>${project.basedir}/.sip-communicator</directory>
+      <outputDirectory>.sip-communicator</outputDirectory>
     </fileSet>
   </fileSets>
 </assembly>
