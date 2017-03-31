@@ -48,26 +48,26 @@ public class RESTBundleActivator
      * boolean property which enables graceful shutdown through REST API.
      * It is disabled by default.
      */
-    private static final String ENABLE_REST_SHUTDOWN_PNAME
+    public static final String ENABLE_REST_SHUTDOWN_PNAME
         = "org.jitsi.videobridge.ENABLE_REST_SHUTDOWN";
 
     /**
      * The name of the <tt>System</tt> and <tt>ConfigurationService</tt>
      * boolean property which enables <tt>/colibri/*</tt> REST API endpoints.
      */
-    private static final String ENABLE_REST_COLIBRI_PNAME
+    public static final String ENABLE_REST_COLIBRI_PNAME
       = "org.jitsi.videobridge.ENABLE_REST_COLIBRI";
 
-    private static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
+    public static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.hostHeader";
 
-    private static final String JETTY_PROXY_SERVLET_PATH_SPEC_PNAME
+    public static final String JETTY_PROXY_SERVLET_PATH_SPEC_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.pathSpec";
 
-    private static final String JETTY_PROXY_SERVLET_PROXY_TO_PNAME
+    public static final String JETTY_PROXY_SERVLET_PROXY_TO_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ProxyServlet.proxyTo";
 
-    private static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
+    public static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.resourceBase";
 
     /**
@@ -78,10 +78,10 @@ public class RESTBundleActivator
     public static final String JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
         = Videobridge.REST_API_PNAME + ".jetty.ResourceHandler.alias";
 
-    private static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
+    public static final String JETTY_REWRITE_HANDLER_REGEX_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.regex";
 
-    private static final String JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME
+    public static final String JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME
         = Videobridge.REST_API_PNAME + ".jetty.RewriteHandler.replacement";
 
     /**
@@ -99,10 +99,10 @@ public class RESTBundleActivator
     protected void doStop(BundleContext bundleContext)
         throws Exception
     {
-        if (server != null)
+        if (privateServer != null)
         {
             // FIXME graceful Jetty shutdown
-            // When shutdown request is accepted, empty response is sent back
+            // When a shutdown request is accepted, empty response is sent back
             // instead of 200, because Jetty is not being shutdown gracefully.
             Thread.sleep(1000);
         }
@@ -112,84 +112,100 @@ public class RESTBundleActivator
 
     /**
      * Initializes a new {@link Handler} instance which is to handle the
-     * &quot;/colibri&quot; target for a specific {@code Server} instance.
+     * &quot;/colibri&quot; target and adds it to the appropriate lists of
+     * handlers (specified in {@code privateHandlers} and
+     * {@code publicHandlers}) according to the desired public or private
+     * exposure.
      *
      * @param bundleContext the {@code BundleContext} in which the new instance
      * is to be initialized
-     * @param server the {@code Server} for which the new instance is to handle
-     * the &quot;/colibri&quot; target
-     * @return a new {@code Handler} instance which is to handle the
-     * &quot;/colibri&quot; target for {@code server}
+     * @param privateHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the private
+     * interface/port, or {@code null} if the private interface is disabled and
+     * no handlers are to be initialized for it.
+     * @param publicHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the public
+     * interface/port, or {@code null} if the public interface is disabled and
+     * no handlers are to be initialized for it.
      */
-    private Handler initializeColibriHandler(
+    private void initializeColibriHandlers(
             BundleContext bundleContext,
-            Server server)
+            List<Handler> privateHandlers,
+            List<Handler> publicHandlers)
     {
-        return
-            new HandlerImpl(
-                    bundleContext,
-                    getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false),
-                    getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true));
+        // The colibri control interface is private only.
+        if (privateHandlers != null)
+        {
+            privateHandlers.add(new HandlerImpl(
+                bundleContext,
+                getCfgBoolean(ENABLE_REST_SHUTDOWN_PNAME, false),
+                getCfgBoolean(ENABLE_REST_COLIBRI_PNAME, true)));
+        }
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Handler initializeHandler(
+    protected Handler[] initializeHandlers(
             BundleContext bundleContext,
-            Server server)
+            Server privateServer,
+            Server publicServer)
         throws Exception
     {
         // The main content served by Server. It may include, for example, the
         // /colibri target of the REST API, purely static content, and
         // ProxyServlet.
-        Handler handler = super.initializeHandler(bundleContext, server);
+        Handler[] handlers
+            = super.initializeHandlers(
+                bundleContext, privateServer, publicServer);
 
-        // When handling requests, the main content may be superseded by
-        // RewriteHandler.
-        HandlerWrapper rewriteHandler
-            = initializeRewriteHandler(bundleContext, server);
-
-        if (rewriteHandler != null)
+        for (int i = 0; i < handlers.length; i++)
         {
-            rewriteHandler.setHandler(handler);
-            handler = rewriteHandler;
+            if (handlers[i] != null)
+            {
+                // When handling requests, the main content may be superseded by
+                // RewriteHandler. Note that currently we use the same set of
+                // rules for both the private and public servers, but we
+                // create separate Handler instances, because it is not clear
+                // whether it is safe to share a Handler between two Servers.
+                HandlerWrapper wrapper = initializeRewriteHandler(bundleContext);
+                if (wrapper != null)
+                {
+                    wrapper.setHandler(handlers[i]);
+                    handlers[i] = wrapper;
+                }
+            }
         }
 
-        return handler;
+        return handlers;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Handler initializeHandlerList(
+    protected Handler[] initializeHandlerLists(
             BundleContext bundleContext,
-            Server server)
+            Server privateServer,
+            Server publicServer)
         throws Exception
     {
-        List<Handler> handlers = new ArrayList<>();
+        List<Handler> privateHandlers
+            = privateServer == null ? null : new ArrayList<Handler>();
+        List<Handler> publicHandlers
+            = publicServer == null ? null : new ArrayList<Handler>();
 
         // The /colibri target of the REST API.
-        Handler colibriHandler
-            = initializeColibriHandler(bundleContext, server);
-
-        if (colibriHandler != null)
-            handlers.add(colibriHandler);
+        initializeColibriHandlers(
+                bundleContext, privateHandlers, publicHandlers);
 
         // Purely static content.
-        Handler resourceHandler
-            = initializeResourceHandler(bundleContext, server);
+        initializeResourceHandler(
+                bundleContext, privateHandlers, publicHandlers);
 
-        if (resourceHandler != null)
-            handlers.add(resourceHandler);
-
-        Handler aliasHandler
-            = initializeResourceHandlerAliases(bundleContext, server);
-
-        if (aliasHandler != null)
-            handlers.add(aliasHandler);
+        initializeResourceHandlerAliases(
+                bundleContext, privateHandlers, publicHandlers);
 
         // ServletHandler to serve, for example, ProxyServlet.
 
@@ -197,13 +213,13 @@ public class RESTBundleActivator
         // they always mark HTTP Request as handled if it reaches a Servlet
         // regardless of whether the Servlet actually did anything.
         // Consequently, it is advisable to keep Servlets as the last Handler.
-        Handler servletHandler
-            = initializeServletHandler(bundleContext, server);
+        initializeServletHandler(bundleContext, privateHandlers, publicHandlers);
 
-        if (servletHandler != null)
-            handlers.add(servletHandler);
-
-        return initializeHandlerList(handlers);
+        return new Handler[]
+            {
+                initializeHandlerList(privateHandlers),
+                initializeHandlerList(publicHandlers)
+            };
     }
 
     /**
@@ -281,83 +297,109 @@ public class RESTBundleActivator
 
     /**
      * Initializes a new {@link Handler} instance which is to serve purely
-     * static content for a specific {@code Server} instance.
+     * static content and adds it to the appropriate lists of handlers
+     * (specified in {@code privateHandlers} and {@code publicHandlers})
+     * according to the desired public or private exposure.
      *
      * @param bundleContext the {@code BundleContext} in which the new instance
-     * is to be initialized
-     * @param server the {@code Server} for which the new instance is to serve
-     * purely static content
-     * @return a new {@code Handler} instance which is to serve purely static
-     * content for {@code server}
+     * is to be initialized.
+     * @param privateHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the private
+     * interface/port, or {@code null} if the private interface is disabled and
+     * no handlers are to be initialized for it.
+     * @param publicHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the public
+     * interface/port, or {@code null} if the public interface is disabled and
+     * no handlers are to be initialized for it.
      */
-    private Handler initializeResourceHandler(
+    private void initializeResourceHandler(
             BundleContext bundleContext,
-            Server server)
+            List<Handler> privateHandlers,
+            List<Handler> publicHandlers)
     {
-        String resourceBase
-            = getCfgString(JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME, null);
-        ContextHandler contextHandler;
-
-        if (resourceBase == null || resourceBase.length() == 0)
+        if (publicHandlers != null)
         {
-            contextHandler = null;
+            String resourceBase
+                = getCfgString(JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME,
+                               null);
+            ContextHandler contextHandler;
+
+            if (resourceBase == null || resourceBase.length() == 0)
+            {
+                contextHandler = null;
+            }
+            else
+            {
+                ResourceHandler resourceHandler = new SSIResourceHandler(cfg);
+
+                resourceHandler.setResourceBase(resourceBase);
+
+                // Enable alisases so we can handle symlinks.
+                contextHandler = new ContextHandler();
+                contextHandler.setHandler(resourceHandler);
+                contextHandler
+                    .addAliasCheck(new ContextHandler.ApproveAliases());
+            }
+
+            if (contextHandler != null)
+            {
+                publicHandlers.add(contextHandler);
+            }
         }
-        else
-        {
-            ResourceHandler resourceHandler = new SSIResourceHandler(cfg);
-
-            resourceHandler.setResourceBase(resourceBase);
-
-            // Enable alisases so we can handle symlinks.
-            contextHandler = new ContextHandler();
-            contextHandler.setHandler(resourceHandler);
-            contextHandler.addAliasCheck(new ContextHandler.ApproveAliases());
-        }
-
-        return contextHandler;
     }
 
     /**
      * Initializes a new {@link Handler} instance which is to serve purely
-     * static content for a specific {@code Server} instance and only the
-     * aliases configured.
+     * static content and adds it to the appropriate lists of handlers
+     * (specified in {@code privateHandlers} and {@code publicHandlers})
+     * according to the desired public or private exposure.
      *
      * @param bundleContext the {@code BundleContext} in which the new instance
-     * is to be initialized
-     * @param server the {@code Server} for which the new instance is to serve
-     * purely static content
-     * @return a new {@code Handler} instance which is to serve purely static
-     * content for {@code server}
+     * is to be initialized.
+     * @param privateHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the private
+     * interface/port, or {@code null} if the private interface is disabled and
+     * no handlers are to be initialized for it.
+     * @param publicHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the public
+     * interface/port, or {@code null} if the public interface is disabled and
+     * no handlers are to be initialized for it.
      */
-    private Handler initializeResourceHandlerAliases(
+    private void initializeResourceHandlerAliases(
             BundleContext bundleContext,
-            Server server)
+            List<Handler> privateHandlers,
+            List<Handler> publicHandlers)
     {
-        return
-            new ResourceHandler()
-            {
-                /**
-                 * Checks whether there is configured alias/link for the path
-                 * and, if there is, uses the configured value as resource to
-                 * return.
-                 *
-                 * @param path the path to check
-                 * @return the resource to server.
-                 * @throws MalformedURLException
-                 */
-                @Override
-                public Resource getResource(String path)
-                    throws MalformedURLException
+        if (publicHandlers != null)
+        {
+            publicHandlers.add(
+                new ResourceHandler()
                 {
-                    String value
-                        = getCfgString(
-                                JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "."
-                                    + path,
-                                null);
+                    /**
+                     * Checks whether there is configured alias/link for the
+                     * path and, if there is, uses the configured value as
+                     * resource to return.
+                     *
+                     * @param path the path to check
+                     * @return the resource to server.
+                     * @throws MalformedURLException
+                     */
+                    @Override
+                    public Resource getResource(String path)
+                        throws MalformedURLException
+                    {
+                        String value
+                            = getCfgString(
+                            JETTY_RESOURCE_HANDLER_ALIAS_PREFIX + "."
+                                + path,
+                            null);
 
-                    return (value == null) ? null : Resource.newResource(value);
+                        return (value == null) ? null : Resource
+                            .newResource(value);
+                    }
                 }
-            };
+            );
+        }
     }
 
     /**
@@ -367,16 +409,11 @@ public class RESTBundleActivator
      *
      * @param bundleContext the {@code BundleContext} in which the new instance
      * is to be initialized
-     * @param server the {@code Server} for which the new instance is to match
-     * requests against a set of rules and modify them accordingly for any rules
-     * that match
      * @return a new {@code HandlerWrapper} instance which is to match requests
      * against a set of rules and modify them accordingly for any rules that
      * match
      */
-    private HandlerWrapper initializeRewriteHandler(
-            BundleContext bundleContext,
-            Server server)
+    private HandlerWrapper initializeRewriteHandler(BundleContext bundleContext)
     {
         String regex = getCfgString(JETTY_REWRITE_HANDLER_REGEX_PNAME, null);
         RewriteHandler handler = null;
@@ -402,40 +439,51 @@ public class RESTBundleActivator
 
     /**
      * Initializes a new {@link ServletHandler} instance which is to map
-     * requests to servlets.
+     * requests to servlets, and adds it to the appropriate lists of
+     * handlers (specified in {@code privateHandlers} and
+     * {@code publicHandlers}) according to the desired public or private
+     * exposure.
      *
      * @param bundleContext the {@code BundleContext} in which the new instance
      * is to be initialized
-     * @param server the {@code Server} for which the new instance is to map
-     * requests to servlets
-     * @return a new {@code ServletHandler} instance which is to map requests to
-     * servlets for {@code server}
+     * @param privateHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the private
+     * interface/port, or {@code null} if the private interface is disabled and
+     * no handlers are to be initialized for it.
+     * @param publicHandlers the list to which to add any newly initialized
+     * {@link Handler}s if they are to be accessible on the public
+     * interface/port, or {@code null} if the public interface is disabled and
+     * no handlers are to be initialized for it.
      */
-    private Handler initializeServletHandler(
+    private void initializeServletHandler(
             BundleContext bundleContext,
-            Server server)
+            List<Handler> privateHandlers,
+            List<Handler> publicHandlers)
     {
-        ServletHolder servletHolder;
-        ServletContextHandler servletContextHandler
-            = new ServletContextHandler();
-        boolean b = false;
+        // All of the current servlets need to be (only) publicly accessible
+        if (publicHandlers != null)
+        {
+            ServletHolder servletHolder;
+            ServletContextHandler servletContextHandler
+                = new ServletContextHandler();
+            boolean b = false;
 
-        // ProxyServletImpl i.e. http-bind.
-        servletHolder = initializeProxyServlet(servletContextHandler);
-        if (servletHolder != null)
-            b = true;
+            // ProxyServletImpl i.e. http-bind.
+            servletHolder = initializeProxyServlet(servletContextHandler);
+            if (servletHolder != null)
+                b = true;
 
-        // LongPollingServlet
-        servletHolder = initializeLongPollingServlet(servletContextHandler);
-        if (servletHolder != null)
-            b = true;
+            // LongPollingServlet
+            servletHolder = initializeLongPollingServlet(servletContextHandler);
+            if (servletHolder != null)
+                b = true;
 
-        if (b)
-            servletContextHandler.setContextPath("/");
-        else
-            servletContextHandler = null;
-
-        return servletContextHandler;
+            if (b)
+            {
+                servletContextHandler.setContextPath("/");
+                publicHandlers.add(servletContextHandler);
+            }
+        }
     }
 
     /**
