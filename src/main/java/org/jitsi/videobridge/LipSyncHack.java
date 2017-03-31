@@ -31,6 +31,8 @@ import org.jitsi.util.function.*;
 import java.util.*;
 import java.util.concurrent.*;
 
+import org.jitsi.service.neomedia.codec.*;
+
 /**
  * Implements a hack for
  * https://bugs.chromium.org/p/chromium/issues/detail?id=403710. The hack
@@ -199,6 +201,11 @@ public class LipSyncHack
         transformations = new ConcurrentHashMap<>();
 
     /**
+     * The VP8 payload type.
+     */
+    private int vp8pt = -1;
+
+    /**
      * Ctor.
      *
      * @param dest the {@link VideoChannel} that owns this hack.
@@ -318,7 +325,31 @@ public class LipSyncHack
      * @param sz the number of black key frame packets to create.
      * @return the array of black key frame packets that were created.
      */
-    private static RawPacket[] make(int ssrc, int seqNumOff, long tsOff, int sz)
+    private RawPacket[] make(int ssrc, int seqNumOff, long tsOff, int sz)
+    {
+        if (vp8pt == -1)
+        {
+            vp8pt = dest.getStream()
+                .getDynamicRTPPayloadType(Constants.VP8) & 0xFF;
+        }
+
+        return make(ssrc, (byte) vp8pt, seqNumOff, tsOff, sz);
+    }
+
+    /**
+     * Makes {@code sz} black key frame packets within the range specified by
+     * {@code seqNumOff}.
+     *
+     * @param ssrc the SSRC of the black key frame packets.
+     * @param pt the VP8 payload type.
+     * @param seqNumOff the sequence number offset of the black key frame
+     * packets.
+     * @param tsOff the RTP timestamp offset of the black key frame packets.
+     * @param sz the number of black key frame packets to create.
+     * @return the array of black key frame packets that were created.
+     */
+    private static RawPacket[] make(
+        int ssrc, byte pt, int seqNumOff, long tsOff, int sz)
     {
         RawPacket[] kfs = new RawPacket[sz];
         for (int i = 0; i < sz; i++)
@@ -329,6 +360,9 @@ public class LipSyncHack
 
             // Set SSRC.
             kfs[i].setSSRC(ssrc);
+
+            // Set payload type.
+            kfs[i].setPayloadType(pt);
 
             // Set sequence number.
             int seqnum = (seqNumOff + i) & 0xFFFF;
@@ -530,6 +564,7 @@ public class LipSyncHack
                         logger.debug("new_translation" +
                             ",stream=" + dest.getStream().hashCode() +
                             " ssrc=" + ssrc +
+                            ",pt=" + vp8pt +
                             ",ts_delta=0,seq_num_delta=0");
                     }
 
