@@ -863,6 +863,10 @@ public class RtpChannel
 
         synchronized (streamSyncRoot)
         {
+            TransportManager transportManager = getTransportManager();
+            TransportCCEngine transportCCEngine
+                = transportManager.getTransportCCEngine();
+
             stream
                 = mediaService.createMediaStream(
                         null,
@@ -878,6 +882,10 @@ public class RtpChannel
             if (transformEngine != null)
             {
                 stream.setExternalTransformer(transformEngine);
+            }
+            if (transportCCEngine != null)
+            {
+                stream.setTransportCCEngine(transportCCEngine);
             }
 
             logger.info(Logger.Category.STATISTICS,
@@ -900,10 +908,9 @@ public class RtpChannel
 
             // The transport manager could be already connected, in which case
             // (since we just created the stream), any previous calls to
-            // transportConnected() have failed started the stream. So trigger
+            // transportConnected() have failed to start the stream. So trigger
             // one now, to make sure that the stream is started.
-            TransportManager transportManager = getTransportManager();
-            if (transportManager != null && transportManager.isConnected())
+            if (transportManager.isConnected())
             {
                 transportConnected();
             }
