@@ -265,7 +265,8 @@ class SimulcastController
             // otherwise, check if anything higher is streaming.
             for (int i = currentTL0Idx + 1; i < targetTL0Idx + 1; i++)
             {
-                if (sourceEncodings[i].isActive())
+                RTPEncodingDesc tl0 = sourceEncodings[i].getBaseLayer();
+                if (tl0.isActive() && tl0.getIndex() > currentTL0Idx)
                 {
                     sendFIR = true;
                     break;
