@@ -804,7 +804,18 @@ public class BitrateController
         @Override
         public void close()
         {
-            // TODO decrease counters.
+            for (SimulcastController simulcastController
+                : ssrcToBitrateController.values())
+            {
+                try
+                {
+                    simulcastController.close();
+                }
+                catch (Exception ignored)
+                {
+
+                }
+            }
         }
 
         /**

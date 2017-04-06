@@ -38,6 +38,7 @@ import java.util.*;
  * @author George Politis
  */
 class SimulcastController
+    implements AutoCloseable
 {
     /**
      * The number of seen frames to keep track of.
@@ -414,6 +415,13 @@ class SimulcastController
         return bitstreamController.getCurrentIndex();
     }
 
+    @Override
+    public void close()
+        throws Exception
+    {
+        bitstreamController.setTL0Idx(-1);
+    }
+
     class BitstreamController
     {
         /**
@@ -559,6 +567,7 @@ class SimulcastController
                 this.maxSentFrame = null;
             }
 
+            int oldTL0Idx = this.tl0Idx;
             this.tl0Idx = newTL0Idx;
 
             // a stream always starts suspended (and resumes with a key frame).
@@ -567,6 +576,18 @@ class SimulcastController
             MediaStreamTrackDesc source = weakSource.get();
             assert source != null;
             RTPEncodingDesc[] rtpEncodings = source.getRTPEncodings();
+            if (!ArrayUtils.isNullOrEmpty(rtpEncodings))
+            {
+                if (oldTL0Idx > -1)
+                {
+                    rtpEncodings[rtpEncodings[oldTL0Idx].getBaseLayer().getIndex()].decrReceivers();
+                }
+
+                if (newTL0Idx > -1)
+                {
+                    rtpEncodings[rtpEncodings[newTL0Idx].getBaseLayer().getIndex()].incrReceivers();
+                }
+            }
             if (ArrayUtils.isNullOrEmpty(rtpEncodings) || tl0Idx < 0)
             {
                 this.availableIdx = null;
