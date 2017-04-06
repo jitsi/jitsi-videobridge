@@ -78,6 +78,14 @@ public class BandwidthProbing
     {
         super.run();
 
+        MediaStream destStream = dest.getStream();
+        if (destStream == null
+            || (destStream.getDirection() != null
+                && !destStream.getDirection().allowsSending()))
+        {
+            return;
+        }
+
         List<SimulcastController> simulcastControllerList
             = dest.getBitrateController().getSimulcastControllers();
 
