@@ -742,7 +742,15 @@ public class VideoChannel
                     .getRtcpFeedbackMessageSender();
 
                 if (rtcpFeedbackMessageSender != null)
+                {
+                    if (logger.isTraceEnabled())
+                    {
+                        logger.trace("send_fir,stream="
+                            + getStream().hashCode()
+                            + ",reason=scheduled");
+                    }
                     rtcpFeedbackMessageSender.sendFIR(ssrc);
+                }
             }
         };
 

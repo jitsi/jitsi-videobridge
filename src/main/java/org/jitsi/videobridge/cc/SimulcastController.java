@@ -275,10 +275,21 @@ class SimulcastController
             }
         }
 
-        if (sendFIR)
+        MediaStream sourceStream
+            = sourceTrack.getMediaStreamTrackReceiver().getStream();
+        if (sendFIR && sourceStream != null)
         {
-            ((RTPTranslatorImpl) sourceTrack.getMediaStreamTrackReceiver()
-                .getStream().getRTPTranslator())
+
+            if (logger.isTraceEnabled())
+            {
+                logger.trace("send_fir,stream="
+                    + sourceStream.hashCode()
+                    + ",reason=target_changed"
+                    + ",current_tl0=" + currentTL0Idx
+                    + ",target_tl0=" + targetTL0Idx);
+            }
+
+            ((RTPTranslatorImpl) sourceStream.getRTPTranslator())
                 .getRtcpFeedbackMessageSender().sendFIR(
                 (int) targetSSRC);
         }
@@ -552,7 +563,8 @@ class SimulcastController
 
             if (logger.isDebugEnabled())
             {
-                logger.debug("tl0_changed,hash=" + hashCode()
+                logger.debug("tl0_changed,hash="
+                    + SimulcastController.this.hashCode()
                     + " old_tl0=" + this.tl0Idx
                     + ",new_tl0=" + newTL0Idx);
             }
@@ -683,7 +695,8 @@ class SimulcastController
 
                     if (currentIdx != this.currentIdx && logger.isDebugEnabled())
                     {
-                        logger.debug("current_idx_changed,hash=" + hashCode()
+                        logger.debug("current_idx_changed,hash="
+                            + SimulcastController.this.hashCode()
                             + " old_idx=" + this.currentIdx
                             + ",new_idx=" + currentIdx);
                     }
