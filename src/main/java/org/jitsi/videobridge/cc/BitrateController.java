@@ -87,6 +87,12 @@ public class BitrateController
     implements TransformEngine
 {
     /**
+     * The property name that holds the bandwidth estimation threshold.
+     */
+    public static final String BWE_THRES_PNAME
+        = "org.jitsi.videobridge.BWE_THRES";
+
+    /**
      * The max resolution to allocate for the thumbnails.
      *
      * XXX this should come from the client.
@@ -98,6 +104,20 @@ public class BitrateController
      * allocating bandwidth for the thumbnails.
      */
     private static final int ONSTAGE_MIN_HEIGHT = 360;
+
+    /**
+     * The ConfigurationService to get config values from.
+     */
+    private static final ConfigurationService
+        cfg = LibJitsi.getConfigurationService();
+
+    /**
+     * In order to limit the resolution changes due to bandwidth changes we
+     * react to bandwidth changes greater BWE_THRES / 100 of the last bandwidth
+     * estimation.
+     */
+    private static final int BWE_THRES
+        = cfg != null ? cfg.getInt(BWE_THRES_PNAME, 15) : 15;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -169,6 +189,13 @@ public class BitrateController
      * be fixed in the CC.
      */
     private long firstMediaMs = -1;
+
+    /**
+     * The last bandwidth estimation that we got. This is used to limit the
+     * resolution changes due to bandwidth changes. We react to bandwidth
+     * changes greater than BWE_THRES/100 of the last bandwidth estimation.
+     */
+    long lastBwe = -1;
 
     /**
      * The current padding parameters list for {@link #dest}.
@@ -260,6 +287,17 @@ public class BitrateController
      */
     public void update(List<Endpoint> conferenceEndpoints, long bweBps)
     {
+        if (bweBps > -1)
+        {
+            if (lastBwe != -1 &&
+                Math.abs(bweBps - lastBwe) < lastBwe * BWE_THRES / 100)
+            {
+                return;
+            }
+
+            lastBwe = bweBps;
+        }
+
         // Gather the conference allocation input.
         if (conferenceEndpoints == null)
         {
