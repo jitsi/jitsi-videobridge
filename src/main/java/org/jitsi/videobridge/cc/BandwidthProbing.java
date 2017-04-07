@@ -135,7 +135,8 @@ public class BandwidthProbing
         for (SimulcastController simulcastController : simulcastControllerList)
         {
             long currentBps = simulcastController.getSource()
-                .getBps(simulcastController.getCurrentIndex());
+                .getBps(simulcastController.getCurrentIndex(),
+                    true /* performTimeoutCheck */);
 
             if (currentBps > 0)
             {
@@ -149,9 +150,11 @@ public class BandwidthProbing
             }
 
             totalTargetBps += simulcastController
-                .getSource().getBps(simulcastController.getTargetIndex());
+                .getSource().getBps(simulcastController.getTargetIndex(),
+                    true /* performTimeoutCheck */);
             totalOptimalBps += simulcastController
-                .getSource().getBps(simulcastController.getOptimalIndex());
+                .getSource().getBps(simulcastController.getOptimalIndex(),
+                    true /* performTimeoutCheck */);
         }
 
         // How much padding do we need?
