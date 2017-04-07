@@ -273,8 +273,10 @@ public class RtpChannel
          */
         initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffL;
 
-        conferenceSpeechActivity
-            = getContent().getConference().getSpeechActivity();
+        Conference conference = content.getConference();
+        conference.addPropertyChangeListener(propertyChangeListener);
+
+        conferenceSpeechActivity = conference.getSpeechActivity();
         if (conferenceSpeechActivity != null)
         {
             /*
