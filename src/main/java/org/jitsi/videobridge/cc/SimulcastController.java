@@ -38,6 +38,7 @@ import java.util.*;
  * @author George Politis
  */
 class SimulcastController
+    implements AutoCloseable
 {
     /**
      * The number of seen frames to keep track of.
@@ -265,7 +266,8 @@ class SimulcastController
             // otherwise, check if anything higher is streaming.
             for (int i = currentTL0Idx + 1; i < targetTL0Idx + 1; i++)
             {
-                if (sourceEncodings[i].isActive())
+                RTPEncodingDesc tl0 = sourceEncodings[i].getBaseLayer();
+                if (tl0.isActive() && tl0.getIndex() > currentTL0Idx)
                 {
                     sendFIR = true;
                     break;
@@ -273,10 +275,21 @@ class SimulcastController
             }
         }
 
-        if (sendFIR)
+        MediaStream sourceStream
+            = sourceTrack.getMediaStreamTrackReceiver().getStream();
+        if (sendFIR && sourceStream != null)
         {
-            ((RTPTranslatorImpl) sourceTrack.getMediaStreamTrackReceiver()
-                .getStream().getRTPTranslator())
+
+            if (logger.isTraceEnabled())
+            {
+                logger.trace("send_fir,stream="
+                    + sourceStream.hashCode()
+                    + ",reason=target_changed"
+                    + ",current_tl0=" + currentTL0Idx
+                    + ",target_tl0=" + targetTL0Idx);
+            }
+
+            ((RTPTranslatorImpl) sourceStream.getRTPTranslator())
                 .getRtcpFeedbackMessageSender().sendFIR(
                 (int) targetSSRC);
         }
@@ -413,6 +426,13 @@ class SimulcastController
         return bitstreamController.getCurrentIndex();
     }
 
+    @Override
+    public void close()
+        throws Exception
+    {
+        bitstreamController.setTL0Idx(-1);
+    }
+
     class BitstreamController
     {
         /**
@@ -543,7 +563,8 @@ class SimulcastController
 
             if (logger.isDebugEnabled())
             {
-                logger.debug("tl0_changed,hash=" + hashCode()
+                logger.debug("tl0_changed,hash="
+                    + SimulcastController.this.hashCode()
                     + " old_tl0=" + this.tl0Idx
                     + ",new_tl0=" + newTL0Idx);
             }
@@ -558,6 +579,7 @@ class SimulcastController
                 this.maxSentFrame = null;
             }
 
+            int oldTL0Idx = this.tl0Idx;
             this.tl0Idx = newTL0Idx;
 
             // a stream always starts suspended (and resumes with a key frame).
@@ -566,6 +588,18 @@ class SimulcastController
             MediaStreamTrackDesc source = weakSource.get();
             assert source != null;
             RTPEncodingDesc[] rtpEncodings = source.getRTPEncodings();
+            if (!ArrayUtils.isNullOrEmpty(rtpEncodings))
+            {
+                if (oldTL0Idx > -1)
+                {
+                    rtpEncodings[rtpEncodings[oldTL0Idx].getBaseLayer().getIndex()].decrReceivers();
+                }
+
+                if (newTL0Idx > -1)
+                {
+                    rtpEncodings[rtpEncodings[newTL0Idx].getBaseLayer().getIndex()].incrReceivers();
+                }
+            }
             if (ArrayUtils.isNullOrEmpty(rtpEncodings) || tl0Idx < 0)
             {
                 this.availableIdx = null;
@@ -661,7 +695,8 @@ class SimulcastController
 
                     if (currentIdx != this.currentIdx && logger.isDebugEnabled())
                     {
-                        logger.debug("current_idx_changed,hash=" + hashCode()
+                        logger.debug("current_idx_changed,hash="
+                            + SimulcastController.this.hashCode()
                             + " old_idx=" + this.currentIdx
                             + ",new_idx=" + currentIdx);
                     }
