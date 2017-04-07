@@ -89,8 +89,8 @@ public class BitrateController
     /**
      * The property name that holds the bandwidth estimation threshold.
      */
-    public static final String BWE_THRES_PNAME
-        = "org.jitsi.videobridge.BWE_THRES";
+    public static final String BWE_CHANGE_THRESHOLD_PCT_PNAME
+        = "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT";
 
     /**
      * The max resolution to allocate for the thumbnails.
@@ -106,6 +106,12 @@ public class BitrateController
     private static final int ONSTAGE_MIN_HEIGHT = 360;
 
     /**
+     * The default value of the bandwidth change threshold above which we react
+     * with a new bandwidth allocation.
+     */
+    private static int BWE_CHANGE_THRESHOLD_PCT_DEFAULT = 15;
+
+    /**
      * The ConfigurationService to get config values from.
      */
     private static final ConfigurationService
@@ -113,11 +119,12 @@ public class BitrateController
 
     /**
      * In order to limit the resolution changes due to bandwidth changes we
-     * react to bandwidth changes greater BWE_THRES / 100 of the last bandwidth
-     * estimation.
+     * react to bandwidth changes greater BWE_CHANGE_THRESHOLD_PCT / 100 of the
+     * last bandwidth estimation.
      */
-    private static final int BWE_THRES
-        = cfg != null ? cfg.getInt(BWE_THRES_PNAME, 15) : 15;
+    private static final int BWE_CHANGE_THRESHOLD_PCT
+        = cfg != null ? cfg.getInt(BWE_CHANGE_THRESHOLD_PCT_PNAME,
+        BWE_CHANGE_THRESHOLD_PCT_DEFAULT) : BWE_CHANGE_THRESHOLD_PCT_DEFAULT;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -193,9 +200,10 @@ public class BitrateController
     /**
      * The last bandwidth estimation that we got. This is used to limit the
      * resolution changes due to bandwidth changes. We react to bandwidth
-     * changes greater than BWE_THRES/100 of the last bandwidth estimation.
+     * changes greater than BWE_CHANGE_THRESHOLD_PCT/100 of the last bandwidth
+     * estimation.
      */
-    long lastBwe = -1;
+    private long lastBwe = -1;
 
     /**
      * The current padding parameters list for {@link #dest}.
@@ -215,6 +223,25 @@ public class BitrateController
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
         trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, false);
+    }
+
+    /**
+     * Returns a boolean that indicates whether or not the current bandwidth
+     * estimation (in bps) has changed above the configured threshold (in
+     * percent) {@link #BWE_CHANGE_THRESHOLD_PCT} with respect to the previous
+     * bandwidth estimation.
+     *
+     * @param previousBwe the previous bandwidth estimation (in bps).
+     * @param currentBwe the current bandwidth estimation (in bps).
+     *
+     * @return true if the bandwidth has changed above the configured threshold,
+     * false otherwise.
+     */
+    private static boolean isLargerThanBweThreshold(
+        long previousBwe, long currentBwe)
+    {
+        return Math.abs(previousBwe - currentBwe)
+            >= previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
     }
 
     /**
@@ -289,9 +316,14 @@ public class BitrateController
     {
         if (bweBps > -1)
         {
-            if (lastBwe != -1 &&
-                Math.abs(bweBps - lastBwe) < lastBwe * BWE_THRES / 100)
+            if (!isLargerThanBweThreshold(lastBwe, bweBps))
             {
+                // If this is a "negligible" change in the bandwidth estimation
+                // wrt the last bandwith estimation that we reacted to, then
+                // do not update the bitrate allocation. The goal is to limit
+                // the resolution changes due to bandwidth estimation changes,
+                // as often resolution changes can negatively impact user
+                // experience.
                 return;
             }
 
