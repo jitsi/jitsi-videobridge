@@ -339,7 +339,7 @@ public class BitrateController
         }
 
         // Compute the bitrate allocation.
-        EndpointBitrateAllocation[]
+        List<EndpointBitrateAllocation>
             allocations = allocate(bweBps, conferenceEndpoints);
 
         // Update the the controllers based on the allocation and send a
@@ -353,7 +353,7 @@ public class BitrateController
 
         List<SimulcastController> simulcastControllers = new ArrayList<>();
         long targetBps = 0;
-        if (!ArrayUtils.isNullOrEmpty(allocations))
+        if (allocations != null && !allocations.isEmpty())
         {
             for (EndpointBitrateAllocation allocation : allocations)
             {
@@ -433,7 +433,8 @@ public class BitrateController
 
         if (logger.isDebugEnabled())
         {
-            if (destStream != null && !ArrayUtils.isNullOrEmpty(allocations))
+            if (destStream != null
+                && allocations != null && !allocations.isEmpty())
             {
                 for (EndpointBitrateAllocation endpointBitrateAllocation
                     : allocations)
@@ -471,13 +472,14 @@ public class BitrateController
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link EndpointBitrateAllocation}.
      */
-    private EndpointBitrateAllocation[] allocate(
+    private List<EndpointBitrateAllocation> allocate(
         long maxBandwidth, List<Endpoint> conferenceEndpoints)
     {
-        EndpointBitrateAllocation[]
+        List<EndpointBitrateAllocation>
             endpointBitrateAllocations = prioritize(conferenceEndpoints);
 
-        if (ArrayUtils.isNullOrEmpty(endpointBitrateAllocations))
+        if (endpointBitrateAllocations == null
+            || endpointBitrateAllocations.isEmpty())
         {
             return endpointBitrateAllocations;
         }
@@ -553,7 +555,7 @@ public class BitrateController
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private EndpointBitrateAllocation[] prioritize(
+    private List<EndpointBitrateAllocation> prioritize(
         List<Endpoint> conferenceEndpoints)
     {
         if (dest.isExpired())
@@ -568,23 +570,21 @@ public class BitrateController
         }
 
         // Init.
-        int szConference = conferenceEndpoints.size();
-
         // subtract 1 for destEndpoint.
-        EndpointBitrateAllocation[] endpointBitrateAllocations
-            = new EndpointBitrateAllocation[szConference - 1];
+        List<EndpointBitrateAllocation> endpointBitrateAllocations
+            = new ArrayList<>();
 
         int lastN = dest.getLastN();
         if (lastN < 0)
         {
             // If lastN is disable, pretend lastN == szConference.
-            lastN = endpointBitrateAllocations.length;
+            lastN = conferenceEndpoints.size() - 1;
         }
         else
         {
             // If lastN is enabled, pretend lastN at most as big as the size
             // of the conference.
-            lastN = Math.min(lastN, endpointBitrateAllocations.length);
+            lastN = Math.min(lastN, conferenceEndpoints.size() - 1);
         }
 
         int priority = 0;
@@ -598,17 +598,18 @@ public class BitrateController
                  it.hasNext() && priority < lastN;)
             {
                 Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint.getID().equals(destEndpoint.getID())
+                if (sourceEndpoint.isExpired()
+                    || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !selectedEndpoints.contains(sourceEndpoint.getID()))
                 {
                     continue;
                 }
 
-                endpointBitrateAllocations[priority++]
-                    = new EndpointBitrateAllocation(
-                    sourceEndpoint,
-                    true /* fitsInLastN */,
-                    true /* selected */);
+                endpointBitrateAllocations.add(
+                    priority++, new EndpointBitrateAllocation(
+                        sourceEndpoint,
+                        true /* fitsInLastN */,
+                        true /* selected */));
 
                 it.remove();
             }
@@ -622,17 +623,18 @@ public class BitrateController
                  it.hasNext() && priority < lastN;)
             {
                 Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint.getID().equals(destEndpoint.getID())
+                if (sourceEndpoint.isExpired()
+                    || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !pinnedEndpoints.contains(sourceEndpoint.getID()))
                 {
                     continue;
                 }
 
-                endpointBitrateAllocations[priority++]
-                    = new EndpointBitrateAllocation(
-                    sourceEndpoint,
-                    true /* fitsInLastN */,
-                    false /* selected */);
+                endpointBitrateAllocations.add(
+                    priority++, new EndpointBitrateAllocation(
+                        sourceEndpoint,
+                        true /* fitsInLastN */,
+                        false /* selected */));
 
                 it.remove();
             }
@@ -643,16 +645,17 @@ public class BitrateController
         {
             for (Endpoint sourceEndpoint : conferenceEndpoints)
             {
-                if (sourceEndpoint.getID().equals(destEndpoint.getID()))
+                if (sourceEndpoint.isExpired()
+                    || sourceEndpoint.getID().equals(destEndpoint.getID()))
                 {
                     continue;
                 }
 
                 boolean forwarded = priority < lastN;
 
-                endpointBitrateAllocations[priority++]
-                    = new EndpointBitrateAllocation(
-                    sourceEndpoint, forwarded, false /* selected */);
+                endpointBitrateAllocations.add(
+                    priority++, new EndpointBitrateAllocation(
+                    sourceEndpoint, forwarded, false /* selected */));
             }
         }
 
