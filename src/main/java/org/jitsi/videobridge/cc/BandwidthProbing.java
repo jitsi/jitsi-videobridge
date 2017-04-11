@@ -18,6 +18,8 @@ package org.jitsi.videobridge.cc;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
@@ -32,16 +34,45 @@ public class BandwidthProbing
     extends PeriodicRunnable
 {
     /**
+     * The system property name that holds a boolean that determines whether or
+     * not to activate the RTX bandwidth probing mechanism that implements
+     * stream protection.
+     */
+    public static final String
+        DISABLE_RTX_PROBING_PNAME = "org.jitsi.videobridge.DISABLE_RTX_PROBING";
+
+    /**
+     * The system property name that holds the interval/period in milliseconds
+     * at which {@link #run()} is to be invoked.
+     */
+    public static final String
+        PADDING_PERIOD_MS_PNAME = "org.jitsi.videobridge.PADDING_PERIOD_MS";
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
-    private final Logger logger = Logger.getLogger(BandwidthProbing.class);
+    private static final Logger logger = Logger.getLogger(BandwidthProbing.class);
+
+    /**
+     * The ConfigurationService to get config values from.
+     */
+    private static final ConfigurationService
+        cfg = LibJitsi.getConfigurationService();
 
     /**
      * the interval/period in milliseconds at which {@link #run()} is to be
      * invoked.
      */
-    private static final long PADDING_PERIOD_MS = 15;
+    private static final long PADDING_PERIOD_MS =
+        cfg != null ? cfg.getInt(PADDING_PERIOD_MS_PNAME, 15) : 15;
+
+    /**
+     * A boolean that determines whether or not to activate the RTX bandwidth
+     * probing mechanism that implements stream protection.
+     */
+    private static final boolean DISABLE_RTX_PROBING =
+        cfg != null && cfg.getBoolean(DISABLE_RTX_PROBING_PNAME, false);
 
     /**
      * The {@link VideoChannel} to probe for available send bandwidth.
@@ -78,44 +109,64 @@ public class BandwidthProbing
     {
         super.run();
 
-        List<PaddingParams> paddingParamsList
-            = dest.getBitrateController().getPaddingParamsList();
-
-        if (paddingParamsList == null || paddingParamsList.isEmpty())
+        MediaStream destStream = dest.getStream();
+        if (destStream == null
+            || (destStream.getDirection() != null
+                && !destStream.getDirection().allowsSending()))
         {
             return;
         }
 
-        long totalCurrentBps = 0, totalOptimalBps = 0;
+        List<SimulcastController> simulcastControllerList
+            = dest.getBitrateController().getSimulcastControllers();
+
+        if (simulcastControllerList == null || simulcastControllerList.isEmpty())
+        {
+            return;
+        }
+
+        // We calculate how much to probe for based on the total target bps
+        // (what we're able to reach), the total optimal bps (what we want to
+        // be able to reach) and the total current bps (what we currently send).
+
+        long totalCurrentBps = 0, totalTargetBps = 0, totalOptimalBps = 0;
 
         List<Long> ssrcsToProtect = new ArrayList<>();
-        for (PaddingParams paddingParams : paddingParamsList)
+        for (SimulcastController simulcastController : simulcastControllerList)
         {
-            PaddingParams.Bitrates bitrates = paddingParams.getBitrates();
-            long currentBps = bitrates.getCurrentBps();
+            long currentBps = simulcastController.getSource()
+                .getBps(simulcastController.getCurrentIndex(),
+                    true /* performTimeoutCheck */);
+
             if (currentBps > 0)
             {
                 // Do not protect SSRC if it's not streaming.
                 totalCurrentBps += currentBps;
-                long ssrc = paddingParams.getTargetSSRC();
+                long ssrc = simulcastController.getTargetSSRC();
                 if (ssrc > -1)
                 {
                     ssrcsToProtect.add(ssrc);
                 }
             }
 
-            totalOptimalBps += bitrates.getOptimalBps();
+            totalTargetBps += simulcastController
+                .getSource().getBps(simulcastController.getTargetIndex(),
+                    true /* performTimeoutCheck */);
+            totalOptimalBps += simulcastController
+                .getSource().getBps(simulcastController.getOptimalIndex(),
+                    true /* performTimeoutCheck */);
         }
 
         // How much padding do we need?
-        long totalNeededBps = totalOptimalBps - totalCurrentBps;
+        long totalNeededBps
+            = totalOptimalBps - Math.max(totalTargetBps, totalCurrentBps);
         if (totalNeededBps < 1)
         {
             // Not much.
             return;
         }
 
-        long bweBps = ((VideoMediaStream) dest.getStream())
+        long bweBps = ((VideoMediaStream) destStream)
             .getOrCreateBandwidthEstimator().getLatestEstimate();
 
         if (totalOptimalBps <= bweBps)
@@ -127,15 +178,16 @@ public class BandwidthProbing
         }
 
         // How much padding can we afford?
-        long maxPaddingBps = bweBps - totalCurrentBps;
+        long maxPaddingBps = bweBps - Math.max(totalTargetBps, totalCurrentBps);
         long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("padding,stream="+ dest.getStream().hashCode()
+            logger.debug("padding,stream="+ destStream.hashCode()
                 + " padding_bps=" + paddingBps
                 + ",optimal_bps=" + totalOptimalBps
                 + ",current_bps=" + totalCurrentBps
+                + ",target_bps=" + totalTargetBps
                 + ",needed_bps=" + totalNeededBps
                 + ",max_padding_bps=" + maxPaddingBps
                 + ",bwe_bps=" + bweBps);
@@ -148,23 +200,26 @@ public class BandwidthProbing
         }
 
 
-        MediaStreamImpl stream = (MediaStreamImpl) dest.getStream();
+        MediaStreamImpl stream = (MediaStreamImpl) destStream;
 
         // XXX a signed int is practically sufficient, as it can represent up to
         // ~ 2GB
         int bytes = (int) (PADDING_PERIOD_MS * paddingBps / 1000 / 8);
         RtxTransformer rtxTransformer = stream.getRtxTransformer();
 
-        if (!ssrcsToProtect.isEmpty())
+        if (!DISABLE_RTX_PROBING)
         {
-            // stream protection with padding.
-            for (Long ssrc : ssrcsToProtect)
+            if (!ssrcsToProtect.isEmpty())
             {
-                bytes = rtxTransformer.sendPadding(ssrc, bytes);
-                if (bytes < 1)
+                // stream protection with padding.
+                for (Long ssrc : ssrcsToProtect)
                 {
-                    // We're done.
-                    return;
+                    bytes = rtxTransformer.sendPadding(ssrc, bytes);
+                    if (bytes < 1)
+                    {
+                        // We're done.
+                        return;
+                    }
                 }
             }
         }

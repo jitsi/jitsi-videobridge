@@ -87,11 +87,44 @@ public class BitrateController
     implements TransformEngine
 {
     /**
+     * The property name that holds the bandwidth estimation threshold.
+     */
+    public static final String BWE_CHANGE_THRESHOLD_PCT_PNAME
+        = "org.jitsi.videobridge.BWE_CHANGE_THRESHOLD_PCT";
+
+    /**
      * The max resolution to allocate for the thumbnails.
      *
      * XXX this should come from the client.
      */
     private static final int THUMBNAIL_MAX_HEIGHT = 180;
+
+    /**
+     * The min resolution to allocate for the onstage participant, before
+     * allocating bandwidth for the thumbnails.
+     */
+    private static final int ONSTAGE_MIN_HEIGHT = 360;
+
+    /**
+     * The default value of the bandwidth change threshold above which we react
+     * with a new bandwidth allocation.
+     */
+    private static int BWE_CHANGE_THRESHOLD_PCT_DEFAULT = 15;
+
+    /**
+     * The ConfigurationService to get config values from.
+     */
+    private static final ConfigurationService
+        cfg = LibJitsi.getConfigurationService();
+
+    /**
+     * In order to limit the resolution changes due to bandwidth changes we
+     * react to bandwidth changes greater BWE_CHANGE_THRESHOLD_PCT / 100 of the
+     * last bandwidth estimation.
+     */
+    private static final int BWE_CHANGE_THRESHOLD_PCT
+        = cfg != null ? cfg.getInt(BWE_CHANGE_THRESHOLD_PCT_PNAME,
+        BWE_CHANGE_THRESHOLD_PCT_DEFAULT) : BWE_CHANGE_THRESHOLD_PCT_DEFAULT;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -165,9 +198,17 @@ public class BitrateController
     private long firstMediaMs = -1;
 
     /**
+     * The last bandwidth estimation that we got. This is used to limit the
+     * resolution changes due to bandwidth changes. We react to bandwidth
+     * changes greater than BWE_CHANGE_THRESHOLD_PCT/100 of the last bandwidth
+     * estimation.
+     */
+    private long lastBwe = -1;
+
+    /**
      * The current padding parameters list for {@link #dest}.
      */
-    private List<PaddingParams> paddingParamsList;
+    private List<SimulcastController> simulcastControllers;
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -182,6 +223,25 @@ public class BitrateController
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
         trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, false);
+    }
+
+    /**
+     * Returns a boolean that indicates whether or not the current bandwidth
+     * estimation (in bps) has changed above the configured threshold (in
+     * percent) {@link #BWE_CHANGE_THRESHOLD_PCT} with respect to the previous
+     * bandwidth estimation.
+     *
+     * @param previousBwe the previous bandwidth estimation (in bps).
+     * @param currentBwe the current bandwidth estimation (in bps).
+     *
+     * @return true if the bandwidth has changed above the configured threshold,
+     * false otherwise.
+     */
+    private static boolean isLargerThanBweThreshold(
+        long previousBwe, long currentBwe)
+    {
+        return Math.abs(previousBwe - currentBwe)
+            >= previousBwe * BWE_CHANGE_THRESHOLD_PCT / 100;
     }
 
     /**
@@ -207,9 +267,9 @@ public class BitrateController
      *
      * @return the current padding parameters list for {@link #dest}.
      */
-    List<PaddingParams> getPaddingParamsList()
+    List<SimulcastController> getSimulcastControllers()
     {
-        return paddingParamsList;
+        return simulcastControllers;
     }
 
     /**
@@ -254,6 +314,22 @@ public class BitrateController
      */
     public void update(List<Endpoint> conferenceEndpoints, long bweBps)
     {
+        if (bweBps > -1)
+        {
+            if (!isLargerThanBweThreshold(lastBwe, bweBps))
+            {
+                // If this is a "negligible" change in the bandwidth estimation
+                // wrt the last bandwith estimation that we reacted to, then
+                // do not update the bitrate allocation. The goal is to limit
+                // the resolution changes due to bandwidth estimation changes,
+                // as often resolution changes can negatively impact user
+                // experience.
+                return;
+            }
+
+            lastBwe = bweBps;
+        }
+
         // Gather the conference allocation input.
         if (conferenceEndpoints == null)
         {
@@ -295,7 +371,7 @@ public class BitrateController
         }
 
         // Compute the bitrate allocation.
-        EndpointBitrateAllocation[]
+        List<EndpointBitrateAllocation>
             allocations = allocate(bweBps, conferenceEndpoints);
 
         // Update the the controllers based on the allocation and send a
@@ -307,9 +383,9 @@ public class BitrateController
         Set<String> endpointsEnteringLastNIds = new HashSet<>();
         Set<String> conferenceEndpointIds = new HashSet<>();
 
-        List<PaddingParams> simulcastControllers = new ArrayList<>();
+        List<SimulcastController> simulcastControllers = new ArrayList<>();
         long targetBps = 0;
-        if (!ArrayUtils.isNullOrEmpty(allocations))
+        if (allocations != null && !allocations.isEmpty())
         {
             for (EndpointBitrateAllocation allocation : allocations)
             {
@@ -377,7 +453,7 @@ public class BitrateController
         }
 
         // The BandwidthProber will pick this up.
-        this.paddingParamsList = simulcastControllers;
+        this.simulcastControllers = simulcastControllers;
 
         if (logger.isInfoEnabled() && destStream != null)
         {
@@ -389,7 +465,8 @@ public class BitrateController
 
         if (logger.isDebugEnabled())
         {
-            if (destStream != null && !ArrayUtils.isNullOrEmpty(allocations))
+            if (destStream != null
+                && allocations != null && !allocations.isEmpty())
             {
                 for (EndpointBitrateAllocation endpointBitrateAllocation
                     : allocations)
@@ -422,23 +499,48 @@ public class BitrateController
      * @param conferenceEndpoints the ordered list of {@link Endpoint}s
      * participating in the multipoint conference with the dominant (speaker)
      * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performaance;
+     * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link EndpointBitrateAllocation}.
      */
-    private EndpointBitrateAllocation[] allocate(
+    private List<EndpointBitrateAllocation> allocate(
         long maxBandwidth, List<Endpoint> conferenceEndpoints)
     {
-        EndpointBitrateAllocation[]
+        List<EndpointBitrateAllocation>
             endpointBitrateAllocations = prioritize(conferenceEndpoints);
 
-        if (ArrayUtils.isNullOrEmpty(endpointBitrateAllocations))
+        if (endpointBitrateAllocations == null
+            || endpointBitrateAllocations.isEmpty())
         {
             return endpointBitrateAllocations;
         }
 
-        int maxQuality = 0;
+        // Depth-first allocation, for the on-stage participants (give them at
+        // least 360p).
+
+        for (EndpointBitrateAllocation endpointBitrateAllocation
+            : endpointBitrateAllocations)
+        {
+            // on-stage participants have been bubbled up in the prioritization
+            // step. When we encounter a participant who's not on-stage, that
+            // means that we're done with the on-stage participants.
+            if (!endpointBitrateAllocation.selected)
+            {
+                break;
+            }
+
+            maxBandwidth += endpointBitrateAllocation.getTargetBitrate();
+
+            int maxQuality
+                = endpointBitrateAllocation.track.getMaxIndex(ONSTAGE_MIN_HEIGHT);
+            endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
+            maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
+        }
+
+        // Breadth-first allocation, try to give everybody some portion of the
+        // available bandwidth.
+
         long oldMaxBandwidth = 0;
         while (oldMaxBandwidth != maxBandwidth)
         {
@@ -447,13 +549,23 @@ public class BitrateController
             for (EndpointBitrateAllocation endpointBitrateAllocation
                 : endpointBitrateAllocations)
             {
+                if (!endpointBitrateAllocation.fitsInLastN)
+                {
+                    // participants that are not forwarded are sunk in the
+                    // prioritization step. When we encounter a participant
+                    // who's not on-stage, that means that we're done with the
+                    // on-stage participants.
+                    break;
+                }
+
+                int maxQuality = endpointBitrateAllocation.targetIdx + 1;
                 maxBandwidth += endpointBitrateAllocation.getTargetBitrate();
                 endpointBitrateAllocation.allocate(maxBandwidth, maxQuality);
                 maxBandwidth -= endpointBitrateAllocation.getTargetBitrate();
             }
-
-            maxQuality++;
         }
+
+        // at this point, maxBandwidth is what we failed to allocate.
 
         return endpointBitrateAllocations;
     }
@@ -475,7 +587,7 @@ public class BitrateController
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private EndpointBitrateAllocation[] prioritize(
+    private List<EndpointBitrateAllocation> prioritize(
         List<Endpoint> conferenceEndpoints)
     {
         if (dest.isExpired())
@@ -490,23 +602,21 @@ public class BitrateController
         }
 
         // Init.
-        int szConference = conferenceEndpoints.size();
-
         // subtract 1 for destEndpoint.
-        EndpointBitrateAllocation[] endpointBitrateAllocations
-            = new EndpointBitrateAllocation[szConference - 1];
+        List<EndpointBitrateAllocation> endpointBitrateAllocations
+            = new ArrayList<>();
 
         int lastN = dest.getLastN();
         if (lastN < 0)
         {
             // If lastN is disable, pretend lastN == szConference.
-            lastN = endpointBitrateAllocations.length;
+            lastN = conferenceEndpoints.size() - 1;
         }
         else
         {
             // If lastN is enabled, pretend lastN at most as big as the size
             // of the conference.
-            lastN = Math.min(lastN, endpointBitrateAllocations.length);
+            lastN = Math.min(lastN, conferenceEndpoints.size() - 1);
         }
 
         int priority = 0;
@@ -520,17 +630,18 @@ public class BitrateController
                  it.hasNext() && priority < lastN;)
             {
                 Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint.getID().equals(destEndpoint.getID())
+                if (sourceEndpoint.isExpired()
+                    || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !selectedEndpoints.contains(sourceEndpoint.getID()))
                 {
                     continue;
                 }
 
-                endpointBitrateAllocations[priority++]
-                    = new EndpointBitrateAllocation(
-                    sourceEndpoint,
-                    true /* forwarded */,
-                    true /* selected */);
+                endpointBitrateAllocations.add(
+                    priority++, new EndpointBitrateAllocation(
+                        sourceEndpoint,
+                        true /* fitsInLastN */,
+                        true /* selected */));
 
                 it.remove();
             }
@@ -544,17 +655,18 @@ public class BitrateController
                  it.hasNext() && priority < lastN;)
             {
                 Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint.getID().equals(destEndpoint.getID())
+                if (sourceEndpoint.isExpired()
+                    || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !pinnedEndpoints.contains(sourceEndpoint.getID()))
                 {
                     continue;
                 }
 
-                endpointBitrateAllocations[priority++]
-                    = new EndpointBitrateAllocation(
-                    sourceEndpoint,
-                    true /* forwarded */,
-                    false /* selected */);
+                endpointBitrateAllocations.add(
+                    priority++, new EndpointBitrateAllocation(
+                        sourceEndpoint,
+                        true /* fitsInLastN */,
+                        false /* selected */));
 
                 it.remove();
             }
@@ -565,16 +677,17 @@ public class BitrateController
         {
             for (Endpoint sourceEndpoint : conferenceEndpoints)
             {
-                if (sourceEndpoint.getID().equals(destEndpoint.getID()))
+                if (sourceEndpoint.isExpired()
+                    || sourceEndpoint.getID().equals(destEndpoint.getID()))
                 {
                     continue;
                 }
 
                 boolean forwarded = priority < lastN;
 
-                endpointBitrateAllocations[priority++]
-                    = new EndpointBitrateAllocation(
-                    sourceEndpoint, forwarded, false /* selected */);
+                endpointBitrateAllocations.add(
+                    priority++, new EndpointBitrateAllocation(
+                    sourceEndpoint, forwarded, false /* selected */));
             }
         }
 
@@ -609,7 +722,7 @@ public class BitrateController
          * Indicates whether this {@link Endpoint} is forwarded or not to the
          * {@link VideoChannel} that owns this {@link BitrateController}.
          */
-        private final boolean forwarded;
+        private final boolean fitsInLastN;
 
         /**
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
@@ -649,17 +762,17 @@ public class BitrateController
          *
          * @param endpoint the {@link Endpoint} that this bitrate allocation
          * pertains to.
-         * @param forwarded a flag indicating whether or not the endpoint is in
+         * @param fitsInLastN a flag indicating whether or not the endpoint is in
          * LastN.
          * @param selected a flag indicating whether or not the endpoint is
          * selected.
          */
         private EndpointBitrateAllocation(
-            Endpoint endpoint, boolean forwarded, boolean selected)
+            Endpoint endpoint, boolean fitsInLastN, boolean selected)
         {
             this.endpointID = endpoint.getID();
             this.selected = selected;
-            this.forwarded = forwarded;
+            this.fitsInLastN = fitsInLastN;
 
             // This assumes that the array is ordered by the subjective quality
             // ordering ex: one can argue that 360p@30fps looks better than
@@ -692,14 +805,10 @@ public class BitrateController
 
             // Initialize rates.
             rates = new long[encodings.length];
-            int optimalThumbnailIndex = 0;
+            int optimalThumbnailIndex = track.getMaxIndex(THUMBNAIL_MAX_HEIGHT);
             for (int i = 0; i < encodings.length; i++)
             {
                 rates[i] = encodings[i].getLastStableBitrateBps();
-                if (encodings[i].getHeight() <= THUMBNAIL_MAX_HEIGHT)
-                {
-                    optimalThumbnailIndex = i;
-                }
             }
 
             // TODO Determining the optimal index needs some work. The optimal
@@ -708,7 +817,7 @@ public class BitrateController
             // anything above 360p (not even the on-stage participant). On a
             // laptop computer 720p seems reasonable and on a big screen 1080p
             // or above.
-            optimalIdx = forwarded
+            optimalIdx = fitsInLastN
                 ? (selected ? encodings.length - 1 : optimalThumbnailIndex) : -1;
         }
 
@@ -768,7 +877,18 @@ public class BitrateController
         @Override
         public void close()
         {
-            // TODO decrease counters.
+            for (SimulcastController simulcastController
+                : ssrcToBitrateController.values())
+            {
+                try
+                {
+                    simulcastController.close();
+                }
+                catch (Exception ignored)
+                {
+
+                }
+            }
         }
 
         /**

@@ -389,7 +389,8 @@ public class VideoChannel
         String propertyName = ev.getPropertyName();
 
         if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
-            || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName))
+            || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
+            || Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
             bitrateController.update(null, -1);
         }
@@ -742,7 +743,15 @@ public class VideoChannel
                     .getRtcpFeedbackMessageSender();
 
                 if (rtcpFeedbackMessageSender != null)
+                {
+                    if (logger.isTraceEnabled())
+                    {
+                        logger.trace("send_fir,stream="
+                            + getStream().hashCode()
+                            + ",reason=scheduled");
+                    }
                     rtcpFeedbackMessageSender.sendFIR(ssrc);
+                }
             }
         };
 
