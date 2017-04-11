@@ -88,6 +88,7 @@ public class JvbBundleConfig
             // level separate from Videobridge because the HTTP/JSON API is
             // useless if Videobridge fails to start.
             "org/jitsi/videobridge/rest/RESTBundleActivator",
+            "org/jitsi/videobridge/rest/PublicRESTBundleActivator",
             // The statistics/health reports are a non-vital, optional,
             // additional piece of functionality of the Videobridge.
             // Consequently, they do not have to be started before the

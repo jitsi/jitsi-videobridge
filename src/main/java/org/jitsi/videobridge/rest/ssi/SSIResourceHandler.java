@@ -32,7 +32,7 @@ import java.util.Scanner;
 
 /**
  * ResourceHandler implementation which check a property to search for
- * preconfigured paths to be scanned for ssi tags. Rest of the resources are
+ * pre-configured paths to be scanned for ssi tags. Rest of the resources are
  * loaded by default implementation of ResourceHandler.
  *
  * TODO Current implementation doesn't respect file modifications. If you modify
@@ -49,7 +49,9 @@ public class SSIResourceHandler
      * <tt>rest.api.jetty.SSIResourceHandler.paths=/;/somefolder/somepage.html</tt>
      */
     private static final String JETTY_SSI_RESOURCE_HANDLER_PATHS
-        = Videobridge.REST_API_PNAME + ".jetty.SSIResourceHandler.paths";
+        = ".jetty.SSIResourceHandler.paths";
+
+    private static final String OLD_PREFIX = Videobridge.REST_API_PNAME;
 
     /**
      * Start of ssi command.
@@ -100,7 +102,9 @@ public class SSIResourceHandler
         String paths
             = ConfigUtils.getString(
                     cfg,
-                    JETTY_SSI_RESOURCE_HANDLER_PATHS,
+                    PublicRESTBundleActivator.JETTY_PROPERTY_PREFIX
+                        + JETTY_SSI_RESOURCE_HANDLER_PATHS,
+                    OLD_PREFIX + JETTY_SSI_RESOURCE_HANDLER_PATHS,
                     null);
 
         if (paths == null)
@@ -283,13 +287,16 @@ public class SSIResourceHandler
                     fileToInclude = "/" + fileToInclude;
 
                 // Alias check.
+                String property
+                    = PublicRESTBundleActivator
+                            .JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
+                        + "." + fileToInclude;
                 String aliasValue
                     = ConfigUtils.getString(
                             cfg,
-                            RESTBundleActivator
-                                    .JETTY_RESOURCE_HANDLER_ALIAS_PREFIX
-                                + "."
-                                + fileToInclude,
+                            PublicRESTBundleActivator.JETTY_PROPERTY_PREFIX
+                                + property,
+                            OLD_PREFIX + property,
                             null);
                 if (aliasValue != null)
                     fileToInclude = aliasValue;
