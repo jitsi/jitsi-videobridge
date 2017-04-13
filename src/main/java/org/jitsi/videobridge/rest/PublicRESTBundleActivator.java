@@ -22,7 +22,6 @@ import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.rest.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.rest.ssi.*;
 import org.osgi.framework.*;
 
@@ -44,13 +43,7 @@ public class PublicRESTBundleActivator
      * this {@link AbstractJettyBundleActivator}.
      */
     public static final String JETTY_PROPERTY_PREFIX
-        = "org.jitsi.videobridge.rest.public";
-
-    /**
-     * The old, deprecated prefix for some of the properties which configure
-     * the behavior of the public HTTP API. Kept for backward compatibility.
-     */
-    private static final String OLD_PREFIX = Videobridge.REST_API_PNAME;
+        = "org.jitsi.videobridge.rest";
 
     public static final String JETTY_PROXY_SERVLET_HOST_HEADER_PNAME
         = ".jetty.ProxyServlet.hostHeader";
@@ -215,7 +208,6 @@ public class PublicRESTBundleActivator
             = ConfigUtils.getString(
                 cfg,
                 JETTY_PROPERTY_PREFIX + JETTY_PROXY_SERVLET_PATH_SPEC_PNAME,
-                OLD_PREFIX + JETTY_PROXY_SERVLET_PATH_SPEC_PNAME,
                 null);
         ServletHolder holder = null;
 
@@ -225,7 +217,6 @@ public class PublicRESTBundleActivator
                 = ConfigUtils.getString(
                     cfg,
                     JETTY_PROPERTY_PREFIX + JETTY_PROXY_SERVLET_PROXY_TO_PNAME,
-                    OLD_PREFIX + JETTY_PROXY_SERVLET_PROXY_TO_PNAME,
                     null);
 
             if (proxyTo != null && proxyTo.length() != 0)
@@ -245,7 +236,6 @@ public class PublicRESTBundleActivator
                         cfg,
                         JETTY_PROPERTY_PREFIX
                             + JETTY_PROXY_SERVLET_HOST_HEADER_PNAME,
-                        OLD_PREFIX + JETTY_PROXY_SERVLET_HOST_HEADER_PNAME,
                         null);
 
                 if (hostHeader != null && hostHeader.length() != 0)
@@ -277,7 +267,6 @@ public class PublicRESTBundleActivator
                 cfg,
                 JETTY_PROPERTY_PREFIX
                     + JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME,
-                OLD_PREFIX + JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME,
                 null);
         ContextHandler contextHandler;
 
@@ -338,7 +327,6 @@ public class PublicRESTBundleActivator
                         = ConfigUtils.getString(
                             cfg,
                             JETTY_PROPERTY_PREFIX + property,
-                            OLD_PREFIX + property,
                             null);
 
                     return (value == null) ? null : Resource.newResource(value);
@@ -367,7 +355,6 @@ public class PublicRESTBundleActivator
         String regex = ConfigUtils.getString(
             cfg,
             JETTY_PROPERTY_PREFIX + JETTY_REWRITE_HANDLER_REGEX_PNAME,
-            OLD_PREFIX + JETTY_REWRITE_HANDLER_REGEX_PNAME,
             null);
         RewriteHandler handler = null;
 
@@ -378,7 +365,6 @@ public class PublicRESTBundleActivator
                     cfg,
                     JETTY_PROPERTY_PREFIX +
                         JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME,
-                    OLD_PREFIX + JETTY_REWRITE_HANDLER_REPLACEMENT_PNAME,
                     null);
 
             if (replacement != null)
