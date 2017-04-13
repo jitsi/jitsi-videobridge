@@ -54,11 +54,18 @@ public class RESTBundleActivator
       = "org.jitsi.videobridge.ENABLE_REST_COLIBRI";
 
     /**
+     * The prefix of the property names for the Jetty instance managed by
+     * this {@link AbstractJettyBundleActivator}.
+     */
+    public static final String JETTY_PROPERTY_PREFIX
+        = "org.jitsi.videobridge.rest.private";
+
+    /**
      * Initializes a new {@code RESTBundleActivator} instance.
      */
     public RESTBundleActivator()
     {
-        super(Videobridge.REST_API_PNAME);
+        super(JETTY_PROPERTY_PREFIX);
     }
 
     /**
