@@ -25,6 +25,9 @@ import org.jitsi.util.*;
 import org.jitsi.videobridge.rest.ssi.*;
 import org.osgi.framework.*;
 
+import javax.servlet.*;
+import javax.servlet.http.*;
+import java.io.*;
 import java.net.*;
 import java.util.*;
 
@@ -106,9 +109,8 @@ public class PublicRESTBundleActivator
             Server server)
         throws Exception
     {
-        // The main content served by Server. It may include, for example, the
-        // /colibri target of the REST API, purely static content, and
-        // ProxyServlet.
+        // The main content served by Server. It may include, for example,
+        // purely static content, and ProxyServlet.
         Handler handler = super.initializeHandler(bundleContext, server);
 
         // When handling requests, the main content may be superseded by
@@ -148,6 +150,14 @@ public class PublicRESTBundleActivator
 
         if (aliasHandler != null)
             handlers.add(aliasHandler);
+
+        Handler redirectHandler
+            = initializeRedirectHandler(bundleContext, server);
+
+        if (redirectHandler != null)
+        {
+            handlers.add(redirectHandler);
+        }
 
         // ServletHandler to serve, for example, ProxyServlet.
 
@@ -335,6 +345,55 @@ public class PublicRESTBundleActivator
     }
 
     /**
+     * Initializes a new {@link Handler} instance which is to redirect requests
+     * for certain targets which were previously accessible through the public
+     * HTTP interface to their new location (via the private interface).
+     *
+     * @param bundleContext the {@code BundleContext} in which the new instance
+     * is to be initialized
+     * @param server the {@code Server} for which the new instance is to serve
+     * purely static content
+     */
+    private Handler initializeRedirectHandler(
+        BundleContext bundleContext,
+        Server server)
+    {
+        // We only need this redirect for backward compatibility, so the code
+        // is ad-hoc.
+
+        String privateSslContextFactoryKeyStorePath
+            = getCfgString(
+                RESTBundleActivator.JETTY_PROPERTY_PREFIX
+                    + ".jetty.sslContextFactory.keyStorePath",
+                null);
+
+        int privatePort;
+        if (privateSslContextFactoryKeyStorePath == null)
+        {
+            privatePort
+                = cfg.getInt(
+                    RESTBundleActivator.JETTY_PROPERTY_PREFIX + ".jetty.port",
+                    8080);
+        }
+        else
+        {
+            privatePort
+                = cfg.getInt(
+                    RESTBundleActivator.JETTY_PROPERTY_PREFIX + ".jetty.tls.port",
+                    8443);
+        }
+
+        if (privatePort > 0)
+        {
+            return new RedirectHandler(
+                privateSslContextFactoryKeyStorePath == null ? "http" : "https",
+                privatePort);
+        }
+
+        return null;
+    }
+
+    /**
      * Initializes a new {@link HandlerWrapper} instance which is to match
      * requests against a set of rules and modify them accordingly for any rules
      * that match.
@@ -435,5 +494,53 @@ public class PublicRESTBundleActivator
     protected int getDefaultTlsPort()
     {
         return -1;
+    }
+
+    /**
+     * Redirects requests for certain targets which were previously accessible
+     * through the public HTTP interface to their new location (via the
+     * private interface).
+     */
+    private class RedirectHandler extends AbstractHandler
+    {
+        /**
+         * The protocol ("http" or "https") of the target location.
+         */
+        private final String targetProtocol;
+
+        /**
+         * The port of the target location.
+         */
+        private final int targetPort;
+
+        RedirectHandler(String targetProtocol, int targetPort)
+        {
+            this.targetProtocol = targetProtocol;
+            this.targetPort = targetPort;
+        }
+
+        /**
+         * Handles requests for "/colibri/*" and "/about/*" by redirecting them
+         * (with a 301) to the private interface.
+         */
+        @Override
+        public void handle(String target, Request baseRequest,
+                           HttpServletRequest request,
+                           HttpServletResponse response)
+            throws IOException, ServletException
+        {
+            if (target.startsWith("/colibri/") || target.startsWith("/about/"))
+            {
+                String host = request.getServerName();
+
+                String location
+                    = targetProtocol + "://" + host + ":" + targetPort + target;
+                response.setHeader("Location", location);
+
+                response.setStatus(301);
+                response.setContentLength(0);
+                baseRequest.setHandled(true);
+            }
+        }
     }
 }
