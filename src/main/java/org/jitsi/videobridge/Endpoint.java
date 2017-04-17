@@ -485,7 +485,7 @@ public class Endpoint
      * @param msg message text to send.
      * @throws IOException
      */
-    public void sendMessageOnDataChannel(String msg)
+    public void sendMessage(String msg)
         throws IOException
     {
         messageTransport.sendMessageOnDataChannel(msg);

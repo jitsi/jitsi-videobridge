@@ -537,7 +537,7 @@ public class VideoChannel
 
         try
         {
-            thisEndpoint.sendMessageOnDataChannel(msg.toString());
+            thisEndpoint.sendMessage(msg.toString());
         }
         catch (IOException e)
         {
