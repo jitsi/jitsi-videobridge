@@ -311,7 +311,7 @@ public class Conference
         {
             try
             {
-                endpoint.sendMessageOnDataChannel(msg);
+                endpoint.sendMessage(msg);
             }
             catch (IOException e)
             {
@@ -1506,7 +1506,7 @@ public class Conference
                 {
                     try
                     {
-                        endpoint.sendMessageOnDataChannel(
+                        endpoint.sendMessage(
                                 createDominantSpeakerEndpointChangeEvent(
                                         dominantSpeaker));
                     }
