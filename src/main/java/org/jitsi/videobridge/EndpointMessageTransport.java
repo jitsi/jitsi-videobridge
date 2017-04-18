@@ -247,11 +247,11 @@ class EndpointMessageTransport
         else
         {
             // 1:1 message
-            Endpoint ep = conference.getEndpoint(to);
-            if (ep != null)
+            Endpoint targetEndpoint = conference.getEndpoint(to);
+            if (targetEndpoint != null)
             {
                 List<Endpoint> endpointSubset = new ArrayList<>();
-                endpointSubset.add(ep);
+                endpointSubset.add(targetEndpoint);
                 conference.sendMessageOnDataChannels(
                     jsonObject.toString(), endpointSubset);
             }
