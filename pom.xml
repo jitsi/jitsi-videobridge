@@ -200,6 +200,25 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <executions>
           <execution>
+            <id>assembly-native-libraries</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>true</appendAssemblyId>
+              <descriptors>
+                <!-- The slightly odd artifact names help with backwards compatibility with the checkNatives() implementation. -->
+                <descriptor>src/assembly/native-linux-32.xml</descriptor>
+                <descriptor>src/assembly/native-linux-64.xml</descriptor>
+                <descriptor>src/assembly/native-macosx.xml</descriptor>
+                <descriptor>src/assembly/native-windows-32.xml</descriptor>
+                <descriptor>src/assembly/native-windows-64.xml</descriptor>
+              </descriptors>
+              <skipAssembly>false</skipAssembly>
+            </configuration>
+          </execution>
+          <execution>
             <id>assembly-linux-x64-bin-archive</id>
             <phase>package</phase>
             <goals>
