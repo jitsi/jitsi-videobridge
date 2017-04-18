@@ -21,6 +21,7 @@ import java.net.*;
 import java.util.*;
 import java.util.logging.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.protocol.*;
@@ -37,6 +38,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.rest.*;
 import org.osgi.framework.*;
 
 /**
@@ -304,6 +306,8 @@ public class IceUdpTransportManager
      */
     private final Conference conference;
 
+    private final String id;
+
     /**
      * The <tt>Thread</tt> used by this <tt>TransportManager</tt> to wait until
      * {@link #iceAgent} has established a connection.
@@ -418,7 +422,7 @@ public class IceUdpTransportManager
                                   boolean controlling)
         throws IOException
     {
-        this(conference, controlling, 2, DEFAULT_ICE_STREAM_NAME);
+        this(conference, controlling, 2, DEFAULT_ICE_STREAM_NAME, null);
     }
 
     public IceUdpTransportManager(Conference conference,
@@ -426,7 +430,18 @@ public class IceUdpTransportManager
                                   int numComponents)
         throws IOException
     {
-        this(conference, controlling, numComponents, DEFAULT_ICE_STREAM_NAME);
+        this(conference, controlling, numComponents,
+             DEFAULT_ICE_STREAM_NAME, null);
+    }
+
+    public IceUdpTransportManager(Conference conference,
+                                  boolean controlling,
+                                  int numComponents,
+                                  String id)
+        throws IOException
+    {
+        this(conference, controlling, numComponents,
+             DEFAULT_ICE_STREAM_NAME, id);
     }
 
     /**
@@ -445,10 +460,12 @@ public class IceUdpTransportManager
     public IceUdpTransportManager(Conference conference,
                                   boolean controlling,
                                   int numComponents,
-                                  String iceStreamName)
+                                  String iceStreamName,
+                                  String id)
         throws IOException
     {
         this.conference = conference;
+        this.id = id;
         this.controlling = controlling;
         this.numComponents = numComponents;
         this.rtcpmux = numComponents == 1;
@@ -1056,11 +1073,37 @@ public class IceUdpTransportManager
                 }
             }
 
+            String colibriWsUrl = getColibriWsUrl();
+            if (colibriWsUrl != null)
+            {
+                WebSocketPacketExtension wsPacketExtension
+                    = new WebSocketPacketExtension(colibriWsUrl);
+                pe.addChildExtension(wsPacketExtension);
+            }
+
             if (rtcpmux)
                 pe.addChildExtension(new RtcpmuxPacketExtension());
 
             describeDtlsControl(pe);
         }
+    }
+
+    private String getColibriWsUrl()
+    {
+        BundleContext bundleContext
+            = getConference().getVideobridge().getBundleContext();
+        ColibriWebSocketService colibriWebSocketService
+            = ServiceUtils.getService(
+                    bundleContext, ColibriWebSocketService.class);
+        if (colibriWebSocketService != null)
+        {
+            return colibriWebSocketService.getColibriWebSocketUrl(
+                getConference().getID(),
+                id,
+                iceAgent.getLocalPassword());
+        }
+
+        return null;
     }
 
     /**
@@ -1310,6 +1353,15 @@ public class IceUdpTransportManager
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalUfrag();
+    }
+
+    /**
+     * Gets the ICE password.
+     */
+    public String getIcePassword()
+    {
+        Agent iceAgent = this.iceAgent;
+        return iceAgent == null ? null : iceAgent.getLocalPassword();
     }
 
     /**

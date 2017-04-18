@@ -23,8 +23,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
-import org.json.simple.*;
-import org.json.simple.parser.*;
+import org.jitsi.videobridge.rest.*;
 
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
@@ -141,6 +140,16 @@ public class Endpoint
      * The instance handling the transport of COLIBRI messages for this endpoint.
      */
     private final EndpointMessageTransport messageTransport;
+
+    /**
+     * The password of the ICE Agent associated with this endpoint: note that
+     * without bundle an endpoint might have multiple channels with different
+     * ICE Agents. In this case one of the channels will be chosen (in an
+     * unspecified way).
+     *
+     * Initialized lazily.
+     */
+    private String icePassword;
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -488,7 +497,7 @@ public class Endpoint
     public void sendMessage(String msg)
         throws IOException
     {
-        messageTransport.sendMessageOnDataChannel(msg);
+        messageTransport.sendMessage(msg);
     }
 
     /**
@@ -589,5 +598,67 @@ public class Endpoint
         }
 
         return ret;
+    }
+
+    public boolean acceptWebSocket(String icePassword)
+    {
+        String ourPassword = getIcePassword();
+        if (ourPassword == null || !ourPassword.equals(icePassword))
+        {
+            logger.warn("Incoming web socket request with an invalid password."
+                            + "Expected: " + ourPassword
+                            + ", received " + icePassword);
+            return false;
+        }
+
+        return true;
+    }
+
+    public void onWebSocketConnect(ColibriWebSocket ws)
+    {
+        messageTransport.onWebSocketConnect(ws);
+    }
+
+    public void onWebSocketClose(
+            ColibriWebSocket ws, int statusCode, String reason)
+    {
+        messageTransport.onWebSocketClose(ws, statusCode, reason);
+    }
+
+    public void onWebSocketText(ColibriWebSocket ws, String message)
+    {
+        messageTransport.onWebSocketText(ws, message);
+    }
+
+    /**
+     * @return the password of the ICE Agent associated with this
+     * {@link Endpoint}.
+     */
+    String getIcePassword()
+    {
+        if (icePassword != null)
+        {
+            return icePassword;
+        }
+
+        List<RtpChannel> channels = getChannels(null);
+        if (channels == null || channels.isEmpty())
+        {
+            return null;
+        }
+
+        // We just use the first channel, assuming bundle.
+        TransportManager tm = channels.get(0).getTransportManager();
+        if (tm instanceof IceUdpTransportManager)
+        {
+            String password = ((IceUdpTransportManager) tm).getIcePassword();
+            if (password != null)
+            {
+                this.icePassword = password;
+                return password;
+            }
+        }
+
+        return null;
     }
 }

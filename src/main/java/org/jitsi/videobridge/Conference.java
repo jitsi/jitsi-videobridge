@@ -1312,7 +1312,8 @@ public class Conference
                 try
                 {
                     transportManager
-                        = new IceUdpTransportManager(this, initiator, 1);
+                        = new IceUdpTransportManager(
+                            this, initiator, 1, channelBundleId);
                 }
                 catch (IOException ioe)
                 {
