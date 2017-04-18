@@ -3,6 +3,7 @@
 /junit-reports/
 /.settings/
 /target/
+/openfire/target/
 *.class
 /.classpath
 *.jar

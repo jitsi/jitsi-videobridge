@@ -1,0 +1,180 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <artifactId>plugins</artifactId>
+        <groupId>org.igniterealtime.openfire</groupId>
+        <version>4.2.0-SNAPSHOT</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>org.jitsi</groupId>
+    <artifactId>jitsi-videobridge-openfire</artifactId>
+    <version>2.0-SNAPSHOT</version>
+    <name>Jitsi Videobridge Openfire Plugin</name>
+
+    <properties>
+        <!-- Override the default plugin name, as the default include illegal characters. -->
+        <plugin.name>jitsivideobridge</plugin.name>
+    </properties>
+
+    <build>
+        <sourceDirectory>src/java</sourceDirectory>
+        <plugins>
+            <!-- Builds the Openfire plugin jar file. -->
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
+            <!-- Compiles the Openfire Admin Console JSP pages. -->
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-jspc-maven-plugin</artifactId>
+            </plugin>
+            <!-- Fix for Mina 2.x -->
+            <!-- https://issues.apache.org/jira/browse/DIRMINA-919 -->
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>3.0.0</version>
+                <extensions>true</extensions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-videobridge</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk15on</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcpkix-jdk15on</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcpg-jdk15on</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.bouncycastle</groupId>
+                    <artifactId>bcprov-jdk15on</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-lang</groupId>
+                    <artifactId>commons-lang</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>dom4j</groupId>
+                    <artifactId>dom4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.gnu.inet</groupId>
+                    <artifactId>libidn</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-log4j12</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>xpp3</groupId>
+                    <artifactId>xpp3</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>rusv</groupId>
+            <artifactId>agafua-syslog</artifactId>
+            <version>0.4</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-videobridge</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <classifier>native-linux-32</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-videobridge</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <classifier>native-linux-64</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-videobridge</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <classifier>native-macosx</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-videobridge</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <classifier>native-windows-32</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>jitsi-videobridge</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <classifier>native-windows-64</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>jitsi-maven-repository-releases</id>
+            <layout>default</layout>
+            <name>Jitsi Maven Repository (Releases)</name>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <url>https://github.com/jitsi/jitsi-maven-repository/raw/master/releases/</url>
+        </repository>
+        <repository>
+            <id>jitsi-maven-repository-snapshots</id>
+            <layout>default</layout>
+            <name>Jitsi Maven Repository (Snapshots)</name>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <url>https://github.com/jitsi/jitsi-maven-repository/raw/master/snapshots/</url>
+        </repository>
+    </repositories>
+</project>
