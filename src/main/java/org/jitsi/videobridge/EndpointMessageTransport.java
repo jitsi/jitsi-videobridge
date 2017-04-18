@@ -576,14 +576,38 @@ class EndpointMessageTransport
     }
 
     /**
-     * Sends a specific message over one of the transport channels of this
-     * {@link EndpointMessageTransport}. Which channel to use is decided by
-     * the method based on the channel which was last active.
+     * Sends a specific message over the active transport channels of this
+     * {@link EndpointMessageTransport}.
      *
      * @param msg message text to send.
      * @throws IOException
      */
     void sendMessage(String msg)
+        throws IOException
+    {
+        Object dst = getActiveTransportChannel();
+        if (dst == null)
+        {
+            logger.warn("No available transport channel, can't send a message");
+        }
+        else
+        {
+            sendMessage(dst, msg);
+        }
+    }
+
+    /**
+     * @return the active transport channel for this
+     * {@link EndpointMessageTransport} (either the {@link #webSocket}, or
+     * the WebRTC data channel represented by a {@link WebRtcDataStream}).
+     * </p>
+     * The "active" channel is determined based on what channels are available,
+     * and which one was the last to receive data. That is, if only one channel
+     * is available, it will be returned. If two channels are available, the
+     * last one to have received data will be returned. Otherwise, {@code null}
+     * will be returned.
+     */
+    private Object getActiveTransportChannel()
         throws IOException
     {
         SctpConnection sctpConnection = endpoint.getSctpConnection();
@@ -625,14 +649,7 @@ class EndpointMessageTransport
             dst = webSocket;
         }
 
-        if (dst == null)
-        {
-            logger.warn("No available transport channel, can't send a message");
-        }
-        else
-        {
-            sendMessage(dst, msg);
-        }
+        return dst;
     }
 
     /**
