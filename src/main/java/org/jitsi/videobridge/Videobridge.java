@@ -1726,5 +1726,17 @@ public class Videobridge
          * {@link Endpoint}s of this conference.
          */
         public AtomicLong totalDataChannelMessagesSent = new AtomicLong();
+
+        /**
+         * The total number of messages received from the data channels of
+         * the {@link Endpoint}s of this conference.
+         */
+        public AtomicLong totalColibriWebSocketMessagesReceived = new AtomicLong();
+
+        /**
+         * The total number of messages sent via the data channels of the
+         * {@link Endpoint}s of this conference.
+         */
+        public AtomicLong totalColibriWebSocketMessagesSent = new AtomicLong();
     }
 }

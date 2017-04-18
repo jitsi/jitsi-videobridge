@@ -437,7 +437,7 @@ public class VideoChannel
 
         if (endpoint.equals(getEndpoint()))
         {
-            sendLastNEndpointsChangeEventOnDataChannel(
+            sendLastNEndpointsChangeEvent(
                 bitrateController.getForwardedEndpoints(),
                 null,
                 null);
@@ -492,7 +492,7 @@ public class VideoChannel
      * @param conferenceEndpoints the collection of all endpoints in the
      * conference.
      */
-    public void sendLastNEndpointsChangeEventOnDataChannel(
+    public void sendLastNEndpointsChangeEvent(
         Collection<String> forwardedEndpoints,
         Collection<String> endpointsEnteringLastN,
         Collection<String> conferenceEndpoints)

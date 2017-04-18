@@ -21,6 +21,7 @@ import java.net.*;
 import java.util.*;
 import java.util.logging.*;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import net.java.sip.communicator.service.protocol.*;
@@ -37,6 +38,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.rest.*;
 import org.osgi.framework.*;
 
 /**
@@ -305,6 +307,11 @@ public class IceUdpTransportManager
     private final Conference conference;
 
     /**
+     * An identifier of this {@link IceUdpTransportManager}.
+     */
+    private final String id;
+
+    /**
      * The <tt>Thread</tt> used by this <tt>TransportManager</tt> to wait until
      * {@link #iceAgent} has established a connection.
      */
@@ -418,15 +425,49 @@ public class IceUdpTransportManager
                                   boolean controlling)
         throws IOException
     {
-        this(conference, controlling, 2, DEFAULT_ICE_STREAM_NAME);
+        this(conference, controlling, 2, DEFAULT_ICE_STREAM_NAME, null);
     }
 
+    /**
+     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
+     *
+     * @param conference the <tt>Conference</tt> which created this
+     * <tt>TransportManager</tt>.
+     * @param controlling {@code true} if the new instance is to serve as a
+     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
+     * @param numComponents the number of ICE components that this instance is
+     * to start with.
+     * @throws IOException
+     */
     public IceUdpTransportManager(Conference conference,
                                   boolean controlling,
                                   int numComponents)
         throws IOException
     {
-        this(conference, controlling, numComponents, DEFAULT_ICE_STREAM_NAME);
+        this(conference, controlling, numComponents,
+             DEFAULT_ICE_STREAM_NAME, null);
+    }
+
+    /**
+     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
+     *
+     * @param conference the <tt>Conference</tt> which created this
+     * <tt>TransportManager</tt>.
+     * @param controlling {@code true} if the new instance is to serve as a
+     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
+     * @param numComponents the number of ICE components that this instance is
+     * to start with.
+     * @param id an identifier of the {@link IceUdpTransportManager}.
+     * @throws IOException
+     */
+    public IceUdpTransportManager(Conference conference,
+                                  boolean controlling,
+                                  int numComponents,
+                                  String id)
+        throws IOException
+    {
+        this(conference, controlling, numComponents,
+             DEFAULT_ICE_STREAM_NAME, id);
     }
 
     /**
@@ -440,15 +481,18 @@ public class IceUdpTransportManager
      * to start with.
      * @param iceStreamName the name of the ICE stream to be created by this
      * instance.
+     * @param id an identifier of the {@link IceUdpTransportManager}.
      * @throws IOException
      */
     public IceUdpTransportManager(Conference conference,
                                   boolean controlling,
                                   int numComponents,
-                                  String iceStreamName)
+                                  String iceStreamName,
+                                  String id)
         throws IOException
     {
         this.conference = conference;
+        this.id = id;
         this.controlling = controlling;
         this.numComponents = numComponents;
         this.rtcpmux = numComponents == 1;
@@ -1056,11 +1100,41 @@ public class IceUdpTransportManager
                 }
             }
 
+            String colibriWsUrl = getColibriWsUrl();
+            if (colibriWsUrl != null)
+            {
+                WebSocketPacketExtension wsPacketExtension
+                    = new WebSocketPacketExtension(colibriWsUrl);
+                pe.addChildExtension(wsPacketExtension);
+            }
+
             if (rtcpmux)
                 pe.addChildExtension(new RtcpmuxPacketExtension());
 
             describeDtlsControl(pe);
         }
+    }
+
+    /**
+     * @return the URL to advertise for COLIBRI WebSocket connections for this
+     * transport manager.
+     */
+    private String getColibriWsUrl()
+    {
+        BundleContext bundleContext
+            = getConference().getVideobridge().getBundleContext();
+        ColibriWebSocketService colibriWebSocketService
+            = ServiceUtils.getService(
+                    bundleContext, ColibriWebSocketService.class);
+        if (colibriWebSocketService != null)
+        {
+            return colibriWebSocketService.getColibriWebSocketUrl(
+                getConference().getID(),
+                id,
+                iceAgent.getLocalPassword());
+        }
+
+        return null;
     }
 
     /**
@@ -1310,6 +1384,15 @@ public class IceUdpTransportManager
     {
         Agent iceAgent = this.iceAgent;
         return iceAgent == null ? null : iceAgent.getLocalUfrag();
+    }
+
+    /**
+     * Gets the ICE password.
+     */
+    public String getIcePassword()
+    {
+        Agent iceAgent = this.iceAgent;
+        return iceAgent == null ? null : iceAgent.getLocalPassword();
     }
 
     /**

@@ -75,6 +75,12 @@ public class PublicRESTBundleActivator
         = ".jetty.RewriteHandler.replacement";
 
     /**
+     * The {@link ColibriWebSocketService}, which handles the WebSockets used
+     * for COLIBRI.
+     */
+    private ColibriWebSocketService colibriWebSocketService;
+
+    /**
      * Initializes a new {@link PublicRESTBundleActivator}.
      */
     public PublicRESTBundleActivator()
@@ -463,17 +469,38 @@ public class PublicRESTBundleActivator
         // ProxyServletImpl i.e. http-bind.
         servletHolder = initializeProxyServlet(servletContextHandler);
         if (servletHolder != null)
+        {
             b = true;
+        }
 
         // LongPollingServlet
         servletHolder = initializeLongPollingServlet(servletContextHandler);
         if (servletHolder != null)
+        {
             b = true;
+        }
+
+        // Colibri WebSockets
+        ColibriWebSocketService colibriWebSocketService
+            = new ColibriWebSocketService(bundleContext, isTls());
+        servletHolder
+            = colibriWebSocketService.initializeColibriWebSocketServlet(
+                    bundleContext,
+                    servletContextHandler);
+        if (servletHolder != null)
+        {
+            this.colibriWebSocketService = colibriWebSocketService;
+            b = true;
+        }
 
         if (b)
+        {
             servletContextHandler.setContextPath("/");
+        }
         else
+        {
             servletContextHandler = null;
+        }
 
         return servletContextHandler;
     }
@@ -494,6 +521,27 @@ public class PublicRESTBundleActivator
     protected int getDefaultTlsPort()
     {
         return -1;
+    }
+
+    /**
+     * {@inheritDoc}
+     * </p>
+     * Registers the colibri web socket service, if it was has been initialized,
+     * as a service in the specified {@link BundleContext}.
+     */
+    @Override
+    protected void didStart(BundleContext bundleContext)
+        throws Exception
+    {
+        super.didStart(bundleContext);
+
+        if (colibriWebSocketService != null)
+        {
+            bundleContext.registerService(
+                ColibriWebSocketService.class.getName(),
+                colibriWebSocketService,
+                null);
+        }
     }
 
     /**
