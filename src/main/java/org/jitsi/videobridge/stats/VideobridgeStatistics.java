@@ -229,6 +229,20 @@ public class VideobridgeStatistics
         = "total_data_channel_messages_sent";
 
     /**
+     * The name of the stat indicating the total number of messages received
+     * from data channels.
+     */
+    private static final String TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED
+        = "total_colibri_web_socket_messages_received";
+
+    /**
+     * The name of the stat indicating the total number of messages sent over
+     * data channels.
+     */
+    private static final String TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT
+        = "total_colibri_web_socket_messages_sent";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -380,6 +394,8 @@ public class VideobridgeStatistics
         int totalUdpConnections = 0, totalTcpConnections = 0;
         long totalDataChannelMessagesReceived = 0;
         long totalDataChannelMessagesSent = 0;
+        long totalColibriWebSocketMessagesReceived = 0;
+        long totalColibriWebSocketMessagesSent = 0;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
@@ -403,6 +419,10 @@ public class VideobridgeStatistics
                 += jvbStats.totalDataChannelMessagesReceived.get();
             totalDataChannelMessagesSent
                 += jvbStats.totalDataChannelMessagesSent.get();
+            totalColibriWebSocketMessagesReceived
+                += jvbStats.totalColibriWebSocketMessagesReceived.get();
+            totalColibriWebSocketMessagesSent
+                += jvbStats.totalColibriWebSocketMessagesSent.get();
 
 
             for (Conference conference : videobridge.getConferences())
@@ -613,6 +633,10 @@ public class VideobridgeStatistics
                             totalDataChannelMessagesReceived);
             unlockedSetStat(TOTAL_DATA_CHANNEL_MESSAGES_SENT,
                             totalDataChannelMessagesSent);
+            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_RECEIVED,
+                            totalColibriWebSocketMessagesReceived);
+            unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
+                            totalColibriWebSocketMessagesSent);
 
             unlockedSetStat(TIMESTAMP, timestamp);
         }

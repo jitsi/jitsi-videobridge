@@ -225,6 +225,8 @@ class EndpointMessageTransport
         try
         {
             dst.getRemote().sendString(message);
+            endpoint.getConference().getVideobridge().getStatistics()
+                .totalColibriWebSocketMessagesSent.incrementAndGet();
         }
         catch (IOException ioe)
         {
@@ -251,9 +253,6 @@ class EndpointMessageTransport
         JSONObject jsonObject,
         String colibriClass)
     {
-        endpoint.getConference().getVideobridge().getStatistics().
-            totalDataChannelMessagesReceived.incrementAndGet();
-
         switch (colibriClass)
         {
         case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
@@ -526,6 +525,9 @@ class EndpointMessageTransport
     public void onStringData(WebRtcDataStream src, String msg)
     {
         webSocketLastActive = false;
+        endpoint.getConference().getVideobridge().getStatistics().
+            totalDataChannelMessagesReceived.incrementAndGet();
+
         onMessage(src, msg);
     }
 
@@ -694,6 +696,9 @@ class EndpointMessageTransport
                             + "(endpoint=" + endpoint.getID() + ").");
             return;
         }
+
+        endpoint.getConference().getVideobridge().getStatistics().
+            totalColibriWebSocketMessagesReceived.incrementAndGet();
 
         webSocketLastActive = true;
         onMessage(ws, message);
