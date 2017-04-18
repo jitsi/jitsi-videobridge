@@ -13,7 +13,7 @@ The _public_ interface inludes:
 
 * Support for serving static files (e.g. the HTML/js for jitsi-meet)
 * Support for proxying (for e.g. proxying BOSH connections to a prosody instance)
-* A WebSocket API for communicatoin with conference endpoints (```/colibri-ws/```)
+* A WebSocket API for communication with conference endpoints (```/colibri-ws/```)
 
 **For any of the HTTP interfaces to be enabled, jitsi-videobridge needs to be started with the ```--apis=rest```
 parameter (or ```--apis=rest,xmpp``` to also enable the XMPP interface to COLIBRI).** This is enough to enable the
