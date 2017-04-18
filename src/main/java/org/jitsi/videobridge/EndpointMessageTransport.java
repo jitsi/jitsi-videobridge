@@ -234,11 +234,11 @@ class EndpointMessageTransport
         {
             // Broadcast message
             List<Endpoint> endpointSubset = new ArrayList<>();
-            for (Endpoint endpoint : conference.getEndpoints())
+            for (Endpoint e : conference.getEndpoints())
             {
-                if (!endpoint.getID().equalsIgnoreCase(endpoint.getID()))
+                if (!endpoint.getID().equalsIgnoreCase(e.getID()))
                 {
-                    endpointSubset.add(endpoint);
+                    endpointSubset.add(e);
                 }
             }
             conference.sendMessageOnDataChannels(
