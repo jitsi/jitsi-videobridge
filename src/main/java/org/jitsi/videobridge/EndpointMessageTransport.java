@@ -345,7 +345,7 @@ class EndpointMessageTransport
                     endpointSubset.add(endpoint);
                 }
             }
-            conference.sendMessageOnDataChannels(
+            conference.sendMessage(
                 jsonObject.toString(), endpointSubset);
         }
         else
@@ -356,7 +356,7 @@ class EndpointMessageTransport
             {
                 List<Endpoint> endpointSubset = new ArrayList<>();
                 endpointSubset.add(ep);
-                conference.sendMessageOnDataChannels(
+                conference.sendMessage(
                     jsonObject.toString(), endpointSubset);
             }
             else

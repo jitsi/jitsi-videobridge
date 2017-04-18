@@ -481,7 +481,7 @@ public class BitrateController
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
-            dest.sendLastNEndpointsChangeEventOnDataChannel(
+            dest.sendLastNEndpointsChangeEvent(
                 newForwardedEndpointIds,
                 endpointsEnteringLastNIds,
                 conferenceEndpointIds);

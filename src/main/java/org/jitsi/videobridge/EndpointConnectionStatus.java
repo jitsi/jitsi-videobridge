@@ -347,7 +347,7 @@ public class EndpointConnectionStatus
                 ArrayList<Endpoint> receivers = new ArrayList<>(1);
                 receivers.add(msgReceiver);
 
-                conference.sendMessageOnDataChannels(msg, receivers);
+                conference.sendMessage(msg, receivers);
             }
         }
         else

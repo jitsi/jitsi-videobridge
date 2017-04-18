@@ -305,7 +305,7 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessageOnDataChannels(String msg, List<Endpoint> endpoints)
+    public void sendMessage(String msg, List<Endpoint> endpoints)
     {
         for (Endpoint endpoint : endpoints)
         {
@@ -329,7 +329,7 @@ public class Conference
      */
     public void broadcastMessageOnDataChannels(String msg)
     {
-        sendMessageOnDataChannels(msg, getEndpoints());
+        sendMessage(msg, getEndpoints());
     }
 
     /**
