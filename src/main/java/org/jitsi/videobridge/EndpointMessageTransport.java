@@ -337,11 +337,11 @@ class EndpointMessageTransport
         {
             // Broadcast message
             List<Endpoint> endpointSubset = new ArrayList<>();
-            for (Endpoint endpoint : conference.getEndpoints())
+            for (Endpoint e : conference.getEndpoints())
             {
-                if (!endpoint.getID().equalsIgnoreCase(endpoint.getID()))
+                if (!endpoint.getID().equalsIgnoreCase(e.getID()))
                 {
-                    endpointSubset.add(endpoint);
+                    endpointSubset.add(e);
                 }
             }
             conference.sendMessage(
@@ -350,11 +350,11 @@ class EndpointMessageTransport
         else
         {
             // 1:1 message
-            Endpoint ep = conference.getEndpoint(to);
-            if (ep != null)
+            Endpoint targetEndpoint = conference.getEndpoint(to);
+            if (targetEndpoint != null)
             {
                 List<Endpoint> endpointSubset = new ArrayList<>();
-                endpointSubset.add(ep);
+                endpointSubset.add(targetEndpoint);
                 conference.sendMessage(
                     jsonObject.toString(), endpointSubset);
             }
