@@ -25,6 +25,10 @@ import java.io.*;
 import java.util.*;
 
 /**
+ * Handles the functionality related to sending and receiving COLIBRI messages
+ * for an {@link Endpoint}. Supports two underlying transport mechanisms --
+ * WebRTC data channels and {@code WebSocket}s.
+ *
  * @author Boris Grozev
  */
 class EndpointMessageTransport
@@ -92,6 +96,11 @@ class EndpointMessageTransport
     private static final Logger classLogger
         = Logger.getLogger(EndpointMessageTransport.class);
 
+    /**
+     * The {@link Endpoint} associated with this
+     * {@link EndpointMessageTransport}.
+     *
+     */
     private final Endpoint endpoint;
 
     /**
@@ -117,6 +126,10 @@ class EndpointMessageTransport
      */
     private boolean webSocketLastActive = false;
 
+    /**
+     * Initializes a new {@link EndpointMessageTransport} instance.
+     * @param endpoint the associated {@link Endpoint}.
+     */
     EndpointMessageTransport(Endpoint endpoint)
     {
         this.endpoint = Objects.requireNonNull(endpoint, "endpoint");

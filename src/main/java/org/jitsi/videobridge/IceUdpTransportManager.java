@@ -306,6 +306,9 @@ public class IceUdpTransportManager
      */
     private final Conference conference;
 
+    /**
+     * An identifier of this {@link IceUdpTransportManager}.
+     */
     private final String id;
 
     /**
@@ -425,6 +428,17 @@ public class IceUdpTransportManager
         this(conference, controlling, 2, DEFAULT_ICE_STREAM_NAME, null);
     }
 
+    /**
+     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
+     *
+     * @param conference the <tt>Conference</tt> which created this
+     * <tt>TransportManager</tt>.
+     * @param controlling {@code true} if the new instance is to serve as a
+     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
+     * @param numComponents the number of ICE components that this instance is
+     * to start with.
+     * @throws IOException
+     */
     public IceUdpTransportManager(Conference conference,
                                   boolean controlling,
                                   int numComponents)
@@ -434,6 +448,18 @@ public class IceUdpTransportManager
              DEFAULT_ICE_STREAM_NAME, null);
     }
 
+    /**
+     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
+     *
+     * @param conference the <tt>Conference</tt> which created this
+     * <tt>TransportManager</tt>.
+     * @param controlling {@code true} if the new instance is to serve as a
+     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
+     * @param numComponents the number of ICE components that this instance is
+     * to start with.
+     * @param id an identifier of the {@link IceUdpTransportManager}.
+     * @throws IOException
+     */
     public IceUdpTransportManager(Conference conference,
                                   boolean controlling,
                                   int numComponents,
@@ -455,6 +481,7 @@ public class IceUdpTransportManager
      * to start with.
      * @param iceStreamName the name of the ICE stream to be created by this
      * instance.
+     * @param id an identifier of the {@link IceUdpTransportManager}.
      * @throws IOException
      */
     public IceUdpTransportManager(Conference conference,
@@ -1088,6 +1115,10 @@ public class IceUdpTransportManager
         }
     }
 
+    /**
+     * @return the URL to advertise for COLIBRI WebSocket connections for this
+     * transport manager.
+     */
     private String getColibriWsUrl()
     {
         BundleContext bundleContext
