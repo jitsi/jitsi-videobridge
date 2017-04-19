@@ -90,7 +90,9 @@ public class ComponentImpl
      */
     private static void logd(String s)
     {
-        logger.info(s);
+        if ( logger.isDebugEnabled() ) {
+            logger.debug(s);
+        }
     }
 
     /**
