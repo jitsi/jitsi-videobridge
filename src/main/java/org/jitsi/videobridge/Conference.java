@@ -359,6 +359,32 @@ public class Conference
     }
 
     /**
+     * Checks whether <tt>path</tt> is a valid directory for recording (creates
+     * it if necessary).
+     * @param path the path to the directory to check.
+     * @return <tt>true</tt> if the directory <tt>path</tt> can be used for
+     * media recording, <tt>false</tt> otherwise.
+     */
+    private boolean checkRecordingDirectory(String path)
+    {
+        if (path == null || "".equals(path))
+            return false;
+
+        File dir = new File(path);
+
+        if (!dir.exists())
+        {
+            dir.mkdir();
+            if (!dir.exists())
+                return false;
+        }
+        if (!dir.isDirectory() || !dir.canWrite())
+            return false;
+
+        return true;
+    }
+
+    /**
      * Closes given {@link #transportManagers} of this <tt>Conference</tt>
      * and removes corresponding channel bundle.
      */
