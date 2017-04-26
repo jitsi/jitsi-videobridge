@@ -245,6 +245,19 @@ public class BitrateController
     }
 
     /**
+     * Gets the {@link VideoChannel} which owns this {@link BitrateController}
+     * and is the destination of the packets that this instance accepts.
+     *
+     * @return the {@link VideoChannel} which owns this
+     * {@link BitrateController} and is the destination of the packets that this
+     * instance accepts.
+     */
+    VideoChannel getVideoChannel()
+    {
+        return dest;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -407,7 +420,7 @@ public class BitrateController
                         RTPEncodingDesc[] rtpEncodings
                             = allocation.track.getRTPEncodings();
 
-                        ctrl = new SimulcastController(allocation.track);
+                        ctrl = new SimulcastController(this, allocation.track);
 
                         // Route all encodings to the specified bitrate
                         // controller.
