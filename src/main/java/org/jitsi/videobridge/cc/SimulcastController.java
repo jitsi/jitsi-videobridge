@@ -106,14 +106,6 @@ class SimulcastController
     private final long targetSSRC;
 
     /**
-     * The running index of the frames that are sent out. Introduced for VP8
-     * PictureID rewriting. The initial value is chosen so that it matches the
-     * pictureID of the black VP8 key frames injected by the lipsync hack, so
-     * the code assumes a packet with picture ID 1 has already been sent.
-     */
-    private int pictureID = 1;
-
-    /**
      * The running index for the temporal base layer frames, i.e., the frames
      * with TID set to 0. Introduced for VP8 PictureID rewriting. The initial
      * value is chosen so that it matches the TL0PICIDX of the black VP8 key
@@ -533,6 +525,24 @@ class SimulcastController
         private long tsOff = -1;
 
         /**
+         * The running index offset of the frames that are sent out. Introduced
+         * for VP8 PictureID rewriting. The initial value is chosen so that it
+         * matches the pictureID of the black VP8 key frames injected by the
+         * lipsync hack, so the code assumes a packet with picture ID 1 has
+         * already been sent.
+         */
+        private int pidOff = 1;
+
+        /**
+         * The running index delta to apply to the frames that are sent out.
+         * Introduced for VP8 PictureID rewriting. The initial value is chosen
+         * so that it matches the pictureID of the black VP8 key frames injected
+         * by the lipsync hack, so the code assumes a packet with picture ID 1
+         * has already been sent.
+         */
+        private int pidDelta = -1;
+
+        /**
          * The SSRC of the TL0 of the RTP stream that is currently being
          * forwarded. This is useful for simulcast and RTCP SR rewriting.
          *
@@ -648,8 +658,11 @@ class SimulcastController
             {
                 this.tsOff = getMaxTs();
                 this.seqNumOff = getMaxSeqNum();
+                this.pidOff = getMaxPictureID();
                 this.maxSentFrame = null;
             }
+
+            this.pidDelta = -1;
 
             int oldTL0Idx = this.tl0Idx;
             this.tl0Idx = newTL0Idx;
@@ -776,18 +789,23 @@ class SimulcastController
                     this.currentIdx = currentIdx;
                 }
 
+                boolean isNewest = maxSentFrame == null
+                    || TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0;
+
+                boolean isNewerThanMostRecentKeyFrame = mrKeyFrame == null
+                    || TimeUtils.rtpDiff(srcTs, mrKeyFrame.srcTs) > 0;
+
                 if (currentIdx > -1
                     // we haven't seen anything yet and this is an independent
                     // frame.
                     && (maxSentFrame == null && sourceFrameDesc.isIndependent()
                     // frames from non-adaptive streams need to be newer than
                     // the most recent independent frame
-                    || (!adaptive
-                        && TimeUtils.rtpDiff(srcTs, mrKeyFrame.srcTs) > 0)
+                    || (maxSentFrame != null && !adaptive
+                        && isNewerThanMostRecentKeyFrame)
                     // frames from adaptive streams need to be newer than the
                     // max
-                    || (adaptive
-                        && TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0)))
+                    || (maxSentFrame != null && adaptive && isNewest)))
                 {
                     // the stream is not suspended and we're not dealing with a
                     // late frame or the stream is not adaptive.
@@ -853,7 +871,7 @@ class SimulcastController
                             tsTranslation = maxSentFrame.tsTranslation;
                         }
 
-                        int dstPictureID = -1, dstTL0PICIDX = -1;
+                        int dstPictureID = -1;
                         if (ENABLE_VP8_PICID_REWRITING)
                         {
                             byte vp8PT = bitrateController.getVideoChannel()
@@ -864,32 +882,55 @@ class SimulcastController
 
                             if (isVP8)
                             {
-                                pictureID++; // new frame => new picid
                                 REDBlock redBlock = ((MediaStreamImpl)
                                     bitrateController.getVideoChannel()
                                         .getStream()).getPayloadBlock(
                                             buf, off, len);
 
-                                if (DePacketizer
-                                    .VP8PayloadDescriptor.getTemporalLayerIndex(
+                                int srcPID = DePacketizer
+                                    .VP8PayloadDescriptor.getPictureId(
                                         redBlock.getBuffer(),
-                                        redBlock.getOffset(),
-                                        redBlock.getLength()) == 0)
+                                        redBlock.getOffset());
+
+                                if (pidDelta == -1)
                                 {
-                                    tl0PicIdx++;
+                                    pidDelta = (pidOff + 1 - srcPID) & 0x7FFF;
                                 }
 
-                                dstPictureID = pictureID;
-                                dstTL0PICIDX = tl0PicIdx;
+                                dstPictureID = (srcPID + pidDelta) & 0x7FFF;
+
+                                if (((dstPictureID - getMaxPictureID()) & 0x7FFF) > 200
+                                    || ((dstPictureID - getMaxPictureID()) & 0x7FFF) > 0x7F00)
+                                {
+                                    pidDelta = (getMaxPictureID() + 1 - srcPID) & 0x7FFF;
+                                    dstPictureID = (srcPID + pidDelta) & 0x7FFF;
+                                    logger.warn("A jump was detected in the picture IDs.");
+                                }
                             }
                         }
+
+
+                        if (((MediaStreamImpl) bitrateController
+                            .getVideoChannel().getStream())
+                            .getTemporalID(buf, off, len) == 0)
+                        {
+                            tl0PicIdx++;
+                        }
+
+                        int dstTL0PICIDX = tl0PicIdx;
 
                         destFrame = seenFrameAllocator.getOrCreate();
                         destFrame.reset(srcTs, seqNumTranslation, tsTranslation,
                             dstPictureID, dstTL0PICIDX);
                         seenFrames.put(srcTs, destFrame);
-                        maxSentFrame = destFrame;
-                        if (sourceFrameDesc.isIndependent())
+
+                        if (isNewest)
+                        {
+                            maxSentFrame = destFrame;
+                        }
+
+                        if (isNewerThanMostRecentKeyFrame
+                            && sourceFrameDesc.isIndependent())
                         {
                             mrKeyFrame = destFrame;
                         }
@@ -1024,6 +1065,14 @@ class SimulcastController
         private int getMaxSeqNum()
         {
             return maxSentFrame == null ? seqNumOff : maxSentFrame.getMaxSeqNum();
+        }
+
+        /**
+         * Gets the maximum VP8 picture ID that this instance has accepted.
+         */
+        private int getMaxPictureID()
+        {
+            return maxSentFrame == null ? pidOff : maxSentFrame.dstPictureID;
         }
 
         /**
@@ -1224,7 +1273,7 @@ class SimulcastController
                         }
                     }
 
-                    if (dstPictureID > -1)
+                    if (ENABLE_VP8_PICID_REWRITING && dstPictureID > -1)
                     {
                         MediaStreamTrackDesc source = weakSource.get();
                         assert source != null;
@@ -1265,7 +1314,8 @@ class SimulcastController
 
                         if (!DePacketizer
                             .VP8PayloadDescriptor.setExtendedPictureId(
-                            redBlock.getBuffer(), redBlock.getOffset(),
+                                // XXX pktOut is not a typo.
+                            pktOut.getBuffer(), redBlock.getOffset(),
                             redBlock.getLength(), dstPictureID))
                         {
                             logger.warn("Failed to set the VP8 extended" +
