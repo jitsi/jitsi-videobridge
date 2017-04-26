@@ -55,7 +55,7 @@ class SimulcastController
      *
      */
     public static final String ENABLE_VP8_PICID_REWRITING_PNAME
-        = "org.jitsi.videobridge.ENABLE_PICID_REWRITING";
+        = "org.jitsi.videobridge.ENABLE_VP8_PICID_REWRITING";
 
     /**
      * The ConfigurationService to get config values from.
@@ -107,13 +107,18 @@ class SimulcastController
 
     /**
      * The running index of the frames that are sent out. Introduced for VP8
-     * PictureID rewriting.
+     * PictureID rewriting. The initial value is chosen so that it matches the
+     * pictureID of the black VP8 key frames injected by the lipsync hack, so
+     * the code assumes a packet with picture ID 1 has already been sent.
      */
-    private int pictureID = 0;
+    private int pictureID = 1;
 
     /**
      * The running index for the temporal base layer frames, i.e., the frames
-     * with TID set to 0. Introduced for VP8 PictureID rewriting.
+     * with TID set to 0. Introduced for VP8 PictureID rewriting. The initial
+     * value is chosen so that it matches the TL0PICIDX of the black VP8 key
+     * frames injected by the lipsync hack; so the code assumes a packet of TID
+     * 0 has already been sent.
      */
     private int tl0PicIdx = 0;
 
@@ -860,12 +865,10 @@ class SimulcastController
                             if (isVP8)
                             {
                                 pictureID++; // new frame => new picid
-                                dstPictureID = pictureID;
-                                dstTL0PICIDX = tl0PicIdx;
-
                                 REDBlock redBlock = ((MediaStreamImpl)
                                     bitrateController.getVideoChannel()
-                                    .getStream()).getPayloadBlock(buf, off, len);
+                                        .getStream()).getPayloadBlock(
+                                            buf, off, len);
 
                                 if (DePacketizer
                                     .VP8PayloadDescriptor.getTemporalLayerIndex(
@@ -875,6 +878,9 @@ class SimulcastController
                                 {
                                     tl0PicIdx++;
                                 }
+
+                                dstPictureID = pictureID;
+                                dstTL0PICIDX = tl0PicIdx;
                             }
                         }
 
