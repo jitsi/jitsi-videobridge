@@ -141,6 +141,9 @@ case "$1" in
         if getent group jvb > /dev/null; then
             groupdel jvb
         fi
+
+        # load the UDP buffer sizes required by the JVB.
+        sysctl --system
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

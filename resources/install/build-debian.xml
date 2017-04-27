@@ -137,6 +137,9 @@
         <copy file="config/logrotate"
               tofile="${debian.dir}/etc/logrotate.d/jitsi-videobridge"
               overwrite="true"/>
+        <copy file="config/20-jvb-udp-buffers.conf"
+              todir="${debian.dir}/etc/sysctl.d/"
+              overwrite="true"/>
 
         <!-- creating a debian archive file
         <tar destfile="jitsi-videobridge_${label}-1.debian.tar.gz"
