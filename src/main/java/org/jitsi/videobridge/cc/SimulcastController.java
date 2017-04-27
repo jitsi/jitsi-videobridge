@@ -42,7 +42,7 @@ import java.util.*;
  *
  * @author George Politis
  */
-class SimulcastController
+public class SimulcastController
     implements AutoCloseable
 {
     /**

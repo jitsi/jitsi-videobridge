@@ -18,7 +18,9 @@ package org.jitsi.videobridge.osgi;
 import java.io.*;
 import java.util.*;
 import org.ice4j.*;
+import org.ice4j.ice.harvest.*;
 import org.jitsi.impl.neomedia.device.*;
+import org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
 import org.jitsi.meet.*;
@@ -26,7 +28,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
-import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.cc.*;
 
 /**
  * OSGi bundles description for the Jitsi Videobridge.
@@ -246,6 +248,21 @@ public class JvbBundleConfig
         defaults.put(
                 PacketLoggingConfiguration.PACKET_LOGGING_ENABLED_PROPERTY_NAME,
                 false_);
+
+        // Configure the receive buffer size for the sockets used for the
+        // single-port mode to be 10MB.
+        defaults.put(AbstractUdpListener.SO_RCVBUF_PNAME, "10485760");
+
+        // Configure the starting send bitrate to be 2.5Mbps.
+        defaults.put(BandwidthEstimatorImpl.START_BITRATE_BPS_PNAME, "2500000");
+
+        // Enable picture ID rewriting by default, as jumping picture IDs cause
+        // recent versions of Chrome to crash.
+        defaults.put(
+            SimulcastController.ENABLE_VP8_PICID_REWRITING_PNAME, true_);
+
+        // Trust the bandwidth estimations by default.
+        defaults.put(BitrateController.TRUST_BWE_PNAME, true_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed

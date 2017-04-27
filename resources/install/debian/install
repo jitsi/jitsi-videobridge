@@ -3,3 +3,4 @@ debian/etc/jitsi/videobridge/logging.properties	/etc/jitsi/videobridge/
 debian/etc/jitsi/videobridge/log4j2.xml	/etc/jitsi/videobridge/
 debian/etc/jitsi/videobridge/callstats-java-sdk.properties	/etc/jitsi/videobridge/
 debian/etc/logrotate.d/jitsi-videobridge	/etc/logrotate.d/
+debian/etc/sysctl.d/* 	/etc/sysctl.d/
