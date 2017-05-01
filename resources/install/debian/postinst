@@ -92,6 +92,10 @@ case "$1" in
  -Djava.util.logging.config.file=/etc/jitsi/videobridge/logging.properties\"" >> $CONFIG
         fi
 
+        if ! grep -q "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP" "$NEW_JITSI_CONFIG" ;then
+            echo "org.jitsi.videobridge.AUTHORIZED_SOURCE_REGEXP=focus@auth.${JVB_HOSTNAME}/.*" >> $NEW_JITSI_CONFIG
+        fi
+
         # we don't want to start the daemon as root
         if ! getent group jitsi > /dev/null ; then
             groupadd jitsi
