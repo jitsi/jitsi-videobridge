@@ -1348,9 +1348,14 @@ public class Videobridge
             catch (PatternSyntaxException exc)
             {
                 logger.error(
-                    "Error parsing authorized sources reg expr: "
+                    "Error parsing authorized sources regexp: "
                         + shutdownSourcesRegexp, exc);
             }
+        }
+        else
+        {
+            logger.warn("No authorized source regexp configured. Will accept "
+                            + "requests from any source.");
         }
 
         ProviderManager providerManager = ProviderManager.getInstance();
