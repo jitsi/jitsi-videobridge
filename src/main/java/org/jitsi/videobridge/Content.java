@@ -474,36 +474,6 @@ public class Content
     }
 
     /**
-     * XXX REMOVE
-     * Returns a <tt>Channel</tt> of this <tt>Content</tt>, which has
-     * <tt>ssrc</tt> in its list of received SSRCs, or <tt>null</tt> in case no
-     * such <tt>Channel</tt> exists.
-     * @param ssrc the ssrc to search for.
-     * @return a <tt>Channel</tt> of this <tt>Content</tt>, which has
-     * <tt>ssrc</tt> in its list of received SSRCs, or <tt>null</tt> in case no
-     * such <tt>Channel</tt> exists.
-     */
-    public Channel findChannel(long ssrc)
-    {
-        // TODO we need to optimize the performance of this. We could use a
-        // simple Map as a Cache for this loop.
-        for (Channel channel : getChannels())
-        {
-            if (channel instanceof RtpChannel)
-            {
-                RtpChannel rtpChannel = (RtpChannel) channel;
-                for (int channelSsrc : rtpChannel.getReceiveSSRCs())
-                {
-                    if (ssrc == (0xffffffffL & channelSsrc))
-                        return channel;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Returns a <tt>Channel</tt> of this <tt>Content</tt>, which has
      * <tt>receiveSSRC</tt> in its list of received SSRCs, or <tt>null</tt> in
      * case no such <tt>Channel</tt> exists.
