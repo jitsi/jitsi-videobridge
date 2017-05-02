@@ -79,6 +79,13 @@ public class VideoChannel
         = "org.jitsi.videobridge.LOG_OVERSENDING_STATS";
 
     /**
+     *  The default SSRC that Chrome picks to send RTCP feedback with, when
+     *  there's no SSRC signaled in the local description.
+     */
+    private static final int[] DEFAULT_RTCP_RECV_REPORT_SSRCS
+        = new int[] { 1, 2 };
+
+    /**
      * The {@link Logger} used by the {@link VideoChannel} class to print debug
      * information. Note that instances should use {@link #logger} instead.
      */
@@ -266,6 +273,15 @@ public class VideoChannel
         }
 
         return changed;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int[] getDefaultReceiveSSRCs()
+    {
+        return DEFAULT_RTCP_RECV_REPORT_SSRCS;
     }
 
     /**

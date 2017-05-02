@@ -134,7 +134,16 @@ class RtpChannelDatagramFilter
         {
             int packetSenderSSRC
                 = RTPTranslatorImpl.readInt(data, off + 4);
-            int[] channelSSRCs = channel.getReceiveSSRCs();
+
+            int[] channelSSRCs =  channel.getDefaultReceiveSSRCs();
+
+            for (int channelSSRC : channelSSRCs)
+            {
+                if (channelSSRC == packetSenderSSRC)
+                    return true;
+            }
+
+            channelSSRCs = channel.getReceiveSSRCs();
 
             for (int channelSSRC : channelSSRCs)
             {
