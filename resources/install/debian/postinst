@@ -146,8 +146,11 @@ case "$1" in
             groupdel jvb
         fi
 
-        # load the UDP buffer sizes required by the JVB.
-        sysctl --system
+        # load the UDP buffer sizes required by the JVB. As reported in
+        # https://github.com/jitsi/jitsi-videobridge/issues/461
+        # OpenVZ containers do not typically allow permission to modify the
+        # kernel with sysctl config values.
+        sysctl --system || true
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
