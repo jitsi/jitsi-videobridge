@@ -608,6 +608,38 @@ public class Videobridge
     }
 
     /**
+     * Checks whether a COLIBRI request from a specific source ({@code focus})
+     * with specific {@code options} should be accepted or not.
+     * @param focus the source of the request (i.e. the JID of the conference
+     * focus).
+     * @param options
+     * @return {@code true} if a COLIBRI request from focus should be accepted,
+     * given the specified {@code options}, and {@code false} otherwise.
+     */
+    private boolean accept(String focus, int options)
+    {
+        if ((options & OPTION_ALLOW_ANY_FOCUS) > 0)
+        {
+            return true;
+        }
+
+        if (focus == null && (options & OPTION_ALLOW_NO_FOCUS) != 0)
+        {
+            return true;
+        }
+
+        if (authorizedSourcePattern != null)
+        {
+            return focus != null &&
+                authorizedSourcePattern.matcher(focus).matches();
+        }
+        else
+        {
+            return true;
+        }
+    }
+
+    /**
      * Handles a <tt>ColibriConferenceIQ</tt> stanza which represents a request.
      *
      * @param conferenceIQ the <tt>ColibriConferenceIQ</tt> stanza represents
@@ -627,21 +659,7 @@ public class Videobridge
         String focus = conferenceIQ.getFrom();
         Conference conference;
 
-        if ((options & OPTION_ALLOW_ANY_FOCUS) > 0)
-        {
-            // Act like the focus was not provided at all
-            options |= OPTION_ALLOW_NO_FOCUS;
-            focus = null;
-        }
-
-        if (focus == null && (options & OPTION_ALLOW_NO_FOCUS) == 0)
-        {
-            return IQUtils.createError(
-                    conferenceIQ, XMPPError.Condition.not_authorized);
-        }
-        else if (authorizedSourcePattern != null
-                && (focus == null
-                    || !authorizedSourcePattern.matcher(focus).matches()))
+        if (!accept(focus, options))
         {
             return IQUtils.createError(
                     conferenceIQ, XMPPError.Condition.not_authorized);
