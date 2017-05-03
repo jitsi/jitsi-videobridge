@@ -27,6 +27,7 @@ import org.ice4j.util.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.rtp.*;
@@ -55,8 +56,17 @@ public class VideoChannel
     /**
      * The name of the property used to disable LastN notifications.
      */
-    private static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
+    public static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
         = "org.jitsi.videobridge.DISABLE_LASTN_NOTIFICATIONS";
+
+    /**
+     * The Java system property name that holds the boolean that indicates
+     * whether or not to route the default video SSRCs that Chrome picks to send
+     * RTCP feedback with (when there's no SSRC signaled in the local
+     * description) to the video channel.
+     */
+    public static final String DISABLE_DEFAULT_RTCP_RECV_REPORT_SSRCS_PNAME
+        = "org.jitsi.videobridge.DISABLE_DEFAULT_RTCP_RECV_REPORT_SSRCS";
 
     /**
      * The name of the property used to disable NACK termination.
@@ -77,6 +87,28 @@ public class VideoChannel
      */
     private static final String LOG_OVERSENDING_STATS_PNAME
         = "org.jitsi.videobridge.LOG_OVERSENDING_STATS";
+
+    /**
+     * The ConfigurationService to get config values from.
+     */
+    private static final ConfigurationService cfg
+        = LibJitsi.getConfigurationService();
+
+    /**
+     * A boolean that indicates whether or not to route the default video SSRCs
+     * that Chrome picks to send RTCP feedback with (when there's no SSRC
+     * signaled in the local description) to the video channel.
+     */
+    public static final boolean DISABLE_DEFAULT_RTCP_RECV_REPORT_SSRCS
+        = cfg.getBoolean(DISABLE_DEFAULT_RTCP_RECV_REPORT_SSRCS_PNAME, false);
+
+    /**
+     * The default SSRC that Chrome picks to send RTCP feedback with, when
+     * there's no SSRC signaled in the local description.
+     */
+    private static final int[] DEFAULT_RTCP_RECV_REPORT_SSRCS
+        = DISABLE_DEFAULT_RTCP_RECV_REPORT_SSRCS
+            ? new int[0] : new int[] { 1, 2 };
 
     /**
      * The {@link Logger} used by the {@link VideoChannel} class to print debug
@@ -210,10 +242,6 @@ public class VideoChannel
                     classLogger,
                     content.getConference().getLogger());
 
-        ConfigurationService cfg
-            = content.getConference().getVideobridge()
-            .getConfigurationService();
-
         this.lipSyncHack
             = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, true)
             ? new LipSyncHack(this) : null;
@@ -266,6 +294,15 @@ public class VideoChannel
         }
 
         return changed;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int[] getDefaultReceiveSSRCs()
+    {
+        return DEFAULT_RTCP_RECV_REPORT_SSRCS;
     }
 
     /**

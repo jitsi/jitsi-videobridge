@@ -80,6 +80,12 @@ public class RtpChannel
     private static final long[] NO_RECEIVE_SSRCS = new long[0];
 
     /**
+     * An empty array of ints explicitly defined to reduce allocations and,
+     * consequently, the effects of garbage collection.
+     */
+    private static final int[] EMPTY_INT_ARRAY = new int[0];
+
+    /**
      * The maximum number of SSRCs to accept on this channel. RTP packets arriving
      */
     private static final int MAX_RECEIVE_SSRCS = 50;
@@ -764,6 +770,22 @@ public class RtpChannel
     private MediaService getMediaService()
     {
         return getContent().getMediaService();
+    }
+
+    /**
+     *  Gets the default receive SSRCs for this instance. When there's no SSRC
+     *  signaled in the local description, Chrome picks a default SSRC to send
+     *  RTCP feedback with. We must accept/process/forward RTCP coming from
+     *  these default SSRCs.
+     *
+     *  related: https://chromium.googlesource.com/external/webrtc/trunk/talk/+/1ab49dfe42941a18ead037138434abdfbd3a691b/media/webrtc/webrtcvideoengine2.cc#132
+     *  related: https://chromium.googlesource.com/external/webrtc/trunk/talk/+/1ab49dfe42941a18ead037138434abdfbd3a691b/media/webrtc/webrtcvideoengine2.cc#936
+     *  related: https://bugs.chromium.org/p/webrtc/issues/detail?id=7555
+     * @return
+     */
+    public int[] getDefaultReceiveSSRCs()
+    {
+        return EMPTY_INT_ARRAY;
     }
 
     /**
