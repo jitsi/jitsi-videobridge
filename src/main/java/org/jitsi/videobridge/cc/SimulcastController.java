@@ -910,14 +910,24 @@ public class SimulcastController
                         }
 
 
-                        if (((MediaStreamImpl) bitrateController
+                        int tid = ((MediaStreamImpl) bitrateController
                             .getVideoChannel().getStream())
-                            .getTemporalID(buf, off, len) == 0)
-                        {
-                            tl0PicIdx++;
-                        }
+                            .getTemporalID(buf, off, len);
 
-                        int dstTL0PICIDX = tl0PicIdx;
+                        int dstTL0PICIDX;
+                        if (tid > -1)
+                        {
+                            if (tid == 0)
+                            {
+                                tl0PicIdx++;
+                            }
+
+                            dstTL0PICIDX = tl0Idx;
+                        }
+                        else
+                        {
+                            dstTL0PICIDX = -1;
+                        }
 
                         destFrame = seenFrameAllocator.getOrCreate();
                         destFrame.reset(srcTs, seqNumTranslation, tsTranslation,
