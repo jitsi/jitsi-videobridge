@@ -1,7 +1,8 @@
 /var/log/jitsi/jvb.log {
-  daily
+  hourly
+  size 100M
   missingok
-  rotate 7
+  rotate 24
   compress
   delaycompress
   notifempty
