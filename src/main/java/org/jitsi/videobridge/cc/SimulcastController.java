@@ -871,7 +871,7 @@ public class SimulcastController
                             tsTranslation = maxSentFrame.tsTranslation;
                         }
 
-                        int dstPictureID = -1;
+                        int dstPictureID = -1, dstTL0PICIDX = -1;
                         if (ENABLE_VP8_PICID_REWRITING)
                         {
                             byte vp8PT = bitrateController.getVideoChannel()
@@ -907,26 +907,20 @@ public class SimulcastController
                                     logger.warn("A jump was detected in the picture IDs.");
                                 }
                             }
-                        }
 
+                            int tid = ((MediaStreamImpl) bitrateController
+                                .getVideoChannel().getStream())
+                                .getTemporalID(buf, off, len);
 
-                        int tid = ((MediaStreamImpl) bitrateController
-                            .getVideoChannel().getStream())
-                            .getTemporalID(buf, off, len);
-
-                        int dstTL0PICIDX;
-                        if (tid > -1)
-                        {
-                            if (tid == 0)
+                            if (tid > -1)
                             {
-                                tl0PicIdx++;
-                            }
+                                if (tid == 0)
+                                {
+                                    tl0PicIdx++;
+                                }
 
-                            dstTL0PICIDX = tl0Idx;
-                        }
-                        else
-                        {
-                            dstTL0PICIDX = -1;
+                                dstTL0PICIDX = tl0Idx;
+                            }
                         }
 
                         destFrame = seenFrameAllocator.getOrCreate();
