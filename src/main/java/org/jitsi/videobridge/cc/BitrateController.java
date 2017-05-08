@@ -355,9 +355,10 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        MediaStream destStream = dest.getStream();
+        VideoMediaStreamImpl destStream
+            = (VideoMediaStreamImpl) dest.getStream();
         BandwidthEstimator bwe = destStream == null ? null
-            : ((VideoMediaStream) destStream).getOrCreateBandwidthEstimator();
+            : destStream.getOrCreateBandwidthEstimator();
 
         boolean trustBwe = this.trustBwe;
         if (trustBwe)
@@ -378,7 +379,8 @@ public class BitrateController
             bweBps = bwe.getLatestEstimate();
         }
 
-        if (bweBps < 0 || !trustBwe)
+        if (bweBps < 0 || !trustBwe
+            || !destStream.getRtxTransformer().destinationSupportsRtx())
         {
             bweBps = Long.MAX_VALUE;
         }
