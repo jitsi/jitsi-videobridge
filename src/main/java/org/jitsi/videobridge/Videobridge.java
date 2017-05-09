@@ -623,15 +623,14 @@ public class Videobridge
             return true;
         }
 
-        if (focus == null && (options & OPTION_ALLOW_NO_FOCUS) != 0)
+        if (focus == null)
         {
-            return true;
+            return (options & OPTION_ALLOW_NO_FOCUS) != 0;
         }
 
         if (authorizedSourcePattern != null)
         {
-            return focus != null &&
-                authorizedSourcePattern.matcher(focus).matches();
+            return authorizedSourcePattern.matcher(focus).matches();
         }
         else
         {
