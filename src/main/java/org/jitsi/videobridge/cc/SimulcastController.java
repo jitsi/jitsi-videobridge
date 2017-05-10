@@ -416,8 +416,6 @@ public class SimulcastController
             return pktIn;
         }
 
-        BitstreamController bitstreamController = this.bitstreamController;
-
         // Drop SRs from other streams.
         boolean removed = false;
         RTCPIterator it = new RTCPIterator(pktIn);
@@ -919,7 +917,7 @@ public class SimulcastController
                                     tl0PicIdx++;
                                 }
 
-                                dstTL0PICIDX = tl0Idx;
+                                dstTL0PICIDX = tl0PicIdx;
                             }
                         }
 
