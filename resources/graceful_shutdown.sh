@@ -90,13 +90,7 @@ then
 		then
 			printError "Bridge did not exit after $timeout sec - killing $pid"
 			kill $pid
-		else
-			printInfo "Bridge shutdown OK"
-			exit 0
 		fi
-	else
-		printInfo "Bridge shutdown OK"
-		exit 0
 	fi
 	# check for 3 seconds if we managed to kill
 	for I in 1 2 3
@@ -113,10 +107,11 @@ then
 		kill -9 $pid
 		if ps -p $pid > /dev/null 2>&1
 		then
-			printError "Failed to force kill $pid"
+			printError "Failed to force kill $pid, giving up."
 			exit 1
 		fi
 	fi
+    rm -f /var/run/jitsi-videobridge.pid
 	printInfo "Bridge shutdown OK"
 	exit 0
 else
