@@ -43,6 +43,11 @@ while getopts "p:h:t:s" opt; do
 done
 shift "$((OPTIND-1))"
 
+# Try the pid file, if no pid was provided as an argument.
+if [ "$pid" = "" ] ;then
+    pid=`cat /var/run/jitsi-videobridge.pid`
+fi
+
 #Check if PID is a number
 re='^[0-9]+$'
 if ! [[ $pid =~ $re ]] ; then
