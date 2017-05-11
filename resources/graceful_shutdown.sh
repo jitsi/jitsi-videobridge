@@ -52,8 +52,8 @@ fi
 # Returns conference count by calling JVB REST statistics API and extracting
 # conference count from JSON stats text returned.
 function getConferenceCount {
-    stats=$(curl -s "$hostUrl/colibri/stats"| jq ". conferences")
-    echo $stats
+    # Total number of conferences minus the empty conferences
+    curl -s "$hostUrl/colibri/stats"| jq '.conferences - .conference_sizes[0]'
 }
 
 # Prints info messages
