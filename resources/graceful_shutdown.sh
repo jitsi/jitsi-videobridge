@@ -43,6 +43,11 @@ while getopts "p:h:t:s" opt; do
 done
 shift "$((OPTIND-1))"
 
+# Try the pid file, if no pid was provided as an argument.
+if [ "$pid" = "" ] ;then
+    pid=`cat /var/run/jitsi-videobridge.pid`
+fi
+
 #Check if PID is a number
 re='^[0-9]+$'
 if ! [[ $pid =~ $re ]] ; then
@@ -52,8 +57,8 @@ fi
 # Returns conference count by calling JVB REST statistics API and extracting
 # conference count from JSON stats text returned.
 function getConferenceCount {
-    stats=$(curl -s "$hostUrl/colibri/stats"| jq ". conferences")
-    echo $stats
+    # Total number of conferences minus the empty conferences
+    curl -s "$hostUrl/colibri/stats"| jq '.conferences - .conference_sizes[0]'
 }
 
 # Prints info messages
@@ -90,13 +95,7 @@ then
 		then
 			printError "Bridge did not exit after $timeout sec - killing $pid"
 			kill $pid
-		else
-			printInfo "Bridge shutdown OK"
-			exit 0
 		fi
-	else
-		printInfo "Bridge shutdown OK"
-		exit 0
 	fi
 	# check for 3 seconds if we managed to kill
 	for I in 1 2 3
@@ -113,10 +112,11 @@ then
 		kill -9 $pid
 		if ps -p $pid > /dev/null 2>&1
 		then
-			printError "Failed to force kill $pid"
+			printError "Failed to force kill $pid, giving up."
 			exit 1
 		fi
 	fi
+    rm -f /var/run/jitsi-videobridge.pid
 	printInfo "Bridge shutdown OK"
 	exit 0
 else
