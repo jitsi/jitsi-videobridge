@@ -1328,7 +1328,7 @@ public class RtpChannel
          * Convert the PayloadTypePacketExtensions into Formats and let the
          * MediaStream know about them.
          */
-        if ((payloadTypes != null) && (payloadTypes.size() > 0))
+        if (payloadTypes != null && !payloadTypes.isEmpty())
         {
             MediaService mediaService = getMediaService();
 

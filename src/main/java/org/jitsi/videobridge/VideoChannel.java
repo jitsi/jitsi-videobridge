@@ -24,6 +24,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.ice4j.util.*;
+import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.service.configuration.*;
@@ -632,10 +633,19 @@ public class VideoChannel
         // TODO remove this whole method.
         boolean enableRedFilter = true;
 
+        // Support for FIR and PLI is declared per-payload type, but currently
+        // our code which requests FIR and PLI is not payload-type aware. So
+        // until this changes we will just check if any of the PTs supports
+        // FIR and PLI.
+        boolean supportsFir = false;
+        boolean supportsPli = false;
+
         // If we're not given any PTs at all, assume that we shouldn't touch
         // RED.
         if (payloadTypes == null || payloadTypes.isEmpty())
+        {
             return;
+        }
 
         for (PayloadTypePacketExtension payloadType : payloadTypes)
         {
@@ -644,12 +654,36 @@ public class VideoChannel
                 enableRedFilter = false;
             }
 
+            for (RtcpFbPacketExtension rtcpFb :
+                        payloadType.getChildExtensionsOfType(
+                                RtcpFbPacketExtension.class))
+            {
+                if ("ccm".equals(rtcpFb.getAttribute("type"))
+                        && "fir".equals(rtcpFb.getAttribute("subtype")))
+                {
+                    supportsFir = true;
+                }
+                else if ("nack".equals(rtcpFb.getAttribute("type"))
+                    && "pli".equals(rtcpFb.getAttribute("subtype")))
+                {
+                    supportsPli = true;
+                }
+            }
         }
 
         // If the endpoint supports RED we disable the filter (e.g. leave RED).
         // Otherwise, we strip it.
         if (transformEngine != null)
+        {
             transformEngine.enableREDFilter(enableRedFilter);
+        }
+
+        MediaStream mediaStream = getStream();
+        if (mediaStream != null)
+        {
+            ((VideoMediaStreamImpl) mediaStream).setSupportsFir(supportsFir);
+            ((VideoMediaStreamImpl) mediaStream).setSupportsPli(supportsPli);
+        }
     }
 
     /**
