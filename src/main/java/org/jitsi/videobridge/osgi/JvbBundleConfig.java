@@ -29,6 +29,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.*;
+import org.jitsi.videobridge.xmpp.*;
 
 /**
  * OSGi bundles description for the Jitsi Videobridge.
@@ -263,6 +264,9 @@ public class JvbBundleConfig
 
         // Trust the bandwidth estimations by default.
         defaults.put(BitrateController.TRUST_BWE_PNAME, true_);
+
+        // Trust the bandwidth estimations by default.
+        defaults.put(MediaStreamTrackFactory.ENABLE_SVC_PNAME, true_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed
