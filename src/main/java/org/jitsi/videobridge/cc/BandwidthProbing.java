@@ -163,6 +163,24 @@ public class BandwidthProbing
         if (totalNeededBps < 1)
         {
             // Not much.
+
+            if (logger.isDebugEnabled())
+            {
+                long bweBps = ((VideoMediaStream) destStream)
+                    .getOrCreateBandwidthEstimator().getLatestEstimate();
+
+                logger.debug("probing" +
+                    "," + System.currentTimeMillis() +
+                    "," + destStream.hashCode() +
+                    "," + 0 +
+                    "," + totalOptimalBps +
+                    "," + totalCurrentBps +
+                    "," + totalTargetBps +
+                    "," + totalNeededBps +
+                    "," + 0 +
+                    "," + bweBps);
+            }
+
             return;
         }
 
@@ -171,6 +189,20 @@ public class BandwidthProbing
 
         if (totalOptimalBps <= bweBps)
         {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("probing" +
+                    "," + System.currentTimeMillis() +
+                    "," + destStream.hashCode() +
+                    "," + 0 +
+                    "," + totalOptimalBps +
+                    "," + totalCurrentBps +
+                    "," + totalTargetBps +
+                    "," + totalNeededBps +
+                    "," + 0 +
+                    "," + bweBps);
+            }
+
             // it seems like the optimal bps fits in the bandwidth estimation,
             // let's update the bitrate controller.
             dest.getBitrateController().update(null, bweBps);
@@ -183,14 +215,16 @@ public class BandwidthProbing
 
         if (logger.isDebugEnabled())
         {
-            logger.debug("padding,stream="+ destStream.hashCode()
-                + " padding_bps=" + paddingBps
-                + ",optimal_bps=" + totalOptimalBps
-                + ",current_bps=" + totalCurrentBps
-                + ",target_bps=" + totalTargetBps
-                + ",needed_bps=" + totalNeededBps
-                + ",max_padding_bps=" + maxPaddingBps
-                + ",bwe_bps=" + bweBps);
+            logger.debug("probing" +
+                "," + System.currentTimeMillis() +
+                "," + destStream.hashCode() +
+                "," + paddingBps +
+                "," + totalOptimalBps +
+                "," + totalCurrentBps +
+                "," + totalTargetBps +
+                "," + totalNeededBps +
+                "," + maxPaddingBps +
+                "," + bweBps);
         }
 
         if (paddingBps < 1)
