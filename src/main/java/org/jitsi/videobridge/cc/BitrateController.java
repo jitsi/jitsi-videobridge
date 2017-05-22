@@ -891,7 +891,10 @@ public class BitrateController
 
             List<RateSnapshot> ratesList = new ArrayList<>();
             // Initialize the list of flows that we will consider for sending
-            // for this track.
+            // for this track. For example, for the on-stage participant we
+            // consider 720p@30fps, 360p@30fps, 180p@30fps, 180p@15fps,
+            // 180p@7.5fps while for the thumbnails we consider 180p@30fps,
+            // 180p@15fps and 180p@7.5fps
             for (RTPEncodingDesc encoding : encodings)
             {
                 if (selected)
