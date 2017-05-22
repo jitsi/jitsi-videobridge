@@ -262,10 +262,11 @@ public class JvbBundleConfig
         defaults.put(
             SimulcastController.ENABLE_VP8_PICID_REWRITING_PNAME, true_);
 
-        // Trust the bandwidth estimations by default.
+        // Trust the send side bandwidth estimations (which enables adaptivity)
+        // by default.
         defaults.put(BitrateController.TRUST_BWE_PNAME, true_);
 
-        // Trust the bandwidth estimations by default.
+        // Enable VP8 temporal scalability filtering by default.
         defaults.put(MediaStreamTrackFactory.ENABLE_SVC_PNAME, true_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
