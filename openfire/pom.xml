@@ -12,6 +12,20 @@
     <artifactId>jitsi-videobridge-openfire</artifactId>
     <version>2.0-SNAPSHOT</version>
     <name>Jitsi Videobridge Openfire Plugin</name>
+    <description>Integrates Jitsi Video Bridge into Openfire.</description>
+
+    <organization>
+        <name>Jitsi</name>
+        <url>https://jitsi.org</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <properties>
         <!-- Override the default plugin name, as the default include illegal characters. -->
