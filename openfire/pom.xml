@@ -30,6 +30,7 @@
     <properties>
         <!-- Override the default plugin name, as the default include illegal characters. -->
         <plugin.name>jitsivideobridge</plugin.name>
+        <videobridge.version>1.0-20170523.204532-356</videobridge.version>
     </properties>
 
     <build>
@@ -59,7 +60,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.bouncycastle</groupId>
@@ -126,7 +127,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-linux-32</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -134,7 +135,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-linux-64</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -142,7 +143,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-macosx</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -150,7 +151,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-windows-32</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -158,7 +159,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-windows-64</classifier>
             <scope>runtime</scope>
         </dependency>
