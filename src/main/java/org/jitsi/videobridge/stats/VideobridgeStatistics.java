@@ -20,6 +20,8 @@ import java.text.*;
 import java.util.*;
 import java.util.concurrent.locks.*;
 
+import net.java.sip.communicator.util.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.videobridge.*;
@@ -259,6 +261,21 @@ public class VideobridgeStatistics
      */
     public static final String VIDEOSTREAMS = "videostreams";
 
+    /**
+     * The name of the "region" statistic.
+     */
+    public static final String REGION = "region";
+
+    /**
+     * The currently configured region.
+     */
+    public static String region = null;
+
+    /**
+     * The name of the property used to configure the region.
+     */
+    public static final String REGION_PNAME = "org.jitsi.videobridge.REGION";
+
     static
     {
         dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -288,6 +305,16 @@ public class VideobridgeStatistics
      */
     public VideobridgeStatistics()
     {
+        BundleContext bundleContext
+            = StatsManagerBundleActivator.getBundleContext();
+
+        ConfigurationService cfg
+            = ServiceUtils.getService(bundleContext, ConfigurationService.class);
+        if (cfg != null)
+        {
+            region = cfg.getString(REGION_PNAME, region);
+        }
+
         // Is it necessary to set initial values for all of these?
         unlockedSetStat(AUDIOCHANNELS, 0);
         unlockedSetStat(BITRATE_DOWNLOAD, 0d);
@@ -639,6 +666,10 @@ public class VideobridgeStatistics
                             totalColibriWebSocketMessagesSent);
 
             unlockedSetStat(TIMESTAMP, timestamp);
+            if (region != null)
+            {
+                unlockedSetStat(REGION, region);
+            }
         }
         finally
         {
