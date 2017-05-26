@@ -9,9 +9,10 @@
   <includeBaseDirectory>false</includeBaseDirectory>
   <fileSets>
     <fileSet>
-      <directory>${project.basedir}/lib</directory>
+      <directory>${project.basedir}/lib/native/macosx</directory>
+      <outputDirectory></outputDirectory>
       <includes>
-        <include>native/macosx/**</include>
+        <include>*</include>
       </includes>
     </fileSet>
   </fileSets>
