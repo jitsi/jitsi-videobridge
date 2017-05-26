@@ -12,10 +12,25 @@
     <artifactId>jitsi-videobridge-openfire</artifactId>
     <version>2.0-SNAPSHOT</version>
     <name>Jitsi Videobridge Openfire Plugin</name>
+    <description>Integrates Jitsi Video Bridge into Openfire.</description>
+
+    <organization>
+        <name>Jitsi</name>
+        <url>https://jitsi.org</url>
+    </organization>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <properties>
         <!-- Override the default plugin name, as the default include illegal characters. -->
         <plugin.name>jitsivideobridge</plugin.name>
+        <videobridge.version>1.0-20170526.134340-357</videobridge.version>
     </properties>
 
     <build>
@@ -45,7 +60,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.bouncycastle</groupId>
@@ -112,7 +127,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-linux-32</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -120,7 +135,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-linux-64</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -128,7 +143,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-macosx</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -136,7 +151,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-windows-32</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -144,7 +159,7 @@
         <dependency>
             <groupId>org.jitsi</groupId>
             <artifactId>jitsi-videobridge</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${videobridge.version}</version>
             <classifier>native-windows-64</classifier>
             <scope>runtime</scope>
         </dependency>
@@ -175,6 +190,17 @@
                 <enabled>true</enabled>
             </snapshots>
             <url>https://github.com/jitsi/jitsi-maven-repository/raw/master/snapshots/</url>
+        </repository>
+        <repository>
+            <id>igniterealtime</id>
+            <name>Ignite Realtime Repository (Snapshots)</name>
+            <url>http://igniterealtime.org/repo/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 </project>
