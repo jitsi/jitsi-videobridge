@@ -514,6 +514,23 @@ public class LipSyncHack
         @Override
         public RawPacket[] reverseTransform(RawPacket[] pkts)
         {
+            if (logger.isDebugEnabled())
+            {
+                for (RawPacket pkt : pkts)
+                {
+                    if (!RTPPacketPredicate.INSTANCE.test(pkt))
+                    {
+                        continue;
+                    }
+
+                    logger.debug("rtp_in"
+                        + "," + LipSyncHack.this.dest.getStream().hashCode()
+                        + "," + System.currentTimeMillis()
+                        + "," + pkt.getSSRCAsLong()
+                        + "," + pkt.getTimestamp());
+                }
+            }
+
             return pkts;
         }
 
@@ -578,7 +595,26 @@ public class LipSyncHack
                 pkts[i] = transformation.apply(pkts[i]);
             }
 
-            return ArrayUtils.concat(cumulExtras, pkts);
+
+            RawPacket[] ret = ArrayUtils.concat(cumulExtras, pkts);
+            if (logger.isDebugEnabled())
+            {
+                for (RawPacket pkt : pkts)
+                {
+                    if (!RTPPacketPredicate.INSTANCE.test(pkt))
+                    {
+                        continue;
+                    }
+
+                    logger.debug("rtp_out"
+                        + "," + dest.getStream().hashCode()
+                        + "," + System.currentTimeMillis()
+                        + "," + pkt.getSSRCAsLong()
+                        + "," + pkt.getTimestamp());
+                }
+            }
+
+            return ret;
         }
     }
 
@@ -600,8 +636,39 @@ public class LipSyncHack
          * {@inheritDoc}
          */
         @Override
+        public RawPacket reverseTransform(RawPacket pkt)
+        {
+            if (logger.isDebugEnabled()
+                && RTCPPacketPredicate.INSTANCE.test(pkt)
+                && RTCPHeaderUtils.getPacketType(pkt) == RTCPPacket.SR)
+            {
+                logger.debug("rtcp_in"
+                    + "," + dest.getStream().hashCode()
+                    + "," + System.currentTimeMillis()
+                    + "," + pkt.getRTCPSSRC()
+                    + "," + RTCPSenderInfoUtils.getTimestamp(pkt));
+            }
+
+            return pkt;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public RawPacket transform(RawPacket pkt)
         {
+            if (logger.isDebugEnabled()
+                && RTCPPacketPredicate.INSTANCE.test(pkt)
+                && RTCPHeaderUtils.getPacketType(pkt) == RTCPPacket.SR)
+            {
+                logger.debug("rtcp_out"
+                    + "," + dest.getStream().hashCode()
+                    + "," + System.currentTimeMillis()
+                    + "," + pkt.getRTCPSSRC()
+                    + "," + RTCPSenderInfoUtils.getTimestamp(pkt));
+            }
+
             if (injections.isEmpty())
             {
                 return pkt;
