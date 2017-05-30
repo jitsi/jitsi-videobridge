@@ -125,6 +125,8 @@ public class MediaStreamTrackFactory
         for (int streamIdx = 0; streamIdx < primary.length; streamIdx++)
         {
             for (int spatialIdx = 0; spatialIdx < spatialLen; spatialIdx++)
+            {
+                double frameRate = (double) 30 / (1 << (temporalLen - 1));
                 for (int temporalIdx = 0;
                      temporalIdx < temporalLen; temporalIdx++)
                 {
@@ -173,8 +175,11 @@ public class MediaStreamTrackFactory
                         = new RTPEncodingDesc(track, idx,
                         primary[streamIdx],
                         rtx == null || rtx.length == 0 ? -1 : rtx[streamIdx],
-                        temporalId, spatialId, height, dependencies);
+                        temporalId, spatialId, height, frameRate, dependencies);
+
+                    frameRate *= 2;
                 }
+            }
 
             height *= 2;
         }

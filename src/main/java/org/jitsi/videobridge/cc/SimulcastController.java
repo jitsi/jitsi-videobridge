@@ -1311,7 +1311,7 @@ public class SimulcastController
                                 pktOut.getOffset(), pktOut.getLength() + 1);
                             pktsOut[i] = pktOut;
 
-                            logger.warn("Extending the picture ID of a VP8 pkt.");
+                            logger.debug("Extending the picture ID of a VP8 pkt.");
                         }
 
                         if (!DePacketizer
