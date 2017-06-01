@@ -503,19 +503,19 @@ class HandlerImpl
                     = statsManager.getStatistics().iterator();
                 Statistics statistics = null;
 
-                if (i.hasNext())
+                Map<String, Object> stats = new HashMap<>();
+                JSONObject statisticsJSONObject = new JSONObject();
+                while (i.hasNext()) {
                     statistics = i.next();
-
-                JSONObject statisticsJSONObject
-                    = JSONSerializer.serializeStatistics(statistics);
+                    statisticsJSONObject.putAll(statistics.getStats());
+                }
                 Writer writer = response.getWriter();
-
-                response.setStatus(HttpServletResponse.SC_OK);
                 if (statisticsJSONObject == null)
                     writer.write("null");
                 else
                     statisticsJSONObject.writeJSONString(writer);
 
+                response.setStatus(HttpServletResponse.SC_OK);
                 return;
             }
         }

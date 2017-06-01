@@ -30,6 +30,7 @@ import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.stats.RtpChannelStatistics;
 import org.osgi.framework.*;
 
 /**
@@ -60,6 +61,7 @@ public class Content
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
      */
     private final Map<String,Channel> channels = new HashMap<>();
+    private final Map<String, RtpChannelStatistics> channelStats = new HashMap<>();
 
     /**
      * The <tt>Conference</tt> which has initialized this <tt>Content</tt>.
@@ -262,7 +264,9 @@ public class Content
                             transportNamespace, initiator);
                         break;
                     }
+                    RtpChannelStatistics rtpChannelStats = new RtpChannelStatistics(id, channel);
                     channels.put(id, channel);
+                    channelStats.put(id, rtpChannelStats);
                 }
             }
         }
@@ -436,6 +440,7 @@ public class Content
             if (channel.equals(channels.get(id)))
             {
                 channels.remove(id);
+                channelStats.remove(id);
                 expireChannel = true;
             }
             else
