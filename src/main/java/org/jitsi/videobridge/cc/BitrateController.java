@@ -438,7 +438,7 @@ public class BitrateController
         }
 
         // Compute the bitrate allocation.
-        List<TrackBitrateAllocation>
+        TrackBitrateAllocation[]
             trackBitrateAllocations = allocate(bweBps, conferenceEndpoints);
 
         // Update the the controllers based on the allocation and send a
@@ -450,9 +450,9 @@ public class BitrateController
         Set<String> endpointsEnteringLastNIds = new HashSet<>();
         Set<String> conferenceEndpointIds = new HashSet<>();
 
+        long nowMs = System.currentTimeMillis();
         List<SimulcastController> simulcastControllers = new ArrayList<>();
-        if (trackBitrateAllocations != null
-            && !trackBitrateAllocations.isEmpty())
+        if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
         {
             for (TrackBitrateAllocation
                 trackBitrateAllocation : trackBitrateAllocations)
@@ -501,12 +501,14 @@ public class BitrateController
                     if (logger.isDebugEnabled())
                     {
                         logger.debug("qot" +
-                            "," + System.currentTimeMillis() +
+                            "," + nowMs +
                             "," + destStream.hashCode() +
                             "," + ctrl.getSource().hashCode() +
                             "," + ctrl.getCurrentIndex() +
                             "," + targetIdx +
-                            "," + optimalIdx);
+                            "," + optimalIdx +
+                            "," + trackBitrateAllocation.getTargetBitrate() +
+                            "," + trackBitrateAllocation.getOptimalBitrate());
                     }
                 }
 
@@ -561,26 +563,35 @@ public class BitrateController
      * {@link ConferenceSpeechActivity}.
      * @return an array of {@link TrackBitrateAllocation}.
      */
-    private List<TrackBitrateAllocation> allocate(
+    private TrackBitrateAllocation[] allocate(
         long maxBandwidth, List<Endpoint> conferenceEndpoints)
     {
-        List<TrackBitrateAllocation>
+        TrackBitrateAllocation[]
             trackBitrateAllocations = prioritize(conferenceEndpoints);
 
-        if (trackBitrateAllocations == null
-            || trackBitrateAllocations.isEmpty())
+        if (ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
         {
             return trackBitrateAllocations;
         }
 
         long oldMaxBandwidth = 0;
+
+        int oldStateLen = 0;
+        int[] oldState = new int[trackBitrateAllocations.length];
+        int[] newState = new int[trackBitrateAllocations.length];
+        Arrays.fill(newState, -1);
+
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
+            System.arraycopy(newState, 0, oldState, 0, oldState.length);
 
-            for (TrackBitrateAllocation trackBitrateAllocation
-                : trackBitrateAllocations)
+            int newStateLen = 0;
+            for (int i = 0; i < trackBitrateAllocations.length; i++)
             {
+                TrackBitrateAllocation trackBitrateAllocation
+                    = trackBitrateAllocations[i];
+
                 if (!trackBitrateAllocation.fitsInLastN)
                 {
                     // participants that are not forwarded are sunk in the
@@ -593,7 +604,33 @@ public class BitrateController
                 maxBandwidth += trackBitrateAllocation.getTargetBitrate();
                 trackBitrateAllocation.improve(maxBandwidth);
                 maxBandwidth -= trackBitrateAllocation.getTargetBitrate();
+
+                newState[i] = trackBitrateAllocation.getTargetIndex();
+                if (trackBitrateAllocation.getTargetIndex() > -1)
+                {
+                    newStateLen++;
+                }
+
+                if (trackBitrateAllocation.ratesIdx
+                    < trackBitrateAllocation.preferredIdx)
+                {
+                    break;
+                }
             }
+
+            if (oldStateLen > newStateLen)
+            {
+                // rollback state to prevent jumps in the number of forwarded
+                // participants.
+                for (int i = 0; i < trackBitrateAllocations.length; i++)
+                {
+                    trackBitrateAllocations[i].ratesIdx = oldState[i];
+                }
+
+                break;
+            }
+
+            oldStateLen = newStateLen;
         }
 
         // at this point, maxBandwidth is what we failed to allocate.
@@ -618,7 +655,7 @@ public class BitrateController
      * selected endpoint are at the top of the array, followed by the pinned
      * endpoints, finally followed by any other remaining endpoints.
      */
-    private List<TrackBitrateAllocation> prioritize(
+    private TrackBitrateAllocation[] prioritize(
         List<Endpoint> conferenceEndpoints)
     {
         if (dest.isExpired())
@@ -758,7 +795,8 @@ public class BitrateController
             }
         }
 
-        return trackBitrateAllocations;
+        return trackBitrateAllocations.toArray(
+            new TrackBitrateAllocation[trackBitrateAllocations.size()]);
     }
 
     /**
@@ -845,6 +883,13 @@ public class BitrateController
         private final RateSnapshot[] rates;
 
         /**
+         * The index in the {@link #rates} array that needs to be achieved
+         * before allocating bandwidth for any of the other tracks after this
+         * track.
+         */
+        private final int preferredIdx;
+
+        /**
          * The index in the {@link #rates} array that is the currently selected
          * target for this track.
          */
@@ -874,6 +919,7 @@ public class BitrateController
             if (track == null || !fitsInLastN)
             {
                 targetSSRC = -1;
+                preferredIdx = -1;
                 rates = EMPTY_RATE_SNAPSHOT_ARRAY;
                 return;
             }
@@ -883,6 +929,7 @@ public class BitrateController
             if (ArrayUtils.isNullOrEmpty(encodings))
             {
                 targetSSRC = -1;
+                preferredIdx = -1;
                 rates = EMPTY_RATE_SNAPSHOT_ARRAY;
                 return;
             }
@@ -895,6 +942,7 @@ public class BitrateController
             // consider 720p@30fps, 360p@30fps, 180p@30fps, 180p@15fps,
             // 180p@7.5fps while for the thumbnails we consider 180p@30fps,
             // 180p@15fps and 180p@7.5fps
+            int preferredIdx = -1;
             for (RTPEncodingDesc encoding : encodings)
             {
                 if (selected)
@@ -907,6 +955,11 @@ public class BitrateController
                         ratesList.add(new RateSnapshot(
                             encoding.getLastStableBitrateBps(), encoding));
                     }
+
+                    if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
+                    {
+                        preferredIdx = ratesList.size() - 1;
+                    }
                 }
                 else if (encoding.getHeight() <= THUMBNAIL_MAX_HEIGHT)
                 {
@@ -917,6 +970,7 @@ public class BitrateController
                 }
             }
 
+            this.preferredIdx = preferredIdx;
             rates = ratesList.toArray(new RateSnapshot[ratesList.size()]);
             // TODO Determining the optimal index needs some work. The optimal
             // index is constrained by the viewport of the endpoint. For
@@ -945,7 +999,7 @@ public class BitrateController
                 // Boost on stage participant to 360p.
                 for (int i = ratesIdx + 1; i < rates.length; i++)
                 {
-                    if (rates[i].encoding.getHeight() > ONSTAGE_PREFERRED_HEIGHT
+                    if (i > preferredIdx
                         || maxBps < rates[i].bps)
                     {
                         break;
@@ -973,6 +1027,16 @@ public class BitrateController
         long getTargetBitrate()
         {
             return ratesIdx != -1 ? rates[ratesIdx].bps : 0;
+        }
+
+        /**
+         * Gets the optimal bitrate (in bps) for this endpoint allocation.
+         *
+         * @return the optimal bitrate (in bps) for this endpoint allocation.
+         */
+        long getOptimalBitrate()
+        {
+            return rates.length != 0 ? rates[rates.length - 1].bps : 0L;
         }
 
         /**
