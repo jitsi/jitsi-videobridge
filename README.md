@@ -23,7 +23,7 @@ Or you can clone the Git repo and run the JVB from source using maven.
 
 ```sh
 HOST="Your XMPP server hostname/IP address goes here."
-DOMAIN="Yhe JVB component name goes here."
+DOMAIN="The JVB component name goes here."
 PORT="the component port of your XMPP server goes here."
 SECRET="The secret or password for the JVB component."
 JVB_HOME="The path to your JVB clone."
