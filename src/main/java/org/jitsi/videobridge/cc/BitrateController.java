@@ -942,7 +942,7 @@ public class BitrateController
             // consider 720p@30fps, 360p@30fps, 180p@30fps, 180p@15fps,
             // 180p@7.5fps while for the thumbnails we consider 180p@30fps,
             // 180p@15fps and 180p@7.5fps
-            int preferredIdx = -1;
+            int preferredIdx = 0;
             for (RTPEncodingDesc encoding : encodings)
             {
                 if (selected)
