@@ -18,6 +18,7 @@ package org.jitsi.videobridge.osgi;
 import java.io.*;
 import java.util.*;
 import org.ice4j.*;
+import org.ice4j.attribute.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.*;
@@ -244,6 +245,9 @@ public class JvbBundleConfig
 
         // Enable retransmission requests for video streams.
         defaults.put(VideoMediaStream.REQUEST_RETRANSMISSIONS_PNAME, true_);
+        
+        // Work around this Edge bug: https://github.com/jitsi/lib-jitsi-meet/issues/498
+        defaults.put(UsernameAttribute.STRIP_TRAILING_ZEROES_PNAME, true_);
 
         // Disable packet logging.
         defaults.put(
