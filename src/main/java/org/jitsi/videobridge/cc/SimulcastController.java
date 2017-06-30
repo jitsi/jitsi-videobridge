@@ -880,30 +880,7 @@ public class SimulcastController
 
                             if (isVP8)
                             {
-                                REDBlock redBlock = ((MediaStreamImpl)
-                                    bitrateController.getVideoChannel()
-                                        .getStream()).getPayloadBlock(
-                                            buf, off, len);
-
-                                int srcPID = DePacketizer
-                                    .VP8PayloadDescriptor.getPictureId(
-                                        redBlock.getBuffer(),
-                                        redBlock.getOffset());
-
-                                if (pidDelta == -1)
-                                {
-                                    pidDelta = (pidOff + 1 - srcPID) & 0x7FFF;
-                                }
-
-                                dstPictureID = (srcPID + pidDelta) & 0x7FFF;
-
-                                if (((dstPictureID - getMaxPictureID()) & 0x7FFF) > 200
-                                    || ((dstPictureID - getMaxPictureID()) & 0x7FFF) > 0x7F00)
-                                {
-                                    pidDelta = (getMaxPictureID() + 1 - srcPID) & 0x7FFF;
-                                    dstPictureID = (srcPID + pidDelta) & 0x7FFF;
-                                    logger.warn("A jump was detected in the picture IDs.");
-                                }
+                                dstPictureID = calculatePictureID(buf, off, len);
                             }
 
                             int tid = ((MediaStreamImpl) bitrateController
@@ -963,6 +940,53 @@ public class SimulcastController
             }
 
             return accept;
+        }
+
+        /**
+         * Calculates the destination picture ID of an incoming VP8 frame.
+         *
+         * @param buf
+         * @param off
+         * @param len
+         * @return the destination picture ID of the VP8 frame that is specified
+         * in the parameter.
+         */
+        private int calculatePictureID(byte[] buf, int off, int len)
+        {
+            REDBlock redBlock = ((MediaStreamImpl)
+                bitrateController.getVideoChannel()
+                    .getStream()).getPayloadBlock(
+                buf, off, len);
+
+            int srcPID = DePacketizer
+                .VP8PayloadDescriptor.getPictureId(
+                    redBlock.getBuffer(),
+                    redBlock.getOffset());
+
+            int dstPictureID;
+            if (srcPID > -1)
+            {
+                if (pidDelta == -1)
+                {
+                    pidDelta = (pidOff + 1 - srcPID) & 0x7FFF;
+                }
+
+                dstPictureID = (srcPID + pidDelta) & 0x7FFF;
+
+                if (((dstPictureID - getMaxPictureID()) & 0x7FFF) > 200
+                    || ((dstPictureID - getMaxPictureID()) & 0x7FFF) > 0x7F00)
+                {
+                    pidDelta = (getMaxPictureID() + 1 - srcPID) & 0x7FFF;
+                    dstPictureID = (srcPID + pidDelta) & 0x7FFF;
+                    logger.warn("A jump was detected in the picture IDs.");
+                }
+            }
+            else
+            {
+                dstPictureID = -1;
+            }
+
+            return dstPictureID;
         }
 
         /**
