@@ -75,15 +75,15 @@ The respective response could look like:
  			} 
 		] 
 }</pre>
-		</td>
-	</tr>
-	<tr>
+	</td>
+</tr>
+<tr>
 		<td>GET</td>
 		<td>/colibri/conferences{id}</td>
 		<td>
 			200 OK with a JSON object which represents the conference with the specified id. <br />
 			For example: 
-			<pre>
+<pre>
 { 
 	"id" : "{id}", 
 	"contents" : 
