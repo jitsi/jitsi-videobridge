@@ -919,7 +919,6 @@ public class BitrateController
             Endpoint endpoint, MediaStreamTrackDesc track,
             boolean fitsInLastN, boolean selected, int maxFrameHeight)
         {
-            System.out.println("BB: TrackBitrateAllocation using a maxFrameHeight of " + maxFrameHeight);
             this.endpointID = endpoint.getID();
             this.selected = selected;
             this.fitsInLastN = fitsInLastN;

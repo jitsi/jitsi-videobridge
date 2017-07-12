@@ -150,7 +150,7 @@ public class VideoChannel
     /**
      * Maximum frame height, in pixels, for any video stream forwarded to this receiver
      */
-    private int maxFrameHeight;
+    private int maxFrameHeight = MAX_FRAME_HEIGHT_DEFAULT;
 
     /**
      * @return the {@link RecurringRunnableExecutor} instance for
@@ -248,7 +248,6 @@ public class VideoChannel
         throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
-        this.maxFrameHeight = MAX_FRAME_HEIGHT_DEFAULT;
 
         logger
             = Logger.getLogger(
