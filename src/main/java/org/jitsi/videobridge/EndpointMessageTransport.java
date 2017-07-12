@@ -84,6 +84,13 @@ class EndpointMessageTransport
         = "EndpointMessage";
 
     /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code ReceiverVideoConstraint} message.
+     */
+    public static final String RECEIVER_VIDEO_CONSTRAINT
+        = "ReceiverVideoConstraint";
+
+    /**
      * The string which encodes a COLIBRI {@code ServerHello} message.
      */
     private static final String SERVER_HELLO_STR
@@ -275,6 +282,9 @@ class EndpointMessageTransport
             break;
         case COLIBRI_CLASS_LASTN_CHANGED:
             onLastNChangedEvent(src, jsonObject);
+            break;
+        case RECEIVER_VIDEO_CONSTRAINT:
+            onReceiverVideoConstraintEvent(src, jsonObject);
             break;
         default:
             break;
@@ -515,6 +525,36 @@ class EndpointMessageTransport
 
         for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO)) {
             channel.setLastN(lastN);
+        }
+    }
+
+    /**
+     * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraint}
+     * event has been received
+     *
+     * @param src the transport channel by which {@code jsonObject} has been
+     * received.
+     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
+     * {@code LastNChangedEvent} which has been received.
+     */
+    private void onReceiverVideoConstraintEvent(
+        Object src,
+        JSONObject jsonObject)
+    {
+        Object o = jsonObject.get("maxFrameHeight");
+        if (!(o instanceof Number))
+        {
+            logger.warn("Received a non-number maxFrameHeight video constraint from " + endpoint.getID() +
+                ": " + o.toString());
+            return;
+        }
+        int maxFrameHeight = ((Number) o).intValue();
+        logger.debug("Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
+
+        for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
+        {
+            VideoChannel videoChannel = (VideoChannel)channel;
+            videoChannel.setMaxFrameHeight(maxFrameHeight);
         }
     }
 

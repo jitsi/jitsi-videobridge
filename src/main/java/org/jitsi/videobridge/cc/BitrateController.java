@@ -717,7 +717,8 @@ public class BitrateController
                                 sourceEndpoint,
                                 track,
                                 true /* fitsInLastN */,
-                                true /* selected */));
+                                true /* selected */,
+                                getVideoChannel().getMaxFrameHeight()));
                     }
 
                     endpointPriority++;
@@ -754,7 +755,8 @@ public class BitrateController
                                 sourceEndpoint,
                                 track,
                                 true /* fitsInLastN */,
-                                false /* selected */));
+                                false /* selected */,
+                                getVideoChannel().getMaxFrameHeight()));
                     }
 
                     endpointPriority++;
@@ -787,7 +789,8 @@ public class BitrateController
                         trackBitrateAllocations.add(
                             endpointPriority, new TrackBitrateAllocation(
                                 sourceEndpoint, track,
-                                forwarded, false /* selected */));
+                                forwarded, false /* selected */,
+                                getVideoChannel().getMaxFrameHeight()));
                     }
 
                     endpointPriority++;
@@ -869,6 +872,11 @@ public class BitrateController
         private final int targetSSRC;
 
         /**
+         * Maximum frame height, in pixels, for any video stream forwarded to this receiver
+         */
+        private final int maxFrameHeight;
+
+        /**
          * The first {@link MediaStreamTrackDesc} of the {@link Endpoint} that
          * this instance pertains to.
          */
@@ -909,12 +917,14 @@ public class BitrateController
          */
         private TrackBitrateAllocation(
             Endpoint endpoint, MediaStreamTrackDesc track,
-            boolean fitsInLastN, boolean selected)
+            boolean fitsInLastN, boolean selected, int maxFrameHeight)
         {
+            System.out.println("BB: TrackBitrateAllocation using a maxFrameHeight of " + maxFrameHeight);
             this.endpointID = endpoint.getID();
             this.selected = selected;
             this.fitsInLastN = fitsInLastN;
             this.track = track;
+            this.maxFrameHeight = maxFrameHeight;
 
             if (track == null || !fitsInLastN)
             {
@@ -945,11 +955,15 @@ public class BitrateController
             int preferredIdx = 0;
             for (RTPEncodingDesc encoding : encodings)
             {
+                if (encoding.getHeight() > this.maxFrameHeight)
+                {
+                    continue;
+                }
                 if (selected)
                 {
                     // For the selected participant we favor resolution over
                     // frame rate.
-                    if (encoding.getHeight() < ONSTAGE_PREFERRED_HEIGHT
+                    if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT
                         || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
                     {
                         ratesList.add(new RateSnapshot(

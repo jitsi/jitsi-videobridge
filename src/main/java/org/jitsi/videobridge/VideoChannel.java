@@ -112,6 +112,12 @@ public class VideoChannel
             ? new int[0] : new int[] { 1, 2 };
 
     /**
+     * The default maximum frame height (in pixels) that can be forwarded to
+     * this participant
+     */
+    private static final int MAX_FRAME_HEIGHT_DEFAULT = 2160;
+
+    /**
      * The {@link Logger} used by the {@link VideoChannel} class to print debug
      * information. Note that instances should use {@link #logger} instead.
      */
@@ -140,6 +146,11 @@ public class VideoChannel
      * The object that implements a hack for LS for this {@link Endpoint}.
      */
     private final LipSyncHack lipSyncHack;
+
+    /**
+     * Maximum frame height, in pixels, for any video stream forwarded to this receiver
+     */
+    private int maxFrameHeight;
 
     /**
      * @return the {@link RecurringRunnableExecutor} instance for
@@ -237,6 +248,7 @@ public class VideoChannel
         throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
+        this.maxFrameHeight = MAX_FRAME_HEIGHT_DEFAULT;
 
         logger
             = Logger.getLogger(
@@ -748,6 +760,31 @@ public class VideoChannel
             rtt = stream.getMediaStreamStats().getReceiveStats().getRtt();
         }
         return rtt;
+    }
+
+    /**
+     * Set the maximum frame height, in pixels, of video streams that can be forwarded
+     * to this participant.
+     *
+     * @param maxFrameHeight the maximum frame height, in pixels, of video streams that can be forwarded
+     * to this participant;
+     */
+    public void setMaxFrameHeight(int maxFrameHeight)
+    {
+        this.maxFrameHeight = maxFrameHeight;
+        this.bitrateController.update(null, -1);
+    }
+
+    /**
+     * Get the maximum frame height, in pixels, of video streams that can be forwarded
+     * to this participant.
+     *
+     * @return the maximum frame height, in pixels, of video streams that can be forwarded
+     * to this participant;
+     */
+    public int getMaxFrameHeight()
+    {
+        return this.maxFrameHeight;
     }
 
     /**
