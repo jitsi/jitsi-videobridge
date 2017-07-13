@@ -87,7 +87,7 @@ class EndpointMessageTransport
      * The {@link Videobridge#COLIBRI_CLASS} value indicating a
      * {@code ReceiverVideoConstraint} message.
      */
-    public static final String RECEIVER_VIDEO_CONSTRAINT
+    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT
         = "ReceiverVideoConstraint";
 
     /**
@@ -283,7 +283,7 @@ class EndpointMessageTransport
         case COLIBRI_CLASS_LASTN_CHANGED:
             onLastNChangedEvent(src, jsonObject);
             break;
-        case RECEIVER_VIDEO_CONSTRAINT:
+        case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
             onReceiverVideoConstraintEvent(src, jsonObject);
             break;
         default:

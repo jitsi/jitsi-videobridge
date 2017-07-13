@@ -962,7 +962,7 @@ public class BitrateController
                 {
                     // For the selected participant we favor resolution over
                     // frame rate.
-                    if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT
+                    if (encoding.getHeight() < ONSTAGE_PREFERRED_HEIGHT
                         || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
                     {
                         ratesList.add(new RateSnapshot(
