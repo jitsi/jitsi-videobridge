@@ -15,13 +15,13 @@ if [[ "$1" == "--help"  || $# -lt 1 ]]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+BASE_LIB_DIR="$(echo ~jvb)"
 
 mainClass="org.jitsi.videobridge.Main"
-cp=$(JARS=($SCRIPT_DIR/jitsi-videobridge*.jar $SCRIPT_DIR/lib/*.jar); IFS=:; echo "${JARS[*]}")
-libs="$SCRIPT_DIR/lib/native/linux-64"
-logging_config="$SCRIPT_DIR/lib/logging.properties"
-videobridge_rc="$SCRIPT_DIR/lib/videobridge.rc"
+cp="$BASE_LIB_DIR/*:$BASE_LIB_DIR/lib/*"
+libs="$BASE_LIB_DIR/lib/native/linux-64"
+logging_config="$BASE_LIB_DIR/lib/logging.properties"
+videobridge_rc="$BASE_LIB_DIR/lib/videobridge.rc"
 
 # if there is a logging config file in lib folder use it (running from source)
 if [ -f $logging_config ]; then
