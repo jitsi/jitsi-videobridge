@@ -21,7 +21,7 @@ if [ -f /etc/jitsi/videobridge/config ]; then
 fi
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-DAEMON=/usr/share/jitsi-videobridge/jvb.sh
+DAEMON=/usr/bin/jvb
 NAME=jvb
 USER=jvb
 PIDFILE=/var/run/jitsi-videobridge.pid
