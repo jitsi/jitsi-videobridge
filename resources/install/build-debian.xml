@@ -108,10 +108,8 @@
               todir="${debian.dir}/etc/jitsi/videobridge"
               overwrite="true"/>
         <copy file="resources/install/${include-dir}/jvb.sh"
-              todir="${debian.dir}/usr/share/jitsi-videobridge"
+              tofile="${debian.dir}/usr/bin/jvb"
               overwrite="true"/>
-        <chmod file="${debian.dir}/usr/share/jitsi-videobridge/jvb.sh"
-               perm="755"/>
         <copy file="resources/graceful_shutdown.sh"
               todir="${debian.dir}/usr/share/jitsi-videobridge"
               overwrite="true"/>
@@ -122,6 +120,16 @@
               overwrite="true"/>
         <chmod file="${debian.dir}/usr/share/jitsi-videobridge/collect-dump-logs.sh"
                perm="755"/>
+
+        <chown owner="root">
+            <fileset dir="${debian.dir}/usr/bin"></fileset>
+        </chown>
+        <chgrp group="root">
+            <fileset dir="${debian.dir}/usr/bin"></fileset>
+        </chgrp>
+        <chmod perm="755">
+            <fileset dir="${debian.dir}/usr/bin"></fileset>
+        </chmod>
 
         <!-- callstats-java-sdk -->
         <copy file="config/log4j2.xml"
@@ -257,11 +265,12 @@ override_dh_auto_clean:
 
 override_dh_install-arch:
 ifeq ($(DEB_HOST_ARCH),amd64)
-&#009;dh_install resources/install/linux-64/jvb.sh usr/share/jitsi-videobridge
+&#009;dh_install resources/install/linux-64/jvb.sh usr/bin
 else
-&#009;dh_install resources/install/linux/jvb.sh usr/share/jitsi-videobridge
+&#009;dh_install resources/install/linux/jvb.sh usr/bin
 endif
-&#009;chmod +x debian/jitsi-videobridge/usr/share/jitsi-videobridge/jvb.sh
+&#009;chmod +x debian/jitsi-videobridge/usr/bin/jvb.sh
+&#009;chown root:root debian/jitsi-videobridge/usr/bin/jvb.sh
 
 </echo>
 

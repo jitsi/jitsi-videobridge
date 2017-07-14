@@ -1,3 +1,4 @@
+debian/usr/bin/*    /usr/bin/
 debian/usr/share/jitsi-videobridge/*	/usr/share/jitsi-videobridge/
 debian/etc/jitsi/videobridge/logging.properties	/etc/jitsi/videobridge/
 debian/etc/jitsi/videobridge/log4j2.xml	/etc/jitsi/videobridge/
