@@ -391,6 +391,12 @@ public class Endpoint
         {
             this.pinnedEndpoints = newPinnedEndpoints;
 
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(id + " pinned "
+                    + Arrays.toString(pinnedEndpoints.toArray()));
+            }
+
             firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
                 oldPinnedEndpoints, pinnedEndpoints);
         }
@@ -403,6 +409,12 @@ public class Endpoint
         if (!oldSelectedEndpoints.equals(newSelectedEndpoints))
         {
             this.selectedEndpoints = newSelectedEndpoints;
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug(id + " selected "
+                    + Arrays.toString(pinnedEndpoints.toArray()));
+            }
 
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
                 oldSelectedEndpoints, selectedEndpoints);
