@@ -900,7 +900,7 @@ public class SimulcastController
 
                         destFrame = seenFrameAllocator.getOrCreate();
                         destFrame.reset(srcTs, seqNumTranslation, tsTranslation,
-                            dstPictureID, dstTL0PICIDX);
+                            dstPictureID, dstTL0PICIDX, sourceFrameDesc.isIndependent());
                         seenFrames.put(srcTs, destFrame);
 
                         if (isNewest)
@@ -1410,9 +1410,10 @@ public class SimulcastController
                 long srcTs,
                 SeqNumTranslation seqNumTranslation,
                 TimestampTranslation tsTranslation,
-                int dstPictureID, int dstTL0PICIDX)
+                int dstPictureID, int dstTL0PICIDX,
+                boolean maybeFixInitialIndependentFrame)
             {
-                this.maybeFixInitialIndependentFrame = true;
+                this.maybeFixInitialIndependentFrame = maybeFixInitialIndependentFrame;
                 this.srcSeqNumLimit = -1;
                 this.srcSeqNumStart = -1;
                 this.srcTs = srcTs;
@@ -1429,7 +1430,7 @@ public class SimulcastController
              */
             void reset(long srcTs)
             {
-                reset(srcTs, null, null, -1, -1);
+                reset(srcTs, null, null, -1, -1, false);
             }
         }
 
