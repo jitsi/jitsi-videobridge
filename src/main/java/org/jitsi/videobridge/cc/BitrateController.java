@@ -473,20 +473,23 @@ public class BitrateController
                         RTPEncodingDesc[] rtpEncodings
                             = trackBitrateAllocation.track.getRTPEncodings();
 
-                        ctrl = new SimulcastController(
-                            this, trackBitrateAllocation.track);
-
-                        // Route all encodings to the specified bitrate
-                        // controller.
-                        for (RTPEncodingDesc rtpEncoding : rtpEncodings)
+                        if (!ArrayUtils.isNullOrEmpty(rtpEncodings))
                         {
-                            ssrcToBitrateController.put(
-                                rtpEncoding.getPrimarySSRC(), ctrl);
+                            ctrl = new SimulcastController(
+                                this, trackBitrateAllocation.track);
 
-                            if (rtpEncoding.getRTXSSRC() != -1)
+                            // Route all encodings to the specified bitrate
+                            // controller.
+                            for (RTPEncodingDesc rtpEncoding : rtpEncodings)
                             {
                                 ssrcToBitrateController.put(
-                                    rtpEncoding.getRTXSSRC(), ctrl);
+                                    rtpEncoding.getPrimarySSRC(), ctrl);
+
+                                if (rtpEncoding.getRTXSSRC() != -1)
+                                {
+                                    ssrcToBitrateController.put(
+                                        rtpEncoding.getRTXSSRC(), ctrl);
+                                }
                             }
                         }
                     }
@@ -925,25 +928,32 @@ public class BitrateController
             this.track = track;
             this.maxFrameHeight = maxFrameHeight;
 
-            if (track == null || !fitsInLastN)
+            RTPEncodingDesc[] encodings;
+            if (track == null)
             {
-                targetSSRC = -1;
+                this.targetSSRC = -1;
+                encodings = null;
+            }
+            else
+            {
+                encodings = track.getRTPEncodings();
+
+                if (ArrayUtils.isNullOrEmpty(encodings))
+                {
+                    this.targetSSRC = -1;
+                }
+                else
+                {
+                    this.targetSSRC = (int) encodings[0].getPrimarySSRC();
+                }
+            }
+
+            if (targetSSRC == -1 || !fitsInLastN)
+            {
                 preferredIdx = -1;
                 rates = EMPTY_RATE_SNAPSHOT_ARRAY;
                 return;
             }
-
-            RTPEncodingDesc[] encodings = track.getRTPEncodings();
-
-            if (ArrayUtils.isNullOrEmpty(encodings))
-            {
-                targetSSRC = -1;
-                preferredIdx = -1;
-                rates = EMPTY_RATE_SNAPSHOT_ARRAY;
-                return;
-            }
-
-            targetSSRC = (int) encodings[0].getPrimarySSRC();
 
             List<RateSnapshot> ratesList = new ArrayList<>();
             // Initialize the list of flows that we will consider for sending
