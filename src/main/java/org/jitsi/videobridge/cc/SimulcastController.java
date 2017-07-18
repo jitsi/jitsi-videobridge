@@ -83,6 +83,12 @@ public class SimulcastController
         cfg != null && cfg.getBoolean(ENABLE_VP8_PICID_REWRITING_PNAME, false);
 
     /**
+     * Controls the activation of experimental code that removes VP8 payload
+     * descriptor extended control bits.
+     */
+    private static final boolean REMOVE_VP8_EXTENDED_CONTROL_BITS = false;
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -386,8 +392,9 @@ public class SimulcastController
 
         RawPacket[] pktsOut = bitstreamController.rtpTransform(pktIn);
 
-        if (!ArrayUtils.isNullOrEmpty(pktsOut)
-            && pktIn.getSSRCAsLong() != targetSSRC)
+        if (REMOVE_VP8_EXTENDED_CONTROL_BITS
+            || (!ArrayUtils.isNullOrEmpty(pktsOut)
+            && pktIn.getSSRCAsLong() != targetSSRC))
         {
             // Rewrite the SSRC of the output RTP stream.
             for (RawPacket pktOut : pktsOut)
@@ -395,6 +402,27 @@ public class SimulcastController
                 if (pktOut != null)
                 {
                     pktOut.setSSRC((int) targetSSRC);
+
+                    if (REMOVE_VP8_EXTENDED_CONTROL_BITS)
+                    {
+                        // remove extended control bits
+                        REDBlock block = bitrateController.getVideoChannel()
+                            .getStream().getPayloadBlock(pktOut);
+
+                        int shiftLen = DePacketizer
+                            .VP8PayloadDescriptor.getSize(block) - 1;
+
+                        if (shiftLen > 0)
+                        {
+                            System.arraycopy(pktOut.getBuffer(),
+                                block.getOffset() + shiftLen,
+                                pktOut.getBuffer(),
+                                block.getOffset(),
+                                block.getLength() - shiftLen);
+
+                            pktOut.setLength(pktOut.getLength() - shiftLen);
+                        }
+                    }
                 }
             }
         }
