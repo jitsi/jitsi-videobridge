@@ -107,6 +107,12 @@ public class Conference
     private final String id;
 
     /**
+     * The "global" id of this conference, set by the controller (e.g. jicofo)
+     * as opposed to the bridge.
+     */
+    private final String gid;
+
+    /**
      * The string used to identify this conference for the purposes of logging.
      */
     private final String loggingId;
@@ -240,15 +246,21 @@ public class Conference
                       String id,
                       String focus,
                       String name,
-                      boolean enableLogging)
+                      boolean enableLogging,
+                      String gid)
     {
         if (videobridge == null)
+        {
             throw new NullPointerException("videobridge");
+        }
         if (id == null)
+        {
             throw new NullPointerException("id");
+        }
 
         this.videobridge = videobridge;
         this.id = id;
+        this.gid = gid;
         this.loggingId = "conf_id=" + id;
         this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
@@ -1850,6 +1862,16 @@ public class Conference
         return
             (conference == null ? "conf_id=null" : conference.getLoggingId());
     }
+
+    /**
+     * Gets the global ID of the conference.
+     * @return
+     */
+    public String getGid()
+    {
+        return gid;
+    }
+
 
     /**
      * Holds conference statistics.
