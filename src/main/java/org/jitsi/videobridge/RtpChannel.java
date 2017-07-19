@@ -895,7 +895,7 @@ public class RtpChannel
                 = mediaService.createMediaStream(
                         null,
                         mediaType,
-                        getDtlsControl());
+                        getSrtpControl());
 
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes

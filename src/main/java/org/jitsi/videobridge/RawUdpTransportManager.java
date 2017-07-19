@@ -472,7 +472,7 @@ public class RawUdpTransportManager
      * RawUdpTransportManager does not implement DTLS.
      */
     @Override
-    public DtlsControlImpl getDtlsControl(Channel channel)
+    public SrtpControl getSrtpControl(Channel channel)
     {
         return null;
     }

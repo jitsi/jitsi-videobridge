@@ -488,14 +488,14 @@ public abstract class Channel
      * @return <tt>DtlsControl</tt> if this instance supports DTLS transport or
      * <tt>null</tt> otherwise.
      */
-    protected DtlsControl getDtlsControl()
+    protected SrtpControl getSrtpControl()
     {
         TransportManager transportManager = getTransportManager();
 
         return
             (transportManager == null)
                 ? null
-                : transportManager.getDtlsControl(this);
+                : transportManager.getSrtpControl(this);
     }
 
     /**
