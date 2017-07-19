@@ -294,7 +294,8 @@ public class VideoChannel
             {
                 for (Channel peerChannel : peerChannels)
                 {
-                    if (peerChannel == this)
+                    if (peerChannel == this
+                        || !(peerChannel instanceof VideoChannel))
                     {
                         continue;
                     }
