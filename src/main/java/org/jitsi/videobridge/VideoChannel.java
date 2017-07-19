@@ -706,7 +706,7 @@ public class VideoChannel
     {
         Endpoint dominantEndpoint = conferenceSpeechActivity.getDominantEndpoint();
 
-        if (getEndpoint().equals(dominantEndpoint))
+        if (dominantEndpoint != null && dominantEndpoint.equals(getEndpoint()))
         {
             // We are the new dominant speaker. We expect other endpoints to
             // mark us as a selected endpoint as soon as they receive the
