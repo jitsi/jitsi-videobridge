@@ -196,15 +196,21 @@ public abstract class Channel
         throws Exception
     {
         if (content == null)
+        {
             throw new NullPointerException("content");
+        }
         if (StringUtils.isNullOrEmpty(id))
+        {
             throw new NullPointerException("id");
+        }
 
         this.id = id;
         this.content = content;
         this.channelBundleId = channelBundleId;
         if (initiator != null)
+        {
             this.initiator = initiator;
+        }
 
         this.logger
             = Logger.getLogger(classLogger,
