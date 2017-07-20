@@ -407,7 +407,7 @@ public class SimulcastController
                     {
                         // remove extended control bits
                         REDBlock block = bitrateController.getVideoChannel()
-                            .getStream().getPayloadBlock(pktOut);
+                            .getStream().getPrimaryREDBlock(pktOut);
 
                         int shiftLen = DePacketizer
                             .VP8PayloadDescriptor.getSize(block) - 1;
@@ -983,7 +983,7 @@ public class SimulcastController
         {
             REDBlock redBlock = ((MediaStreamImpl)
                 bitrateController.getVideoChannel()
-                    .getStream()).getPayloadBlock(
+                    .getStream()).getPrimaryREDBlock(
                 buf, off, len);
 
             int srcPID = DePacketizer
@@ -1333,7 +1333,7 @@ public class SimulcastController
                         assert source != null;
 
                         REDBlock redBlock = source.getMediaStreamTrackReceiver()
-                            .getStream().getPayloadBlock(
+                            .getStream().getPrimaryREDBlock(
                                 pktOut.getBuffer(),
                                 pktOut.getOffset(),
                                 pktOut.getLength());
@@ -1383,7 +1383,7 @@ public class SimulcastController
                         assert source != null;
 
                         REDBlock redBlock = source.getMediaStreamTrackReceiver()
-                            .getStream().getPayloadBlock(
+                            .getStream().getPrimaryREDBlock(
                                 pktOut.getBuffer(),
                                 pktOut.getOffset(),
                                 pktOut.getLength());
