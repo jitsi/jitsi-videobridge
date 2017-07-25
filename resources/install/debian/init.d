@@ -32,7 +32,10 @@ if [ ! $JVB_HOST ]; then
 fi
 DAEMON_OPTS=" --host=$JVB_HOST --domain=$JVB_HOSTNAME --port=$JVB_PORT --secret=$JVB_SECRET $JVB_OPTS"
 
-test -x $DAEMON || exit 0
+if [ ! -x $DAEMON ] ;then
+  echo "Daemon not executable: $DAEMON"
+  exit 1
+fi
 
 set -e
 
