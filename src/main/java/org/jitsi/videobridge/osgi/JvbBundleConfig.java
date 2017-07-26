@@ -103,6 +103,9 @@ public class JvbBundleConfig
             // of the Videobridge and (2) it pulls, does not push.
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
             "org/jitsi/videobridge/EndpointConnectionStatus"
+        },
+        {
+            "org/jitsi/videobridge/octo/OctoRelayService"
         }
     };
 
