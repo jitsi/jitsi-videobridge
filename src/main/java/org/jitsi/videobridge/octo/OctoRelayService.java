@@ -30,11 +30,11 @@ public class OctoRelayService
     implements BundleActivator
 {
     /**
-     * The {@link Logger} used by the {@link OctoRelayImpl} class and its
+     * The {@link Logger} used by the {@link OctoRelay} class and its
      * instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(OctoRelayImpl.class);
+        = Logger.getLogger(OctoRelay.class);
 
     /**
      * The name of the configuration property which controls the address on
@@ -53,7 +53,7 @@ public class OctoRelayService
     /**
      * The Octo relay instance used by this {@link OctoRelayService}.
      */
-    private OctoRelayImpl relay;
+    private OctoRelay relay;
 
     /**
      * The {@code ConfigurationService} which looks up values of configuration
@@ -62,10 +62,10 @@ public class OctoRelayService
     private ConfigurationService cfg;
 
     /**
-     * @return the {@link OctoRelayImpl} managed by this
+     * @return the {@link OctoRelay} managed by this
      * {@link OctoRelayService}.
      */
-    public OctoRelayImpl getRelay()
+    public OctoRelay getRelay()
     {
         return relay;
     }
@@ -83,12 +83,11 @@ public class OctoRelayService
         String address = cfg.getString(ADDRESS_PNAME, null);
         int port = cfg.getInt(PORT_PNAME, -1);
 
-
         if (address != null && NetworkUtils.isValidPortNumber(port))
         {
             try
             {
-                relay = new OctoRelayImpl(address, port);
+                relay = new OctoRelay(address, port);
 
                 bundleContext
                     .registerService(OctoRelayService.class.getName(), this,

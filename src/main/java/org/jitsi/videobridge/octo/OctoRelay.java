@@ -21,18 +21,21 @@ import org.jitsi.util.*;
 import java.net.*;
 
 /**
- * Implements a bridge-to-bridge (Octo) relay.
+ * Implements a bridge-to-bridge (Octo) relay. This class is responsible for
+ * holding the {@link DatagramSocket} which is to be used for bridge-to-bridge
+ * communication, and the "relay ID" which other bridges use to discover the
+ * socket address on which this bridge is accessible.
  *
  * @author Boris Grozev
  */
-public class OctoRelayImpl
+public class OctoRelay
 {
     /**
-     * The {@link Logger} used by the {@link OctoRelayImpl} class and its
+     * The {@link Logger} used by the {@link OctoRelay} class and its
      * instances to print debug information.
      */
     private static final Logger logger
-        = Logger.getLogger(OctoRelayImpl.class);
+        = Logger.getLogger(OctoRelay.class);
 
     /**
      * The socket used to send and receive Octo packets.
@@ -41,16 +44,20 @@ public class OctoRelayImpl
 
     /**
      * The Octo relay ID which will be advertised by jitsi-videobridge.
+     * Other bridges can use this ID in order to discover the socket address
+     * that this bridge is accessible on. With the current implementation the
+     * ID just encodes a pre-configured IP address and port,
+     * e.g. "10.0.0.1:20000"
      */
     private String relayId;
 
     /**
-     * Initializes a new {@link OctoRelayImpl} instance, binding on a specific
+     * Initializes a new {@link OctoRelay} instance, binding on a specific
      * address and port.
      * @param address the address on which to bind.
      * @param port the port on which to bind.
      */
-    public OctoRelayImpl(String address, int port)
+    public OctoRelay(String address, int port)
         throws UnknownHostException, SocketException
     {
         DatagramSocket s
@@ -61,7 +68,7 @@ public class OctoRelayImpl
     }
 
     /**
-     * Stops this {@link OctoRelayImpl}, closing its {@link DatagramSocket}.
+     * Stops this {@link OctoRelay}, closing its {@link DatagramSocket}.
      */
     void stop()
     {
@@ -71,12 +78,12 @@ public class OctoRelayImpl
         }
         catch (Exception e)
         {
-            logger.warn("Failed to stop OctoRelayImpl: ", e);
+            logger.warn("Failed to stop OctoRelay: ", e);
         }
     }
 
     /**
-     * @return the ID of this {@link OctoRelayImpl}.
+     * @return the ID of this {@link OctoRelay}.
      */
     public String getId()
     {
@@ -85,7 +92,7 @@ public class OctoRelayImpl
 
     /**
      * @return  the {@link MultiplexingDatagramSocket} used by this
-     * {@link OctoRelayImpl}.
+     * {@link OctoRelay}.
      */
     public MultiplexingDatagramSocket getSocket()
     {
