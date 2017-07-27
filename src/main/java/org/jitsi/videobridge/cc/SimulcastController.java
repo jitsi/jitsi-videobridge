@@ -506,7 +506,7 @@ public class SimulcastController
          * A boolean that indicates whether or not the current TL0 is adaptive
          * or not.
          */
-        private boolean adaptive;
+        private boolean isAdaptive;
 
         /**
          * The sequence number offset that this bitstream started. The initial
@@ -687,7 +687,7 @@ public class SimulcastController
             {
                 this.availableIdx = null;
                 this.tl0SSRC = -1;
-                this.adaptive = false;
+                this.isAdaptive = false;
             }
             else
             {
@@ -713,7 +713,7 @@ public class SimulcastController
                     availableIdx[i] = iterator.next();
                 }
 
-                this.adaptive = availableIdx.length > 1;
+                this.isAdaptive = availableIdx.length > 1;
             }
         }
 
@@ -735,7 +735,7 @@ public class SimulcastController
         public boolean accept(
             FrameDesc sourceFrameDesc, byte[] buf, int off, int len)
         {
-            if (adaptive && sourceFrameDesc.getStart() == -1)
+            if (isAdaptive && sourceFrameDesc.getStart() == -1)
             {
                 return false;
             }
@@ -799,11 +799,11 @@ public class SimulcastController
                     && (maxSentFrame == null && sourceFrameDesc.isIndependent()
                     // frames from non-adaptive streams need to be newer than
                     // the most recent independent frame
-                    || (maxSentFrame != null && !adaptive
+                    || (maxSentFrame != null && !isAdaptive
                         && isNewerThanMostRecentKeyFrame)
                     // frames from adaptive streams need to be newer than the
                     // max
-                    || (maxSentFrame != null && adaptive && isNewest)))
+                    || (maxSentFrame != null && isAdaptive && isNewest)))
                 {
                     // the stream is not suspended and we're not dealing with a
                     // late frame or the stream is not adaptive.
@@ -821,7 +821,7 @@ public class SimulcastController
                         // complete.
 
                         SeqNumTranslation seqNumTranslation;
-                        if (maxSentFrame == null || adaptive)
+                        if (maxSentFrame == null || isAdaptive)
                         {
                             int maxSeqNum = getMaxSeqNum();
                             if (maxSeqNum > -1)
