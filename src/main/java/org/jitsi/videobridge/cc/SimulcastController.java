@@ -1066,13 +1066,16 @@ public class SimulcastController
          */
         void rtcpTransform(ByteArrayBuffer baf)
         {
-            SeenFrame maxSentFrame = this.maxSentFrame;
-
+            // Make a local reference to this.maxSentFrame to prevent
+            // it from being set to null or a different frame while we're
+            // using it.  maxSentFrame.tsTranslation is conceptually final for
+            // this given frame, so we don't need any extra protection
+            SeenFrame localMaxSentFrameCopy = this.maxSentFrame;
             // Rewrite timestamp.
-            if (maxSentFrame != null && maxSentFrame.tsTranslation != null)
+            if (localMaxSentFrameCopy != null && localMaxSentFrameCopy.tsTranslation != null)
             {
                 long srcTs = RTCPSenderInfoUtils.getTimestamp(baf);
-                long dstTs = maxSentFrame.tsTranslation.apply(srcTs);
+                long dstTs = localMaxSentFrameCopy.tsTranslation.apply(srcTs);
 
                 if (srcTs != dstTs)
                 {
