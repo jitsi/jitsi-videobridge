@@ -978,10 +978,10 @@ public class SctpConnection
     private void runOnDtlsTransport(StreamConnector connector)
         throws IOException
     {
-        SrtpControl dtlsControl
+        SrtpControl srtpControl
             = getTransportManager().getSrtpControl(this);
         DtlsTransformEngine engine
-            = (DtlsTransformEngine) dtlsControl.getTransformEngine();
+            = (DtlsTransformEngine) srtpControl.getTransformEngine();
         DtlsPacketTransformer transformer
             = (DtlsPacketTransformer) engine.getRTPTransformer();
         if (this.transformer == null)
