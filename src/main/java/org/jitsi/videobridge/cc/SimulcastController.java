@@ -590,10 +590,10 @@ public class SimulcastController
         private long transmittedPackets = 0;
 
         /**
-         * The most recent (mr) key frame that we've sent out. Anything that's
+         * The most recent key frame that we've sent out. Anything that's
          * accepted by this controller needs to be newer than this.
          */
-        private SeenFrame mrKeyFrame;
+        private SeenFrame mostRecentSentKeyFrame;
 
         /**
          * The max (biggest timestamp) frame that we've sent out.
@@ -651,8 +651,8 @@ public class SimulcastController
 
             this.seenFrames.clear();
 
-            this.mrKeyFrame = null;
-            if (maxSentFrame != null)
+            this.mostRecentSentKeyFrame = null;
+            if (mostRecentSentFrame != null)
             {
                 this.tsOff = getMaxTs();
                 this.seqNumOff = getMaxSeqNum();
@@ -790,8 +790,8 @@ public class SimulcastController
                 boolean isNewest = maxSentFrame == null
                     || TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0;
 
-                boolean isNewerThanMostRecentKeyFrame = mrKeyFrame == null
-                    || TimeUtils.rtpDiff(srcTs, mrKeyFrame.srcTs) > 0;
+                boolean isNewerThanMostRecentKeyFrame = mostRecentSentKeyFrame == null
+                    || TimeUtils.rtpDiff(srcTs, mostRecentSentKeyFrame.srcTs) > 0;
 
                 if (currentIdx > -1
                     // we haven't seen anything yet and this is an independent
@@ -911,7 +911,7 @@ public class SimulcastController
                         if (isNewerThanMostRecentKeyFrame
                             && sourceFrameDesc.isIndependent())
                         {
-                            mrKeyFrame = destFrame;
+                            mostRecentSentKeyFrame = destFrame;
                         }
                     }
                     else
