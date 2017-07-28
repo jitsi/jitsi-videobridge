@@ -598,7 +598,7 @@ public class SimulcastController
         /**
          * The max (biggest timestamp) frame that we've sent out.
          */
-        private SeenFrame maxSentFrame;
+        private SeenFrame mostRecentSentFrame;
 
         /**
          * The {@link SeenFrameAllocator} for this {@link BitstreamController}.
@@ -657,7 +657,7 @@ public class SimulcastController
                 this.tsOff = getMaxTs();
                 this.seqNumOff = getMaxSeqNum();
                 this.pidOff = getMaxPictureID();
-                this.maxSentFrame = null;
+                this.mostRecentSentFrame = null;
             }
 
             this.pidDelta = -1;
@@ -787,8 +787,8 @@ public class SimulcastController
                     this.currentIdx = currentIdx;
                 }
 
-                boolean isNewest = maxSentFrame == null
-                    || TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0;
+                boolean isNewest = mostRecentSentFrame == null
+                    || TimeUtils.rtpDiff(srcTs, mostRecentSentFrame.srcTs) > 0;
 
                 boolean isNewerThanMostRecentKeyFrame = mostRecentSentKeyFrame == null
                     || TimeUtils.rtpDiff(srcTs, mostRecentSentKeyFrame.srcTs) > 0;
@@ -796,14 +796,14 @@ public class SimulcastController
                 if (currentIdx > -1
                     // we haven't seen anything yet and this is an independent
                     // frame.
-                    && (maxSentFrame == null && sourceFrameDesc.isIndependent()
+                    && (mostRecentSentFrame == null && sourceFrameDesc.isIndependent()
                     // frames from non-adaptive streams need to be newer than
                     // the most recent independent frame
-                    || (maxSentFrame != null && !isAdaptive
+                    || (mostRecentSentFrame != null && !isAdaptive
                         && isNewerThanMostRecentKeyFrame)
                     // frames from adaptive streams need to be newer than the
                     // max
-                    || (maxSentFrame != null && isAdaptive && isNewest)))
+                    || (mostRecentSentFrame != null && isAdaptive && isNewest)))
                 {
                     // the stream is not suspended and we're not dealing with a
                     // late frame or the stream is not adaptive.
@@ -821,7 +821,7 @@ public class SimulcastController
                         // complete.
 
                         SeqNumTranslation seqNumTranslation;
-                        if (maxSentFrame == null || isAdaptive)
+                        if (mostRecentSentFrame == null || isAdaptive)
                         {
                             int maxSeqNum = getMaxSeqNum();
                             if (maxSeqNum > -1)
@@ -843,12 +843,12 @@ public class SimulcastController
                             // quality, then we're not filtering anything thus
                             // the sequence number distances between the frames
                             // are fixed so we can reuse the sequence number
-                            // translation from the maxSentFrame.
-                            seqNumTranslation = maxSentFrame.seqNumTranslation;
+                            // translation from the mostRecentSentFrame.
+                            seqNumTranslation = mostRecentSentFrame.seqNumTranslation;
                         }
 
                         TimestampTranslation tsTranslation;
-                        if (maxSentFrame == null)
+                        if (mostRecentSentFrame == null)
                         {
                             if (tsOff > -1)
                             {
@@ -866,7 +866,7 @@ public class SimulcastController
                             // The timestamp delta doesn't change for a bitstream,
                             // so, if we've sent out a frame already, reuse its
                             // timestamp translation.
-                            tsTranslation = maxSentFrame.tsTranslation;
+                            tsTranslation = mostRecentSentFrame.tsTranslation;
                         }
 
                         int dstPictureID = -1, dstTL0PICIDX = -1;
@@ -905,7 +905,7 @@ public class SimulcastController
 
                         if (isNewest)
                         {
-                            maxSentFrame = destFrame;
+                            mostRecentSentFrame = destFrame;
                         }
 
                         if (isNewerThanMostRecentKeyFrame
@@ -1070,7 +1070,7 @@ public class SimulcastController
             // it from being set to null or a different frame while we're
             // using it.  maxSentFrame.tsTranslation is conceptually final for
             // this given frame, so we don't need any extra protection
-            SeenFrame localMaxSentFrameCopy = this.maxSentFrame;
+            SeenFrame localMaxSentFrameCopy = this.mostRecentSentFrame;
             // Rewrite timestamp.
             if (localMaxSentFrameCopy != null && localMaxSentFrameCopy.tsTranslation != null)
             {
@@ -1093,7 +1093,7 @@ public class SimulcastController
          */
         private int getMaxSeqNum()
         {
-            return maxSentFrame == null ? seqNumOff : maxSentFrame.getMaxSeqNum();
+            return mostRecentSentFrame == null ? seqNumOff : mostRecentSentFrame.getMaxSeqNum();
         }
 
         /**
@@ -1101,7 +1101,7 @@ public class SimulcastController
          */
         private int getMaxPictureID()
         {
-            return maxSentFrame == null ? pidOff : maxSentFrame.dstPictureID;
+            return mostRecentSentFrame == null ? pidOff : mostRecentSentFrame.dstPictureID;
         }
 
         /**
@@ -1109,7 +1109,7 @@ public class SimulcastController
          */
         private long getMaxTs()
         {
-            return maxSentFrame == null ? tsOff : maxSentFrame.getTs();
+            return mostRecentSentFrame == null ? tsOff : mostRecentSentFrame.getTs();
         }
 
         /**
@@ -1190,7 +1190,7 @@ public class SimulcastController
              */
             boolean accept(FrameDesc source, byte[] buf, int off, int len)
             {
-                if (this == maxSentFrame /* the max frame can expand */
+                if (this == mostRecentSentFrame /* the max frame can expand */
                     || availableIdx == null || availableIdx.length < 2)
                 {
                     int end = source.getEnd();
