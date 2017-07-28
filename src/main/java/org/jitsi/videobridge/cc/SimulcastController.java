@@ -500,7 +500,7 @@ public class SimulcastController
         /**
          * The available subjective quality indexes that this RTP stream offers.
          */
-        private int[] availableIdx;
+        private int[] availableQualityIndices;
 
         /**
          * A boolean that indicates whether or not the current TL0 is adaptive
@@ -685,7 +685,7 @@ public class SimulcastController
             }
             if (ArrayUtils.isNullOrEmpty(rtpEncodings) || tl0Idx < 0)
             {
-                this.availableIdx = null;
+                this.availableQualityIndices = null;
                 this.tl0SSRC = -1;
                 this.isAdaptive = false;
             }
@@ -706,14 +706,14 @@ public class SimulcastController
                     }
                 }
 
-                availableIdx = new int[availableQualities.size()];
+                availableQualityIndices = new int[availableQualities.size()];
                 Iterator<Integer> iterator = availableQualities.iterator();
-                for (int i = 0; i < availableIdx.length; i++)
+                for (int i = 0; i < availableQualityIndices.length; i++)
                 {
-                    availableIdx[i] = iterator.next();
+                    availableQualityIndices[i] = iterator.next();
                 }
 
-                this.isAdaptive = availableIdx.length > 1;
+                this.isAdaptive = availableQualityIndices.length > 1;
             }
         }
 
@@ -761,14 +761,14 @@ public class SimulcastController
 
                 int currentIdx = this.currentIdx;
 
-                if (availableIdx != null && availableIdx.length != 0)
+                if (availableQualityIndices != null && availableQualityIndices.length != 0)
                 {
-                    currentIdx = availableIdx[0];
-                    for (int i = 1; i < availableIdx.length; i++)
+                    currentIdx = availableQualityIndices[0];
+                    for (int i = 1; i < availableQualityIndices.length; i++)
                     {
-                        if (availableIdx[i] <= targetIdx)
+                        if (availableQualityIndices[i] <= targetIdx)
                         {
-                            currentIdx = availableIdx[i];
+                            currentIdx = availableQualityIndices[i];
                         }
                         else
                         {
@@ -1225,7 +1225,7 @@ public class SimulcastController
             boolean accept(FrameDesc source, byte[] buf, int off, int len)
             {
                 if (this == mostRecentSentFrame /* the max frame can expand */
-                    || availableIdx == null || availableIdx.length < 2)
+                    || availableQualityIndices == null || availableQualityIndices.length < 2)
                 {
                     int end = source.getEnd();
                     srcSeqNumLimit
