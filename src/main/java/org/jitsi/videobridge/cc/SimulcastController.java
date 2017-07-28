@@ -790,7 +790,7 @@ public class SimulcastController
                 boolean isNewerThanMostRecentFrame = !haveSentFrame()
                     || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentFrame.srcTs);
 
-                boolean isNewerThanMostRecentKeyFrame = mostRecentSentKeyFrame == null
+                boolean isNewerThanMostRecentKeyFrame = !haveSentKeyFrame()
                     || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentKeyFrame.srcTs);
 
                 if (!isSuspended()
@@ -1093,7 +1093,7 @@ public class SimulcastController
          */
         private int getMaxSeqNum()
         {
-            return !haveSentFrame() ? seqNumOff : mostRecentSentFrame.getMaxSeqNum();
+            return haveSentFrame() ? mostRecentSentFrame.getMaxSeqNum() : seqNumOff;
         }
 
         /**
@@ -1101,7 +1101,7 @@ public class SimulcastController
          */
         private int getMaxPictureID()
         {
-            return !haveSentFrame() ? pidOff : mostRecentSentFrame.dstPictureID;
+            return haveSentFrame() ? mostRecentSentFrame.dstPictureID : pidOff;
         }
 
         /**
@@ -1109,7 +1109,7 @@ public class SimulcastController
          */
         private long getMaxTs()
         {
-            return !haveSentFrame() ? tsOff : mostRecentSentFrame.getTs();
+            return haveSentFrame() ? mostRecentSentFrame.getTs() : tsOff;
         }
 
         /**
@@ -1134,6 +1134,18 @@ public class SimulcastController
         private boolean haveSentFrame()
         {
             return mostRecentSentFrame != null;
+        }
+
+        /**
+         * Return whether or not this BitstreamController has sent a key frame
+         * from the current bitstream yet
+         *
+         * @return true if it has sent a key frame from this bitstream, false
+         * otherwise
+         */
+        private boolean haveSentKeyFrame()
+        {
+            return mostRecentSentKeyFrame != null;
         }
 
         /**
@@ -1483,7 +1495,7 @@ public class SimulcastController
 
             /**
              * Returns a {@link SeenFrame} to this allocator.
-             * 
+             *
              * @param value the {@link SeenFrame} to return.
              */
             public void returnSeenFrame(SeenFrame value)
