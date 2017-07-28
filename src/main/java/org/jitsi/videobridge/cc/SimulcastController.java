@@ -793,7 +793,7 @@ public class SimulcastController
                 boolean isNewerThanMostRecentKeyFrame = mostRecentSentKeyFrame == null
                     || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentKeyFrame.srcTs);
 
-                if (currentIdx > -1
+                if (!isSuspended()
                     // we haven't seen anything yet and this is an independent
                     // frame.
                     && (!haveSentFrame() && sourceFrameDesc.isIndependent()
@@ -1134,6 +1134,16 @@ public class SimulcastController
         private boolean haveSentFrame()
         {
             return mostRecentSentFrame != null;
+        }
+
+        /**
+         * Returns whether or not this bitstream is suspended
+         *
+         * @return true if this bitstream is suspended, false otherwise
+         */
+        private boolean isSuspended()
+        {
+            return currentIdx == -1;
         }
 
         /**
