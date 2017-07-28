@@ -787,7 +787,7 @@ public class SimulcastController
                     this.currentIdx = currentIdx;
                 }
 
-                boolean isNewest = mostRecentSentFrame == null
+                boolean isNewest = !haveSentFrame()
                     || TimeUtils.rtpDiff(srcTs, mostRecentSentFrame.srcTs) > 0;
 
                 boolean isNewerThanMostRecentKeyFrame = mostRecentSentKeyFrame == null
@@ -796,14 +796,14 @@ public class SimulcastController
                 if (currentIdx > -1
                     // we haven't seen anything yet and this is an independent
                     // frame.
-                    && (mostRecentSentFrame == null && sourceFrameDesc.isIndependent()
+                    && (!haveSentFrame() && sourceFrameDesc.isIndependent()
                     // frames from non-adaptive streams need to be newer than
                     // the most recent independent frame
-                    || (mostRecentSentFrame != null && !isAdaptive
+                    || (haveSentFrame() && !isAdaptive
                         && isNewerThanMostRecentKeyFrame)
                     // frames from adaptive streams need to be newer than the
                     // max
-                    || (mostRecentSentFrame != null && isAdaptive && isNewest)))
+                    || (haveSentFrame() && isAdaptive && isNewest)))
                 {
                     // the stream is not suspended and we're not dealing with a
                     // late frame or the stream is not adaptive.
@@ -821,7 +821,7 @@ public class SimulcastController
                         // complete.
 
                         SeqNumTranslation seqNumTranslation;
-                        if (mostRecentSentFrame == null || isAdaptive)
+                        if (!haveSentFrame() || isAdaptive)
                         {
                             int maxSeqNum = getMaxSeqNum();
                             if (maxSeqNum > -1)
@@ -848,7 +848,7 @@ public class SimulcastController
                         }
 
                         TimestampTranslation tsTranslation;
-                        if (mostRecentSentFrame == null)
+                        if (!haveSentFrame())
                         {
                             if (tsOff > -1)
                             {
@@ -1093,7 +1093,7 @@ public class SimulcastController
          */
         private int getMaxSeqNum()
         {
-            return mostRecentSentFrame == null ? seqNumOff : mostRecentSentFrame.getMaxSeqNum();
+            return !haveSentFrame() ? seqNumOff : mostRecentSentFrame.getMaxSeqNum();
         }
 
         /**
@@ -1101,7 +1101,7 @@ public class SimulcastController
          */
         private int getMaxPictureID()
         {
-            return mostRecentSentFrame == null ? pidOff : mostRecentSentFrame.dstPictureID;
+            return !haveSentFrame() ? pidOff : mostRecentSentFrame.dstPictureID;
         }
 
         /**
@@ -1109,7 +1109,7 @@ public class SimulcastController
          */
         private long getMaxTs()
         {
-            return mostRecentSentFrame == null ? tsOff : mostRecentSentFrame.getTs();
+            return !haveSentFrame() ? tsOff : mostRecentSentFrame.getTs();
         }
 
         /**
@@ -1122,6 +1122,18 @@ public class SimulcastController
         long getTL0SSRC()
         {
             return tl0SSRC;
+        }
+
+        /**
+         * Return whether or not this BitstreamController has sent a frame
+         * from the current bitstream yet
+         *
+         * @return true if it has sent a frame from this bitstream, false
+         * otherwise
+         */
+        private boolean haveSentFrame()
+        {
+            return mostRecentSentFrame != null;
         }
 
         /**
