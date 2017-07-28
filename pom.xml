@@ -144,7 +144,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20170725.185154-299</version>
+      <version>1.0-20170729.110629-301</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>

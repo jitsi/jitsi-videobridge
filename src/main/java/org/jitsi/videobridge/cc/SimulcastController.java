@@ -788,10 +788,10 @@ public class SimulcastController
                 }
 
                 boolean isNewest = !haveSentFrame()
-                    || TimeUtils.rtpDiff(srcTs, mostRecentSentFrame.srcTs) > 0;
+                    || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentFrame.srcTs);
 
                 boolean isNewerThanMostRecentKeyFrame = mostRecentSentKeyFrame == null
-                    || TimeUtils.rtpDiff(srcTs, mostRecentSentKeyFrame.srcTs) > 0;
+                    || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentKeyFrame.srcTs);
 
                 if (currentIdx > -1
                     // we haven't seen anything yet and this is an independent
