@@ -787,7 +787,7 @@ public class SimulcastController
                     this.currentIdx = currentIdx;
                 }
 
-                boolean isNewest = !haveSentFrame()
+                boolean isNewerThanMostRecentFrame = !haveSentFrame()
                     || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentFrame.srcTs);
 
                 boolean isNewerThanMostRecentKeyFrame = mostRecentSentKeyFrame == null
@@ -803,7 +803,7 @@ public class SimulcastController
                         && isNewerThanMostRecentKeyFrame)
                     // frames from adaptive streams need to be newer than the
                     // max
-                    || (haveSentFrame() && isAdaptive && isNewest)))
+                    || (haveSentFrame() && isAdaptive && isNewerThanMostRecentFrame)))
                 {
                     // the stream is not suspended and we're not dealing with a
                     // late frame or the stream is not adaptive.
@@ -903,7 +903,7 @@ public class SimulcastController
                             dstPictureID, dstTL0PICIDX, sourceFrameDesc.isIndependent());
                         seenFrames.put(srcTs, destFrame);
 
-                        if (isNewest)
+                        if (isNewerThanMostRecentFrame)
                         {
                             mostRecentSentFrame = destFrame;
                         }
