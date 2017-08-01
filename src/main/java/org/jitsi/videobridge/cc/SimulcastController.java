@@ -165,7 +165,6 @@ public class SimulcastController
      * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
      * written into the arbitrary target/receiver that owns this
      * {@link SimulcastController} ; otherwise, <tt>false</tt>
-     * @Deprecated use accept(RawPacket)
      */
     public boolean accept(RawPacket pkt)
     {
@@ -282,25 +281,6 @@ public class SimulcastController
             return false;
         }
 
-    }
-
-    /**
-     * Defines a packet filter that controls which packets to be written into
-     * some arbitrary target/receiver that owns this {@link SimulcastController}.
-     *
-     * @param buf the <tt>byte</tt> array that holds the packet.
-     * @param off the offset in <tt>buffer</tt> at which the actual data begins.
-     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-     * constitute the actual data.
-     * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
-     * written into the arbitrary target/receiver that owns this
-     * {@link SimulcastController} ; otherwise, <tt>false</tt>
-     * @Deprecated use accept(RawPacket)
-     */
-    @Deprecated
-    public boolean accept(byte[] buf, int off, int len)
-    {
-        return accept(new RawPacket(buf, off, len));
     }
 
     /**
@@ -976,7 +956,7 @@ public class SimulcastController
          * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
          * written into the arbitrary target/receiver that owns this
          * {@link BitstreamController} ; otherwise, <tt>false</tt>
-         * @Deprecated use accept(FrameDesc, RawPacket)
+         * @deprecated use accept(FrameDesc, RawPacket)
          */
         @Deprecated
         public boolean accept(
