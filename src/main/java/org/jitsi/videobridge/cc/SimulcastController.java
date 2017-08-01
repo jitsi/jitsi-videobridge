@@ -767,7 +767,7 @@ public class SimulcastController
         public boolean accept(
             FrameDesc sourceFrameDesc, RawPacket pkt)
         {
-            if (isAdaptive && sourceFrameDesc.getStart() == -1)
+            if (isAdaptive && !sourceFrameDesc.firstSequenceNumberKnown())
             {
                 return false;
             }
