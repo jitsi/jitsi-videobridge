@@ -157,19 +157,7 @@ public class SimulcastController
         return targetSSRC;
     }
 
-    /**
-     * Defines a packet filter that controls which packets to be written into
-     * some arbitrary target/receiver that owns this {@link SimulcastController}.
-     *
-     * @param buf the <tt>byte</tt> array that holds the packet.
-     * @param off the offset in <tt>buffer</tt> at which the actual data begins.
-     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-     * constitute the actual data.
-     * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
-     * written into the arbitrary target/receiver that owns this
-     * {@link SimulcastController} ; otherwise, <tt>false</tt>
-     */
-    public boolean accept(byte[] buf, int off, int len)
+    public boolean accept(RawPacket pkt)
     {
         int targetIndex = bitstreamController.getTargetIndex()
             , currentIndex = bitstreamController.getCurrentIndex();
@@ -184,10 +172,13 @@ public class SimulcastController
 
         MediaStreamTrackDesc sourceTrack = weakSource.get();
         assert sourceTrack != null;
-        FrameDesc sourceFrameDesc = sourceTrack.findFrameDesc(buf, off, len);
+        FrameDesc sourceFrameDesc =
+            sourceTrack.findFrameDesc(pkt.getSSRCAsLong(), pkt.getTimestamp());
 
-        if (sourceFrameDesc == null || buf == null || off < 0
-            || len < RawPacket.FIXED_HEADER_SIZE || buf.length < off + len)
+        //FIXME(brian): there were these other checks here, are they still necessary?
+        //if (sourceFrameDesc == null || buf == null || off < 0
+        //    || len < RawPacket.FIXED_HEADER_SIZE || buf.length < off + len)
+        if (sourceFrameDesc == null)
         {
             return false;
         }
@@ -231,7 +222,7 @@ public class SimulcastController
             }
 
             // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, buf, off, len);
+            return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
         // An intra-codec/simulcast switch pending.
@@ -261,7 +252,7 @@ public class SimulcastController
             }
 
             // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, buf, off, len);
+            return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
         if ((targetTL0Idx <= sourceTL0Idx && sourceTL0Idx < currentTL0Idx)
@@ -271,12 +262,32 @@ public class SimulcastController
             bitstreamController.setTL0Idx(sourceTL0Idx);
 
             // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, buf, off, len);
+            return bitstreamController.accept(sourceFrameDesc, pkt);
         }
         else
         {
             return false;
         }
+
+    }
+
+    /**
+     * Defines a packet filter that controls which packets to be written into
+     * some arbitrary target/receiver that owns this {@link SimulcastController}.
+     *
+     * @param buf the <tt>byte</tt> array that holds the packet.
+     * @param off the offset in <tt>buffer</tt> at which the actual data begins.
+     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
+     * constitute the actual data.
+     * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
+     * written into the arbitrary target/receiver that owns this
+     * {@link SimulcastController} ; otherwise, <tt>false</tt>
+     * @Deprecated use accept(RawPacket)
+     */
+    @Deprecated
+    public boolean accept(byte[] buf, int off, int len)
+    {
+        return accept(new RawPacket(buf, off, len));
     }
 
     /**
@@ -724,16 +735,13 @@ public class SimulcastController
          *
          * @param sourceFrameDesc the {@link FrameDesc} that the RTP packet belongs
          * to.
-         * @param buf the <tt>byte</tt> array that holds the packet.
-         * @param off the offset in <tt>buffer</tt> at which the actual data begins.
-         * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-         * constitute the actual data.
+         * @param pkt the packet for which to decide to accept
          * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
          * written into the arbitrary target/receiver that owns this
          * {@link BitstreamController} ; otherwise, <tt>false</tt>
          */
         public boolean accept(
-            FrameDesc sourceFrameDesc, byte[] buf, int off, int len)
+            FrameDesc sourceFrameDesc, RawPacket pkt)
         {
             if (isAdaptive && sourceFrameDesc.getStart() == -1)
             {
@@ -875,17 +883,16 @@ public class SimulcastController
                             byte vp8PT = bitrateController.getVideoChannel()
                                 .getStream().getDynamicRTPPayloadType(Constants.VP8);
 
-                            boolean isVP8 = vp8PT
-                                == (byte) RawPacket.getPayloadType(buf, off, len);
+                            boolean isVP8 = vp8PT == pkt.getPayloadType();
 
                             if (isVP8)
                             {
-                                dstPictureID = calculatePictureID(buf, off, len);
+                                dstPictureID = calculatePictureID(pkt);
                             }
 
                             int tid = ((MediaStreamImpl) bitrateController
                                 .getVideoChannel().getStream())
-                                .getTemporalID(buf, off, len);
+                                .getTemporalID(pkt);
 
                             if (tid > -1)
                             {
@@ -931,32 +938,53 @@ public class SimulcastController
                 }
             }
 
-            boolean accept = destFrame.accept(sourceFrameDesc, buf, off, len);
+            boolean accept = destFrame.accept(sourceFrameDesc, pkt);
 
             if (accept)
             {
                 transmittedPackets++;
-                transmittedBytes += len;
+                transmittedBytes += pkt.getLength();
             }
 
             return accept;
         }
 
         /**
+         * Defines an RTP packet filter that controls which packets to be written
+         * into some arbitrary target/receiver that owns this
+         * {@link BitstreamController}.
+         *
+         * @param sourceFrameDesc the {@link FrameDesc} that the RTP packet belongs
+         * to.
+         * @param buf the <tt>byte</tt> array that holds the packet.
+         * @param off the offset in <tt>buffer</tt> at which the actual data begins.
+         * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
+         * constitute the actual data.
+         * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
+         * written into the arbitrary target/receiver that owns this
+         * {@link BitstreamController} ; otherwise, <tt>false</tt>
+         * @Deprecated use accept(FrameDesc, RawPacket)
+         */
+        @Deprecated
+        public boolean accept(
+            FrameDesc sourceFrameDesc, byte[] buf, int off, int len)
+        {
+            return accept(sourceFrameDesc, new RawPacket(buf, off, len));
+        }
+
+        /**
          * Calculates the destination picture ID of an incoming VP8 frame.
          *
-         * @param buf
-         * @param off
-         * @param len
+         * @param pkt the packet from which to calculate the vp8 picture id
          * @return the destination picture ID of the VP8 frame that is specified
          * in the parameter.
+         * FIXME(brian): feels like this should be in some vp8-specific class
          */
-        private int calculatePictureID(byte[] buf, int off, int len)
+        private int calculatePictureID(RawPacket pkt)
         {
             REDBlock redBlock = ((MediaStreamImpl)
                 bitrateController.getVideoChannel()
-                    .getStream()).getPrimaryREDBlock(
-                buf, off, len);
+                    .getStream()).getPrimaryREDBlock(pkt);
 
             int srcPID = DePacketizer
                 .VP8PayloadDescriptor.getPictureId(
@@ -1205,6 +1233,52 @@ public class SimulcastController
              * The start source sequence number of this frame.
              */
             private int srcSeqNumStart = -1;
+
+            /**
+             * Defines an RTP packet filter that controls which packets to be
+             * written into some arbitrary target/receiver that owns this
+             * {@link SeenFrame}.
+             *
+             * @param source the {@link FrameDesc} that the RTP packet belongs
+             * to.
+             * @param pkt the packet for which to decide to accept
+             * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt>
+             * to be written into the arbitrary target/receiver that owns this
+             * {@link SeenFrame} ; otherwise, <tt>false</tt>
+             */
+            boolean accept(FrameDesc source, RawPacket pkt)
+            {
+                if (this == maxSentFrame /* the max frame can expand */
+                    || availableIdx == null || availableIdx.length < 2)
+                {
+                    int end = source.getEnd();
+                    srcSeqNumLimit
+                        = end != -1 ? source.getEnd() : source.getMaxSeen() ;
+                }
+
+                if (srcSeqNumLimit == -1)
+                {
+                    return false;
+                }
+
+                int start = source.getStart();
+                srcSeqNumStart
+                    = start != -1 ? source.getStart() : source.getMinSeen();
+
+                int seqNum = pkt.getSequenceNumber();
+
+                boolean accept
+                    = RTPUtils.sequenceNumberDiff(seqNum, srcSeqNumLimit) <= 0;
+
+                if (!accept && logger.isDebugEnabled())
+                {
+                    logger.debug("frame_corruption seq=" + seqNum
+                        + ",seq_start=" + srcSeqNumStart
+                        + ",seq_limit=" + srcSeqNumLimit);
+                }
+
+                return accept;
+            }
 
             /**
              * Defines an RTP packet filter that controls which packets to be
