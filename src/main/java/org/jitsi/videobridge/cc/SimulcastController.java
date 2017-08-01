@@ -48,7 +48,7 @@ public class SimulcastController
     /**
      * The property name of the number of seen frames to keep track of.
      */
-    public static final String SEEN_FRAME_HISTORY_SIZE_PNAME
+    private static final String SEEN_FRAME_HISTORY_SIZE_PNAME
         = "org.jitsi.videobridge.SEEN_FRAME_HISTORY_SIZE";
 
     /**
@@ -966,9 +966,8 @@ public class SimulcastController
          */
         private int calculatePictureID(RawPacket pkt)
         {
-            REDBlock redBlock = ((MediaStreamImpl)
-                bitrateController.getVideoChannel()
-                    .getStream()).getPrimaryREDBlock(pkt);
+            REDBlock redBlock = bitrateController.getVideoChannel()
+                    .getStream().getPrimaryREDBlock(pkt);
 
             int srcPID = DePacketizer
                 .VP8PayloadDescriptor.getPictureId(
@@ -1359,10 +1358,7 @@ public class SimulcastController
                         assert source != null;
 
                         REDBlock redBlock = source.getMediaStreamTrackReceiver()
-                            .getStream().getPrimaryREDBlock(
-                                pktOut.getBuffer(),
-                                pktOut.getOffset(),
-                                pktOut.getLength());
+                            .getStream().getPrimaryREDBlock(pktOut);
 
                         if (!DePacketizer
                             .VP8PayloadDescriptor.hasExtendedPictureId(
@@ -1409,10 +1405,7 @@ public class SimulcastController
                         assert source != null;
 
                         REDBlock redBlock = source.getMediaStreamTrackReceiver()
-                            .getStream().getPrimaryREDBlock(
-                                pktOut.getBuffer(),
-                                pktOut.getOffset(),
-                                pktOut.getLength());
+                            .getStream().getPrimaryREDBlock(pktOut);
 
                         if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
                             redBlock.getBuffer(), redBlock.getOffset(),
@@ -1460,7 +1453,7 @@ public class SimulcastController
              * @param dstTL0PICIDX The VP8 TL0PICIDX to set to outgoing packets
              * that belong to this frame.
              */
-            public void reset(
+            void reset(
                 long srcTs,
                 SeqNumTranslation seqNumTranslation,
                 TimestampTranslation tsTranslation,
@@ -1505,7 +1498,7 @@ public class SimulcastController
              * @return a {@link SeenFrame} from the pool of available seen
              * frames, or a new one, if none is available.
              */
-            public SeenFrame getOrCreate()
+            SeenFrame getOrCreate()
             {
                 return pool.isEmpty() ? new SeenFrame() : pool.remove();
             }
@@ -1515,7 +1508,7 @@ public class SimulcastController
              *
              * @param value the {@link SeenFrame} to return.
              */
-            public void returnSeenFrame(SeenFrame value)
+            void returnSeenFrame(SeenFrame value)
             {
                 pool.add(value);
             }
