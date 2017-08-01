@@ -722,6 +722,37 @@ public class SimulcastController
         }
 
         /**
+         * Given a list of available quality indices and a target index, find
+         * the highest available quality index <= targetIdx
+         * @param availableQualityIndices the available quality indices
+         * @param targetIdx the target index
+         * @return the highest quality index <= targetIdx
+         * //FIXME(brian): this could be static, but can't add a static method
+         * to the inner class.  should it be put elsewhere and made a static
+         * helper method? (the outer class?)
+         */
+        private int findMaximumQualityIndex(int[] availableQualityIndices, int targetIdx)
+        {
+            int maxIndex = -1;
+            if (availableQualityIndices != null)
+            {
+                for (int i = 0; i < availableQualityIndices.length; ++i)
+                {
+                    if (availableQualityIndices[i] <= targetIdx)
+                    {
+                        maxIndex = availableQualityIndices[i];
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+            }
+            return maxIndex;
+        }
+
+        /**
          * Defines an RTP packet filter that controls which packets to be written
          * into some arbitrary target/receiver that owns this
          * {@link BitstreamController}.
@@ -759,33 +790,16 @@ public class SimulcastController
                 // This can happen when the max frame is a TL0 and we don't know its
                 // boundaries. Then the stream will be broken an we should ask for a
                 // key frame.
-
-                int currentIdx = this.currentIdx;
-
-                if (availableQualityIndices != null && availableQualityIndices.length != 0)
                 {
-                    currentIdx = availableQualityIndices[0];
-                    for (int i = 1; i < availableQualityIndices.length; i++)
-                    {
-                        if (availableQualityIndices[i] <= targetIdx)
-                        {
-                            currentIdx = availableQualityIndices[i];
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-                    if (currentIdx != this.currentIdx && logger.isDebugEnabled())
+                    int newCurrentIdx = findMaximumQualityIndex(availableQualityIndices, targetIdx);
+                    if (newCurrentIdx != this.currentIdx && logger.isDebugEnabled())
                     {
                         logger.debug("current_idx_changed,hash="
                             + SimulcastController.this.hashCode()
                             + " old_idx=" + this.currentIdx
-                            + ",new_idx=" + currentIdx);
+                            + ",new_idx=" + newCurrentIdx);
                     }
-
-                    this.currentIdx = currentIdx;
+                    this.currentIdx = newCurrentIdx;
                 }
 
                 boolean isNewerThanMostRecentFrame = !haveSentFrame()
@@ -815,7 +829,7 @@ public class SimulcastController
                     // TODO ask for independent frame if we're skipping a TL0.
 
                     int sourceIdx = sourceFrameDesc.getRTPEncoding().getIndex();
-                    if (sourceEncodings[currentIdx].requires(sourceIdx))
+                    if (sourceEncodings[this.currentIdx].requires(sourceIdx))
                     {
                         // the quality of the frame is a dependency of the
                         // forwarded quality and the max frame is effectively
