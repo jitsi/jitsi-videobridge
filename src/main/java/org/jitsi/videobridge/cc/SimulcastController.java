@@ -157,8 +157,24 @@ public class SimulcastController
         return targetSSRC;
     }
 
+    /**
+     * Defines a packet filter that controls which packets to be written into
+     * some arbitrary target/receiver that owns this {@link SimulcastController}.
+     *
+     * @param pkt the packet to decide whether or not to accept
+     * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
+     * written into the arbitrary target/receiver that owns this
+     * {@link SimulcastController} ; otherwise, <tt>false</tt>
+     * @Deprecated use accept(RawPacket)
+     */
     public boolean accept(RawPacket pkt)
     {
+        if (pkt.getBuffer() == null || pkt.getOffset() < 0 ||
+            pkt.getLength() < RawPacket.FIXED_HEADER_SIZE ||
+            pkt.getBuffer().length < pkt.getOffset() + pkt.getLength())
+        {
+            return false;
+        }
         int targetIndex = bitstreamController.getTargetIndex()
             , currentIndex = bitstreamController.getCurrentIndex();
 
@@ -174,10 +190,7 @@ public class SimulcastController
         assert sourceTrack != null;
         FrameDesc sourceFrameDesc =
             sourceTrack.findFrameDesc(pkt.getSSRCAsLong(), pkt.getTimestamp());
-
-        //FIXME(brian): there were these other checks here, are they still necessary?
-        //if (sourceFrameDesc == null || buf == null || off < 0
-        //    || len < RawPacket.FIXED_HEADER_SIZE || buf.length < off + len)
+        
         if (sourceFrameDesc == null)
         {
             return false;
