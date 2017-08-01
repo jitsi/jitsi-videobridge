@@ -103,7 +103,7 @@ public class SimulcastController
      * The SSRC to protect when probing for bandwidth and for RTP/RTCP packet
      * rewritting.
      */
-    private final long targetSSRC;
+    private final long targetSsrc;
 
     /**
      * The running index for the temporal base layer frames, i.e., the frames
@@ -135,11 +135,11 @@ public class SimulcastController
         RTPEncodingDesc[] rtpEncodings = source.getRTPEncodings();
         if (ArrayUtils.isNullOrEmpty(rtpEncodings))
         {
-            targetSSRC = -1;
+            targetSsrc = -1;
         }
         else
         {
-            targetSSRC = rtpEncodings[0].getPrimarySSRC();
+            targetSsrc = rtpEncodings[0].getPrimarySSRC();
         }
 
         bitstreamController = new BitstreamController();
@@ -154,7 +154,7 @@ public class SimulcastController
      */
     long getTargetSSRC()
     {
-        return targetSSRC;
+        return targetSsrc;
     }
 
     /**
@@ -225,8 +225,8 @@ public class SimulcastController
             && (currentTL0IsActive || targetTL0Idx < 0 /* => currentIdx < 0 */))
         {
             // An intra-codec/simulcast switch is NOT pending.
-            long sourceSSRC = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
-            boolean accept = sourceSSRC == bitstreamController.getTL0SSRC();
+            long sourceSsrc = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
+            boolean accept = sourceSsrc == bitstreamController.getTL0SSRC();
 
             if (!accept)
             {
@@ -255,8 +255,8 @@ public class SimulcastController
         {
             // An intra-codec switch requires a key frame.
 
-            long sourceSSRC = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
-            boolean accept = sourceSSRC == bitstreamController.getTL0SSRC();
+            long sourceSsrc = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
+            boolean accept = sourceSsrc == bitstreamController.getTL0SSRC();
 
             if (!accept)
             {
@@ -359,7 +359,7 @@ public class SimulcastController
 
             ((RTPTranslatorImpl) sourceStream.getRTPTranslator())
                 .getRtcpFeedbackMessageSender().sendFIR(
-                (int) targetSSRC);
+                (int) targetSsrc);
         }
     }
 
@@ -391,14 +391,14 @@ public class SimulcastController
         RawPacket[] pktsOut = bitstreamController.rtpTransform(pktIn);
 
         if (!ArrayUtils.isNullOrEmpty(pktsOut)
-            && pktIn.getSSRCAsLong() != targetSSRC)
+            && pktIn.getSSRCAsLong() != targetSsrc)
         {
-            // Rewrite the SSRC of the output RTP stream.
+            // Rewrite the SSSRC of the output RTP stream.
             for (RawPacket pktOut : pktsOut)
             {
                 if (pktOut != null)
                 {
-                    pktOut.setSSRC((int) targetSSRC);
+                    pktOut.setSSRC((int) targetSsrc);
                 }
             }
         }
@@ -447,7 +447,7 @@ public class SimulcastController
                     bitstreamController.rtcpTransform(baf);
 
                     // Rewrite senderSSRC
-                    RTCPHeaderUtils.setSenderSSRC(baf, (int) targetSSRC);
+                    RTCPHeaderUtils.setSenderSSRC(baf, (int) targetSsrc);
                 }
                 break;
                 case RTCPPacket.BYE:
@@ -551,7 +551,7 @@ public class SimulcastController
          * The special value -1 indicates that we're not accepting (and hence
          * not forwarding) anything.
          */
-        private long tl0SSRC = -1;
+        private long tl0Ssrc = -1;
 
         /**
          * The subjective quality index for of the TL0 of this instance.
@@ -690,13 +690,13 @@ public class SimulcastController
             if (ArrayUtils.isNullOrEmpty(rtpEncodings) || tl0Idx < 0)
             {
                 this.availableQualityIndices = null;
-                this.tl0SSRC = -1;
+                this.tl0Ssrc = -1;
                 this.isAdaptive = false;
             }
             else
             {
                 tl0Idx = rtpEncodings[tl0Idx].getBaseLayer().getIndex();
-                tl0SSRC = rtpEncodings[tl0Idx].getPrimarySSRC();
+                tl0Ssrc = rtpEncodings[tl0Idx].getPrimarySSRC();
 
                 // find the available qualities in this bitstream.
 
@@ -1058,7 +1058,7 @@ public class SimulcastController
          */
         RawPacket[] rtpTransform(RawPacket pktIn)
         {
-            if (pktIn.getSSRCAsLong() != tl0SSRC)
+            if (pktIn.getSSRCAsLong() != tl0Ssrc)
             {
                 return null;
             }
@@ -1133,7 +1133,7 @@ public class SimulcastController
          */
         long getTL0SSRC()
         {
-            return tl0SSRC;
+            return tl0Ssrc;
         }
 
         /**
@@ -1285,7 +1285,7 @@ public class SimulcastController
             RawPacket[] rtpTransform(RawPacket pktIn)
             {
                 RawPacket[] pktsOut;
-                long srcSSRC = pktIn.getSSRCAsLong();
+                long srcSsrc = pktIn.getSSRCAsLong();
 
                 if (maybeFixInitialIndependentFrame)
                 {
@@ -1309,7 +1309,7 @@ public class SimulcastController
                         {
                             // Note that the ingress cache might not have the desired
                             // packet.
-                            pktsOut[i] = inCache.get(srcSSRC, (srcSeqNumStart + i) & 0xFFFF);
+                            pktsOut[i] = inCache.get(srcSsrc, (srcSeqNumStart + i) & 0xFFFF);
                         }
                     }
                     else
