@@ -1252,8 +1252,16 @@ public class SimulcastController
 
                 int seqNum = pkt.getSequenceNumber();
 
-                boolean accept
-                    = RTPUtils.sequenceNumberDiff(seqNum, srcSeqNumLimit) <= 0;
+                // We'll accept the packet if it's no newer than our srcSeqNumLimit
+                // FIXME(brian): in what scenario will this test fail?  mostRecentSentFrame
+                // will always, at least, be equal to the frame to which this
+                // sequence number belongs, and we update srcSeqNumLimit based
+                // on the highest seen sequence number of that frame.  if seqNum
+                // was from a new frame
+                boolean accept =
+                    RTPUtils.isOlderSequenceNumberThan(
+                        seqNum,
+                        RTPUtils.applySequenceNumberDelta(srcSeqNumLimit, 1));
 
                 if (!accept && logger.isDebugEnabled())
                 {
@@ -1294,7 +1302,7 @@ public class SimulcastController
                             .getCachingTransformer()
                             .getIncomingRawPacketCache();
 
-                        int len = RTPUtils.sequenceNumberDiff(
+                        int len = RTPUtils.getSequenceNumberDelta(
                             srcSeqNumLimit, srcSeqNumStart) + 1;
                         pktsOut = new RawPacket[len];
                         for (int i = 0; i < pktsOut.length; i++)
