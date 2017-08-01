@@ -360,8 +360,9 @@ public class BitrateController
         SimulcastController simulcastController
             = ssrcToBitrateController.get(ssrc);
 
+        RawPacket pkt = new RawPacket(buf, off, len);
         return simulcastController != null
-            && simulcastController.accept(buf, off, len);
+            && simulcastController.accept(pkt);
     }
 
     /**
