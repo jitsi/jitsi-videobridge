@@ -1205,7 +1205,7 @@ public class IceUdpTransportManager
      */
     private void describeDtlsControl(IceUdpTransportPacketExtension transportPE)
     {
-        DtlsControlImpl dtlsControl = getDtlsControl(/* channel */ null);
+        DtlsControlImpl dtlsControl = this.dtlsControl;
         String fingerprint = dtlsControl.getLocalFingerprint();
         String hash = dtlsControl.getLocalFingerprintHashFunction();
 
@@ -1445,7 +1445,7 @@ public class IceUdpTransportManager
      * {@inheritDoc}
      */
     @Override
-    public DtlsControlImpl getDtlsControl(Channel channel)
+    public SrtpControl getSrtpControl(Channel channel)
     {
         return dtlsControl;
     }

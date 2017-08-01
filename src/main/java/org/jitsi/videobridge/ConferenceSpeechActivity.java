@@ -555,7 +555,9 @@ public class ConferenceSpeechActivity
             {
                 dominantEndpoint = this.dominantEndpoint;
                 if (dominantEndpoint.isExpired())
+                {
                     this.dominantEndpoint = null;
+                }
             }
         }
         return dominantEndpoint;

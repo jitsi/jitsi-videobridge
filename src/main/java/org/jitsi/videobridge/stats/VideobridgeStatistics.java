@@ -25,6 +25,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.octo.*;
 import org.json.simple.*;
 import org.osgi.framework.*;
 
@@ -262,6 +263,11 @@ public class VideobridgeStatistics
     public static final String VIDEOSTREAMS = "videostreams";
 
     /**
+     * The name of the "relay_id" statistic.
+     */
+    public static final String RELAY_ID = "relay_id";
+
+    /**
      * The name of the "region" statistic.
      */
     public static final String REGION = "region";
@@ -426,6 +432,11 @@ public class VideobridgeStatistics
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
+
+        OctoRelayService relayService
+            = ServiceUtils.getService(bundleContext, OctoRelayService.class);
+        String relayId = relayService == null ? null : relayService.getRelayId();
+
         for (Videobridge videobridge
                 : Videobridge.getVideobridges(bundleContext))
         {
@@ -666,6 +677,10 @@ public class VideobridgeStatistics
                             totalColibriWebSocketMessagesSent);
 
             unlockedSetStat(TIMESTAMP, timestamp);
+            if (relayId != null)
+            {
+                unlockedSetStat(RELAY_ID, relayId);
+            }
             if (region != null)
             {
                 unlockedSetStat(REGION, region);
