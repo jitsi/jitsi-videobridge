@@ -1218,8 +1218,9 @@ public class SimulcastController
              */
             boolean accept(FrameDesc source, RawPacket pkt)
             {
-                if (this == maxSentFrame /* the max frame can expand */
-                    || availableIdx == null || availableIdx.length < 2)
+                if (this == mostRecentSentFrame /* the max frame can expand */
+                    || availableQualityIndices == null
+                    || availableQualityIndices.length < 2)
                 {
                     int end = source.getEnd();
                     srcSeqNumLimit
