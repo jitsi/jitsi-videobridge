@@ -460,7 +460,7 @@ public class VideoChannel
             return true;
         }
 
-        boolean accept = bitrateController.accept(buffer, offset, length);
+        boolean accept = bitrateController.accept(new RawPacket(buffer, offset, length));
 
         if (accept && lipSyncHack != null)
         {
