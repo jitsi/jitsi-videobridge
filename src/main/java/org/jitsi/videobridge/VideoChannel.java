@@ -459,13 +459,14 @@ public class VideoChannel
         {
             return true;
         }
+        RawPacket pkt = new RawPacket(buffer, offset, length);
 
-        boolean accept = bitrateController.accept(new RawPacket(buffer, offset, length));
+        boolean accept = bitrateController.accept(pkt);
 
         if (accept && lipSyncHack != null)
         {
             lipSyncHack
-                .onRTPTranslatorWillWriteVideo(buffer, offset, length, source);
+                .onRTPTranslatorWillWriteVideo(pkt, source);
         }
 
         return accept;
