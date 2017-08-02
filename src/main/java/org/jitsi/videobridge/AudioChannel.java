@@ -323,7 +323,7 @@ public class AudioChannel
     @Override
     boolean rtpTranslatorWillWrite(
         boolean data,
-        byte[] buffer, int offset, int length,
+        RawPacket pkt,
         RtpChannel source)
     {
         if (!data)
@@ -348,7 +348,7 @@ public class AudioChannel
         if (associatedLipSyncHack != null)
         {
             associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
-                buffer, offset, length, source);
+                pkt, source);
         }
 
         return true;

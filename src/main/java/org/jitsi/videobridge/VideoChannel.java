@@ -452,14 +452,13 @@ public class VideoChannel
     @Override
     boolean rtpTranslatorWillWrite(
         boolean data,
-        byte[] buffer, int offset, int length,
+        RawPacket pkt,
         RtpChannel source)
     {
         if (!data)
         {
             return true;
         }
-        RawPacket pkt = new RawPacket(buffer, offset, length);
 
         boolean accept = bitrateController.accept(pkt);
 
@@ -471,7 +470,6 @@ public class VideoChannel
 
         return accept;
     }
-
 
     /**
      * {@inheritDoc}

@@ -224,20 +224,15 @@ public class LipSyncHack
      * written. The purpose of this is to trigger the hack for the video stream
      * that is associated to the audio SSRC that is about to be written.
      *
-     * @param buffer the buffer which contains the bytes of the received RTP or
-     * RTCP packet.
-     * @param offset the zero-based index in <tt>buffer</tt> at which the bytes
-     * of the received RTP or RTCP packet begin.
-     * @param length the number of bytes in <tt>buffer</tt> beginning at
+     * @param pkt the packet that is about to be written
      * <tt>offset</tt> which represent the received RTP or RTCP packet.
      * @param source the {@link Channel} where this packet came from.
      */
     void onRTPTranslatorWillWriteAudio(
-        byte[] buffer, int offset, int length, RtpChannel source)
+        RawPacket pkt, RtpChannel source)
     {
         // Decide whether to trigger the hack or not.
-        Long acceptedAudioSSRC
-            = RawPacket.getSSRCAsLong(buffer, offset, length);
+        Long acceptedAudioSSRC = pkt.getSSRCAsLong();
 
         // In order to minimize the synchronization overhead, we process
         // only the first data packet of a given RTP stream.

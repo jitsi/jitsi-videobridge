@@ -197,7 +197,7 @@ public class Content
                 accept
                     = dst.rtpTranslatorWillWrite(
                             data,
-                            buffer, offset, length,
+                            new RawPacket(buffer, offset, length),
                             src);
             }
         }
