@@ -1204,6 +1204,7 @@ public class SimulcastController
             /**
              * The VP8 TL0PICIDX to set to outgoing packets that belong to this
              * frame.
+             * https://tools.ietf.org/html/draft-ietf-payload-vp8-17#section-4.2
              */
             private int dstTL0PICIDX = -1;
 
@@ -1328,6 +1329,27 @@ public class SimulcastController
             }
 
             /**
+             * Handles setting the appropriate TL0PICIDX on the given packet
+             * @param pktOut the packet in which to set the TL0PICIDX (in place)
+             *
+             */
+            private void handleSettingVp8TL0PICIDX(RawPacket pktOut)
+            {
+                MediaStreamTrackDesc source = weakSource.get();
+                assert source != null;
+
+                REDBlock redBlock = source.getMediaStreamTrackReceiver()
+                    .getStream().getPrimaryREDBlock(pktOut);
+
+                if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
+                    redBlock.getBuffer(), redBlock.getOffset(),
+                    redBlock.getLength(), dstTL0PICIDX))
+                {
+                    logger.warn("Failed to set the VP8 TL0PICIDX.");
+                }
+            }
+
+            /**
              * Translates accepted packets and drops packets that are not
              * accepted (by this instance).
              *
@@ -1414,18 +1436,7 @@ public class SimulcastController
 
                     if (dstTL0PICIDX > -1)
                     {
-                        MediaStreamTrackDesc source = weakSource.get();
-                        assert source != null;
-
-                        REDBlock redBlock = source.getMediaStreamTrackReceiver()
-                            .getStream().getPrimaryREDBlock(pktOut);
-
-                        if (!DePacketizer.VP8PayloadDescriptor.setTL0PICIDX(
-                            redBlock.getBuffer(), redBlock.getOffset(),
-                            redBlock.getLength(), dstTL0PICIDX))
-                        {
-                            logger.warn("Failed to set the VP8 TL0PICIDX.");
-                        }
+                        handleSettingVp8TL0PICIDX(pktOut);
                     }
                 }
                 return pktsOut;
