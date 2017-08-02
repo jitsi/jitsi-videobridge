@@ -1273,6 +1273,61 @@ public class SimulcastController
             }
 
             /**
+             * Rewrite the vp8 picture id
+             * @param pktOut the packet in which to rewrite the picture id
+             * @return a RawPacket matching the given one in all ways but
+             * with the picture id appropriately rewritten (may not be the same
+             * RawPacket instance as pktOut)
+             */
+            private RawPacket handleVp8PictureIdRewriting(RawPacket pktOut)
+            {
+                MediaStreamTrackDesc source = weakSource.get();
+                assert source != null;
+
+                REDBlock redBlock = source.getMediaStreamTrackReceiver()
+                    .getStream().getPrimaryREDBlock(pktOut);
+
+                if (!DePacketizer
+                    .VP8PayloadDescriptor.hasExtendedPictureId(
+                        redBlock.getBuffer(), redBlock.getOffset(),
+                        redBlock.getLength()))
+                {
+                    // XXX we have observed that using a non-extended
+                    // picture ID makes the Chrome 58 jitter buffer to
+                    // completely freak out. So here we expand the non
+                    // extended picture id field and convert it to an
+                    // extended one.
+                    byte[] srcBuf = pktOut.getBuffer();
+                    byte[] dstBuf = new byte[srcBuf.length + 1];
+                    System.arraycopy(
+                        srcBuf, 0, dstBuf, 0, redBlock.getOffset() + 3);
+                    System.arraycopy(srcBuf, redBlock.getOffset() + 3,
+                        dstBuf, redBlock.getOffset() + 4,
+                        srcBuf.length - redBlock.getOffset() - 3);
+
+                    // set the extended picture id bit.
+                    dstBuf[redBlock.getOffset() + 2] |= (byte) (0x80);
+
+                    pktOut = new RawPacket(dstBuf,
+                        pktOut.getOffset(), pktOut.getLength() + 1);
+
+                    logger.debug("Extending the picture ID of a VP8 pkt.");
+                }
+
+                if (!DePacketizer
+                    .VP8PayloadDescriptor.setExtendedPictureId(
+                        // XXX pktOut is not a typo.
+                        pktOut.getBuffer(), redBlock.getOffset(),
+                        redBlock.getLength(), dstPictureID))
+                {
+                    logger.warn("Failed to set the VP8 extended" +
+                        " picture ID.");
+                }
+                // We may have re-assigned pktOut to a new RawPacket
+                return pktOut;
+            }
+
+            /**
              * Translates accepted packets and drops packets that are not
              * accepted (by this instance).
              *
@@ -1354,49 +1409,7 @@ public class SimulcastController
 
                     if (ENABLE_VP8_PICID_REWRITING && dstPictureID > -1)
                     {
-                        MediaStreamTrackDesc source = weakSource.get();
-                        assert source != null;
-
-                        REDBlock redBlock = source.getMediaStreamTrackReceiver()
-                            .getStream().getPrimaryREDBlock(pktOut);
-
-                        if (!DePacketizer
-                            .VP8PayloadDescriptor.hasExtendedPictureId(
-                            redBlock.getBuffer(), redBlock.getOffset(),
-                            redBlock.getLength()))
-                        {
-                            // XXX we have observed that using a non-extended
-                            // picture ID makes the Chrome 58 jitter buffer to
-                            // completely freak out. So here we expand the non
-                            // extended picture id field and convert it to an
-                            // extended one.
-                            byte[] srcBuf = pktOut.getBuffer();
-                            byte[] dstBuf = new byte[srcBuf.length + 1];
-                            System.arraycopy(
-                                srcBuf, 0, dstBuf, 0, redBlock.getOffset() + 3);
-                            System.arraycopy(srcBuf, redBlock.getOffset() + 3,
-                                dstBuf, redBlock.getOffset() + 4,
-                                srcBuf.length - redBlock.getOffset() - 3);
-
-                            // set the extended picture id bit.
-                            dstBuf[redBlock.getOffset() + 2] |= (byte) (0x80);
-
-                            pktOut = new RawPacket(dstBuf,
-                                pktOut.getOffset(), pktOut.getLength() + 1);
-                            pktsOut[i] = pktOut;
-
-                            logger.debug("Extending the picture ID of a VP8 pkt.");
-                        }
-
-                        if (!DePacketizer
-                            .VP8PayloadDescriptor.setExtendedPictureId(
-                                // XXX pktOut is not a typo.
-                            pktOut.getBuffer(), redBlock.getOffset(),
-                            redBlock.getLength(), dstPictureID))
-                        {
-                            logger.warn("Failed to set the VP8 extended" +
-                                " picture ID.");
-                        }
+                        pktsOut[i] = handleVp8PictureIdRewriting(pktOut);
                     }
 
                     if (dstTL0PICIDX > -1)
