@@ -924,7 +924,7 @@ public class Content
         @Override
         public boolean accept(
                 MediaStream source,
-                byte[] buffer, int offset, int length,
+                RawPacket pkt,
                 MediaStream destination,
                 boolean data)
         {
@@ -943,7 +943,7 @@ public class Content
                 accept
                     = writeFilter.accept(
                             source,
-                            buffer, offset, length,
+                            pkt,
                             destination,
                             data);
             }
