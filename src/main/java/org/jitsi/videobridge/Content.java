@@ -176,12 +176,11 @@ public class Content
         touch();
     }
 
-    @Override
     public boolean accept(
-            MediaStream source,
-            byte[] buffer, int offset, int length,
-            MediaStream destination,
-            boolean data)
+        MediaStream source,
+        RawPacket pkt,
+        MediaStream destination,
+        boolean data)
     {
         boolean accept = true;
 
@@ -196,12 +195,22 @@ public class Content
 
                 accept
                     = dst.rtpTranslatorWillWrite(
-                            data,
-                            new RawPacket(buffer, offset, length),
-                            src);
+                    data,
+                    pkt,
+                    src);
             }
         }
         return accept;
+    }
+
+    @Override
+    public boolean accept(
+            MediaStream source,
+            byte[] buffer, int offset, int length,
+            MediaStream destination,
+            boolean data)
+    {
+        return accept(source, new RawPacket(buffer, offset, length), destination, data);
     }
 
     /**
