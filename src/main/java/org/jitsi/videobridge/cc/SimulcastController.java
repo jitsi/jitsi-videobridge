@@ -48,7 +48,7 @@ public class SimulcastController
     /**
      * The property name of the number of seen frames to keep track of.
      */
-    private static final String SEEN_FRAME_HISTORY_SIZE_PNAME
+    public static final String SEEN_FRAME_HISTORY_SIZE_PNAME
         = "org.jitsi.videobridge.SEEN_FRAME_HISTORY_SIZE";
 
     /**
@@ -1204,7 +1204,7 @@ public class SimulcastController
             /**
              * The VP8 TL0PICIDX to set to outgoing packets that belong to this
              * frame.
-             * https://tools.ietf.org/html/draft-ietf-payload-vp8-17#section-4.2
+             * https://tools.ietf.org/html/rfc7741#section-4.2
              */
             private int dstTL0PICIDX = -1;
 
