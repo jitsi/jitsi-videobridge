@@ -393,7 +393,7 @@ public class SimulcastController
         if (!ArrayUtils.isNullOrEmpty(pktsOut)
             && pktIn.getSSRCAsLong() != targetSsrc)
         {
-            // Rewrite the SSSRC of the output RTP stream.
+            // Rewrite the SSRC of the output RTP stream.
             for (RawPacket pktOut : pktsOut)
             {
                 if (pktOut != null)
@@ -503,12 +503,16 @@ public class SimulcastController
     {
         /**
          * The available subjective quality indexes that this RTP stream offers.
+         * NOTE: this refers to the available qualities for the current stream
+         * only.  a non-adaptive stream would only have 1, an adaptive stream
+         * would have multiple for each of its layers.
          */
         private int[] availableQualityIndices;
 
         /**
          * A boolean that indicates whether or not the current TL0 is adaptive
-         * or not.
+         * (meaning it has multiple quality layers within the same rtp stream) or
+         * not.
          */
         private boolean isAdaptive;
 
@@ -722,8 +726,13 @@ public class SimulcastController
         }
 
         /**
-         * Given a list of available quality indices and a target index, find
-         * the highest available quality index <= targetIdx
+         * Given a list of available quality indices for the current stream
+         * and a target index, find the highest available quality index <= targetIdx.
+         * Note that targetIdx may be pointing at a different stream, i.e.
+         * availableQualityIndices may be {7, 8, 9} and targetIdx could be 3.
+         * We won't change the stream we're sending, but will find the max index
+         * that is both in the current stream and is less than the targetIdx,
+         * if it exists
          * @param availableQualityIndices the available quality indices
          * @param targetIdx the target index
          * @return the highest quality index <= targetIdx
@@ -734,9 +743,14 @@ public class SimulcastController
         private int findMaximumQualityIndex(int[] availableQualityIndices, int targetIdx)
         {
             int maxIndex = -1;
-            if (availableQualityIndices != null)
+            if (availableQualityIndices != null && availableQualityIndices.length > 0)
             {
-                for (int i = 0; i < availableQualityIndices.length; ++i)
+                // At the very least we will send the lowest quality layer of
+                // the current stream.  If there happens to be an additional,
+                // higher index of this stream that is also <= targetIdx, we will
+                // upgrade to that
+                maxIndex = availableQualityIndices[0];
+                for (int i = 1; i < availableQualityIndices.length; ++i)
                 {
                     if (availableQualityIndices[i] <= targetIdx)
                     {
