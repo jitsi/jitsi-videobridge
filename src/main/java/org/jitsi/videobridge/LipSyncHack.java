@@ -224,8 +224,7 @@ public class LipSyncHack
      * written. The purpose of this is to trigger the hack for the video stream
      * that is associated to the audio SSRC that is about to be written.
      *
-     * @param pkt the packet that is about to be written
-     * <tt>offset</tt> which represent the received RTP or RTCP packet.
+     * @param pkt the the received RTP or RTCP packet.
      * @param source the {@link Channel} where this packet came from.
      */
     void onRTPTranslatorWillWriteAudio(
@@ -380,7 +379,7 @@ public class LipSyncHack
      * written. The purpose of this is to stop the hack for the SSRC that is
      * about to be written.
      *
-     * @param pkt the packet which is about to be written
+     * @param pkt the received RTP or RTCP packet.
      * @param source the {@link RtpChannel} where this packet came from.
      */
     void onRTPTranslatorWillWriteVideo(
