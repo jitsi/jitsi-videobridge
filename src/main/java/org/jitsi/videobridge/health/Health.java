@@ -41,7 +41,7 @@ public class Health
      * The {@link MediaType}s of {@link RtpChannel}s supported by
      * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
      * by {@link
-     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
+     * Content#createRtpChannel(org.jxmpp.jid.Jid, String, Boolean, RTPLevelRelayType)}.
      */
     private static final MediaType[] MEDIA_TYPES
         = { MediaType.AUDIO, MediaType.VIDEO };

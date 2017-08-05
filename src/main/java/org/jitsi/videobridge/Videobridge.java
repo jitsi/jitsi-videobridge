@@ -44,6 +44,8 @@ import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.provider.*;
+import org.jxmpp.jid.Jid;
+import org.jxmpp.jid.parts.Localpart;
 import org.osgi.framework.*;
 
 /**
@@ -233,7 +235,7 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(String focus, String name, String gid)
+    public Conference createConference(Jid focus, Localpart name, String gid)
     {
         return this.createConference(focus, name, /* enableLogging */ true, gid);
     }
@@ -258,7 +260,7 @@ public class Videobridge
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     public Conference createConference(
-        String focus, String name, boolean enableLogging, String gid)
+            Jid focus, Localpart name, boolean enableLogging, String gid)
     {
         Conference conference = null;
 
@@ -431,7 +433,7 @@ public class Videobridge
      * with the specified ID and the specified conference focus is known to this
      * <tt>Videobridge</tt>
      */
-    public Conference getConference(String id, String focus)
+    public Conference getConference(String id, Jid focus)
     {
         Conference conference;
 
@@ -446,7 +448,7 @@ public class Videobridge
              * (Optional) A conference is owned by the focus who has initialized
              * it and it may be managed by that focus only.
              */
-            String conferenceFocus = conference.getFocus();
+            Jid conferenceFocus = conference.getFocus();
 
             // If no 'focus' was given as an argument or if conference is not
             // owned by any 'conferenceFocus' then skip equals()
@@ -617,7 +619,7 @@ public class Videobridge
      * @return {@code true} if a COLIBRI request from focus should be accepted,
      * given the specified {@code options}, and {@code false} otherwise.
      */
-    private boolean accept(String focus, int options)
+    private boolean accept(Jid focus, int options)
     {
         if ((options & OPTION_ALLOW_ANY_FOCUS) > 0)
         {
@@ -656,7 +658,7 @@ public class Videobridge
             int options)
         throws Exception
     {
-        String focus = conferenceIQ.getFrom();
+        Jid focus = conferenceIQ.getFrom();
         Conference conference;
 
         if (!accept(focus, options))
@@ -691,7 +693,7 @@ public class Videobridge
                     {
                         return IQUtils.createError(
                                 conferenceIQ,
-                                XMPPError.Condition.interna_server_error,
+                                XMPPError.Condition.internal_server_error,
                                 "Failed to create new conference");
                     }
                 }
@@ -766,7 +768,7 @@ public class Videobridge
             {
                 return IQUtils.createError(
                         conferenceIQ,
-                        XMPPError.Condition.interna_server_error,
+                        XMPPError.Condition.internal_server_error,
                         "Failed to create new content for name: "
                             + contentName);
             }
@@ -822,7 +824,7 @@ public class Videobridge
                     {
                         return IQUtils.createError(
                                 conferenceIQ,
-                                XMPPError.Condition.interna_server_error,
+                                XMPPError.Condition.internal_server_error,
                                 "Failed to allocate new RTP Channel");
                     }
 
@@ -995,7 +997,7 @@ public class Videobridge
                     {
                         return IQUtils.createError(
                                 conferenceIQ,
-                                XMPPError.Condition.interna_server_error,
+                                XMPPError.Condition.internal_server_error,
                                 "Failed to create new endpoint for ID: "
                                     + endpointID);
                     }
@@ -1014,7 +1016,7 @@ public class Videobridge
                             return IQUtils.createError(
                                     conferenceIQ,
                                     XMPPError.Condition
-                                        .interna_server_error,
+                                        .internal_server_error,
                                     "Failed to create new SCTP connection");
                         }
                     }
@@ -1120,7 +1122,7 @@ public class Videobridge
         conference.describeChannelBundles(responseConferenceIQ);
 
         responseConferenceIQ.setType(
-                org.jivesoftware.smack.packet.IQ.Type.RESULT);
+                org.jivesoftware.smack.packet.IQ.Type.result);
 
         return responseConferenceIQ;
     }
@@ -1132,7 +1134,7 @@ public class Videobridge
      * @param healthCheckIQ the <tt>HealthCheckIQ</tt> to be handled.
      * @return IQ with &quot;result&quot; type if the health check succeeded or
      * IQ with &quot;error&quot; type if something went wrong.
-     * {@link XMPPError.Condition#interna_server_error} is returned when the
+     * {@link XMPPError.Condition#internal_server_error} is returned when the
      * health check fails or {@link XMPPError.Condition#not_authorized} if the
      * request comes from a JID that is not authorized to do health checks on
      * this instance.
@@ -1160,7 +1162,7 @@ public class Videobridge
             return
                 IQUtils.createError(
                         healthCheckIQ,
-                        XMPPError.Condition.interna_server_error,
+                        XMPPError.Condition.internal_server_error,
                         e.getMessage());
         }
     }
@@ -1183,7 +1185,7 @@ public class Videobridge
                     shutdownIQ, XMPPError.Condition.service_unavailable);
         }
         // Check if source matches pattern
-        String from = shutdownIQ.getFrom();
+        Jid from = shutdownIQ.getFrom();
         if (from != null && shutdownSourcePattern.matcher(from).matches())
         {
             logger.info("Accepted shutdown request from: " + from);
@@ -1383,62 +1385,61 @@ public class Videobridge
                             + "requests from any source.");
         }
 
-        ProviderManager providerManager = ProviderManager.getInstance();
-
         // <conference>
-        providerManager.addIQProvider(
+        ProviderManager.addIQProvider(
                 ColibriConferenceIQ.ELEMENT_NAME,
                 ColibriConferenceIQ.NAMESPACE,
                 new ColibriIQProvider());
 
         // ICE-UDP <transport>
-        providerManager.addExtensionProvider(
+        ProviderManager.addExtensionProvider(
                 IceUdpTransportPacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         IceUdpTransportPacketExtension.class));
         // Raw UDP <transport>
-        providerManager.addExtensionProvider(
+        ProviderManager.addExtensionProvider(
                 RawUdpTransportPacketExtension.ELEMENT_NAME,
                 RawUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         RawUdpTransportPacketExtension.class));
 
-        PacketExtensionProvider candidatePacketExtensionProvider
-            = new DefaultPacketExtensionProvider<>(
+        DefaultPacketExtensionProvider<CandidatePacketExtension>
+            candidatePacketExtensionProvider
+                = new DefaultPacketExtensionProvider<>(
                     CandidatePacketExtension.class);
 
         // ICE-UDP <candidate>
-        providerManager.addExtensionProvider(
+        ProviderManager.addExtensionProvider(
                 CandidatePacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
                 candidatePacketExtensionProvider);
         // Raw UDP <candidate>
-        providerManager.addExtensionProvider(
+        ProviderManager.addExtensionProvider(
                 CandidatePacketExtension.ELEMENT_NAME,
                 RawUdpTransportPacketExtension.NAMESPACE,
                 candidatePacketExtensionProvider);
-        providerManager.addExtensionProvider(
+        ProviderManager.addExtensionProvider(
                 RtcpmuxPacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         RtcpmuxPacketExtension.class));
 
         // DTLS-SRTP <fingerprint>
-        providerManager.addExtensionProvider(
+        ProviderManager.addExtensionProvider(
                 DtlsFingerprintPacketExtension.ELEMENT_NAME,
                 DtlsFingerprintPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         DtlsFingerprintPacketExtension.class));
 
         // PubSub
-        providerManager.addIQProvider(
+        ProviderManager.addIQProvider(
                 PubSubElementType.PUBLISH.getElementName(),
                 PubSubElementType.PUBLISH.getNamespace().getXmlns(),
                 new PubSubProvider());
 
         // Health-check
-        providerManager.addIQProvider(
+        ProviderManager.addIQProvider(
                 HealthCheckIQ.ELEMENT_NAME,
                 HealthCheckIQ.NAMESPACE,
                 new HealthCheckIQProvider());

@@ -155,7 +155,7 @@ public class Endpoint
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
-     * @param id the identifier/ID of the endpoint of a participant in a
+     *  @param id the identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt> with which the new instance is to be initialized
      * @param conference
      */
@@ -615,7 +615,7 @@ public class Endpoint
     /**
      * Checks whether a WebSocket connection with a specific password string
      * should be accepted for this {@link Endpoint}.
-     * @param icePassword the
+     * @param password the
      * @return {@code true} iff the password matches and the WebSocket
      */
     public boolean acceptWebSocket(String password)
