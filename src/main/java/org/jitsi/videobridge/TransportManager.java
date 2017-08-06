@@ -294,7 +294,7 @@ public abstract class TransportManager
      * @return the <tt>DtlsControl</tt> allocated by this instance for use by a
      * specific <tt>Channel</tt>.
      */
-    public abstract DtlsControlImpl getDtlsControl(Channel channel);
+    public abstract SrtpControl getSrtpControl(Channel channel);
 
     /**
      * Gets the <tt>StreamConnector</tt> which represents the datagram sockets

@@ -233,9 +233,9 @@ public class Videobridge
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
-    public Conference createConference(String focus, String name)
+    public Conference createConference(String focus, String name, String gid)
     {
-        return this.createConference(focus, name, /* enableLogging */ true);
+        return this.createConference(focus, name, /* enableLogging */ true, gid);
     }
 
     /**
@@ -258,7 +258,7 @@ public class Videobridge
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
     public Conference createConference(
-        String focus, String name, boolean enableLogging)
+        String focus, String name, boolean enableLogging, String gid)
     {
         Conference conference = null;
 
@@ -276,7 +276,8 @@ public class Videobridge
                                 id,
                                 focus,
                                 name,
-                                enableLogging);
+                                enableLogging,
+                                gid);
                     conferences.put(id, conference);
                 }
             }
@@ -682,7 +683,10 @@ public class Videobridge
                 else
                 {
                     conference
-                        = createConference(focus, conferenceIQ.getName());
+                        = createConference(
+                                focus,
+                                conferenceIQ.getName(),
+                                conferenceIQ.getGID());
                     if (conference == null)
                     {
                         return IQUtils.createError(
@@ -873,7 +877,9 @@ public class Videobridge
                 String endpoint = channelIQ.getEndpoint();
 
                 if (endpoint != null)
+                {
                     channel.setEndpoint(endpoint);
+                }
 
                 /*
                  * The attribute last-n is optional. If a value is not
@@ -882,7 +888,9 @@ public class Videobridge
                 Integer lastN = channelIQ.getLastN();
 
                 if (lastN != null)
+                {
                     channel.setLastN(lastN);
+                }
 
                 // Packet delay - for automated testing purpose only
                 Integer packetDelay = channelIQ.getPacketDelay();

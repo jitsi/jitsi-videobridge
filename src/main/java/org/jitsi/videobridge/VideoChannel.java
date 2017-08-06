@@ -294,7 +294,8 @@ public class VideoChannel
             {
                 for (Channel peerChannel : peerChannels)
                 {
-                    if (peerChannel == this)
+                    if (peerChannel == this
+                        || !(peerChannel instanceof VideoChannel))
                     {
                         continue;
                     }
@@ -451,7 +452,7 @@ public class VideoChannel
     @Override
     boolean rtpTranslatorWillWrite(
         boolean data,
-        byte[] buffer, int offset, int length,
+        RawPacket pkt,
         RtpChannel source)
     {
         if (!data)
@@ -459,17 +460,16 @@ public class VideoChannel
             return true;
         }
 
-        boolean accept = bitrateController.accept(buffer, offset, length);
+        boolean accept = bitrateController.accept(pkt);
 
         if (accept && lipSyncHack != null)
         {
             lipSyncHack
-                .onRTPTranslatorWillWriteVideo(buffer, offset, length, source);
+                .onRTPTranslatorWillWriteVideo(pkt, source);
         }
 
         return accept;
     }
-
 
     /**
      * {@inheritDoc}
@@ -705,7 +705,7 @@ public class VideoChannel
     {
         Endpoint dominantEndpoint = conferenceSpeechActivity.getDominantEndpoint();
 
-        if (getEndpoint().equals(dominantEndpoint))
+        if (dominantEndpoint != null && dominantEndpoint.equals(getEndpoint()))
         {
             // We are the new dominant speaker. We expect other endpoints to
             // mark us as a selected endpoint as soon as they receive the

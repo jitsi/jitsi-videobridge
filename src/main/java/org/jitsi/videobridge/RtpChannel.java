@@ -895,7 +895,7 @@ public class RtpChannel
                 = mediaService.createMediaStream(
                         null,
                         mediaType,
-                        getDtlsControl());
+                        getSrtpControl());
 
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes
@@ -1253,18 +1253,16 @@ public class RtpChannel
      * <tt>Channel</tt> into this destination <tt>Channel</tt>.
      *
      * @param data
-     * @param buffer
-     * @param offset
-     * @param length
+     * @param pkt
      * @param source
      * @return <tt>true</tt> to allow the <tt>RTPTranslator</tt> to write the
      * specified packet/<tt>buffer</tt> into this <tt>Channel</tt>; otherwise,
      * <tt>false</tt>
      */
     boolean rtpTranslatorWillWrite(
-            boolean data,
-            byte[] buffer, int offset, int length,
-            RtpChannel source)
+        boolean data,
+        RawPacket pkt,
+        RtpChannel source)
     {
         return true;
     }

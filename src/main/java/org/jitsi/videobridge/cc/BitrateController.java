@@ -341,17 +341,14 @@ public class BitrateController
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Channel} that owns this {@link BitrateController}.
      *
-     * @param buf the <tt>byte</tt> array that holds the packet.
-     * @param off the offset in <tt>buffer</tt> at which the actual data begins.
-     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-     * constitute the actual data.
-     * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
+     * @param pkt that packet for which to decide to accept
+     * @return <tt>true</tt> to allow the specified packet to be
      * written into the {@link Channel} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
-    public boolean accept(byte[] buf, int off, int len)
+    public boolean accept(RawPacket pkt)
     {
-        long ssrc = RawPacket.getSSRCAsLong(buf, off, len);
+        long ssrc = pkt.getSSRCAsLong();
         if (ssrc < 0)
         {
             return false;
@@ -361,7 +358,7 @@ public class BitrateController
             = ssrcToBitrateController.get(ssrc);
 
         return simulcastController != null
-            && simulcastController.accept(buf, off, len);
+            && simulcastController.accept(pkt);
     }
 
     /**

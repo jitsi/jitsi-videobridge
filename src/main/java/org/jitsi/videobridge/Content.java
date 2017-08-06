@@ -176,12 +176,11 @@ public class Content
         touch();
     }
 
-    @Override
     public boolean accept(
-            MediaStream source,
-            byte[] buffer, int offset, int length,
-            MediaStream destination,
-            boolean data)
+        MediaStream source,
+        RawPacket pkt,
+        MediaStream destination,
+        boolean data)
     {
         boolean accept = true;
 
@@ -196,14 +195,14 @@ public class Content
 
                 accept
                     = dst.rtpTranslatorWillWrite(
-                            data,
-                            buffer, offset, length,
-                            src);
+                    data,
+                    pkt,
+                    src);
             }
         }
         return accept;
     }
-
+    
     /**
      * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
      * <tt>RtpChannel</tt>s of this <tt>Content</tt>. The new
@@ -915,7 +914,7 @@ public class Content
         @Override
         public boolean accept(
                 MediaStream source,
-                byte[] buffer, int offset, int length,
+                RawPacket pkt,
                 MediaStream destination,
                 boolean data)
         {
@@ -934,7 +933,7 @@ public class Content
                 accept
                     = writeFilter.accept(
                             source,
-                            buffer, offset, length,
+                            pkt,
                             destination,
                             data);
             }

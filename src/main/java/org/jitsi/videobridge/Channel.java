@@ -196,15 +196,21 @@ public abstract class Channel
         throws Exception
     {
         if (content == null)
+        {
             throw new NullPointerException("content");
+        }
         if (StringUtils.isNullOrEmpty(id))
+        {
             throw new NullPointerException("id");
+        }
 
         this.id = id;
         this.content = content;
         this.channelBundleId = channelBundleId;
         if (initiator != null)
+        {
             this.initiator = initiator;
+        }
 
         this.logger
             = Logger.getLogger(classLogger,
@@ -482,14 +488,14 @@ public abstract class Channel
      * @return <tt>DtlsControl</tt> if this instance supports DTLS transport or
      * <tt>null</tt> otherwise.
      */
-    protected DtlsControl getDtlsControl()
+    protected SrtpControl getSrtpControl()
     {
         TransportManager transportManager = getTransportManager();
 
         return
             (transportManager == null)
                 ? null
-                : transportManager.getDtlsControl(this);
+                : transportManager.getSrtpControl(this);
     }
 
     /**

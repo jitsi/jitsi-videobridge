@@ -161,16 +161,19 @@ public class SimulcastController
      * Defines a packet filter that controls which packets to be written into
      * some arbitrary target/receiver that owns this {@link SimulcastController}.
      *
-     * @param buf the <tt>byte</tt> array that holds the packet.
-     * @param off the offset in <tt>buffer</tt> at which the actual data begins.
-     * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-     * constitute the actual data.
+     * @param pkt the packet to decide whether or not to accept
      * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
      * written into the arbitrary target/receiver that owns this
      * {@link SimulcastController} ; otherwise, <tt>false</tt>
      */
-    public boolean accept(byte[] buf, int off, int len)
+    public boolean accept(RawPacket pkt)
     {
+        if (pkt.getBuffer() == null || pkt.getOffset() < 0 ||
+            pkt.getLength() < RawPacket.FIXED_HEADER_SIZE ||
+            pkt.getBuffer().length < pkt.getOffset() + pkt.getLength())
+        {
+            return false;
+        }
         int targetIndex = bitstreamController.getTargetIndex()
             , currentIndex = bitstreamController.getCurrentIndex();
 
@@ -184,10 +187,10 @@ public class SimulcastController
 
         MediaStreamTrackDesc sourceTrack = weakSource.get();
         assert sourceTrack != null;
-        FrameDesc sourceFrameDesc = sourceTrack.findFrameDesc(buf, off, len);
+        FrameDesc sourceFrameDesc =
+            sourceTrack.findFrameDesc(pkt.getSSRCAsLong(), pkt.getTimestamp());
 
-        if (sourceFrameDesc == null || buf == null || off < 0
-            || len < RawPacket.FIXED_HEADER_SIZE || buf.length < off + len)
+        if (sourceFrameDesc == null)
         {
             return false;
         }
@@ -231,7 +234,7 @@ public class SimulcastController
             }
 
             // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, buf, off, len);
+            return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
         // An intra-codec/simulcast switch pending.
@@ -261,7 +264,7 @@ public class SimulcastController
             }
 
             // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, buf, off, len);
+            return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
         if ((targetTL0Idx <= sourceTL0Idx && sourceTL0Idx < currentTL0Idx)
@@ -271,12 +274,13 @@ public class SimulcastController
             bitstreamController.setTL0Idx(sourceTL0Idx);
 
             // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, buf, off, len);
+            return bitstreamController.accept(sourceFrameDesc, pkt);
         }
         else
         {
             return false;
         }
+
     }
 
     /**
@@ -500,13 +504,13 @@ public class SimulcastController
         /**
          * The available subjective quality indexes that this RTP stream offers.
          */
-        private int[] availableIdx;
+        private int[] availableQualityIndices;
 
         /**
          * A boolean that indicates whether or not the current TL0 is adaptive
          * or not.
          */
-        private boolean adaptive;
+        private boolean isAdaptive;
 
         /**
          * The sequence number offset that this bitstream started. The initial
@@ -590,15 +594,15 @@ public class SimulcastController
         private long transmittedPackets = 0;
 
         /**
-         * The most recent (mr) key frame that we've sent out. Anything that's
+         * The most recent key frame that we've sent out. Anything that's
          * accepted by this controller needs to be newer than this.
          */
-        private SeenFrame mrKeyFrame;
+        private SeenFrame mostRecentSentKeyFrame;
 
         /**
          * The max (biggest timestamp) frame that we've sent out.
          */
-        private SeenFrame maxSentFrame;
+        private SeenFrame mostRecentSentFrame;
 
         /**
          * The {@link SeenFrameAllocator} for this {@link BitstreamController}.
@@ -651,13 +655,13 @@ public class SimulcastController
 
             this.seenFrames.clear();
 
-            this.mrKeyFrame = null;
-            if (maxSentFrame != null)
+            this.mostRecentSentKeyFrame = null;
+            if (mostRecentSentFrame != null)
             {
                 this.tsOff = getMaxTs();
                 this.seqNumOff = getMaxSeqNum();
                 this.pidOff = getMaxPictureID();
-                this.maxSentFrame = null;
+                this.mostRecentSentFrame = null;
             }
 
             this.pidDelta = -1;
@@ -685,9 +689,9 @@ public class SimulcastController
             }
             if (ArrayUtils.isNullOrEmpty(rtpEncodings) || tl0Idx < 0)
             {
-                this.availableIdx = null;
+                this.availableQualityIndices = null;
                 this.tl0SSRC = -1;
-                this.adaptive = false;
+                this.isAdaptive = false;
             }
             else
             {
@@ -706,14 +710,14 @@ public class SimulcastController
                     }
                 }
 
-                availableIdx = new int[availableQualities.size()];
+                availableQualityIndices = new int[availableQualities.size()];
                 Iterator<Integer> iterator = availableQualities.iterator();
-                for (int i = 0; i < availableIdx.length; i++)
+                for (int i = 0; i < availableQualityIndices.length; i++)
                 {
-                    availableIdx[i] = iterator.next();
+                    availableQualityIndices[i] = iterator.next();
                 }
 
-                this.adaptive = availableIdx.length > 1;
+                this.isAdaptive = availableQualityIndices.length > 1;
             }
         }
 
@@ -724,18 +728,15 @@ public class SimulcastController
          *
          * @param sourceFrameDesc the {@link FrameDesc} that the RTP packet belongs
          * to.
-         * @param buf the <tt>byte</tt> array that holds the packet.
-         * @param off the offset in <tt>buffer</tt> at which the actual data begins.
-         * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-         * constitute the actual data.
+         * @param pkt the packet for which to decide to accept
          * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt> to be
          * written into the arbitrary target/receiver that owns this
          * {@link BitstreamController} ; otherwise, <tt>false</tt>
          */
         public boolean accept(
-            FrameDesc sourceFrameDesc, byte[] buf, int off, int len)
+            FrameDesc sourceFrameDesc, RawPacket pkt)
         {
-            if (adaptive && sourceFrameDesc.getStart() == -1)
+            if (isAdaptive && sourceFrameDesc.getStart() == -1)
             {
                 return false;
             }
@@ -761,14 +762,14 @@ public class SimulcastController
 
                 int currentIdx = this.currentIdx;
 
-                if (availableIdx != null && availableIdx.length != 0)
+                if (availableQualityIndices != null && availableQualityIndices.length != 0)
                 {
-                    currentIdx = availableIdx[0];
-                    for (int i = 1; i < availableIdx.length; i++)
+                    currentIdx = availableQualityIndices[0];
+                    for (int i = 1; i < availableQualityIndices.length; i++)
                     {
-                        if (availableIdx[i] <= targetIdx)
+                        if (availableQualityIndices[i] <= targetIdx)
                         {
-                            currentIdx = availableIdx[i];
+                            currentIdx = availableQualityIndices[i];
                         }
                         else
                         {
@@ -787,23 +788,23 @@ public class SimulcastController
                     this.currentIdx = currentIdx;
                 }
 
-                boolean isNewest = maxSentFrame == null
-                    || TimeUtils.rtpDiff(srcTs, maxSentFrame.srcTs) > 0;
+                boolean isNewerThanMostRecentFrame = !haveSentFrame()
+                    || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentFrame.srcTs);
 
-                boolean isNewerThanMostRecentKeyFrame = mrKeyFrame == null
-                    || TimeUtils.rtpDiff(srcTs, mrKeyFrame.srcTs) > 0;
+                boolean isNewerThanMostRecentKeyFrame = !haveSentKeyFrame()
+                    || RTPUtils.isNewerTimestampThan(srcTs, mostRecentSentKeyFrame.srcTs);
 
-                if (currentIdx > -1
+                if (!isSuspended()
                     // we haven't seen anything yet and this is an independent
                     // frame.
-                    && (maxSentFrame == null && sourceFrameDesc.isIndependent()
+                    && (!haveSentFrame() && sourceFrameDesc.isIndependent()
                     // frames from non-adaptive streams need to be newer than
                     // the most recent independent frame
-                    || (maxSentFrame != null && !adaptive
+                    || (haveSentFrame() && !isAdaptive
                         && isNewerThanMostRecentKeyFrame)
                     // frames from adaptive streams need to be newer than the
                     // max
-                    || (maxSentFrame != null && adaptive && isNewest)))
+                    || (haveSentFrame() && isAdaptive && isNewerThanMostRecentFrame)))
                 {
                     // the stream is not suspended and we're not dealing with a
                     // late frame or the stream is not adaptive.
@@ -821,7 +822,7 @@ public class SimulcastController
                         // complete.
 
                         SeqNumTranslation seqNumTranslation;
-                        if (maxSentFrame == null || adaptive)
+                        if (!haveSentFrame() || isAdaptive)
                         {
                             int maxSeqNum = getMaxSeqNum();
                             if (maxSeqNum > -1)
@@ -843,12 +844,12 @@ public class SimulcastController
                             // quality, then we're not filtering anything thus
                             // the sequence number distances between the frames
                             // are fixed so we can reuse the sequence number
-                            // translation from the maxSentFrame.
-                            seqNumTranslation = maxSentFrame.seqNumTranslation;
+                            // translation from the mostRecentSentFrame.
+                            seqNumTranslation = mostRecentSentFrame.seqNumTranslation;
                         }
 
                         TimestampTranslation tsTranslation;
-                        if (maxSentFrame == null)
+                        if (!haveSentFrame())
                         {
                             if (tsOff > -1)
                             {
@@ -866,7 +867,7 @@ public class SimulcastController
                             // The timestamp delta doesn't change for a bitstream,
                             // so, if we've sent out a frame already, reuse its
                             // timestamp translation.
-                            tsTranslation = maxSentFrame.tsTranslation;
+                            tsTranslation = mostRecentSentFrame.tsTranslation;
                         }
 
                         int dstPictureID = -1, dstTL0PICIDX = -1;
@@ -875,17 +876,16 @@ public class SimulcastController
                             byte vp8PT = bitrateController.getVideoChannel()
                                 .getStream().getDynamicRTPPayloadType(Constants.VP8);
 
-                            boolean isVP8 = vp8PT
-                                == (byte) RawPacket.getPayloadType(buf, off, len);
+                            boolean isVP8 = vp8PT == pkt.getPayloadType();
 
                             if (isVP8)
                             {
-                                dstPictureID = calculatePictureID(buf, off, len);
+                                dstPictureID = calculatePictureID(pkt);
                             }
 
                             int tid = ((MediaStreamImpl) bitrateController
                                 .getVideoChannel().getStream())
-                                .getTemporalID(buf, off, len);
+                                .getTemporalID(pkt);
 
                             if (tid > -1)
                             {
@@ -903,15 +903,15 @@ public class SimulcastController
                             dstPictureID, dstTL0PICIDX, sourceFrameDesc.isIndependent());
                         seenFrames.put(srcTs, destFrame);
 
-                        if (isNewest)
+                        if (isNewerThanMostRecentFrame)
                         {
-                            maxSentFrame = destFrame;
+                            mostRecentSentFrame = destFrame;
                         }
 
                         if (isNewerThanMostRecentKeyFrame
                             && sourceFrameDesc.isIndependent())
                         {
-                            mrKeyFrame = destFrame;
+                            mostRecentSentKeyFrame = destFrame;
                         }
                     }
                     else
@@ -931,12 +931,12 @@ public class SimulcastController
                 }
             }
 
-            boolean accept = destFrame.accept(sourceFrameDesc, buf, off, len);
+            boolean accept = destFrame.accept(sourceFrameDesc, pkt);
 
             if (accept)
             {
                 transmittedPackets++;
-                transmittedBytes += len;
+                transmittedBytes += pkt.getLength();
             }
 
             return accept;
@@ -945,18 +945,16 @@ public class SimulcastController
         /**
          * Calculates the destination picture ID of an incoming VP8 frame.
          *
-         * @param buf
-         * @param off
-         * @param len
+         * @param pkt the packet from which to calculate the vp8 picture id
          * @return the destination picture ID of the VP8 frame that is specified
          * in the parameter.
+         * FIXME(brian): feels like this should be in some vp8-specific class
          */
-        private int calculatePictureID(byte[] buf, int off, int len)
+        private int calculatePictureID(RawPacket pkt)
         {
             REDBlock redBlock = ((MediaStreamImpl)
                 bitrateController.getVideoChannel()
-                    .getStream()).getPrimaryREDBlock(
-                buf, off, len);
+                    .getStream()).getPrimaryREDBlock(pkt);
 
             int srcPID = DePacketizer
                 .VP8PayloadDescriptor.getPictureId(
@@ -1066,13 +1064,16 @@ public class SimulcastController
          */
         void rtcpTransform(ByteArrayBuffer baf)
         {
-            SeenFrame maxSentFrame = this.maxSentFrame;
-
+            // Make a local reference to this.maxSentFrame to prevent
+            // it from being set to null or a different frame while we're
+            // using it.  maxSentFrame.tsTranslation is conceptually final for
+            // this given frame, so we don't need any extra protection
+            SeenFrame localMaxSentFrameCopy = this.mostRecentSentFrame;
             // Rewrite timestamp.
-            if (maxSentFrame != null && maxSentFrame.tsTranslation != null)
+            if (localMaxSentFrameCopy != null && localMaxSentFrameCopy.tsTranslation != null)
             {
                 long srcTs = RTCPSenderInfoUtils.getTimestamp(baf);
-                long dstTs = maxSentFrame.tsTranslation.apply(srcTs);
+                long dstTs = localMaxSentFrameCopy.tsTranslation.apply(srcTs);
 
                 if (srcTs != dstTs)
                 {
@@ -1090,7 +1091,7 @@ public class SimulcastController
          */
         private int getMaxSeqNum()
         {
-            return maxSentFrame == null ? seqNumOff : maxSentFrame.getMaxSeqNum();
+            return haveSentFrame() ? mostRecentSentFrame.getMaxSeqNum() : seqNumOff;
         }
 
         /**
@@ -1098,7 +1099,7 @@ public class SimulcastController
          */
         private int getMaxPictureID()
         {
-            return maxSentFrame == null ? pidOff : maxSentFrame.dstPictureID;
+            return haveSentFrame() ? mostRecentSentFrame.dstPictureID : pidOff;
         }
 
         /**
@@ -1106,7 +1107,7 @@ public class SimulcastController
          */
         private long getMaxTs()
         {
-            return maxSentFrame == null ? tsOff : maxSentFrame.getTs();
+            return haveSentFrame() ? mostRecentSentFrame.getTs() : tsOff;
         }
 
         /**
@@ -1119,6 +1120,40 @@ public class SimulcastController
         long getTL0SSRC()
         {
             return tl0SSRC;
+        }
+
+        /**
+         * Return whether or not this BitstreamController has sent a frame
+         * from the current bitstream yet
+         *
+         * @return true if it has sent a frame from this bitstream, false
+         * otherwise
+         */
+        private boolean haveSentFrame()
+        {
+            return mostRecentSentFrame != null;
+        }
+
+        /**
+         * Return whether or not this BitstreamController has sent a key frame
+         * from the current bitstream yet
+         *
+         * @return true if it has sent a key frame from this bitstream, false
+         * otherwise
+         */
+        private boolean haveSentKeyFrame()
+        {
+            return mostRecentSentKeyFrame != null;
+        }
+
+        /**
+         * Returns whether or not this bitstream is suspended
+         *
+         * @return true if this bitstream is suspended, false otherwise
+         */
+        private boolean isSuspended()
+        {
+            return currentIdx == -1;
         }
 
         /**
@@ -1176,19 +1211,16 @@ public class SimulcastController
              *
              * @param source the {@link FrameDesc} that the RTP packet belongs
              * to.
-             * @param buf the <tt>byte</tt> array that holds the packet.
-             * @param off the offset in <tt>buffer</tt> at which the actual data
-             * begins.
-             * @param len the number of <tt>byte</tt>s in <tt>buffer</tt> which
-             * constitute the actual data.
+             * @param pkt the packet for which to decide to accept
              * @return <tt>true</tt> to allow the specified packet/<tt>buffer</tt>
              * to be written into the arbitrary target/receiver that owns this
              * {@link SeenFrame} ; otherwise, <tt>false</tt>
              */
-            boolean accept(FrameDesc source, byte[] buf, int off, int len)
+            boolean accept(FrameDesc source, RawPacket pkt)
             {
-                if (this == maxSentFrame /* the max frame can expand */
-                    || availableIdx == null || availableIdx.length < 2)
+                if (this == mostRecentSentFrame /* the max frame can expand */
+                    || availableQualityIndices == null
+                    || availableQualityIndices.length < 2)
                 {
                     int end = source.getEnd();
                     srcSeqNumLimit
@@ -1204,7 +1236,7 @@ public class SimulcastController
                 srcSeqNumStart
                     = start != -1 ? source.getStart() : source.getMinSeen();
 
-                int seqNum = RawPacket.getSequenceNumber(buf, off, len);
+                int seqNum = pkt.getSequenceNumber();
 
                 boolean accept
                     = RTPUtils.sequenceNumberDiff(seqNum, srcSeqNumLimit) <= 0;
@@ -1458,7 +1490,7 @@ public class SimulcastController
 
             /**
              * Returns a {@link SeenFrame} to this allocator.
-             * 
+             *
              * @param value the {@link SeenFrame} to return.
              */
             public void returnSeenFrame(SeenFrame value)
