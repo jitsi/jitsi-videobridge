@@ -267,31 +267,7 @@ public class SimulcastController
         int sourceLayerIndex = sourceFrameDesc.getRTPEncoding().getIndex();
 //        logger.error("SimulcastController " + this.hashCode() + " sourceIndex: " + sourceLayerIndex +
 //            " incoming frame is keyframe? " + sourceFrameDesc.isIndependent());
-
-//        boolean currentLayerActive = sourceEncodings[currentIndex].isFullyActive(true);
-//        if (!currentLayerActive)
-//        {
-//            // The current layer we're forwarding isn't even active, so we'll take
-//            // anything that's flowing as long as it's <= target and this is
-//            // a keyframe
-//            //TODO: this shouldn't be <=, it should be 'in between current and target'
-//            if (sourceLayerIndex <= targetIndex && sourceFrameDesc.isIndependent())
-//            {
-//                //PR-NOTE(brian): what if we set the tl0 index in the bistream
-//                //controller but then it doesn't accept the packet? could that
-//                //happen?
-//                bitstreamController.setTL0Idx(sourceEncodings[sourceLayerIndex].getBaseLayer().getIndex());
-//                return bitstreamController.accept(sourceFrameDesc, pkt);
-//            }
-//            else
-//            {
-//                // The current layer isn't active, but this either:
-//                // a) isn't a keyframe OR
-//                // b) is for a stream we can't use
-//                // so we can't switch to this stream
-//                return false;
-//            }
-//        }
+        
         // At this point we know we *want* to be forwarding something, but the
         // current layer we're forwarding is still sending, so we're not "desperate"
         int currentBaseLayerIndex = currentIndex == SUSPENDED_INDEX ?
@@ -335,52 +311,6 @@ public class SimulcastController
             }
         }
         return false;
-
-//        //PR-NOTE(brian): we don't need to disqualify a keyframe here, do we?
-//        //if it's a keyframe for the current index we can still forward it fine
-//        // --> this test can be simplified (and perhaps even combined with the one
-//        // that does the switch) basically the main thing we care about is:
-//        // if this is a frame of the new stream, it has to be a keyframe, and if it
-//        // is, we'll do the switch.  if it's any frame of the old stream and we
-//        // haven't switched yet, it can go, if we have, it should be dropped
-//        if (!sourceFrameDesc.isIndependent() ||
-//            //PR-NOTE(brian): i don't get this check either, if the base layer
-//            //isn't active, how could we successfully forward a frame on this layer?
-//            !sourceBaseLayerIsActive || // TODO this condition needs review
-//            //PR-NOTE(brian): what is this check for?
-//            sourceBaseLayerIndex == currentBaseLayerIndex)
-//        {
-//            // An intra-codec switch requires a key frame.
-//            long sourceSsrc = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
-//            boolean accept = sourceSsrc == bitstreamController.getTL0SSRC();
-//            // Give the bitstream filter a chance to drop the packet.
-//            return accept && bitstreamController.accept(sourceFrameDesc, pkt);
-//        }
-//
-//        // We get here if:
-//        // the sourceFrameDesc is a keyframe AND
-//        // the sourceBaseLayer is active AND
-//        // the sourceBaseLayerIndex != the currentBaseLayerIndex
-//        // so we will actually do the switch itself
-//
-//        // "if source is in between current and target -> we want it" ||
-//        // if current is inactive, we'll take the source as long as it's <= target
-//
-//        if ((targetTL0Idx <= sourceTL0Idx && // incoming frame is higher/equal quality than what we want
-//            sourceTL0Idx < currentTL0Idx) // incoming frame is lesser quality than current
-//            || (currentTL0Idx < sourceTL0Idx &&
-//            sourceTL0Idx <= targetTL0Idx)
-//            || (!currentTL0IsActive && sourceTL0Idx <= targetTL0Idx))
-//        {
-//            bitstreamController.setTL0Idx(sourceTL0Idx);
-//
-//            // Give the bitstream filter a chance to drop the packet.
-//            return bitstreamController.accept(sourceFrameDesc, pkt);
-//        }
-//        else
-//        {
-//            return false;
-//        }
     }
 
     /**
