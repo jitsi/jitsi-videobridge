@@ -83,6 +83,11 @@ public class SimulcastController
         cfg != null && cfg.getBoolean(ENABLE_VP8_PICID_REWRITING_PNAME, false);
 
     /**
+     * Index used to represent that forwarding is suspended.
+     */
+    private static final int SUSPENDED_INDEX = -1;
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -158,6 +163,48 @@ public class SimulcastController
     }
 
     /**
+     * Returns whether or not the stream represented by 'sourceQualityIndex'
+     * is desirable to switch to given the values of currentQualityIndex and
+     * targetQualityIndex.  In either case (downscale or upscale),
+     * 'sourceQualityIndex' will be desirable if it falls in between
+     * currentQualityIndex and targetQualityIndex, e.g.:
+     *
+     * currentQualityIndex = 1, sourceQualityIndex = 4, targetQualityIndex = 7
+     * -> we're trying to upscale and sourceQualityIndex represents a quality
+     * higher than what we currently have (but not the final target) so forwarding
+     * it is a step in the right direction
+     *
+     * currentQualityIndex = 7, sourceQualityIndex = 4, targetQualityIndex = 1
+     * -> we're trying to downscale and sourceQualityIndex represents a quality
+     * lower than what we currently have (but not the final target) so forwarding
+     * it is a step in the right direction
+     * @param currentQualityIndex the index of the stream currently being
+     * forwarded
+     * @param sourceQualityIndex the index of the stream to which the incoming
+     * frame belongs
+     * @param targetQualityIndex the index of the stream we want to forward
+     * @return true if the stream represented by sourceQualityIndex represents
+     * a step closer (or all the way) to the targetQualityIndex
+     */
+    private boolean shouldSwitchToStream(
+        int currentQualityIndex, int sourceQualityIndex, int targetQualityIndex)
+    {
+        if ((currentQualityIndex < sourceQualityIndex) &&
+            sourceQualityIndex <= targetQualityIndex)
+        {
+            // upscale case
+            return true;
+        }
+        else if ((currentQualityIndex > sourceQualityIndex) &&
+            (sourceQualityIndex >= targetQualityIndex))
+        {
+            // downscale case
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Defines a packet filter that controls which packets to be written into
      * some arbitrary target/receiver that owns this {@link SimulcastController}.
      *
@@ -168,22 +215,32 @@ public class SimulcastController
      */
     public boolean accept(RawPacket pkt)
     {
-        if (pkt.getBuffer() == null || pkt.getOffset() < 0 ||
-            pkt.getLength() < RawPacket.FIXED_HEADER_SIZE ||
-            pkt.getBuffer().length < pkt.getOffset() + pkt.getLength())
+        // PR-NOTE(brian): the set of checks in isInvalid isn't exactly
+        // the same as what was here, but seems like we should be consistent
+        // with the check?
+        if (pkt.isInvalid())
         {
             return false;
         }
-        int targetIndex = bitstreamController.getTargetIndex()
-            , currentIndex = bitstreamController.getCurrentIndex();
 
-        // if the target is set to suspend and it's not already suspended, then
-        // suspend the stream.
-        if (targetIndex < 0 && currentIndex > -1)
+        int targetIndex = bitstreamController.getTargetIndex(),
+            currentIndex = bitstreamController.getCurrentIndex();
+
+//        logger.error("SimulcastController " + this.hashCode() + " target " +
+//            "index: " + targetIndex + ", currentIndex: " + currentIndex);
+
+        // If we're suspended, we won't forward anything
+        if (targetIndex == SUSPENDED_INDEX)
         {
-            bitstreamController.setTL0Idx(-1);
+            // Update the bitstreamController if it hasn't suspended yet
+            if (currentIndex != SUSPENDED_INDEX)
+            {
+                bitstreamController.suspend();
+            }
+//            logger.error("SimulcastController " + this.hashCode() + " suspended, dropping packet");
             return false;
         }
+        // At this point we know we *want* to be forwarding something
 
         MediaStreamTrackDesc sourceTrack = weakSource.get();
         assert sourceTrack != null;
@@ -192,95 +249,138 @@ public class SimulcastController
 
         if (sourceFrameDesc == null)
         {
+//            logger.error("SimulcastController " + this.hashCode() + " sourceFrameDesc is null, dropping");
             return false;
         }
 
         RTPEncodingDesc sourceEncodings[] = sourceTrack.getRTPEncodings();
 
         // If we're getting packets here => there must be at least 1 encoding.
+        //PR-NOTE(brian): is this check necessary? is there a scenario where it
+        //could fail?
         if (ArrayUtils.isNullOrEmpty(sourceEncodings))
         {
+//            logger.error("SimulcastController " + this.hashCode() + " no source encodings, dropping");
             return false;
         }
 
-        // if the TL0 of the forwarded stream is suspended, we MUST downscale.
-        boolean currentTL0IsActive = false;
-        int currentTL0Idx = currentIndex;
-        if (currentTL0Idx > -1)
+        int sourceLayerIndex = sourceFrameDesc.getRTPEncoding().getIndex();
+//        logger.error("SimulcastController " + this.hashCode() + " sourceIndex: " + sourceLayerIndex +
+//            " incoming frame is keyframe? " + sourceFrameDesc.isIndependent());
+
+//        boolean currentLayerActive = sourceEncodings[currentIndex].isFullyActive(true);
+//        if (!currentLayerActive)
+//        {
+//            // The current layer we're forwarding isn't even active, so we'll take
+//            // anything that's flowing as long as it's <= target and this is
+//            // a keyframe
+//            //TODO: this shouldn't be <=, it should be 'in between current and target'
+//            if (sourceLayerIndex <= targetIndex && sourceFrameDesc.isIndependent())
+//            {
+//                //PR-NOTE(brian): what if we set the tl0 index in the bistream
+//                //controller but then it doesn't accept the packet? could that
+//                //happen?
+//                bitstreamController.setTL0Idx(sourceEncodings[sourceLayerIndex].getBaseLayer().getIndex());
+//                return bitstreamController.accept(sourceFrameDesc, pkt);
+//            }
+//            else
+//            {
+//                // The current layer isn't active, but this either:
+//                // a) isn't a keyframe OR
+//                // b) is for a stream we can't use
+//                // so we can't switch to this stream
+//                return false;
+//            }
+//        }
+        // At this point we know we *want* to be forwarding something, but the
+        // current layer we're forwarding is still sending, so we're not "desperate"
+        int currentBaseLayerIndex = currentIndex == SUSPENDED_INDEX ?
+            SUSPENDED_INDEX : sourceEncodings[currentIndex].getBaseLayer().getIndex();
+        int sourceBaseLayerIndex = sourceEncodings[sourceLayerIndex].getBaseLayer().getIndex();
+        if (sourceBaseLayerIndex == currentBaseLayerIndex)
         {
-            currentTL0Idx
-                = sourceEncodings[currentTL0Idx].getBaseLayer().getIndex();
-
-            currentTL0IsActive = sourceEncodings[currentTL0Idx].isActive(true);
-        }
-
-        int targetTL0Idx = targetIndex;
-        if (targetTL0Idx > -1)
-        {
-            targetTL0Idx
-                = sourceEncodings[targetTL0Idx].getBaseLayer().getIndex();
-        }
-
-        if (currentTL0Idx == targetTL0Idx
-            && (currentTL0IsActive || targetTL0Idx < 0 /* => currentIdx < 0 */))
-        {
-            // An intra-codec/simulcast switch is NOT pending.
-            long sourceSsrc = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
-            boolean accept = sourceSsrc == bitstreamController.getTL0SSRC();
-
-            if (!accept)
-            {
-                return false;
-            }
-
-            // Give the bitstream filter a chance to drop the packet.
+//            logger.error("SimulcastController " + this.hashCode() + " source base matches current base");
+            // Regardless of whether a switch is pending or not, if an incoming
+            // frame belongs to the current stream being forwarded, we'll
+            // accept it (if the bitstreamController lets it through)
+            //PR-NOTE(brian): the BitstreamController#accept should handle
+            //if the frame is from the wrong temporal layer, right?
             return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
-        // An intra-codec/simulcast switch pending.
-
-        boolean sourceTL0IsActive = false;
-        int sourceTL0Idx = sourceFrameDesc.getRTPEncoding().getIndex();
-        if (sourceTL0Idx > -1)
+        // At this point we know that we want to be forwarding something and
+        // that the incoming frame doesn't belong to the one we're currently
+        // forwarding, so we need to check if there is a layer switch
+        // pending and this frame brings us to (or closer to) the stream we want
+        if (!sourceFrameDesc.isIndependent())
         {
-            sourceTL0Idx
-                = sourceEncodings[sourceTL0Idx].getBaseLayer().getIndex();
-
-            sourceTL0IsActive = sourceEncodings[sourceTL0Idx].isActive(true);
-        }
-
-        if (!sourceFrameDesc.isIndependent()
-            || !sourceTL0IsActive // TODO this condition needs review
-            || sourceTL0Idx == currentTL0Idx)
-        {
-            // An intra-codec switch requires a key frame.
-
-            long sourceSsrc = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
-            boolean accept = sourceSsrc == bitstreamController.getTL0SSRC();
-
-            if (!accept)
-            {
-                return false;
-            }
-
-            // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, pkt);
-        }
-
-        if ((targetTL0Idx <= sourceTL0Idx && sourceTL0Idx < currentTL0Idx)
-            || (currentTL0Idx < sourceTL0Idx && sourceTL0Idx <= targetTL0Idx)
-            || (!currentTL0IsActive && sourceTL0Idx <= targetTL0Idx))
-        {
-            bitstreamController.setTL0Idx(sourceTL0Idx);
-
-            // Give the bitstream filter a chance to drop the packet.
-            return bitstreamController.accept(sourceFrameDesc, pkt);
-        }
-        else
-        {
+//            logger.error("SimulcastController " + this.hashCode() + " source is not a keyframe, can't switch to its layer");
+            // If it's not a keyframe we can't switch to it anyway
             return false;
         }
+        int targetBaseLayerIndex = sourceEncodings[targetIndex].getBaseLayer().getIndex();
+//        logger.error("SimulcastController " + this.hashCode() + " currentBaseLayerIndex: " + currentBaseLayerIndex
+//            + " targetBaseLayerIndex: " + targetBaseLayerIndex);
+        if (currentBaseLayerIndex != targetBaseLayerIndex)
+        {
+//            logger.error("SimulcastController " + this.hashCode() + " we do want to switch to another layer");
+            // We do want to switch to another layer
+            if (shouldSwitchToStream(currentIndex, sourceLayerIndex, targetIndex))
+            {
+//                logger.error("SimulcastController " + this.hashCode() + " source represnts a layer on the way to target");
+                // This frame represents, at least, a step in the right direction
+                // towards the stream we want
+                bitstreamController.setTL0Idx(sourceBaseLayerIndex);
+                return bitstreamController.accept(sourceFrameDesc, pkt);
+            }
+        }
+        return false;
 
+//        //PR-NOTE(brian): we don't need to disqualify a keyframe here, do we?
+//        //if it's a keyframe for the current index we can still forward it fine
+//        // --> this test can be simplified (and perhaps even combined with the one
+//        // that does the switch) basically the main thing we care about is:
+//        // if this is a frame of the new stream, it has to be a keyframe, and if it
+//        // is, we'll do the switch.  if it's any frame of the old stream and we
+//        // haven't switched yet, it can go, if we have, it should be dropped
+//        if (!sourceFrameDesc.isIndependent() ||
+//            //PR-NOTE(brian): i don't get this check either, if the base layer
+//            //isn't active, how could we successfully forward a frame on this layer?
+//            !sourceBaseLayerIsActive || // TODO this condition needs review
+//            //PR-NOTE(brian): what is this check for?
+//            sourceBaseLayerIndex == currentBaseLayerIndex)
+//        {
+//            // An intra-codec switch requires a key frame.
+//            long sourceSsrc = sourceFrameDesc.getRTPEncoding().getPrimarySSRC();
+//            boolean accept = sourceSsrc == bitstreamController.getTL0SSRC();
+//            // Give the bitstream filter a chance to drop the packet.
+//            return accept && bitstreamController.accept(sourceFrameDesc, pkt);
+//        }
+//
+//        // We get here if:
+//        // the sourceFrameDesc is a keyframe AND
+//        // the sourceBaseLayer is active AND
+//        // the sourceBaseLayerIndex != the currentBaseLayerIndex
+//        // so we will actually do the switch itself
+//
+//        // "if source is in between current and target -> we want it" ||
+//        // if current is inactive, we'll take the source as long as it's <= target
+//
+//        if ((targetTL0Idx <= sourceTL0Idx && // incoming frame is higher/equal quality than what we want
+//            sourceTL0Idx < currentTL0Idx) // incoming frame is lesser quality than current
+//            || (currentTL0Idx < sourceTL0Idx &&
+//            sourceTL0Idx <= targetTL0Idx)
+//            || (!currentTL0IsActive && sourceTL0Idx <= targetTL0Idx))
+//        {
+//            bitstreamController.setTL0Idx(sourceTL0Idx);
+//
+//            // Give the bitstream filter a chance to drop the packet.
+//            return bitstreamController.accept(sourceFrameDesc, pkt);
+//        }
+//        else
+//        {
+//            return false;
+//        }
     }
 
     /**
@@ -637,6 +737,11 @@ public class SimulcastController
                 return removeEldestEntry;
             }
         });
+
+        public void suspend()
+        {
+            setTL0Idx(-1);
+        }
 
         /**
          *
