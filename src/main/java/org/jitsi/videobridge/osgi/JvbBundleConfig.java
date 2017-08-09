@@ -263,7 +263,7 @@ public class JvbBundleConfig
         // Enable picture ID rewriting by default, as jumping picture IDs cause
         // recent versions of Chrome to crash.
         defaults.put(
-            SimulcastController.ENABLE_VP8_PICID_REWRITING_PNAME, true_);
+            BitstreamController.ENABLE_VP8_PICID_REWRITING_PNAME, true_);
 
         // Trust the send side bandwidth estimations (which enables adaptivity)
         // by default.

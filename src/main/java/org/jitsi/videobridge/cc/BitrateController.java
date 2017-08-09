@@ -473,7 +473,8 @@ public class BitrateController
                         if (!ArrayUtils.isNullOrEmpty(rtpEncodings))
                         {
                             ctrl = new SimulcastController(
-                                this, trackBitrateAllocation.track);
+                                this, trackBitrateAllocation.track,
+                                new BitstreamController());
 
                             // Route all encodings to the specified bitrate
                             // controller.
