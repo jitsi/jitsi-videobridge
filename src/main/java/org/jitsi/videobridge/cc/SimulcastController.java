@@ -215,9 +215,6 @@ public class SimulcastController
      */
     public boolean accept(RawPacket pkt)
     {
-        // PR-NOTE(brian): the set of checks in isInvalid isn't exactly
-        // the same as what was here, but seems like we should be consistent
-        // with the check?
         if (pkt.isInvalid())
         {
             return false;
@@ -225,9 +222,6 @@ public class SimulcastController
 
         int targetIndex = bitstreamController.getTargetIndex(),
             currentIndex = bitstreamController.getCurrentIndex();
-
-//        logger.error("SimulcastController " + this.hashCode() + " target " +
-//            "index: " + targetIndex + ", currentIndex: " + currentIndex);
 
         // If we're suspended, we won't forward anything
         if (targetIndex == SUSPENDED_INDEX)
@@ -237,7 +231,6 @@ public class SimulcastController
             {
                 bitstreamController.suspend();
             }
-//            logger.error("SimulcastController " + this.hashCode() + " suspended, dropping packet");
             return false;
         }
         // At this point we know we *want* to be forwarding something
@@ -249,38 +242,36 @@ public class SimulcastController
 
         if (sourceFrameDesc == null)
         {
-//            logger.error("SimulcastController " + this.hashCode() + " sourceFrameDesc is null, dropping");
             return false;
         }
 
         RTPEncodingDesc sourceEncodings[] = sourceTrack.getRTPEncodings();
 
-        // If we're getting packets here => there must be at least 1 encoding.
-        //PR-NOTE(brian): is this check necessary? is there a scenario where it
-        //could fail?
         if (ArrayUtils.isNullOrEmpty(sourceEncodings))
         {
-//            logger.error("SimulcastController " + this.hashCode() + " no source encodings, dropping");
             return false;
         }
 
         int sourceLayerIndex = sourceFrameDesc.getRTPEncoding().getIndex();
-//        logger.error("SimulcastController " + this.hashCode() + " sourceIndex: " + sourceLayerIndex +
-//            " incoming frame is keyframe? " + sourceFrameDesc.isIndependent());
-        
+
         // At this point we know we *want* to be forwarding something, but the
         // current layer we're forwarding is still sending, so we're not "desperate"
-        int currentBaseLayerIndex = currentIndex == SUSPENDED_INDEX ?
-            SUSPENDED_INDEX : sourceEncodings[currentIndex].getBaseLayer().getIndex();
+        int currentBaseLayerIndex;
+        if (currentIndex == SUSPENDED_INDEX ||
+            !sourceEncodings[currentIndex].getBaseLayer().isActive(true))
+        {
+            currentBaseLayerIndex = SUSPENDED_INDEX;
+        }
+        else
+        {
+            currentBaseLayerIndex = sourceEncodings[currentIndex].getBaseLayer().getIndex();
+        }
         int sourceBaseLayerIndex = sourceEncodings[sourceLayerIndex].getBaseLayer().getIndex();
         if (sourceBaseLayerIndex == currentBaseLayerIndex)
         {
-//            logger.error("SimulcastController " + this.hashCode() + " source base matches current base");
             // Regardless of whether a switch is pending or not, if an incoming
             // frame belongs to the current stream being forwarded, we'll
             // accept it (if the bitstreamController lets it through)
-            //PR-NOTE(brian): the BitstreamController#accept should handle
-            //if the frame is from the wrong temporal layer, right?
             return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
@@ -290,20 +281,15 @@ public class SimulcastController
         // pending and this frame brings us to (or closer to) the stream we want
         if (!sourceFrameDesc.isIndependent())
         {
-//            logger.error("SimulcastController " + this.hashCode() + " source is not a keyframe, can't switch to its layer");
             // If it's not a keyframe we can't switch to it anyway
             return false;
         }
         int targetBaseLayerIndex = sourceEncodings[targetIndex].getBaseLayer().getIndex();
-//        logger.error("SimulcastController " + this.hashCode() + " currentBaseLayerIndex: " + currentBaseLayerIndex
-//            + " targetBaseLayerIndex: " + targetBaseLayerIndex);
         if (currentBaseLayerIndex != targetBaseLayerIndex)
         {
-//            logger.error("SimulcastController " + this.hashCode() + " we do want to switch to another layer");
             // We do want to switch to another layer
             if (shouldSwitchToStream(currentIndex, sourceLayerIndex, targetIndex))
             {
-//                logger.error("SimulcastController " + this.hashCode() + " source represnts a layer on the way to target");
                 // This frame represents, at least, a step in the right direction
                 // towards the stream we want
                 bitstreamController.setTL0Idx(sourceBaseLayerIndex);
