@@ -33,7 +33,6 @@ import org.ice4j.socket.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.service.configuration.*;
@@ -42,6 +41,7 @@ import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.service.neomedia.stats.*;
+import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
@@ -385,7 +385,7 @@ public class RtpChannel
                          * will be provided to the focus by the Jitsi
                          * Videobridge server.
                          */
-                        int ssrc = RTPTranslatorImpl.readInt(data, offset + 4);
+                        int ssrc = RTPUtils.readInt(data, offset + 4);
 
                         if (removeReceiveSSRC(ssrc))
                             notifyFocus();
@@ -500,7 +500,7 @@ public class RtpChannel
                      * streams that they send. The information will be provided
                      * to the focus by the Jitsi Videobridge server.
                      */
-                    int ssrc = RTPTranslatorImpl.readInt(data, off + 8);
+                    int ssrc = RTPUtils.readInt(data, off + 8);
                     boolean notify;
 
                     try
