@@ -138,7 +138,9 @@ class RtpChannelDatagramFilter
             for (int channelSSRC : channelSSRCs)
             {
                 if (channelSSRC == packetSenderSSRC)
+                {
                     return true;
+                }
             }
 
             channelSSRCs = channel.getReceiveSSRCs();
@@ -146,7 +148,9 @@ class RtpChannelDatagramFilter
             for (int channelSSRC : channelSSRCs)
             {
                 if (channelSSRC == packetSenderSSRC)
+                {
                     return true;
+                }
             }
         }
         return false;
