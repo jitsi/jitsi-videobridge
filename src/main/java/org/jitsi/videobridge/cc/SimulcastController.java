@@ -187,7 +187,8 @@ public class SimulcastController
      * a step closer (or all the way) to the targetQualityIndex
      */
     private boolean shouldSwitchToStream(
-        int currentQualityIndex, int sourceQualityIndex, int targetQualityIndex)
+        int currentQualityIndex, int sourceQualityIndex, int targetQualityIndex,
+        RTPEncodingDesc[] encodings)
     {
         if ((currentQualityIndex < sourceQualityIndex) &&
             sourceQualityIndex <= targetQualityIndex)
@@ -199,6 +200,16 @@ public class SimulcastController
             (sourceQualityIndex >= targetQualityIndex))
         {
             // downscale case
+            return true;
+        }
+        else if (encodings[targetQualityIndex].requires(sourceQualityIndex))
+        {
+            // It's possible, when downscaling, that the source index will not
+            // be 'in between' the current index and the target index, but the
+            // target layer will still require this layer, for example:
+            // current index: 3, target index: 2, source index: 0
+            // here, source is not in between current and target, but the target
+            // index will rely on this stream anyway, so we should switch to it
             return true;
         }
         return false;
@@ -245,7 +256,7 @@ public class SimulcastController
             return false;
         }
 
-        RTPEncodingDesc sourceEncodings[] = sourceTrack.getRTPEncodings();
+        RTPEncodingDesc[] sourceEncodings = sourceTrack.getRTPEncodings();
 
         if (ArrayUtils.isNullOrEmpty(sourceEncodings))
         {
@@ -288,7 +299,7 @@ public class SimulcastController
         if (currentBaseLayerIndex != targetBaseLayerIndex)
         {
             // We do want to switch to another layer
-            if (shouldSwitchToStream(currentIndex, sourceLayerIndex, targetIndex))
+            if (shouldSwitchToStream(currentIndex, sourceLayerIndex, targetIndex, sourceEncodings))
             {
                 // This frame represents, at least, a step in the right direction
                 // towards the stream we want
