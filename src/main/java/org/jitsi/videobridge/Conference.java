@@ -32,6 +32,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.recording.*;
+import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.json.simple.*;
@@ -65,6 +66,18 @@ public class Conference
      * #logger} instead.
      */
     private static final Logger classLogger = Logger.getLogger(Conference.class);
+
+    /**
+     * @return a string which identifies a specific {@link Conference} for the
+     * purposes of logging. The string is a comma-separated list of "key=value"
+     * pairs.
+     * @param conference The conference for which to return a string.
+     */
+    public static String getLoggingId(Conference conference)
+    {
+        return
+            (conference == null ? "conf_id=null" : conference.getLoggingId());
+    }
 
     /**
      * The <tt>Content</tt>s of this <tt>Conference</tt>.
@@ -355,8 +368,10 @@ public class Conference
      */
     private boolean checkRecordingDirectory(String path)
     {
-        if (path == null || "".equals(path))
+        if (StringUtils.isNullOrEmpty(path))
+        {
             return false;
+        }
 
         File dir = new File(path);
 
@@ -364,10 +379,14 @@ public class Conference
         {
             dir.mkdir();
             if (!dir.exists())
+            {
                 return false;
+            }
         }
         if (!dir.isDirectory() || !dir.canWrite())
+        {
             return false;
+        }
 
         return true;
     }
@@ -410,9 +429,13 @@ public class Conference
                 // TransportManagers open because a TransportManager has
                 // failed to close.
                 if (t instanceof InterruptedException)
+                {
                     Thread.currentThread().interrupt();
+                }
                 else if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
             }
         }
     }
@@ -574,7 +597,9 @@ public class Conference
                     createDominantSpeakerEndpointChangeEvent(dominantSpeaker));
 
             if (isRecording() && (recorderEventHandler != null))
+            {
                 recorderEventHandler.dominantSpeakerChanged(dominantSpeaker);
+            }
         }
     }
 
@@ -672,14 +697,20 @@ public class Conference
         synchronized (this)
         {
             if (expired)
+            {
                 return;
+            }
             else
+            {
                 expired = true;
+            }
         }
 
         EventAdmin eventAdmin = getEventAdmin();
         if (eventAdmin != null)
+        {
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
+        }
 
         setRecording(false);
         if (recorderEventHandler != null)
@@ -710,9 +741,13 @@ public class Conference
                                 + " of conference " + getID() + "!",
                             t);
                     if (t instanceof InterruptedException)
+                    {
                         Thread.currentThread().interrupt();
+                    }
                     else if (t instanceof ThreadDeath)
+                    {
                         throw (ThreadDeath) t;
+                    }
                 }
             }
 
@@ -824,10 +859,14 @@ public class Conference
                 expireContent = true;
             }
             else
+            {
                 expireContent = false;
+            }
         }
         if (expireContent)
+        {
             content.expire();
+        }
     }
 
     /**
@@ -853,7 +892,9 @@ public class Conference
                 Channel channel = content.findChannelByReceiveSSRC(receiveSSRC);
 
                 if (channel != null)
+                {
                     return channel;
+                }
             }
         }
         return null;
@@ -973,7 +1014,9 @@ public class Conference
         }
 
         if (changed)
+        {
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+        }
 
         return endpoint;
     }
@@ -1045,7 +1088,9 @@ public class Conference
         }
 
         if (changed)
+        {
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+        }
 
         return endpoints;
     }
@@ -1112,7 +1157,9 @@ public class Conference
         // retrieve the MediaService implementation. In the form of a temporary
         // workaround, get it through LibJitsi.
         if (mediaService == null)
+        {
             mediaService = LibJitsi.getMediaService();
+        }
 
         return mediaService;
     }
@@ -1219,12 +1266,15 @@ public class Conference
      *
      * @return the directory of the new recording
      */
-    String getRecordingDirectory() {
-        if (this.recordingDirectory == null) {
+    String getRecordingDirectory()
+    {
+        if (this.recordingDirectory == null)
+        {
             SimpleDateFormat dateFormat
-                    = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.");
-            this.recordingDirectory = dateFormat.format(new Date()) + getID()
-                + ((name != null) ? "_" + name : "");
+                = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.");
+            this.recordingDirectory
+                = dateFormat.format(new Date()) + getID() +
+                        ((name != null) ? "_" + name : "");
         }
 
         return this.recordingDirectory;
@@ -1239,7 +1289,7 @@ public class Conference
      * should be saved, or <tt>null</tt> if recording is not enabled in the
      * configuration, or a recording path has not been configured.
      */
-    String getRecordingPath()
+    private String getRecordingPath()
     {
         if (recordingPath == null)
         {
@@ -1294,7 +1344,7 @@ public class Conference
      */
     TransportManager getTransportManager(String channelBundleId)
     {
-        // If create is false then initiator parametr will not be used.
+        // If create is false then initiator parameter will not be used.
         // So here it doesnt matter it is true, or false.
         return getTransportManager(channelBundleId, false, true);
     }
@@ -1394,14 +1444,20 @@ public class Conference
 
                     if (!MediaType.VIDEO.equals(mediaType)
                             && !MediaType.AUDIO.equals(mediaType))
+                    {
                         continue;
+                    }
                     if (!content.isRecording())
+                    {
                         recording = false;
+                    }
                 }
             }
         }
         if (this.recording != recording)
+        {
             setRecording(recording);
+        }
 
         return this.recording;
     }
@@ -1442,7 +1498,9 @@ public class Conference
             Endpoint endpoint = getEndpoint(((Endpoint) source).getID());
 
             if (endpoint != null)
+            {
                 endpointPropertyChange(endpoint, ev);
+            }
         }
     }
 
@@ -1479,7 +1537,9 @@ public class Conference
         }
 
         if (removed)
+        {
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+        }
 
         return removed;
     }
@@ -1507,7 +1567,9 @@ public class Conference
             Endpoint endpoint = sctpConnection.getEndpoint();
 
             if (endpoint != null)
+            {
                 endpoint = getEndpoint(endpoint.getID());
+            }
             if (endpoint != null)
             {
                 /*
@@ -1570,7 +1632,7 @@ public class Conference
      * @return the state of the media recording for this <tt>Conference</tt>
      * after the attempt to enable (or disable).
      */
-    public boolean setRecording(boolean recording)
+    boolean setRecording(boolean recording)
     {
         if (recording != this.recording)
         {
@@ -1592,7 +1654,9 @@ public class Conference
                     RecorderEventHandler handler = getRecorderEventHandler();
 
                     if (handler == null)
+                    {
                         failedToStart = true;
+                    }
                 }
                 if (!failedToStart)
                 {
@@ -1605,7 +1669,9 @@ public class Conference
                     else
                     {
                         for (Endpoint endpoint : getEndpoints())
+                        {
                             endpointRecorder.updateEndpoint(endpoint);
+                        }
                     }
                 }
 
@@ -1627,9 +1693,13 @@ public class Conference
                     }
 
                     if (!failedToStart)
+                    {
                         failedToStart = !content.setRecording(true, path);
+                    }
                     if (failedToStart)
+                    {
                         break;
+                    }
 
                     if (first)
                     {
@@ -1641,7 +1711,9 @@ public class Conference
                         Recorder recorder = content.getRecorder();
 
                         if (recorder != null)
+                        {
                             recorder.setSynchronizer(synchronizer);
+                        }
                     }
 
                     content.feedKnownSsrcsToSynchronizer();
@@ -1679,13 +1751,17 @@ public class Conference
                 }
 
                 if (recorderEventHandler != null)
+                {
                     recorderEventHandler.close();
+                }
                 recorderEventHandler = null;
                 recordingPath = null;
                 recordingDirectory = null;
 
                 if (endpointRecorder != null)
+                {
                     endpointRecorder.close();
+                }
                 endpointRecorder = null;
             }
 
@@ -1717,7 +1793,9 @@ public class Conference
                 for (Channel channel : content.getChannels())
                 {
                     if (!(channel instanceof RtpChannel))
+                    {
                         continue;
+                    }
 
                     RtpChannel rtpChannel = (RtpChannel) channel;
                     rtpChannel.speechActivityEndpointsChanged(endpoints);
@@ -1765,7 +1843,9 @@ public class Conference
         synchronized (this)
         {
             if (getLastActivityTime() < now)
+            {
                 lastActivityTime = now;
+            }
         }
     }
 
@@ -1799,7 +1879,9 @@ public class Conference
                     endpoint.setDisplayName(newDisplayName);
 
                     if (isRecording() && endpointRecorder != null)
+                    {
                         endpointRecorder.updateEndpoint(endpoint);
+                    }
 
                     EventAdmin eventAdmin = getEventAdmin();
                     if (eventAdmin != null)
@@ -1854,18 +1936,6 @@ public class Conference
     }
 
     /**
-     * @return a string which identifies a specific {@link Conference} for the
-     * purposes of logging. The string is a comma-separated list of "key=value"
-     * pairs.
-     * @param conference The conference for which to return a string.
-     */
-    public static String getLoggingId(Conference conference)
-    {
-        return
-            (conference == null ? "conf_id=null" : conference.getLoggingId());
-    }
-
-    /**
      * Gets the global ID of the conference.
      * @return
      */
@@ -1873,7 +1943,6 @@ public class Conference
     {
         return gid;
     }
-
 
     /**
      * Holds conference statistics.
@@ -1893,7 +1962,7 @@ public class Conference
         /**
          * The total number of channels.
          */
-        public AtomicInteger totalChannels = new AtomicInteger(0);
+        AtomicInteger totalChannels = new AtomicInteger(0);
 
         /**
          * The total number of ICE transport managers of this conference which
