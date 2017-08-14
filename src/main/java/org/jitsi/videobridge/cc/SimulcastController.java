@@ -163,53 +163,39 @@ public class SimulcastController
     }
 
     /**
-     * Returns whether or not the stream represented by 'sourceQualityIndex'
-     * is desirable to switch to given the values of currentQualityIndex and
-     * targetQualityIndex.  In either case (downscale or upscale),
-     * 'sourceQualityIndex' will be desirable if it falls in between
-     * currentQualityIndex and targetQualityIndex, e.g.:
+     * Given the current base layer index, the target base layer index and the
+     * base layer index of an incoming frame, returns whether the incoming
+     * frame's base layer represents a step closer (or all the way to) the
+     * target index we're trying to reach.  In either case (downscale or
+     * upscale), 'incomingFrameBaseLayerIndex' will be desirable if it falls
+     * in the range (currentBaseLayerIndex, targetBaseLayerIndex] OR
+     * [targetBaseLayerIndex, currentBaseLayerIndex) e.g.:
      *
-     * currentQualityIndex = 1, sourceQualityIndex = 4, targetQualityIndex = 7
-     * -> we're trying to upscale and sourceQualityIndex represents a quality
-     * higher than what we currently have (but not the final target) so forwarding
-     * it is a step in the right direction
-     *
-     * currentQualityIndex = 7, sourceQualityIndex = 4, targetQualityIndex = 1
-     * -> we're trying to downscale and sourceQualityIndex represents a quality
-     * lower than what we currently have (but not the final target) so forwarding
-     * it is a step in the right direction
-     * @param currentQualityIndex the index of the stream currently being
-     * forwarded
-     * @param sourceQualityIndex the index of the stream to which the incoming
-     * frame belongs
-     * @param targetQualityIndex the index of the stream we want to forward
-     * @return true if the stream represented by sourceQualityIndex represents
-     * a step closer (or all the way) to the targetQualityIndex
+     * currentBaseLayerIndex = 0, incomingFrameBaseLayerIndex = 2,
+     * targetBaseLayerIndex = 7 -> we're trying to upscale and incomingFrameBaseLayerIndex
+     * represents a quality higher than what we currently have (but not the final
+     * target) so forwarding it is a step in the right direction.
+     * @param currentBaseLayerIndex the base layer index of the stream currently
+     * being forwarded
+     * @param incomingFrameBaseLayerIndex the base layer index to which the
+     * current incoming frame belongs
+     * @param targetBaseLayerIndex the base layer index of the stream we want to forward
+     * @return true if the stream represented by incomingFrameBaseLayerIndex
+     * represents a step closer (or all the way) to the targetBaseLayerIndex
      */
-    private boolean shouldSwitchToStream(
-        int currentQualityIndex, int sourceQualityIndex, int targetQualityIndex,
-        RTPEncodingDesc[] encodings)
+    private boolean shouldSwitchToBaseLayer(
+        int currentBaseLayerIndex, int incomingFrameBaseLayerIndex, int targetBaseLayerIndex)
     {
-        if ((currentQualityIndex < sourceQualityIndex) &&
-            sourceQualityIndex <= targetQualityIndex)
+        if ((currentBaseLayerIndex < incomingFrameBaseLayerIndex) &&
+            incomingFrameBaseLayerIndex <= targetBaseLayerIndex)
         {
             // upscale case
             return true;
         }
-        else if ((currentQualityIndex > sourceQualityIndex) &&
-            (sourceQualityIndex >= targetQualityIndex))
+        else if ((currentBaseLayerIndex > incomingFrameBaseLayerIndex) &&
+            (incomingFrameBaseLayerIndex >= targetBaseLayerIndex))
         {
             // downscale case
-            return true;
-        }
-        else if (encodings[targetQualityIndex].requires(sourceQualityIndex))
-        {
-            // It's possible, when downscaling, that the source index will not
-            // be 'in between' the current index and the target index, but the
-            // target layer will still require this layer, for example:
-            // current index: 3, target index: 2, source index: 0
-            // here, source is not in between current and target, but the target
-            // index will rely on this stream anyway, so we should switch to it
             return true;
         }
         return false;
@@ -296,10 +282,11 @@ public class SimulcastController
             return false;
         }
         int targetBaseLayerIndex = sourceEncodings[targetIndex].getBaseLayer().getIndex();
+
         if (currentBaseLayerIndex != targetBaseLayerIndex)
         {
             // We do want to switch to another layer
-            if (shouldSwitchToStream(currentIndex, sourceLayerIndex, targetIndex, sourceEncodings))
+            if (shouldSwitchToBaseLayer(currentBaseLayerIndex, sourceBaseLayerIndex, targetBaseLayerIndex))
             {
                 // This frame represents, at least, a step in the right direction
                 // towards the stream we want
