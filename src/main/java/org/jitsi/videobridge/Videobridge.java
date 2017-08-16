@@ -230,6 +230,7 @@ public class Videobridge
      * further/future requests to manage the new instance must come or they will
      * be ignored. Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of the conference to create.
+     * @param gid the optional "global" id of the conference.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
@@ -254,6 +255,7 @@ public class Videobridge
      * @param name world readable name of the conference to create.
      * @param enableLogging whether logging should be enabled or disabled for
      * the {@link Conference}.
+     * @param gid the optional "global" id of the conference.
      * @return a new <tt>Conference</tt> instance with an ID unique to the
      * <tt>Conference</tt> instances listed by this <tt>Videobridge</tt>
      */
