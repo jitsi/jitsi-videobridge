@@ -235,12 +235,12 @@ class EndpointMessageTransport
             endpoint.getConference().getVideobridge().getStatistics()
                 .totalColibriWebSocketMessagesSent.incrementAndGet();
         }
-        catch (IOException ioe)
+        catch (Exception e)
         {
             logger.error(
                 "Failed to send a message over a WebSocket (endpoint="
                     + endpoint.getID() + "): " + errorMessage,
-                ioe);
+                e);
         }
     }
 
