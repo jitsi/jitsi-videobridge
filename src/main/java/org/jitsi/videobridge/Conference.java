@@ -123,7 +123,8 @@ public class Conference
 
     /**
      * The "global" id of this conference, set by the controller (e.g. jicofo)
-     * as opposed to the bridge.
+     * as opposed to the bridge. This defaults to {@code null} unless it is
+     * specified.
      */
     private final String gid;
 
@@ -256,6 +257,7 @@ public class Conference
      * @param enableLogging whether logging should be enabled for this
 * {@link Conference} and its sub-components, and whether this conference
      * should be considered when generating statistics.
+     * @param gid the optional "global" id of the conference.
      */
     public Conference(Videobridge videobridge,
                       String id,
@@ -1936,8 +1938,8 @@ public class Conference
     }
 
     /**
-     * Gets the global ID of the conference.
-     * @return
+     * @return the global ID of the conference, or {@code null} if none has been
+     * set.
      */
     public String getGid()
     {
