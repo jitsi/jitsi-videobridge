@@ -229,19 +229,12 @@ class EndpointMessageTransport
     private void sendMessage(
         ColibriWebSocket dst, String message, String errorMessage)
     {
-        try
-        {
-            dst.getRemote().sendString(message);
-            endpoint.getConference().getVideobridge().getStatistics()
-                .totalColibriWebSocketMessagesSent.incrementAndGet();
-        }
-        catch (IOException ioe)
-        {
-            logger.error(
-                "Failed to send a message over a WebSocket (endpoint="
-                    + endpoint.getID() + "): " + errorMessage,
-                ioe);
-        }
+        // We'll use the async version of sendString since this may be called
+        // from multiple threads.  It's just fire-and-forget though, so we
+        // don't wait on the result
+        dst.getRemote().sendStringByFuture(message);
+        endpoint.getConference().getVideobridge().getStatistics()
+            .totalColibriWebSocketMessagesSent.incrementAndGet();
     }
 
     /**
