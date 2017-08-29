@@ -23,7 +23,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
-import org.jxmpp.jid.Jid;
+import org.jxmpp.jid.*;
 import org.osgi.framework.*;
 
 /**

@@ -24,8 +24,8 @@ import org.jivesoftware.smack.util.*;
 
 import org.junit.*;
 
-import org.jxmpp.jid.Jid;
-import org.jxmpp.jid.impl.JidCreate;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
 import org.xmlpull.v1.*;
 
 import java.io.*;

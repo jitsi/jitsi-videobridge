@@ -36,8 +36,8 @@ import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.json.simple.*;
-import org.jxmpp.jid.Jid;
-import org.jxmpp.jid.parts.Localpart;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
 /**
@@ -250,12 +250,12 @@ public class Conference
      * <tt>Conference</tt> instance is to be initialized
      * @param id the (unique) ID of the new instance to be initialized
      * @param focus the JID of the conference focus who has requested the
-* initialization of the new instance and from whom further/future requests
-* to manage the new instance must come or they will be ignored.
-* Pass <tt>null</tt> to override this safety check.
+     * initialization of the new instance and from whom further/future requests
+     * to manage the new instance must come or they will be ignored.
+     * Pass <tt>null</tt> to override this safety check.
      * @param name world readable name of this instance if any.
      * @param enableLogging whether logging should be enabled for this
-* {@link Conference} and its sub-components, and whether this conference
+     * {@link Conference} and its sub-components, and whether this conference
      * should be considered when generating statistics.
      * @param gid the optional "global" id of the conference.
      */

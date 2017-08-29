@@ -23,11 +23,11 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
-import org.jivesoftware.smack.packet.id.StanzaIdUtil;
+import org.jivesoftware.smack.packet.id.*;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.packet.*;
-import org.jivesoftware.smackx.xdata.packet.DataForm;
-import org.jxmpp.jid.Jid;
+import org.jivesoftware.smackx.xdata.packet.*;
+import org.jxmpp.jid.*;
 import org.osgi.framework.*;
 
 /**

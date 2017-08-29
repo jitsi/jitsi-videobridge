@@ -32,7 +32,7 @@ import org.jitsi.videobridge.stats.*;
 import org.jivesoftware.smack.packet.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
-import org.jxmpp.jid.impl.JidCreate;
+import org.jxmpp.jid.impl.*;
 import org.osgi.framework.*;
 
 /**

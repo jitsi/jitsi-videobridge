@@ -46,7 +46,7 @@ import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
-import org.jxmpp.jid.Jid;
+import org.jxmpp.jid.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.

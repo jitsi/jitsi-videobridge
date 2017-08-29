@@ -155,7 +155,7 @@ public class Endpoint
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
      *
-     *  @param id the identifier/ID of the endpoint of a participant in a
+     * @param id the identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt> with which the new instance is to be initialized
      * @param conference
      */

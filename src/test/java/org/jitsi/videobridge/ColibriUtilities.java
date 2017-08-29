@@ -17,7 +17,7 @@ package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import org.jitsi.service.neomedia.*;
-import org.jxmpp.jid.Jid;
+import org.jxmpp.jid.*;
 
 /**
  * FIXME merge with utility used by the focus

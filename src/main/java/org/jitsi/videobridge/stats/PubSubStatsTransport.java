@@ -22,7 +22,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
-import org.jxmpp.jid.Jid;
+import org.jxmpp.jid.*;
 import org.osgi.framework.*;
 
 /**
@@ -230,7 +230,7 @@ public class PubSubStatsTransport
 
             if (err != null
                     && XMPPError.Type.CANCEL.equals(err.getType())
-                    && XMPPError.Condition.item_not_found.toString().equals(
+                    && XMPPError.Condition.item_not_found.equals(
                             err.getCondition()))
             {
                 // We are about to attempt to resurrect this
@@ -276,7 +276,8 @@ public class PubSubStatsTransport
         {
             try
             {
-                publisher.publish(nodeName, itemId, Statistics.toXmppExtensionElement(stats));
+                publisher.publish(nodeName, itemId,
+                    Statistics.toXmppExtensionElement(stats));
             }
             catch (IllegalArgumentException e)
             {
