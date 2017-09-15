@@ -20,6 +20,7 @@ import java.util.*;
 import org.ice4j.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.impl.neomedia.device.*;
+import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.rtp.sendsidebandwidthestimation.*;
 import org.jitsi.impl.neomedia.transform.csrc.*;
 import org.jitsi.impl.neomedia.transform.srtp.*;
@@ -271,6 +272,9 @@ public class JvbBundleConfig
 
         // Enable VP8 temporal scalability filtering by default.
         defaults.put(MediaStreamTrackFactory.ENABLE_SVC_PNAME, true_);
+
+        // Enable AST RBE by default.
+        defaults.put(RemoteBitrateEstimatorWrapper.ENABLE_AST_RBE_PNAME, true_);
 
         // This causes RTP/RTCP packets received before the DTLS agent is ready
         // to decrypt them to be dropped. Without it, these packets are passed
