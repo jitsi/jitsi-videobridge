@@ -355,8 +355,8 @@ class CallStatsConferenceStatsHandler
             {
                 ConferenceStats conferenceStats
                     = new ConferenceStatsBuilder()
-                        .bytesSent(receiveStat.getBytes())
-                        .packetsSent(receiveStat.getPackets())
+                        .bytesReceived(receiveStat.getBytes())
+                        .packetsReceived(receiveStat.getPackets())
                         .packetsLost(receiveStat.getPacketsLost())
                         .fractionalPacketLost(receiveStat.getLossRate())
                         .ssrc(String.valueOf(receiveStat.getSSRC()))

@@ -1413,6 +1413,8 @@ public class RtpChannel
     {
         if ((rtpHeaderExtensions != null) && (rtpHeaderExtensions.size() > 0))
         {
+            stream.clearRTPExtensions();
+
             for (RTPHdrExtPacketExtension rtpHdrExtPacketExtension
                     : rtpHeaderExtensions)
             {

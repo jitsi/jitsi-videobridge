@@ -336,6 +336,8 @@ public class VideoChannel
     {
         super.initialize(rtpLevelRelayType);
 
+        bitrateController.update(null, -1);
+
         ((VideoMediaStream) getStream()).getOrCreateBandwidthEstimator()
             .addListener(new BandwidthEstimator.Listener()
             {
@@ -650,6 +652,7 @@ public class VideoChannel
         // FIR and PLI.
         boolean supportsFir = false;
         boolean supportsPli = false;
+        boolean supportsRemb = false;
 
         // If we're not given any PTs at all, assume that we shouldn't touch
         // RED.
@@ -679,6 +682,10 @@ public class VideoChannel
                 {
                     supportsPli = true;
                 }
+                else if ("goog-remb".equals(rtcpFb.getAttribute("type")))
+                {
+                    supportsRemb = true;
+                }
             }
         }
 
@@ -694,6 +701,7 @@ public class VideoChannel
         {
             ((VideoMediaStreamImpl) mediaStream).setSupportsFir(supportsFir);
             ((VideoMediaStreamImpl) mediaStream).setSupportsPli(supportsPli);
+            ((VideoMediaStreamImpl) mediaStream).setSupportsRemb(supportsRemb);
         }
     }
 
