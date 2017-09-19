@@ -1035,33 +1035,33 @@ public class Videobridge
                                 XMPPError.Condition.bad_request,
                                 "No SCTP connection found for ID: " + id);
                     }
+                }
 
-                    // expire
-                    if (expire
-                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                // expire
+                if (expire
+                    != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                {
+                    if (expire < 0)
                     {
-                        if (expire < 0)
-                        {
-                            return IQUtils.createError(
-                                    conferenceIQ,
-                                    XMPPError.Condition.bad_request,
-                                    "Invalid 'expire' value: " + expire);
-                        }
-
-                        sctpConn.setExpire(expire);
-
-                        // Check if SCTP connection has expired.
-                        if (expire == 0 && sctpConn.isExpired())
-                        {
-                            continue;
-                        }
+                        return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.bad_request,
+                            "Invalid 'expire' value: " + expire);
                     }
 
-                    // endpoint
-                    if (endpointID != null)
+                    sctpConn.setExpire(expire);
+
+                    // Check if SCTP connection has expired.
+                    if (expire == 0 && sctpConn.isExpired())
                     {
-                        sctpConn.setEndpoint(endpointID);
+                        continue;
                     }
+                }
+
+                // endpoint
+                if (endpointID != null)
+                {
+                    sctpConn.setEndpoint(endpointID);
                 }
 
                 // initiator
