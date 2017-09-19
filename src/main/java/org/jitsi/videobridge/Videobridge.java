@@ -1048,11 +1048,13 @@ public class Videobridge
                                     "Invalid 'expire' value: " + expire);
                         }
 
+                        sctpConn.setExpire(expire);
+
                         // Check if SCTP connection has expired.
                         if (expire == 0 && sctpConn.isExpired())
+                        {
                             continue;
-
-                        sctpConn.setExpire(expire);
+                        }
                     }
 
                     // endpoint
