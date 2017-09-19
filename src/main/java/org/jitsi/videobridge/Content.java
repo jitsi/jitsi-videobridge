@@ -188,6 +188,12 @@ public class Content
         touch();
     }
 
+    /**
+     * Implements
+     * {@link RTPTranslator.WriteFilter#accept(
+     *      MediaStream, RawPacket, MediaStream, boolean)}
+     */
+    @Override
     public boolean accept(
         MediaStream source,
         RawPacket pkt,
@@ -207,14 +213,14 @@ public class Content
 
                 accept
                     = dst.rtpTranslatorWillWrite(
-                    data,
-                    pkt,
-                    src);
+                            data,
+                            pkt,
+                            src);
             }
         }
         return accept;
     }
-    
+
     /**
      * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
      * <tt>RtpChannel</tt>s of this <tt>Content</tt>. The new
