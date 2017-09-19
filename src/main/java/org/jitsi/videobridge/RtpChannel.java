@@ -325,7 +325,7 @@ public class RtpChannel
      * accepted for further processing within Jitsi Videobridge or
      * <tt>false</tt> to reject/drop it
      */
-    private boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
+    protected boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
     {
         InetAddress ctrlAddr = streamTarget.getControlAddress();
         int ctrlPort = streamTarget.getControlPort();
@@ -732,7 +732,7 @@ public class RtpChannel
      * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
      * this <tt>RtpChannel</tt>.
      */
-    RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
+    public RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
     {
         RtpChannelDatagramFilter datagramFilter;
         int index = rtcp ? 1 : 0;
