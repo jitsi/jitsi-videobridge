@@ -746,14 +746,20 @@ public abstract class Channel
     public void setExpire(int expire)
     {
         if (expire < 0)
+        {
             throw new IllegalArgumentException("expire");
+        }
 
         this.expire = expire;
 
         if (this.expire == 0)
+        {
             expire();
+        }
         else
+        {
             touch(); // It seems this Channel is still active.
+        }
     }
 
     /**

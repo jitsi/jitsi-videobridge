@@ -797,22 +797,18 @@ public class Videobridge
                  */
                 if (channelID == null)
                 {
-                    // What ? Wants to expire a channel while not providing
-                    // it's ID ?
                     if (channelExpire == 0)
                     {
+                        // An expire attribute in the channel element with
+                        // value equal to zero requests the immediate
+                        // expiration of the channel in question.
+                        // Consequently, it does not make sense to have it in a
+                        // channel allocation request.
                         return IQUtils.createError(
                                 conferenceIQ,
                                 XMPPError.Condition.bad_request,
                                 "Channel expire request for empty ID");
                     }
-                    /*
-                     * An expire attribute in the channel element with
-                     * value equal to zero requests the immediate
-                     * expiration of the channel in question.
-                     * Consequently, it does not make sense to have it
-                     * in a channel allocation request.
-                     */
                     channel
                         = content.createRtpChannel(
                                 channelBundleId,
@@ -870,7 +866,9 @@ public class Videobridge
                      * the request is valid and has correctly been acted upon.
                      */
                     if ((channelExpire == 0) && channel.isExpired())
+                    {
                         continue;
+                    }
                 }
 
                 // endpoint
@@ -1037,29 +1035,33 @@ public class Videobridge
                                 XMPPError.Condition.bad_request,
                                 "No SCTP connection found for ID: " + id);
                     }
+                }
 
-                    // expire
-                    if (expire
-                            != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                // expire
+                if (expire
+                    != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+                {
+                    if (expire < 0)
                     {
-                        if (expire < 0)
-                        {
-                            return IQUtils.createError(
-                                    conferenceIQ,
-                                    XMPPError.Condition.bad_request,
-                                    "Invalid 'expire' value: " + expire);
-                        }
-
-                        // Check if SCTP connection has expired.
-                        if (expire == 0 && sctpConn.isExpired())
-                            continue;
-
-                        sctpConn.setExpire(expire);
+                        return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.bad_request,
+                            "Invalid 'expire' value: " + expire);
                     }
 
-                    // endpoint
-                    if (endpointID != null)
-                        sctpConn.setEndpoint(endpointID);
+                    sctpConn.setExpire(expire);
+
+                    // Check if SCTP connection has expired.
+                    if (expire == 0 && sctpConn.isExpired())
+                    {
+                        continue;
+                    }
+                }
+
+                // endpoint
+                if (endpointID != null)
+                {
+                    sctpConn.setEndpoint(endpointID);
                 }
 
                 // initiator
