@@ -239,45 +239,39 @@ public class Content
                                        RTPLevelRelayType rtpLevelRelayType)
         throws Exception
     {
-        RtpChannel channel = null;
+        RtpChannel channel;
 
-        do
+        synchronized (channels)
         {
-            String id = generateChannelID();
+            String id = generateUniqueChannelID();
 
-            synchronized (channels)
+            switch (getMediaType())
             {
-                if (!channels.containsKey(id))
-                {
-                    switch (getMediaType())
-                    {
-                    case AUDIO:
-                        channel = new AudioChannel(
-                                this, id, channelBundleId,
-                                transportNamespace, initiator);
-                        break;
-                    case DATA:
-                        /*
-                         * MediaType.DATA signals an SctpConnection, not an
-                         * RtpChannel.
-                         */
-                        throw new IllegalStateException("mediaType");
-                    case VIDEO:
-                        channel = new VideoChannel(
-                                this, id, channelBundleId,
-                                transportNamespace, initiator);
-                        break;
-                    default:
-                        channel = new RtpChannel(
-                            this, id, channelBundleId,
-                            transportNamespace, initiator);
-                        break;
-                    }
-                    channels.put(id, channel);
-                }
+            case AUDIO:
+                channel = new AudioChannel(
+                        this, id, channelBundleId,
+                        transportNamespace, initiator);
+                break;
+            case DATA:
+                /*
+                 * MediaType.DATA signals an SctpConnection, not an
+                 * RtpChannel.
+                 */
+                throw new IllegalStateException("mediaType");
+            case VIDEO:
+                channel = new VideoChannel(
+                        this, id, channelBundleId,
+                        transportNamespace, initiator);
+                break;
+            default:
+                channel = new RtpChannel(
+                    this, id, channelBundleId,
+                    transportNamespace, initiator);
+                break;
             }
+
+            channels.put(id, channel);
         }
-        while (channel == null);
 
         // Initialize channel
         channel.initialize(rtpLevelRelayType);
@@ -541,6 +535,25 @@ public class Content
         return
             Long.toHexString(
                     System.currentTimeMillis() + Videobridge.RANDOM.nextLong());
+    }
+
+    /**
+     * @return a new channel ID, unique in the list of this {@link Content}'s
+     * channels.
+     */
+    private String generateUniqueChannelID()
+    {
+        synchronized (channels)
+        {
+            String id;
+            do
+            {
+                id = generateChannelID();
+            }
+            while (channels.containsKey(id));
+
+            return id;
+        }
     }
 
     /**
