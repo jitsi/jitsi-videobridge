@@ -207,7 +207,7 @@ public class BitrateController
      * by the SSRCs of the associated {@link MediaStreamTrackDesc}.
      */
     private final Map<Long, SimulcastController>
-        ssrcToBitrateController = new ConcurrentHashMap<>();
+        ssrcToSimulcastController = new ConcurrentHashMap<>();
 
     /**
      * The {@link PacketTransformer} that handles incoming/outgoing RTP
@@ -355,7 +355,7 @@ public class BitrateController
         }
 
         SimulcastController simulcastController
-            = ssrcToBitrateController.get(ssrc);
+            = ssrcToSimulcastController.get(ssrc);
 
         return simulcastController != null
             && simulcastController.accept(pkt);
@@ -467,9 +467,9 @@ public class BitrateController
 
                 // Review this.
                 SimulcastController ctrl;
-                synchronized (ssrcToBitrateController)
+                synchronized (ssrcToSimulcastController)
                 {
-                    ctrl = ssrcToBitrateController.get(ssrc & 0xFFFFFFFFL);
+                    ctrl = ssrcToSimulcastController.get(ssrc & 0xFFFFFFFFL);
                     if (ctrl == null && trackBitrateAllocation.track != null)
                     {
                         RTPEncodingDesc[] rtpEncodings
@@ -484,12 +484,12 @@ public class BitrateController
                             // controller.
                             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
                             {
-                                ssrcToBitrateController.put(
+                                ssrcToSimulcastController.put(
                                     rtpEncoding.getPrimarySSRC(), ctrl);
 
                                 if (rtpEncoding.getRTXSSRC() != -1)
                                 {
-                                    ssrcToBitrateController.put(
+                                    ssrcToSimulcastController.put(
                                         rtpEncoding.getRTXSSRC(), ctrl);
                                 }
                             }
@@ -533,7 +533,7 @@ public class BitrateController
         else
         {
             for (SimulcastController simulcastController
-                : ssrcToBitrateController.values())
+                : ssrcToSimulcastController.values())
             {
                 simulcastController.setTargetIndex(-1);
                 simulcastController.setOptimalIndex(-1);
@@ -1102,7 +1102,7 @@ public class BitrateController
         public void close()
         {
             for (SimulcastController simulcastController
-                : ssrcToBitrateController.values())
+                : ssrcToSimulcastController.values())
             {
                 try
                 {
@@ -1150,11 +1150,13 @@ public class BitrateController
 
                 long ssrc = pkts[i].getSSRCAsLong();
 
-                SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+                SimulcastController simulcastController
+                    = ssrcToSimulcastController.get(ssrc);
 
                 // FIXME properly support unannounced SSRCs.
                 RawPacket[] ret
-                    = subCtrl == null ? null : subCtrl.rtpTransform(pkts[i]);
+                    = simulcastController == null
+                            ? null : simulcastController.rtpTransform(pkts[i]);
 
                 if (ArrayUtils.isNullOrEmpty(ret))
                 {
@@ -1215,10 +1217,11 @@ public class BitrateController
                 return pkt;
             }
 
-            SimulcastController subCtrl
-                = ssrcToBitrateController.get(ssrc);
+            SimulcastController simulcastController
+                = ssrcToSimulcastController.get(ssrc);
 
-            return subCtrl == null ? pkt : subCtrl.rtcpTransform(pkt);
+            return simulcastController == null
+                    ? pkt : simulcastController.rtcpTransform(pkt);
         }
     }
 }
