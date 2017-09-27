@@ -15,11 +15,10 @@
  */
 package org.jitsi.videobridge.eventadmin.callstats;
 
-import io.callstats.sdk.*;
-
 import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.stats.media.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.stats.*;
 import org.osgi.framework.*;
@@ -52,7 +51,7 @@ public class Activator
      *
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Activator} is starting
-     * @throws Exception
+     * @throws Exception error starting this activator
      */
     @Override
     public void start(BundleContext bundleContext)
@@ -68,7 +67,7 @@ public class Activator
      *
      * @param bundleContext the {@code BundleContext} in which this
      * {@code Activator} is stopping
-     * @throws Exception
+     * @throws Exception error stopping and removing dependent services.
      */
     @Override
     public void stop(BundleContext bundleContext)
@@ -80,6 +79,12 @@ public class Activator
         {
             serviceRegistration.unregister();
             serviceRegistration = null;
+        }
+
+        if (conferenceStatsHandler != null)
+        {
+            conferenceStatsHandler.stop();
+            conferenceStatsHandler = null;
         }
     }
 
@@ -109,7 +114,7 @@ public class Activator
             service = null;
         }
 
-        if (service == null || !(service instanceof CallStats))
+        if (service == null || !(service instanceof StatsService))
             return;
 
         switch (ev.getType())
@@ -140,7 +145,7 @@ public class Activator
 
             conferenceStatsHandler = new CallStatsConferenceStatsHandler();
             conferenceStatsHandler.start(
-                (CallStats) service,
+                (StatsService) service,
                 bridgeId,
                 conferenceIDPrefix,
                 interval);
