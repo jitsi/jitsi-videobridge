@@ -29,11 +29,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.callstats</groupId>
-      <artifactId>callstats-java-sdk</artifactId>
-      <version>4.1.2</version>
-    </dependency>
-    <dependency>
       <groupId>com.googlecode.json-simple</groupId>
       <artifactId>json-simple</artifactId>
     </dependency>
@@ -144,7 +139,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20170925.024654-315</version>
+      <version>1.0-20170927.165735-317</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -190,6 +185,11 @@
       <artifactId>easymock</artifactId>
       <version>3.4</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jitsi</groupId>
+      <artifactId>jitsi-stats</artifactId>
+      <version>1.0-20171003.152041-3</version>
     </dependency>
   </dependencies>
 
