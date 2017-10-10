@@ -203,6 +203,11 @@ public class JvbBundleConfig
         //            + ".dropUnencryptedPkts",
         //        true_);
 
+        // make sure we use the properties files for configuration
+        defaults.put(
+            "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
+            true_);
+
         // callstats-java-sdk
         Utils.getCallStatsJavaSDKSystemPropertyDefaults(defaults);
 

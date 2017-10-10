@@ -46,6 +46,7 @@ import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
+import org.jxmpp.jid.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -1076,7 +1077,7 @@ public class RtpChannel
     {
         Content content = getContent();
         Conference conference = content.getConference();
-        String focus = conference.getFocus();
+        Jid focus = conference.getFocus();
 
         if (focus == null)
         {
@@ -1103,7 +1104,7 @@ public class RtpChannel
                 contentIQ.addChannel(channelIQ);
 
                 conferenceIQ.setTo(focus);
-                conferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.SET);
+                conferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.set);
 
                 for (ComponentImpl component : components)
                 {

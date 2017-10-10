@@ -15,8 +15,6 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.*;
-import net.java.sip.communicator.service.protocol.jabber.*;
 import org.osgi.framework.*;
 
 /**
@@ -45,17 +43,13 @@ public class VideobridgeBundleActivator
      * Initializes and starts a new <tt>Videobridge</tt> instance and registers
      * it as an OSGi service in the specified <tt>bundleContext</tt>.
      *
-     * @param the <tt>BundleContext</tt> in which the <tt>Videobridge</tt> OSGi
-     * bundle is to start
+     * @param bundleContext the <tt>BundleContext</tt> in which the
+     * <tt>Videobridge</tt> OSGi bundle is to start
      */
     @Override
     public void start(BundleContext bundleContext)
         throws Exception
     {
-        AbstractSmackInteroperabilityLayer
-            .setImplementationClass(
-                    SmackV3InteroperabilityLayer.class);
-
         Videobridge videobridge = new Videobridge();
 
         videobridge.start(bundleContext);
@@ -85,8 +79,8 @@ public class VideobridgeBundleActivator
      * <tt>BundleContext</tt> if such an instance has been registered and
      * started.
      *
-     * @param the <tt>BundleContext</tt> in which the <tt>Videobridge</tt> OSGi
-     * bundle is to stop
+     * @param bundleContext the <tt>BundleContext</tt> in which the
+     * <tt>Videobridge</tt> OSGi bundle is to stop
      */
     @Override
     public void stop(BundleContext bundleContext)

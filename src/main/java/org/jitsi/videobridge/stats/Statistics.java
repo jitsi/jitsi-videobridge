@@ -33,7 +33,8 @@ public abstract class Statistics
      * @param statistics the statistics instance
      * @return the <tt>ColibriStatsExtension</tt> instance.
      */
-    public static ColibriStatsExtension toXMPP(Statistics statistics)
+    public static ColibriStatsExtension toXmppExtensionElement(
+            Statistics statistics)
     {
         ColibriStatsExtension ext = new ColibriStatsExtension();
 
@@ -43,6 +44,22 @@ public abstract class Statistics
                     new ColibriStatsExtension.Stat(e.getKey(), e.getValue()));
         }
         return ext;
+    }
+
+    /**
+     * Formats statistics in <tt>ColibriStatsIQ</tt> object
+     * @param statistics the statistics instance
+     * @return the <tt>ColibriStatsIQ</tt> instance.
+     */
+    public static ColibriStatsIQ toXmppIq(Statistics statistics)
+    {
+        ColibriStatsIQ iq = new ColibriStatsIQ();
+        for (Map.Entry<String,Object> e : statistics.getStats().entrySet())
+        {
+            iq.addStat(
+                    new ColibriStatsExtension.Stat(e.getKey(), e.getValue()));
+        }
+        return iq;
     }
 
     /**

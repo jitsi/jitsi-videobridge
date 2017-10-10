@@ -36,6 +36,8 @@ import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.json.simple.*;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
 /**
@@ -112,7 +114,7 @@ public class Conference
      * ignored. If <tt>null</tt> value is assigned we don't care who modifies
      * the conference.
      */
-    private final String focus;
+    private final Jid focus;
 
     /**
      * The (unique) identifier/ID of this instance.
@@ -134,7 +136,7 @@ public class Conference
     /**
      * The world readable name of this instance if any.
      */
-    private String name;
+    private Localpart name;
 
     /**
      * The time in milliseconds of the last activity related to this
@@ -147,7 +149,7 @@ public class Conference
      * If {@link #focus} is <tt>null</tt> the value of the last known focus is
      * stored in this member.
      */
-    private String lastKnownFocus;
+    private Jid lastKnownFocus;
 
     /**
      * The <tt>PropertyChangeListener</tt> which listens to
@@ -259,8 +261,8 @@ public class Conference
      */
     public Conference(Videobridge videobridge,
                       String id,
-                      String focus,
-                      String name,
+                      Jid focus,
+                      Localpart name,
                       boolean enableLogging,
                       String gid)
     {
@@ -1104,7 +1106,7 @@ public class Conference
      * and from whom requests to manage this instance must come or they will be
      * ignored
      */
-    public final String getFocus()
+    public final Jid getFocus()
     {
         return focus;
     }
@@ -1138,7 +1140,7 @@ public class Conference
      * Returns the JID of the last known focus.
      * @return the JID of the last known focus.
      */
-    public String getLastKnowFocus()
+    public Jid getLastKnowFocus()
     {
         return lastKnownFocus;
     }
@@ -1357,7 +1359,7 @@ public class Conference
      * @param channelBundleId the ID of the channel-bundle for which to return
      * the <tt>TransportManager</tt>.
      * @param create whether to create a new instance, if one doesn't exist.
-     * @param initiator determines ICE controlling/controlled and DTLS role. 
+     * @param initiator determines ICE controlling/controlled and DTLS role.
      * @return the <tt>TransportManager</tt> instance for the channel-bundle
      * with ID <tt>channelBundleId</tt>.
      */
@@ -1619,7 +1621,7 @@ public class Conference
      *
      * @param jid the JID of the last known focus.
      */
-    public void setLastKnownFocus(String jid)
+    public void setLastKnownFocus(Jid jid)
     {
         lastKnownFocus = jid;
     }
@@ -1900,7 +1902,7 @@ public class Conference
      *
      * @return the conference name
      */
-    public String getName()
+    public Localpart getName()
     {
         return name;
     }

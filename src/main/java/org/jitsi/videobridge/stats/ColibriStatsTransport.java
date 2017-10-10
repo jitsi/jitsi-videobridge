@@ -23,6 +23,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
+import org.jxmpp.jid.*;
 import org.osgi.framework.*;
 
 /**
@@ -47,18 +48,8 @@ public class ColibriStatsTransport
      */
     private static IQ buildStatsIQ(Statistics statistics)
     {
-        final ColibriStatsExtension ext = Statistics.toXMPP(statistics);
-        IQ iq
-            = new IQ()
-            {
-                @Override
-                public String getChildElementXML()
-                {
-                    return ext.toXML();
-                }
-            };
-
-        iq.setType(IQ.Type.RESULT);
+        ColibriStatsIQ iq = Statistics.toXmppIq(statistics);
+        iq.setType(IQ.Type.result);
         return iq;
     }
 
@@ -92,7 +83,7 @@ public class ColibriStatsTransport
 
                         for (Conference conference : conferences)
                         {
-                            String focus = conference.getLastKnowFocus();
+                            Jid focus = conference.getLastKnowFocus();
 
                             if (focus != null)
                             {

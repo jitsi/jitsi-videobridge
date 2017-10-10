@@ -404,6 +404,11 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
+        if (!(dest.getStream() instanceof VideoMediaStreamImpl))
+        {
+            return;
+        }
+
         VideoMediaStreamImpl destStream
             = (VideoMediaStreamImpl) dest.getStream();
         BandwidthEstimator bwe = destStream == null ? null

@@ -19,6 +19,9 @@ public class OSGiHandler
     public void start()
         throws InterruptedException
     {
+        System.setProperty(
+            "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
+            "true");
         OSGi.setBundleConfig(new JvbBundleConfig());
 
         activator =

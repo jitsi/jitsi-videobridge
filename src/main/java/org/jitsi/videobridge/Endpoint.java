@@ -615,7 +615,7 @@ public class Endpoint
     /**
      * Checks whether a WebSocket connection with a specific password string
      * should be accepted for this {@link Endpoint}.
-     * @param icePassword the
+     * @param password the
      * @return {@code true} iff the password matches and the WebSocket
      */
     public boolean acceptWebSocket(String password)
