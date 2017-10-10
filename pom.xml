@@ -20,7 +20,7 @@
   <properties>
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
-    <jitsi-desktop.version>2.11-SNAPSHOT</jitsi-desktop.version>
+    <jitsi-desktop.version>2.13.77e7a10</jitsi-desktop.version>
     <smack.version>4.2.1</smack.version>
   </properties>
 
