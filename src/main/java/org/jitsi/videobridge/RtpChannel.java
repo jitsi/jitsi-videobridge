@@ -906,12 +906,6 @@ public class RtpChannel
                         mediaType,
                         getSrtpControl());
 
-            if (logger.isTraceEnabled())
-            {
-                logger.trace("channel_stream," + hashCode()
-                        + "," + stream.hashCode());
-            }
-
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes
              // to the values of properties we may be interested in.
