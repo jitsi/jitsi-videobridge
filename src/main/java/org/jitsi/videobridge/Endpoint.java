@@ -458,27 +458,24 @@ public class Endpoint
     public boolean removeChannel(RtpChannel channel)
     {
         if (channel == null)
+        {
             return false;
+        }
 
-        boolean removed = false;
+        boolean removed;
 
         synchronized (channels)
         {
-            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
-                    i.hasNext();)
-            {
-                Channel c = i.next().get();
-
-                if ((c == null) || c.equals(channel) || c.isExpired())
-                {
-                    i.remove();
-                    removed = true;
-                }
-            }
+            removed = channels.removeIf(w -> {
+                Channel c = w.get();
+                return c == null || c.equals(channel) || c.isExpired();
+            });
         }
 
         if (removed)
+        {
             firePropertyChange(CHANNELS_PROPERTY_NAME, null, null);
+        }
 
         return removed;
     }

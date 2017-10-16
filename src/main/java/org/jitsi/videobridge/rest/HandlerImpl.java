@@ -505,7 +505,9 @@ class HandlerImpl
                 Statistics statistics = null;
 
                 if (i.hasNext())
+                {
                     statistics = i.next();
+                }
 
                 JSONObject statisticsJSONObject
                     = JSONSerializer.serializeStatistics(statistics);
@@ -513,9 +515,13 @@ class HandlerImpl
 
                 response.setStatus(HttpServletResponse.SC_OK);
                 if (statisticsJSONObject == null)
+                {
                     writer.write("null");
+                }
                 else
+                {
                     statisticsJSONObject.writeJSONString(writer);
+                }
 
                 return;
             }
