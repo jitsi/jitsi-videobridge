@@ -509,10 +509,8 @@ public class Conference
      */
     void describeEndpoints(ColibriConferenceIQ iq)
     {
-        for (Iterator<Endpoint> i = getEndpoints().iterator(); i.hasNext(); )
+        for (Endpoint en : getEndpoints())
         {
-            Endpoint en = i.next();
-
             ColibriConferenceIQ.Endpoint responseBundleIQ
                 = new ColibriConferenceIQ.Endpoint(
                 en.getID(),
