@@ -1124,6 +1124,7 @@ public class Videobridge
         }
 
         conference.describeChannelBundles(responseConferenceIQ);
+        conference.describeEndpoints(responseConferenceIQ);
 
         responseConferenceIQ.setType(
                 org.jivesoftware.smack.packet.IQ.Type.result);
