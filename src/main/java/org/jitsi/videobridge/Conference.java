@@ -977,20 +977,17 @@ public class Conference
      */
     private Endpoint getEndpoint(String id, boolean create)
     {
-        Endpoint endpoint = null;
-        boolean changed = false;
+        Endpoint endpoint;
+        boolean changed;
 
         synchronized (endpoints)
         {
-            endpoints.removeIf(Endpoint::isExpired);
+            changed = endpoints.removeIf(Endpoint::isExpired);
 
-            for (Endpoint e : endpoints)
-            {
-                if (e.getID().equals(id))
-                {
-                    endpoint = e;
-                }
-            }
+            endpoint
+                = endpoints.stream()
+                        .filter(e -> e.getID().equals(id))
+                        .findFirst().orElse(null);
 
             if (create && endpoint == null)
             {
