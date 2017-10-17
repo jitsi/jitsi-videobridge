@@ -11,7 +11,7 @@
   </parent>
 
   <artifactId>jitsi-videobridge</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>jitsi-videobridge</name>
@@ -20,6 +20,8 @@
   <properties>
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
+    <jitsi-desktop.version>2.13.9aab784</jitsi-desktop.version>
+    <smack.version>4.2.1</smack.version>
   </properties>
 
   <dependencyManagement>
@@ -28,11 +30,6 @@
   </dependencyManagement>
 
   <dependencies>
-    <dependency>
-      <groupId>io.callstats</groupId>
-      <artifactId>callstats-java-sdk</artifactId>
-      <version>4.1.1</version>
-    </dependency>
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
       <artifactId>json-simple</artifactId>
@@ -57,18 +54,17 @@
     <dependency>
       <groupId>org.igniterealtime</groupId>
       <artifactId>tinder</artifactId>
+      <version>1.3.0</version>
     </dependency>
     <dependency>
       <groupId>org.igniterealtime.smack</groupId>
-      <artifactId>smack</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.igniterealtime.smack</groupId>
-      <artifactId>smackx</artifactId>
+      <artifactId>smack-extensions</artifactId>
+      <version>${smack.version}</version>
     </dependency>
     <dependency>
       <groupId>org.igniterealtime.whack</groupId>
       <artifactId>core</artifactId>
+      <version>2.0.1</version>
     </dependency>
     <!-- org.jitsi -->
     <dependency>
@@ -79,12 +75,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>ice4j</artifactId>
-      <version>2.0.0-20170720.150550-1</version>
+      <version>2.0.0-20170821.174042-3</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.0-20170417.175044-39</version>
+      <version>1.1-20171010.184527-1</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -94,57 +90,57 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-configuration</artifactId>
-      <version>2.9-20150723.181638-1</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-fileaccess</artifactId>
-      <version>2.9-20150723.181644-1</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-netaddr</artifactId>
-      <version>2.9-20150723.181645-1</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-packetlogging</artifactId>
-      <version>2.9-20160331.174040-3</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-protocol</artifactId>
-      <version>2.9-20151211.202410-3</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-protocol-jabber</artifactId>
-      <version>2.11-20170726.210550-11</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-protocol-media</artifactId>
-      <version>2.9-20150723.181646-1</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-resourcemanager</artifactId>
-      <version>2.9-20150723.181652-1</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-ui-service</artifactId>
-      <version>2.9-20150723.181654-1</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-util</artifactId>
-      <version>2.9-20160203.194039-2</version>
+      <version>${jitsi-desktop.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20170804.152207-305</version>
+      <version>1.0-20171013.160715-320</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -191,10 +187,23 @@
       <version>3.4</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.jitsi</groupId>
+      <artifactId>jitsi-stats</artifactId>
+      <version>1.0-20171010.224039-4</version>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>

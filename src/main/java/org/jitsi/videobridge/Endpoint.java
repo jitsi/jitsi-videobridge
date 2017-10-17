@@ -92,6 +92,11 @@ public class Endpoint
     private String displayName;
 
     /**
+     * The statistic Id of this <tt>Endpoint</tt>.
+     */
+    private String statsId;
+
+    /**
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Endpoint</tt>.
      */
@@ -314,6 +319,16 @@ public class Endpoint
     }
 
     /**
+     * Returns the stats Id of this <tt>Endpoint</tt>.
+     *
+     * @return the stats Id of this <tt>Endpoint</tt>.
+     */
+    public String getStatsId()
+    {
+        return statsId;
+    }
+
+    /**
      * Gets the (unique) identifier/ID of this instance.
      *
      * @return the (unique) identifier/ID of this instance
@@ -523,6 +538,16 @@ public class Endpoint
     }
 
     /**
+     * Sets the stats Id of this <tt>Endpoint</tt>.
+     *
+     * @param value the stats Id value to set on this <tt>Endpoint</tt>.
+     */
+    public void setStatsId(String value)
+    {
+        this.statsId = value;
+    }
+
+    /**
      * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
      *
      * @param sctpConnection the <tt>SctpConnection</tt> to be bound to this
@@ -615,7 +640,7 @@ public class Endpoint
     /**
      * Checks whether a WebSocket connection with a specific password string
      * should be accepted for this {@link Endpoint}.
-     * @param icePassword the
+     * @param password the
      * @return {@code true} iff the password matches and the WebSocket
      */
     public boolean acceptWebSocket(String password)

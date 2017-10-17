@@ -18,7 +18,6 @@ package org.jitsi.videobridge;
 import java.net.*;
 
 import org.ice4j.socket.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.util.*;
 
 /**
@@ -132,15 +131,16 @@ class RtpChannelDatagramFilter
     {
         if (len >= 8)
         {
-            int packetSenderSSRC
-                = RTPTranslatorImpl.readInt(data, off + 4);
+            int packetSenderSSRC = RTPUtils.readInt(data, off + 4);
 
             int[] channelSSRCs =  channel.getDefaultReceiveSSRCs();
 
             for (int channelSSRC : channelSSRCs)
             {
                 if (channelSSRC == packetSenderSSRC)
+                {
                     return true;
+                }
             }
 
             channelSSRCs = channel.getReceiveSSRCs();
@@ -148,7 +148,9 @@ class RtpChannelDatagramFilter
             for (int channelSSRC : channelSSRCs)
             {
                 if (channelSSRC == packetSenderSSRC)
+                {
                     return true;
+                }
             }
         }
         return false;

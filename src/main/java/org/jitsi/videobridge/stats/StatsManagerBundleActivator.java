@@ -19,6 +19,9 @@ import net.java.sip.communicator.util.*;
 import net.java.sip.communicator.util.Logger;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
+import org.jxmpp.stringprep.*;
 import org.osgi.framework.*;
 
 /**
@@ -163,9 +166,18 @@ public class StatsManagerBundleActivator
         }
         else if (STAT_TRANSPORT_PUBSUB.equalsIgnoreCase(transport))
         {
-            String service = cfg.getString(PUBSUB_SERVICE_PNAME);
-            String node = cfg.getString(PUBSUB_NODE_PNAME);
+            Jid service;
+            try
+            {
+                service = JidCreate.from(cfg.getString(PUBSUB_SERVICE_PNAME));
+            }
+            catch (XmppStringprepException e)
+            {
+                logger.error("Invalid pubsub service name", e);
+                return;
+            }
 
+            String node = cfg.getString(PUBSUB_NODE_PNAME);
             if(service != null && node != null)
             {
                 t = new PubSubStatsTransport(service, node);

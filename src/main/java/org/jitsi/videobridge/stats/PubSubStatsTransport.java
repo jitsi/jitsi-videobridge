@@ -22,6 +22,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;
+import org.jxmpp.jid.*;
 import org.osgi.framework.*;
 
 /**
@@ -76,7 +77,7 @@ public class PubSubStatsTransport
     /**
      * The name of the service.
      */
-    private final String serviceName;
+    private final Jid serviceName;
 
     /**
      * Initializes a new <tt>PubSubStatsTransport</tt> instance.
@@ -84,7 +85,7 @@ public class PubSubStatsTransport
      * @param serviceName the name of the service.
      * @param nodeName the name of the PubSub node.
      */
-    public PubSubStatsTransport(String serviceName, String nodeName)
+    public PubSubStatsTransport(Jid serviceName, String nodeName)
     {
         this.serviceName = serviceName;
         this.nodeName = nodeName;
@@ -229,7 +230,7 @@ public class PubSubStatsTransport
 
             if (err != null
                     && XMPPError.Type.CANCEL.equals(err.getType())
-                    && XMPPError.Condition.item_not_found.toString().equals(
+                    && XMPPError.Condition.item_not_found.equals(
                             err.getCondition()))
             {
                 // We are about to attempt to resurrect this
@@ -275,7 +276,8 @@ public class PubSubStatsTransport
         {
             try
             {
-                publisher.publish(nodeName, itemId, Statistics.toXMPP(stats));
+                publisher.publish(nodeName, itemId,
+                    Statistics.toXmppExtensionElement(stats));
             }
             catch (IllegalArgumentException e)
             {

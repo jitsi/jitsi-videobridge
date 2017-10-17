@@ -18,14 +18,14 @@ package org.jitsi.videobridge;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.service.shutdown.*;
 
-import org.jitsi.service.neomedia.*;
-
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.util.*;
 
 import org.junit.*;
 
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
 import org.xmlpull.v1.*;
 
 import java.io.*;
@@ -73,35 +73,6 @@ public class BridgeShutdownTest
     }
 
     /**
-     * Creates {@link ColibriConferenceIQ} with audio content and empty channel
-     * IQ. Conference ID is empty hence it can be used to created new conference
-     * on the bridge.
-     *
-     * @param focusJid conference focus owner.
-     *
-     * @return {@link ColibriConferenceIQ} with audio content and empty channel
-     *         IQ.
-     */
-    private ColibriConferenceIQ createConferenceIq(String focusJid)
-    {
-        ColibriConferenceIQ confIq = new ColibriConferenceIQ();
-
-        confIq.setFrom(focusJid);
-
-        ColibriConferenceIQ.Content audioContent
-            = new ColibriConferenceIQ.Content(MediaType.AUDIO.toString());
-
-        ColibriConferenceIQ.Channel channel
-            = new ColibriConferenceIQ.Channel();
-
-        audioContent.addChannel(channel);
-
-        confIq.addContent(audioContent);
-
-        return confIq;
-    }
-
-    /**
      *
      * FIXME: add test case when unauthorized jid tries to shutdown
      */
@@ -116,10 +87,11 @@ public class BridgeShutdownTest
             ShutdownService.class,
             testShutdownService, null);
 
-        String focusJid = "focusJid";
+        Jid focusJid = JidCreate.from("focusJid");
 
         // Allocate one conference
-        ColibriConferenceIQ confIq = createConferenceIq(focusJid);
+        ColibriConferenceIQ confIq = ColibriUtilities
+                .createConferenceIq(focusJid);
         IQ respIq;
 
         respIq = bridge.handleColibriConferenceIQ(confIq);
@@ -137,12 +109,12 @@ public class BridgeShutdownTest
 
         respIq = bridge.handleShutdownIQ(shutdownIQ);
 
-        assertEquals(IQ.Type.RESULT, respIq.getType());
+        assertEquals(IQ.Type.result, respIq.getType());
         assertTrue(bridge.isShutdownInProgress());
 
         // Now send get conference state request
         respConfIq.setFrom(focusJid);
-        respConfIq.setType(IQ.Type.GET);
+        respConfIq.setType(IQ.Type.get);
         respIq = bridge.handleColibriConferenceIQ(respConfIq);
 
         assertTrue(respIq instanceof ColibriConferenceIQ);
@@ -152,7 +124,8 @@ public class BridgeShutdownTest
         assertTrue(respConfIq.isGracefulShutdown());
 
         // Now send create new conference request and we expect error
-        ColibriConferenceIQ createNewConfIq = createConferenceIq(focusJid);
+        ColibriConferenceIQ createNewConfIq
+                = ColibriUtilities.createConferenceIq(focusJid);
 
         respIq = bridge.handleColibriConferenceIQ(createNewConfIq);
 
@@ -176,7 +149,7 @@ public class BridgeShutdownTest
         }
 
         respConfIq.setFrom(focusJid);
-        respConfIq.setType(IQ.Type.SET);
+        respConfIq.setType(IQ.Type.set);
 
         respIq = bridge.handleColibriConferenceIQ(respConfIq);
 
@@ -207,18 +180,20 @@ public class BridgeShutdownTest
 
         XmlPullParser parser = factory.newPullParser();
 
-        String iqStr = respIqRaw.toXML();
+        String iqStr = respIqRaw.toXML().toString();
 
         parser.setInput(new StringReader(iqStr));
 
         parser.next();
 
-        IQ respIq = PacketParserUtils.parseIQ(parser, null);
+        IQ respIq = PacketParserUtils.parseIQ(parser);
 
-        assertEquals(IQ.Type.ERROR, respIq.getType());
+        assertEquals(IQ.Type.error, respIq.getType());
 
         XMPPError error = respIq.getError();
         assertNotNull(error);
+        assertEquals(XMPPError.Condition.service_unavailable,
+                error.getCondition());
         assertEquals(XMPPError.Type.CANCEL, error.getType());
 
         assertNotNull(

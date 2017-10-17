@@ -21,6 +21,8 @@ import org.jivesoftware.smack.packet.*;
 import org.junit.*;
 import org.junit.runner.*;
 import org.junit.runners.*;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.impl.*;
 
 import static org.junit.Assert.*;
 
@@ -72,7 +74,7 @@ public class RawUdpConferenceTest
     public void testNo_127_0_0_0_CandidateIps()
         throws Exception
     {
-        String focusJid = "focusJid";
+        Jid focusJid = JidCreate.from("focusJid");
 
         ColibriConferenceIQ confIq
             = ColibriUtilities.createConferenceIq(focusJid);
@@ -99,7 +101,7 @@ public class RawUdpConferenceTest
     public void testMixerChannel()
             throws Exception
     {
-        String focusJid = "focusJid";
+        Jid focusJid = JidCreate.from("focusJid");
 
         ColibriConferenceIQ confIq
                 = ColibriUtilities.createConferenceIq(focusJid);
