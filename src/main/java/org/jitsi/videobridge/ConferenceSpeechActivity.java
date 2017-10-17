@@ -614,21 +614,13 @@ public class ConferenceSpeechActivity
                     List<Endpoint> conferenceEndpoints
                         = conference.getEndpoints();
 
-                    endpoints = new ArrayList<>(conferenceEndpoints.size());
-                    for (Endpoint endpoint : conferenceEndpoints)
-                        endpoints.add(endpoint);
+                    endpoints = new ArrayList<>(conferenceEndpoints);
                 }
             }
 
             // The return value is the list of Endpoints of this instance.
-            ret = new ArrayList<>(endpoints.size());
-            for (Iterator<Endpoint> i = endpoints.iterator(); i.hasNext();)
-            {
-                Endpoint endpoint = i.next();
-
-                if (endpoint != null)
-                    ret.add(endpoint);
-            }
+            ret = new ArrayList<>(endpoints);
+            ret.removeIf(Objects::isNull);
         }
         return ret;
     }
@@ -808,11 +800,7 @@ public class ConferenceSpeechActivity
 
             if (endpoints == null)
             {
-                endpoints = new ArrayList<>(conferenceEndpoints.size());
-                for (Endpoint endpoint : conferenceEndpoints)
-                {
-                    endpoints.add(endpoint);
-                }
+                endpoints = new ArrayList<>(conferenceEndpoints);
                 endpointsChanged = true;
             }
             else

@@ -51,11 +51,11 @@ final class JSONDeserializer
             JSONObject jsonObject,
             AbstractPacketExtension abstractPacketExtension)
     {
-        Iterator<Map.Entry<Object,Object>> i = jsonObject.entrySet().iterator();
 
-        while (i.hasNext())
+        for (Map.Entry<Object, Object> e : (Iterable<Map.Entry<Object,
+            Object>>) jsonObject
+            .entrySet())
         {
-            Map.Entry<Object,Object> e = i.next();
             Object key = e.getKey();
 
             if (key != null)
@@ -67,7 +67,7 @@ final class JSONDeserializer
                     Object value = e.getValue();
 
                     if (!(value instanceof JSONObject)
-                            && !(value instanceof JSONArray))
+                        && !(value instanceof JSONArray))
                     {
                         abstractPacketExtension.setAttribute(name, value);
                     }
@@ -557,12 +557,11 @@ final class JSONDeserializer
     {
         if (parameters != null)
         {
-            Iterator<Map.Entry<Object,Object>> i
-                = parameters.entrySet().iterator();
 
-            while (i.hasNext())
+            for (Map.Entry<Object, Object> e
+                        : (Iterable<Map.Entry<Object, Object>>) parameters
+                                .entrySet())
             {
-                Map.Entry<Object,Object> e = i.next();
                 Object name = e.getKey();
                 Object value = e.getValue();
 

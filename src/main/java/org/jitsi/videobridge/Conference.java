@@ -401,18 +401,7 @@ public class Conference
     {
         synchronized (transportManagers)
         {
-            for (Iterator<IceUdpTransportManager> i
-                        = transportManagers.values().iterator();
-                    i.hasNext();)
-            {
-                if (i.next() == transportManager)
-                {
-                    i.remove();
-                    // Presumably, we have a single association for
-                    // transportManager.
-                    break;
-                }
-            }
+            transportManagers.values().removeIf(tm -> tm == transportManager);
 
             // Close manager
             try
@@ -449,15 +438,8 @@ public class Conference
     {
         synchronized (transportManagers)
         {
-            for (Iterator<IceUdpTransportManager> i
-                        = transportManagers.values().iterator();
-                    i.hasNext();)
-            {
-                IceUdpTransportManager transportManager = i.next();
-
-                i.remove();
-                closeTransportManager(transportManager);
-            }
+            transportManagers.forEach((id, tm) -> closeTransportManager(tm));
+            transportManagers.clear();
         }
     }
 
@@ -995,25 +977,17 @@ public class Conference
      */
     private Endpoint getEndpoint(String id, boolean create)
     {
-        Endpoint endpoint = null;
-        boolean changed = false;
+        Endpoint endpoint;
+        boolean changed;
 
         synchronized (endpoints)
         {
-            for (Iterator<Endpoint> i = endpoints.iterator(); i.hasNext();)
-            {
-                Endpoint e = i.next();
+            changed = endpoints.removeIf(Endpoint::isExpired);
 
-                if (e.isExpired())
-                {
-                    i.remove();
-                    changed = true;
-                }
-                else if (e.getID().equals(id))
-                {
-                    endpoint = e;
-                }
-            }
+            endpoint
+                = endpoints.stream()
+                        .filter(e -> e.getID().equals(id))
+                        .findFirst().orElse(null);
 
             if (create && endpoint == null)
             {
@@ -1086,26 +1060,13 @@ public class Conference
      */
     public List<Endpoint> getEndpoints()
     {
-        List<Endpoint> endpoints;
-        boolean changed = false;
+        boolean changed;
+        List<Endpoint> copy;
 
         synchronized (this.endpoints)
         {
-            endpoints = new ArrayList<>(this.endpoints.size());
-            for (Iterator<Endpoint> i = this.endpoints.iterator(); i.hasNext();)
-            {
-                Endpoint endpoint = i.next();
-
-                if (endpoint.isExpired())
-                {
-                    i.remove();
-                    changed = true;
-                }
-                else
-                {
-                    endpoints.add(endpoint);
-                }
-            }
+            changed = this.endpoints.removeIf(Endpoint::isExpired);
+            copy = new ArrayList<>(this.endpoints);
         }
 
         if (changed)
@@ -1113,7 +1074,7 @@ public class Conference
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
         }
 
-        return endpoints;
+        return copy;
     }
 
     /**
@@ -1536,20 +1497,12 @@ public class Conference
      */
     private boolean removeEndpoint(Endpoint endpoint)
     {
-        boolean removed = false;
+        boolean removed;
 
         synchronized (endpoints)
         {
-            for (Iterator<Endpoint> i = endpoints.iterator(); i.hasNext();)
-            {
-                Endpoint e = i.next();
-
-                if (e.isExpired() || e == endpoint)
-                {
-                    i.remove();
-                    removed = true;
-                }
-            }
+            removed = endpoints.removeIf(Endpoint::isExpired);
+            removed |= endpoints.removeIf(e -> e == endpoint);
 
             if (endpoint != null)
             {
