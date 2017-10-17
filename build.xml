@@ -99,9 +99,9 @@
             destdir="${output}"
             debug="true"
             fork="true"
-            source="1.7"
+            source="1.8"
             srcdir="${src}"
-            target="1.7" />
+            target="1.8" />
     </target>
 
     <target name="compile-test" depends="compile">
@@ -111,9 +111,9 @@
                 destdir="${output.test}"
                 debug="true"
                 fork="true"
-                source="1.7"
+                source="1.8"
                 srcdir="${src.test}"
-                target="1.7" />
+                target="1.8" />
     </target>
 
     <target name="run">
