@@ -125,7 +125,9 @@ public class ConferencePeriodicRunnable
                         continue;
                     }
 
-                    String endpointID = e.getID();
+                    // uses statsId if it is available
+                    String endpointID
+                        = e.getStatsId() != null ? e.getStatsId(): e.getID();
 
                     Collection newStats
                         = receive

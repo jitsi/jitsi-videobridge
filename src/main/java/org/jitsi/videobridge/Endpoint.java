@@ -92,6 +92,11 @@ public class Endpoint
     private String displayName;
 
     /**
+     * The statistic Id of this <tt>Endpoint</tt>.
+     */
+    private String statsId;
+
+    /**
      * The indicator which determines whether {@link #expire()} has been called
      * on this <tt>Endpoint</tt>.
      */
@@ -314,6 +319,16 @@ public class Endpoint
     }
 
     /**
+     * Returns the stats Id of this <tt>Endpoint</tt>.
+     *
+     * @return the stats Id of this <tt>Endpoint</tt>.
+     */
+    public String getStatsId()
+    {
+        return statsId;
+    }
+
+    /**
      * Gets the (unique) identifier/ID of this instance.
      *
      * @return the (unique) identifier/ID of this instance
@@ -520,6 +535,16 @@ public class Endpoint
     public void setDisplayName(String displayName)
     {
         this.displayName = displayName;
+    }
+
+    /**
+     * Sets the stats Id of this <tt>Endpoint</tt>.
+     *
+     * @param value the stats Id value to set on this <tt>Endpoint</tt>.
+     */
+    public void setStatsId(String value)
+    {
+        this.statsId = value;
     }
 
     /**

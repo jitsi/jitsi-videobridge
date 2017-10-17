@@ -503,6 +503,25 @@ public class Conference
     }
 
     /**
+     * Adds the endpoint of this <tt>Conference</tt> as
+     * <tt>ColibriConferenceIQ.Endpoint</tt> instances in <tt>iq</tt>.
+     * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
+     */
+    void describeEndpoints(ColibriConferenceIQ iq)
+    {
+        for (Endpoint en : getEndpoints())
+        {
+            ColibriConferenceIQ.Endpoint responseBundleIQ
+                = new ColibriConferenceIQ.Endpoint(
+                en.getID(),
+                en != null ? en.getStatsId() : null,
+                en != null ? en.getDisplayName() : null);
+
+            iq.addEndpoint(responseBundleIQ);
+        }
+    }
+
+    /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
@@ -1893,6 +1912,8 @@ public class Conference
                                         endpoint));
                     }
                 }
+
+                endpoint.setStatsId(colibriEndpoint.getStatsId());
             }
         }
     }
