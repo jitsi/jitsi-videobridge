@@ -401,7 +401,7 @@ public class BitrateController
             if (!isLargerThanBweThreshold(lastBwe, bweBps))
             {
                 // If this is a "negligible" change in the bandwidth estimation
-                // wrt the last bandwith estimation that we reacted to, then
+                // wrt the last bandwidth estimation that we reacted to, then
                 // do not update the bitrate allocation. The goal is to limit
                 // the resolution changes due to bandwidth estimation changes,
                 // as often resolution changes can negatively impact user
@@ -493,7 +493,7 @@ public class BitrateController
                 SimulcastController ctrl;
                 synchronized (ssrcToSimulcastController)
                 {
-                    ctrl = ssrcToSimulcastController.get(ssrc & 0xFFFFFFFFL);
+                    ctrl = ssrcToSimulcastController.get(ssrc & 0xFFFF_FFFFL);
                     if (ctrl == null && trackBitrateAllocation.track != null)
                     {
                         RTPEncodingDesc[] rtpEncodings
@@ -717,7 +717,7 @@ public class BitrateController
      * @param conferenceEndpoints the ordered list of {@link Endpoint}s
      * participating in the multipoint conference with the dominant (speaker)
      * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performaance;
+     * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
      * @return a prioritized {@link TrackBitrateAllocation} array where
@@ -739,14 +739,13 @@ public class BitrateController
         }
 
         // Init.
-        // subtract 1 for destEndpoint.
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();
 
         int lastN = dest.getLastN();
         if (lastN < 0)
         {
-            // If lastN is disable, pretend lastN == szConference.
+            // If lastN is disabled, pretend lastN == szConference.
             lastN = conferenceEndpoints.size() - 1;
         }
         else
@@ -761,40 +760,38 @@ public class BitrateController
         // First, bubble-up the selected endpoints (whoever's on-stage needs to
         // be visible).
         Set<String> selectedEndpoints = destEndpoint.getSelectedEndpoints();
-        if (!selectedEndpoints.isEmpty())
+        for (Iterator<Endpoint> it = conferenceEndpoints.iterator();
+             it.hasNext() && endpointPriority < lastN;)
         {
-            for (Iterator<Endpoint> it = conferenceEndpoints.iterator();
-                 it.hasNext() && endpointPriority < lastN;)
-            {
-                Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint.isExpired()
+            Endpoint sourceEndpoint = it.next();
+            if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !selectedEndpoints.contains(sourceEndpoint.getID()))
-                {
-                    continue;
-                }
-
-                MediaStreamTrackDesc[] tracks
-                    = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
-
-                if (!ArrayUtils.isNullOrEmpty(tracks))
-                {
-                    for (MediaStreamTrackDesc track : tracks)
-                    {
-                        trackBitrateAllocations.add(
-                            endpointPriority, new TrackBitrateAllocation(
-                                sourceEndpoint,
-                                track,
-                                true /* fitsInLastN */,
-                                true /* selected */,
-                                getVideoChannel().getMaxFrameHeight()));
-                    }
-
-                    endpointPriority++;
-                }
-
-                it.remove();
+            {
+                continue;
             }
+
+            MediaStreamTrackDesc[] tracks
+                = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
+
+            if (!ArrayUtils.isNullOrEmpty(tracks))
+            {
+                for (MediaStreamTrackDesc track : tracks)
+                {
+                    trackBitrateAllocations.add(
+                        endpointPriority,
+                        new TrackBitrateAllocation(
+                            sourceEndpoint,
+                            track,
+                            true /* fitsInLastN */,
+                            true /* selected */,
+                            getVideoChannel().getMaxFrameHeight()));
+                }
+
+                endpointPriority++;
+            }
+
+            it.remove();
         }
 
         // Then, bubble-up the pinned endpoints.
