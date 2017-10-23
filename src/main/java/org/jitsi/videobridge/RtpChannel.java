@@ -969,6 +969,22 @@ public class RtpChannel
     }
 
     /**
+     * Configures the given {@link MediaStream} according to the needs of this
+     * {@link RtpChannel}.
+     * @param stream the stream to configure.
+     */
+    protected void configureStream(MediaStream stream)
+    {
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+        {
+            retransmissionRequester
+                .setSenderSsrc(getContent().getInitialLocalSSRC());
+        }
+    }
+
+    /**
      * Starts {@link #stream} if it has not been started yet and if the state of
      * this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
@@ -991,13 +1007,7 @@ public class RtpChannel
             }
         }
 
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
-        if (retransmissionRequester != null)
-        {
-            retransmissionRequester
-                .setSenderSsrc(getContent().getInitialLocalSSRC());
-        }
+        configureStream(stream);
 
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
