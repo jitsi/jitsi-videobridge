@@ -105,15 +105,7 @@ public class AudioChannel
     {
         if (csrcAudioLevelListener == null)
         {
-            csrcAudioLevelListener
-                = new CsrcAudioLevelListener()
-                {
-                    @Override
-                    public void audioLevelsReceived(long[] levels)
-                    {
-                        streamAudioLevelsReceived(levels);
-                    }
-                };
+            csrcAudioLevelListener = this::streamAudioLevelsReceived;
         }
         return csrcAudioLevelListener;
     }
@@ -132,15 +124,7 @@ public class AudioChannel
     {
         if (streamAudioLevelListener == null)
         {
-            streamAudioLevelListener
-                = new SimpleAudioLevelListener()
-                {
-                    @Override
-                    public void audioLevelChanged(int level)
-                    {
-                        streamAudioLevelChanged(level);
-                    }
-                };
+            streamAudioLevelListener = this::streamAudioLevelChanged;
         }
         return streamAudioLevelListener;
     }

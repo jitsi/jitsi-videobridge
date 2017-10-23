@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import java.io.*;
+import java.util.*;
 
 import org.jitsi.eventadmin.*;
 import org.jitsi.service.neomedia.*;
@@ -52,11 +53,38 @@ public abstract class Channel
     public static final String INITIATOR_PROPERTY = "initiator";
 
     /**
+     * The name of the <tt>Channel</tt> property <tt>endpoint</tt> which
+     * points to the <tt>Endpoint</tt> of the conference participant associated
+     * with this <tt>Channel</tt>..
+     */
+    public static final String ENDPOINT_PROPERTY_NAME = ".endpoint";
+
+    /**
      * The {@link Logger} used by the {@link Channel} class to print debug
      * information. Note that {@link Channel} instances should use {@link
      * #logger} instead.
      */
     private static final Logger classLogger = Logger.getLogger(Channel.class);
+
+    /**
+     * @return a string which identifies a specific {@link Channel} for the
+     * purposes of logging (i.e. includes the ID of the channel, the ID of its
+     * conference and potentially other information). The string is a
+     * comma-separated list of "key=value" pairs.
+     * @param channel The channel for which to return a string.
+     */
+    public static String getLoggingId(Channel channel)
+    {
+        String id = channel == null ? "null" : channel.getID();
+        Content content
+            = channel == null ? null : channel.getContent();
+        Endpoint endpoint
+            = channel == null ? null : channel.getEndpoint();
+
+        return Content.getLoggingId(content)
+            + ",ch_id=" + id
+            + ",endp_id=" + (endpoint == null ? "null" : endpoint.getID());
+    }
 
     /**
      * The ID of the channel-bundle that this <tt>Channel</tt> is part of, or
@@ -68,13 +96,6 @@ public abstract class Channel
      * Remembers when this <tt>Channel</tt> instance was created.
      */
     private final long creationTimestamp = System.currentTimeMillis();
-
-    /**
-     * The name of the <tt>Channel</tt> property <tt>endpoint</tt> which
-     * points to the <tt>Endpoint</tt> of the conference participant associated
-     * with this <tt>Channel</tt>..
-     */
-    public static final String ENDPOINT_PROPERTY_NAME = ".endpoint";
 
     /**
      * The <tt>Content</tt> which has initialized this <tt>Channel</tt>.
@@ -195,14 +216,8 @@ public abstract class Channel
             Boolean initiator)
         throws Exception
     {
-        if (content == null)
-        {
-            throw new NullPointerException("content");
-        }
-        if (StringUtils.isNullOrEmpty(id))
-        {
-            throw new NullPointerException("id");
-        }
+        Objects.requireNonNull(content, "content");
+        org.jivesoftware.smack.util.StringUtils.requireNotNullOrEmpty(id, "id");
 
         this.id = id;
         this.content = content;
@@ -323,7 +338,9 @@ public abstract class Channel
         Endpoint endpoint = getEndpoint();
 
         if (endpoint != null)
+        {
             iq.setEndpoint(endpoint.getID());
+        }
 
         iq.setID(id);
         iq.setExpire(getExpire());
@@ -332,9 +349,13 @@ public abstract class Channel
         // If a channel is part of a bundle, its transport will be described in
         // the channel-bundle itself.
         if (channelBundleId != null)
+        {
             iq.setChannelBundleId(channelBundleId);
+        }
         else
+        {
             describeTransportManager(iq);
+        }
     }
 
     /**
@@ -350,7 +371,9 @@ public abstract class Channel
         TransportManager transportManager = getTransportManager();
 
         if (transportManager != null)
+        {
             transportManager.describe(iq);
+        }
     }
 
     /**
@@ -365,9 +388,13 @@ public abstract class Channel
         synchronized (this)
         {
             if (expired)
+            {
                 return false;
+            }
             else
+            {
                 expired = true;
+            }
         }
 
         Content content = getContent();
@@ -375,7 +402,9 @@ public abstract class Channel
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
+        {
             eventAdmin.sendEvent(EventFactory.channelExpired(this));
+        }
 
         try
         {
@@ -396,7 +425,9 @@ public abstract class Channel
                             + " of conference " + conference.getID() + "!",
                         t);
                 if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
             }
 
             // transportManager
@@ -405,7 +436,9 @@ public abstract class Channel
                 synchronized (transportManagerSyncRoot)
                 {
                     if (transportManager != null)
+                    {
                         transportManager.close(this);
+                    }
                 }
             }
             catch (Throwable t)
@@ -417,7 +450,9 @@ public abstract class Channel
                             + conference.getID() + "!",
                         t);
                 if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
             }
 
             // endpoint
@@ -431,7 +466,9 @@ public abstract class Channel
             catch (Throwable t)
             {
                 if (t instanceof ThreadDeath)
+                {
                     throw (ThreadDeath) t;
+                }
             }
 
             if (logger.isInfoEnabled())
@@ -626,7 +663,9 @@ public abstract class Channel
             }
 
             if (transportManager == null)
+            {
                 throw new IOException("Failed to get transport manager.");
+            }
 
             transportManager.addChannel(this);
         }
@@ -701,7 +740,9 @@ public abstract class Channel
             if (oldValue == null)
             {
                 if (newEndpointId == null)
+                {
                     return;
+                }
             }
             else if (oldValue.getID().equals(newEndpointId))
             {
@@ -774,9 +815,7 @@ public abstract class Channel
     public void setInitiator(boolean initiator)
     {
         boolean oldValue = this.initiator;
-
         this.initiator = initiator;
-
         boolean newValue = this.initiator;
 
         touch(); // It seems this Channel is still active.
@@ -853,28 +892,6 @@ public abstract class Channel
     }
 
     /**
-     * This enum describes the possible {@link Channel} activity types.
-     */
-    public enum ActivityType
-    {
-        /**
-         * Transport level activity like ICE consent checks and/or RTP/RTCP
-         * packets received.
-         */
-        TRANSPORT,
-
-        /**
-         * Application level activity like RTP/RTCP packets received.
-         */
-        PAYLOAD,
-
-        /**
-         * Anything else that doesn't fall in the above two categories.
-         */
-        OTHER
-    }
-
-    /**
      * Sets the time in milliseconds of the last activity related to this
      * <tt>Channel</tt> to the current system time.
      */
@@ -938,22 +955,24 @@ public abstract class Channel
     }
 
     /**
-     * @return a string which identifies a specific {@link Channel} for the
-     * purposes of logging (i.e. includes the ID of the channel, the ID of its
-     * conference and potentially other information). The string is a
-     * comma-separated list of "key=value" pairs.
-     * @param channel The channel for which to return a string.
+     * This enum describes the possible {@link Channel} activity types.
      */
-    public static String getLoggingId(Channel channel)
+    public enum ActivityType
     {
-        String id = channel == null ? "null" : channel.getID();
-        Content content
-            = channel == null ? null : channel.getContent();
-        Endpoint endpoint
-            = channel == null ? null : channel.getEndpoint();
+        /**
+         * Transport level activity like ICE consent checks and/or RTP/RTCP
+         * packets received.
+         */
+        TRANSPORT,
 
-        return Content.getLoggingId(content)
-            + ",ch_id=" + id
-            + ",endp_id=" + (endpoint == null ? "null" : endpoint.getID());
+        /**
+         * Application level activity like RTP/RTCP packets received.
+         */
+        PAYLOAD,
+
+        /**
+         * Anything else that doesn't fall in the above two categories.
+         */
+        OTHER
     }
 }

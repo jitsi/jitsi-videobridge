@@ -289,21 +289,10 @@ public class VideoChannel
 
         if (changed)
         {
-            Channel[] peerChannels = getContent().getChannels();
-            if (!ArrayUtils.isNullOrEmpty(peerChannels))
-            {
-                for (Channel peerChannel : peerChannels)
-                {
-                    if (peerChannel == this
-                        || !(peerChannel instanceof VideoChannel))
-                    {
-                        continue;
-                    }
-
-                    ((VideoChannel) peerChannel)
-                        .bitrateController.update(null, -1);
-                }
-            }
+            getContent().getChannels().stream()
+                .filter(c -> c != this && c instanceof VideoChannel)
+                .forEach(
+                    c -> ((VideoChannel) c).bitrateController.update(null, -1));
         }
 
         return changed;
@@ -807,7 +796,9 @@ public class VideoChannel
             {
                 long rtt = ((VideoChannel) channel).getRtt();
                 if (maxRtt < rtt)
+                {
                     maxRtt = rtt;
+                }
             }
         }
 
