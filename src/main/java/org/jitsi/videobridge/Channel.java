@@ -23,6 +23,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.octo.*;
 import org.osgi.framework.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -316,6 +317,10 @@ public abstract class Channel
         else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
         {
             return new RawUdpTransportManager(this);
+        }
+        else if (OctoTransportManager.NAMESPACE.equals(xmlNamespace))
+        {
+            return new OctoTransportManager(this);
         }
         else
         {

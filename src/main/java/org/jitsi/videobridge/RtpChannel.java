@@ -325,7 +325,7 @@ public class RtpChannel
      * accepted for further processing within Jitsi Videobridge or
      * <tt>false</tt> to reject/drop it
      */
-    private boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
+    protected boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
     {
         InetAddress ctrlAddr = streamTarget.getControlAddress();
         int ctrlPort = streamTarget.getControlPort();
@@ -732,7 +732,7 @@ public class RtpChannel
      * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
      * this <tt>RtpChannel</tt>.
      */
-    RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
+    public RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
     {
         RtpChannelDatagramFilter datagramFilter;
         int index = rtcp ? 1 : 0;
@@ -969,6 +969,22 @@ public class RtpChannel
     }
 
     /**
+     * Configures the given {@link MediaStream} according to the needs of this
+     * {@link RtpChannel}.
+     * @param stream the stream to configure.
+     */
+    protected void configureStream(MediaStream stream)
+    {
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+        {
+            retransmissionRequester
+                .setSenderSsrc(getContent().getInitialLocalSSRC());
+        }
+    }
+
+    /**
      * Starts {@link #stream} if it has not been started yet and if the state of
      * this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
@@ -991,13 +1007,7 @@ public class RtpChannel
             }
         }
 
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
-        if (retransmissionRequester != null)
-        {
-            retransmissionRequester
-                .setSenderSsrc(getContent().getInitialLocalSSRC());
-        }
+        configureStream(stream);
 
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
