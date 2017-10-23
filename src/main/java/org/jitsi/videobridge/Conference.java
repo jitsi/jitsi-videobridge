@@ -1147,7 +1147,7 @@ public class Conference
             content
                 = contents.stream()
                     .filter(c -> c.getName().equals(name))
-                    .findAny().orElse(null);
+                    .findFirst().orElse(null);
             if (content != null)
             {
                 content.touch(); // It seems the content is still active.
