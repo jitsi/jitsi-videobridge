@@ -57,6 +57,21 @@ public class Content
         = "org.jitsi.videobridge.VideoChannel.mod";
 
     /**
+     * @return a string which identifies a specific {@link Content} for the
+     * purposes of logging (i.e. includes the name of the content and ID of its
+     * conference). The string is a comma-separated list of "key=value" pairs.
+     * @param content The channel for which to return a string.
+     */
+    static String getLoggingId(Content content)
+    {
+        if (content == null)
+        {
+            return Conference.getLoggingId(null) + ",content=null";
+        }
+        return content.getLoggingId();
+    }
+
+    /**
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
      */
     private final Map<String,Channel> channels = new HashMap<>();
@@ -157,13 +172,8 @@ public class Content
      */
     public Content(Conference conference, String name)
     {
-        if (conference == null)
-            throw new NullPointerException("conference");
-        if (name == null)
-            throw new NullPointerException("name");
-
-        this.conference = conference;
-        this.name = name;
+        this.conference = Objects.requireNonNull(conference, "conference");
+        this.name = Objects.requireNonNull(name, "name");
         this.loggingId = conference.getLoggingId() + ",content=" + name;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
@@ -171,7 +181,9 @@ public class Content
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
+        {
             eventAdmin.sendEvent(EventFactory.contentCreated(this));
+        }
 
         touch();
     }
@@ -364,9 +376,13 @@ public class Content
         synchronized (this)
         {
             if (expired)
+            {
                 return;
+            }
             else
+            {
                 expired = true;
+            }
         }
 
         setRecording(false, null);
@@ -407,7 +423,9 @@ public class Content
             synchronized (rtpLevelRelaySyncRoot)
             {
                 if (rtpTranslator != null)
+                {
                     rtpTranslator.dispose();
+                }
             }
 
             if (logger.isInfoEnabled())
@@ -438,10 +456,14 @@ public class Content
                 expireChannel = true;
             }
             else
+            {
                 expireChannel = false;
+            }
         }
         if (expireChannel)
+        {
             channel.expire();
+        }
     }
 
     /**
@@ -458,14 +480,18 @@ public class Content
             for (Channel channel : getChannels())
             {
                 if (!(channel instanceof RtpChannel))
+                {
                     continue;
+                }
                 Endpoint endpoint = channel.getEndpoint();
-                if(endpoint == null)
+                if (endpoint == null)
+                {
                     continue;
+                }
 
                 for(int s : ((RtpChannel) channel).getReceiveSSRCs())
                 {
-                    long ssrc = s & 0xffffffffl;
+                    long ssrc = s & 0xffff_ffffL;
                     synchronizer.setEndpoint(ssrc, endpoint.getID());
                 }
             }
@@ -488,14 +514,18 @@ public class Content
         {
             //FIXME: fix instanceof
             if(!(channel instanceof RtpChannel))
+            {
                 continue;
+            }
 
             RtpChannel rtpChannel = (RtpChannel) channel;
 
             for (int channelReceiveSSRC : rtpChannel.getReceiveSSRCs())
             {
-                if (receiveSSRC == (0xFFFFFFFFL & channelReceiveSSRC))
+                if (receiveSSRC == (0xffff_ffffL & channelReceiveSSRC))
+                {
                     return channel;
+                }
             }
         }
         return null;
@@ -546,7 +576,9 @@ public class Content
 
         // It seems the channel is still active.
         if (channel != null)
+        {
             channel.touch();
+        }
 
         return channel;
     }
@@ -560,20 +592,9 @@ public class Content
      */
     public int getChannelCount()
     {
-        int sz = 0;
-        Channel[] cs = getChannels();
-        if (cs != null && cs.length != 0)
-        {
-            for (int i = 0; i < cs.length; i++)
-            {
-                Channel c = cs[i];
-                if (c != null && !c.isExpired())
-                {
-                    sz++;
-                }
-            }
-        }
-        return sz;
+        return (int) getChannels().stream()
+            .filter(c -> c != null && !c.isExpired())
+            .count();
     }
 
     /**
@@ -581,13 +602,11 @@ public class Content
      *
      * @return the <tt>Channel</tt>s of this <tt>Content</tt>
      */
-    public Channel[] getChannels()
+    public List<Channel> getChannels()
     {
         synchronized (channels)
         {
-            Collection<Channel> values = channels.values();
-
-            return values.toArray(new Channel[values.size()]);
+            return new LinkedList<>(channels.values());
         }
     }
 
@@ -752,7 +771,7 @@ public class Content
                         RTPTranslatorImpl rtpTranslatorImpl
                             = (RTPTranslatorImpl) rtpTranslator;
 
-                        /**
+                        /*
                          * XXX(gp) some thoughts on the use of initialLocalSSRC:
                          *
                          * 1. By using the initialLocalSSRC as the SSRC of the
@@ -766,7 +785,8 @@ public class Content
                          * The places that are involved in this have been tagged
                          * with TAG(cat4-local-ssrc-hurricane).
                          */
-                        initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffl;
+                        initialLocalSSRC
+                            = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
 
                         rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
                     }
@@ -881,7 +901,9 @@ public class Content
         synchronized (this)
         {
             if (getLastActivityTime() < now)
+            {
                 lastActivityTime = now;
+            }
         }
     }
 
@@ -894,53 +916,6 @@ public class Content
         firePropertyChange(CHANNEL_MODIFIED_PROPERTY_NAME, channel, channel);
     }
 
-    private static class RTPTranslatorWriteFilter
-        implements RTPTranslator.WriteFilter
-    {
-        private final WeakReference<RTPTranslator> rtpTranslator;
-
-        private final WeakReference<RTPTranslator.WriteFilter> writeFilter;
-
-        public RTPTranslatorWriteFilter(
-                RTPTranslator rtpTranslator,
-                RTPTranslator.WriteFilter writeFilter)
-        {
-            this.rtpTranslator = new WeakReference<>(rtpTranslator);
-            this.writeFilter = new WeakReference<>(writeFilter);
-
-            rtpTranslator.addWriteFilter(this);
-        }
-
-        @Override
-        public boolean accept(
-                MediaStream source,
-                RawPacket pkt,
-                MediaStream destination,
-                boolean data)
-        {
-            RTPTranslator.WriteFilter writeFilter = this.writeFilter.get();
-            boolean accept = true;
-
-            if (writeFilter == null)
-            {
-                RTPTranslator rtpTranslator = this.rtpTranslator.get();
-
-                if (rtpTranslator != null)
-                    rtpTranslator.removeWriteFilter(this);
-            }
-            else
-            {
-                accept
-                    = writeFilter.accept(
-                            source,
-                            pkt,
-                            destination,
-                            data);
-            }
-            return accept;
-        }
-    }
-
     /**
      * @return a string which identifies this {@link Content} for the purposes
      * of logging (i.e. includes the name of the content and ID of its
@@ -951,18 +926,52 @@ public class Content
         return loggingId;
     }
 
-    /**
-     * @return a string which identifies a specific {@link Content} for the
-     * purposes of logging (i.e. includes the name of the content and ID of its
-     * conference). The string is a comma-separated list of "key=value" pairs.
-     * @param content The channel for which to return a string.
-     */
-    static String getLoggingId(Content content)
+    private static class RTPTranslatorWriteFilter
+        implements RTPTranslator.WriteFilter
     {
-        if (content == null)
+        private final WeakReference<RTPTranslator> rtpTranslator;
+
+        private final WeakReference<RTPTranslator.WriteFilter> writeFilter;
+
+        public RTPTranslatorWriteFilter(
+            RTPTranslator rtpTranslator,
+            RTPTranslator.WriteFilter writeFilter)
         {
-            return Conference.getLoggingId(null) + ",content=null";
+            this.rtpTranslator = new WeakReference<>(rtpTranslator);
+            this.writeFilter = new WeakReference<>(writeFilter);
+
+            rtpTranslator.addWriteFilter(this);
         }
-        return content.getLoggingId();
+
+        @Override
+        public boolean accept(
+            MediaStream source,
+            RawPacket pkt,
+            MediaStream destination,
+            boolean data)
+        {
+            RTPTranslator.WriteFilter writeFilter = this.writeFilter.get();
+            boolean accept = true;
+
+            if (writeFilter == null)
+            {
+                RTPTranslator rtpTranslator = this.rtpTranslator.get();
+
+                if (rtpTranslator != null)
+                {
+                    rtpTranslator.removeWriteFilter(this);
+                }
+            }
+            else
+            {
+                accept
+                    = writeFilter.accept(
+                    source,
+                    pkt,
+                    destination,
+                    data);
+            }
+            return accept;
+        }
     }
 }

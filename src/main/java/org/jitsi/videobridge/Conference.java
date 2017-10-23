@@ -266,17 +266,8 @@ public class Conference
                       boolean enableLogging,
                       String gid)
     {
-        if (videobridge == null)
-        {
-            throw new NullPointerException("videobridge");
-        }
-        if (id == null)
-        {
-            throw new NullPointerException("id");
-        }
-
-        this.videobridge = videobridge;
-        this.id = id;
+        this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
+        this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
         this.loggingId = "conf_id=" + id;
         this.focus = focus;
@@ -491,16 +482,10 @@ public class Conference
      */
     void describeEndpoints(ColibriConferenceIQ iq)
     {
-        for (Endpoint en : getEndpoints())
-        {
-            ColibriConferenceIQ.Endpoint responseBundleIQ
-                = new ColibriConferenceIQ.Endpoint(
-                en.getID(),
-                en != null ? en.getStatsId() : null,
-                en != null ? en.getDisplayName() : null);
-
-            iq.addEndpoint(responseBundleIQ);
-        }
+        getEndpoints().forEach(
+            en -> iq.addEndpoint(
+                new ColibriConferenceIQ.Endpoint(
+                    en.getID(), en.getStatsId(), en.getDisplayName())));
     }
 
     /**
@@ -685,7 +670,9 @@ public class Conference
             // The SctpConnection may itself be ready already. If this is the
             // case, then it has now become ready for this Conference.
             if (newValue.isReady())
+            {
                 sctpConnectionReady(newValue);
+            }
         }
     }
 
@@ -775,8 +762,7 @@ public class Conference
     private void updateStatisticsOnExpire()
     {
         long durationSeconds
-            = Math.round(
-            (System.currentTimeMillis() - creationTime) / 1000d);
+            = Math.round((System.currentTimeMillis() - creationTime) / 1000d);
 
         Videobridge.Statistics videobridgeStatistics
             = getVideobridge().getStatistics();
@@ -800,7 +786,7 @@ public class Conference
 
         boolean hasFailed
             = statistics.totalNoPayloadChannels.get()
-            >= statistics.totalChannels.get();
+                >= statistics.totalChannels.get();
         boolean hasPartiallyFailed
             = statistics.totalNoPayloadChannels.get() != 0;
 
@@ -812,15 +798,13 @@ public class Conference
 
         if (hasFailed)
         {
-            videobridgeStatistics.totalFailedConferences
-                .incrementAndGet();
+            videobridgeStatistics.totalFailedConferences.incrementAndGet();
         }
 
         if (logger.isInfoEnabled())
         {
 
-            int[] metrics
-                = videobridge.getConferenceChannelAndStreamCount();
+            int[] metrics = videobridge.getConferenceChannelAndStreamCount();
 
             StringBuilder sb = new StringBuilder("expire_conf,");
             sb.append(getLoggingId())
@@ -856,14 +840,10 @@ public class Conference
 
         synchronized (contents)
         {
-            if (contents.contains(content))
+            expireContent = contents.contains(content);
+            if (expireContent)
             {
                 contents.remove(content);
-                expireContent = true;
-            }
-            else
-            {
-                expireContent = false;
             }
         }
         if (expireContent)
@@ -1164,13 +1144,14 @@ public class Conference
 
         synchronized (contents)
         {
-            for (Content aContent : contents)
+            content
+                = contents.stream()
+                    .filter(c -> c.getName().equals(name))
+                    .findAny().orElse(null);
+            if (content != null)
             {
-                if (aContent.getName().equals(name))
-                {
-                    aContent.touch(); // It seems the content is still active.
-                    return aContent;
-                }
+                content.touch(); // It seems the content is still active.
+                return content;
             }
 
             content = new Content(this, name);
@@ -1764,16 +1745,11 @@ public class Conference
                 List<Endpoint> endpoints = Collections.unmodifiableList(
                     speechActivity.getEndpoints());
 
-                for (Channel channel : content.getChannels())
-                {
-                    if (!(channel instanceof RtpChannel))
-                    {
-                        continue;
-                    }
-
-                    RtpChannel rtpChannel = (RtpChannel) channel;
-                    rtpChannel.speechActivityEndpointsChanged(endpoints);
-                }
+                content.getChannels().stream()
+                    .filter(c -> c instanceof RtpChannel)
+                    .forEach(
+                        c -> ((RtpChannel) c)
+                            .speechActivityEndpointsChanged(endpoints));
             }
         }
     }

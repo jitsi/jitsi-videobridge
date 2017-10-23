@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import java.lang.ref.*;
+import java.util.*;
 
 import org.jitsi.util.*;
 
@@ -103,9 +104,9 @@ class VideobridgeExpireThread
                      * The Contents will live an iteration more than the
                      * Channels.
                      */
-                    Channel[] channels = content.getChannels();
+                    List<Channel> channels = content.getChannels();
 
-                    if (channels.length == 0)
+                    if (channels.isEmpty())
                     {
                         if ((content.getLastActivityTime()
                                     + 1000L * Channel.DEFAULT_EXPIRE)

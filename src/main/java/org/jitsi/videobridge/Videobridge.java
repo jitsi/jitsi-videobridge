@@ -1653,31 +1653,22 @@ public class Videobridge
      * @return  the number of video streams for a given <tt>Content</tt>. See the
      * documentation for {@link #getConferenceCountString()}.
      */
-    private int getContentStreamCount(Content content, int contentChannelCount)
+    private int getContentStreamCount(
+        Content content,
+        final int contentChannelCount)
     {
-        Channel[] channels = content.getChannels();
-        int contentStreamCount = 0;
-        if (channels != null && channels.length != 0)
-        {
-            for (Channel channel : channels)
+        return content.getChannels().stream()
+            .filter(
+                c -> c != null && !c.isExpired() && c instanceof VideoChannel)
+            .mapToInt(c ->
             {
-                if (channel != null
-                        && !channel.isExpired()
-                        && channel instanceof VideoChannel)
-                {
-                    VideoChannel videoChannel = (VideoChannel) channel;
-                    int channelStreams = 1; //assume we're receiving a stream
-                    int lastN = videoChannel.getLastN();
-                    channelStreams +=
-                            lastN == -1
-                                    ? contentChannelCount - 1
-                                    : Math.min(lastN, contentChannelCount - 1);
-
-                    contentStreamCount += channelStreams;
-                }
-            }
-        }
-        return contentStreamCount;
+                int lastN = ((VideoChannel) c).getLastN();
+                int lastNSteams =
+                    lastN == -1
+                        ? contentChannelCount - 1
+                        : Math.min(lastN, contentChannelCount - 1);
+                return lastNSteams + 1; // assume we're receiving 1 stream
+            }).sum();
     }
 
     /**
