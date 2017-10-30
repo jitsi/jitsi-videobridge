@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.eventadmin.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.rest.*;
@@ -143,6 +144,20 @@ class EndpointMessageTransport
         this.logger
             = Logger.getLogger(
                     classLogger, endpoint.getConference().getLogger());
+    }
+
+    /**
+     * Fires the message transport ready event for the associated endpoint.
+     */
+    void notifyTransportChannelConnected()
+    {
+        EventAdmin eventAdmin = endpoint.getConference().getEventAdmin();
+
+        if (eventAdmin != null)
+        {
+            eventAdmin.postEvent(
+                EventFactory.endpointMessageTransportReady(endpoint));
+        }
     }
 
     /**
@@ -705,6 +720,8 @@ class EndpointMessageTransport
             webSocketLastActive = true;
             sendMessage(ws, SERVER_HELLO_STR, "initial ServerHello");
         }
+
+        notifyTransportChannelConnected();
     }
 
     /**
