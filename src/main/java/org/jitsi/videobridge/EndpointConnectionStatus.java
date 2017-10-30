@@ -133,7 +133,7 @@ public class EndpointConnectionStatus
      */
     public EndpointConnectionStatus()
     {
-        super(new String[] { EventFactory.SCTP_CONN_READY_TOPIC });
+        super(new String[] { EventFactory.MSG_TRANSPORT_READY_TOPIC});
     }
 
     /**
@@ -398,7 +398,7 @@ public class EndpointConnectionStatus
         // Verify the topic just in case
         // FIXME eventually add this verification to the base class
         String topic = event.getTopic();
-        if (!EventFactory.SCTP_CONN_READY_TOPIC.equals(topic))
+        if (!EventFactory.MSG_TRANSPORT_READY_TOPIC.equals(topic))
         {
             logger.warn("Received event for unexpected topic: " + topic);
             return;

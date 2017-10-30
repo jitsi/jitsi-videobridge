@@ -73,18 +73,18 @@ public class EventFactory
         = "org/jitsi/videobridge/Endpoint/CREATED";
 
     /**
+     * The name of the topic of a "message transport ready" event triggered on
+     * an endpoint instance when it's message transport connection is ready for
+     * sending/receiving data.
+     */
+    public static final String MSG_TRANSPORT_READY_TOPIC
+        = "org/jitsi/videobridge/Endpoint/MSG_TRANSPORT_READY_TOPIC";
+
+    /**
      * The name of the topic of a "stream started" event.
      */
     public static final String STREAM_STARTED_TOPIC
         = "org/jitsi/videobridge/Endpoint/STREAM_STARTED";
-
-    /**
-     * The name of the topic of a "SCTP connection ready" event triggered on
-     * an endpoint instance when it's SCTP connection is ready for
-     * sending/receiving data.
-     */
-    public static final String SCTP_CONN_READY_TOPIC
-        = "org/jitsi/videobridge/Endpoint/SCTP_CONN_READY";
 
     /**
      * The name of the topic of a "transport channel created" event.
@@ -219,20 +219,21 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "SCTP connection ready" <tt>Event</tt>, which means that
-     * the endpoint passed in {@link #EVENT_SOURCE} property has now it's SCTP
-     * connection ready for sending/receiving data.
+     * Creates a new "message transport ready" <tt>Event</tt>, which means that
+     * the endpoint passed in {@link #EVENT_SOURCE} property has now it's
+     * message transport connection established and ready for sending/receiving
+     * data.
      *
-     * @param endpoint the endpoint for which SCTP connection is now ready.
+     * @param endpoint the endpoint for which the message transport is now ready
      *
      * @return the <tt>Event</tt> which was created.
      */
-    public static Event endpointSctpConnReady(Endpoint endpoint)
+    public static Event endpointMessageTransportReady(Endpoint endpoint)
     {
         Dictionary<String, Object> properties = new Hashtable<>(1);
 
         properties.put(EVENT_SOURCE, endpoint);
-        return new Event(SCTP_CONN_READY_TOPIC, properties);
+        return new Event(MSG_TRANSPORT_READY_TOPIC, properties);
     }
 
     public static Event streamStarted(RtpChannel rtpChannel)

@@ -503,6 +503,8 @@ public class Endpoint
             {
                 dataStream = sctpConnection.getDefaultDataStream();
                 dataStream.setDataCallback(this);
+
+                messageTransport.notifyTransportChannelConnected();
             }
             catch (IOException e)
             {
