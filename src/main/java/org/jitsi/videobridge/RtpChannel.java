@@ -1298,15 +1298,14 @@ public class RtpChannel
     }
 
     /**
-     * Notifies this <tt>RtpChannel</tt> that its associated
-     * <tt>SctpConnection</tt> has become ready i.e. connected to the remote
-     * peer and operational.
+     * Notifies this {@link RtpChannel} that its associated {@link Endpoint}'s
+     * message transport has become ready i.e. connected to the remote peer and
+     * operational.
      *
-     * @param endpoint the <tt>Endpoint</tt> which is the source of the
-     * notification and through which an <tt>SctpConnection</tt> is associated
-     * with this <tt>RtpChannel</tt>
+     * Note that this may happen more than once (e.g. if the client opens a new
+     * web-socket).
      */
-    void sctpConnectionReady(Endpoint endpoint)
+    void endpointMessageTransportConnected()
     {
     }
 

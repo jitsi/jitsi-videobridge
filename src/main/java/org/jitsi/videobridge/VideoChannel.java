@@ -464,24 +464,21 @@ public class VideoChannel
 
     /**
      * {@inheritDoc}
-     *
-     * Fires initial events over the WebRTC data channel of this
-     * <tt>VideoChannel</tt> such as the list of last-n <tt>Endpoint</tt>s whose
-     * video is sent/RTP translated by this <tt>RtpChannel</tt> to its
-     * <tt>Endpoint</tt>.
+     * <p/>
+     * Fires the initial events such as the list of last-n endpoints whose
+     * video is sent/RTP translated by this {@link RtpChannel}.
      */
     @Override
-    void sctpConnectionReady(Endpoint endpoint)
+    void endpointMessageTransportConnected()
     {
-        super.sctpConnectionReady(endpoint);
+        super.endpointMessageTransportConnected();
 
-        if (endpoint.equals(getEndpoint()))
-        {
-            sendLastNEndpointsChangeEvent(
-                bitrateController.getForwardedEndpoints(),
-                null,
-                null);
-        }
+        // Note that it is not ideal, but safe to send this event more than
+        // once (e.g. if the endpoint message transport re-connects).
+        sendLastNEndpointsChangeEvent(
+            bitrateController.getForwardedEndpoints(),
+            null,
+            null);
     }
 
     /**

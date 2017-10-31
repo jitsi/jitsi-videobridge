@@ -267,6 +267,14 @@ public class Endpoint
     }
 
     /**
+     * @return a list with all {@link RtpChannel}s of this {@link Endpoint}.
+     */
+    public List<RtpChannel> getChannels()
+    {
+        return getChannels(null);
+    }
+
+    /**
      * Gets a list with the {@link RtpChannel}s of this {@link Endpoint} with a
      * particular {@link MediaType} (or all of them, if {@code mediaType} is
      * {@code null}).
@@ -494,9 +502,6 @@ public class Endpoint
                 && !sctpConnection.isExpired()
                 && sctpConnection.isReady())
         {
-            for (RtpChannel channel : getChannels(null))
-                channel.sctpConnectionReady(this);
-
             WebRtcDataStream dataStream;
 
             try
