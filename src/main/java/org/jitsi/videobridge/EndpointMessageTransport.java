@@ -158,6 +158,11 @@ class EndpointMessageTransport
             eventAdmin.postEvent(
                 EventFactory.endpointMessageTransportReady(endpoint));
         }
+
+        for (RtpChannel channel : endpoint.getChannels())
+        {
+            channel.endpointMessageTransportConnected();
+        }
     }
 
     /**
