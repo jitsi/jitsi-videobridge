@@ -853,7 +853,8 @@ public class VideoChannel
                             + getStream().hashCode()
                             + ",reason=scheduled");
                     }
-                    rtcpFeedbackMessageSender.sendFIR(ssrc);
+                    rtcpFeedbackMessageSender.
+                        requestKeyframe(ssrc & 0xffff_ffffL);
                 }
             }
         };
