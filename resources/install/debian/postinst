@@ -107,10 +107,7 @@ case "$1" in
             usermod -g jitsi jvb
         fi
 
-        # we create home folder only if it doesn't exist
-        if [ ! -d /usr/share/jitsi-videobridge ]; then
-            mkdir -p /usr/share/jitsi-videobridge
-        fi
+        mkdir -p /usr/share/jitsi-videobridge
 
         # we claim the home folder of jvb in case it is owned by someone else
         OWNER=$(stat -c '%U' /usr/share/jitsi-videobridge)
@@ -123,8 +120,8 @@ case "$1" in
 
         CONFIG_DIR=$(dirname $CONFIG)
         if ! dpkg-statoverride --list "$CONFIG_DIR" >/dev/null; then
-                chown root:$GROUP "$CONFIG_DIR"
-                chmod 750 "$CONFIG_DIR"
+            chown -R jvb:jitsi "$CONFIG_DIR"
+            chmod 750 "$CONFIG_DIR"
         fi
 
         # die logz
