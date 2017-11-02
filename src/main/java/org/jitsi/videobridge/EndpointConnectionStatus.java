@@ -352,23 +352,15 @@ public class EndpointConnectionStatus
 
     private void cleanupExpiredEndpointsStatus()
     {
-        Iterator<Endpoint> endpoints = inactiveEndpoints.iterator();
-        while (endpoints.hasNext())
+        inactiveEndpoints.removeIf(e -> !e.getConference().isExpired());
+        if (logger.isDebugEnabled())
         {
-            Endpoint endpoint = endpoints.next();
-            if (endpoint.getConference().isExpired())
-            {
-                logger.debug("Removing endpoint from expired conference: "
-                        + endpoint.getID());
-
-                endpoints.remove();
-            }
-            else if (endpoint.isExpired() && logger.isDebugEnabled())
-            {
-                logger.debug(
-                        "Endpoint has expired: " + endpoint.getID()
-                            + ", but still on the list");
-            }
+            inactiveEndpoints.stream()
+                .filter(Endpoint::isExpired)
+                .forEach(
+                    e ->
+                        logger.debug("Endpoint has expired: " + e.getID()
+                            + ", but is still on the list"));
         }
     }
 
@@ -404,13 +396,8 @@ public class EndpointConnectionStatus
         //
         // Looping over all inactive endpoints of all conferences maybe is not
         // the most efficient, but it should not be extremely large number.
-        for (Endpoint potentialSubject : inactiveEndpoints)
-        {
-            if (potentialSubject.getConference() == conference)
-            {
-                sendEndpointConnectionStatus(
-                        potentialSubject, false, endpoint);
-            }
-        }
+        inactiveEndpoints.stream()
+            .filter(e -> e.getConference() == conference)
+            .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
     }
 }
