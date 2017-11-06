@@ -134,7 +134,13 @@ public class BandwidthProbing
         List<Long> ssrcsToProtect = new ArrayList<>();
         for (SimulcastController simulcastController : simulcastControllerList)
         {
-            long currentBps = simulcastController.getSource()
+            MediaStreamTrackDesc sourceTrack = simulcastController.getSource();
+            if (sourceTrack == null)
+            {
+                continue;
+            }
+
+            long currentBps = sourceTrack
                 .getBps(simulcastController.getCurrentIndex(),
                     true /* performTimeoutCheck */);
 
@@ -149,11 +155,11 @@ public class BandwidthProbing
                 }
             }
 
-            totalTargetBps += simulcastController
-                .getSource().getBps(simulcastController.getTargetIndex(),
+            totalTargetBps += sourceTrack.getBps(
+                    simulcastController.getTargetIndex(),
                     true /* performTimeoutCheck */);
-            totalOptimalBps += simulcastController
-                .getSource().getBps(simulcastController.getOptimalIndex(),
+            totalOptimalBps += sourceTrack.getBps(
+                    simulcastController.getOptimalIndex(),
                     true /* performTimeoutCheck */);
         }
 
