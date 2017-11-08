@@ -503,12 +503,13 @@ public class BitrateController
                     ctrl.setTargetIndex(targetIdx);
                     ctrl.setOptimalIndex(optimalIdx);
 
-                    if (logger.isDebugEnabled())
+                    MediaStreamTrackDesc sourceTrack = ctrl.getSource();
+                    if (sourceTrack != null && logger.isDebugEnabled())
                     {
                         logger.debug("qot" +
                             "," + nowMs +
                             "," + destStream.hashCode() +
-                            "," + ctrl.getSource().hashCode() +
+                            "," + sourceTrack.hashCode() +
                             "," + ctrl.getCurrentIndex() +
                             "," + targetIdx +
                             "," + optimalIdx +
