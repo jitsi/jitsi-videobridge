@@ -367,9 +367,8 @@ Post "[]" to <bridge_base_url>/colibri/conferences/
               "clockrate": 48000,
               "channels": 2,
               "parameters": {
-                "fmtp": [
-                  "111 minptime=10; useinbandfec=1"
-                ]
+                "minptime": 10,
+                "useinbandfec": 1
               }
             }
           ],
@@ -397,7 +396,12 @@ Post "[]" to <bridge_base_url>/colibri/conferences/
           "channel-bundle-id": "9f537ebb-1c2a-4ee9-9940-373304f9b260",
           "rtp-level-relay-type": "translator",
           "ssrc-groups": [
-            
+          {
+            "semantics": "FID",
+            "sources": [
+              2,
+              3
+            ]}
           ],
           "payload-types": [
             {
@@ -405,30 +409,42 @@ Post "[]" to <bridge_base_url>/colibri/conferences/
               "name": "H264",
               "clockrate": 90000,
               "channels": 0,
-              "parameters": {
-                "rtcp-fb": [
-                  "127 ccm fir",
-                  "127 nack",
-                  "127 nack pli"
-                ]
-              }
+              "parameters": {},
+              "rtcp-fbs": [ {
+                "type": "ccm",
+                "subtype": "fir"
+              }, {
+                "type": "nack"
+              }, {
+                "type": "nack",
+                "subtype": "pli"
+              } ]
             },
             {
               "id": 100,
               "name": "VP8",
               "clockrate": 90000,
               "channels": 0,
-              "parameters": {
-                "rtcp-fb": [
-                  "100 ccm fir",
-                  "100 nack",
-                  "100 goog-remb"
-                ]
-              }
+              "parameters": {},
+              "rtcp-fbs": [ {
+                "type": "ccm",
+                "subtype": "fir"
+              }, {
+                "type": "nack"
+              }, {
+                "type": "goog-remb"
+              } ]
             }
           ],
           "rtp-hdrexts": [
-            
+            {
+              "id": 2,
+              "uri": "urn:ietf:params:rtp-hdrext:toffset"
+            },
+            {
+              "id": 3,
+              "uri": "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
+            }
           ]
         }
       ]

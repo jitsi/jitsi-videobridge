@@ -17,6 +17,7 @@ package org.jitsi.videobridge.rest;
 
 import java.util.*;
 
+import com.sun.istack.internal.NotNull;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -91,6 +92,13 @@ final class JSONSerializer
      */
     static final String PAYLOAD_TYPES
         = PayloadTypePacketExtension.ELEMENT_NAME + "s";
+
+    /**
+     * The name of the JSON pair which specifies the value of the
+     * <tt>rtcp-fb</tt> property of <tt>ColibriConferenceIQ.Channel</tt>.
+     */
+    static final String RTCP_FBS
+            = RtcpFbPacketExtension.ELEMENT_NAME + "s";
 
     /**
      * The name of the JSON pair which specifies the value of the
@@ -698,6 +706,38 @@ final class JSONSerializer
         return parametersJSONObject;
     }
 
+    public static JSONArray serializeRtcpFbs(
+            @NotNull
+            Collection<RtcpFbPacketExtension> rtcpFbs) {
+        JSONArray rtcpFbsJSON = new JSONArray();
+        /*
+         * A rtcp-fb is an JSONObject with type / subtype data.
+         * "rtcp-fbs": [ {
+                "type": "ccm",
+                "subtype": "fir"
+              }, {
+                "type": "nack"
+              }, {
+                "type": "goog-remb"
+              } ]
+         */
+        for (RtcpFbPacketExtension ext : rtcpFbs)
+        {
+            String type = ext.getFeedbackType();
+            String subtype = ext.getFeedbackSubtype();
+
+            if (type != null) {
+                JSONObject rtcpFbJSON = new JSONObject();
+                rtcpFbJSON.put(RtcpFbPacketExtension.TYPE_ATTR_NAME, type);
+                if (subtype != null) {
+                    rtcpFbJSON.put(RtcpFbPacketExtension.SUBTYPE_ATTR_NAME, subtype);
+                }
+                rtcpFbsJSON.add(rtcpFbJSON);
+            }
+        }
+        return rtcpFbsJSON;
+    }
+
     public static JSONObject serializePayloadType(
             PayloadTypePacketExtension payloadType)
     {
@@ -723,6 +763,12 @@ final class JSONSerializer
                 payloadTypeJSONObject.put(
                         PARAMETERS,
                         serializeParameters(parameters));
+            }
+            final List<RtcpFbPacketExtension> rtcpFeedbackTypeList = payloadType.getRtcpFeedbackTypeList();
+            if ((rtcpFeedbackTypeList != null) && !rtcpFeedbackTypeList.isEmpty()) {
+                payloadTypeJSONObject.put(
+                        RTCP_FBS,
+                        serializeRtcpFbs(rtcpFeedbackTypeList));
             }
         }
         return payloadTypeJSONObject;

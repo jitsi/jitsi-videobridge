@@ -654,10 +654,7 @@ public class VideoChannel
                 enableRedFilter = false;
             }
 
-            for (RtcpFbPacketExtension rtcpFb :
-                        payloadType.getChildExtensionsOfType(
-                                RtcpFbPacketExtension.class))
-            {
+            for (RtcpFbPacketExtension rtcpFb : payloadType.getRtcpFeedbackTypeList()) {
                 if ("ccm".equals(rtcpFb.getAttribute("type"))
                         && "fir".equals(rtcpFb.getAttribute("subtype")))
                 {
