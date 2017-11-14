@@ -655,8 +655,7 @@ public class VideoChannel
             }
 
             for (RtcpFbPacketExtension rtcpFb :
-                        payloadType.getChildExtensionsOfType(
-                                RtcpFbPacketExtension.class))
+                    payloadType.getRtcpFeedbackTypeList())
             {
                 if ("ccm".equals(rtcpFb.getAttribute("type"))
                         && "fir".equals(rtcpFb.getAttribute("subtype")))
