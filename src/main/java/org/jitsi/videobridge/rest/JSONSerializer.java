@@ -17,7 +17,7 @@ package org.jitsi.videobridge.rest;
 
 import java.util.*;
 
-import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -708,7 +708,8 @@ final class JSONSerializer
 
     public static JSONArray serializeRtcpFbs(
             @NotNull
-            Collection<RtcpFbPacketExtension> rtcpFbs) {
+            Collection<RtcpFbPacketExtension> rtcpFbs)
+    {
         JSONArray rtcpFbsJSON = new JSONArray();
         /*
          * A rtcp-fb is an JSONObject with type / subtype data.
@@ -726,11 +727,15 @@ final class JSONSerializer
             String type = ext.getFeedbackType();
             String subtype = ext.getFeedbackSubtype();
 
-            if (type != null) {
+            if (type != null)
+            {
                 JSONObject rtcpFbJSON = new JSONObject();
                 rtcpFbJSON.put(RtcpFbPacketExtension.TYPE_ATTR_NAME, type);
-                if (subtype != null) {
-                    rtcpFbJSON.put(RtcpFbPacketExtension.SUBTYPE_ATTR_NAME, subtype);
+                if (subtype != null)
+                {
+                    rtcpFbJSON.put(
+                            RtcpFbPacketExtension.SUBTYPE_ATTR_NAME,
+                            subtype);
                 }
                 rtcpFbsJSON.add(rtcpFbJSON);
             }
@@ -764,8 +769,10 @@ final class JSONSerializer
                         PARAMETERS,
                         serializeParameters(parameters));
             }
-            final List<RtcpFbPacketExtension> rtcpFeedbackTypeList = payloadType.getRtcpFeedbackTypeList();
-            if ((rtcpFeedbackTypeList != null) && !rtcpFeedbackTypeList.isEmpty()) {
+            final List<RtcpFbPacketExtension> rtcpFeedbackTypeList =
+                    payloadType.getRtcpFeedbackTypeList();
+            if ((rtcpFeedbackTypeList != null) &&
+                    !rtcpFeedbackTypeList.isEmpty()) {
                 payloadTypeJSONObject.put(
                         RTCP_FBS,
                         serializeRtcpFbs(rtcpFeedbackTypeList));

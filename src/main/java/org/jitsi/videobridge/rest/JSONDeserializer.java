@@ -578,16 +578,23 @@ final class JSONDeserializer
 
     public static void deserializeRtcpFbs(
             JSONArray rtcpFbs,
-            PayloadTypePacketExtension payloadTypeIQ) {
-        if (rtcpFbs != null && rtcpFbs instanceof JSONArray) {
-            for (Object iter : rtcpFbs) {
+            PayloadTypePacketExtension payloadTypeIQ)
+    {
+        if (rtcpFbs != null && rtcpFbs instanceof JSONArray)
+        {
+            for (Object iter : rtcpFbs)
+            {
                 JSONObject rtcpFb = (JSONObject) iter;
-                String type = (String) rtcpFb.get(RtcpFbPacketExtension.TYPE_ATTR_NAME);
-                String subtype = (String) rtcpFb.get(RtcpFbPacketExtension.SUBTYPE_ATTR_NAME);
-                if (type != null) {
+                String type = (String)
+                        rtcpFb.get(RtcpFbPacketExtension.TYPE_ATTR_NAME);
+                String subtype = (String)
+                        rtcpFb.get(RtcpFbPacketExtension.SUBTYPE_ATTR_NAME);
+                if (type != null)
+                {
                     RtcpFbPacketExtension ext = new RtcpFbPacketExtension();
                     ext.setFeedbackType(type);
-                    if (subtype != null) {
+                    if (subtype != null)
+                    {
                         ext.setFeedbackSubtype(subtype);
                     }
                     payloadTypeIQ.addRtcpFeedbackType(ext);
