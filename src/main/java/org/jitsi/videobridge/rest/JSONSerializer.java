@@ -17,7 +17,6 @@ package org.jitsi.videobridge.rest;
 
 import java.util.*;
 
-import com.sun.istack.internal.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
@@ -25,6 +24,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.stats.*;
 import org.json.simple.*;
+
+import javax.validation.constraints.*;
 
 /**
  * Implements (utility) functions to serialize instances of
@@ -708,7 +709,7 @@ final class JSONSerializer
 
     public static JSONArray serializeRtcpFbs(
             @NotNull
-            Collection<RtcpFbPacketExtension> rtcpFbs)
+                    Collection<RtcpFbPacketExtension> rtcpFbs)
     {
         JSONArray rtcpFbsJSON = new JSONArray();
         /*
