@@ -772,7 +772,8 @@ final class JSONSerializer
             final List<RtcpFbPacketExtension> rtcpFeedbackTypeList =
                     payloadType.getRtcpFeedbackTypeList();
             if ((rtcpFeedbackTypeList != null) &&
-                    !rtcpFeedbackTypeList.isEmpty()) {
+                    !rtcpFeedbackTypeList.isEmpty())
+            {
                 payloadTypeJSONObject.put(
                         RTCP_FBS,
                         serializeRtcpFbs(rtcpFeedbackTypeList));
