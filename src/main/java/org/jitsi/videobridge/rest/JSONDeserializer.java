@@ -580,7 +580,7 @@ final class JSONDeserializer
             JSONArray rtcpFbs,
             PayloadTypePacketExtension payloadTypeIQ)
     {
-        if (rtcpFbs != null && rtcpFbs instanceof JSONArray)
+        if (rtcpFbs != null)
         {
             for (Object iter : rtcpFbs)
             {
