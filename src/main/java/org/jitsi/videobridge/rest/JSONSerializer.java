@@ -21,11 +21,10 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.videobridge.stats.*;
 import org.json.simple.*;
-
-import javax.validation.constraints.*;
 
 /**
  * Implements (utility) functions to serialize instances of
@@ -708,8 +707,7 @@ final class JSONSerializer
     }
 
     public static JSONArray serializeRtcpFbs(
-            @NotNull
-                    Collection<RtcpFbPacketExtension> rtcpFbs)
+            @NotNull Collection<RtcpFbPacketExtension> rtcpFbs)
     {
         JSONArray rtcpFbsJSON = new JSONArray();
         /*

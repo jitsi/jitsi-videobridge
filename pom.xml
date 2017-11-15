@@ -66,6 +66,12 @@
       <artifactId>core</artifactId>
       <version>2.0.1</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/org.jetbrains/annotations -->
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <version>15.0</version>
+    </dependency>
     <!-- org.jitsi -->
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -127,6 +133,12 @@
       <artifactId>jitsi-resourcemanager</artifactId>
       <version>${jitsi-desktop.version}</version>
     </dependency>
+    <!-- Note that this is not part of jitsi/jitsi, and it has a separate version. -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>jitsi-stats</artifactId>
+      <version>1.0-20171010.224039-4</version>
+    </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-ui-service</artifactId>
@@ -147,6 +159,7 @@
       <artifactId>newrelic-api-stub</artifactId>
       <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
@@ -169,11 +182,6 @@
       <groupId>xpp3</groupId>
       <artifactId>xpp3</artifactId>
     </dependency>
-    <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
-      <version>1.1.0.Final</version>
-    </dependency>
     <!-- runtime -->
     <dependency>
       <groupId>rusv</groupId>
@@ -182,20 +190,15 @@
     </dependency>
     <!-- test -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <version>3.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.jitsi</groupId>
-      <artifactId>jitsi-stats</artifactId>
-      <version>1.0-20171010.224039-4</version>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
