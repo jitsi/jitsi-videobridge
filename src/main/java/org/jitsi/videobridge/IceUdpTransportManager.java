@@ -337,14 +337,7 @@ public class IceUdpTransportManager
      * changes in the <tt>state</tt> of {@link #iceAgent}.
      */
     private final PropertyChangeListener iceAgentStateChangeListener
-        = new PropertyChangeListener()
-        {
-            @Override
-            public void propertyChange(PropertyChangeEvent ev)
-            {
-                iceAgentStateChange(ev);
-            }
-        };
+        = this::iceAgentStateChange;
 
     /**
      * Whether ICE connectivity has been established.
@@ -363,14 +356,7 @@ public class IceUdpTransportManager
      * {@link #iceStream}.
      */
     private final PropertyChangeListener iceStreamPairChangeListener
-        = new PropertyChangeListener()
-        {
-            @Override
-            public void propertyChange(PropertyChangeEvent ev)
-            {
-                iceStreamPairChange(ev);
-            }
-        };
+        = this::iceStreamPairChange;
 
     /**
      * Whether this <tt>IceUdpTransportManager</tt> will serve as the the
@@ -541,7 +527,9 @@ public class IceUdpTransportManager
     public boolean addChannel(Channel channel)
     {
         if (closed)
+        {
             return false;
+        }
 
         if (channel instanceof SctpConnection
                 && sctpConnection != null
@@ -553,7 +541,9 @@ public class IceUdpTransportManager
         }
 
         if (!super.addChannel(channel))
+        {
             return false;
+        }
 
         if (channel instanceof SctpConnection)
         {
@@ -592,7 +582,9 @@ public class IceUdpTransportManager
         }
 
         if (iceConnected)
+        {
             channel.transportConnected();
+        }
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
@@ -670,12 +662,18 @@ public class IceUdpTransportManager
             // possibly running iceAgent and (2) to return a consistent return
             // value.
             if (!canReach(component, remoteCandidate))
+            {
                 continue;
+            }
 
             if (iceAgentStateIsRunning)
+            {
                 component.addUpdateRemoteCandidates(remoteCandidate);
+            }
             else
+            {
                 component.addRemoteCandidate(remoteCandidate);
+            }
             remoteCandidateCount++;
         }
 
@@ -714,7 +712,9 @@ public class IceUdpTransportManager
             initializeStaticConfiguration(cfg);
 
             if (tcpHarvester != null)
+            {
                 iceAgent.addCandidateHarvester(tcpHarvester);
+            }
             if (singlePortHarvesters != null)
             {
                 for (CandidateHarvester harvester : singlePortHarvesters)
@@ -748,14 +748,9 @@ public class IceUdpTransportManager
             Component component,
             RemoteCandidate remoteCandidate)
     {
-        for (LocalCandidate localCandidate : component.getLocalCandidates())
-        {
-            if (localCandidate.canReach(remoteCandidate))
-            {
-                return true;
-            }
-        }
-        return false;
+        return component.getLocalCandidates().stream().
+            anyMatch(
+                localCandidate -> localCandidate.canReach(remoteCandidate));
     }
 
     /**
@@ -793,8 +788,7 @@ public class IceUdpTransportManager
             // is removed.
             closed = true;
 
-            for (Channel channel : getChannels())
-                close(channel);
+            getChannels().forEach(this::close);
 
             if (dtlsControl != null)
             {
@@ -819,7 +813,9 @@ public class IceUdpTransportManager
             synchronized (connectThreadSyncRoot)
             {
                 if (connectThread != null)
+                {
                     connectThread.interrupt();
+                }
             }
 
             super.close();
@@ -856,7 +852,9 @@ public class IceUdpTransportManager
                     for (Channel c : getChannels())
                     {
                         if (c instanceof RtpChannel)
+                        {
                             newChannelForDtls = (RtpChannel) c;
+                        }
                     }
                     if (newChannelForDtls != null)
                     {
@@ -886,18 +884,26 @@ public class IceUdpTransportManager
                     DatagramSocket datagramSocket = connector.getDataSocket();
 
                     if (datagramSocket != null)
+                    {
                         datagramSocket.close();
+                    }
                     datagramSocket = connector.getControlSocket();
                     if (datagramSocket != null)
+                    {
                         datagramSocket.close();
+                    }
 
                     Socket socket = connector.getDataTCPSocket();
 
                     if (socket != null)
+                    {
                         socket.close();
+                    }
                     socket = connector.getControlTCPSocket();
                     if (socket != null)
+                    {
                         socket.close();
+                    }
                 }
             }
             catch (IOException ioe)
@@ -917,7 +923,9 @@ public class IceUdpTransportManager
         }
 
         if (getChannels().isEmpty())
+        {
             close();
+        }
 
         return removed;
     }
@@ -1109,7 +1117,9 @@ public class IceUdpTransportManager
             }
 
             if (rtcpmux)
+            {
                 pe.addChildExtension(new RtcpmuxPacketExtension());
+            }
 
             describeDtlsControl(pe);
         }
@@ -1225,7 +1235,9 @@ public class IceUdpTransportManager
         DtlsControl.Setup setup = dtlsControl.getSetup();
 
         if (setup != null)
+        {
             fingerprintPE.setSetup(setup.toString());
+        }
     }
 
     /**
@@ -1238,7 +1250,9 @@ public class IceUdpTransportManager
             IceUdpTransportPacketExtension transport)
     {
         if (closed)
+        {
             return;
+        }
 
         // Reflect the transport's rtcpmux onto this instance.
         setRtcpmux(transport);
@@ -1264,7 +1278,9 @@ public class IceUdpTransportManager
         {
             Component rtcpComponent = iceStream.getComponent(Component.RTCP);
             if (rtcpComponent != null)
+            {
                 iceStream.removeComponent(rtcpComponent);
+            }
         }
 
         // Different streams may have different ufrag/pwd.
@@ -1275,7 +1291,9 @@ public class IceUdpTransportManager
                     CandidatePacketExtension.class);
 
         if (iceAgentStateIsRunning && candidates.isEmpty())
+        {
             return;
+        }
 
         int remoteCandidateCount
             = addRemoteCandidates(candidates, iceAgentStateIsRunning);
@@ -1291,38 +1309,29 @@ public class IceUdpTransportManager
             else
             {
                 // update all components of all streams
-                for (IceMediaStream stream : iceAgent.getStreams())
-                {
-                    for (Component component : stream.getComponents())
-                    {
-                        component.updateRemoteCandidates();
-                    }
-                }
+                iceAgent.getStreams()
+                    .forEach(
+                        stream -> stream.getComponents()
+                            .forEach(Component::updateRemoteCandidates));
             }
         }
         else if (remoteCandidateCount != 0)
         {
-            // Once again because the ICE Agent does not support adding
+            // Once again, because the ICE Agent does not support adding
             // candidates after the connectivity establishment has been started
             // and because multiple transport-info JingleIQs may be used to send
             // the whole set of transport candidates from the remote peer to the
             // local peer, do not really start the connectivity establishment
             // until we have at least one remote candidate per ICE Component.
-            for (IceMediaStream stream : iceAgent.getStreams())
+            if (iceAgent.getStreams().stream().allMatch(
+                stream -> stream.getComponents().stream().allMatch(
+                    component -> component.getRemoteCandidateCount() >= 1)))
             {
-                for (Component component : stream.getComponents())
-                {
-                    if (component.getRemoteCandidateCount() < 1)
-                    {
-                        remoteCandidateCount = 0;
-                        break;
-                    }
-                }
-                if (remoteCandidateCount == 0)
-                    break;
-            }
-            if (remoteCandidateCount != 0)
+                logger.info(
+                    "We have remote candidates for all ICE components. "
+                        + "Starting the ICE agent.");
                 iceAgent.startConnectivityEstablishment();
+            }
         }
         else if (iceStream.getRemoteUfrag() != null
                 && iceStream.getRemotePassword() != null)
@@ -1499,7 +1508,9 @@ public class IceUdpTransportManager
         }
 
         if (! (channel instanceof RtpChannel))
+        {
             return null;
+        }
 
         RtpChannel rtpChannel = (RtpChannel) channel;
         DatagramSocket channelRtpSocket, channelRtcpSocket;
@@ -1677,10 +1688,8 @@ public class IceUdpTransportManager
         {
             // TODO we might not necessarily want to keep all channels alive by
             // the ICE connection.
-            for (Channel channel : getChannels())
-            {
-                channel.touch(Channel.ActivityType.TRANSPORT);
-            }
+            getChannels().forEach(
+                channel -> channel.touch(Channel.ActivityType.TRANSPORT));
         }
     }
 
@@ -1721,10 +1730,7 @@ public class IceUdpTransportManager
             eventAdmin.sendEvent(EventFactory.transportConnected(this));
         }
 
-        for (Channel channel : getChannels())
-        {
-            channel.transportConnected();
-        }
+        getChannels().forEach(Channel::transportConnected);
     }
 
     /**
@@ -1817,7 +1823,7 @@ public class IceUdpTransportManager
                     else if (!setup.equals(aSetup))
                     {
                         // The setup of dfpe disagrees with the setups of the
-                        // prevous remoteFingerprints. For the sake of clarity,
+                        // previous remoteFingerprints. For the sake of clarity,
                         // don't set a setup on dtlsControl.
                         setSetup = false;
                     }
@@ -2015,13 +2021,17 @@ public class IceUdpTransportManager
                 {
                     state = iceAgent.getState();
                     if (this.iceAgent == null)
+                    {
                         break;
+                    }
                 }
             }
         }
 
         if (interrupted)
+        {
             Thread.currentThread().interrupt();
+        }
 
         // Make sure stateChangeListener is removed from iceAgent in case its
         // #propertyChange(PropertyChangeEvent) has never been executed.

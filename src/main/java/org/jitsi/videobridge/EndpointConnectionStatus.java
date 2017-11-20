@@ -37,7 +37,7 @@ import java.util.*;
  * {@link Channel#lastTransportActivityTime}. When there is no activity for
  * longer than {@link #maxInactivityLimit} it will be assumed that
  * the endpoint is having some connectivity issues. Those may be temporary or
- * permanent. When that happens there will be a Colibri message broadcasted
+ * permanent. When that happens there will be a Colibri message broadcast
  * to all conference endpoints. The Colibri class name of the message is defined
  * in {@link #COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS} and it will contain
  * "active" attribute set to "false". If those problems turn out to be temporary
@@ -49,6 +49,7 @@ import java.util.*;
  *
  * @author Pawel Domas
  */
+@SuppressWarnings("unused") // started by OSGi
 public class EndpointConnectionStatus
     extends EventHandlerActivator
 {
@@ -372,23 +373,15 @@ public class EndpointConnectionStatus
 
     private void cleanupExpiredEndpointsStatus()
     {
-        Iterator<Endpoint> endpoints = inactiveEndpoints.iterator();
-        while (endpoints.hasNext())
+        inactiveEndpoints.removeIf(e -> !e.getConference().isExpired());
+        if (logger.isDebugEnabled())
         {
-            Endpoint endpoint = endpoints.next();
-            if (endpoint.getConference().isExpired())
-            {
-                logger.debug("Removing endpoint from expired conference: "
-                        + endpoint.getID());
-
-                endpoints.remove();
-            }
-            else if (endpoint.isExpired() && logger.isDebugEnabled())
-            {
-                logger.debug(
-                        "Endpoint has expired: " + endpoint.getID()
-                            + ", but still on the list");
-            }
+            inactiveEndpoints.stream()
+                .filter(Endpoint::isExpired)
+                .forEach(
+                    e ->
+                        logger.debug("Endpoint has expired: " + e.getID()
+                            + ", but is still on the list"));
         }
     }
 
@@ -424,13 +417,8 @@ public class EndpointConnectionStatus
         //
         // Looping over all inactive endpoints of all conferences maybe is not
         // the most efficient, but it should not be extremely large number.
-        for (Endpoint potentialSubject : inactiveEndpoints)
-        {
-            if (potentialSubject.getConference() == conference)
-            {
-                sendEndpointConnectionStatus(
-                        potentialSubject, false, endpoint);
-            }
-        }
+        inactiveEndpoints.stream()
+            .filter(e -> e.getConference() == conference)
+            .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
     }
 }
