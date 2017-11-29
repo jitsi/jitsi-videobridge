@@ -21,6 +21,7 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
@@ -487,10 +488,11 @@ public class BitrateController
                                 ssrcToBitrateController.put(
                                     rtpEncoding.getPrimarySSRC(), ctrl);
 
-                                if (rtpEncoding.getRTXSSRC() != -1)
+                                long rtxSsrc = rtpEncoding.getSecondarySsrc(Constants.RTX);
+                                if (rtxSsrc != -1)
                                 {
                                     ssrcToBitrateController.put(
-                                        rtpEncoding.getRTXSSRC(), ctrl);
+                                        rtxSsrc, ctrl);
                                 }
                             }
                         }
