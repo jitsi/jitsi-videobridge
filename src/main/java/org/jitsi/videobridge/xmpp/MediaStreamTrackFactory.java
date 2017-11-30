@@ -15,15 +15,12 @@
  */
 package org.jitsi.videobridge.xmpp;
 
-import javafx.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.codec.*;
 
-import javax.xml.transform.*;
 import java.util.*;
 import java.util.stream.*;
 
@@ -379,5 +376,28 @@ public class MediaStreamTrackFactory
     {
         return streamIdx * spatialLen * temporalLen
             + spatialIdx * temporalLen + temporalIdx;
+    }
+
+
+    static class Pair<K, V>
+    {
+        private K key;
+        private V value;
+
+        Pair(K k, V v)
+        {
+            this.key = k;
+            this.value = v;
+        }
+
+        public K getKey()
+        {
+            return key;
+        }
+
+        public V getValue()
+        {
+            return value;
+        }
     }
 }
