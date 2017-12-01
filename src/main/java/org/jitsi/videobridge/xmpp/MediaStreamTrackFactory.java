@@ -325,9 +325,14 @@ public class MediaStreamTrackFactory
         int numTemporalLayers
             = ENABLE_SVC ? VP8_SIMULCAST_TEMPORAL_LAYERS : 1;
 
-        int numSpatialLayers = simGroup == null ? 1 : simGroup.getSources().size();
+        //NOTE(brian): is this confusing?  We only ever have one spatial layer
+        // per stream, and will represent more spatial layers by having multiple
+        // primary ssrcs
+        int numSpatialLayers = 1;
 
-        int numEncodings = numSpatialLayers * numTemporalLayers;
+        int numPrimarySsrcs = simGroup != null ? simGroup.getSources().size() : 1;
+
+        int numEncodings = numPrimarySsrcs * numSpatialLayers * numTemporalLayers;
 
         RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
 
