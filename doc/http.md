@@ -21,6 +21,11 @@ org.jitsi.videobridge.TCP_HARVESTER_PORT=443
 org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePath=/etc/jitsi/videobridge/example.meet.jit.si.jks
 org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePassword=changeit
 ```
+NOTE: If you configure jetty to listen on a non-standard port (something other than 80 for http or 443 for https), you will need to edit the BOSH URL in /etc/jitsi/meet/\*-config.js.  For example, if you chose port 12345:
+```
+bosh: '//jitsi-meet.example.com:12345/http-bind',
+```
+
 4. You need to start jvb with rest and xmpp interface running. Add the
 following to jvb config in etc:
 JVB_OPTS="--apis=rest,xmpp"
