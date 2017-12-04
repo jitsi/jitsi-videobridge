@@ -110,7 +110,7 @@ public class MediaStreamTrackFactory
      */
     private static RTPEncodingDesc[] createRTPEncodings(
         MediaStreamTrackDesc track, Long[] primary,
-        int spatialLen, int temporalLen, Map<Long, List<Pair<Long, String>>> secondarySsrcs)
+        int spatialLen, int temporalLen, Map<Long, SecondarySsrcs> secondarySsrcs)
     {
         RTPEncodingDesc[] rtpEncodings
             = new RTPEncodingDesc[primary.length * spatialLen * temporalLen];
@@ -179,11 +179,11 @@ public class MediaStreamTrackFactory
                         = new RTPEncodingDesc(track, idx,
                         primary[streamIdx],
                         temporalId, spatialId, height, frameRate, dependencies);
-                    List<Pair<Long, String>> ssrcSecondarySsrcs = secondarySsrcs.get(primary[streamIdx]);
+                    SecondarySsrcs ssrcSecondarySsrcs = secondarySsrcs.get(primary[streamIdx]);
                     if (ssrcSecondarySsrcs != null)
                     {
                         ssrcSecondarySsrcs.forEach(ssrcSecondarySsrc -> {
-                            rtpEncodings[idx].addSecondarySsrc(ssrcSecondarySsrc.getKey(), ssrcSecondarySsrc.getValue());
+                            rtpEncodings[idx].addSecondarySsrc(ssrcSecondarySsrc.ssrc, ssrcSecondarySsrc.type);
                         });
                     }
 
@@ -262,9 +262,9 @@ public class MediaStreamTrackFactory
      * @param sourceGroups
      * @return a map of secondary ssrc -> type (rtx, fec, etc.)
      */
-    private static Map<Long, String> getSecondarySsrcs(long ssrc, List<SourceGroupPacketExtension> sourceGroups)
+    private static List<SecondarySsrc> getSecondarySsrcs(long ssrc, List<SourceGroupPacketExtension> sourceGroups)
     {
-        Map<Long, String> secondarySsrcs = new HashMap<>();
+        List<SecondarySsrc> secondarySsrcs = new ArrayList<>();
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
         {
             if (sourceGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
@@ -277,7 +277,7 @@ public class MediaStreamTrackFactory
             long groupSecondarySsrc = sourceGroup.getSources().get(1).getSSRC();
             if (groupPrimarySsrc == ssrc)
             {
-                secondarySsrcs.put(groupSecondarySsrc, sourceGroup.getSemantics());
+                secondarySsrcs.add(new SecondarySsrc(groupSecondarySsrc, sourceGroup.getSemantics()));
             }
         }
         return secondarySsrcs;
@@ -289,18 +289,14 @@ public class MediaStreamTrackFactory
      * @param sourceGroups the signaled source groups
      * @return map of source ssrc -> a list of secondary ssrc, secondary ssrc type
      */
-    private static Map<Long, List<Pair<Long, String>>> getAllSecondarySsrcs(Long[] ssrcs, List<SourceGroupPacketExtension> sourceGroups)
+    private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(Long[] ssrcs, List<SourceGroupPacketExtension> sourceGroups)
     {
-        Map<Long, List<Pair<Long, String>>> allSecondarySsrcs = new HashMap<>();
+        Map<Long, SecondarySsrcs> allSecondarySsrcs = new HashMap<>();
 
         for (long ssrc : ssrcs)
         {
-            Map<Long, String> secondarySsrcs = getSecondarySsrcs(ssrc, sourceGroups);
-            List<Pair<Long, String>> secondarySsrcList = secondarySsrcs.entrySet()
-                .stream()
-                .map(e -> new Pair<Long, String>(e.getKey(), e.getValue()))
-                .collect(Collectors.toList());
-            allSecondarySsrcs.put(ssrc, secondarySsrcList);
+            List<SecondarySsrc> secondarySsrcs = getSecondarySsrcs(ssrc, sourceGroups);
+            allSecondarySsrcs.put(ssrc, new SecondarySsrcs(secondarySsrcs));
         }
         return allSecondarySsrcs;
     }
@@ -358,7 +354,8 @@ public class MediaStreamTrackFactory
                 .map(SourcePacketExtension::getSSRC)
                 .toArray(Long[]::new);
 
-            Map<Long, List<Pair<Long, String>>> allSecondarySsrcs = getAllSecondarySsrcs(ssrcs, sourceGroups);
+            Map<Long, SecondarySsrcs> allSecondarySsrcs =
+                getAllSecondarySsrcs(ssrcs, sourceGroups);
 
             RTPEncodingDesc[] encodings =
                 createRTPEncodings(track, ssrcs, numSpatialLayers, numTemporalLayers, allSecondarySsrcs);
@@ -367,7 +364,7 @@ public class MediaStreamTrackFactory
         else
         {
             Long[] ssrcs = new Long[] { primarySsrc };
-            Map<Long, List<Pair<Long, String>>> allSecondarySsrcs =
+            Map<Long, SecondarySsrcs> allSecondarySsrcs =
                 getAllSecondarySsrcs(ssrcs, sourceGroups);
             RTPEncodingDesc[] encodings =
                 createRTPEncodings(track, ssrcs, numSpatialLayers, numTemporalLayers, allSecondarySsrcs);
@@ -395,26 +392,32 @@ public class MediaStreamTrackFactory
             + spatialIdx * temporalLen + temporalIdx;
     }
 
-
-    static class Pair<K, V>
+    private static class SecondarySsrc
     {
-        private K key;
-        private V value;
+        public long ssrc;
+        public String type;
 
-        Pair(K k, V v)
+        public SecondarySsrc(long ssrc, String type)
         {
-            this.key = k;
-            this.value = v;
+            this.ssrc = ssrc;
+            this.type = type;
+        }
+    }
+
+    private static class SecondarySsrcs
+        implements Iterable<SecondarySsrc>
+    {
+        public List<SecondarySsrc> secondarySsrcs;
+
+        public SecondarySsrcs(List<SecondarySsrc> secondarySsrcs)
+        {
+            this.secondarySsrcs = secondarySsrcs;
         }
 
-        public K getKey()
+        @Override
+        public Iterator<SecondarySsrc> iterator()
         {
-            return key;
-        }
-
-        public V getValue()
-        {
-            return value;
+            return secondarySsrcs.iterator();
         }
     }
 }
