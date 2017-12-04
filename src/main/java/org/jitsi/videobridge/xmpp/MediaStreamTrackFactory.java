@@ -96,6 +96,18 @@ public class MediaStreamTrackFactory
     private static final boolean ENABLE_SVC
         = cfg.getBoolean(ENABLE_SVC_PNAME, false);
 
+    /**
+     * Creates encodings.
+     *
+     * @param track the track that will own the temporal encodings.
+     * @param primary the array of the primary SSRCs for the simulcast streams.
+     * @param spatialLen the number of spatial encodings per simulcast stream.
+     * @param temporalLen the number of temporal encodings per simulcast stream.
+     * @param secondarySsrcs a map of primary ssrc -> list of pairs, where each
+     * pair has the secondary ssrc as its key, and the type (rtx, etc.) as its
+     * value
+     * @return an array that holds the simulcast encodings.
+     */
     private static RTPEncodingDesc[] createRTPEncodings(
         MediaStreamTrackDesc track, Long[] primary,
         int spatialLen, int temporalLen, Map<Long, List<Pair<Long, String>>> secondarySsrcs)
