@@ -37,7 +37,7 @@ import java.util.*;
  * {@link Channel#lastTransportActivityTime}. When there is no activity for
  * longer than {@link #maxInactivityLimit} it will be assumed that
  * the endpoint is having some connectivity issues. Those may be temporary or
- * permanent. When that happens there will be a Colibri message broadcasted
+ * permanent. When that happens there will be a Colibri message broadcast
  * to all conference endpoints. The Colibri class name of the message is defined
  * in {@link #COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS} and it will contain
  * "active" attribute set to "false". If those problems turn out to be temporary
@@ -49,6 +49,7 @@ import java.util.*;
  *
  * @author Pawel Domas
  */
+@SuppressWarnings("unused") // started by OSGi
 public class EndpointConnectionStatus
     extends EventHandlerActivator
 {

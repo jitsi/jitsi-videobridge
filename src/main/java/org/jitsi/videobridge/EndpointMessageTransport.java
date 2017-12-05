@@ -105,6 +105,22 @@ class EndpointMessageTransport
         = Logger.getLogger(EndpointMessageTransport.class);
 
     /**
+     * @param dominantSpeaker the dominant speaker in this multipoint conference
+     *
+     * @return a new <tt>String</tt> which represents a message to be sent
+     * to an endpoint in order to notify it that the dominant speaker in its
+     * multipoint conference has changed to a specific endpoint.
+     */
+    public static String createDominantSpeakerEndpointChangeEvent(
+        Endpoint dominantSpeaker)
+    {
+        return
+            "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
+                + "\"dominantSpeakerEndpoint\":\""
+                + JSONValue.escape(dominantSpeaker.getID()) + "\"}";
+    }
+
+    /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.
      *

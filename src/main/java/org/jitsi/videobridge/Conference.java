@@ -434,25 +434,6 @@ public class Conference
         }
     }
 
-    /**
-     * Initializes a new <tt>String</tt> to be sent over an
-     * <tt>SctpConnection</tt> in order to notify an <tt>Endpoint</tt> that the
-     * dominant speaker in this multipoint conference has changed to a specific
-     * <tt>Endpoint</tt>.
-     *
-     * @param dominantSpeaker the dominant speaker in this multipoint conference
-     * @return a new <tt>String</tt> to be sent over an <tt>SctpConnection</tt>
-     * in order to notify an <tt>Endpoint</tt> that the dominant speaker in this
-     * multipoint conference has changed to <tt>dominantSpeaker</tt>
-     */
-    private String createDominantSpeakerEndpointChangeEvent(
-            Endpoint dominantSpeaker)
-    {
-        return
-            "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
-                + "\"dominantSpeakerEndpoint\":\""
-                + JSONValue.escape(dominantSpeaker.getID()) + "\"}";
-    }
 
     /**
      * Adds the channel-bundles of this <tt>Conference</tt> as
@@ -582,7 +563,8 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessageOnDataChannels(
-                    createDominantSpeakerEndpointChangeEvent(dominantSpeaker));
+                EndpointMessageTransport
+                    .createDominantSpeakerEndpointChangeEvent(dominantSpeaker));
 
             if (isRecording() && (recorderEventHandler != null))
             {
@@ -1539,8 +1521,9 @@ public class Conference
                     try
                     {
                         endpoint.sendMessage(
-                                createDominantSpeakerEndpointChangeEvent(
-                                        dominantSpeaker));
+                            EndpointMessageTransport
+                                .createDominantSpeakerEndpointChangeEvent(
+                                    dominantSpeaker));
                     }
                     catch (IOException e)
                     {
