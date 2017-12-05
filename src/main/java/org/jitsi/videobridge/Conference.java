@@ -358,7 +358,10 @@ public class Conference
      * @param path the path to the directory to check.
      * @return <tt>true</tt> if the directory <tt>path</tt> can be used for
      * media recording, <tt>false</tt> otherwise.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     private boolean checkRecordingDirectory(String path)
     {
         if (StringUtils.isNullOrEmpty(path))
@@ -994,7 +997,10 @@ public class Conference
      * if none exists.
      * @return the <tt>EndpointRecorder</tt> instance used to save the
      * endpoints information for this <tt>Conference</tt>.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     private EndpointRecorder getEndpointRecorder()
     {
         if (endpointRecorder == null)
@@ -1179,6 +1185,10 @@ public class Conference
         return getEndpoint(id, /* create */ true);
     }
 
+     /**
+      * @deprecated remove-with-recording
+      */
+    @Deprecated
     RecorderEventHandler getRecorderEventHandler()
     {
         if (recorderEventHandler == null)
@@ -1210,7 +1220,10 @@ public class Conference
      * Returns the directory where the recording should be stored
      *
      * @return the directory of the new recording
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     String getRecordingDirectory()
     {
         if (this.recordingDirectory == null)
@@ -1233,7 +1246,10 @@ public class Conference
      * @return the path to the directory where the media recording related files
      * should be saved, or <tt>null</tt> if recording is not enabled in the
      * configuration, or a recording path has not been configured.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     private String getRecordingPath()
     {
         if (recordingPath == null)
@@ -1373,7 +1389,10 @@ public class Conference
      * <tt>Conference</tt>.
      * @return <tt>true</tt> if media recording is currently enabled for this
      * <tt>Conference</tt>, false otherwise.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     public boolean isRecording()
     {
         boolean recording = this.recording;
@@ -1563,7 +1582,10 @@ public class Conference
      * @param recording whether to enable or disable recording.
      * @return the state of the media recording for this <tt>Conference</tt>
      * after the attempt to enable (or disable).
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     boolean setRecording(boolean recording)
     {
         if (recording != this.recording)
