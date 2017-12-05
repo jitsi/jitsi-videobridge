@@ -206,14 +206,14 @@ public class Conference
     private final Statistics statistics = new Statistics();
 
     /**
-     * The <tt>WebRtcpDataStreamListener</tt> which listens to the
+     * The {@link WebRtcDataStreamListener} which listens to the
      * <tt>SctpConnection</tt>s of the <tt>Endpoint</tt>s participating in this
      * multipoint conference in order to detect when they are ready (to fire
      * initial events such as the current dominant speaker in this multipoint
      * conference).
      */
     private final WebRtcDataStreamListener webRtcDataStreamListener
-        = new WebRtcDataStreamAdapter()
+        = new WebRtcDataStreamListener()
                 {
                     /**
                      * {@inheritDoc}

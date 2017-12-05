@@ -32,9 +32,11 @@ public interface WebRtcDataStreamListener
      * @param channel the <tt>WebRtcDataStream</tt> that represents opened
      * WebRTC data channel.
      */
-    public void onChannelOpened(
+    default void onChannelOpened(
             SctpConnection source,
-            WebRtcDataStream channel);
+            WebRtcDataStream channel)
+    {
+    }
 
     /**
      * Indicates that a <tt>SctpConnection</tt> has established SCTP connection.
@@ -44,5 +46,7 @@ public interface WebRtcDataStreamListener
      * @param source the <tt>SctpConnection</tt> which is the source of the
      * event i.e. which has established an SCTP connection
      */
-    public void onSctpConnectionReady(SctpConnection source);
+    default void onSctpConnectionReady(SctpConnection source)
+    {
+    }
 }
