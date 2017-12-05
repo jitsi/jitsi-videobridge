@@ -319,7 +319,7 @@ public class Conference
      * Used to send a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
-     * the call, for that see broadcastMessageOnDataChannels below
+     * the call, for that see {@link #broadcastMessageOnDataChannels(String)}.
      *
      * @param msg the message to be sent
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
@@ -343,9 +343,9 @@ public class Conference
     }
 
     /**
-     * Broadcasts string message to all participants over default data channel.
+     * Broadcasts a string message to all endpoints of the conference.
      *
-     * @param msg the message to be advertised across conference peers.
+     * @param msg the message to be broadcast.
      */
     public void broadcastMessageOnDataChannels(String msg)
     {

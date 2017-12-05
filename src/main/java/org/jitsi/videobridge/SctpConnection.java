@@ -500,14 +500,7 @@ public class SctpConnection
         if (!isExpired())
         {
             eventDispatcher.execute(
-                    new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            notifyChannelOpenedInEventDispatcher(dataChannel);
-                        }
-                    });
+                () -> notifyChannelOpenedInEventDispatcher(dataChannel));
         }
     }
 
@@ -523,7 +516,9 @@ public class SctpConnection
             if (ls != null)
             {
                 for (WebRtcDataStreamListener l : ls)
+                {
                     l.onChannelOpened(this, dataChannel);
+                }
             }
         }
     }
@@ -537,14 +532,7 @@ public class SctpConnection
         if (!isExpired())
         {
             eventDispatcher.execute(
-                    new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            notifySctpConnectionReadyInEventDispatcher();
-                        }
-                    });
+                this::notifySctpConnectionReadyInEventDispatcher);
         }
     }
 
@@ -720,9 +708,13 @@ public class SctpConnection
         super.onEndpointChanged(oldValue, newValue);
 
         if (oldValue != null)
+        {
             oldValue.setSctpConnection(null);
+        }
         if (newValue != null)
+        {
             newValue.setSctpConnection(this);
+        }
     }
 
     /**

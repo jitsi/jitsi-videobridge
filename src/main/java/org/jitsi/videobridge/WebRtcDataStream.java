@@ -215,7 +215,9 @@ public class WebRtcDataStream
          *            received.
          * @param msg <tt>String</tt> message content.
          */
-        public void onStringData(WebRtcDataStream src, String msg);
+        default void onStringData(WebRtcDataStream src, String msg)
+        {
+        }
 
         /**
          * Fired when binary message is received on this
@@ -225,6 +227,8 @@ public class WebRtcDataStream
          *            received.
          * @param data <tt>byte</tt> buffer that contains message content.
          */
-        public void onBinaryData(WebRtcDataStream src, byte[] data);
+        default void onBinaryData(WebRtcDataStream src, byte[] data)
+        {
+        }
     }
 }
