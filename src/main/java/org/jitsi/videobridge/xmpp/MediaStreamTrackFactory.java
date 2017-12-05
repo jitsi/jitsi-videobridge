@@ -22,7 +22,6 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 
 import java.util.*;
-import java.util.stream.*;
 
 /**
  * A factory of {@link MediaStreamTrackDesc}s from jingle signaling.
@@ -109,7 +108,7 @@ public class MediaStreamTrackFactory
      * @return an array that holds the simulcast encodings.
      */
     private static RTPEncodingDesc[] createRTPEncodings(
-        MediaStreamTrackDesc track, Long[] primary,
+        MediaStreamTrackDesc track, long[] primary,
         int spatialLen, int temporalLen, Map<Long, SecondarySsrcs> secondarySsrcs)
     {
         RTPEncodingDesc[] rtpEncodings
@@ -197,69 +196,11 @@ public class MediaStreamTrackFactory
 
     }
 
-    private static SourceGroupPacketExtension getGroup(String semantics, List<SourceGroupPacketExtension> groups)
-    {
-        return groups.stream()
-            .filter(sg -> sg.getSemantics().equalsIgnoreCase(semantics))
-            .findFirst()
-            .orElse(null);
-    }
-
-    /**
-     * Given a list of sources and groups, find the primary ssrc.
-     * NOTE: this assumes there is only a single 'video source' described
-     * by the given sources/groups (the rest must be things like rtx, fec,
-     * simulcast sub-streams, etc.)
-     * @param sources
-     * @param sourceGroups
-     * @return
-     */
-    private static long getPrimarySsrc(List<SourcePacketExtension> sources,
-                                       List<SourceGroupPacketExtension> sourceGroups)
-    {
-        // Based on there only being a single video source, we can discover
-        // the primary ssrc by doing the following:
-        // 1) check if there is a simulcast group; if there is, then the first
-        //    ssrc in that group will be the overall primary
-        // 2) if no sim group, check if there is an fec group; if there is, then
-        //    the first ssrc in that group will be the overall primary
-        // 3) if no fec group, check if there is an rtx group; if there is, then
-        //    the first ssrc in that group will be the overall primary
-        // 4) if no fec group, then there should only be a single source, total,
-        //    which will be the primary
-        SourceGroupPacketExtension simGroup =
-            getGroup(SourceGroupPacketExtension.SEMANTICS_SIMULCAST, sourceGroups);
-        if (simGroup != null)
-        {
-            return simGroup.getSources().get(0).getSSRC();
-        }
-
-        SourceGroupPacketExtension fecGroup =
-            getGroup(SourceGroupPacketExtension.SEMANTICS_FEC, sourceGroups);
-        if (fecGroup != null)
-        {
-            return fecGroup.getSources().get(0).getSSRC();
-        }
-
-        SourceGroupPacketExtension rtxGroup =
-            getGroup(SourceGroupPacketExtension.SEMANTICS_FID, sourceGroups);
-        if (rtxGroup != null)
-        {
-            return rtxGroup.getSources().get(0).getSSRC();
-        }
-
-        if (!sources.isEmpty())
-        {
-            return sources.get(0).getSSRC();
-        }
-        return -1;
-    }
-
     /**
      * Get the 'secondary' ssrcs for the given primary ssrc.  'Secondary' here
      * is defined as things like rtx or fec ssrcs.
-     * @param ssrc
-     * @param sourceGroups
+     * @param ssrc the primay ssrc for which to get the secondary ssrcs
+     * @param sourceGroups the source groups
      * @return a map of secondary ssrc -> type (rtx, fec, etc.)
      */
     private static List<SecondarySsrc> getSecondarySsrcs(long ssrc, List<SourceGroupPacketExtension> sourceGroups)
@@ -289,7 +230,7 @@ public class MediaStreamTrackFactory
      * @param sourceGroups the signaled source groups
      * @return map of source ssrc -> a list of secondary ssrc, secondary ssrc type
      */
-    private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(Long[] ssrcs, List<SourceGroupPacketExtension> sourceGroups)
+    private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(long[] ssrcs, List<SourceGroupPacketExtension> sourceGroups)
     {
         Map<Long, SecondarySsrcs> allSecondarySsrcs = new HashMap<>();
 
@@ -319,59 +260,176 @@ public class MediaStreamTrackFactory
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
-        // Currently we only support a single track, so get the single
-        // primary ssrc
-        long primarySsrc = getPrimarySsrc(sources, sourceGroups);
-        if (primarySsrc == -1)
+        boolean hasSources = sources != null && !sources.isEmpty();
+        boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
+
+        if (!hasSources && !hasGroups)
         {
             return null;
         }
 
-        SourceGroupPacketExtension simGroup =
-            getGroup(SourceGroupPacketExtension.SEMANTICS_SIMULCAST, sourceGroups);
+        List<MediaStreamTrackDesc> tracks = new ArrayList<>();
+        List<Long> grouped = new ArrayList<>();
 
-        int numTemporalLayers
-            = ENABLE_SVC ? VP8_SIMULCAST_TEMPORAL_LAYERS : 1;
-
-        //NOTE(brian): is this confusing?  We only ever have one spatial layer
-        // per stream, and will represent more spatial layers by having multiple
-        // primary ssrcs
-        int numSpatialLayers = 1;
-
-        int numPrimarySsrcs = simGroup != null ? simGroup.getSources().size() : 1;
-
-        int numEncodings = numPrimarySsrcs * numSpatialLayers * numTemporalLayers;
-
-        RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
-
-        MediaStreamTrackDesc track = new MediaStreamTrackDesc(
-            mediaStreamTrackReceiver, rtpEncodings, simGroup != null);
-
-        if (simGroup != null)
+        if (hasGroups)
         {
-            Long[] ssrcs = simGroup.getSources()
-                .stream()
-                .map(SourcePacketExtension::getSSRC)
-                .toArray(Long[]::new);
+            List<SourceGroupPacketExtension> simGroups = new ArrayList<>();
+            Map<Long, Long> rtxPairs = new TreeMap<>();
 
-            Map<Long, SecondarySsrcs> allSecondarySsrcs =
-                getAllSecondarySsrcs(ssrcs, sourceGroups);
+            for (SourceGroupPacketExtension sg : sourceGroups)
+            {
+                List<SourcePacketExtension> groupSources = sg.getSources();
+                if (groupSources == null || groupSources.isEmpty())
+                {
+                    continue;
+                }
 
-            RTPEncodingDesc[] encodings =
-                createRTPEncodings(track, ssrcs, numSpatialLayers, numTemporalLayers, allSecondarySsrcs);
-            System.arraycopy(encodings, 0, rtpEncodings, 0, encodings.length);
+                if (SourceGroupPacketExtension
+                    .SEMANTICS_SIMULCAST.equalsIgnoreCase(sg.getSemantics())
+                    && groupSources.size() >= 2)
+                {
+                    simGroups.add(sg);
+                }
+                else if (SourceGroupPacketExtension.SEMANTICS_FID
+                    .equalsIgnoreCase(sg.getSemantics())
+                    && groupSources.size() == 2)
+                {
+                    rtxPairs.put(
+                        groupSources.get(0).getSSRC(),
+                        groupSources.get(1).getSSRC());
+                }
+            }
+
+            if (!simGroups.isEmpty())
+            {
+                for (SourceGroupPacketExtension simGroup : simGroups)
+                {
+                    List<SourcePacketExtension> simSources
+                        = simGroup.getSources();
+
+                    int streamLen = simSources.size();
+
+                    long[] primary = new long[streamLen],
+                        rtx = new long[streamLen];
+
+                    for (int i = 0; i < streamLen; i++)
+                    {
+                        long primarySSRC = simSources.get(i).getSSRC();
+                        primary[i] = primarySSRC;
+                        grouped.add(primarySSRC);
+
+                        long rtxSSRC = -1;
+                        if (rtxPairs.containsKey(primarySSRC))
+                        {
+                            rtxSSRC = rtxPairs.remove(primarySSRC);
+                            grouped.add(rtxSSRC);
+                        }
+                        rtx[i] = rtxSSRC;
+                    }
+
+                    int numOfTemporal
+                        = ENABLE_SVC ? VP8_SIMULCAST_TEMPORAL_LAYERS : 1;
+                    int encodingsLen = streamLen * numOfTemporal;
+
+                    RTPEncodingDesc[] rtpEncodings
+                        = new RTPEncodingDesc[encodingsLen];
+
+                    MediaStreamTrackDesc track = new MediaStreamTrackDesc(
+                        mediaStreamTrackReceiver, rtpEncodings, true);
+
+                    Map<Long, SecondarySsrcs> allSecondarySsrcs =
+                        getAllSecondarySsrcs(primary, sourceGroups);
+
+                    RTPEncodingDesc[] simulcastEncodings = createRTPEncodings(
+                        track, primary, 1, numOfTemporal, allSecondarySsrcs);
+
+                    System.arraycopy(simulcastEncodings, 0, rtpEncodings, 0,
+                        simulcastEncodings.length);
+                    tracks.add(track);
+                }
+            }
+
+            if (!rtxPairs.isEmpty())
+            {
+                for (Map.Entry<Long, Long> fidEntry : rtxPairs.entrySet())
+                {
+                    Long primarySSRC = fidEntry.getKey();
+                    Long rtxSSRC = fidEntry.getValue();
+
+                    int numOfTemporal, numOfSpatial;
+                    if (ENABLE_VP9_SVC && ENABLE_SVC)
+                    {
+                        numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
+                        numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
+                    }
+                    else
+                    {
+                        numOfSpatial = 1;
+                        numOfTemporal = 1;
+                    }
+
+                    int encodingsLen = numOfSpatial * numOfTemporal;
+                    RTPEncodingDesc[] encodings
+                        = new RTPEncodingDesc[encodingsLen];
+                    MediaStreamTrackDesc track = new MediaStreamTrackDesc(
+                        mediaStreamTrackReceiver, encodings, false);
+
+                    Map<Long, SecondarySsrcs> allSecondarySsrcs =
+                        getAllSecondarySsrcs(new long[] { primarySSRC }, sourceGroups);
+
+                    RTPEncodingDesc[] ret = createRTPEncodings(track,
+                        new long[] { primarySSRC }, numOfSpatial, numOfTemporal,
+                        allSecondarySsrcs);
+
+                    System.arraycopy(ret, 0, encodings, 0, encodings.length);
+
+                    grouped.add(primarySSRC);
+                    grouped.add(rtxSSRC);
+                    tracks.add(track);
+                }
+            }
         }
-        else
+
+        if (hasSources)
         {
-            Long[] ssrcs = new Long[] { primarySsrc };
-            Map<Long, SecondarySsrcs> allSecondarySsrcs =
-                getAllSecondarySsrcs(ssrcs, sourceGroups);
-            RTPEncodingDesc[] encodings =
-                createRTPEncodings(track, ssrcs, numSpatialLayers, numTemporalLayers, allSecondarySsrcs);
-            System.arraycopy(encodings, 0, rtpEncodings, 0, encodings.length);
+            for (SourcePacketExtension spe : sources)
+            {
+                long mediaSSRC = spe.getSSRC();
+
+                if (!grouped.contains(mediaSSRC))
+                {
+                    int numOfTemporal, numOfSpatial;
+                    if (ENABLE_VP9_SVC && ENABLE_SVC)
+                    {
+                        numOfTemporal = VP9_SVC_TEMPORAL_LAYERS;
+                        numOfSpatial = VP9_SVC_SPATIAL_LAYERS;
+                    }
+                    else
+                    {
+                        numOfSpatial = 1;
+                        numOfTemporal = 1;
+                    }
+
+                    int encodingsLen = numOfSpatial * numOfTemporal;
+                    RTPEncodingDesc[] encodings
+                        = new RTPEncodingDesc[encodingsLen];
+                    MediaStreamTrackDesc track = new MediaStreamTrackDesc(
+                        mediaStreamTrackReceiver, encodings, false);
+
+                    Map<Long, SecondarySsrcs> allSecondarySsrcs =
+                        getAllSecondarySsrcs(new long[] { mediaSSRC }, sourceGroups);
+
+                    RTPEncodingDesc[] ret = createRTPEncodings(track,
+                        new long[] { mediaSSRC }, numOfSpatial, numOfTemporal,
+                        allSecondarySsrcs);
+
+                    System.arraycopy(ret, 0, encodings, 0, encodings.length);
+                    tracks.add(track);
+                }
+            }
         }
 
-        return new MediaStreamTrackDesc[] { track };
+        return tracks.toArray(new MediaStreamTrackDesc[tracks.size()]);
     }
 
     /**
