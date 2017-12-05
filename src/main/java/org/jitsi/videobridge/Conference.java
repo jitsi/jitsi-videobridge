@@ -27,6 +27,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
 import net.java.sip.communicator.util.*;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -204,26 +205,6 @@ public class Conference
      * Holds conference statistics.
      */
     private final Statistics statistics = new Statistics();
-
-    /**
-     * The {@link WebRtcDataStreamListener} which listens to the
-     * <tt>SctpConnection</tt>s of the <tt>Endpoint</tt>s participating in this
-     * multipoint conference in order to detect when they are ready (to fire
-     * initial events such as the current dominant speaker in this multipoint
-     * conference).
-     */
-    private final WebRtcDataStreamListener webRtcDataStreamListener
-        = new WebRtcDataStreamListener()
-                {
-                    /**
-                     * {@inheritDoc}
-                     */
-                    @Override
-                    public void onSctpConnectionReady(SctpConnection source)
-                    {
-                        Conference.this.sctpConnectionReady(source);
-                    }
-                };
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -591,30 +572,11 @@ public class Conference
             PropertyChangeEvent ev)
     {
         String propertyName = ev.getPropertyName();
-        boolean maybeRemoveEndpoint;
 
-        if (Endpoint.SCTP_CONNECTION_PROPERTY_NAME.equals(propertyName))
-        {
-            // The SctpConnection of/associated with an Endpoint has changed. We
-            // may want to fire initial events over that SctpConnection (as soon
-            // as it is ready).
-            SctpConnection oldValue = (SctpConnection) ev.getOldValue();
-            SctpConnection newValue = (SctpConnection) ev.getNewValue();
+        // An RtpChannel may have expired.
+        boolean maybeRemoveEndpoint
+            = Endpoint.CHANNELS_PROPERTY_NAME.equals(propertyName);
 
-            endpointSctpConnectionChanged(endpoint, oldValue, newValue);
-
-            // The SctpConnection may have expired.
-            maybeRemoveEndpoint = (newValue == null);
-        }
-        else if (Endpoint.CHANNELS_PROPERTY_NAME.equals(propertyName))
-        {
-            // An RtpChannel may have expired.
-            maybeRemoveEndpoint = true;
-        }
-        else
-        {
-            maybeRemoveEndpoint = false;
-        }
         if (maybeRemoveEndpoint)
         {
             // It looks like there is a chance that the Endpoint may have
@@ -626,37 +588,6 @@ public class Conference
                     && endpoint.getChannelCount(null) == 0)
             {
                 removeEndpoint(endpoint);
-            }
-        }
-    }
-
-    /**
-     * Notifies this instance that the <tt>SctpConnection</tt> of/associated
-     * with a specific <tt>Endpoint</tt> participating in this
-     * <tt>Conference</tt> has changed.
-     *
-     * @param endpoint the <tt>Endpoint</tt> participating in this
-     * <tt>Conference</tt> which has had its (associated)
-     * <tt>SctpConnection</tt> changed
-     */
-    private void endpointSctpConnectionChanged(
-            Endpoint endpoint,
-            SctpConnection oldValue, SctpConnection newValue)
-    {
-        // We want to fire initial events (e.g. dominant speaker) over the
-        // SctpConnection as soon as it is ready.
-        if (oldValue != null)
-        {
-            oldValue.removeChannelListener(webRtcDataStreamListener);
-        }
-        if (newValue != null)
-        {
-            newValue.addChannelListener(webRtcDataStreamListener);
-            // The SctpConnection may itself be ready already. If this is the
-            // case, then it has now become ready for this Conference.
-            if (newValue.isReady())
-            {
-                sctpConnectionReady(newValue);
             }
         }
     }
@@ -1501,66 +1432,34 @@ public class Conference
     }
 
     /**
-     * Notifies this instance that a specific <tt>SctpConnection</tt> has become
-     * ready i.e. connected to a/the remote peer and operational.
+     * Notifies this {@link Conference} that one of its {@link Endpoint}s
+     * transport channel has become available.
      *
-     * @param sctpConnection the <tt>SctpConnection</tt> which has become ready
-     * and is the cause of the method invocation
+     * @param endpoint the {@link Endpoint} whose transport channel has become
+     * available.
      */
-    private void sctpConnectionReady(SctpConnection sctpConnection)
+    void endpointMessageTransportConnected(@NotNull Endpoint endpoint)
     {
-        /*
-         * We want to fire initial events over the SctpConnection as soon as it
-         * is ready, we do not want to fire them multiple times i.e. every time
-         * the SctpConnection becomes ready.
-         */
-        sctpConnection.removeChannelListener(webRtcDataStreamListener);
-
-        if (!isExpired()
-                && !sctpConnection.isExpired()
-                && sctpConnection.isReady())
+        if (!isExpired())
         {
-            Endpoint endpoint = sctpConnection.getEndpoint();
+            Endpoint dominantSpeaker = speechActivity.getDominantEndpoint();
 
-            if (endpoint != null)
+            if (dominantSpeaker != null)
             {
-                endpoint = getEndpoint(endpoint.getID());
-            }
-            if (endpoint != null)
-            {
-                /*
-                 * It appears that this Conference, the SctpConnection and the
-                 * Endpoint are in states which allow them to fire the initial
-                 * events. 
-                 */
-                Endpoint dominantSpeaker = speechActivity.getDominantEndpoint();
-
-                if (dominantSpeaker != null)
+                try
                 {
-                    try
-                    {
-                        endpoint.sendMessage(
-                            EndpointMessageTransport
-                                .createDominantSpeakerEndpointChangeEvent(
-                                    dominantSpeaker));
-                    }
-                    catch (IOException e)
-                    {
-                        logger.error(
-                                "Failed to send dominant speaker update"
-                                    + " on data channel to " + endpoint.getID(),
-                                e);
-                    }
+                    endpoint.sendMessage(
+                        EndpointMessageTransport
+                            .createDominantSpeakerEndpointChangeEvent(
+                                dominantSpeaker));
                 }
-
-                /*
-                 * Determining the instant at which an SctpConnection associated
-                 * with an Endpoint becomes ready (i.e. connected to the remote
-                 * peer and operational) is a multi-step ordeal. The Conference
-                 * class implements the procedure so do not make other classes
-                 * implement it as well.
-                 */
-                endpoint.sctpConnectionReady(sctpConnection);
+                catch (IOException e)
+                {
+                    logger.error(
+                            "Failed to send dominant speaker update"
+                                + " on data channel to " + endpoint.getID(),
+                            e);
+                }
             }
         }
     }

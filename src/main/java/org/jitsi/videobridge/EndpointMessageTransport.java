@@ -23,6 +23,7 @@ import org.json.simple.*;
 import org.json.simple.parser.*;
 
 import java.io.*;
+import java.lang.ref.*;
 import java.util.*;
 
 /**
@@ -151,6 +152,50 @@ class EndpointMessageTransport
     private boolean webSocketLastActive = false;
 
     /**
+     * SCTP connection bound to this endpoint.
+     */
+    private WeakReference<SctpConnection> sctpConnection
+        = new WeakReference<>(null);
+
+    /**
+     * The listener which will be added to {@link SctpConnection}s associated
+     * with this endpoint, which will be notified when {@link SctpConnection}s
+     * become ready.
+     *
+     * Note that we just want to make sure that the initial messages (e.g.
+     * a dominant speaker notification) are sent. Because of this we only add
+     * listeners to {@link SctpConnection}s which are not yet ready, and we
+     * remove the listener after an {@link SctpConnection} becomes ready.
+     */
+    private final WebRtcDataStreamListener webRtcDataStreamListener
+        = new WebRtcDataStreamListener()
+    {
+        @Override
+        public void onSctpConnectionReady(
+            SctpConnection source)
+        {
+            if (source != null)
+            {
+                if (source.equals(getSctpConnection()))
+                {
+                    try
+                    {
+                        WebRtcDataStream dataStream
+                            = source.getDefaultDataStream();
+                        dataStream.setDataCallback(EndpointMessageTransport.this);
+                        notifyTransportChannelConnected();
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error("Could not get the default data stream.", e);
+                    }
+                }
+                source.removeChannelListener(this);
+            }
+        }
+    };
+
+    /**
      * Initializes a new {@link EndpointMessageTransport} instance.
      * @param endpoint the associated {@link Endpoint}.
      */
@@ -165,7 +210,7 @@ class EndpointMessageTransport
     /**
      * Fires the message transport ready event for the associated endpoint.
      */
-    void notifyTransportChannelConnected()
+    private void notifyTransportChannelConnected()
     {
         EventAdmin eventAdmin = endpoint.getConference().getEventAdmin();
 
@@ -174,6 +219,8 @@ class EndpointMessageTransport
             eventAdmin.postEvent(
                 EventFactory.endpointMessageTransportReady(endpoint));
         }
+
+        endpoint.getConference().endpointMessageTransportConnected(endpoint);
 
         for (RtpChannel channel : endpoint.getChannels())
         {
@@ -791,4 +838,52 @@ class EndpointMessageTransport
         webSocketLastActive = true;
         onMessage(ws, message);
     }
+
+    /**
+     * @return the {@link SctpConnection} associated with this endpoint.
+     */
+    SctpConnection getSctpConnection()
+    {
+        return sctpConnection.get();
+    }
+
+    /**
+     * Sets the {@link SctpConnection} associated with this endpoint.
+     * @param sctpConnection the new {@link SctpConnection}.
+     */
+    void setSctpConnection(SctpConnection sctpConnection)
+    {
+        SctpConnection oldValue = getSctpConnection();
+
+        if (!Objects.equals(oldValue, sctpConnection))
+        {
+            if (oldValue != null && sctpConnection != null)
+            {
+                // This is not necessarily invalid, but with the current
+                // codebase it likely indicates a problem. If we start to
+                // actually use it, this warning should be removed.
+                logger.warn("Replacing an Endpoint's SctpConnection.");
+            }
+
+            this.sctpConnection = new WeakReference<>(sctpConnection);
+
+            if (sctpConnection != null)
+            {
+                if (sctpConnection.isReady())
+                {
+                    notifyTransportChannelConnected();
+                }
+                else
+                {
+                    sctpConnection.addChannelListener(webRtcDataStreamListener);
+                }
+            }
+
+            if (oldValue != null)
+            {
+                oldValue.removeChannelListener(webRtcDataStreamListener);
+            }
+        }
+    }
+
 }
