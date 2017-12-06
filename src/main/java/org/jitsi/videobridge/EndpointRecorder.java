@@ -25,7 +25,10 @@ import org.json.simple.*;
  * A class responsible for saving to disk information about <tt>Endpoint</tt>s.
  *
  * @author Boris Grozev
+ *
+ * @deprecated remove-with-recording
  */
+@Deprecated
 public class EndpointRecorder
 {
     /**

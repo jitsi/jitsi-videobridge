@@ -23,7 +23,10 @@ import org.json.simple.*;
 import org.json.simple.parser.*;
 
 import java.io.*;
+import java.lang.ref.*;
 import java.util.*;
+
+import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
@@ -35,67 +38,6 @@ import java.util.*;
 class EndpointMessageTransport
     implements WebRtcDataStream.DataCallback
 {
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedEndpointChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED
-        = "SelectedEndpointChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedEndpointChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED
-        = "SelectedEndpointsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code PinnedEndpointChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED
-        = "PinnedEndpointChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code PinnedEndpointsChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED
-        = "PinnedEndpointsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code ClientHello} message.
-     */
-    public static final String COLIBRI_CLASS_CLIENT_HELLO
-        = "ClientHello";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code LastNChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_LASTN_CHANGED
-        = "LastNChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code EndpointMessage}.
-     */
-    public static final String COLIBRI_CLASS_ENDPOINT_MESSAGE
-        = "EndpointMessage";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code ReceiverVideoConstraint} message.
-     */
-    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT
-        = "ReceiverVideoConstraint";
-
-    /**
-     * The string which encodes a COLIBRI {@code ServerHello} message.
-     */
-    private static final String SERVER_HELLO_STR
-        = "{\"colibriClass\":\"ServerHello\"}";
 
     /**
      * The {@link Logger} used by the {@link Endpoint} class to print debug
@@ -135,6 +77,50 @@ class EndpointMessageTransport
     private boolean webSocketLastActive = false;
 
     /**
+     * SCTP connection bound to this endpoint.
+     */
+    private WeakReference<SctpConnection> sctpConnection
+        = new WeakReference<>(null);
+
+    /**
+     * The listener which will be added to {@link SctpConnection}s associated
+     * with this endpoint, which will be notified when {@link SctpConnection}s
+     * become ready.
+     *
+     * Note that we just want to make sure that the initial messages (e.g.
+     * a dominant speaker notification) are sent. Because of this we only add
+     * listeners to {@link SctpConnection}s which are not yet ready, and we
+     * remove the listener after an {@link SctpConnection} becomes ready.
+     */
+    private final WebRtcDataStreamListener webRtcDataStreamListener
+        = new WebRtcDataStreamListener()
+    {
+        @Override
+        public void onSctpConnectionReady(
+            SctpConnection source)
+        {
+            if (source != null)
+            {
+                if (source.equals(getSctpConnection()))
+                {
+                    try
+                    {
+                        WebRtcDataStream dataStream
+                            = source.getDefaultDataStream();
+                        dataStream.setDataCallback(EndpointMessageTransport.this);
+                        notifyTransportChannelConnected();
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error("Could not get the default data stream.", e);
+                    }
+                }
+                source.removeChannelListener(this);
+            }
+        }
+    };
+
+    /**
      * Initializes a new {@link EndpointMessageTransport} instance.
      * @param endpoint the associated {@link Endpoint}.
      */
@@ -149,7 +135,7 @@ class EndpointMessageTransport
     /**
      * Fires the message transport ready event for the associated endpoint.
      */
-    void notifyTransportChannelConnected()
+    private void notifyTransportChannelConnected()
     {
         EventAdmin eventAdmin = endpoint.getConference().getEventAdmin();
 
@@ -158,6 +144,8 @@ class EndpointMessageTransport
             eventAdmin.postEvent(
                 EventFactory.endpointMessageTransportReady(endpoint));
         }
+
+        endpoint.getConference().endpointMessageTransportConnected(endpoint);
 
         for (RtpChannel channel : endpoint.getChannels())
         {
@@ -181,7 +169,7 @@ class EndpointMessageTransport
         // triggers a ServerHello response from Videobridge. The exchange
         // reveals (to the client) that the transport channel between the
         // remote endpoint and the Videobridge is operational.
-        sendMessage(src, SERVER_HELLO_STR, "response to ClientHello");
+        sendMessage(src, createServerHelloEvent(), "response to ClientHello");
     }
 
     /**
@@ -302,14 +290,6 @@ class EndpointMessageTransport
         default:
             break;
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onBinaryData(WebRtcDataStream src, byte[] data)
-    {
     }
 
     /**
@@ -612,7 +592,8 @@ class EndpointMessageTransport
         {
             JSONObject jsonObject = (JSONObject) obj;
             // We utilize JSONObjects with colibriClass only.
-            String colibriClass = (String)jsonObject.get(Videobridge.COLIBRI_CLASS);
+            String colibriClass
+                = (String)jsonObject.get(Videobridge.COLIBRI_CLASS);
 
             if (colibriClass != null)
             {
@@ -663,7 +644,7 @@ class EndpointMessageTransport
     private Object getActiveTransportChannel()
         throws IOException
     {
-        SctpConnection sctpConnection = endpoint.getSctpConnection();
+        SctpConnection sctpConnection = getSctpConnection();
         ColibriWebSocket webSocket = this.webSocket;
         String endpointId = endpoint.getID();
 
@@ -723,7 +704,7 @@ class EndpointMessageTransport
 
             webSocket = ws;
             webSocketLastActive = true;
-            sendMessage(ws, SERVER_HELLO_STR, "initial ServerHello");
+            sendMessage(ws, createServerHelloEvent(), "initial ServerHello");
         }
 
         notifyTransportChannelConnected();
@@ -775,4 +756,52 @@ class EndpointMessageTransport
         webSocketLastActive = true;
         onMessage(ws, message);
     }
+
+    /**
+     * @return the {@link SctpConnection} associated with this endpoint.
+     */
+    SctpConnection getSctpConnection()
+    {
+        return sctpConnection.get();
+    }
+
+    /**
+     * Sets the {@link SctpConnection} associated with this endpoint.
+     * @param sctpConnection the new {@link SctpConnection}.
+     */
+    void setSctpConnection(SctpConnection sctpConnection)
+    {
+        SctpConnection oldValue = getSctpConnection();
+
+        if (!Objects.equals(oldValue, sctpConnection))
+        {
+            if (oldValue != null && sctpConnection != null)
+            {
+                // This is not necessarily invalid, but with the current
+                // codebase it likely indicates a problem. If we start to
+                // actually use it, this warning should be removed.
+                logger.warn("Replacing an Endpoint's SctpConnection.");
+            }
+
+            this.sctpConnection = new WeakReference<>(sctpConnection);
+
+            if (sctpConnection != null)
+            {
+                if (sctpConnection.isReady())
+                {
+                    notifyTransportChannelConnected();
+                }
+                else
+                {
+                    sctpConnection.addChannelListener(webRtcDataStreamListener);
+                }
+            }
+
+            if (oldValue != null)
+            {
+                oldValue.removeChannelListener(webRtcDataStreamListener);
+            }
+        }
+    }
+
 }

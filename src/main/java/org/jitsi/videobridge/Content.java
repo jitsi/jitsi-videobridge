@@ -133,13 +133,19 @@ public class Content
 
     /**
      * Whether media recording is currently enabled for this <tt>Content</tt>.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     private boolean recording = false;
 
     /**
      * Path to the directory into which files relating to media recording for
      * this <tt>Content</tt> will be stored.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     private String recordingPath = null;
 
     /**
@@ -470,7 +476,10 @@ public class Content
      * If media recording is started, finds all SSRCs received on all channels,
      * and sets their endpoints to the <tt>Recorder</tt>'s <tt>Synchronizer</tt>
      * instance.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     void feedKnownSsrcsToSynchronizer()
     {
         Recorder recorder;
@@ -721,7 +730,10 @@ public class Content
      *
      * @return the <tt>Recorder</tt> instance used to record media for this
      * <tt>Content</tt>.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     public Recorder getRecorder()
     {
         if (recorder == null)
@@ -815,7 +827,10 @@ public class Content
      *
      * @return <tt>true</tt> if media recording for this <tt>Content</tt> is
      * currently enabled, and <tt>false</tt> otherwise.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     public boolean isRecording()
     {
         return recording;
@@ -831,7 +846,10 @@ public class Content
      *
      * @return the state of the media recording for this <tt>Content</tt>
      * after the attempt to enable (or disable).
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     public boolean setRecording(boolean recording, String path)
     {
         this.recordingPath = path;
@@ -870,7 +888,10 @@ public class Content
      * @param recorder the <tt>Recorder</tt> to start.
      * @return <tt>true</tt> if <tt>recorder</tt> was started, <tt>false</tt>
      * otherwise.
+     *
+     * @deprecated remove-with-recording
      */
+    @Deprecated
     private boolean startRecorder(Recorder recorder)
     {
         boolean started = false;

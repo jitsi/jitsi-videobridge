@@ -35,7 +35,6 @@ import org.jitsi.videobridge.rest.*;
  */
 public class Endpoint
     extends PropertyChangeNotifier
-    implements WebRtcDataStream.DataCallback
 {
     /**
      * The name of the <tt>Endpoint</tt> property <tt>channels</tt> which lists
@@ -57,14 +56,6 @@ public class Endpoint
      */
     public static final String PINNED_ENDPOINTS_PROPERTY_NAME
         = Endpoint.class.getName() + ".pinnedEndpoints";
-
-    /**
-     * The name of the <tt>Endpoint</tt> property <tt>sctpConnection</tt> which
-     * specifies the <tt>SctpConnection</tt> associated with the
-     * <tt>Endpoint</tt>.
-     */
-    public static final String SCTP_CONNECTION_PROPERTY_NAME
-        = Endpoint.class.getName() + ".sctpConnection";
 
     /**
      * The name of the <tt>Endpoint</tt> property <tt>selectedEndpoint</tt>
@@ -112,12 +103,6 @@ public class Endpoint
      * The string used to identify this endpoint for the purposes of logging.
      */
     private final String loggingId;
-
-    /**
-     * SCTP connection bound to this endpoint.
-     */
-    private WeakReference<SctpConnection> sctpConnection
-        = new WeakReference<>(null);
 
     /**
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
@@ -347,14 +332,16 @@ public class Endpoint
     }
 
     /**
-     * Returns an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>.
+     * Returns this {@link Endpoint}'s {@link SctpConnection}, if any. Note
+     * that this should NOT be used for sending messages -- use the abstract
+     * {@link EndpointMessageTransport} instead.
      *
      * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt> or
      * <tt>null</tt> otherwise.
      */
     public SctpConnection getSctpConnection()
     {
-        return sctpConnection.get();
+        return messageTransport.getSctpConnection();
     }
 
     /**
@@ -397,15 +384,6 @@ public class Endpoint
         return expired;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onBinaryData(WebRtcDataStream src, byte[] data)
-    {
-        messageTransport.onBinaryData(src, data);
-    }
-
     void pinnedEndpointsChanged(Set<String> newPinnedEndpoints)
     {
         // Check if that's different to what we think the pinned endpoints are.
@@ -445,15 +423,6 @@ public class Endpoint
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onStringData(WebRtcDataStream src, String msg)
-    {
-        messageTransport.onStringData(src, msg);
-    }
-
-    /**
      * Removes a specific <tt>Channel</tt> from the list of <tt>Channel</tt>s
      * associated with this <tt>Endpoint</tt>.
      *
@@ -486,36 +455,6 @@ public class Endpoint
         }
 
         return removed;
-    }
-
-    /**
-     * Notifies this <tt>Endpoint</tt> that its associated
-     * <tt>SctpConnection</tt> has become ready i.e. connected to the remote
-     * peer and operational.
-     *
-     * @param sctpConnection the <tt>SctpConnection</tt> which has become ready
-     * and is the cause of the method invocation
-     */
-    void sctpConnectionReady(SctpConnection sctpConnection)
-    {
-        if (sctpConnection.equals(getSctpConnection())
-                && !sctpConnection.isExpired()
-                && sctpConnection.isReady())
-        {
-            WebRtcDataStream dataStream;
-
-            try
-            {
-                dataStream = sctpConnection.getDefaultDataStream();
-                dataStream.setDataCallback(this);
-
-                messageTransport.notifyTransportChannelConnected();
-            }
-            catch (IOException e)
-            {
-                logger.error("Could not get the default data stream.", e);
-            }
-        }
     }
 
     /**
@@ -557,26 +496,9 @@ public class Endpoint
      * @param sctpConnection the <tt>SctpConnection</tt> to be bound to this
      * <tt>Endpoint</tt>.
      */
-    public void setSctpConnection(SctpConnection sctpConnection)
+    void setSctpConnection(SctpConnection sctpConnection)
     {
-        Object oldValue = getSctpConnection();
-
-        if (!Objects.equals(oldValue, sctpConnection))
-        {
-            if (oldValue != null && sctpConnection != null)
-            {
-                // This is not necessarily invalid, but with the current
-                // codebase it likely indicates a problem. If we start to
-                // actually use it, this warning should be removed.
-                logger.warn("Replacing an Endpoint's SctpConnection.");
-            }
-
-            this.sctpConnection = new WeakReference<>(sctpConnection);
-
-            firePropertyChange(
-                    SCTP_CONNECTION_PROPERTY_NAME,
-                    oldValue, getSctpConnection());
-        }
+        messageTransport.setSctpConnection(sctpConnection);
     }
 
     /**
