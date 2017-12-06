@@ -86,7 +86,7 @@ public class MediaStreamTrackFactory
      * experimental and is left disabled by default.
      */
     private static final boolean ENABLE_VP9_SVC
-        = cfg.getBoolean(ENABLE_VP9_SVC_PNAME, false);;
+        = cfg.getBoolean(ENABLE_VP9_SVC_PNAME, false);
 
     /**
      * A boolean that's controlling whether or not to enable SVC filtering for
