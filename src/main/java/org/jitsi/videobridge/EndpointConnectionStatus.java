@@ -15,17 +15,16 @@
  */
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.util.*;
+import java.util.*;
 
+import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
-
 import org.jitsi.service.configuration.*;
 import org.json.simple.*;
-
 import org.osgi.framework.*;
 
-import java.util.*;
+import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * This module monitors all endpoints across all conferences currently hosted
@@ -39,12 +38,12 @@ import java.util.*;
  * the endpoint is having some connectivity issues. Those may be temporary or
  * permanent. When that happens there will be a Colibri message broadcast
  * to all conference endpoints. The Colibri class name of the message is defined
- * in {@link #COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS} and it will contain
- * "active" attribute set to "false". If those problems turn out to be temporary
- * and the traffic is restored another message is sent with "active" set to
- * "true".
+ * in {@link EndpointMessageBuilder#COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS}
+ * and it will contain "active" attribute set to "false". If those problems turn
+ * out to be temporary and the traffic is restored another message is sent with
+ * "active" set to "true".
  *
- * The modules is started by OSGi as configured in
+ * The module is started by OSGi as configured in
  * {@link org.jitsi.videobridge.osgi.JvbBundleConfig}
  *
  * @author Pawel Domas
@@ -88,13 +87,6 @@ public class EndpointConnectionStatus
      */
     private final static Logger logger
         = Logger.getLogger(EndpointConnectionStatus.class);
-
-    /**
-     * Constant value defines the name of "colibriClass" for connectivity status
-     * notifications sent over the data channels.
-     */
-    private static final String COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS
-        = "EndpointConnectivityStatusChangeEvent";
 
     /**
      * How long it can take an endpoint to send first data, before it will
@@ -326,16 +318,15 @@ public class EndpointConnectionStatus
         }
     }
 
-    private void sendEndpointConnectionStatus(Endpoint    subjectEndpoint,
-                                              boolean     isConnected,
-                                              Endpoint    msgReceiver)
+    private void sendEndpointConnectionStatus(
+        Endpoint subjectEndpoint, boolean isConnected, Endpoint msgReceiver)
     {
         Conference conference = subjectEndpoint.getConference();
         if (conference != null)
         {
             String msg
                 = createEndpointConnectivityStatusChangeEvent(
-                        subjectEndpoint, isConnected);
+                        subjectEndpoint.getID(), isConnected);
             if (msgReceiver == null)
             {
                 // We broadcast the message also to the endpoint itself for
@@ -358,17 +349,6 @@ public class EndpointConnectionStatus
                         + " endpoint " + subjectEndpoint.getID()
                         + " without parent conference instance (expired?)");
         }
-    }
-
-    private String createEndpointConnectivityStatusChangeEvent(
-            Endpoint endpoint, boolean connected)
-    {
-        return
-            "{\"colibriClass\":\""
-                + COLIBRI_CLASS_ENDPOINT_CONNECTIVITY_STATUS
-                + "\",\"endpoint\":\"" + JSONValue.escape(endpoint.getID())
-                +"\", \"active\":\"" + String.valueOf(connected)
-                + "\"}";
     }
 
     private void cleanupExpiredEndpointsStatus()

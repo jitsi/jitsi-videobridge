@@ -36,7 +36,6 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.json.simple.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
@@ -547,7 +546,7 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessageOnDataChannels(
-                EndpointMessageTransport
+                EndpointMessageBuilder
                     .createDominantSpeakerEndpointChangeEvent(dominantSpeaker));
 
             if (isRecording() && (recorderEventHandler != null))
@@ -1449,7 +1448,7 @@ public class Conference
                 try
                 {
                     endpoint.sendMessage(
-                        EndpointMessageTransport
+                        EndpointMessageBuilder
                             .createDominantSpeakerEndpointChangeEvent(
                                 dominantSpeaker));
                 }

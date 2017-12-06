@@ -26,6 +26,8 @@ import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
 
+import static org.jitsi.videobridge.EndpointMessageBuilder.*;
+
 /**
  * Handles the functionality related to sending and receiving COLIBRI messages
  * for an {@link Endpoint}. Supports two underlying transport mechanisms --
@@ -36,67 +38,6 @@ import java.util.*;
 class EndpointMessageTransport
     implements WebRtcDataStream.DataCallback
 {
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedEndpointChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED
-        = "SelectedEndpointChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code SelectedEndpointChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED
-        = "SelectedEndpointsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code PinnedEndpointChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED
-        = "PinnedEndpointChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code PinnedEndpointsChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED
-        = "PinnedEndpointsChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code ClientHello} message.
-     */
-    public static final String COLIBRI_CLASS_CLIENT_HELLO
-        = "ClientHello";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code LastNChangedEvent}.
-     */
-    public static final String COLIBRI_CLASS_LASTN_CHANGED
-        = "LastNChangedEvent";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code EndpointMessage}.
-     */
-    public static final String COLIBRI_CLASS_ENDPOINT_MESSAGE
-        = "EndpointMessage";
-
-    /**
-     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
-     * {@code ReceiverVideoConstraint} message.
-     */
-    public static final String COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT
-        = "ReceiverVideoConstraint";
-
-    /**
-     * The string which encodes a COLIBRI {@code ServerHello} message.
-     */
-    private static final String SERVER_HELLO_STR
-        = "{\"colibriClass\":\"ServerHello\"}";
 
     /**
      * The {@link Logger} used by the {@link Endpoint} class to print debug
@@ -104,22 +45,6 @@ class EndpointMessageTransport
      */
     private static final Logger classLogger
         = Logger.getLogger(EndpointMessageTransport.class);
-
-    /**
-     * @param dominantSpeaker the dominant speaker in this multipoint conference
-     *
-     * @return a new <tt>String</tt> which represents a message to be sent
-     * to an endpoint in order to notify it that the dominant speaker in its
-     * multipoint conference has changed to a specific endpoint.
-     */
-    public static String createDominantSpeakerEndpointChangeEvent(
-        Endpoint dominantSpeaker)
-    {
-        return
-            "{\"colibriClass\":\"DominantSpeakerEndpointChangeEvent\","
-                + "\"dominantSpeakerEndpoint\":\""
-                + JSONValue.escape(dominantSpeaker.getID()) + "\"}";
-    }
 
     /**
      * The {@link Endpoint} associated with this
@@ -244,7 +169,7 @@ class EndpointMessageTransport
         // triggers a ServerHello response from Videobridge. The exchange
         // reveals (to the client) that the transport channel between the
         // remote endpoint and the Videobridge is operational.
-        sendMessage(src, SERVER_HELLO_STR, "response to ClientHello");
+        sendMessage(src, createServerHelloEvent(), "response to ClientHello");
     }
 
     /**
@@ -667,7 +592,8 @@ class EndpointMessageTransport
         {
             JSONObject jsonObject = (JSONObject) obj;
             // We utilize JSONObjects with colibriClass only.
-            String colibriClass = (String)jsonObject.get(Videobridge.COLIBRI_CLASS);
+            String colibriClass
+                = (String)jsonObject.get(Videobridge.COLIBRI_CLASS);
 
             if (colibriClass != null)
             {
@@ -778,7 +704,7 @@ class EndpointMessageTransport
 
             webSocket = ws;
             webSocketLastActive = true;
-            sendMessage(ws, SERVER_HELLO_STR, "initial ServerHello");
+            sendMessage(ws, createServerHelloEvent(), "initial ServerHello");
         }
 
         notifyTransportChannelConnected();

@@ -36,7 +36,8 @@ import org.jitsi.util.*;
 import org.jitsi.util.Logger; // Disambiguation.
 import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.cc.*;
-import org.json.simple.*;
+
+import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Implements an <tt>RtpChannel</tt> with <tt>MediaType.VIDEO</tt>.
@@ -518,10 +519,8 @@ public class VideoChannel
     }
 
     /**
-     * Sends a message with <tt>colibriClass</tt>
-     * <tt>LastNEndpointsChangeEvent</tt> to the <tt>Endpoint</tt> of this
-     * <tt>VideoChannel</tt> in order to notify it that the list/set of
-     * <tt>lastN</tt> has changed.
+     * Sends a message to the {@link Endpoint} of this {@link VideoChannel}
+     * in order to notify it that the list/set of {@code lastN} has changed.
      *
      * @param forwardedEndpoints the collection of forwarded endpoints.
      * @param endpointsEnteringLastN the <tt>Endpoint</tt>s which are entering
@@ -549,50 +548,21 @@ public class VideoChannel
         // endpointsEnteringLastN is specified.
         // XXX do we really want that?
         if (endpointsEnteringLastN == null)
-            endpointsEnteringLastN = forwardedEndpoints;
-
-        // XXX Should we just build JSON here?
-        // colibriClass
-        StringBuilder msg
-            = new StringBuilder(
-                    "{\"colibriClass\":\"LastNEndpointsChangeEvent\"");
-
         {
-            // lastNEndpoints
-            msg.append(",\"lastNEndpoints\":");
-            msg.append(getJsonString(forwardedEndpoints));
-
-            // endpointsEnteringLastN
-            msg.append(",\"endpointsEnteringLastN\":");
-            msg.append(getJsonString(endpointsEnteringLastN));
-
-            // conferenceEndpoints
-            msg.append(",\"conferenceEndpoints\":");
-            msg.append(getJsonString(conferenceEndpoints));
+            endpointsEnteringLastN = forwardedEndpoints;
         }
-        msg.append('}');
+
+        String msg = createLastNEndpointsChangeEvent(
+            forwardedEndpoints, endpointsEnteringLastN, conferenceEndpoints);
 
         try
         {
-            thisEndpoint.sendMessage(msg.toString());
+            thisEndpoint.sendMessage(msg);
         }
         catch (IOException e)
         {
             logger.error("Failed to send message on data channel.", e);
         }
-    }
-
-    private String getJsonString(Collection<String> strings)
-    {
-        JSONArray array = new JSONArray();
-        if (strings != null && !strings.isEmpty())
-        {
-            for (String s : strings)
-            {
-                array.add(s);
-            }
-        }
-        return array.toString();
     }
 
     /**
