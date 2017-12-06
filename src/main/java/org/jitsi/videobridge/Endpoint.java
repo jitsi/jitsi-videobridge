@@ -332,7 +332,9 @@ public class Endpoint
     }
 
     /**
-     * Returns an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt>.
+     * Returns this {@link Endpoint}'s {@link SctpConnection}, if any. Note
+     * that this should NOT be used for sending messages -- use the abstract
+     * {@link EndpointMessageTransport} instead.
      *
      * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt> or
      * <tt>null</tt> otherwise.

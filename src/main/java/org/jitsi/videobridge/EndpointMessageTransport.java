@@ -368,14 +368,6 @@ class EndpointMessageTransport
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void onBinaryData(WebRtcDataStream src, byte[] data)
-    {
-    }
-
-    /**
      * Handles an opaque message from this {@code Endpoint} that should be
      * forwarded to either: a) another client in this conference (1:1
      * message) or b) all other clients in this conference (broadcast message)
@@ -726,7 +718,7 @@ class EndpointMessageTransport
     private Object getActiveTransportChannel()
         throws IOException
     {
-        SctpConnection sctpConnection = endpoint.getSctpConnection();
+        SctpConnection sctpConnection = getSctpConnection();
         ColibriWebSocket webSocket = this.webSocket;
         String endpointId = endpoint.getID();
 
