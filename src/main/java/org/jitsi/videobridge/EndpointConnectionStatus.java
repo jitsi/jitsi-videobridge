@@ -21,7 +21,6 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
-import org.json.simple.*;
 import org.osgi.framework.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -331,7 +330,7 @@ public class EndpointConnectionStatus
             {
                 // We broadcast the message also to the endpoint itself for
                 // debugging purposes
-                conference.broadcastMessageOnDataChannels(msg);
+                conference.broadcastMessage(msg);
             }
             else
             {
