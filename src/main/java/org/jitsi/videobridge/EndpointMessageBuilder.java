@@ -1,3 +1,18 @@
+/*
+ * Copyright @ 2017 Atlassian Pty Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.jitsi.videobridge;
 
 import org.json.simple.*;
@@ -89,20 +104,21 @@ public class EndpointMessageBuilder
     public static final String COLIBRI_CLASS_SERVER_HELLO = "ServerHello";
 
     /**
-     * @param dominantSpeaker the dominant speaker in this multipoint conference
+     * @param endpoint the ID of the dominant speaker endpoint in this
+     * multipoint conference.
      *
      * @return a new <tt>String</tt> which represents a message to be sent
      * to an endpoint in order to notify it that the dominant speaker in its
      * multipoint conference has changed to a specific endpoint.
      */
     public static String createDominantSpeakerEndpointChangeEvent(
-        Endpoint dominantSpeaker)
+        String endpoint)
     {
         return
             "{\"colibriClass\":\""
                 + COLIBRI_CLASS_DOMINANT_SPEAKER_CHANGE + "\","
                 + "\"dominantSpeakerEndpoint\":\""
-                + JSONValue.escape(dominantSpeaker.getID()) + "\"}";
+                + JSONValue.escape(endpoint) + "\"}";
     }
 
     /**

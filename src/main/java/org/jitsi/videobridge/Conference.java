@@ -40,6 +40,8 @@ import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
+import static org.jitsi.videobridge.EndpointMessageBuilder.*;
+
 /**
  * Represents a conference in the terms of Jitsi Videobridge.
  *
@@ -546,8 +548,8 @@ public class Conference
         if (dominantSpeaker != null)
         {
             broadcastMessage(
-                EndpointMessageBuilder
-                    .createDominantSpeakerEndpointChangeEvent(dominantSpeaker));
+                    createDominantSpeakerEndpointChangeEvent(
+                        dominantSpeaker.getID()));
 
             if (isRecording() && (recorderEventHandler != null))
             {
@@ -1448,9 +1450,8 @@ public class Conference
                 try
                 {
                     endpoint.sendMessage(
-                        EndpointMessageBuilder
-                            .createDominantSpeakerEndpointChangeEvent(
-                                dominantSpeaker));
+                            createDominantSpeakerEndpointChangeEvent(
+                                dominantSpeaker.getID()));
                 }
                 catch (IOException e)
                 {
