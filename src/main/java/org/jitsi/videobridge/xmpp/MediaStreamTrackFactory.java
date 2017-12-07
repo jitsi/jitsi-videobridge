@@ -20,7 +20,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
+import org.jitsi.util.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -36,6 +37,13 @@ public class MediaStreamTrackFactory
      * The {@link ConfigurationService} to pull configuration options from.
      */
     private static ConfigurationService cfg = LibJitsi.getConfigurationService();
+
+    /**
+     * The {@link Logger} used by the {@link MediaStreamTrackDesc} class and its
+     * instances for logging output.
+     */
+    private static final Logger logger
+        = Logger.getLogger(MediaStreamTrackFactory.class);
 
     /**
      * The system property name that for a boolean that's controlling whether or
@@ -96,6 +104,24 @@ public class MediaStreamTrackFactory
      */
     private static final Boolean ENABLE_SVC
         = cfg.getBoolean(ENABLE_SVC_PNAME, false);
+
+    /**
+     * libjitsi isn't aware of the group semantics names defined in
+     * {@link SourceGroupPacketExtension}, which is how we distinguish secondary
+     * ssrcs, so we'll translate them into constants defined in libjitsi
+     */
+    private static Map<String, String> secondarySsrcTypeMap = null;
+
+    private static synchronized Map<String, String> getSecondarySsrcTypeMap()
+    {
+        if (secondarySsrcTypeMap == null)
+        {
+            secondarySsrcTypeMap = new HashMap<>();
+            secondarySsrcTypeMap.put(SourceGroupPacketExtension.SEMANTICS_FID, Constants.RTX);
+        }
+
+        return secondarySsrcTypeMap;
+    }
 
     /**
      * Creates encodings.
@@ -184,7 +210,18 @@ public class MediaStreamTrackFactory
                     if (ssrcSecondarySsrcs != null)
                     {
                         ssrcSecondarySsrcs.forEach(ssrcSecondarySsrc -> {
-                            rtpEncodings[idx].addSecondarySsrc(ssrcSecondarySsrc.ssrc, ssrcSecondarySsrc.type);
+                            String type = getSecondarySsrcTypeMap().get(ssrcSecondarySsrc.type);
+                            if (type == null)
+                            {
+                                logger.error("Unable to find a mapping for" +
+                                    " secondary ssrc type " + ssrcSecondarySsrc.type +
+                                    " will NOT included this secondary ssrc as" +
+                                    " an encoding");
+                            }
+                            else
+                            {
+                                rtpEncodings[idx].addSecondarySsrc(ssrcSecondarySsrc.ssrc, type);
+                            }
                         });
                     }
 
@@ -493,11 +530,6 @@ public class MediaStreamTrackFactory
 
         RTPEncodingDesc[] encodings = createRTPEncodings(track, primarySsrcs,
             numSpatialLayersPerStream, numTemporalLayersPerStream, allSecondarySsrcs);
-        System.out.println("BRIAN: created encodings:\n ");
-        for (int i = 0; i < encodings.length; ++i)
-        {
-            System.out.println(encodings[i]);
-        }
         assert(encodings.length <= numEncodings);
         System.arraycopy(encodings, 0, rtpEncodings, 0, encodings.length);
 
