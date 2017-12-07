@@ -20,7 +20,7 @@
   <properties>
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
-    <jitsi-desktop.version>2.13.9aab784</jitsi-desktop.version>
+    <jitsi-desktop.version>2.13.fdf384f</jitsi-desktop.version>
     <smack.version>4.2.1</smack.version>
   </properties>
 
@@ -152,7 +152,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20171013.160715-320</version>
+      <version>1.0-20171204.173547-328</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -195,6 +195,28 @@
       <version>3.4</version>
       <scope>test</scope>
     </dependency>
+	<!-- https://mvnrepository.com/artifact/org.powermock/powermock-core -->
+	<dependency>
+		<groupId>org.powermock</groupId>
+		<artifactId>powermock-core</artifactId>
+		<version>1.7.3</version>
+		<scope>test</scope>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/org.powermock/powermock-api-easymock -->
+	<dependency>
+		<groupId>org.powermock</groupId>
+		<artifactId>powermock-api-easymock</artifactId>
+		<version>1.7.3</version>
+		<scope>test</scope>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-junit4 -->
+	<dependency>
+		<groupId>org.powermock</groupId>
+		<artifactId>powermock-module-junit4</artifactId>
+		<version>1.7.3</version>
+		<scope>test</scope>
+	</dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
