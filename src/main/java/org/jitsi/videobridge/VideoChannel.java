@@ -361,6 +361,13 @@ public class VideoChannel
         return accept;
     }
 
+    @Override
+    public void setEndpoint(String newEndpointId)
+    {
+        super.setEndpoint(newEndpointId);
+        bitrateController.update(null, -1);
+    }
+
     /**
      * Gets the {@link BitrateController} which controls which endpoints'
      * video streams are to be forwarded on this {@link VideoChannel} (i.e.
