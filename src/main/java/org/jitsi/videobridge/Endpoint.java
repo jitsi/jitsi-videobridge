@@ -37,13 +37,6 @@ public class Endpoint
     extends PropertyChangeNotifier
 {
     /**
-     * The name of the <tt>Endpoint</tt> property <tt>channels</tt> which lists
-     * the <tt>RtpChannel</tt>s associated with the <tt>Endpoint</tt>.
-     */
-    public static final String CHANNELS_PROPERTY_NAME
-        = Endpoint.class.getName() + ".channels";
-
-    /**
      * The {@link Logger} used by the {@link Endpoint} class to print debug
      * information.
      */
@@ -171,13 +164,14 @@ public class Endpoint
      */
     public boolean addChannel(RtpChannel channel)
     {
-        if (channel == null)
-            throw new NullPointerException("channel");
+        Objects.requireNonNull(channel, "channel");
 
         // The expire state of Channel is final. Adding an expired Channel to
         // an Endpoint is a no-op.
         if (channel.isExpired())
+        {
             return false;
+        }
 
         boolean added = false;
         boolean removed = false;
@@ -213,8 +207,10 @@ public class Endpoint
             }
         }
 
-        if (added || removed)
-            firePropertyChange(CHANNELS_PROPERTY_NAME, null, null);
+        if (removed)
+        {
+            maybeExpire();
+        }
 
         return added;
     }
@@ -296,7 +292,9 @@ public class Endpoint
         }
 
         if (removed)
-            firePropertyChange(CHANNELS_PROPERTY_NAME, null, null);
+        {
+            maybeExpire();
+        }
 
         return channels;
     }
@@ -451,10 +449,21 @@ public class Endpoint
 
         if (removed)
         {
-            firePropertyChange(CHANNELS_PROPERTY_NAME, null, null);
+            maybeExpire();
         }
 
         return removed;
+    }
+
+    /**
+     * Expires this {@link Endpoint} if it has no channels and no SCTP connection.
+     */
+    private void maybeExpire()
+    {
+        if (getSctpConnection() == null && getChannelCount(null) == 0)
+        {
+            expire();
+        }
     }
 
     /**
@@ -499,6 +508,11 @@ public class Endpoint
     void setSctpConnection(SctpConnection sctpConnection)
     {
         messageTransport.setSctpConnection(sctpConnection);
+
+        if (getSctpConnection() == null)
+        {
+            maybeExpire();
+        }
     }
 
     /**
@@ -516,6 +530,7 @@ public class Endpoint
     public void expire()
     {
         this.expired = true;
+        getConference().endpointExpired(this);
     }
 
     /**
