@@ -559,41 +559,6 @@ public class Conference
     }
 
     /**
-     * Notifies this instance that there was a change in the value of a property
-     * of an <tt>Endpoint</tt> participating in this multipoint conference.
-     *
-     * @param endpoint the <tt>Endpoint</tt> which is the source of the
-     * event/notification and is participating in this multipoint conference
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the source of
-     * the event/notification, the name of the property and the old and new
-     * values of that property
-     */
-    private void endpointPropertyChange(
-            Endpoint endpoint,
-            PropertyChangeEvent ev)
-    {
-        String propertyName = ev.getPropertyName();
-
-        // An RtpChannel may have expired.
-        boolean maybeRemoveEndpoint
-            = Endpoint.CHANNELS_PROPERTY_NAME.equals(propertyName);
-
-        if (maybeRemoveEndpoint)
-        {
-            // It looks like there is a chance that the Endpoint may have
-            // expired. We have functionality though which could benefit from
-            // discovering that an Endpoint has expired as quickly as possible
-            // (e.g. ConferenceSpeechActivity). Consequently, try to expedite
-            // the removal of expired Endpoints.
-            if (endpoint.getSctpConnection() == null
-                    && endpoint.getChannelCount(null) == 0)
-            {
-                removeEndpoint(endpoint);
-            }
-        }
-    }
-
-    /**
      * Expires this <tt>Conference</tt>, its <tt>Content</tt>s and their
      * respective <tt>Channel</tt>s. Releases the resources acquired by this
      * instance throughout its life time and prepares it to be garbage
@@ -1387,49 +1352,26 @@ public class Conference
         {
             speechActivityPropertyChange(ev);
         }
-        else if (source instanceof Endpoint)
-        {
-            // We care about PropertyChangeEvents from Endpoint but only if the
-            // Endpoint in question is still participating in this Conference.
-            Endpoint endpoint = getEndpoint(((Endpoint) source).getID());
-
-            if (endpoint != null)
-            {
-                endpointPropertyChange(endpoint, ev);
-            }
-        }
     }
 
     /**
-     * Removes a specific <tt>Endpoint</tt> instance from this list of
-     * <tt>Endpoint</tt>s participating in this multipoint conference.
+     * Notifies this conference that one of it's endpoints has expired.
      *
-     * @param endpoint the <tt>Endpoint</tt> to remove
-     * @return <tt>true</tt> if the list of <tt>Endpoint</tt>s participating in
-     * this multipoint conference changed as a result of the execution of the
-     * method; otherwise, <tt>false</tt>
+     * @param endpoint the <tt>Endpoint</tt> which expired.
      */
-    private boolean removeEndpoint(Endpoint endpoint)
+    void endpointExpired(Endpoint endpoint)
     {
         boolean removed;
 
         synchronized (endpoints)
         {
             removed = endpoints.removeIf(Endpoint::isExpired);
-            removed |= endpoints.removeIf(e -> e == endpoint);
-
-            if (endpoint != null)
-            {
-                endpoint.expire();
-            }
         }
 
         if (removed)
         {
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
         }
-
-        return removed;
     }
 
     /**
