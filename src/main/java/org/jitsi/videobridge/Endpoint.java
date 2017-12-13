@@ -508,6 +508,11 @@ public class Endpoint
     void setSctpConnection(SctpConnection sctpConnection)
     {
         messageTransport.setSctpConnection(sctpConnection);
+
+        if (getSctpConnection() == null)
+        {
+            maybeExpire();
+        }
     }
 
     /**
