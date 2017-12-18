@@ -245,25 +245,21 @@ public class MediaStreamTrackFactory
     private static List<SecondarySsrc> getSecondarySsrcs(long ssrc, List<SourceGroupPacketExtension> sourceGroups)
     {
         List<SecondarySsrc> secondarySsrcs = new ArrayList<>();
-        if (sourceGroups != null)
+        for (SourceGroupPacketExtension sourceGroup : sourceGroups)
         {
-            for (SourceGroupPacketExtension sourceGroup : sourceGroups)
+            if (sourceGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
             {
-                if (sourceGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
-                {
-                    // Simulcast does not fall under the definition of 'secondary'
-                    // we want here.
-                    continue;
-                }
-                long groupPrimarySsrc = sourceGroup.getSources().get(0).getSSRC();
-                long groupSecondarySsrc = sourceGroup.getSources().get(1).getSSRC();
-                if (groupPrimarySsrc == ssrc)
-                {
-                    secondarySsrcs.add(new SecondarySsrc(groupSecondarySsrc, sourceGroup.getSemantics()));
-                }
+                // Simulcast does not fall under the definition of 'secondary'
+                // we want here.
+                continue;
+            }
+            long groupPrimarySsrc = sourceGroup.getSources().get(0).getSSRC();
+            long groupSecondarySsrc = sourceGroup.getSources().get(1).getSSRC();
+            if (groupPrimarySsrc == ssrc)
+            {
+                secondarySsrcs.add(new SecondarySsrc(groupSecondarySsrc, sourceGroup.getSemantics()));
             }
         }
-
         return secondarySsrcs;
     }
 
@@ -340,16 +336,8 @@ public class MediaStreamTrackFactory
         List<TrackSsrcs> trackSsrcsList = new ArrayList<>();
         // We'll need to keep track of which sources and groups have been processed,
         // so make copies of the lists we've been given so we can modify them.
-        List<SourcePacketExtension> sourcesCopy = new ArrayList<>();
-        List<SourceGroupPacketExtension> sourceGroupsCopy = new ArrayList<>();
-
-        if (sources != null) {
-            sourcesCopy.addAll(sources);
-        }
-
-        if (sourceGroups != null) {
-            sourceGroupsCopy.addAll(sourceGroups);
-        }
+        List<SourcePacketExtension> sourcesCopy = new ArrayList<>(sources);
+        List<SourceGroupPacketExtension> sourceGroupsCopy = new ArrayList<>(sourceGroups);
 
         // Note that the order we process these groups is important
         Arrays.asList(

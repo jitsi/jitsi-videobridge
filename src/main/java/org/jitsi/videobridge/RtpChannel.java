@@ -1900,9 +1900,19 @@ public class RtpChannel
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
-        boolean hasSources = sources != null && !sources.isEmpty();
-        boolean hasGroups = sourceGroups != null && !sourceGroups.isEmpty();
-        if (!hasSources && !hasGroups)
+        // replace null sources / sourceGroups with empty collection
+        // so that downstreams do not need to take care of nulls.
+        if (sources == null)
+        {
+            sources = Collections.<SourcePacketExtension>emptyList();
+        }
+
+        if (sourceGroups == null)
+        {
+            sourceGroups = Collections.<SourceGroupPacketExtension>emptyList();
+        }
+
+        if (sources.isEmpty() && sourceGroups.isEmpty())
         {
             return false;
         }
