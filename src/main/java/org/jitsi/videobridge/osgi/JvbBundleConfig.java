@@ -183,7 +183,7 @@ public class JvbBundleConfig
         defaults.put(BitrateController.TRUST_BWE_PNAME, true_);
 
         // Enable VP8 temporal scalability filtering by default.
-        defaults.put(MediaStreamTrackFactory.ENABLE_SVC_PNAME, true_);
+        defaults.put(MediaStreamTrackFactory.ENABLE_VP8_SVC_PNAME, true_);
 
         // Enable AST RBE by default.
         defaults.put(RemoteBitrateEstimatorWrapper.ENABLE_AST_RBE_PNAME, true_);

@@ -1925,9 +1925,11 @@ public class RtpChannel
 
         if (mediaStreamTrackReceiver != null)
         {
+            MediaStreamTrackFactory mediaStreamTrackFactory
+                = new MediaStreamTrackFactory
+                (mediaStreamTrackReceiver, sources, sourceGroups);
             MediaStreamTrackDesc[] newTracks
-                = MediaStreamTrackFactory.createMediaStreamTracks(
-                    mediaStreamTrackReceiver, sources, sourceGroups);
+                = mediaStreamTrackFactory.createMediaStreamTracks();
 
             return mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
         }
