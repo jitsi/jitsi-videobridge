@@ -393,6 +393,15 @@ public class MediaStreamTrackFactory
             });
         });
 
+        if (!sourceGroupsCopy.isEmpty()) {
+            logger.warn("Unprocessed source groups: " + sourceGroupsCopy);
+        }
+
+        // The remaining sources are not part of any group. Add them as tracks
+        // with their own primary SSRC.
+        sourcesCopy.forEach(
+            source -> trackSsrcsList.add(new TrackSsrcs(source.getSSRC())));
+
         return trackSsrcsList;
     }
 
@@ -503,6 +512,11 @@ public class MediaStreamTrackFactory
         implements Iterable<Long>
     {
         private List<Long> trackSsrcs;
+
+        private TrackSsrcs(Long ssrc)
+        {
+            this(Collections.singletonList(ssrc));
+        }
 
         public TrackSsrcs(List<Long> trackSsrcs)
         {
