@@ -1904,12 +1904,12 @@ public class RtpChannel
         // so that downstreams do not need to take care of nulls.
         if (sources == null)
         {
-            sources = Collections.<SourcePacketExtension>emptyList();
+            sources = Collections.emptyList();
         }
 
         if (sourceGroups == null)
         {
-            sourceGroups = Collections.<SourceGroupPacketExtension>emptyList();
+            sourceGroups = Collections.emptyList();
         }
 
         if (sources.isEmpty() && sourceGroups.isEmpty())
