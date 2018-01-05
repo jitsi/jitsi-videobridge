@@ -117,7 +117,8 @@ public class MediaStreamTrackFactory
         if (secondarySsrcTypeMap == null)
         {
             secondarySsrcTypeMap = new HashMap<>();
-            secondarySsrcTypeMap.put(SourceGroupPacketExtension.SEMANTICS_FID, Constants.RTX);
+            secondarySsrcTypeMap.put(
+                SourceGroupPacketExtension.SEMANTICS_FID, Constants.RTX);
         }
 
         return secondarySsrcTypeMap;
@@ -206,21 +207,26 @@ public class MediaStreamTrackFactory
                         = new RTPEncodingDesc(track, idx,
                         primary.get(streamIdx),
                         temporalId, spatialId, height, frameRate, dependencies);
-                    SecondarySsrcs ssrcSecondarySsrcs = secondarySsrcs.get(primary.get(streamIdx));
+                    SecondarySsrcs ssrcSecondarySsrcs
+                        = secondarySsrcs.get(primary.get(streamIdx));
                     if (ssrcSecondarySsrcs != null)
                     {
                         ssrcSecondarySsrcs.forEach(ssrcSecondarySsrc -> {
-                            String type = getSecondarySsrcTypeMap().get(ssrcSecondarySsrc.type);
+                            String type
+                                = getSecondarySsrcTypeMap()
+                                        .get(ssrcSecondarySsrc.type);
                             if (type == null)
                             {
                                 logger.error("Unable to find a mapping for" +
-                                    " secondary ssrc type " + ssrcSecondarySsrc.type +
+                                    " secondary ssrc type " +
+                                                 ssrcSecondarySsrc.type +
                                     " will NOT included this secondary ssrc as" +
                                     " an encoding");
                             }
                             else
                             {
-                                rtpEncodings[idx].addSecondarySsrc(ssrcSecondarySsrc.ssrc, type);
+                                rtpEncodings[idx].addSecondarySsrc(
+                                    ssrcSecondarySsrc.ssrc, type);
                             }
                         });
                     }
@@ -236,18 +242,20 @@ public class MediaStreamTrackFactory
     }
 
     /**
-     * Get the 'secondary' ssrcs for the given primary ssrc.  'Secondary' here
+     * Get the 'secondary' ssrcs for the given primary ssrc. 'Secondary' here
      * is defined as things like rtx or fec ssrcs.
-     * @param ssrc the primay ssrc for which to get the secondary ssrcs
+     * @param ssrc the primary ssrc for which to get the secondary ssrcs
      * @param sourceGroups the source groups
      * @return a map of secondary ssrc -> type (rtx, fec, etc.)
      */
-    private static List<SecondarySsrc> getSecondarySsrcs(long ssrc, List<SourceGroupPacketExtension> sourceGroups)
+    private static List<SecondarySsrc> getSecondarySsrcs(
+        long ssrc, List<SourceGroupPacketExtension> sourceGroups)
     {
         List<SecondarySsrc> secondarySsrcs = new ArrayList<>();
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
         {
-            if (sourceGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
+            if (sourceGroup.getSemantics().equalsIgnoreCase(
+                SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
             {
                 // Simulcast does not fall under the definition of 'secondary'
                 // we want here.
@@ -257,25 +265,31 @@ public class MediaStreamTrackFactory
             long groupSecondarySsrc = sourceGroup.getSources().get(1).getSSRC();
             if (groupPrimarySsrc == ssrc)
             {
-                secondarySsrcs.add(new SecondarySsrc(groupSecondarySsrc, sourceGroup.getSemantics()));
+                secondarySsrcs.add(
+                    new SecondarySsrc(
+                        groupSecondarySsrc, sourceGroup.getSemantics()));
             }
         }
         return secondarySsrcs;
     }
 
     /**
-     * Build a map of source ssrc -> a list of secondary ssrc, secondary ssrc type
+     * Build a map of source ssrc -> a list of secondary ssrc, secondary ssrc
+     * type
      * @param ssrcs the ssrcs to get secondary ssrcs for
      * @param sourceGroups the signaled source groups
-     * @return map of source ssrc -> a list of secondary ssrc, secondary ssrc type
+     * @return map of source ssrc -> a list of secondary ssrc, secondary ssrc
+     * type
      */
-    private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(TrackSsrcs ssrcs, List<SourceGroupPacketExtension> sourceGroups)
+    private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(
+            TrackSsrcs ssrcs, List<SourceGroupPacketExtension> sourceGroups)
     {
         Map<Long, SecondarySsrcs> allSecondarySsrcs = new HashMap<>();
 
         for (long ssrc : ssrcs)
         {
-            List<SecondarySsrc> secondarySsrcs = getSecondarySsrcs(ssrc, sourceGroups);
+            List<SecondarySsrc> secondarySsrcs
+                = getSecondarySsrcs(ssrc, sourceGroups);
             allSecondarySsrcs.put(ssrc, new SecondarySsrcs(secondarySsrcs));
         }
         return allSecondarySsrcs;
@@ -287,7 +301,8 @@ public class MediaStreamTrackFactory
      * @param groups
      * @return
      */
-    private static List<SourceGroupPacketExtension> getGroups(final String semantics, final List<SourceGroupPacketExtension> groups)
+    private static List<SourceGroupPacketExtension> getGroups(
+        final String semantics, final List<SourceGroupPacketExtension> groups)
     {
         return groups.stream()
             .filter(sg -> sg.getSemantics().equalsIgnoreCase(semantics))
@@ -303,8 +318,10 @@ public class MediaStreamTrackFactory
      * @param sources the set of sources
      * @param sourceGroups the set of groups
      */
-    private static void removeReferences(TrackSsrcs trackSsrcs, List<SourcePacketExtension> sources,
-                                         List<SourceGroupPacketExtension> sourceGroups)
+    private static void removeReferences(
+            TrackSsrcs trackSsrcs,
+            List<SourcePacketExtension> sources,
+            List<SourceGroupPacketExtension> sourceGroups)
     {
         sources.removeIf(source -> trackSsrcs.contains(source.getSSRC()));
         sourceGroups.removeIf(group -> {
@@ -327,17 +344,20 @@ public class MediaStreamTrackFactory
      * @return a list of {@link TrackSsrcs}. Each TrackSsrc object represents
      * a set of primary video ssrcs belonging to a single track (video source)
      */
-    private static List<TrackSsrcs> getTrackSsrcs(List<SourcePacketExtension> sources,
-                                                  List<SourceGroupPacketExtension> sourceGroups)
+    private static List<TrackSsrcs> getTrackSsrcs(
+            List<SourcePacketExtension> sources,
+            List<SourceGroupPacketExtension> sourceGroups)
     {
         //FIXME: determining the individual tracks should be done via msid,
         // but somewhere along the line we seem to lose the msid information
         // in the packet extensions
         List<TrackSsrcs> trackSsrcsList = new ArrayList<>();
-        // We'll need to keep track of which sources and groups have been processed,
-        // so make copies of the lists we've been given so we can modify them.
+        // We'll need to keep track of which sources and groups have been
+        // processed, so make copies of the lists we've been given so we can
+        // modify them.
         List<SourcePacketExtension> sourcesCopy = new ArrayList<>(sources);
-        List<SourceGroupPacketExtension> sourceGroupsCopy = new ArrayList<>(sourceGroups);
+        List<SourceGroupPacketExtension> sourceGroupsCopy
+            = new ArrayList<>(sourceGroups);
 
         // Note that the order we process these groups is important
         Arrays.asList(
@@ -345,16 +365,19 @@ public class MediaStreamTrackFactory
             SourceGroupPacketExtension.SEMANTICS_FID,
             SourceGroupPacketExtension.SEMANTICS_FEC
         ).forEach(groupSem -> {
-            List<SourceGroupPacketExtension> groups = getGroups(groupSem, sourceGroupsCopy);
+            List<SourceGroupPacketExtension> groups
+                = getGroups(groupSem, sourceGroupsCopy);
             groups.forEach(group -> {
                 List<Long> ssrcs;
-                // For a simulcast group, all the ssrcs are considered primary ssrcs,
-                // but for others, only the main ssrc of the group is
-                if (groupSem.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
+                // For a simulcast group, all the ssrcs are considered primary
+                // ssrcs, but for others, only the main ssrc of the group is
+                if (groupSem.equalsIgnoreCase(
+                    SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
                 {
-                    ssrcs = group.getSources().stream()
-                        .map(SourcePacketExtension::getSSRC)
-                        .collect(Collectors.toList());
+                    ssrcs
+                        = group.getSources().stream()
+                            .map(SourcePacketExtension::getSSRC)
+                            .collect(Collectors.toList());
                 }
                 else
                 {
@@ -362,8 +385,8 @@ public class MediaStreamTrackFactory
                 }
 
                 TrackSsrcs trackSsrcs = new TrackSsrcs(ssrcs);
-                // Now we need to remove any groups with these ssrcs as their primary,
-                // or sources that correspond to one of these ssrcs
+                // Now we need to remove any groups with these ssrcs as their
+                // primary, or sources that correspond to one of these ssrcs
                 removeReferences(trackSsrcs, sourcesCopy, sourceGroupsCopy);
 
                 trackSsrcsList.add(trackSsrcs);
@@ -393,6 +416,7 @@ public class MediaStreamTrackFactory
     {
         List<TrackSsrcs> trackSsrcsList = getTrackSsrcs(sources, sourceGroups);
         List<MediaStreamTrackDesc> tracks = new ArrayList<>();
+
         trackSsrcsList.forEach(trackSsrcs -> {
             // As of now, we only ever have 1 spatial layer per stream
             int numSpatialLayersPerStream = 1;
@@ -401,11 +425,15 @@ public class MediaStreamTrackFactory
             {
                 numTemporalLayersPerStream = VP8_SIMULCAST_TEMPORAL_LAYERS;
             }
-            Map<Long, SecondarySsrcs> secondarySsrcs = getAllSecondarySsrcs(trackSsrcs,
-                sourceGroups);
-            MediaStreamTrackDesc track = createTrack(mediaStreamTrackReceiver,
-                trackSsrcs, numSpatialLayersPerStream,
-                numTemporalLayersPerStream, secondarySsrcs);
+            Map<Long, SecondarySsrcs> secondarySsrcs
+                = getAllSecondarySsrcs(trackSsrcs, sourceGroups);
+            MediaStreamTrackDesc track
+                = createTrack(
+                        mediaStreamTrackReceiver,
+                        trackSsrcs,
+                        numSpatialLayersPerStream,
+                        numTemporalLayersPerStream,
+                        secondarySsrcs);
             tracks.add(track);
         });
 
@@ -516,20 +544,26 @@ public class MediaStreamTrackFactory
      * its corresponding rtx and fec ssrcs)
      * @return the created MediaStreamTrack
      */
-    private static MediaStreamTrackDesc createTrack(MediaStreamTrackReceiver receiver,
-                                             TrackSsrcs primarySsrcs,
-                                             int numSpatialLayersPerStream,
-                                             int numTemporalLayersPerStream,
-                                             Map<Long, SecondarySsrcs> allSecondarySsrcs)
+    private static MediaStreamTrackDesc createTrack(
+            MediaStreamTrackReceiver receiver,
+            TrackSsrcs primarySsrcs,
+            int numSpatialLayersPerStream,
+            int numTemporalLayersPerStream,
+            Map<Long, SecondarySsrcs> allSecondarySsrcs)
     {
-        int numEncodings = primarySsrcs.size() * numSpatialLayersPerStream * numTemporalLayersPerStream;
+        int numEncodings
+            = primarySsrcs.size()
+                * numSpatialLayersPerStream * numTemporalLayersPerStream;
         boolean isSimulcast = primarySsrcs.size() > 1;
         RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
         MediaStreamTrackDesc track =
             new MediaStreamTrackDesc(receiver, rtpEncodings, isSimulcast);
 
-        RTPEncodingDesc[] encodings = createRTPEncodings(track, primarySsrcs,
-            numSpatialLayersPerStream, numTemporalLayersPerStream, allSecondarySsrcs);
+        RTPEncodingDesc[] encodings
+            = createRTPEncodings(
+                    track, primarySsrcs,
+                    numSpatialLayersPerStream, numTemporalLayersPerStream,
+                    allSecondarySsrcs);
         assert(encodings.length <= numEncodings);
         System.arraycopy(encodings, 0, rtpEncodings, 0, encodings.length);
 
