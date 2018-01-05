@@ -78,6 +78,30 @@ public class MediaStreamTrackFactoryTest
         verifyAll();
     }
 
+    // 1 video stream -> 1 track, 1 encoding
+    @Test
+    public void createMediaStreamTrack()
+        throws Exception
+    {
+        setUpMockConfigurationServiceAndUseDefaults();
+        replayAll();
+
+        long videoSsrc = 12345;
+
+        SourcePacketExtension videoSource = createSource(videoSsrc);
+
+        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
+
+        MediaStreamTrackDesc[] tracks =
+            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+                Collections.singletonList(videoSource), Collections.emptyList());
+
+        assertNotNull(tracks);
+        assertEquals(1, tracks.length);
+        MediaStreamTrackDesc track = tracks[0];
+        assertEquals(1, track.getRTPEncodings().length);
+    }
+
     // 1 video stream, 1 rtx -> 1 track, 1 encoding
     @Test
     public void createMediaStreamTracks1()
