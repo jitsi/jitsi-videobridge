@@ -358,8 +358,13 @@ public class BitrateController
         SimulcastController simulcastController
             = ssrcToBitrateController.get(ssrc);
 
-        return simulcastController != null
-            && simulcastController.accept(pkt);
+        if (simulcastController == null) {
+            logger.warn("Dropping an RTP packet, because the SSRC has not " +
+                "been signaled:" + ssrc);
+            return false;
+        }
+
+        return simulcastController.accept(pkt);
     }
 
     /**
