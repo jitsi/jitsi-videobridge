@@ -323,6 +323,7 @@ public class MediaStreamTrackFactory
             List<SourcePacketExtension> sources,
             List<SourceGroupPacketExtension> sourceGroups)
     {
+        // Remove any groups to which any of the ssrcs of this track belong
         List<SourceGroupPacketExtension> groupsToRemove
             = sourceGroups.stream()
                 .filter(
@@ -332,6 +333,17 @@ public class MediaStreamTrackFactory
 
         sourceGroups.removeAll(groupsToRemove);
 
+        /*
+         * Remove not only the ssrcs in the track itself, but any ssrcs that
+         * were in groups along with ssrcs from the track. E.g. if we have:`
+         * SIM 1 2 3
+         * RTX 1 10
+         * RTX 2 20
+         * RTX 3 30
+         * then we need to make sure ssrcs 10, 20 and 30 don't create tracks of
+         * their own and are removed along with the processing of the track
+         * with ssrcs 1, 2 and 3.
+         */
         Set<Long> ssrcsToRemove = extractSsrcs(groupsToRemove);
         sources.removeIf(
             source ->
