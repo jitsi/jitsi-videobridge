@@ -323,18 +323,36 @@ public class MediaStreamTrackFactory
             List<SourcePacketExtension> sources,
             List<SourceGroupPacketExtension> sourceGroups)
     {
-        sources.removeIf(source -> trackSsrcs.contains(source.getSSRC()));
-        sourceGroups.removeIf(group -> {
-            for (SourcePacketExtension source : group.getSources())
-            {
-                if (trackSsrcs.contains(source.getSSRC()))
-                {
-                    return true;
-                }
-            }
-            return false;
-        });
+        List<SourceGroupPacketExtension> groupsToRemove
+            = sourceGroups.stream()
+                .filter(
+                    group -> group.getSources().stream().anyMatch(
+                        source -> trackSsrcs.contains(source.getSSRC())))
+                .collect(Collectors.toList());
+
+        sourceGroups.removeAll(groupsToRemove);
+
+        Set<Long> ssrcsToRemove = extractSsrcs(groupsToRemove);
+        sources.removeIf(
+            source ->
+                trackSsrcs.contains(source.getSSRC())
+                    || ssrcsToRemove.contains(source.getSSRC()));
     }
+
+    /**
+     * Extracts all SSRCs from all sources of a list of source groups.
+     * @param groups the list of groups.
+     * @return the set of SSRCs contained in one of the groups.
+     */
+    private static Set<Long> extractSsrcs(
+        List<SourceGroupPacketExtension> groups)
+    {
+        Set<Long> ssrcs = new HashSet<>();
+        groups.forEach(
+            group -> group.getSources().forEach(
+                source -> ssrcs.add(source.getSSRC())));
+        return ssrcs;
+    };
 
     /**
      * Given the sources and groups, return a list of the ssrcs for each
