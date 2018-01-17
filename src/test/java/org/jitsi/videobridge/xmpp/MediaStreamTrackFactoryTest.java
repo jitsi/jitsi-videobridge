@@ -6,7 +6,6 @@ import org.easymock.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.*;
 import org.junit.*;
 import org.junit.runner.*;
 import org.powermock.api.easymock.*;
@@ -14,8 +13,6 @@ import org.powermock.core.classloader.annotations.*;
 import org.powermock.modules.junit4.*;
 import org.powermock.reflect.*;
 
-
-import java.lang.reflect.*;
 import java.util.*;
 
 import static org.easymock.EasyMock.*;
@@ -28,7 +25,8 @@ public class MediaStreamTrackFactoryTest
 {
     private ConfigurationService mockConfigurationService;
 
-    private SourceGroupPacketExtension createGroup(String semantics, SourcePacketExtension... sources)
+    private SourceGroupPacketExtension createGroup(
+        String semantics, SourcePacketExtension... sources)
     {
         SourceGroupPacketExtension sgpe = new SourceGroupPacketExtension();
         sgpe.setSemantics(semantics);
@@ -47,17 +45,27 @@ public class MediaStreamTrackFactoryTest
 
     private void setUpMockConfigurationService()
     {
-        mockConfigurationService = PowerMock.createMock(ConfigurationService.class);
-        expect(LibJitsi.getConfigurationService()).andReturn(mockConfigurationService).anyTimes();
+        mockConfigurationService
+            = PowerMock.createMock(ConfigurationService.class);
+        expect(LibJitsi.getConfigurationService())
+            .andReturn(mockConfigurationService).anyTimes();
 
         //Capture<Boolean> boolCapture = Capture.newInstance();
-        //expect(cs.getBoolean(EasyMock.anyString(), EasyMock.captureBoolean(boolCapture))).andReturn(boolCapture.getValue());
+        //expect(cs.getBoolean(
+        // EasyMock.anyString(), EasyMock.captureBoolean(boolCapture)))
+        // .andReturn(boolCapture.getValue());
     }
 
     private void useMockDefaults()
     {
-        expect(mockConfigurationService.getBoolean(EasyMock.anyString(), EasyMock.anyBoolean())).andAnswer(() -> (boolean)EasyMock.getCurrentArguments()[1]).anyTimes();
-        expect(mockConfigurationService.getInt(EasyMock.anyString(), EasyMock.anyInt())).andAnswer(() -> (int)EasyMock.getCurrentArguments()[1]).anyTimes();
+        expect(mockConfigurationService.getBoolean(
+                EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andAnswer(() -> (boolean)EasyMock.getCurrentArguments()[1])
+            .anyTimes();
+        expect(mockConfigurationService.getInt(
+                EasyMock.anyString(), EasyMock.anyInt()))
+            .andAnswer(() -> (int)EasyMock.getCurrentArguments()[1])
+            .anyTimes();
     }
 
     private void setUpMockConfigurationServiceAndUseDefaults()
@@ -117,7 +125,9 @@ public class MediaStreamTrackFactoryTest
         SourcePacketExtension videoSource = createSource(videoSsrc);
         SourcePacketExtension rtx = createSource(rtxSsrc);
 
-        SourceGroupPacketExtension rtxGroup = createGroup(SourceGroupPacketExtension.SEMANTICS_FID, videoSource, rtx);
+        SourceGroupPacketExtension rtxGroup
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource, rtx);
 
         MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
 
@@ -154,16 +164,29 @@ public class MediaStreamTrackFactoryTest
         SourcePacketExtension rtx2 = createSource(rtxSsrc2);
         SourcePacketExtension rtx3 = createSource(rtxSsrc3);
 
-        SourceGroupPacketExtension simGroup = createGroup(SourceGroupPacketExtension.SEMANTICS_SIMULCAST, videoSource1, videoSource2, videoSource3);
-        SourceGroupPacketExtension rtxGroup1 = createGroup(SourceGroupPacketExtension.SEMANTICS_FID, videoSource1, rtx1);
-        SourceGroupPacketExtension rtxGroup2 = createGroup(SourceGroupPacketExtension.SEMANTICS_FID, videoSource2, rtx2);
-        SourceGroupPacketExtension rtxGroup3 = createGroup(SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
+        SourceGroupPacketExtension simGroup
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_SIMULCAST,
+                videoSource1,
+                videoSource2,
+                videoSource3);
+        SourceGroupPacketExtension rtxGroup1
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource1, rtx1);
+        SourceGroupPacketExtension rtxGroup2
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource2, rtx2);
+        SourceGroupPacketExtension rtxGroup3
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
 
         MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
 
         MediaStreamTrackDesc[] tracks =
             MediaStreamTrackFactory.createMediaStreamTracks(receiver,
-                Arrays.asList(videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3), Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
+                Arrays.asList(
+                    videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3),
+                Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
 
         assertNotNull(tracks);
         assertEquals(1, tracks.length);
@@ -182,9 +205,11 @@ public class MediaStreamTrackFactoryTest
         replayAll();
 
         // Here we add an override for the config service for a specific setting
-        // NOTE: we can't do this via the mock return values, because the mock values
-        // are only read once for the entire test class (because the fields are static)
-        Whitebox.setInternalState(MediaStreamTrackFactory.class, "ENABLE_SVC", true);
+        // NOTE: we can't do this via the mock return values, because the mock
+        // values are only read once for the entire test class (because the
+        // fields are static)
+        Whitebox.setInternalState(
+            MediaStreamTrackFactory.class, "ENABLE_SVC", true);
 
         long videoSsrc1 = 12345;
         long videoSsrc2 = 23456;
@@ -200,16 +225,27 @@ public class MediaStreamTrackFactoryTest
         SourcePacketExtension rtx2 = createSource(rtxSsrc2);
         SourcePacketExtension rtx3 = createSource(rtxSsrc3);
 
-        SourceGroupPacketExtension simGroup = createGroup(SourceGroupPacketExtension.SEMANTICS_SIMULCAST, videoSource1, videoSource2, videoSource3);
-        SourceGroupPacketExtension rtxGroup1 = createGroup(SourceGroupPacketExtension.SEMANTICS_FID, videoSource1, rtx1);
-        SourceGroupPacketExtension rtxGroup2 = createGroup(SourceGroupPacketExtension.SEMANTICS_FID, videoSource2, rtx2);
-        SourceGroupPacketExtension rtxGroup3 = createGroup(SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
+        SourceGroupPacketExtension simGroup
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_SIMULCAST,
+                videoSource1, videoSource2, videoSource3);
+        SourceGroupPacketExtension rtxGroup1
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource1, rtx1);
+        SourceGroupPacketExtension rtxGroup2
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource2, rtx2);
+        SourceGroupPacketExtension rtxGroup3
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
 
         MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
 
         MediaStreamTrackDesc[] tracks =
             MediaStreamTrackFactory.createMediaStreamTracks(receiver,
-                Arrays.asList(videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3), Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
+                Arrays.asList(
+                    videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3),
+                Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
 
         assertNotNull(tracks);
         assertEquals(1, tracks.length);
