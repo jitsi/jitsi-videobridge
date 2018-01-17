@@ -200,8 +200,7 @@ public class MediaStreamTrackFactoryTest
         throws
         Exception
     {
-        setUpMockConfigurationService();
-        useMockDefaults();
+        setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
         // Here we add an override for the config service for a specific setting
@@ -251,5 +250,73 @@ public class MediaStreamTrackFactoryTest
         assertEquals(1, tracks.length);
         MediaStreamTrackDesc track = tracks[0];
         assertEquals(9, track.getRTPEncodings().length);
+    }
+
+    // 3 sim streams with rtx, 1 stream with rtx, 1 stream without rtx
+    @Test
+    public void createMediaStreamTracks4()
+        throws Exception
+    {
+        setUpMockConfigurationServiceAndUseDefaults();
+        replayAll();
+
+        Whitebox.setInternalState(
+            MediaStreamTrackFactory.class, "ENABLE_SVC", true);
+
+        long videoSsrc1 = 12345;
+        long videoSsrc2 = 23456;
+        long videoSsrc3 = 34567;
+        long videoSsrc4 = 45678;
+        long videoSsrc5 = 56789;
+        long rtxSsrc1 = 54321;
+        long rtxSsrc2 = 43215;
+        long rtxSsrc3 = 32154;
+        long rtxSsrc4 = 21543;
+
+        SourcePacketExtension videoSource1 = createSource(videoSsrc1);
+        SourcePacketExtension videoSource2 = createSource(videoSsrc2);
+        SourcePacketExtension videoSource3 = createSource(videoSsrc3);
+        SourcePacketExtension videoSource4 = createSource(videoSsrc4);
+        SourcePacketExtension videoSource5 = createSource(videoSsrc5);
+        SourcePacketExtension rtx1 = createSource(rtxSsrc1);
+        SourcePacketExtension rtx2 = createSource(rtxSsrc2);
+        SourcePacketExtension rtx3 = createSource(rtxSsrc3);
+        SourcePacketExtension rtx4 = createSource(rtxSsrc4);
+
+        SourceGroupPacketExtension simGroup
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_SIMULCAST,
+                videoSource1,
+                videoSource2,
+                videoSource3);
+        SourceGroupPacketExtension rtxGroup1
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource1, rtx1);
+        SourceGroupPacketExtension rtxGroup2
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource2, rtx2);
+        SourceGroupPacketExtension rtxGroup3
+            = createGroup(
+                SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
+        SourceGroupPacketExtension rtxGroup4
+            = createGroup(
+            SourceGroupPacketExtension.SEMANTICS_FID, videoSource4, rtx4);
+
+        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
+
+        MediaStreamTrackDesc[] tracks =
+            MediaStreamTrackFactory.createMediaStreamTracks(
+                receiver,
+                Arrays.asList(
+                    videoSource1, videoSource2, videoSource3, videoSource4,
+                    videoSource5, rtx1, rtx2, rtx3, rtx4),
+                Arrays.asList(
+                    simGroup, rtxGroup1, rtxGroup2, rtxGroup3, rtxGroup4));
+
+        assertNotNull(tracks);
+        assertEquals(3, tracks.length);
+        assertEquals(9, tracks[0].getRTPEncodings().length);
+        assertEquals(1, tracks[1].getRTPEncodings().length);
+        assertEquals(1, tracks[2].getRTPEncodings().length);
     }
 }
