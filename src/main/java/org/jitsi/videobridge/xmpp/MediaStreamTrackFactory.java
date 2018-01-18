@@ -323,18 +323,48 @@ public class MediaStreamTrackFactory
             List<SourcePacketExtension> sources,
             List<SourceGroupPacketExtension> sourceGroups)
     {
-        sources.removeIf(source -> trackSsrcs.contains(source.getSSRC()));
-        sourceGroups.removeIf(group -> {
-            for (SourcePacketExtension source : group.getSources())
-            {
-                if (trackSsrcs.contains(source.getSSRC()))
-                {
-                    return true;
-                }
-            }
-            return false;
-        });
+        // Remove any groups to which any of the ssrcs of this track belong
+        List<SourceGroupPacketExtension> groupsToRemove
+            = sourceGroups.stream()
+                .filter(
+                    group -> group.getSources().stream().anyMatch(
+                        source -> trackSsrcs.contains(source.getSSRC())))
+                .collect(Collectors.toList());
+
+        sourceGroups.removeAll(groupsToRemove);
+
+        /*
+         * Remove not only the ssrcs in the track itself, but any ssrcs that
+         * were in groups along with ssrcs from the track. E.g. if we have:`
+         * SIM 1 2 3
+         * RTX 1 10
+         * RTX 2 20
+         * RTX 3 30
+         * then we need to make sure ssrcs 10, 20 and 30 don't create tracks of
+         * their own and are removed along with the processing of the track
+         * with ssrcs 1, 2 and 3.
+         */
+        Set<Long> ssrcsToRemove = extractSsrcs(groupsToRemove);
+        sources.removeIf(
+            source ->
+                trackSsrcs.contains(source.getSSRC())
+                    || ssrcsToRemove.contains(source.getSSRC()));
     }
+
+    /**
+     * Extracts all SSRCs from all sources of a list of source groups.
+     * @param groups the list of groups.
+     * @return the set of SSRCs contained in one of the groups.
+     */
+    private static Set<Long> extractSsrcs(
+        List<SourceGroupPacketExtension> groups)
+    {
+        Set<Long> ssrcs = new HashSet<>();
+        groups.forEach(
+            group -> group.getSources().forEach(
+                source -> ssrcs.add(source.getSSRC())));
+        return ssrcs;
+    };
 
     /**
      * Given the sources and groups, return a list of the ssrcs for each

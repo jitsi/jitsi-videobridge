@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.videobridge.xmpp.*;
 import org.junit.runner.*;
 import org.junit.runners.*;
 
@@ -28,7 +29,9 @@ import org.junit.runners.*;
     {
         FocusControlTest.class,
         RawUdpConferenceTest.class,
-        BridgeShutdownTest.class // This one must be the last one
+        EndpointMessageBuilderTest.class,
+        MediaStreamTrackFactoryTest.class,
+        BridgeShutdownTest.class, // This one must be the last one
     })
 public class VideoBridgeTestSuite
 {
