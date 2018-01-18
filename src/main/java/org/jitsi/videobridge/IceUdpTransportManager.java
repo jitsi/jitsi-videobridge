@@ -307,6 +307,11 @@ public class IceUdpTransportManager
     private final Conference conference;
 
     /**
+     * The {@link DiagnosticContext} of this diagnostic instance provider.
+     */
+    private final DiagnosticContext diagnosticContext = new DiagnosticContext();
+
+    /**
      * An identifier of this {@link IceUdpTransportManager}.
      */
     private final String id;
@@ -410,7 +415,7 @@ public class IceUdpTransportManager
      * handles transport-wide numbering of packets. It is shared among the
      * {@link RtpChannel}s/{@link MediaStream}s of this transport manager.
      */
-    private TransportCCEngine transportCCEngine = new TransportCCEngine();
+    private final TransportCCEngine transportCCEngine;
 
     /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
@@ -497,6 +502,11 @@ public class IceUdpTransportManager
         this.numComponents = numComponents;
         this.rtcpmux = numComponents == 1;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
+        this.transportCCEngine = new TransportCCEngine(diagnosticContext);
+
+        // Setup the diagnostic context.
+        conference.appendDiagnosticInformation(diagnosticContext);
+        diagnosticContext.put("transport", hashCode());
 
         dtlsControl = createDtlsControl();
 

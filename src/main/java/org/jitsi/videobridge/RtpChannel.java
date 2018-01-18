@@ -912,6 +912,17 @@ public class RtpChannel
             stream.addPropertyChangeListener(streamPropertyChangeListener);
             stream.setName(getID());
             stream.setProperty(RtpChannel.class.getName(), this);
+
+            if (stream instanceof MediaStreamImpl)
+            {
+                MediaStreamImpl streamImpl = (MediaStreamImpl) stream;
+                DiagnosticContext diagnosticContext
+                    = streamImpl.getDiagnosticContext();
+
+                getContent().getConference()
+                    .appendDiagnosticInformation(diagnosticContext);
+            }
+
             if (transformEngine != null)
             {
                 stream.setExternalTransformer(transformEngine);
