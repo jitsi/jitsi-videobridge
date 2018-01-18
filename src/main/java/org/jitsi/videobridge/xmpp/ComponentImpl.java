@@ -543,6 +543,7 @@ public class ComponentImpl
     protected IQ handleIQSetImpl(IQ iq)
         throws Exception
     {
+        logger.error("BRIAN: received iq:\n" + iq.toXML());
         IQ resultIQ = handleIQ(iq);
 
         return (resultIQ == null) ? super.handleIQSetImpl(iq) : resultIQ;
