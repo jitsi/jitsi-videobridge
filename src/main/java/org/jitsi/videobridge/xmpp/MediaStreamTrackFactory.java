@@ -394,7 +394,12 @@ public class MediaStreamTrackFactory
         });
 
         if (!sourceGroupsCopy.isEmpty()) {
-            logger.warn("Unprocessed source groups: " + sourceGroupsCopy);
+            StringBuilder sb = new StringBuilder();
+            for (SourceGroupPacketExtension sgpe : sourceGroupsCopy)
+            {
+                sb.append(sgpe.toXML());
+            }
+            logger.warn("Unprocessed source groups:\n" + sb.toString());
         }
 
         // The remaining sources are not part of any group. Add them as tracks
