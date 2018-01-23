@@ -360,17 +360,14 @@ public class MediaStreamTrackFactoryTest
         setUpMockConfigurationServiceAndUseDefaults();
         replayAll();
 
-        long videoSsrc1 = 12345;
-
-        SourcePacketExtension videoSource1 = createSource(videoSsrc1);
-        SourcePacketExtension videoSource2 = createSource(null);
+        SourcePacketExtension videoSource1 = createSource(null);
 
         MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
 
         MediaStreamTrackDesc[] tracks =
             MediaStreamTrackFactory.createMediaStreamTracks(receiver,
                 Arrays.asList(
-                    videoSource1, videoSource2),
+                    videoSource1),
                 Collections.emptyList());
 
         assertNotNull(tracks);
@@ -379,8 +376,6 @@ public class MediaStreamTrackFactoryTest
                 System.out.println(r.getPrimarySSRC());
             }
         }
-        assertEquals(1, tracks.length);
-        MediaStreamTrackDesc track = tracks[0];
-        assertEquals(1, track.getRTPEncodings().length);
+        assertEquals(0, tracks.length);
     }
 }
