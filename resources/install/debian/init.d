@@ -24,9 +24,18 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 DAEMON=/usr/share/jitsi-videobridge/jvb.sh
 NAME=jvb
 USER=jvb
+# A tmpfs backed directory just for the JVB process. This is introduced
+# to hold packet arrival times, but it may be otherwise useful in the future.
+TMPPATH=/var/run/jitsi-videobridge
 PIDFILE=/var/run/jitsi-videobridge.pid
 LOGFILE=/var/log/jitsi/jvb.log
 DESC=jitsi-videobridge
+
+if [ ! -d "$TMPPATH" ]; then
+    mkdir "$TMPPATH"
+    chown $USER:adm "$TMPPATH"
+fi
+
 if [ ! $JVB_HOST ]; then
     JVB_HOST=localhost
 fi
