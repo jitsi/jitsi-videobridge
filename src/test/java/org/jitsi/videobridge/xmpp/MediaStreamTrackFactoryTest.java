@@ -371,11 +371,6 @@ public class MediaStreamTrackFactoryTest
                 Collections.emptyList());
 
         assertNotNull(tracks);
-        for (MediaStreamTrackDesc t : tracks) {
-            for (RTPEncodingDesc r : t.getRTPEncodings()) {
-                System.out.println(r.getPrimarySSRC());
-            }
-        }
         assertEquals(0, tracks.length);
     }
 }
