@@ -398,6 +398,10 @@ public class MediaStreamTrackFactory
             List<SourceGroupPacketExtension> groups
                 = getGroups(groupSem, sourceGroupsCopy);
             groups.forEach(group -> {
+                if (group.getSources().isEmpty())
+                {
+                    return;
+                }
                 List<Long> ssrcs;
                 // For a simulcast group, all the ssrcs are considered primary
                 // ssrcs, but for others, only the main ssrc of the group is
