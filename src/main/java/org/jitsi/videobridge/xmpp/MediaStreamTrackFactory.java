@@ -398,6 +398,19 @@ public class MediaStreamTrackFactory
             List<SourceGroupPacketExtension> groups
                 = getGroups(groupSem, sourceGroupsCopy);
             groups.forEach(group -> {
+                // An empty group is the signal that we want to clear all
+                // the groups.
+                // https://github.com/jitsi/jitsi/blob/7eabaab0fca37711813965d66a0720d1545f6c48/src/net/java/sip/communicator/impl/protocol/jabber/extensions/colibri/ColibriBuilder.java#L188
+                if (group.getSources() == null || group.getSources().isEmpty())
+                {
+                    if (groups.size() > 1)
+                    {
+                        logger.warn("Received empty group, which is " +
+                            "a signal to clear all groups, but there were " +
+                            "other groups present, which shouldn't happen");
+                    }
+                    return;
+                }
                 List<Long> ssrcs;
                 // For a simulcast group, all the ssrcs are considered primary
                 // ssrcs, but for others, only the main ssrc of the group is
@@ -429,8 +442,24 @@ public class MediaStreamTrackFactory
 
         // The remaining sources are not part of any group. Add them as tracks
         // with their own primary SSRC.
-        sourcesCopy.forEach(
-            source -> trackSsrcsList.add(new TrackSsrcs(source.getSSRC())));
+        // NOTE: we need to ignore sources with an ssrc of -1, because the
+        // ColibriBuilder will use that as a signal to remove sources
+        // https://github.com/jitsi/jitsi/blob/7eabaab0fca37711813965d66a0720d1545f6c48/src/net/java/sip/communicator/impl/protocol/jabber/extensions/colibri/ColibriBuilder.java#L162
+        sourcesCopy.forEach(source -> {
+            if (source.getSSRC() != -1)
+            {
+                trackSsrcsList.add(new TrackSsrcs(source.getSSRC()));
+            }
+            else
+            {
+                if (sourcesCopy.size() > 1)
+                {
+                    logger.warn("Received an empty source, which is " +
+                        "a signal to clear all sources, but there were " +
+                        "other sources present, which shouldn't happen");
+                }
+            }
+        });
 
         return trackSsrcsList;
     }
