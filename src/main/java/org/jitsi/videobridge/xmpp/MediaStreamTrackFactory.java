@@ -433,8 +433,15 @@ public class MediaStreamTrackFactory
 
         // The remaining sources are not part of any group. Add them as tracks
         // with their own primary SSRC.
-        sourcesCopy.forEach(
-            source -> trackSsrcsList.add(new TrackSsrcs(source.getSSRC())));
+        // NOTE: we need to ignore sources with an ssrc of -1, because the
+        // ColibriBuilder will use that as a signal to remove sources
+        // https://github.com/jitsi/jitsi/blob/7eabaab0fca37711813965d66a0720d1545f6c48/src/net/java/sip/communicator/impl/protocol/jabber/extensions/colibri/ColibriBuilder.java#L162
+        sourcesCopy.forEach(source -> {
+            if (source.getSSRC() != -1)
+            {
+                trackSsrcsList.add(new TrackSsrcs(source.getSSRC()));
+            }
+        });
 
         return trackSsrcsList;
     }

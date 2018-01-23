@@ -30,15 +30,21 @@ public class MediaStreamTrackFactoryTest
     {
         SourceGroupPacketExtension sgpe = new SourceGroupPacketExtension();
         sgpe.setSemantics(semantics);
-        sgpe.addSources(Arrays.asList(sources));
+        if (sources.length > 0)
+        {
+            sgpe.addSources(Arrays.asList(sources));
+        }
 
         return sgpe;
     }
 
-    private SourcePacketExtension createSource(long ssrc)
+    private SourcePacketExtension createSource(Long ssrc)
     {
         SourcePacketExtension spe = new SourcePacketExtension();
-        spe.setSSRC(ssrc);
+        if (ssrc != null)
+        {
+            spe.setSSRC(ssrc);
+        }
 
         return spe;
     }
@@ -318,5 +324,63 @@ public class MediaStreamTrackFactoryTest
         assertEquals(9, tracks[0].getRTPEncodings().length);
         assertEquals(1, tracks[1].getRTPEncodings().length);
         assertEquals(1, tracks[2].getRTPEncodings().length);
+    }
+
+    @Test
+    public void testEmptySimGroup()
+    {
+        setUpMockConfigurationServiceAndUseDefaults();
+        replayAll();
+
+        long videoSsrc1 = 12345;
+
+        SourcePacketExtension videoSource1 = createSource(videoSsrc1);
+
+        SourceGroupPacketExtension simGroup
+            = createGroup(
+            SourceGroupPacketExtension.SEMANTICS_SIMULCAST);
+
+        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
+
+        MediaStreamTrackDesc[] tracks =
+            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+                Arrays.asList(
+                    videoSource1),
+                Arrays.asList(simGroup));
+
+        assertNotNull(tracks);
+        assertEquals(1, tracks.length);
+        MediaStreamTrackDesc track = tracks[0];
+        assertEquals(1, track.getRTPEncodings().length);
+    }
+
+    @Test
+    public void testEmptySource()
+    {
+        setUpMockConfigurationServiceAndUseDefaults();
+        replayAll();
+
+        long videoSsrc1 = 12345;
+
+        SourcePacketExtension videoSource1 = createSource(videoSsrc1);
+        SourcePacketExtension videoSource2 = createSource(null);
+
+        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
+
+        MediaStreamTrackDesc[] tracks =
+            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+                Arrays.asList(
+                    videoSource1, videoSource2),
+                Collections.emptyList());
+
+        assertNotNull(tracks);
+        for (MediaStreamTrackDesc t : tracks) {
+            for (RTPEncodingDesc r : t.getRTPEncodings()) {
+                System.out.println(r.getPrimarySSRC());
+            }
+        }
+        assertEquals(1, tracks.length);
+        MediaStreamTrackDesc track = tracks[0];
+        assertEquals(1, track.getRTPEncodings().length);
     }
 }
