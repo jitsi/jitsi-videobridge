@@ -21,6 +21,7 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.*;
@@ -78,6 +79,11 @@ public class BandwidthProbing
      * The {@link VideoChannel} to probe for available send bandwidth.
      */
     private final VideoChannel dest;
+
+    /**
+     * The VP8 payload type to use when probing with the SSRC of the bridge.
+     */
+    private int vp8PT = -1;
 
     /**
      * The sequence number to use if probing with the JVB's SSRC.
@@ -232,7 +238,17 @@ public class BandwidthProbing
 
         // Send crap with the JVB's SSRC.
         long mediaSSRC = getSenderSSRC();
-        int pt = 100; // VP8 pt.
+        if (vp8PT == -1)
+        {
+            vp8PT = stream.getDynamicRTPPayloadType(Constants.VP8);
+            if (vp8PT == -1)
+            {
+                logger.warn("The VP8 payload type is undefined. Failed to "
+                        + "probe with the SSRC of the bridge.");
+                return;
+            }
+        }
+
         ts += 3000;
 
         int pktLen = RawPacket.FIXED_HEADER_SIZE + 0xFF;
@@ -244,7 +260,7 @@ public class BandwidthProbing
             {
                 // These packets should not be cached.
                 RawPacket pkt
-                    = RawPacket.makeRTP(mediaSSRC, pt, seqNum++, ts, pktLen);
+                    = RawPacket.makeRTP(mediaSSRC, vp8PT, seqNum++, ts, pktLen);
 
                 stream.injectPacket(pkt, /* data */ true, rtxTransformer);
             }
