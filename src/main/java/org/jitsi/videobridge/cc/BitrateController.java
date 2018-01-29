@@ -186,6 +186,13 @@ public class BitrateController
     private final Logger logger = Logger.getLogger(BitrateController.class);
 
     /**
+     * The {@link TimeSeriesLogger} to be used by this instance to print time
+     * series.
+     */
+    private final TimeSeriesLogger timeSeriesLogger
+        = TimeSeriesLogger.getTimeSeriesLogger(BitrateController.class);
+
+    /**
      * The name of the property used to trust bandwidth estimations.
      */
     public static final String TRUST_BWE_PNAME
@@ -511,17 +518,28 @@ public class BitrateController
                     ctrl.setOptimalIndex(optimalIdx);
 
                     MediaStreamTrackDesc sourceTrack = ctrl.getSource();
-                    if (sourceTrack != null && logger.isDebugEnabled())
+                    if (sourceTrack != null
+                            && timeSeriesLogger.isTraceEnabled())
                     {
-                        logger.debug("qot" +
-                            "," + nowMs +
-                            "," + destStream.hashCode() +
-                            "," + sourceTrack.hashCode() +
-                            "," + ctrl.getCurrentIndex() +
-                            "," + targetIdx +
-                            "," + optimalIdx +
-                            "," + trackBitrateAllocation.getTargetBitrate() +
-                            "," + trackBitrateAllocation.getOptimalBitrate());
+                        DiagnosticContext diagnosticContext
+                            = destStream.getDiagnosticContext();
+                        int currentIdx = ctrl.getCurrentIndex();
+                        long targetBps
+                            = trackBitrateAllocation.getTargetBitrate();
+                        long optimalBps
+                            = trackBitrateAllocation.getOptimalBitrate();
+                        long currentBps = sourceTrack.getBps(currentIdx, false);
+                        // time series that tracks how a media stream track
+                        // gets forwarded to a specific receiver.
+                        timeSeriesLogger.trace(diagnosticContext
+                                .makeTimeSeriesPoint("video_quality", nowMs)
+                                .addKey("track_id", sourceTrack.hashCode())
+                                .addField("current_idx", currentIdx)
+                                .addField("target_idx", targetIdx)
+                                .addField("optimal_idx", optimalIdx)
+                                .addField("current_bps", currentBps)
+                                .addField("target_bps", targetBps)
+                                .addField("optimal_bps", optimalBps));
                     }
                 }
 
