@@ -248,6 +248,12 @@ public class BitrateController
     private final boolean trustBwe;
 
     /**
+     * A boolean that indicates whether to enable or disable the video quality
+     * tracing.
+     */
+    private final boolean enableVideoQualityTracing;
+
+    /**
      * The time (in ms) when this instance first transformed any media. This
      * allows to ignore the CC during the early stages of the call and ramp up
      * the send rate faster.
@@ -283,6 +289,7 @@ public class BitrateController
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
         trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, false);
+        enableVideoQualityTracing = logger.isTraceEnabled();
     }
 
     /**
@@ -465,6 +472,10 @@ public class BitrateController
         Set<String> endpointsEnteringLastNIds = new HashSet<>();
         Set<String> conferenceEndpointIds = new HashSet<>();
 
+        // Accumulators used for tracing purposes.
+        long optimalBps = 0, targetBps = 0, currentBps = 0;
+        int optimalIdx = 0, targetIdx = 0, currentIdx = 0;
+
         long nowMs = System.currentTimeMillis();
         List<SimulcastController> simulcastControllers = new ArrayList<>();
         if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
@@ -475,8 +486,8 @@ public class BitrateController
                 conferenceEndpointIds.add(trackBitrateAllocation.endpointID);
 
                 int ssrc = trackBitrateAllocation.targetSSRC,
-                    targetIdx = trackBitrateAllocation.getTargetIndex(),
-                    optimalIdx = trackBitrateAllocation.getOptimalIndex();
+                    trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
+                    trackOptimalIdx = trackBitrateAllocation.getOptimalIndex();
 
                 // Review this.
                 SimulcastController ctrl;
@@ -514,36 +525,43 @@ public class BitrateController
                 if (ctrl != null)
                 {
                     simulcastControllers.add(ctrl);
-                    ctrl.setTargetIndex(targetIdx);
-                    ctrl.setOptimalIndex(optimalIdx);
+                    ctrl.setTargetIndex(trackTargetIdx);
+                    ctrl.setOptimalIndex(trackOptimalIdx);
 
                     MediaStreamTrackDesc sourceTrack = ctrl.getSource();
                     if (sourceTrack != null
-                            && timeSeriesLogger.isTraceEnabled())
+                            && enableVideoQualityTracing)
                     {
                         DiagnosticContext diagnosticContext
                             = destStream.getDiagnosticContext();
-                        int currentIdx = ctrl.getCurrentIndex();
-                        long targetBps
+                        int trackCurrentIdx = ctrl.getCurrentIndex();
+                        long trackTargetBps
                             = trackBitrateAllocation.getTargetBitrate();
-                        long optimalBps
+                        long trackOptimalBps
                             = trackBitrateAllocation.getOptimalBitrate();
-                        long currentBps = sourceTrack.getBps(currentIdx, false);
+                        long trackCurrentBps
+                            = sourceTrack.getBps(trackCurrentIdx, false);
+                        targetBps += trackTargetBps;
+                        optimalBps += trackOptimalBps;
+                        currentBps += trackCurrentBps;
+                        targetIdx += trackTargetIdx;
+                        optimalIdx += trackOptimalIdx;
+                        currentIdx += trackCurrentIdx;
                         // time series that tracks how a media stream track
                         // gets forwarded to a specific receiver.
                         timeSeriesLogger.trace(diagnosticContext
-                                .makeTimeSeriesPoint("video_quality", nowMs)
+                                .makeTimeSeriesPoint("track_quality", nowMs)
                                 .addKey("track_id", sourceTrack.hashCode())
-                                .addField("current_idx", currentIdx)
-                                .addField("target_idx", targetIdx)
-                                .addField("optimal_idx", optimalIdx)
-                                .addField("current_bps", currentBps)
-                                .addField("target_bps", targetBps)
-                                .addField("optimal_bps", optimalBps));
+                                .addField("current_idx", trackCurrentIdx)
+                                .addField("target_idx", trackTargetIdx)
+                                .addField("optimal_idx", trackOptimalIdx)
+                                .addField("current_bps", trackCurrentBps)
+                                .addField("target_bps", trackTargetBps)
+                                .addField("optimal_bps", trackOptimalBps));
                     }
                 }
 
-                if (targetIdx > -1)
+                if (trackTargetIdx > -1)
                 {
                     newForwardedEndpointIds
                         .add(trackBitrateAllocation.endpointID);
@@ -561,9 +579,29 @@ public class BitrateController
             for (SimulcastController simulcastController
                 : ssrcToBitrateController.values())
             {
+                if (enableVideoQualityTracing)
+                {
+                    currentIdx--;
+                    optimalIdx--;
+                    targetIdx--;
+                }
                 simulcastController.setTargetIndex(-1);
                 simulcastController.setOptimalIndex(-1);
             }
+        }
+
+        if (enableVideoQualityTracing)
+        {
+            DiagnosticContext diagnosticContext
+                = destStream.getDiagnosticContext();
+            timeSeriesLogger.trace(diagnosticContext
+                    .makeTimeSeriesPoint("video_quality", nowMs)
+                    .addField("current_idx", currentIdx)
+                    .addField("target_idx", targetIdx)
+                    .addField("optimal_idx", optimalIdx)
+                    .addField("current_bps", currentBps)
+                    .addField("target_bps", targetBps)
+                    .addField("optimal_bps", optimalBps));
         }
 
         // The BandwidthProber will pick this up.
