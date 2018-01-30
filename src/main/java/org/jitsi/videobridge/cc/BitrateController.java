@@ -289,7 +289,7 @@ public class BitrateController
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
         trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, false);
-        enableVideoQualityTracing = logger.isTraceEnabled();
+        enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
     }
 
     /**
