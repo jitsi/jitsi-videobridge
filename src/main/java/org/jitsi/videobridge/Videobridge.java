@@ -164,6 +164,10 @@ public class Videobridge
     public static final String XMPP_API_PNAME
         = "org.jitsi.videobridge." + XMPP_API;
 
+    public static final String EXPIRE_SLEEP_TIME_SEC
+            = "org.jitsi.videobridge.EXPIRE_SLEEP_TIME_SEC";
+
+
     public static Collection<Videobridge> getVideobridges(
             BundleContext bundleContext)
     {
@@ -215,7 +219,6 @@ public class Videobridge
      */
     public Videobridge()
     {
-        new VideobridgeExpireThread(this).start();
     }
 
     /**
@@ -1389,6 +1392,11 @@ public class Videobridge
             logger.warn("No authorized source regexp configured. Will accept "
                             + "requests from any source.");
         }
+
+        Integer expireSleepTimeSec = (cfg == null) ? Channel.DEFAULT_EXPIRE :
+                cfg.getInt(EXPIRE_SLEEP_TIME_SEC, Channel.DEFAULT_EXPIRE);
+
+        new VideobridgeExpireThread(this, expireSleepTimeSec).start();
 
         // <conference>
         ProviderManager.addIQProvider(
