@@ -100,7 +100,10 @@ public class JvbBundleConfig
             // the vital, non-optional, non-additional pieces of functionality
             // of the Videobridge and (2) it pulls, does not push.
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
-            "org/jitsi/videobridge/EndpointConnectionStatus"
+            "org/jitsi/videobridge/EndpointConnectionStatus",
+            // Channel create / expire (remove) reports would be sent to the
+            // selected endpoint.
+            "org/jitsi/videobridge/channelstats/ChannelStatsDealer"
         },
         {
             "org/jitsi/videobridge/octo/OctoRelayService"
