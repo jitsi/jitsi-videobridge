@@ -7,6 +7,7 @@ import org.jitsi.osgi.EventHandlerActivator;
 import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.videobridge.Channel;
 import org.jitsi.videobridge.EventFactory;
+import org.json.simple.JSONObject;
 import org.osgi.framework.BundleContext;
 
 import javax.net.ssl.*;
@@ -142,18 +143,19 @@ public class ChannelStatsDealer
         String topic = event.getTopic();
 
         if (topic.equals(EventFactory.CHANNEL_CREATED_TOPIC)) {
-            channelEvent("channelCreated", event);
+            postEvent("channelCreated", event);
         } else if (topic.equals(EventFactory.CHANNEL_EXPIRED_TOPIC)) {
-            channelEvent("channelExpired", event);
+            postEvent("channelExpired", event);
         }
     }
 
-    private void channelEvent(String type, Event event) {
+    private void postEvent(String type, Event event) {
         final Object eventSource = event.getProperty(EventFactory.EVENT_SOURCE);
         if (eventSource instanceof Channel) {
             final Channel channel = (Channel)eventSource;
+            final String conferenceID = channel.getContent().getConference().getID();
             final String channelID = channel.getID();
-            sendRequest(type, channelID);
+            sendRequest(type, conferenceID, channelID);
         } else {
             logger.error("bad event source type for " + type + ": " +
                     eventSource.getClass().getSimpleName());
@@ -174,12 +176,11 @@ public class ChannelStatsDealer
             }
     };
 
-    private void sendRequest(String type, String channelID) {
+    private void sendRequest(String type, String conferenceID, String channelID) {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL(endpointOrigin + type + "/" + channelID);
-            connection =
-                    (HttpURLConnection) url.openConnection();
+            URL url = new URL(endpointOrigin + type);
+            connection = (HttpURLConnection) url.openConnection();
 
             if (acceptSelfSigned) {
                 SSLContext sc = SSLContext.getInstance("TLSv1.2");
@@ -196,17 +197,22 @@ public class ChannelStatsDealer
                 });
             }
 
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("ConferenceID", conferenceID);
+            jsonObject.put("ChannelID", channelID);
+            final String message = jsonObject.toJSONString();
+
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type",
                     "application/text");
             connection.setRequestProperty("Content-Length",
-                    Integer.toString(channelID.getBytes().length));
+                    Integer.toString(message.getBytes().length));
             connection.setRequestProperty("Content-Language", "en-US");
             connection.setUseCaches(false);
             connection.setDoOutput(true);
             DataOutputStream wr = new DataOutputStream (
                     connection.getOutputStream());
-            wr.writeBytes(channelID);
+            wr.writeBytes(message);
             wr.close();
             InputStream is = connection.getInputStream();
             BufferedReader rd = new BufferedReader(new InputStreamReader(is));
