@@ -38,6 +38,11 @@ class VideobridgeExpireThread
         = Logger.getLogger(VideobridgeExpireThread.class);
 
     /**
+     * Sleep time for expire check cycle (in seconds)
+     */
+    private final int expireSleepTimeSec;
+
+    /**
      * The <tt>Videobridge</tt> which has its {@link Channel}s expired by this
      * instance. <tt>WeakReference</tt>d to allow this instance to determine
      * when it is to stop executing.
@@ -51,9 +56,10 @@ class VideobridgeExpireThread
      * @param videobridge the <tt>Videobridge</tt> which is to have its
      * <tt>Channel</tt>s expired by the new instance
      */
-    public VideobridgeExpireThread(Videobridge videobridge)
+    public VideobridgeExpireThread(Videobridge videobridge, int expireSleepTimeSec)
     {
         this.videobridge = new WeakReference<>(videobridge);
+        this.expireSleepTimeSec = expireSleepTimeSec;
 
         setDaemon(true);
         setName(getClass().getName());
@@ -171,7 +177,7 @@ class VideobridgeExpireThread
     public void run()
     {
         long wakeup = -1;
-        final long sleep = Channel.DEFAULT_EXPIRE * 1000;
+        final long sleep = expireSleepTimeSec;
 
         do
         {
