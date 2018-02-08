@@ -18,7 +18,10 @@ package org.jitsi.videobridge;
 import java.lang.ref.*;
 import java.util.*;
 
+import org.jitsi.osgi.ServiceUtils2;
+import org.jitsi.service.configuration.ConfigurationService;
 import org.jitsi.util.*;
+import org.osgi.framework.BundleContext;
 
 /**
  * Implements a <tt>Thread</tt> which expires the {@link Channel}s of a specific
@@ -45,6 +48,23 @@ class VideobridgeExpireThread
     private final WeakReference<Videobridge> videobridge;
 
     /**
+     * Property name for EXPIRE_CHECK_SLEEP_SEC for
+     * {@link #expireCheckSleepSec}.
+     */
+    private static final String EXPIRE_CHECK_SLEEP_SEC
+            = "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC";
+
+    /**
+     * Default value for {@link #expireCheckSleepSec}.
+     */
+    private static final int EXPIRE_CHECK_SLEEP_SEC_DEFAULT = 60;
+
+    /**
+     * Property that configure sleep time between the checks.
+     */
+    private int expireCheckSleepSec;
+
+    /**
      * Initializes a new <tt>VideobridgeExpireThread</tt> instance which is to
      * expire the {@link Channel}s of a specific <tt>Videobridge</tt>.
      *
@@ -57,6 +77,27 @@ class VideobridgeExpireThread
 
         setDaemon(true);
         setName(getClass().getName());
+    }
+
+    /**
+     * Read necessary parameters.
+     * @param bundleContext  the <tt>BundleContext</tt> in which this
+     * <tt>VideobridgeExpireThread</tt> is to start
+     */
+    public void start(final BundleContext bundleContext)
+            throws Exception
+    {
+        ConfigurationService cfg
+                = ServiceUtils2.getService(
+                bundleContext,
+                ConfigurationService.class);
+
+        expireCheckSleepSec
+                = (cfg == null)
+                ? EXPIRE_CHECK_SLEEP_SEC_DEFAULT
+                : cfg.getInt(EXPIRE_CHECK_SLEEP_SEC,
+                EXPIRE_CHECK_SLEEP_SEC_DEFAULT);
+
     }
 
     /**
@@ -171,7 +212,7 @@ class VideobridgeExpireThread
     public void run()
     {
         long wakeup = -1;
-        final long sleep = Channel.DEFAULT_EXPIRE * 1000;
+        final long sleep = expireCheckSleepSec * 1000;
 
         do
         {

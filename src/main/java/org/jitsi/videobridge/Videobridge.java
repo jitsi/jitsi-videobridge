@@ -211,11 +211,17 @@ public class Videobridge
     private final Statistics statistics = new Statistics();
 
     /**
+     * Thread that checks expiration for conferences, contents, channels and
+     * execute expire procedure for any of them.
+     */
+    private VideobridgeExpireThread videobridgeExpireThread;
+
+    /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
     public Videobridge()
     {
-        new VideobridgeExpireThread(this).start();
+        videobridgeExpireThread = new VideobridgeExpireThread(this);
     }
 
     /**
@@ -1334,6 +1340,9 @@ public class Videobridge
             = ServiceUtils2.getService(
                     bundleContext,
                     ConfigurationService.class);
+
+        videobridgeExpireThread.start(bundleContext);
+        videobridgeExpireThread.start();
 
         defaultProcessingOptions
             = (cfg == null)
