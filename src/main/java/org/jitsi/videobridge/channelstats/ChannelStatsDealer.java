@@ -133,6 +133,9 @@ public class ChannelStatsDealer
 
     @Override
     public void handleEvent(Event event) {
+        if (!isOn) {
+            return;
+        }
 
         if (event == null)
         {
