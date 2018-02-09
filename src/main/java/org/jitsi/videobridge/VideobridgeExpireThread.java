@@ -57,7 +57,8 @@ class VideobridgeExpireThread
     /**
      * Default value for {@link #expireCheckSleepSec}.
      */
-    private static final int EXPIRE_CHECK_SLEEP_SEC_DEFAULT = 60;
+    private static final int EXPIRE_CHECK_SLEEP_SEC_DEFAULT =
+            Channel.DEFAULT_EXPIRE;
 
     /**
      * Property that configure sleep time between the checks.
@@ -98,6 +99,7 @@ class VideobridgeExpireThread
                 : cfg.getInt(EXPIRE_CHECK_SLEEP_SEC,
                 EXPIRE_CHECK_SLEEP_SEC_DEFAULT);
 
+        this.start();
     }
 
     /**

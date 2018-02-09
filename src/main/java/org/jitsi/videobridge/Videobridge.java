@@ -1342,7 +1342,6 @@ public class Videobridge
                     ConfigurationService.class);
 
         videobridgeExpireThread.start(bundleContext);
-        videobridgeExpireThread.start();
 
         defaultProcessingOptions
             = (cfg == null)
