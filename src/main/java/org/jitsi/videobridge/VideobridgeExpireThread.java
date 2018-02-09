@@ -18,10 +18,10 @@ package org.jitsi.videobridge;
 import java.lang.ref.*;
 import java.util.*;
 
-import org.jitsi.osgi.ServiceUtils2;
-import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.osgi.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
-import org.osgi.framework.BundleContext;
+import org.osgi.framework.*;
 
 /**
  * Implements a <tt>Thread</tt> which expires the {@link Channel}s of a specific
@@ -51,7 +51,7 @@ class VideobridgeExpireThread
      * Property name for EXPIRE_CHECK_SLEEP_SEC for
      * {@link #expireCheckSleepSec}.
      */
-    private static final String EXPIRE_CHECK_SLEEP_SEC
+    public static final String EXPIRE_CHECK_SLEEP_SEC
             = "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC";
 
     /**
