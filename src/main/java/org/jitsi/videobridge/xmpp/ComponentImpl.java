@@ -87,28 +87,6 @@ public class ComponentImpl
     }
 
     /**
-     * Logs a specific <tt>String</tt> at debug level.
-     *
-     * @param s the <tt>String</tt> to log at debug level
-     */
-    private static void logd(String s)
-    {
-        if ( logger.isDebugEnabled() ) {
-            logger.debug(s);
-        }
-    }
-
-    /**
-     * Logs a specific <tt>Throwable</tt> at error level.
-     *
-     * @param t the <tt>Throwable</tt> to log at error level
-     */
-    private static void loge(Throwable t)
-    {
-        t.printStackTrace(System.err);
-    }
-
-    /**
      * The <tt>BundleContext</tt> in which this instance has been started as an
      * OSGi bundle.
      */
@@ -272,7 +250,10 @@ public class ComponentImpl
     {
         try
         {
-            logd("RECV: " + iq.toXML());
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("RECV: " + iq.toXML());
+            }
 
             org.jivesoftware.smack.packet.IQ smackIQ = IQUtils.convert(iq);
             // Failed to convert to Smack IQ ?
@@ -307,14 +288,21 @@ public class ComponentImpl
             {
                 resultIQ = IQUtils.convert(resultSmackIQ);
 
-                logd("SENT: " + resultIQ.toXML());
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("SENT: " + resultIQ.toXML());
+                }
             }
 
             return resultIQ;
         }
         catch (Exception e)
         {
-            loge(e);
+            logger.error(
+                "Failed to handle IQ with id="
+                    + (iq == null ? "null" : iq.getID()),
+                e);
+
             throw e;
         }
     }
@@ -373,8 +361,9 @@ public class ComponentImpl
         }
         catch (Exception e)
         {
-            logd("An error occurred while trying to handle error IQ.");
-            loge(e);
+            logger.error(
+                "An error occurred while trying to handle an 'error' IQ.",
+                e);
         }
     }
 
@@ -521,8 +510,9 @@ public class ComponentImpl
         }
         catch (Exception e)
         {
-            logd("An error occurred while trying to handle result IQ.");
-            loge(e);
+            logger.error(
+                "An error occurred while trying to handle a 'result' IQ.",
+                e);
         }
     }
 
@@ -611,11 +601,17 @@ public class ComponentImpl
 
             send(packet);
 
-            logd("SENT: " + packet.toXML());
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("SENT: " + packet.toXML());
+            }
         }
         catch (Exception e)
         {
-            loge(e);
+            logger.error(
+                "Failed to send an IQ with id="
+                    + (iq == null ? "null" : iq.getStanzaId()),
+                e);
             throw e;
         }
     }
