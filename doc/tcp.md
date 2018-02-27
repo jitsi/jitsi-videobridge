@@ -8,7 +8,7 @@ COLIBRI.
 The use of channel-bundle and rtcp-mux is required for TCP 
 candidates to be generated.
 
-#Configuration
+# Configuration
 By default TCP support is enabled on port 443 with fallback 
 to port 4443. A fallback would occur in case something else, 
 like a web server is already listening on port 443. Note,
