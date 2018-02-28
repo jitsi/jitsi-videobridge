@@ -76,16 +76,14 @@ in the candidates that it advertises, but the actual port it listens on
 will not change.
 
 
-### *org.jitsi.videobridge.NAT_HARVESTER_LOCAL_ADDRESS*
-### *org.jitsi.videobridge.NAT_HARVESTER_PUBLIC_ADDRESS*
+### *org.ice4j.ice.harvest.NAT_HARVESTER_LOCAL_ADDRESS*
+### *org.ice4j.ice.harvest.NAT_HARVESTER_PUBLIC_ADDRESS*
 Default: none
 
-DEPRECATED. Use [ice4j properties](https://github.com/jitsi/ice4j/blob/master/doc/configuration.md)
-instead.
 If these to properties are configured, Jitsi Videobridge will
 generate additional srflx candidates for each candidate with
-the local address configured.
-
+the local address configured. See the full documentation in
+[ice4j](https://github.com/jitsi/ice4j/blob/master/doc/configuration.md#mapping-harvesters).
 
 ## Configuration of ice4j
 
