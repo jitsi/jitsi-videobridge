@@ -277,6 +277,22 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
+    protected void maybeStartStream()
+        throws IOException
+    {
+        boolean previouslyStarted = getStream().isStarted();
+        super.maybeStartStream();
+
+        if(getStream().isStarted() && !previouslyStarted)
+        {
+            bitrateController.update(null, -1);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean setRtpEncodingParameters(
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
