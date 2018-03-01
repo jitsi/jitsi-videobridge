@@ -59,14 +59,14 @@ public class OctoChannel
      * RTP packets for this channel.
      */
     private RtpChannelDatagramFilter rtpFilter
-        = new OctoDatagramPacketFilter(false);
+        = new OctoDatagramPacketFilter(false /* rtcp */);
 
     /**
      * The {@link org.ice4j.socket.DatagramPacketFilter} which (only) accepts
      * RTCP packets for this channel.
      */
     private RtpChannelDatagramFilter rtcpFilter
-        = new OctoDatagramPacketFilter(true);
+        = new OctoDatagramPacketFilter(true /* rtcp */);
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -109,8 +109,7 @@ public class OctoChannel
     {
         super.describe(commonIq);
 
-        // TODO: uncomment after the mvn versions are updated
-        //commonIq.setType(ColibriConferenceIQ.OctoChannel.TYPE);
+        commonIq.setType(ColibriConferenceIQ.OctoChannel.TYPE);
     }
 
     /**
@@ -262,8 +261,7 @@ public class OctoChannel
          * Initializes a new {@link OctoDatagramPacketFilter} instance.
          * @param rtcp whether to accept RTCP or RTP.
          */
-        private OctoDatagramPacketFilter(
-            boolean rtcp)
+        private OctoDatagramPacketFilter(boolean rtcp)
         {
             super(OctoChannel.this, rtcp);
             this.rtcp = rtcp;
