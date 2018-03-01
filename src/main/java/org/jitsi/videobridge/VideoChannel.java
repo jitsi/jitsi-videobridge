@@ -288,6 +288,10 @@ public class VideoChannel
         boolean previouslyStarted = getStream().isStarted();
         super.maybeStartStream();
 
+        // If a recvonly channel is created, existing streams won't be forwarded to it until the next
+        // keyframe comes in. bitrateController.update gets called before ICE has completed so the
+        // keyframe comes in before this channel is actually started. So update the bitrate controller when
+        // the stream starts which will request a keyframe from other channels if needed.
         if(getStream().isStarted() && !previouslyStarted)
         {
             bitrateController.update(null, -1);
