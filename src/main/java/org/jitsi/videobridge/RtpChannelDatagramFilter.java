@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 import java.net.*;
 
 import org.ice4j.socket.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
 /**
@@ -91,29 +92,24 @@ class RtpChannelDatagramFilter
     @Override
     public boolean accept(DatagramPacket p)
     {
+        byte[] buf = p.getData();
+        int off = p.getOffset();
         int len = p.getLength();
 
-        if (len >= 4)
+        // If isHeaderValid fails, this is not a valid RTP packet either.
+        if (!RTCPUtils.isHeaderValid(buf, off, len))
         {
-            byte[] data = p.getData();
-            int off = p.getOffset();
-
-            if (((data[off + 0] & 0xc0) >> 6) == 2) // RTP/RTCP version field
-            {
-                int pt = data[off + 1] & 0xff;
-
-                if (200 <= pt && pt <= 211)
-                {
-                    return rtcp && acceptRTCP(data, off, len);
-                }
-                else
-                {
-                    return !rtcp && acceptRTP(pt & 0x7f);
-                }
-            }
+            return acceptNonRtp && DTLSDatagramFilter.isDTLS(p);
         }
 
-        return acceptNonRtp && DTLSDatagramFilter.isDTLS(p);
+        if (RTCPUtils.looksLikeRtcp(buf, off, len))
+        {
+            return rtcp && acceptRTCP(buf, off, len);
+        }
+        else
+        {
+            return !rtcp && acceptRTP(RawPacket.getPayloadType(buf, off, len));
+        }
     }
 
     /**

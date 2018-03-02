@@ -595,7 +595,7 @@ public class LipSyncHack
                 return pkt;
             }
 
-            switch (RTCPHeaderUtils.getPacketType(pkt))
+            switch (RTCPUtils.getPacketType(pkt))
             {
             case RTCPPacket.SR:
                 long ssrc = RawPacket.getRTCPSSRC(pkt);
