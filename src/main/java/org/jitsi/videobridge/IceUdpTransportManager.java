@@ -1320,9 +1320,8 @@ public class IceUdpTransportManager
             {
                 // update all components of all streams
                 iceAgent.getStreams()
-                    .forEach(
-                        stream -> stream.getComponents()
-                            .forEach(Component::updateRemoteCandidates));
+                    .forEach(stream -> stream.getComponents()
+                                .forEach(Component::updateRemoteCandidates));
             }
         }
         else if (remoteCandidateCount != 0)

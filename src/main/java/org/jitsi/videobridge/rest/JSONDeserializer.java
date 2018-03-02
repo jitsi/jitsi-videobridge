@@ -165,14 +165,13 @@ final class JSONDeserializer
             // lastN
             if (lastN != null)
             {
-                Integer i = objectToInteger(lastN);
-                channelIQ.setLastN(i);
+                channelIQ.setLastN(objectToInteger(lastN));
             }
             // receivingSimulcastStream
             if (receivingSimulcastStream != null)
             {
-                Integer i = objectToInteger(receivingSimulcastStream);
-                channelIQ.setReceivingSimulcastLayer(i);
+                channelIQ.setReceivingSimulcastLayer(
+                    objectToInteger(receivingSimulcastStream));
             }
             // payloadTypes
             if (payloadTypes != null)
@@ -386,8 +385,7 @@ final class JSONDeserializer
         // initiator
         if (initiator != null)
         {
-            Boolean b = objectToBoolean(initiator);
-            channelIQ.setInitiator(b);
+            channelIQ.setInitiator(objectToBoolean(initiator));
         }
         // transport
         if (transport != null)
@@ -811,8 +809,7 @@ final class JSONDeserializer
             // port
             if (port != null)
             {
-                Integer i = objectToInteger(port);
-                sctpConnectionIQ.setPort(i);
+                sctpConnectionIQ.setPort(objectToInteger(port));
             }
 
             contentIQ.addSctpConnection(sctpConnectionIQ);
