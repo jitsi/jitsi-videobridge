@@ -876,7 +876,7 @@ public class VideoChannel
     public Endpoint getEndpoint()
     {
         EndpointBase endpointBase = super.getEndpoint();
-        if (endpointBase instanceof Endpoint)
+        if (endpointBase == null || endpointBase instanceof Endpoint)
         {
             return (Endpoint) endpointBase;
         }
