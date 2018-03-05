@@ -515,7 +515,7 @@ public class BitrateController
                                 if (rtxSsrc != -1)
                                 {
                                     ssrcToSimulcastController.put(
-                                        rtpEncoding.getRTXSSRC(), ctrl);
+                                        rtxSsrc, ctrl);
                                 }
                             }
                         }
