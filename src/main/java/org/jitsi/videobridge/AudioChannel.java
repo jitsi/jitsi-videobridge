@@ -42,16 +42,6 @@ public class AudioChannel
     private CsrcAudioLevelListener csrcAudioLevelListener;
 
     /**
-     * The <tt>SimpleAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setStreamAudioLevelListener(
-     * SimpleAudioLevelListener)} in order to have the audio levels of the
-     * contributing sources calculated and to end enable the functionality of
-     * {@code #lastN}.
-     */
-    private SimpleAudioLevelListener streamAudioLevelListener;
-
-    /**
      * The {@link LipSyncHack} from the {@link VideoChannel}.
      */
     private LipSyncHack associatedLipSyncHack;
@@ -111,25 +101,6 @@ public class AudioChannel
     }
 
     /**
-     * Gets the <tt>SimpleAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setStreamAudioLevelListener(
-     * SimpleAudioLevelListener)} in order to have the audio levels of the
-     * contributing sources calculated and to enable the functionality of
-     * {@code #lastN}.
-     *
-     * @return the <tt>SimpleAudioLevelListener</tt> instance
-     */
-    private SimpleAudioLevelListener getStreamAudioLevelListener()
-    {
-        if (streamAudioLevelListener == null)
-        {
-            streamAudioLevelListener = this::streamAudioLevelChanged;
-        }
-        return streamAudioLevelListener;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -146,27 +117,24 @@ public class AudioChannel
                 AudioMediaStream audioStream = (AudioMediaStream) stream;
                 CsrcAudioLevelListener csrcAudioLevelListener
                     = this.csrcAudioLevelListener;
-                SimpleAudioLevelListener streamAudioLevelListener
-                    = this.streamAudioLevelListener;
 
                 if (csrcAudioLevelListener != null)
                 {
                     audioStream.setCsrcAudioLevelListener(
                         csrcAudioLevelListener);
                 }
-                if (streamAudioLevelListener != null)
-                {
-                    audioStream.setStreamAudioLevelListener(
-                        streamAudioLevelListener);
-                }
             }
         }
         catch (Throwable t)
         {
             if (t instanceof InterruptedException)
+            {
                 Thread.currentThread().interrupt();
+            }
             else if (t instanceof ThreadDeath)
+            {
                 throw (ThreadDeath) t;
+            }
         }
     }
 
@@ -195,29 +163,11 @@ public class AudioChannel
                     = device.getSupportedExtensions();
 
                 if (rtpExtensions.size() == 1)
+                {
                     stream.addRTPExtension((byte) 1, rtpExtensions.get(0));
-
-                ((AudioMediaStream) stream).setStreamAudioLevelListener(
-                        getStreamAudioLevelListener());
+                }
             }
         }
-    }
-
-    /**
-     * Notifies this instance about a change in the audio level of the (remote)
-     * endpoint/conference participant associated with this <tt>Channel</tt>.
-     *
-     * @param level the new/current audio level of the (remote)
-     * endpoint/conference participant associated with this <tt>Channel</tt>
-     */
-    private void streamAudioLevelChanged(int level)
-    {
-        /*
-         * Whatever, the Jitsi Videobridge is not interested in the audio
-         * levels. However, an existing/non-null streamAudioLevelListener has to
-         * be set on an AudioMediaStream in order to have the audio levels of
-         * the contributing sources calculated at all.
-         */
     }
 
     /**
@@ -257,7 +207,7 @@ public class AudioChannel
 
                     for (int receiveSSRC : receiveSSRCs)
                     {
-                        if (ssrc == (0xFFFFFFFFL & receiveSSRC))
+                        if (ssrc == (0xFFFF_FFFFL & receiveSSRC))
                         {
                             isReceiveSSRC = true;
                             break;
