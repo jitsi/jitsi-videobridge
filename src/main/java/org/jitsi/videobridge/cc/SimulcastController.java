@@ -440,7 +440,7 @@ public class SimulcastController
         while (it.hasNext())
         {
             ByteArrayBuffer baf = it.next();
-            switch (RTCPHeaderUtils.getPacketType(baf))
+            switch (RTCPUtils.getPacketType(baf))
             {
             case RTCPPacket.SDES:
                 if (removed)
@@ -461,7 +461,7 @@ public class SimulcastController
                     bitstreamController.rtcpTransform(baf);
 
                     // Rewrite senderSSRC
-                    RTCPHeaderUtils.setSenderSSRC(baf, (int) targetSsrc);
+                    RTCPUtils.setSenderSSRC(baf, (int) targetSsrc);
                 }
                 break;
                 case RTCPPacket.BYE:
