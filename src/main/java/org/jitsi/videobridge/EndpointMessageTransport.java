@@ -338,7 +338,7 @@ class EndpointMessageTransport
             return;
         }
 
-        List<Endpoint> endpointSubset;
+        List<EndpointBase> endpointSubset;
         if ("".equals(to))
         {
             // Broadcast message
@@ -349,7 +349,7 @@ class EndpointMessageTransport
         else
         {
             // 1:1 message
-            Endpoint targetEndpoint = conference.getEndpoint(to);
+            EndpointBase targetEndpoint = conference.getEndpoint(to);
             if (targetEndpoint != null)
             {
                 endpointSubset = Collections.singletonList(targetEndpoint);

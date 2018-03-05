@@ -197,7 +197,7 @@ public class EventFactory
      *
      * @return the <tt>Event</tt> which was created.
      */
-    public static Event endpointCreated(Endpoint endpoint)
+    public static Event endpointCreated(EndpointBase endpoint)
     {
         return new Event(ENDPOINT_CREATED_TOPIC, makeProperties(endpoint));
     }
@@ -210,7 +210,7 @@ public class EventFactory
      *
      * @return the <tt>Event</tt> which was created.
      */
-    public static Event endpointDisplayNameChanged(Endpoint endpoint)
+    public static Event endpointDisplayNameChanged(EndpointBase endpoint)
     {
         return
             new Event(

@@ -16,12 +16,16 @@
 package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jitsimeet.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.octo.*;
+import org.jxmpp.jid.*;
 
 import java.net.*;
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Represents an Octo channel, used for bridge-to-bridge communication.
@@ -129,6 +133,27 @@ public class OctoChannel
         OctoTransportManager transportManager = getOctoTransportManager();
 
         transportManager.setRelayIds(relayIds);
+    }
+
+    @Override
+    public boolean setRtpEncodingParameters(
+        List<SourcePacketExtension> sources,
+        List<SourceGroupPacketExtension> sourceGroups)
+    {
+        boolean changed = super.setRtpEncodingParameters(sources, sourceGroups);
+
+        Set<Jid> remoteEndpointIds
+            = sources.stream()
+                .filter(Objects::nonNull)
+                .map(source
+                    -> source.getFirstChildOfType(SSRCInfoPacketExtension.class))
+                .filter(Objects::nonNull)
+                .map(SSRCInfoPacketExtension::getOwner)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+
+        return changed;
     }
 
     /**

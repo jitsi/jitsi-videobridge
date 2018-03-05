@@ -210,41 +210,40 @@ public class EndpointConnectionStatus
             for (Videobridge videobridge : jvbs)
             {
                 Conference[] conferences = videobridge.getConferences();
-                for (Conference conference : conferences)
-                {
-                    List<Endpoint> endpoints = conference.getEndpoints();
-                    for (Endpoint endpoint : endpoints)
-                    {
-                        monitorEndpointActivity(endpoint);
-                    }
-                }
+                Arrays.stream(conferences)
+                    .forEachOrdered(
+                        conference ->
+                            conference.getEndpoints()
+                                .forEach(this::monitorEndpointActivity));
 
                 cleanupExpiredEndpointsStatus();
             }
         }
     }
 
-    private void monitorEndpointActivity(Endpoint endpoint)
+    private void monitorEndpointActivity(EndpointBase endpointBase)
     {
+        if (!(endpointBase instanceof Endpoint))
+        {
+            // We only care about endpoints/participants connected to this
+            // bridge, which are of type Endpoint.
+            return;
+        }
+
+        Endpoint endpoint = (Endpoint) endpointBase;
         String endpointId = endpoint.getID();
-        long lastActivity = 0;
-        long mostRecentChannelCreated = 0;
 
         // Go over all RTP channels to get the latest timestamp
         List<RtpChannel> rtpChannels = endpoint.getChannels(null);
-        for (RtpChannel channel : rtpChannels)
-        {
-            long channelLastActivity = channel.getLastTransportActivityTime();
-            if (channelLastActivity > lastActivity)
-            {
-                lastActivity = channelLastActivity;
-            }
-            long creationTimestamp = channel.getCreationTimestamp();
-            if (creationTimestamp > mostRecentChannelCreated)
-            {
-                mostRecentChannelCreated = creationTimestamp;
-            }
-        }
+        long lastActivity
+            = rtpChannels.stream()
+                .mapToLong(RtpChannel::getLastTransportActivityTime)
+                .max().orElse(0);
+        long mostRecentChannelCreated
+            = rtpChannels.stream()
+                .mapToLong(RtpChannel::getCreationTimestamp)
+                .max().orElse(0);
+
         // Also check SctpConnection
         SctpConnection sctpConnection = endpoint.getSctpConnection();
         if (sctpConnection != null)
@@ -335,7 +334,7 @@ public class EndpointConnectionStatus
             else
             {
                 // Send only to the receiver endpoint
-                ArrayList<Endpoint> receivers = new ArrayList<>(1);
+                ArrayList<EndpointBase> receivers = new ArrayList<>(1);
                 receivers.add(msgReceiver);
 
                 conference.sendMessage(msg, receivers);

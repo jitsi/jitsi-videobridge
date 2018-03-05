@@ -95,11 +95,11 @@ public class ConferencePeriodicRunnable
     {
         Map<String, T> resultStats = new HashMap<>();
 
-        for (Endpoint e : o.getEndpoints())
+        for (EndpointBase endpoint : o.getEndpoints())
         {
             for (MediaType mediaType : MEDIA_TYPES)
             {
-                for (RtpChannel channel : e.getChannels(mediaType))
+                for (RtpChannel channel : endpoint.getChannels(mediaType))
                 {
                     if (channel == null)
                     {
@@ -127,7 +127,8 @@ public class ConferencePeriodicRunnable
 
                     // uses statsId if it is available
                     String endpointID
-                        = e.getStatsId() != null ? e.getStatsId(): e.getID();
+                        = endpoint.getStatsId()
+                            != null ? endpoint.getStatsId(): endpoint.getID();
 
                     Collection newStats
                         = receive

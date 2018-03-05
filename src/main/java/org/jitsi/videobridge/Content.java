@@ -380,7 +380,7 @@ public class Content
      * already for given <tt>Endpoint</tt>.
      */
     public SctpConnection createSctpConnection(
-            Endpoint endpoint,
+            EndpointBase endpoint,
             int sctpPort,
             String channelBundleId,
             Boolean initiator)
@@ -536,7 +536,7 @@ public class Content
                 {
                     continue;
                 }
-                Endpoint endpoint = channel.getEndpoint();
+                EndpointBase endpoint = channel.getEndpoint();
                 if (endpoint == null)
                 {
                     continue;

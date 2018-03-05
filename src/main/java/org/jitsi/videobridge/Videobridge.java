@@ -1018,7 +1018,7 @@ public class Videobridge
                                     + "the new SCTP connection");
                     }
 
-                    Endpoint endpoint
+                    EndpointBase endpoint
                         = conference.getOrCreateEndpoint(endpointID);
                     if (endpoint == null)
                     {

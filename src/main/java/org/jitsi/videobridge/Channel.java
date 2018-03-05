@@ -79,7 +79,7 @@ public abstract class Channel
         String id = channel == null ? "null" : channel.getID();
         Content content
             = channel == null ? null : channel.getContent();
-        Endpoint endpoint
+        EndpointBase endpoint
             = channel == null ? null : channel.getEndpoint();
 
         return Content.getLoggingId(content)
@@ -104,10 +104,10 @@ public abstract class Channel
     private final Content content;
 
     /**
-     * The <tt>Endpoint</tt> of the conference participant associated with this
-     * <tt>Channel</tt>.
+     * The {@link EndpointBase} of the conference participant associated with
+     * this {@link Channel}.
      */
-    private Endpoint endpoint;
+    private EndpointBase endpoint;
 
     /**
      * The number of seconds of inactivity after which this <tt>Channel</tt>
@@ -340,7 +340,7 @@ public abstract class Channel
      */
     public void describe(ColibriConferenceIQ.ChannelCommon iq)
     {
-        Endpoint endpoint = getEndpoint();
+        EndpointBase endpoint = getEndpoint();
 
         if (endpoint != null)
         {
@@ -541,13 +541,10 @@ public abstract class Channel
     }
 
     /**
-     * Gets the <tt>Endpoint</tt> of the conference participant associated with
-     * this <tt>Channel</tt>.
-     *
-     * @return the <tt>Endpoint</tt> of the conference participant associated
-     * with this <tt>Channel</tt>
+     * @return the {@link EndpointBase} of the conference participant associated
+     * with this {@link Channel}.
      */
-    public Endpoint getEndpoint()
+    public EndpointBase getEndpoint()
     {
         return endpoint;
     }
@@ -723,7 +720,8 @@ public abstract class Channel
      * @param oldValue old <tt>Endpoint</tt>, can be <tt>null</tt>.
      * @param newValue new <tt>Endpoint</tt>, can be <tt>null</tt>.
      */
-    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
+    protected void onEndpointChanged(
+        EndpointBase oldValue, EndpointBase newValue)
     {
         firePropertyChange(ENDPOINT_PROPERTY_NAME, oldValue, newValue);
     }
@@ -739,7 +737,7 @@ public abstract class Channel
     {
         try
         {
-            Endpoint oldValue = this.endpoint;
+            EndpointBase oldValue = this.endpoint;
 
             // Is the endpoint really changing?
             if (oldValue == null)
@@ -755,7 +753,7 @@ public abstract class Channel
             }
 
             // The endpoint is really changing.
-            Endpoint newValue
+            EndpointBase newValue
                 = getContent().getConference()
                         .getOrCreateEndpoint(newEndpointId);
             setEndpoint(newValue);
@@ -771,9 +769,9 @@ public abstract class Channel
      * instance.
      * @param endpoint the new {@link Endpoint} instance.
      */
-    public void setEndpoint(Endpoint endpoint)
+    public void setEndpoint(EndpointBase endpoint)
     {
-        Endpoint oldEndpoint = this.endpoint;
+        EndpointBase oldEndpoint = this.endpoint;
         if (oldEndpoint != endpoint)
         {
             this.endpoint = endpoint;

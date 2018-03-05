@@ -17,13 +17,11 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
-import org.ice4j.util.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
@@ -490,10 +488,12 @@ public class VideoChannel
             return;
         }
 
-        Endpoint thisEndpoint = getEndpoint();
+        EndpointBase thisEndpoint = getEndpoint();
 
         if (thisEndpoint == null)
+        {
             return;
+        }
 
         // We want endpointsEnteringLastN to always to reported. Consequently,
         // we will pretend that all lastNEndpoints are entering if no explicit
@@ -536,7 +536,7 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
-    void speechActivityEndpointsChanged(List<Endpoint> endpoints)
+    void speechActivityEndpointsChanged(List<EndpointBase> endpoints)
     {
         bitrateController.update(endpoints, -1);
     }
@@ -618,7 +618,8 @@ public class VideoChannel
     @Override
     protected void dominantSpeakerChanged()
     {
-        Endpoint dominantEndpoint = conferenceSpeechActivity.getDominantEndpoint();
+        EndpointBase dominantEndpoint
+            = conferenceSpeechActivity.getDominantEndpoint();
 
         if (dominantEndpoint != null && dominantEndpoint.equals(getEndpoint()))
         {
@@ -834,17 +835,16 @@ public class VideoChannel
                 }
 
                 long sendingBitrate = 0;
-                Endpoint endpoint = getEndpoint();
+                EndpointBase endpoint = getEndpoint();
                 if (endpoint != null)
                 {
-                    for (RtpChannel channel : endpoint.getChannels(null))
-                    {
-                        sendingBitrate +=
-                            channel
+                    sendingBitrate = endpoint.getChannels(null).stream()
+                        .mapToLong(
+                            channel -> channel
                                 .getStream()
                                 .getMediaStreamStats()
-                                .getSendStats().getBitrate();
-                    }
+                                .getSendStats().getBitrate())
+                        .sum();
                 }
 
                 if (sendingBitrate <= 0)
@@ -866,5 +866,24 @@ public class VideoChannel
                                + bandwidthEstimator.getLatestFractionLoss());
             }
         };
+    }
+
+    /**
+     * @return this {@link VideoChannel}'s {@link EndpointBase} as
+     * an {@link Endpoint} instance.
+     */
+    @Override
+    public Endpoint getEndpoint()
+    {
+        EndpointBase endpointBase = super.getEndpoint();
+        if (endpointBase instanceof Endpoint)
+        {
+            return (Endpoint) endpointBase;
+        }
+        else
+        {
+            throw new IllegalStateException(
+                "A VideoChannel's endpoint is not an Endpoint instance.");
+        }
     }
 }

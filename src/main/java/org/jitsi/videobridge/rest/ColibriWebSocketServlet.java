@@ -156,15 +156,16 @@ class ColibriWebSocketServlet
             return null;
         }
 
-        Endpoint endpoint = conference.getEndpoint(ids[2]);
-        if (endpoint == null)
+        EndpointBase endpointBase = conference.getEndpoint(ids[2]);
+        if (endpointBase == null || !(endpointBase instanceof Endpoint))
         {
-            logger.warn("Received request for an nonexistent endpoint: "
+            logger.warn("Received request for a nonexistent endpoint: "
                             + ids[1] + "(conference " + conference.getID());
             response.sendError(403, authFailed);
             return null;
         }
 
+        Endpoint endpoint = (Endpoint) endpointBase;
         String pwd = getPwd(request.getRequestURI().getQuery());
         if (!endpoint.acceptWebSocket(pwd))
         {

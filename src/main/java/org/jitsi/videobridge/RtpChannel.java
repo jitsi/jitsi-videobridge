@@ -534,7 +534,7 @@ public class RtpChannel
 
                         if (recorder != null)
                         {
-                            Endpoint endpoint = getEndpoint();
+                            EndpointBase endpoint = getEndpoint();
 
                             if (endpoint != null)
                             {
@@ -544,7 +544,7 @@ public class RtpChannel
                                 if (synchronizer != null)
                                 {
                                     synchronizer.setEndpoint(
-                                            ssrc & 0xffffffffL,
+                                            ssrc & 0xffff_ffffL,
                                             endpoint.getID());
                                 }
                             }
@@ -1152,7 +1152,8 @@ public class RtpChannel
      * {@inheritDoc}
      */
     @Override
-    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
+    protected void onEndpointChanged(
+        EndpointBase oldValue, EndpointBase newValue)
     {
         super.onEndpointChanged(oldValue, newValue);
 
@@ -1578,7 +1579,7 @@ public class RtpChannel
      * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
      * <tt>conferenceSpeechActivity</tt>
      */
-    void speechActivityEndpointsChanged(List<Endpoint> endpoints)
+    void speechActivityEndpointsChanged(List<EndpointBase> endpoints)
     {
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
@@ -1718,7 +1719,7 @@ public class RtpChannel
 
             Recorder recorder = null;
             Synchronizer synchronizer = null;
-            Endpoint endpoint = null;
+            EndpointBase endpoint = null;
             if (getContent().isRecording())
             {
                 recorder = getContent().getRecorder();
@@ -1740,7 +1741,7 @@ public class RtpChannel
                     if (recorder != null && endpoint != null && synchronizer != null)
                     {
                         synchronizer.setEndpoint(
-                                addedSSRC & 0xffffffffl,
+                                addedSSRC & 0xffff_ffffL,
                                 endpoint.getID());
                     }
                 }
