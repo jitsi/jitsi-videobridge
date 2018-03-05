@@ -161,32 +161,6 @@ public class OctoChannel
         return rtcp ? rtcpFilter : rtpFilter;
     }
 
-    /**
-     * TODO: this should be in a utility somewhere.
-     * @param data
-     * @param off
-     * @param len
-     * @return
-     */
-    private boolean isRTCP(byte[] data, int off, int len)
-    {
-        // The shortest RTCP packet (an empty RR) is 8 bytes long, RTP packets
-        // are at least 12 bytes long (due to the fixed header).
-        if (len >= 8)
-        {
-            if (((data[off] & 0xc0) >> 6) == 2) // RTP/RTCP version field
-            {
-                int pt = data[off + 1] & 0xff;
-
-                if (200 <= pt && pt <= 211)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
 
     /**
      * {@inheritDoc}
@@ -303,7 +277,7 @@ public class OctoChannel
 
             // The RTP/RTCP packet is preceded by the fixed length Octo header
             boolean packetIsRtcp
-                = isRTCP(
+                = RTCPUtils.looksLikeRtcp(
                         p.getData(),
                         p.getOffset() + OctoPacket.OCTO_HEADER_LENGTH,
                         p.getLength() - OctoPacket.OCTO_HEADER_LENGTH);
