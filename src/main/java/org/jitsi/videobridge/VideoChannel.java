@@ -303,6 +303,15 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
+    protected void updateBitrateController()
+    {
+        bitrateController.update();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public int[] getDefaultReceiveSSRCs()
     {
         return DEFAULT_RTCP_RECV_REPORT_SSRCS;

@@ -1921,6 +1921,8 @@ public class RtpChannel
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
+        boolean changed = false;
+
         // replace null sources / sourceGroups with empty collection
         // so that downstreams do not need to take care of nulls.
         if (sources == null)
@@ -1950,12 +1952,28 @@ public class RtpChannel
                 = MediaStreamTrackFactory.createMediaStreamTracks(
                     mediaStreamTrackReceiver, sources, sourceGroups);
 
-            return mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+            changed
+                = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
         }
-        else
+
+        if (changed)
         {
-            return false;
+            getContent().getChannels().stream()
+                .filter(c -> c != this && c instanceof RtpChannel)
+                .forEach(
+                    c -> ((RtpChannel) c).updateBitrateController());
         }
+
+        return changed;
+    }
+
+    /**
+     * Triggers the bitrate controller of this channel (if any) to update its
+     * state (taking into account e.g. new endpoints in the conference).
+     */
+    protected void updateBitrateController()
+    {
+        // RtpChannel doesn't itself have a bitrate controller.
     }
 
     /**
