@@ -326,17 +326,10 @@ public class VideoChannel
     {
         super.initialize(rtpLevelRelayType);
 
-        bitrateController.update(null, -1);
+        bitrateController.update();
 
         ((VideoMediaStream) getStream()).getOrCreateBandwidthEstimator()
-            .addListener(new BandwidthEstimator.Listener()
-            {
-                @Override
-                public void bandwidthEstimationChanged(long newValueBps)
-                {
-                    bitrateController.update(null, newValueBps);
-                }
-            });
+            .addListener(bitrateController::update);
     }
 
     /**
@@ -434,7 +427,7 @@ public class VideoChannel
             || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
             || Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            bitrateController.update(null, -1);
+            bitrateController.update();
         }
     }
 
@@ -574,7 +567,7 @@ public class VideoChannel
         if (this.lastN != lastN)
         {
             this.lastN = lastN;
-            bitrateController.update(null, -1);
+            bitrateController.update();
         }
 
         touch(); // It seems this Channel is still active.
@@ -734,7 +727,7 @@ public class VideoChannel
     public void setMaxFrameHeight(int maxFrameHeight)
     {
         this.maxFrameHeight = maxFrameHeight;
-        this.bitrateController.update(null, -1);
+        this.bitrateController.update();
     }
 
     /**

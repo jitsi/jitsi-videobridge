@@ -385,6 +385,33 @@ public class BitrateController
      * Computes a new bitrate allocation for every endpoint in the conference,
      * and updates the state of this instance so that bitrate allocation is
      * eventually met.
+     * The list of endpoints will be fetched from the
+     * {@link ConferenceSpeechActivity} of the conference.
+     *
+     * @param bweBps the current bandwidth estimation (in bps).
+     */
+    public void update(long bweBps)
+    {
+        update(null, bweBps);
+    }
+
+    /**
+     * Computes a new bitrate allocation for every endpoint in the conference,
+     * and updates the state of this instance so that bitrate allocation is
+     * eventually met.
+     * The list of endpoints will be fetched from the
+     * {@link ConferenceSpeechActivity} of the conference, and the estimated
+     * available bandwidth will be fetched from the {@link BandwidthEstimator}.
+     */
+    public void update()
+    {
+        update(null, -1);
+    }
+
+    /**
+     * Computes a new bitrate allocation for every endpoint in the conference,
+     * and updates the state of this instance so that bitrate allocation is
+     * eventually met.
      *
      * @param conferenceEndpoints the ordered list of {@link Endpoint}s
      * participating in the multipoint conference with the dominant (speaker)
@@ -392,7 +419,8 @@ public class BitrateController
      * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
-     * @param bweBps the current bandwidth estimation (in bps).
+     * @param bweBps the current bandwidth estimation (in bps), or -1 to fetch
+     * the value from the {@link BandwidthEstimator}.
      */
     public void update(List<Endpoint> conferenceEndpoints, long bweBps)
     {
