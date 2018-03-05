@@ -49,13 +49,6 @@ public class VideoChannel
     extends RtpChannel
 {
     /**
-     * The length in milliseconds of the interval for which the average incoming
-     * bitrate for this video channel will be computed and made available
-     * through {@link #getIncomingBitrate}.
-     */
-    private static final int INCOMING_BITRATE_INTERVAL_MS = 5000;
-
-    /**
      * The name of the property used to disable LastN notifications.
      */
     public static final String DISABLE_LASTN_NOTIFICATIONS_PNAME
@@ -182,14 +175,6 @@ public class VideoChannel
      */
     private final BandwidthProbing bandwidthProbing
         = new BandwidthProbing(this);
-
-    /**
-     * The instance which will be computing the incoming bitrate for this
-     * <tt>VideoChannel</tt>.
-     * @deprecated We should use the statistics from the media stream for this.
-     */
-    private final RateStatistics incomingBitrate
-        = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -342,28 +327,6 @@ public class VideoChannel
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
-    {
-        boolean accept = super.acceptDataInputStreamDatagramPacket(p);
-
-        if (accept)
-        {
-            // TODO: find a way to do this only in case it is actually needed
-            // (currently this means when there is another channel in the
-            // same content, with adaptive-last-n turned on), in order to not
-            // waste resources.
-            // XXX should we also count bytes received for RTCP towards the
-            // incoming bitrate?
-            incomingBitrate.update(p.getLength(), System.currentTimeMillis());
-        }
-
-        return accept;
-    }
-
-    /**
      * Gets the {@link BitrateController} which controls which endpoints'
      * video streams are to be forwarded on this {@link VideoChannel} (i.e.
      * implements last-n and its extensions (pinned endpoints, adaptation).
@@ -396,19 +359,6 @@ public class VideoChannel
         super.describe(iq);
 
         iq.setLastN(lastN);
-    }
-
-    /**
-     * Returns the current incoming bitrate in bits per second for this
-     * <tt>VideoChannel</tt> (computed as the average bitrate over the last
-     * {@link #INCOMING_BITRATE_INTERVAL_MS} milliseconds).
-     *
-     * @deprecated We should use the statistics from the media stream for this.
-     * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
-     */
-    public long getIncomingBitrate()
-    {
-        return incomingBitrate.getRate(System.currentTimeMillis());
     }
 
     /**
