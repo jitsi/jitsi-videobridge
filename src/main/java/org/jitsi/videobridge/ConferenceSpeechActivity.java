@@ -721,18 +721,6 @@ public class ConferenceSpeechActivity
                 }
             }
         }
-        else if (DominantSpeakerIdentification.DOMINANT_SPEAKER_PROPERTY_NAME
-                .equals(propertyName))
-        {
-            DominantSpeakerIdentification dominantSpeakerIdentification
-                = this.dominantSpeakerIdentification;
-
-            if ((dominantSpeakerIdentification != null)
-                    && dominantSpeakerIdentification.equals(ev.getSource()))
-            {
-                // TODO Auto-generated method stub
-            }
-        }
     }
 
     /**
