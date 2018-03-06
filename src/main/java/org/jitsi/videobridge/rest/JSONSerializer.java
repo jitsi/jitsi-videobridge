@@ -43,6 +43,9 @@ final class JSONSerializer
     static final String CANDIDATE_LIST
         = CandidatePacketExtension.ELEMENT_NAME + "s";
 
+    static final String WEBSOCKET_LIST
+            = WebSocketPacketExtension.ELEMENT_NAME + "s";
+
     /**
      * The name of the JSON pair which specifies the value of the
      * <tt>channelBundles</tt> property of <tt>ColibriConferenceIQ</tt>.
@@ -979,9 +982,12 @@ final class JSONSerializer
                         DtlsFingerprintPacketExtension.class);
             List<CandidatePacketExtension> candidateList
                 = transport.getCandidateList();
+            List<WebSocketPacketExtension> websocketList
+                    = transport.getChildExtensionsOfType(WebSocketPacketExtension.class);
             RemoteCandidatePacketExtension remoteCandidate
                 = transport.getRemoteCandidate();
             boolean rtcpMux = transport.isRtcpMux();
+
 
             jsonObject = new JSONObject();
             // xmlns
@@ -1010,6 +1016,10 @@ final class JSONSerializer
                         remoteCandidate.getElementName(),
                         serializeCandidate(remoteCandidate));
             }
+            if ( (websocketList != null) && (!websocketList.isEmpty()) ) {
+                jsonObject.put(WEBSOCKET_LIST,
+                        serializeWebsockets(websocketList));
+            }
             // rtcpMux
             if (rtcpMux)
             {
@@ -1017,8 +1027,29 @@ final class JSONSerializer
                         RtcpmuxPacketExtension.ELEMENT_NAME,
                         Boolean.valueOf(rtcpMux));
             }
+
         }
         return jsonObject;
+    }
+
+    private static JSONArray serializeWebsockets(List<WebSocketPacketExtension> websocketList) {
+        JSONArray websocketJSONArray;
+
+        if (websocketList == null)
+        {
+            websocketJSONArray = null;
+        }
+        else
+        {
+            websocketJSONArray = new JSONArray();
+            for (WebSocketPacketExtension wsp : websocketList)
+                websocketJSONArray.add(serializeWebsocket(wsp));
+        }
+        return websocketJSONArray;
+    }
+
+    private static String serializeWebsocket(WebSocketPacketExtension wsp) {
+        return wsp.getUrl();
     }
 
     /** Prevents the initialization of new <tt>JSONSerializer</tt> instances. */
