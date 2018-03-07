@@ -578,6 +578,14 @@ public class BitrateController
                                 .addField("optimal_idx", trackOptimalIdx)
                                 .addField("current_bps", trackCurrentBps)
                                 .addField("target_bps", trackTargetBps)
+                                .addField("selected",
+                                    trackBitrateAllocation.selected)
+                                .addField("oversending",
+                                    trackBitrateAllocation.oversending)
+                                .addField("preferred_idx",
+                                    trackBitrateAllocation.preferredIdx)
+                                .addField("endpoint_id",
+                                    trackBitrateAllocation.endpointID)
                                 .addField("optimal_bps", trackOptimalBps));
                     }
                 }
@@ -994,6 +1002,12 @@ public class BitrateController
         private int ratesIdx = -1;
 
         /**
+         * A boolean that indicates whether or not we're force pushing through
+         * the bottleneck this track.
+         */
+        private boolean oversending = false;
+
+        /**
          * Ctor.
          *
          * @param endpoint the {@link Endpoint} that this bitrate allocation
@@ -1109,6 +1123,7 @@ public class BitrateController
                 if (!ENABLE_ONSTAGE_VIDEO_SUSPEND)
                 {
                     ratesIdx = 0;
+                    oversending = rates[0].bps > maxBps;
                 }
 
                 // Boost on stage participant to 360p.
