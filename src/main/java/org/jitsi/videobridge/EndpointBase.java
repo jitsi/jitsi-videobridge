@@ -17,12 +17,12 @@ package org.jitsi.videobridge;
 
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -71,6 +71,13 @@ public abstract class EndpointBase extends PropertyChangeNotifier
      * on this <tt>Endpoint</tt>.
      */
     private boolean expired = false;
+
+    /**
+     * Caches the list of video {@link MediaStreamTrackDesc} associated with
+     * this endpoint. We cache this to avoid re-creating it because it is
+     * accessed often.
+     */
+    private List<MediaStreamTrackDesc> mediaStreamTracks = new LinkedList<>();
 
     /**
      * Initializes a new {@link EndpointBase} instance.
@@ -334,6 +341,7 @@ public abstract class EndpointBase extends PropertyChangeNotifier
      */
     public void expire()
     {
+        mediaStreamTracks = new LinkedList<>();
         this.expired = true;
         getConference().endpointExpired(this);
     }
@@ -356,16 +364,40 @@ public abstract class EndpointBase extends PropertyChangeNotifier
     {}
 
     /**
-     * Gets an array that contains all the {@link MediaStreamTrackDesc} of the
-     * specified media type associated with this {@link Endpoint}.
-     *
-     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
-     * get.
-     * @return an array that contains all the {@link MediaStreamTrackDesc} of
-     * the specified media type associated with this {@link Endpoint}, or null.
+     * @return the list of all video {@link MediaStreamTrackDesc} associated
+     * this {@link EndpointBase}. Always return non-null.
      */
-    public abstract MediaStreamTrackDesc[] getMediaStreamTracks(
-        MediaType mediaType);
+    public List<MediaStreamTrackDesc> getMediaStreamTracks()
+    {
+        return mediaStreamTracks;
+    }
+
+    /**
+     * Updates the cached list of {@link MediaStreamTrackDesc} associated
+     * with this endpoint.
+     */
+    void updateMediaStreamTracks()
+    {
+        List<RtpChannel> channels = getChannels(MediaType.VIDEO);
+
+        if (channels == null || channels.isEmpty())
+        {
+            mediaStreamTracks = new LinkedList<>();
+            return;
+        }
+
+        List<MediaStreamTrackDesc> allTracks = new LinkedList<>();
+        channels.stream()
+            .map(channel -> channel.getStream().getMediaStreamTrackReceiver())
+            .forEach(
+                trackReceiver -> allTracks.addAll(
+                    Arrays.asList(trackReceiver.getMediaStreamTracks())));
+
+        mediaStreamTracks
+            = allTracks.stream()
+                .filter(track -> getID().equals(track.getOwner()))
+                .collect(Collectors.toList());
+    }
 
     /**
      * Sends a specific {@link String} {@code msg} to the remote end of this

@@ -1955,6 +1955,10 @@ public class RtpChannel
 
             changed
                 = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+
+            // The list of tracks is cached in the Endpoint for performance
+            // reasons. Make sure it's updated.
+            getEndpoint().updateMediaStreamTracks();
         }
 
         if (changed)

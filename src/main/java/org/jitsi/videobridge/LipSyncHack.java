@@ -255,15 +255,16 @@ public class LipSyncHack
             return;
         }
 
-        MediaStreamTrackDesc[] sourceTracks
-            = source.getEndpoint().getMediaStreamTracks(MediaType.VIDEO);
-        if (ArrayUtils.isNullOrEmpty(sourceTracks))
+        List<MediaStreamTrackDesc> sourceTracks
+            = source.getEndpoint().getMediaStreamTracks();
+        if (sourceTracks.isEmpty())
         {
             // It seems like we're not ready yet to trigger the hack.
             return;
         }
 
-        RTPEncodingDesc[] sourceEncodings = sourceTracks[0].getRTPEncodings();
+        RTPEncodingDesc[] sourceEncodings
+            = sourceTracks.get(0).getRTPEncodings();
         if (ArrayUtils.isNullOrEmpty(sourceEncodings))
         {
             // It seems like we're not ready yet to trigger the hack.
