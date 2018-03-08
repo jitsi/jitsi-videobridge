@@ -95,7 +95,7 @@ public class Conference
     /**
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
-    private final List<EndpointBase> endpoints = new LinkedList<>();
+    private final List<AbstractEndpoint> endpoints = new LinkedList<>();
 
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
@@ -327,9 +327,9 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessage(String msg, List<EndpointBase> endpoints)
+    public void sendMessage(String msg, List<AbstractEndpoint> endpoints)
     {
-        for (EndpointBase endpoint : endpoints)
+        for (AbstractEndpoint endpoint : endpoints)
         {
             try
             {
@@ -554,7 +554,7 @@ public class Conference
      */
     private void dominantSpeakerChanged()
     {
-        EndpointBase dominantSpeaker = speechActivity.getDominantEndpoint();
+        AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
 
         if (logger.isInfoEnabled())
         {
@@ -797,7 +797,7 @@ public class Conference
      * stream with the specified <tt>ssrc</tt> and with the specified
      * <tt>mediaType</tt>; otherwise, <tt>null</tt>
      */
-    EndpointBase findEndpointByReceiveSSRC(
+    AbstractEndpoint findEndpointByReceiveSSRC(
         long receiveSSRC, MediaType mediaType)
     {
         Channel channel = findChannelByReceiveSSRC(receiveSSRC, mediaType);
@@ -839,7 +839,7 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      * which has the specified <tt>id</tt> or <tt>null</tt>
      */
-    public EndpointBase getEndpoint(String id)
+    public AbstractEndpoint getEndpoint(String id)
     {
         return getEndpoint(id, /* create */ false);
     }
@@ -858,14 +858,14 @@ public class Conference
      * which has the specified <tt>id</tt> or <tt>null</tt> if there is no such
      * <tt>Endpoint</tt> and <tt>create</tt> equals <tt>false</tt>
      */
-    private EndpointBase getEndpoint(String id, boolean create)
+    private AbstractEndpoint getEndpoint(String id, boolean create)
     {
-        EndpointBase endpoint;
+        AbstractEndpoint endpoint;
         boolean changed;
 
         synchronized (endpoints)
         {
-            changed = endpoints.removeIf(EndpointBase::isExpired);
+            changed = endpoints.removeIf(AbstractEndpoint::isExpired);
 
             endpoint
                 = endpoints.stream()
@@ -944,14 +944,14 @@ public class Conference
      * @return the <tt>Endpoint</tt>s participating in/contributing to this
      * <tt>Conference</tt>
      */
-    public List<EndpointBase> getEndpoints()
+    public List<AbstractEndpoint> getEndpoints()
     {
         boolean changed;
-        List<EndpointBase> copy;
+        List<AbstractEndpoint> copy;
 
         synchronized (this.endpoints)
         {
-            changed = this.endpoints.removeIf(EndpointBase::isExpired);
+            changed = this.endpoints.removeIf(AbstractEndpoint::isExpired);
             copy = new ArrayList<>(this.endpoints);
         }
 
@@ -1098,7 +1098,7 @@ public class Conference
      * @return an <tt>Endpoint</tt> participating in this <tt>Conference</tt>
      * which has the specified <tt>id</tt>
      */
-    public EndpointBase getOrCreateEndpoint(String id)
+    public AbstractEndpoint getOrCreateEndpoint(String id)
     {
         return getEndpoint(id, /* create */ true);
     }
@@ -1380,13 +1380,13 @@ public class Conference
      *
      * @param endpoint the <tt>Endpoint</tt> which expired.
      */
-    void endpointExpired(EndpointBase endpoint)
+    void endpointExpired(AbstractEndpoint endpoint)
     {
         boolean removed;
 
         synchronized (endpoints)
         {
-            removed = endpoints.removeIf(EndpointBase::isExpired);
+            removed = endpoints.removeIf(AbstractEndpoint::isExpired);
         }
 
         if (removed)
@@ -1406,7 +1406,7 @@ public class Conference
     {
         if (!isExpired())
         {
-            EndpointBase dominantSpeaker = speechActivity.getDominantEndpoint();
+            AbstractEndpoint dominantSpeaker = speechActivity.getDominantEndpoint();
 
             if (dominantSpeaker != null)
             {
@@ -1484,7 +1484,7 @@ public class Conference
                     }
                     else
                     {
-                        for (EndpointBase endpoint : getEndpoints())
+                        for (AbstractEndpoint endpoint : getEndpoints())
                         {
                             endpointRecorder.updateEndpoint(endpoint);
                         }
@@ -1603,7 +1603,7 @@ public class Conference
         {
             if (MediaType.VIDEO.equals(content.getMediaType()))
             {
-                List<EndpointBase> endpoints
+                List<AbstractEndpoint> endpoints
                     = Collections.unmodifiableList(
                         speechActivity.getEndpoints());
 
@@ -1677,7 +1677,7 @@ public class Conference
 
         if (id != null)
         {
-            EndpointBase endpoint = getEndpoint(id);
+            AbstractEndpoint endpoint = getEndpoint(id);
 
             if (endpoint != null)
             {

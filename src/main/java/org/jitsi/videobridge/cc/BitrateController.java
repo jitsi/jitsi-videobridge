@@ -424,7 +424,7 @@ public class BitrateController
      * @param bweBps the current bandwidth estimation (in bps), or -1 to fetch
      * the value from the {@link BandwidthEstimator}.
      */
-    public void update(List<EndpointBase> conferenceEndpoints, long bweBps)
+    public void update(List<AbstractEndpoint> conferenceEndpoints, long bweBps)
     {
         if (bweBps > -1)
         {
@@ -663,7 +663,7 @@ public class BitrateController
      * @return an array of {@link TrackBitrateAllocation}.
      */
     private TrackBitrateAllocation[] allocate(
-        long maxBandwidth, List<EndpointBase> conferenceEndpoints)
+        long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
     {
         TrackBitrateAllocation[]
             trackBitrateAllocations = prioritize(conferenceEndpoints);
@@ -755,14 +755,14 @@ public class BitrateController
      * endpoints, finally followed by any other remaining endpoints.
      */
     private TrackBitrateAllocation[] prioritize(
-        List<EndpointBase> conferenceEndpoints)
+        List<AbstractEndpoint> conferenceEndpoints)
     {
         if (dest.isExpired())
         {
             return null;
         }
 
-        EndpointBase destEndpoint = dest.getEndpoint();
+        AbstractEndpoint destEndpoint = dest.getEndpoint();
         if (destEndpoint == null || destEndpoint.isExpired())
         {
             return null;
@@ -790,10 +790,10 @@ public class BitrateController
         // First, bubble-up the selected endpoints (whoever's on-stage needs to
         // be visible).
         Set<String> selectedEndpoints = destEndpoint.getSelectedEndpoints();
-        for (Iterator<EndpointBase> it = conferenceEndpoints.iterator();
+        for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
              it.hasNext() && endpointPriority < lastN;)
         {
-            EndpointBase sourceEndpoint = it.next();
+            AbstractEndpoint sourceEndpoint = it.next();
             if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !selectedEndpoints.contains(sourceEndpoint.getID()))
@@ -828,10 +828,10 @@ public class BitrateController
         Set<String> pinnedEndpoints = destEndpoint.getPinnedEndpoints();
         if (!pinnedEndpoints.isEmpty())
         {
-            for (Iterator<EndpointBase> it = conferenceEndpoints.iterator();
+            for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
                  it.hasNext() && endpointPriority < lastN;)
             {
-                EndpointBase sourceEndpoint = it.next();
+                AbstractEndpoint sourceEndpoint = it.next();
                 if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !pinnedEndpoints.contains(sourceEndpoint.getID()))
@@ -865,7 +865,7 @@ public class BitrateController
         // Finally, deal with any remaining endpoints.
         if (!conferenceEndpoints.isEmpty())
         {
-            for (EndpointBase sourceEndpoint : conferenceEndpoints)
+            for (AbstractEndpoint sourceEndpoint : conferenceEndpoints)
             {
                 if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID()))
@@ -1012,7 +1012,7 @@ public class BitrateController
          * selected.
          */
         private TrackBitrateAllocation(
-            EndpointBase endpoint, MediaStreamTrackDesc track,
+            AbstractEndpoint endpoint, MediaStreamTrackDesc track,
             boolean fitsInLastN, boolean selected, int maxFrameHeight)
         {
             this.endpointID = endpoint.getID();

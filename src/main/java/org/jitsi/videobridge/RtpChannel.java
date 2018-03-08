@@ -534,7 +534,7 @@ public class RtpChannel
 
                         if (recorder != null)
                         {
-                            EndpointBase endpoint = getEndpoint();
+                            AbstractEndpoint endpoint = getEndpoint();
 
                             if (endpoint != null)
                             {
@@ -1153,7 +1153,7 @@ public class RtpChannel
      */
     @Override
     protected void onEndpointChanged(
-        EndpointBase oldValue, EndpointBase newValue)
+        AbstractEndpoint oldValue, AbstractEndpoint newValue)
     {
         super.onEndpointChanged(oldValue, newValue);
 
@@ -1579,7 +1579,7 @@ public class RtpChannel
      * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
      * <tt>conferenceSpeechActivity</tt>
      */
-    void speechActivityEndpointsChanged(List<EndpointBase> endpoints)
+    void speechActivityEndpointsChanged(List<AbstractEndpoint> endpoints)
     {
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
@@ -1719,7 +1719,7 @@ public class RtpChannel
 
             Recorder recorder = null;
             Synchronizer synchronizer = null;
-            EndpointBase endpoint = null;
+            AbstractEndpoint endpoint = null;
             if (getContent().isRecording())
             {
                 recorder = getContent().getRecorder();

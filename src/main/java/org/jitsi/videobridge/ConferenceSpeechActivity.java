@@ -134,7 +134,7 @@ public class ConferenceSpeechActivity
 
         if (ssrc != -1)
         {
-            EndpointBase endpoint
+            AbstractEndpoint endpoint
                 = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
 
             if (endpoint != null)
@@ -177,7 +177,7 @@ public class ConferenceSpeechActivity
      * The <tt>Endpoint</tt> which is the dominant speaker in
      * {@link #conference}.
      */
-    private EndpointBase dominantEndpoint;
+    private AbstractEndpoint dominantEndpoint;
 
     /**
      * The indicator which signals to {@link #eventDispatcher} that
@@ -197,7 +197,7 @@ public class ConferenceSpeechActivity
      * {@link #conference} with the dominant (speaker) <tt>Endpoint</tt> at the
      * beginning of the list i.e. the dominant speaker history.
      */
-    private List<EndpointBase> endpoints;
+    private List<AbstractEndpoint> endpoints;
 
     /**
      * The indicator which signals to {@link #eventDispatcher} that the
@@ -278,7 +278,7 @@ public class ConferenceSpeechActivity
                             + ".");
             }
 
-            EndpointBase endpoint
+            AbstractEndpoint endpoint
                 = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
             boolean maybeStartEventDispatcher = false;
 
@@ -294,7 +294,7 @@ public class ConferenceSpeechActivity
                 }
                 else
                 {
-                    EndpointBase dominantEndpoint = getDominantEndpoint();
+                    AbstractEndpoint dominantEndpoint = getDominantEndpoint();
 
                     if (!endpoint.equals(dominantEndpoint))
                     {
@@ -533,9 +533,9 @@ public class ConferenceSpeechActivity
      * @return the <tt>Endpoint</tt> which is the dominant speaker in the
      * multipoint conference represented by this instance or <tt>null</tt>
      */
-    public EndpointBase getDominantEndpoint()
+    public AbstractEndpoint getDominantEndpoint()
     {
-        EndpointBase dominantEndpoint;
+        AbstractEndpoint dominantEndpoint;
 
         synchronized (syncRoot)
         {
@@ -580,9 +580,9 @@ public class ConferenceSpeechActivity
      * multipoint conference represented by this instance with the dominant
      * (speaker) <tt>Endpoint</tt> at the beginning of the list
      */
-    public List<EndpointBase> getEndpoints()
+    public List<AbstractEndpoint> getEndpoints()
     {
-        List<EndpointBase> ret;
+        List<AbstractEndpoint> ret;
 
         synchronized (syncRoot)
         {
@@ -603,7 +603,7 @@ public class ConferenceSpeechActivity
                 }
                 else
                 {
-                    List<EndpointBase> conferenceEndpoints
+                    List<AbstractEndpoint> conferenceEndpoints
                         = conference.getEndpoints();
 
                     endpoints = new ArrayList<>(conferenceEndpoints);
@@ -778,7 +778,7 @@ public class ConferenceSpeechActivity
              * Synchronize the set of Endpoints of this instance with the set of
              * Endpoints of the conference.
              */
-            List<EndpointBase> conferenceEndpoints = conference.getEndpoints();
+            List<AbstractEndpoint> conferenceEndpoints = conference.getEndpoints();
 
             if (endpoints == null)
             {
@@ -808,7 +808,7 @@ public class ConferenceSpeechActivity
              * Make sure that the dominantEndpoint is at the top of the list of
              * the Endpoints of this instance.
              */
-            EndpointBase dominantEndpoint = getDominantEndpoint();
+            AbstractEndpoint dominantEndpoint = getDominantEndpoint();
 
             if (dominantEndpoint != null)
             {

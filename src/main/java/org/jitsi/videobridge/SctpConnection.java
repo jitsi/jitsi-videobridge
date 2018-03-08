@@ -26,7 +26,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.ice4j.socket.*;
 import org.ice4j.util.*;
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.impl.osgi.framework.*;
 import org.jitsi.sctp4j.*;
@@ -240,7 +239,7 @@ public class SctpConnection
     public SctpConnection(
             String id,
             Content content,
-            EndpointBase endpoint,
+            AbstractEndpoint endpoint,
             int remoteSctpPort,
             String channelBundleId,
             Boolean initiator)
@@ -703,7 +702,7 @@ public class SctpConnection
      */
     @Override
     protected void onEndpointChanged(
-        EndpointBase oldValue, EndpointBase newValue)
+        AbstractEndpoint oldValue, AbstractEndpoint newValue)
     {
         super.onEndpointChanged(oldValue, newValue);
 

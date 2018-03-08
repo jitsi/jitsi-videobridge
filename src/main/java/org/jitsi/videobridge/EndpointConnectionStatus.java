@@ -221,16 +221,16 @@ public class EndpointConnectionStatus
         }
     }
 
-    private void monitorEndpointActivity(EndpointBase endpointBase)
+    private void monitorEndpointActivity(AbstractEndpoint abstractEndpoint)
     {
-        if (!(endpointBase instanceof Endpoint))
+        if (!(abstractEndpoint instanceof Endpoint))
         {
             // We only care about endpoints/participants connected to this
             // bridge, which are of type Endpoint.
             return;
         }
 
-        Endpoint endpoint = (Endpoint) endpointBase;
+        Endpoint endpoint = (Endpoint) abstractEndpoint;
         String endpointId = endpoint.getID();
 
         // Go over all RTP channels to get the latest timestamp
@@ -334,7 +334,7 @@ public class EndpointConnectionStatus
             else
             {
                 // Send only to the receiver endpoint
-                ArrayList<EndpointBase> receivers = new ArrayList<>(1);
+                ArrayList<AbstractEndpoint> receivers = new ArrayList<>(1);
                 receivers.add(msgReceiver);
 
                 conference.sendMessage(msg, receivers);

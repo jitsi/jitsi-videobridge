@@ -33,7 +33,7 @@ import java.util.stream.*;
  *
  * @author Boris Grozev
  */
-public abstract class EndpointBase extends PropertyChangeNotifier
+public abstract class AbstractEndpoint extends PropertyChangeNotifier
 {
     /**
      * Filters a list of {@code tracks}, and returns the list consisting of the
@@ -91,12 +91,12 @@ public abstract class EndpointBase extends PropertyChangeNotifier
     private boolean expired = false;
 
     /**
-     * Initializes a new {@link EndpointBase} instance.
+     * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
      * part of.
      * @param id the ID of the endpoint.
      */
-    EndpointBase(Conference conference, String id)
+    AbstractEndpoint(Conference conference, String id)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
         this.id = Objects.requireNonNull(id, "id");
@@ -105,7 +105,7 @@ public abstract class EndpointBase extends PropertyChangeNotifier
 
     /**
      * Adds a specific {@link RtpChannel} to the list of channels
-     * associated with this {@link EndpointBase}.
+     * associated with this {@link AbstractEndpoint}.
      *
      * @param channel the {@link RtpChannel }to add.
      * @return {@code true} if the list of {@link RtpChannel}s associated with
@@ -348,7 +348,7 @@ public abstract class EndpointBase extends PropertyChangeNotifier
     }
 
     /**
-     * Expires this {@link EndpointBase}.
+     * Expires this {@link AbstractEndpoint}.
      */
     public void expire()
     {

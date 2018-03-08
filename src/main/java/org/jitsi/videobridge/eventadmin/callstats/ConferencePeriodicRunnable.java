@@ -95,7 +95,7 @@ public class ConferencePeriodicRunnable
     {
         Map<String, T> resultStats = new HashMap<>();
 
-        for (EndpointBase endpoint : o.getEndpoints())
+        for (AbstractEndpoint endpoint : o.getEndpoints())
         {
             for (MediaType mediaType : MEDIA_TYPES)
             {

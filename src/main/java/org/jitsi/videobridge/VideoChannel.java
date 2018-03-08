@@ -488,7 +488,7 @@ public class VideoChannel
             return;
         }
 
-        EndpointBase thisEndpoint = getEndpoint();
+        AbstractEndpoint thisEndpoint = getEndpoint();
 
         if (thisEndpoint == null)
         {
@@ -536,7 +536,7 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
-    void speechActivityEndpointsChanged(List<EndpointBase> endpoints)
+    void speechActivityEndpointsChanged(List<AbstractEndpoint> endpoints)
     {
         bitrateController.update(endpoints, -1);
     }
@@ -618,7 +618,7 @@ public class VideoChannel
     @Override
     protected void dominantSpeakerChanged()
     {
-        EndpointBase dominantEndpoint
+        AbstractEndpoint dominantEndpoint
             = conferenceSpeechActivity.getDominantEndpoint();
 
         if (dominantEndpoint != null && dominantEndpoint.equals(getEndpoint()))
@@ -835,7 +835,7 @@ public class VideoChannel
                 }
 
                 long sendingBitrate = 0;
-                EndpointBase endpoint = getEndpoint();
+                AbstractEndpoint endpoint = getEndpoint();
                 if (endpoint != null)
                 {
                     sendingBitrate = endpoint.getChannels().stream()
