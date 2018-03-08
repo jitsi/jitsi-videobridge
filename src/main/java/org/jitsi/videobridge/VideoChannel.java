@@ -838,7 +838,7 @@ public class VideoChannel
                 EndpointBase endpoint = getEndpoint();
                 if (endpoint != null)
                 {
-                    sendingBitrate = endpoint.getChannels(null).stream()
+                    sendingBitrate = endpoint.getChannels().stream()
                         .mapToLong(
                             channel -> channel
                                 .getStream()
@@ -866,24 +866,5 @@ public class VideoChannel
                                + bandwidthEstimator.getLatestFractionLoss());
             }
         };
-    }
-
-    /**
-     * @return this {@link VideoChannel}'s {@link EndpointBase} as
-     * an {@link Endpoint} instance.
-     */
-    @Override
-    public Endpoint getEndpoint()
-    {
-        EndpointBase endpointBase = super.getEndpoint();
-        if (endpointBase == null || endpointBase instanceof Endpoint)
-        {
-            return (Endpoint) endpointBase;
-        }
-        else
-        {
-            throw new IllegalStateException(
-                "A VideoChannel's endpoint is not an Endpoint instance.");
-        }
     }
 }

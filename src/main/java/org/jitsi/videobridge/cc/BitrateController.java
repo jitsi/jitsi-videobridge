@@ -372,9 +372,11 @@ public class BitrateController
         SimulcastController simulcastController
             = ssrcToSimulcastController.get(ssrc);
 
-        if (simulcastController == null) {
-            logger.warn("Dropping an RTP packet, because the SSRC has not " +
-                "been signaled:" + ssrc);
+        if (simulcastController == null)
+        {
+            logger.warn(
+                "Dropping an RTP packet, because the SSRC has not " +
+                    "been signaled:" + ssrc);
             return false;
         }
 
@@ -760,7 +762,7 @@ public class BitrateController
             return null;
         }
 
-        Endpoint destEndpoint = dest.getEndpoint();
+        EndpointBase destEndpoint = dest.getEndpoint();
         if (destEndpoint == null || destEndpoint.isExpired())
         {
             return null;

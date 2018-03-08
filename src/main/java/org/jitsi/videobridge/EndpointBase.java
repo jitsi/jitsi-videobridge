@@ -374,6 +374,24 @@ public abstract class EndpointBase extends PropertyChangeNotifier
     {}
 
     /**
+     * @return the {@link Set} of selected endpoints, represented as a set of
+     * endpoint IDs.
+     */
+    public Set<String> getSelectedEndpoints()
+    {
+        return Collections.EMPTY_SET;
+    }
+
+    /**
+     * @return the {@link Set} of pinned endpoints, represented as a set of
+     * endpoint IDs.
+     */
+    public Set<String> getPinnedEndpoints()
+    {
+        return Collections.EMPTY_SET;
+    }
+
+    /**
      * Gets an array that contains all the {@link MediaStreamTrackDesc} of the
      * specified media type associated with this {@link Endpoint}.
      *

@@ -127,6 +127,7 @@ public class Endpoint
      * @return the {@link Set} of selected endpoints, represented as a set of
      * endpoint IDs.
      */
+    @Override
     public Set<String> getSelectedEndpoints()
     {
         return selectedEndpoints;
@@ -136,6 +137,7 @@ public class Endpoint
      * @return the {@link Set} of pinned endpoints, represented as a set of
      * endpoint IDs.
      */
+    @Override
     public Set<String> getPinnedEndpoints()
     {
         return pinnedEndpoints;
@@ -283,7 +285,7 @@ public class Endpoint
             return icePassword;
         }
 
-        List<RtpChannel> channels = getChannels(null);
+        List<RtpChannel> channels = getChannels();
         if (channels == null || channels.isEmpty())
         {
             return null;

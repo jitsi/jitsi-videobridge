@@ -802,7 +802,7 @@ public class Conference
     {
         Channel channel = findChannelByReceiveSSRC(receiveSSRC, mediaType);
 
-        return (channel == null) ? null : channel.getEndpoint();
+        return (channel == null) ? null : channel.getEndpoint(receiveSSRC);
     }
 
     /**

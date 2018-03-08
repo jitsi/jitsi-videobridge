@@ -234,7 +234,7 @@ public class EndpointConnectionStatus
         String endpointId = endpoint.getID();
 
         // Go over all RTP channels to get the latest timestamp
-        List<RtpChannel> rtpChannels = endpoint.getChannels(null);
+        List<RtpChannel> rtpChannels = endpoint.getChannels();
         long lastActivity
             = rtpChannels.stream()
                 .mapToLong(RtpChannel::getLastTransportActivityTime)

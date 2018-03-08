@@ -550,6 +550,16 @@ public abstract class Channel
     }
 
     /**
+     * @return the {@link EndpointBase} associated with this {@link Channel}
+     * which has a particular SSRC.
+     * @param ssrc the ssrc
+     */
+    public EndpointBase getEndpoint(long ssrc)
+    {
+        return getEndpoint();
+    }
+
+    /**
      * Gets the number of seconds of inactivity after which this
      * <tt>Channel</tt> expires.
      *
