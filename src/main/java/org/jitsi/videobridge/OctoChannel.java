@@ -302,7 +302,7 @@ public class OctoChannel
 
             // The RTP/RTCP packet is preceded by the fixed length Octo header
             boolean packetIsRtcp
-                = RTCPUtils.looksLikeRtcp(
+                = RTCPUtils.isRtcp(
                         p.getData(),
                         p.getOffset() + OctoPacket.OCTO_HEADER_LENGTH,
                         p.getLength() - OctoPacket.OCTO_HEADER_LENGTH);
