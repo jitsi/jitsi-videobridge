@@ -799,10 +799,10 @@ public class BitrateController
                 continue;
             }
 
-            List<MediaStreamTrackDesc> tracks
-                = sourceEndpoint.getMediaStreamTracks();
+            MediaStreamTrackDesc[] tracks
+                = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
 
-            if (!tracks.isEmpty())
+            if (!ArrayUtils.isNullOrEmpty(tracks))
             {
                 for (MediaStreamTrackDesc track : tracks)
                 {
@@ -837,10 +837,10 @@ public class BitrateController
                     continue;
                 }
 
-                List<MediaStreamTrackDesc> tracks
-                    = sourceEndpoint.getMediaStreamTracks();
+                MediaStreamTrackDesc[] tracks
+                    = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
 
-                if (!tracks.isEmpty())
+                if (!ArrayUtils.isNullOrEmpty(tracks))
                 {
                     for (MediaStreamTrackDesc track : tracks)
                     {
@@ -873,10 +873,10 @@ public class BitrateController
 
                 boolean forwarded = endpointPriority < lastN;
 
-                List<MediaStreamTrackDesc> tracks
-                    = sourceEndpoint.getMediaStreamTracks();
+                MediaStreamTrackDesc[] tracks
+                    = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
 
-                if (!tracks.isEmpty())
+                if (!ArrayUtils.isNullOrEmpty(tracks))
                 {
                     for (MediaStreamTrackDesc track : tracks)
                     {

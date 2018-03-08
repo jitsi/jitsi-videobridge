@@ -36,6 +36,24 @@ import java.util.stream.*;
 public abstract class EndpointBase extends PropertyChangeNotifier
 {
     /**
+     * Filters a list of {@code tracks}, and returns the list consisting of the
+     * tracks which have a given {@code owner}.
+     * @param tracks the tracks to filter (not null).
+     * @param owner the owner to match (not null).
+     * @return the list of tracks from {@code tracks} which are owned by
+     * {@code owner}.
+     */
+    private static List<MediaStreamTrackDesc> filterTracksByOwner(
+        List<MediaStreamTrackDesc> tracks,
+        String owner)
+    {
+        Objects.requireNonNull(owner, "owner");
+        return tracks.stream()
+            .filter(track -> owner.equals(track.getOwner()))
+            .collect(Collectors.toList());
+    }
+
+    /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
      */
@@ -71,13 +89,6 @@ public abstract class EndpointBase extends PropertyChangeNotifier
      * on this <tt>Endpoint</tt>.
      */
     private boolean expired = false;
-
-    /**
-     * Caches the list of video {@link MediaStreamTrackDesc} associated with
-     * this endpoint. We cache this to avoid re-creating it because it is
-     * accessed often.
-     */
-    private List<MediaStreamTrackDesc> mediaStreamTracks = new LinkedList<>();
 
     /**
      * Initializes a new {@link EndpointBase} instance.
@@ -341,7 +352,6 @@ public abstract class EndpointBase extends PropertyChangeNotifier
      */
     public void expire()
     {
-        mediaStreamTracks = new LinkedList<>();
         this.expired = true;
         getConference().endpointExpired(this);
     }
@@ -364,26 +374,21 @@ public abstract class EndpointBase extends PropertyChangeNotifier
     {}
 
     /**
-     * @return the list of all video {@link MediaStreamTrackDesc} associated
-     * this {@link EndpointBase}. Always return non-null.
+     * Gets an array that contains all the {@link MediaStreamTrackDesc} of the
+     * specified media type associated with this {@link Endpoint}.
+     *
+     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
+     * get.
+     * @return an array that contains all the {@link MediaStreamTrackDesc} of
+     * the specified media type associated with this {@link Endpoint}, or null.
      */
-    public List<MediaStreamTrackDesc> getMediaStreamTracks()
+    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
     {
-        return mediaStreamTracks;
-    }
-
-    /**
-     * Updates the cached list of {@link MediaStreamTrackDesc} associated
-     * with this endpoint.
-     */
-    void updateMediaStreamTracks()
-    {
-        List<RtpChannel> channels = getChannels(MediaType.VIDEO);
+        List<RtpChannel> channels = getChannels(mediaType);
 
         if (channels == null || channels.isEmpty())
         {
-            mediaStreamTracks = new LinkedList<>();
-            return;
+            return new MediaStreamTrackDesc[0];
         }
 
         List<MediaStreamTrackDesc> allTracks = new LinkedList<>();
@@ -393,11 +398,11 @@ public abstract class EndpointBase extends PropertyChangeNotifier
                 trackReceiver -> allTracks.addAll(
                     Arrays.asList(trackReceiver.getMediaStreamTracks())));
 
-        mediaStreamTracks
-            = allTracks.stream()
-                .filter(track -> getID().equals(track.getOwner()))
-                .collect(Collectors.toList());
+        return
+            filterTracksByOwner(allTracks, getID())
+                .toArray(new MediaStreamTrackDesc[0]);
     }
+
 
     /**
      * Sends a specific {@link String} {@code msg} to the remote end of this
