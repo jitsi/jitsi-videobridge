@@ -17,11 +17,10 @@ package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jitsimeet.*;
+import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.octo.*;
-import org.jxmpp.jid.*;
 
 import java.net.*;
 import java.util.*;
@@ -79,6 +78,22 @@ public class OctoChannel
     private final Logger logger;
 
     /**
+     * The {@link OctoEndpoints} instance which manages the conference
+     * {@link AbstractEndpoint}s associated with this channel.
+     * The audio and video {@code Octo} channels should have the same set of
+     * endpoints, but since the endpoints of the audio channel a
+     *
+     */
+    private final OctoEndpoints octoEndpoints;
+
+    /**
+     * Whether this channel should handle Octo data packets. We always have
+     * the Octo video channel handle data packets, while the Octo audio channel
+     * ignores them.
+     */
+    private final boolean handleData;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -99,8 +114,19 @@ public class OctoChannel
                 content, id, null /*channelBundleId*/,
                 OctoTransportManager.NAMESPACE, false /*initiator*/);
 
-        conferenceId = content.getConference().getGid();
+        Conference conference = content.getConference();
+        conferenceId = conference.getGid();
         mediaType = content.getMediaType();
+
+        octoEndpoints = conference.getOctoEndpoints();
+        octoEndpoints.setChannel(mediaType, this);
+
+        // We are going to use one of the threads already reading from the
+        // socket to handle data packets. Since both the audio and the video
+        // channel's filters will be given the packet, we want to accept it only
+        // in one of them. We chose to accept in the video channel.
+        handleData = MediaType.VIDEO.equals(mediaType);
+
         logger
             = Logger.getLogger(classLogger, content.getConference().getLogger());
     }
@@ -142,16 +168,15 @@ public class OctoChannel
     {
         boolean changed = super.setRtpEncodingParameters(sources, sourceGroups);
 
-        Set<Jid> remoteEndpointIds
-            = sources.stream()
-                .filter(Objects::nonNull)
-                .map(source
-                    -> source.getFirstChildOfType(SSRCInfoPacketExtension.class))
-                .filter(Objects::nonNull)
-                .map(SSRCInfoPacketExtension::getOwner)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
+        if (changed && octoEndpoints != null)
+        {
+            octoEndpoints.updateEndpoints(
+                Arrays.stream(
+                    getStream().getMediaStreamTrackReceiver()
+                        .getMediaStreamTracks())
+                    .map(MediaStreamTrackDesc::getOwner)
+                    .collect(Collectors.toSet()));
+        }
 
         return changed;
     }
@@ -295,20 +320,47 @@ public class OctoChannel
             MediaType packetMediaType
                 = OctoPacket.readMediaType(
                         p.getData(), p.getOffset(), p.getLength());
-            if (packetMediaType != mediaType)
-            {
-                return false;
-            }
 
-            // The RTP/RTCP packet is preceded by the fixed length Octo header
-            boolean packetIsRtcp
-                = RTCPUtils.isRtcp(
+            if (mediaType.equals(packetMediaType))
+            {
+                // The RTP/RTCP packet is preceded by the fixed length Octo
+                // header.
+                boolean packetIsRtcp
+                    = RTCPUtils.isRtcp(
                         p.getData(),
                         p.getOffset() + OctoPacket.OCTO_HEADER_LENGTH,
                         p.getLength() - OctoPacket.OCTO_HEADER_LENGTH);
 
-            // Note that the rtp socket gets all non-rtcp
-            return rtcp == packetIsRtcp;
+                // Note that the rtp socket gets all non-rtcp packets.
+                return rtcp == packetIsRtcp;
+            }
+
+            if (MediaType.DATA.equals(packetMediaType) && handleData)
+            {
+                // In this case we're going to return 'false' anyway, because
+                // we already read the contents and we don't want the packet to
+                // be accepted by libjitsi.
+                handleDataPacket(p);
+            }
+
+            return false;
         }
+    }
+
+    /**
+     * TODO
+     */
+    private void handleDataPacket(DatagramPacket p)
+    {
+        logger.info("Received data packet from Octo");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AbstractEndpoint getEndpoint(long ssrc)
+    {
+        return octoEndpoints == null ? null : octoEndpoints.findEndpoint(ssrc);
     }
 }

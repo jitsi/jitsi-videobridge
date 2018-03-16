@@ -102,7 +102,7 @@ class RtpChannelDatagramFilter
             return acceptNonRtp && DTLSDatagramFilter.isDTLS(p);
         }
 
-        if (RTCPUtils.looksLikeRtcp(buf, off, len))
+        if (RTCPUtils.isRtcp(buf, off, len))
         {
             return rtcp && acceptRTCP(buf, off, len);
         }

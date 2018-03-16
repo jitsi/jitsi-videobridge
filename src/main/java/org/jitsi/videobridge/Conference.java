@@ -98,6 +98,15 @@ public class Conference
     private final List<AbstractEndpoint> endpoints = new LinkedList<>();
 
     /**
+     * The {@link OctoEndpoints} instance, if Octo is enabled for this
+     * conference, which manages the foreign {@link AbstractEndpoint}s of the
+     * conference (i.e. endpoints connected to remote jitsi-videobridge
+     * instances).
+     * If/while Octo is not enabled for the conference, this is {@code null}.
+     */
+    private OctoEndpoints octoEndpoints = null;
+
+    /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
      * and all instances (of {@code Content}, {@code Channel}, etc.) created by
      * it.
@@ -1392,6 +1401,37 @@ public class Conference
         if (removed)
         {
             firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+        }
+    }
+
+    /**
+     * Adds a specific {@link AbstractEndpoint} instance to the list of
+     * endpoints in this conference.
+     * @param endpoint the endpoint to add.
+     */
+    void addEndpoint(AbstractEndpoint endpoint)
+    {
+        synchronized (endpoints)
+        {
+            endpoints.add(endpoint);
+        }
+
+        firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
+    }
+
+    /**
+     * @return the {@link OctoEndpoints} instance for this {@link Conference}.
+     */
+    OctoEndpoints getOctoEndpoints()
+    {
+        synchronized (endpoints)
+        {
+            if (octoEndpoints == null)
+            {
+                octoEndpoints = new OctoEndpoints(this);
+            }
+
+            return octoEndpoints;
         }
     }
 
