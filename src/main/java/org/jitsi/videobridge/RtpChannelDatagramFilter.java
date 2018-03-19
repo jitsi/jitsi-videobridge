@@ -26,7 +26,7 @@ import org.jitsi.util.*;
  *
  * @author Boris Grozev
  */
-class RtpChannelDatagramFilter
+public class RtpChannelDatagramFilter
     implements DatagramPacketFilter
 {
     /**
@@ -64,7 +64,7 @@ class RtpChannelDatagramFilter
      * @param channel the channel for which to work.
      * @param rtcp whether to accept RTP or RTCP packets.
      */
-    RtpChannelDatagramFilter(RtpChannel channel, boolean rtcp)
+    protected RtpChannelDatagramFilter(RtpChannel channel, boolean rtcp)
     {
         this(channel, rtcp, false);
     }

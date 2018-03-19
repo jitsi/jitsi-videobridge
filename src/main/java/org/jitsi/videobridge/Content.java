@@ -31,6 +31,7 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.octo.*;
 import org.osgi.framework.*;
 
 /**

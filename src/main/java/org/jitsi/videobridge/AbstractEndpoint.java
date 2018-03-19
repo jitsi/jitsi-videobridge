@@ -96,7 +96,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * part of.
      * @param id the ID of the endpoint.
      */
-    AbstractEndpoint(Conference conference, String id)
+    protected AbstractEndpoint(Conference conference, String id)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
         this.id = Objects.requireNonNull(id, "id");

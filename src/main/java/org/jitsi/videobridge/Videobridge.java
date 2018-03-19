@@ -37,6 +37,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
+import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.util.*;

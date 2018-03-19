@@ -37,6 +37,7 @@ import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.octo.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
@@ -1427,7 +1428,7 @@ public class Conference
      * endpoints in this conference.
      * @param endpoint the endpoint to add.
      */
-    void addEndpoint(AbstractEndpoint endpoint)
+    public void addEndpoint(AbstractEndpoint endpoint)
     {
         synchronized (endpoints)
         {
@@ -1440,7 +1441,7 @@ public class Conference
     /**
      * @return the {@link OctoEndpoints} instance for this {@link Conference}.
      */
-    OctoEndpoints getOctoEndpoints()
+    public OctoEndpoints getOctoEndpoints()
     {
         synchronized (endpoints)
         {
