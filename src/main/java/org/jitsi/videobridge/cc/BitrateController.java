@@ -107,11 +107,18 @@ public class BitrateController
         = "org.jitsi.videobridge.ONSTAGE_PREFERRED_HEIGHT";
 
     /**
-     * Property name of the preferred frame rate to allocate for the onstage
+     * The property name of the preferred frame rate to allocate for the onstage
      * participant.
      */
     public static final String ONSTAGE_PREFERRED_FRAME_RATE_PNAME
         = "org.jitsi.videobridge.ONSTAGE_PREFERRED_FRAME_RATE";
+
+    /**
+     * The property name of the option that enables/disables video suspension
+     * for the on-stage participant.
+     */
+    public static final String ENABLE_ONSTAGE_VIDEO_SUSPEND_PNAME
+        = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND";
 
     /**
      * An reusable empty array of {@link RateSnapshot} to reduce allocations.
@@ -134,6 +141,11 @@ public class BitrateController
      * The default preferred frame rate to allocate for the onstage participant.
      */
     private static final double ONSTAGE_PREFERRED_FRAME_RATE_DEFAULT = 30;
+
+    /**
+     * The video for the onstage participant can be disabled by default.
+     */
+    private static final boolean ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT = false;
 
     /**
      * The default value of the bandwidth change threshold above which we react
@@ -178,6 +190,15 @@ public class BitrateController
         = cfg != null ? cfg.getDouble(ONSTAGE_PREFERRED_FRAME_RATE_PNAME,
         ONSTAGE_PREFERRED_FRAME_RATE_DEFAULT)
         : ONSTAGE_PREFERRED_FRAME_RATE_DEFAULT;
+
+    /**
+     * Determines whether or not we're allowed to suspend the video of the
+     * on-stage participant.
+     */
+    private static final boolean ENABLE_ONSTAGE_VIDEO_SUSPEND
+        = cfg != null ? cfg.getBoolean(ENABLE_ONSTAGE_VIDEO_SUSPEND_PNAME,
+                ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT)
+        : ENABLE_ONSTAGE_VIDEO_SUSPEND_DEFAULT;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -587,6 +608,14 @@ public class BitrateController
                                 .addField("optimal_idx", trackOptimalIdx)
                                 .addField("current_bps", trackCurrentBps)
                                 .addField("target_bps", trackTargetBps)
+                                .addField("selected",
+                                    trackBitrateAllocation.selected)
+                                .addField("oversending",
+                                    trackBitrateAllocation.oversending)
+                                .addField("preferred_idx",
+                                    trackBitrateAllocation.preferredIdx)
+                                .addField("endpoint_id",
+                                    trackBitrateAllocation.endpointID)
                                 .addField("optimal_bps", trackOptimalBps));
                     }
                 }
@@ -1000,6 +1029,12 @@ public class BitrateController
         private int ratesIdx = -1;
 
         /**
+         * A boolean that indicates whether or not we're force pushing through
+         * the bottleneck this track.
+         */
+        private boolean oversending = false;
+
+        /**
          * Ctor.
          *
          * @param endpoint the {@link Endpoint} that this bitrate allocation
@@ -1112,6 +1147,12 @@ public class BitrateController
 
             if (ratesIdx == -1 && selected)
             {
+                if (!ENABLE_ONSTAGE_VIDEO_SUSPEND)
+                {
+                    ratesIdx = 0;
+                    oversending = rates[0].bps > maxBps;
+                }
+
                 // Boost on stage participant to 360p.
                 for (int i = ratesIdx + 1; i < rates.length; i++)
                 {
