@@ -904,14 +904,19 @@ public class VideoChannel
                     = getStream()
                         .getMediaStreamStats().getSendStats().getLossRate();
 
-                logger.info(Logger.Category.STATISTICS,
-                           "sending_bitrate," + getLoggingId()
-                           + " bwe=" + bwe
-                           + ",sbr=" + sendingBitrate
-                           + ",loss=" + lossRate
-                           + ",remb=" + bandwidthEstimator.getLatestREMB()
-                           + ",rrLoss="
-                               + bandwidthEstimator.getLatestFractionLoss());
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(Logger.Category.STATISTICS,
+                                "sending_bitrate," + getLoggingId()
+                                    + " bwe=" + bwe
+                                    + ",sbr=" + sendingBitrate
+                                    + ",loss=" + lossRate
+                                    + ",remb=" + bandwidthEstimator
+                                    .getLatestREMB()
+                                    + ",rrLoss="
+                                    + bandwidthEstimator
+                                    .getLatestFractionLoss());
+                }
             }
         };
     }
