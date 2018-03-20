@@ -54,13 +54,14 @@ public class OctoEndpoints
     private OctoChannel videoChannel;
 
     /**
-     * Used to synchronize access in this class. Note that some of the
+     * Used to synchronize access to the {@link Endpoint}s of the conference
+     * while accessed through {@link OctoEndpoints}. Note that some of the
      * operations access the {@link Conference}'s list of endpoints which
      * uses a separate lock. Therefore, to avoid possible deadlocks this
      * class' API MUST NOT be called while holding a lock on the conference
      * endpoints list.
      */
-    private final Object syncRoot = new Object();
+    private final Object endpointsSyncRoot = new Object();
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -79,7 +80,7 @@ public class OctoEndpoints
      */
     private void removeAll()
     {
-        synchronized (syncRoot)
+        synchronized (endpointsSyncRoot)
         {
             List<OctoEndpoint> octoEndpoints = getOctoEndpoints();
             octoEndpoints.forEach(OctoEndpoint::expire);
@@ -108,7 +109,7 @@ public class OctoEndpoints
      */
     void setChannel(MediaType mediaType, OctoChannel channel)
     {
-        synchronized (syncRoot)
+        synchronized (endpointsSyncRoot)
         {
             List<OctoEndpoint> octoEndpoints = getOctoEndpoints();
             if (MediaType.VIDEO.equals(mediaType))
@@ -158,7 +159,7 @@ public class OctoEndpoints
      */
     void updateEndpoints(Set<String> endpointIds)
     {
-        synchronized (syncRoot)
+        synchronized (endpointsSyncRoot)
         {
             List<OctoEndpoint> octoEndpoints = getOctoEndpoints();
             List<String> octoEndpointIds
@@ -188,7 +189,7 @@ public class OctoEndpoints
     private OctoEndpoint addEndpoint(String id)
     {
         OctoEndpoint endpoint;
-        synchronized (syncRoot)
+        synchronized (endpointsSyncRoot)
         {
             endpoint = new OctoEndpoint(id);
             if (audioChannel != null)
@@ -215,7 +216,7 @@ public class OctoEndpoints
      */
     AbstractEndpoint findEndpoint(long ssrc)
     {
-        synchronized (syncRoot)
+        synchronized (endpointsSyncRoot)
         {
             return
                 getOctoEndpoints()
