@@ -160,7 +160,7 @@ class VideobridgeExpireThread
             // The Conferences will live an iteration more than the Contents.
             if (conference.shouldExpire())
             {
-                doExpire(conference, conference.getLoggingId());
+                conference.safeExpire();
             }
             else
             {
@@ -170,7 +170,7 @@ class VideobridgeExpireThread
                      // Channels.
                     if (content.shouldExpire())
                     {
-                        doExpire(content, content.getLoggingId());
+                        content.safeExpire();
                     }
                     else
                     {
@@ -178,33 +178,11 @@ class VideobridgeExpireThread
                         {
                             if (channel.shouldExpire())
                             {
-                                doExpire(channel, channel.getLoggingId());
+                                channel.safeExpire();
                             }
                         }
                     }
                 }
-            }
-        }
-    }
-
-    /**
-     * Expires an {@link Expireable}, catching all exceptions and logging an
-     * error on failure.
-     * @param expireable the {@link Expireable} to expire.
-     * @param loggingId an ID of the expireable to use for logging.
-     */
-    private void doExpire(Expireable expireable, String loggingId)
-    {
-        try
-        {
-            expireable.safeExpire();
-        }
-        catch (Throwable t)
-        {
-            logger.warn("Failed to expire " + loggingId + ": ", t);
-            if (t instanceof ThreadDeath)
-            {
-                throw (ThreadDeath) t;
             }
         }
     }
