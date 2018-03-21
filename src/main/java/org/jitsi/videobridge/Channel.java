@@ -23,6 +23,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -37,6 +38,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
  */
 public abstract class Channel
     extends PropertyChangeNotifier
+    implements Expireable
 {
     /**
      * The default number of seconds of inactivity after which <tt>Channel</tt>s
@@ -190,6 +192,11 @@ public abstract class Channel
     private final Logger logger;
 
     /**
+     * The {@link ExpireableImpl} which we use to safely expire this channel.
+     */
+    private final ExpireableImpl expireableImpl;
+
+    /**
      * Initializes a new <tt>Channel</tt> instance which is to have a specific
      * ID. The initialization is to be considered requested by a specific
      * <tt>Content</tt>.
@@ -240,6 +247,8 @@ public abstract class Channel
         }
 
         this.transportNamespace = transportNamespace;
+
+        expireableImpl = new ExpireableImpl(getLoggingId(), this::expire);
 
         touch();
     }
@@ -952,6 +961,28 @@ public abstract class Channel
     public String getLoggingId()
     {
         return getLoggingId(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     * </p>
+     * @return {@code true} if this {@link Channel} is ready to be expired.
+     */
+    @Override
+    public boolean shouldExpire()
+    {
+        return
+            getLastActivityTime() + 1000L * getExpire()
+                < System.currentTimeMillis();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void safeExpire()
+    {
+        expireableImpl.safeExpire();
     }
 
     /**

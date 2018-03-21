@@ -30,6 +30,7 @@ import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**
@@ -41,7 +42,7 @@ import org.osgi.framework.*;
  */
 public class Content
     extends PropertyChangeNotifier
-    implements RTPTranslator.WriteFilter
+    implements RTPTranslator.WriteFilter, Expireable
 {
     /**
      * The @{link #Logger} used by the {@link Content} class. Note that class
@@ -169,6 +170,11 @@ public class Content
     private final Logger logger;
 
     /**
+     * The {@link ExpireableImpl} which we use to safely expire this content.
+     */
+    private final ExpireableImpl expireableImpl;
+
+    /**
      * Initializes a new <tt>Content</tt> instance which is to be a part of a
      * specific <tt>Conference</tt> and which is to have a specific name.
      *
@@ -184,6 +190,8 @@ public class Content
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
         mediaType = MediaType.parseString(this.name);
+
+        expireableImpl = new ExpireableImpl(getLoggingId(), this::expire);
 
         EventAdmin eventAdmin = conference.getEventAdmin();
         if (eventAdmin != null)
@@ -945,6 +953,29 @@ public class Content
     String getLoggingId()
     {
         return loggingId;
+    }
+
+    /**
+     * {@inheritDoc}
+     * </p>
+     * @return {@code true} if this {@link Content} is ready to be expired.
+     */
+    @Override
+    public boolean shouldExpire()
+    {
+        return
+            getChannels().isEmpty()
+                && getLastActivityTime() + 1000L * Channel.DEFAULT_EXPIRE
+                        < System.currentTimeMillis();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void safeExpire()
+    {
+        expireableImpl.safeExpire();
     }
 
     private static class RTPTranslatorWriteFilter
