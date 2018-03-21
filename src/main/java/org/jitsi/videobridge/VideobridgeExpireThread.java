@@ -21,6 +21,7 @@ import java.util.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**
@@ -116,69 +117,51 @@ class VideobridgeExpireThread
         for (Conference conference : videobridge.getConferences())
         {
             // The Conferences will live an iteration more than the Contents.
-            Content[] contents = conference.getContents();
-
-            if (contents.length == 0)
+            if (conference.shouldExpire())
             {
-                if ((conference.getLastActivityTime()
-                            + 1000L * Channel.DEFAULT_EXPIRE)
-                        < System.currentTimeMillis())
+                try
                 {
-                    try
-                    {
-                        conference.expire();
-                    }
-                    catch (Throwable t)
-                    {
-                        logger.warn(
-                                "Failed to expire conference "
-                                    + conference.getID() + "!",
-                                t);
-                        if (t instanceof ThreadDeath)
-                            throw (ThreadDeath) t;
-                    }
+                    conference.expire();
+                }
+                catch (Throwable t)
+                {
+                    logger.warn(
+                            "Failed to expire conference "
+                                + conference.getID() + "!",
+                            t);
+                    if (t instanceof ThreadDeath)
+                        throw (ThreadDeath) t;
                 }
             }
             else
             {
                 for (Content content : conference.getContents())
                 {
-                    /*
-                     * The Contents will live an iteration more than the
-                     * Channels.
-                     */
-                    List<Channel> channels = content.getChannels();
-
-                    if (channels.isEmpty())
+                     // The Contents will live an iteration more than the
+                     // Channels.
+                    if (content.shouldExpire())
                     {
-                        if ((content.getLastActivityTime()
-                                    + 1000L * Channel.DEFAULT_EXPIRE)
-                                < System.currentTimeMillis())
+                        try
                         {
-                            try
-                            {
-                                content.expire();
-                            }
-                            catch (Throwable t)
-                            {
-                                logger.warn(
-                                        "Failed to expire content "
-                                            + content.getName()
-                                            + " of conference "
-                                            + conference.getID() + "!",
-                                        t);
-                                if (t instanceof ThreadDeath)
-                                    throw (ThreadDeath) t;
-                            }
+                            content.expire();
+                        }
+                        catch (Throwable t)
+                        {
+                            logger.warn(
+                                    "Failed to expire content "
+                                        + content.getName()
+                                        + " of conference "
+                                        + conference.getID() + "!",
+                                    t);
+                            if (t instanceof ThreadDeath)
+                                throw (ThreadDeath) t;
                         }
                     }
                     else
                     {
-                        for (Channel channel : channels)
+                        for (Channel channel : content.getChannels())
                         {
-                            if ((channel.getLastActivityTime()
-                                        + 1000L * channel.getExpire())
-                                    < System.currentTimeMillis())
+                            if (channel.shouldExpire())
                             {
                                 try
                                 {

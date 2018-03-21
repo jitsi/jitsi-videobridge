@@ -36,6 +36,7 @@ import org.jitsi.service.neomedia.recording.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.util.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
@@ -52,7 +53,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  */
 public class Conference
      extends PropertyChangeNotifier
-     implements PropertyChangeListener
+     implements PropertyChangeListener, Expireable
 {
     /**
      * The name of the <tt>Conference</tt> property <tt>endpoints</tt> which
@@ -229,6 +230,11 @@ public class Conference
     private final long creationTime = System.currentTimeMillis();
 
     /**
+     * The {@link ExpireableImpl} which we use to safely expire this conference.
+     */
+    private final ExpireableImpl expireableImpl;
+
+    /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
      * (unique) ID and is managed by a conference focus with a specific JID.
@@ -272,6 +278,8 @@ public class Conference
 
         speechActivity = new ConferenceSpeechActivity(this);
         speechActivity.addPropertyChangeListener(propertyChangeListener);
+
+        expireableImpl = new ExpireableImpl(loggingId, this::expire);
 
         if (enableLogging)
         {
@@ -1754,6 +1762,29 @@ public class Conference
     public String getGid()
     {
         return gid;
+    }
+
+    /**
+     * {@inheritDoc}
+     * </p>
+     * @return {@code true} if this {@link Conference} is ready to be expired.
+     */
+    @Override
+    public boolean shouldExpire()
+    {
+        return
+            getContents().length == 0
+                && getLastActivityTime() + 1000L * Channel.DEFAULT_EXPIRE
+                        < System.currentTimeMillis();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void safeExpire()
+    {
+        expireableImpl.safeExpire();
     }
 
     /**
