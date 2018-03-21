@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
@@ -46,6 +47,13 @@ class VideobridgeExpireThread
     private static final RecurringRunnableExecutor EXECUTOR
         = new RecurringRunnableExecutor(
             VideobridgeExpireThread.class.getSimpleName());
+
+    /**
+     * The executor used to expire individual {@link Channel}s.
+     */
+    private static final Executor CHANNEL_EXPIRE_EXECUTOR
+        = ExecutorUtils.newCachedThreadPool(
+            true, VideobridgeExpireThread.class.getSimpleName() + "-channel");
 
     /**
      * The name of the property which specifies the interval in seconds at which
@@ -178,7 +186,18 @@ class VideobridgeExpireThread
                         {
                             if (channel.shouldExpire())
                             {
-                                channel.safeExpire();
+                                // Expiring Conference and Content objects is
+                                // relatively simple and hasn't been observed
+                                // to cause any problem.
+                                // Expiring a Channel on the other hand may
+                                // result in the MediaStream being closed which
+                                // has been observed to block for a prolonged
+                                // period of time due to a variety of reasons.
+                                // We execute the expiration of a channel in
+                                // a separate thread in order to make sure that
+                                // the main expire thread keeps running.
+                                CHANNEL_EXPIRE_EXECUTOR
+                                    .execute(channel::safeExpire);
                             }
                         }
                     }
