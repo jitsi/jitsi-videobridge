@@ -1209,23 +1209,18 @@ public class Videobridge
             }
             else
             {
-                new Thread(new Runnable()
-                {
-                    @Override
-                    public void run()
+                new Thread(() -> {
+                    try
                     {
-                        try
-                        {
-                            Thread.sleep(1000);
+                        Thread.sleep(1000);
 
-                            logger.warn("JVB force shutdown - now");
+                        logger.warn("JVB force shutdown - now");
 
-                            System.exit(0);
-                        }
-                        catch (InterruptedException e)
-                        {
-                            throw new RuntimeException(e);
-                        }
+                        System.exit(0);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        throw new RuntimeException(e);
                     }
                 }, "ForceShutdownThread").start();
             }
@@ -1558,13 +1553,7 @@ public class Videobridge
         // Start the initialization of the mapping candidate harvesters.
         // Asynchronous, because the AWS and STUN harvester may take a long
         // time to initialize.
-        new Thread()
-        {
-            public void run()
-            {
-                MappingCandidateHarvesters.initialize();
-            }
-        }.start();
+        new Thread(MappingCandidateHarvesters::initialize).start();
     }
 
     /**
