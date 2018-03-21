@@ -1576,6 +1576,7 @@ public class Videobridge
     void stop(BundleContext bundleContext)
         throws Exception
     {
+        videobridgeExpireThread.stop(bundleContext);
         this.bundleContext = null;
     }
 
