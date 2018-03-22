@@ -351,7 +351,7 @@ public class EndpointConnectionStatus
 
     private void cleanupExpiredEndpointsStatus()
     {
-        inactiveEndpoints.removeIf(e -> !e.getConference().isExpired());
+        inactiveEndpoints.removeIf(e -> e.getConference().isExpired());
         if (logger.isDebugEnabled())
         {
             inactiveEndpoints.stream()
