@@ -77,7 +77,7 @@ public class EndpointRecorder
      * <tt>Endpoint</tt>
      * @param endpoint the <tt>Endpoint</tt> to add.
      */
-    public void updateEndpoint(Endpoint endpoint)
+    public void updateEndpoint(AbstractEndpoint endpoint)
     {
         String id = endpoint.getID();
 
@@ -166,7 +166,7 @@ public class EndpointRecorder
          * @param endpoint the endpoint to use to initialize a new
          * <tt>EndpointInfo</tt> instance.
          */
-        private EndpointInfo(Endpoint endpoint)
+        private EndpointInfo(AbstractEndpoint endpoint)
         {
             id = endpoint.getID();
             displayName = endpoint.getDisplayName();

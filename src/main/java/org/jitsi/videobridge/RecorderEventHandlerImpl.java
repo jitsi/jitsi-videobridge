@@ -65,7 +65,7 @@ class RecorderEventHandlerImpl
      * @param endpoint the <tt>Endpoint</tt> corresponding to the new
      * dominant speaker.
      */
-    void dominantSpeakerChanged(Endpoint endpoint)
+    void dominantSpeakerChanged(AbstractEndpoint endpoint)
     {
         long ssrc = -1;
 
@@ -99,7 +99,7 @@ class RecorderEventHandlerImpl
         if (event.getEndpointId() == null)
         {
             long ssrc = event.getSsrc();
-            Endpoint endpoint
+            AbstractEndpoint endpoint
                 = conference.findEndpointByReceiveSSRC(ssrc, MediaType.AUDIO);
 
             if (endpoint == null)

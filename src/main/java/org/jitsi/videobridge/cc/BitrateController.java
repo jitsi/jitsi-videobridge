@@ -236,7 +236,7 @@ public class BitrateController
      * by the SSRCs of the associated {@link MediaStreamTrackDesc}.
      */
     private final Map<Long, SimulcastController>
-        ssrcToBitrateController = new ConcurrentHashMap<>();
+        ssrcToSimulcastController = new ConcurrentHashMap<>();
 
     /**
      * The {@link PacketTransformer} that handles incoming/outgoing RTP
@@ -391,15 +391,44 @@ public class BitrateController
         }
 
         SimulcastController simulcastController
-            = ssrcToBitrateController.get(ssrc);
+            = ssrcToSimulcastController.get(ssrc);
 
-        if (simulcastController == null) {
-            logger.warn("Dropping an RTP packet, because the SSRC has not " +
-                "been signaled:" + ssrc);
+        if (simulcastController == null)
+        {
+            logger.warn(
+                "Dropping an RTP packet, because the SSRC has not " +
+                    "been signaled:" + ssrc);
             return false;
         }
 
         return simulcastController.accept(pkt);
+    }
+
+    /**
+     * Computes a new bitrate allocation for every endpoint in the conference,
+     * and updates the state of this instance so that bitrate allocation is
+     * eventually met.
+     * The list of endpoints will be fetched from the
+     * {@link ConferenceSpeechActivity} of the conference.
+     *
+     * @param bweBps the current bandwidth estimation (in bps).
+     */
+    public void update(long bweBps)
+    {
+        update(null, bweBps);
+    }
+
+    /**
+     * Computes a new bitrate allocation for every endpoint in the conference,
+     * and updates the state of this instance so that bitrate allocation is
+     * eventually met.
+     * The list of endpoints will be fetched from the
+     * {@link ConferenceSpeechActivity} of the conference, and the estimated
+     * available bandwidth will be fetched from the {@link BandwidthEstimator}.
+     */
+    public void update()
+    {
+        update(null, -1);
     }
 
     /**
@@ -413,16 +442,17 @@ public class BitrateController
      * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
-     * @param bweBps the current bandwidth estimation (in bps).
+     * @param bweBps the current bandwidth estimation (in bps), or -1 to fetch
+     * the value from the {@link BandwidthEstimator}.
      */
-    public void update(List<Endpoint> conferenceEndpoints, long bweBps)
+    public void update(List<AbstractEndpoint> conferenceEndpoints, long bweBps)
     {
         if (bweBps > -1)
         {
             if (!isLargerThanBweThreshold(lastBwe, bweBps))
             {
                 // If this is a "negligible" change in the bandwidth estimation
-                // wrt the last bandwith estimation that we reacted to, then
+                // wrt the last bandwidth estimation that we reacted to, then
                 // do not update the bitrate allocation. The goal is to limit
                 // the resolution changes due to bandwidth estimation changes,
                 // as often resolution changes can negatively impact user
@@ -512,9 +542,9 @@ public class BitrateController
 
                 // Review this.
                 SimulcastController ctrl;
-                synchronized (ssrcToBitrateController)
+                synchronized (ssrcToSimulcastController)
                 {
-                    ctrl = ssrcToBitrateController.get(ssrc & 0xFFFFFFFFL);
+                    ctrl = ssrcToSimulcastController.get(ssrc & 0xFFFF_FFFFL);
                     if (ctrl == null && trackBitrateAllocation.track != null)
                     {
                         RTPEncodingDesc[] rtpEncodings
@@ -529,13 +559,13 @@ public class BitrateController
                             // controller.
                             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
                             {
-                                ssrcToBitrateController.put(
+                                ssrcToSimulcastController.put(
                                     rtpEncoding.getPrimarySSRC(), ctrl);
 
                                 long rtxSsrc = rtpEncoding.getSecondarySsrc(Constants.RTX);
                                 if (rtxSsrc != -1)
                                 {
-                                    ssrcToBitrateController.put(
+                                    ssrcToSimulcastController.put(
                                         rtxSsrc, ctrl);
                                 }
                             }
@@ -606,7 +636,7 @@ public class BitrateController
         else
         {
             for (SimulcastController simulcastController
-                : ssrcToBitrateController.values())
+                : ssrcToSimulcastController.values())
             {
                 if (enableVideoQualityTracing)
                 {
@@ -662,7 +692,7 @@ public class BitrateController
      * @return an array of {@link TrackBitrateAllocation}.
      */
     private TrackBitrateAllocation[] allocate(
-        long maxBandwidth, List<Endpoint> conferenceEndpoints)
+        long maxBandwidth, List<AbstractEndpoint> conferenceEndpoints)
     {
         TrackBitrateAllocation[]
             trackBitrateAllocations = prioritize(conferenceEndpoints);
@@ -746,7 +776,7 @@ public class BitrateController
      * @param conferenceEndpoints the ordered list of {@link Endpoint}s
      * participating in the multipoint conference with the dominant (speaker)
      * {@link Endpoint} at the beginning of the list i.e. the dominant speaker
-     * history. This parameter is optional but it can be used for performaance;
+     * history. This parameter is optional but it can be used for performance;
      * if it's omitted it will be fetched from the
      * {@link ConferenceSpeechActivity}.
      * @return a prioritized {@link TrackBitrateAllocation} array where
@@ -754,28 +784,27 @@ public class BitrateController
      * endpoints, finally followed by any other remaining endpoints.
      */
     private TrackBitrateAllocation[] prioritize(
-        List<Endpoint> conferenceEndpoints)
+        List<AbstractEndpoint> conferenceEndpoints)
     {
         if (dest.isExpired())
         {
             return null;
         }
 
-        Endpoint destEndpoint = dest.getEndpoint();
+        AbstractEndpoint destEndpoint = dest.getEndpoint();
         if (destEndpoint == null || destEndpoint.isExpired())
         {
             return null;
         }
 
         // Init.
-        // subtract 1 for destEndpoint.
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();
 
         int lastN = dest.getLastN();
         if (lastN < 0)
         {
-            // If lastN is disable, pretend lastN == szConference.
+            // If lastN is disabled, pretend lastN == szConference.
             lastN = conferenceEndpoints.size() - 1;
         }
         else
@@ -790,50 +819,48 @@ public class BitrateController
         // First, bubble-up the selected endpoints (whoever's on-stage needs to
         // be visible).
         Set<String> selectedEndpoints = destEndpoint.getSelectedEndpoints();
-        if (!selectedEndpoints.isEmpty())
+        for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
+             it.hasNext() && endpointPriority < lastN;)
         {
-            for (Iterator<Endpoint> it = conferenceEndpoints.iterator();
-                 it.hasNext() && endpointPriority < lastN;)
-            {
-                Endpoint sourceEndpoint = it.next();
-                if (sourceEndpoint.isExpired()
+            AbstractEndpoint sourceEndpoint = it.next();
+            if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !selectedEndpoints.contains(sourceEndpoint.getID()))
-                {
-                    continue;
-                }
-
-                MediaStreamTrackDesc[] tracks
-                    = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
-
-                if (!ArrayUtils.isNullOrEmpty(tracks))
-                {
-                    for (MediaStreamTrackDesc track : tracks)
-                    {
-                        trackBitrateAllocations.add(
-                            endpointPriority, new TrackBitrateAllocation(
-                                sourceEndpoint,
-                                track,
-                                true /* fitsInLastN */,
-                                true /* selected */,
-                                getVideoChannel().getMaxFrameHeight()));
-                    }
-
-                    endpointPriority++;
-                }
-
-                it.remove();
+            {
+                continue;
             }
+
+            MediaStreamTrackDesc[] tracks
+                = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
+
+            if (!ArrayUtils.isNullOrEmpty(tracks))
+            {
+                for (MediaStreamTrackDesc track : tracks)
+                {
+                    trackBitrateAllocations.add(
+                        endpointPriority,
+                        new TrackBitrateAllocation(
+                            sourceEndpoint,
+                            track,
+                            true /* fitsInLastN */,
+                            true /* selected */,
+                            getVideoChannel().getMaxFrameHeight()));
+                }
+
+                endpointPriority++;
+            }
+
+            it.remove();
         }
 
         // Then, bubble-up the pinned endpoints.
         Set<String> pinnedEndpoints = destEndpoint.getPinnedEndpoints();
         if (!pinnedEndpoints.isEmpty())
         {
-            for (Iterator<Endpoint> it = conferenceEndpoints.iterator();
+            for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
                  it.hasNext() && endpointPriority < lastN;)
             {
-                Endpoint sourceEndpoint = it.next();
+                AbstractEndpoint sourceEndpoint = it.next();
                 if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID())
                     || !pinnedEndpoints.contains(sourceEndpoint.getID()))
@@ -867,7 +894,7 @@ public class BitrateController
         // Finally, deal with any remaining endpoints.
         if (!conferenceEndpoints.isEmpty())
         {
-            for (Endpoint sourceEndpoint : conferenceEndpoints)
+            for (AbstractEndpoint sourceEndpoint : conferenceEndpoints)
             {
                 if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID()))
@@ -1020,7 +1047,7 @@ public class BitrateController
          * selected.
          */
         private TrackBitrateAllocation(
-            Endpoint endpoint, MediaStreamTrackDesc track,
+            AbstractEndpoint endpoint, MediaStreamTrackDesc track,
             boolean fitsInLastN, boolean selected, int maxFrameHeight)
         {
             this.endpointID = endpoint.getID();
@@ -1207,7 +1234,7 @@ public class BitrateController
         public void close()
         {
             for (SimulcastController simulcastController
-                : ssrcToBitrateController.values())
+                : ssrcToSimulcastController.values())
             {
                 try
                 {
@@ -1255,11 +1282,13 @@ public class BitrateController
 
                 long ssrc = pkts[i].getSSRCAsLong();
 
-                SimulcastController subCtrl = ssrcToBitrateController.get(ssrc);
+                SimulcastController simulcastController
+                    = ssrcToSimulcastController.get(ssrc);
 
                 // FIXME properly support unannounced SSRCs.
                 RawPacket[] ret
-                    = subCtrl == null ? null : subCtrl.rtpTransform(pkts[i]);
+                    = simulcastController == null
+                            ? null : simulcastController.rtpTransform(pkts[i]);
 
                 if (ArrayUtils.isNullOrEmpty(ret))
                 {
@@ -1320,10 +1349,11 @@ public class BitrateController
                 return pkt;
             }
 
-            SimulcastController subCtrl
-                = ssrcToBitrateController.get(ssrc);
+            SimulcastController simulcastController
+                = ssrcToSimulcastController.get(ssrc);
 
-            return subCtrl == null ? pkt : subCtrl.rtcpTransform(pkt);
+            return simulcastController == null
+                    ? pkt : simulcastController.rtcpTransform(pkt);
         }
     }
 }

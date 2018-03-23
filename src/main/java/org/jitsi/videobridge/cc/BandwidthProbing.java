@@ -197,7 +197,7 @@ public class BandwidthProbing
         {
             // it seems like the optimal bps fits in the bandwidth estimation,
             // let's update the bitrate controller.
-            dest.getBitrateController().update(null, bweBps);
+            dest.getBitrateController().update(bweBps);
             return;
         }
 

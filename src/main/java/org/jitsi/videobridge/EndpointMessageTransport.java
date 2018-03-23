@@ -327,6 +327,8 @@ class EndpointMessageTransport
         JSONObject jsonObject)
     {
         String to = (String)jsonObject.get("to");
+
+        // First insert the "from" to prevent spoofing.
         jsonObject.put("from", endpoint.getID());
         Conference conference = endpoint.getConference();
         if (conference == null || conference.isExpired())
@@ -336,38 +338,32 @@ class EndpointMessageTransport
             return;
         }
 
+        List<AbstractEndpoint> endpointSubset;
         if ("".equals(to))
         {
             // Broadcast message
-            List<Endpoint> endpointSubset = new ArrayList<>();
-            for (Endpoint e : conference.getEndpoints())
-            {
-                if (!endpoint.getID().equalsIgnoreCase(e.getID()))
-                {
-                    endpointSubset.add(e);
-                }
-            }
-            conference.sendMessage(
-                jsonObject.toString(), endpointSubset);
+            endpointSubset = new LinkedList<>(conference.getEndpoints());
+            endpointSubset.removeIf(
+                e -> endpoint.getID().equalsIgnoreCase(e.getID()));
         }
         else
         {
             // 1:1 message
-            Endpoint targetEndpoint = conference.getEndpoint(to);
+            AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
             if (targetEndpoint != null)
             {
-                List<Endpoint> endpointSubset = new ArrayList<>();
-                endpointSubset.add(targetEndpoint);
-                conference.sendMessage(
-                    jsonObject.toString(), endpointSubset);
+                endpointSubset = Collections.singletonList(targetEndpoint);
             }
             else
             {
+                endpointSubset = Collections.emptyList();
                 logger.warn(
                     "Unable to find endpoint " + to
                         + " to send EndpointMessage");
             }
         }
+
+        conference.sendMessage(jsonObject.toString(), endpointSubset);
     }
 
     /**

@@ -23,6 +23,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
@@ -80,7 +81,7 @@ public abstract class Channel
         String id = channel == null ? "null" : channel.getID();
         Content content
             = channel == null ? null : channel.getContent();
-        Endpoint endpoint
+        AbstractEndpoint endpoint
             = channel == null ? null : channel.getEndpoint();
 
         return Content.getLoggingId(content)
@@ -105,10 +106,10 @@ public abstract class Channel
     private final Content content;
 
     /**
-     * The <tt>Endpoint</tt> of the conference participant associated with this
-     * <tt>Channel</tt>.
+     * The {@link AbstractEndpoint} of the conference participant associated with
+     * this {@link Channel}.
      */
-    private Endpoint endpoint;
+    private AbstractEndpoint endpoint;
 
     /**
      * The number of seconds of inactivity after which this <tt>Channel</tt>
@@ -326,6 +327,10 @@ public abstract class Channel
         {
             return new RawUdpTransportManager(this);
         }
+        else if (OctoTransportManager.NAMESPACE.equals(xmlNamespace))
+        {
+            return new OctoTransportManager(this);
+        }
         else
         {
             throw new IllegalArgumentException(
@@ -344,7 +349,7 @@ public abstract class Channel
      */
     public void describe(ColibriConferenceIQ.ChannelCommon iq)
     {
-        Endpoint endpoint = getEndpoint();
+        AbstractEndpoint endpoint = getEndpoint();
 
         if (endpoint != null)
         {
@@ -545,15 +550,22 @@ public abstract class Channel
     }
 
     /**
-     * Gets the <tt>Endpoint</tt> of the conference participant associated with
-     * this <tt>Channel</tt>.
-     *
-     * @return the <tt>Endpoint</tt> of the conference participant associated
-     * with this <tt>Channel</tt>
+     * @return the {@link AbstractEndpoint} of the conference participant associated
+     * with this {@link Channel}.
      */
-    public Endpoint getEndpoint()
+    public AbstractEndpoint getEndpoint()
     {
         return endpoint;
+    }
+
+    /**
+     * @return the {@link AbstractEndpoint} associated with this {@link Channel}
+     * which has a particular SSRC.
+     * @param ssrc the ssrc
+     */
+    public AbstractEndpoint getEndpoint(long ssrc)
+    {
+        return getEndpoint();
     }
 
     /**
@@ -727,7 +739,8 @@ public abstract class Channel
      * @param oldValue old <tt>Endpoint</tt>, can be <tt>null</tt>.
      * @param newValue new <tt>Endpoint</tt>, can be <tt>null</tt>.
      */
-    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
+    protected void onEndpointChanged(
+        AbstractEndpoint oldValue, AbstractEndpoint newValue)
     {
         firePropertyChange(ENDPOINT_PROPERTY_NAME, oldValue, newValue);
     }
@@ -743,7 +756,7 @@ public abstract class Channel
     {
         try
         {
-            Endpoint oldValue = this.endpoint;
+            AbstractEndpoint oldValue = this.endpoint;
 
             // Is the endpoint really changing?
             if (oldValue == null)
@@ -759,7 +772,7 @@ public abstract class Channel
             }
 
             // The endpoint is really changing.
-            Endpoint newValue
+            AbstractEndpoint newValue
                 = getContent().getConference()
                         .getOrCreateEndpoint(newEndpointId);
             setEndpoint(newValue);
@@ -775,9 +788,9 @@ public abstract class Channel
      * instance.
      * @param endpoint the new {@link Endpoint} instance.
      */
-    public void setEndpoint(Endpoint endpoint)
+    public void setEndpoint(AbstractEndpoint endpoint)
     {
-        Endpoint oldEndpoint = this.endpoint;
+        AbstractEndpoint oldEndpoint = this.endpoint;
         if (oldEndpoint != endpoint)
         {
             this.endpoint = endpoint;

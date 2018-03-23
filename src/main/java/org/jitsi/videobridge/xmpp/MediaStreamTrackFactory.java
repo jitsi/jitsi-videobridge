@@ -17,6 +17,7 @@ package org.jitsi.videobridge.xmpp;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jitsimeet.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -465,7 +466,64 @@ public class MediaStreamTrackFactory
             }
         });
 
+        setOwners(sources, trackSsrcsList);
+
         return trackSsrcsList;
+    }
+
+    /**
+     * Updates the given list of {@link TrackSsrcs}, setting the {@code owner}
+     * field according to the {@code owner} attribute in {@code ssrc-info}
+     * extensions contained in {@code sources}.
+     * @param sources the list of {@link SourcePacketExtension} which contain
+     * the {@code owner} as an attribute of a {@code ssrc-info} child. The
+     * list or the objects in the list will not be modified.
+     * @param trackSsrcsList the list of {@link TrackSsrcs} to update.
+     */
+    private static void setOwners(
+        List<SourcePacketExtension> sources,
+        List<TrackSsrcs> trackSsrcsList)
+    {
+        for (TrackSsrcs trackSsrcs : trackSsrcsList)
+        {
+            // Look for the "owner" tag in the sources. We assume that all
+            // sources contain the "owner" tag so we just check for the
+            // first SSRC of the track's SSRCs.
+            long primarySsrc = trackSsrcs.get(0);
+            SourcePacketExtension trackSource
+                = sources.stream()
+                    .filter(source -> source.getSSRC() == primarySsrc)
+                    .findAny().orElse(null);
+
+            trackSsrcs.owner = getOwner(trackSource);
+        }
+    }
+
+    /**
+     * Extracts the owner/endpoint ID as a {@link String} from a
+     * {@link SourcePacketExtension}.
+     * Jicofo includes the full occupant JID of the endpoint as the owner of
+     * a {@link SSRCInfoPacketExtension}, but in jitsi-videobridge we only
+     * care about the resource part, which coincides with the ID of the Colibri
+     * endpoint associated with the owner.
+     *
+     * @param source the {@link SourcePacketExtension} from which to extract
+     * the owner.
+     * @return the owner/endpoint ID as a {@link String}.
+     */
+    private static String getOwner(SourcePacketExtension source)
+    {
+        SSRCInfoPacketExtension ssrcInfoPacketExtension
+            = source == null
+                ? null : source.getFirstChildOfType(
+                    SSRCInfoPacketExtension.class);
+        if (ssrcInfoPacketExtension != null)
+        {
+            return
+                ssrcInfoPacketExtension.getOwner()
+                    .getResourceOrEmpty().toString();
+        }
+        return null;
     }
 
     /**
@@ -576,6 +634,8 @@ public class MediaStreamTrackFactory
     {
         private List<Long> trackSsrcs;
 
+        private String owner;
+
         private TrackSsrcs(Long ssrc)
         {
             this(Collections.singletonList(ssrc));
@@ -633,8 +693,9 @@ public class MediaStreamTrackFactory
                 * numSpatialLayersPerStream * numTemporalLayersPerStream;
         boolean isSimulcast = primarySsrcs.size() > 1;
         RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
-        MediaStreamTrackDesc track =
-            new MediaStreamTrackDesc(receiver, rtpEncodings, isSimulcast);
+        MediaStreamTrackDesc track
+            = new MediaStreamTrackDesc(
+                receiver, rtpEncodings, isSimulcast, primarySsrcs.owner);
 
         RTPEncodingDesc[] encodings
             = createRTPEncodings(
@@ -646,5 +707,4 @@ public class MediaStreamTrackFactory
 
         return track;
     }
-
 }

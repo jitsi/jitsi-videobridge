@@ -202,6 +202,12 @@ public class Content
         touch();
     }
 
+    /**
+     * Implements
+     * {@link RTPTranslator.WriteFilter#accept(
+     *      MediaStream, RawPacket, MediaStream, boolean)}
+     */
+    @Override
     public boolean accept(
         MediaStream source,
         RawPacket pkt,
@@ -221,14 +227,14 @@ public class Content
 
                 accept
                     = dst.rtpTranslatorWillWrite(
-                    data,
-                    pkt,
-                    src);
+                            data,
+                            pkt,
+                            src);
             }
         }
         return accept;
     }
-    
+
     /**
      * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
      * <tt>RtpChannel</tt>s of this <tt>Content</tt>. The new
@@ -253,45 +259,79 @@ public class Content
                                        RTPLevelRelayType rtpLevelRelayType)
         throws Exception
     {
-        RtpChannel channel = null;
+        return createRtpChannel(
+                channelBundleId, transportNamespace,
+                initiator, rtpLevelRelayType,
+                false /* octo */);
+    }
 
-        do
+    /**
+     * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
+     * <tt>RtpChannel</tt>s of this <tt>Content</tt>. The new
+     * <tt>RtpChannel</tt> instance has an ID which is unique within the list of
+     * <tt>RtpChannel</tt>s of this <tt>Content</tt>.
+     *
+     * @param channelBundleId the ID of the channel-bundle that the created
+     * <tt>RtpChannel</tt> is to be a part of (or <tt>null</tt> if it is not to
+     * be a part of a channel-bundle).
+     * @param transportNamespace transport namespace that will used by new
+     * channel. Can be either {@link IceUdpTransportPacketExtension#NAMESPACE}
+     * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
+     * @param initiator the value to use for the initiator field, or
+     * <tt>null</tt> to use the default value.
+     * @param rtpLevelRelayType
+     * @return the created <tt>RtpChannel</tt> instance.
+     * @param octo whether to create a regular channel or an Octo channel.
+     * @throws Exception
+     */
+    public RtpChannel createRtpChannel(String channelBundleId,
+                                       String transportNamespace,
+                                       Boolean initiator,
+                                       RTPLevelRelayType rtpLevelRelayType,
+                                       boolean octo)
+        throws Exception
+    {
+        RtpChannel channel;
+
+        synchronized (channels)
         {
-            String id = generateChannelID();
+            String id = generateUniqueChannelID();
 
-            synchronized (channels)
+            if (octo)
             {
-                if (!channels.containsKey(id))
+                channel = new OctoChannel(this, id);
+            }
+            else
+            {
+                switch (getMediaType())
                 {
-                    switch (getMediaType())
-                    {
-                    case AUDIO:
-                        channel = new AudioChannel(
+                case AUDIO:
+                    channel
+                        = new AudioChannel(
                                 this, id, channelBundleId,
                                 transportNamespace, initiator);
-                        break;
-                    case DATA:
-                        /*
-                         * MediaType.DATA signals an SctpConnection, not an
-                         * RtpChannel.
-                         */
-                        throw new IllegalStateException("mediaType");
-                    case VIDEO:
-                        channel = new VideoChannel(
+                    break;
+                case DATA:
+                    // MediaType.DATA signals an SctpConnection, not an
+                    // RtpChannel.
+                    throw new IllegalStateException("mediaType");
+                case VIDEO:
+                    channel
+                        = new VideoChannel(
                                 this, id, channelBundleId,
                                 transportNamespace, initiator);
-                        break;
-                    default:
-                        channel = new RtpChannel(
-                            this, id, channelBundleId,
-                            transportNamespace, initiator);
-                        break;
-                    }
-                    channels.put(id, channel);
+                    break;
+                default:
+                    channel
+                        = new RtpChannel(
+                                this, id, channelBundleId,
+                                transportNamespace, initiator);
+                    break;
                 }
             }
+
+            channels.put(id, channel);
         }
-        while (channel == null);
 
         // Initialize channel
         channel.initialize(rtpLevelRelayType);
@@ -299,7 +339,11 @@ public class Content
         if (logger.isInfoEnabled())
         {
             String transport = "unknown";
-            if (transportNamespace == null)
+            if (octo)
+            {
+                transport = "octo";
+            }
+            else if (transportNamespace == null)
             {
                 transport = "default";
             }
@@ -344,7 +388,7 @@ public class Content
      * already for given <tt>Endpoint</tt>.
      */
     public SctpConnection createSctpConnection(
-            Endpoint endpoint,
+            AbstractEndpoint endpoint,
             int sctpPort,
             String channelBundleId,
             Boolean initiator)
@@ -500,7 +544,7 @@ public class Content
                 {
                     continue;
                 }
-                Endpoint endpoint = channel.getEndpoint();
+                AbstractEndpoint endpoint = channel.getEndpoint();
                 if (endpoint == null)
                 {
                     continue;
@@ -558,6 +602,25 @@ public class Content
         return
             Long.toHexString(
                     System.currentTimeMillis() + Videobridge.RANDOM.nextLong());
+    }
+
+    /**
+     * @return a new channel ID, unique in the list of this {@link Content}'s
+     * channels.
+     */
+    private String generateUniqueChannelID()
+    {
+        synchronized (channels)
+        {
+            String id;
+            do
+            {
+                id = generateChannelID();
+            }
+            while (channels.containsKey(id));
+
+            return id;
+        }
     }
 
     /**

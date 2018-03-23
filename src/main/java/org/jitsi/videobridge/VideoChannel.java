@@ -17,13 +17,11 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
-import java.net.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
-import org.ice4j.util.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
@@ -48,13 +46,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public class VideoChannel
     extends RtpChannel
 {
-    /**
-     * The length in milliseconds of the interval for which the average incoming
-     * bitrate for this video channel will be computed and made available
-     * through {@link #getIncomingBitrate}.
-     */
-    private static final int INCOMING_BITRATE_INTERVAL_MS = 5000;
-
     /**
      * The name of the property used to disable LastN notifications.
      */
@@ -184,14 +175,6 @@ public class VideoChannel
         = new BandwidthProbing(this);
 
     /**
-     * The instance which will be computing the incoming bitrate for this
-     * <tt>VideoChannel</tt>.
-     * @deprecated We should use the statistics from the media stream for this.
-     */
-    private final RateStatistics incomingBitrate
-        = new RateStatistics(INCOMING_BITRATE_INTERVAL_MS, 8000F);
-
-    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -303,6 +286,15 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
+    protected void updateBitrateController()
+    {
+        bitrateController.update();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public int[] getDefaultReceiveSSRCs()
     {
         return DEFAULT_RTCP_RECV_REPORT_SSRCS;
@@ -326,39 +318,10 @@ public class VideoChannel
     {
         super.initialize(rtpLevelRelayType);
 
-        bitrateController.update(null, -1);
+        bitrateController.update();
 
         ((VideoMediaStream) getStream()).getOrCreateBandwidthEstimator()
-            .addListener(new BandwidthEstimator.Listener()
-            {
-                @Override
-                public void bandwidthEstimationChanged(long newValueBps)
-                {
-                    bitrateController.update(null, newValueBps);
-                }
-            });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
-    {
-        boolean accept = super.acceptDataInputStreamDatagramPacket(p);
-
-        if (accept)
-        {
-            // TODO: find a way to do this only in case it is actually needed
-            // (currently this means when there is another channel in the
-            // same content, with adaptive-last-n turned on), in order to not
-            // waste resources.
-            // XXX should we also count bytes received for RTCP towards the
-            // incoming bitrate?
-            incomingBitrate.update(p.getLength(), System.currentTimeMillis());
-        }
-
-        return accept;
+            .addListener(bitrateController::update);
     }
 
     /**
@@ -397,19 +360,6 @@ public class VideoChannel
     }
 
     /**
-     * Returns the current incoming bitrate in bits per second for this
-     * <tt>VideoChannel</tt> (computed as the average bitrate over the last
-     * {@link #INCOMING_BITRATE_INTERVAL_MS} milliseconds).
-     *
-     * @deprecated We should use the statistics from the media stream for this.
-     * @return the current incoming bitrate for this <tt>VideoChannel</tt>.
-     */
-    public long getIncomingBitrate()
-    {
-        return incomingBitrate.getRate(System.currentTimeMillis());
-    }
-
-    /**
      * Gets the maximum number of video RTP streams to be sent from Jitsi
      * Videobridge to the endpoint associated with this video <tt>Channel</tt>.
      *
@@ -434,7 +384,7 @@ public class VideoChannel
             || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
             || Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            bitrateController.update(null, -1);
+            bitrateController.update();
         }
     }
 
@@ -538,10 +488,12 @@ public class VideoChannel
             return;
         }
 
-        Endpoint thisEndpoint = getEndpoint();
+        AbstractEndpoint thisEndpoint = getEndpoint();
 
         if (thisEndpoint == null)
+        {
             return;
+        }
 
         // We want endpointsEnteringLastN to always to reported. Consequently,
         // we will pretend that all lastNEndpoints are entering if no explicit
@@ -574,7 +526,7 @@ public class VideoChannel
         if (this.lastN != lastN)
         {
             this.lastN = lastN;
-            bitrateController.update(null, -1);
+            bitrateController.update();
         }
 
         touch(); // It seems this Channel is still active.
@@ -584,7 +536,7 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
-    void speechActivityEndpointsChanged(List<Endpoint> endpoints)
+    void speechActivityEndpointsChanged(List<AbstractEndpoint> endpoints)
     {
         bitrateController.update(endpoints, -1);
     }
@@ -666,7 +618,8 @@ public class VideoChannel
     @Override
     protected void dominantSpeakerChanged()
     {
-        Endpoint dominantEndpoint = conferenceSpeechActivity.getDominantEndpoint();
+        AbstractEndpoint dominantEndpoint
+            = conferenceSpeechActivity.getDominantEndpoint();
 
         if (dominantEndpoint != null && dominantEndpoint.equals(getEndpoint()))
         {
@@ -734,7 +687,7 @@ public class VideoChannel
     public void setMaxFrameHeight(int maxFrameHeight)
     {
         this.maxFrameHeight = maxFrameHeight;
-        this.bitrateController.update(null, -1);
+        this.bitrateController.update();
     }
 
     /**
@@ -882,17 +835,16 @@ public class VideoChannel
                 }
 
                 long sendingBitrate = 0;
-                Endpoint endpoint = getEndpoint();
+                AbstractEndpoint endpoint = getEndpoint();
                 if (endpoint != null)
                 {
-                    for (RtpChannel channel : endpoint.getChannels(null))
-                    {
-                        sendingBitrate +=
-                            channel
+                    sendingBitrate = endpoint.getChannels().stream()
+                        .mapToLong(
+                            channel -> channel
                                 .getStream()
                                 .getMediaStreamStats()
-                                .getSendStats().getBitrate();
-                    }
+                                .getSendStats().getBitrate())
+                        .sum();
                 }
 
                 if (sendingBitrate <= 0)

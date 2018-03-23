@@ -789,6 +789,11 @@ public class Videobridge
             for (ColibriConferenceIQ.Channel channelIQ
                     : contentIQ.getChannels())
             {
+                ColibriConferenceIQ.OctoChannel octoChannelIQ
+                    = channelIQ instanceof ColibriConferenceIQ.OctoChannel
+                        ? (ColibriConferenceIQ.OctoChannel) channelIQ
+                        : null;
+
                 String channelID = channelIQ.getID();
                 int channelExpire = channelIQ.getExpire();
                 String channelBundleId = channelIQ.getChannelBundleId();
@@ -822,7 +827,8 @@ public class Videobridge
                                 channelBundleId,
                                 transportNamespace,
                                 channelIQ.isInitiator(),
-                                channelIQ.getRTPLevelRelayType());
+                                channelIQ.getRTPLevelRelayType(),
+                                octoChannelIQ != null);
 
                     if (channel == null)
                     {
@@ -945,6 +951,21 @@ public class Videobridge
 
                 channel.setTransport(channelIQ.getTransport());
 
+                if (octoChannelIQ != null)
+                {
+                    if (channel instanceof OctoChannel)
+                    {
+                        ((OctoChannel) channel)
+                            .setRelayIds(octoChannelIQ.getRelays());
+                    }
+                    else
+                    {
+                        logger.warn(
+                            "Channel type mismatch: requested Octo, found "
+                                + channel.getClass().getSimpleName());
+                    }
+                }
+
                 /*
                  * Provide (a description of) the current state of the channel
                  * as part of the response.
@@ -997,7 +1018,7 @@ public class Videobridge
                                     + "the new SCTP connection");
                     }
 
-                    Endpoint endpoint
+                    AbstractEndpoint endpoint
                         = conference.getOrCreateEndpoint(endpointID);
                     if (endpoint == null)
                     {

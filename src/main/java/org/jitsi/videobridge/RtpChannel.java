@@ -325,7 +325,7 @@ public class RtpChannel
      * accepted for further processing within Jitsi Videobridge or
      * <tt>false</tt> to reject/drop it
      */
-    private boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
+    protected boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
     {
         InetAddress ctrlAddr = streamTarget.getControlAddress();
         int ctrlPort = streamTarget.getControlPort();
@@ -534,7 +534,7 @@ public class RtpChannel
 
                         if (recorder != null)
                         {
-                            Endpoint endpoint = getEndpoint();
+                            AbstractEndpoint endpoint = getEndpoint();
 
                             if (endpoint != null)
                             {
@@ -544,7 +544,7 @@ public class RtpChannel
                                 if (synchronizer != null)
                                 {
                                     synchronizer.setEndpoint(
-                                            ssrc & 0xffffffffL,
+                                            ssrc & 0xffff_ffffL,
                                             endpoint.getID());
                                 }
                             }
@@ -732,7 +732,7 @@ public class RtpChannel
      * <tt>rtcp</tt> is false) or RTCP (if <tt>rtcp</tt> is true) packets for
      * this <tt>RtpChannel</tt>.
      */
-    RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
+    public RtpChannelDatagramFilter getDatagramFilter(boolean rtcp)
     {
         RtpChannelDatagramFilter datagramFilter;
         int index = rtcp ? 1 : 0;
@@ -980,6 +980,22 @@ public class RtpChannel
     }
 
     /**
+     * Configures the given {@link MediaStream} according to the needs of this
+     * {@link RtpChannel}.
+     * @param stream the stream to configure.
+     */
+    protected void configureStream(MediaStream stream)
+    {
+        RetransmissionRequester retransmissionRequester
+            = stream.getRetransmissionRequester();
+        if (retransmissionRequester != null)
+        {
+            retransmissionRequester
+                .setSenderSsrc(getContent().getInitialLocalSSRC());
+        }
+    }
+
+    /**
      * Starts {@link #stream} if it has not been started yet and if the state of
      * this <tt>Channel</tt> meets the prerequisites to invoke
      * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
@@ -1002,13 +1018,7 @@ public class RtpChannel
             }
         }
 
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
-        if (retransmissionRequester != null)
-        {
-            retransmissionRequester
-                .setSenderSsrc(getContent().getInitialLocalSSRC());
-        }
+        configureStream(stream);
 
         MediaStreamTarget streamTarget = createStreamTarget();
         StreamConnector connector = getStreamConnector();
@@ -1142,7 +1152,8 @@ public class RtpChannel
      * {@inheritDoc}
      */
     @Override
-    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
+    protected void onEndpointChanged(
+        AbstractEndpoint oldValue, AbstractEndpoint newValue)
     {
         super.onEndpointChanged(oldValue, newValue);
 
@@ -1568,7 +1579,7 @@ public class RtpChannel
      * @param endpoints the ordered list of <tt>Endpoint</tt>s reported by
      * <tt>conferenceSpeechActivity</tt>
      */
-    void speechActivityEndpointsChanged(List<Endpoint> endpoints)
+    void speechActivityEndpointsChanged(List<AbstractEndpoint> endpoints)
     {
         // The attribute/functionality last-n is defined/effective for video
         // channels only.
@@ -1708,7 +1719,7 @@ public class RtpChannel
 
             Recorder recorder = null;
             Synchronizer synchronizer = null;
-            Endpoint endpoint = null;
+            AbstractEndpoint endpoint = null;
             if (getContent().isRecording())
             {
                 recorder = getContent().getRecorder();
@@ -1730,7 +1741,7 @@ public class RtpChannel
                     if (recorder != null && endpoint != null && synchronizer != null)
                     {
                         synchronizer.setEndpoint(
-                                addedSSRC & 0xffffffffl,
+                                addedSSRC & 0xffff_ffffL,
                                 endpoint.getID());
                     }
                 }
@@ -1911,6 +1922,8 @@ public class RtpChannel
         List<SourcePacketExtension> sources,
         List<SourceGroupPacketExtension> sourceGroups)
     {
+        boolean changed = false;
+
         // replace null sources / sourceGroups with empty collection
         // so that downstreams do not need to take care of nulls.
         if (sources == null)
@@ -1940,12 +1953,28 @@ public class RtpChannel
                 = MediaStreamTrackFactory.createMediaStreamTracks(
                     mediaStreamTrackReceiver, sources, sourceGroups);
 
-            return mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+            changed
+                = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
         }
-        else
+
+        if (changed)
         {
-            return false;
+            getContent().getChannels().stream()
+                .filter(c -> c != this && c instanceof RtpChannel)
+                .forEach(
+                    c -> ((RtpChannel) c).updateBitrateController());
         }
+
+        return changed;
+    }
+
+    /**
+     * Triggers the bitrate controller of this channel (if any) to update its
+     * state (taking into account e.g. new endpoints in the conference).
+     */
+    protected void updateBitrateController()
+    {
+        // RtpChannel doesn't itself have a bitrate controller.
     }
 
     /**

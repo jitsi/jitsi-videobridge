@@ -74,7 +74,7 @@ public class Health
         for (int i = 0; i < endpoints.length; ++i)
         {
             Endpoint endpoint
-                = conference.getOrCreateEndpoint(generateEndpointID());
+                = (Endpoint) conference.getOrCreateEndpoint(generateEndpointID());
 
             // Fail as quickly as possible.
             if (endpoint == null)

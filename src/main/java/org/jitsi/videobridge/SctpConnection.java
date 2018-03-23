@@ -26,7 +26,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
 import org.ice4j.socket.*;
 import org.ice4j.util.*;
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.impl.osgi.framework.*;
 import org.jitsi.sctp4j.*;
@@ -240,18 +239,17 @@ public class SctpConnection
     public SctpConnection(
             String id,
             Content content,
-            Endpoint endpoint,
+            AbstractEndpoint endpoint,
             int remoteSctpPort,
             String channelBundleId,
             Boolean initiator)
         throws Exception
     {
-        super(
-                content,
-                id,
-                channelBundleId,
-                IceUdpTransportPacketExtension.NAMESPACE,
-                initiator);
+        super(content,
+              id,
+              channelBundleId,
+              IceUdpTransportPacketExtension.NAMESPACE,
+              initiator);
 
         logger
             = Logger.getLogger(classLogger, content.getConference().getLogger());
@@ -263,7 +261,7 @@ public class SctpConnection
                 handler);
 
         this.remoteSctpPort = remoteSctpPort;
-        this.debugId = generateDebugId();
+        debugId = generateDebugId();
     }
 
     /**
@@ -703,17 +701,18 @@ public class SctpConnection
      * {@inheritDoc}
      */
     @Override
-    protected void onEndpointChanged(Endpoint oldValue, Endpoint newValue)
+    protected void onEndpointChanged(
+        AbstractEndpoint oldValue, AbstractEndpoint newValue)
     {
         super.onEndpointChanged(oldValue, newValue);
 
-        if (oldValue != null)
+        if (oldValue != null && oldValue instanceof Endpoint)
         {
-            oldValue.setSctpConnection(null);
+            ((Endpoint) oldValue).setSctpConnection(null);
         }
-        if (newValue != null)
+        if (newValue != null && newValue instanceof Endpoint)
         {
-            newValue.setSctpConnection(this);
+            ((Endpoint) newValue).setSctpConnection(this);
         }
     }
 

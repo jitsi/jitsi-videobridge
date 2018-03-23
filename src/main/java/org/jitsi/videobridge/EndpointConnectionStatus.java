@@ -210,41 +210,40 @@ public class EndpointConnectionStatus
             for (Videobridge videobridge : jvbs)
             {
                 Conference[] conferences = videobridge.getConferences();
-                for (Conference conference : conferences)
-                {
-                    List<Endpoint> endpoints = conference.getEndpoints();
-                    for (Endpoint endpoint : endpoints)
-                    {
-                        monitorEndpointActivity(endpoint);
-                    }
-                }
+                Arrays.stream(conferences)
+                    .forEachOrdered(
+                        conference ->
+                            conference.getEndpoints()
+                                .forEach(this::monitorEndpointActivity));
 
                 cleanupExpiredEndpointsStatus();
             }
         }
     }
 
-    private void monitorEndpointActivity(Endpoint endpoint)
+    private void monitorEndpointActivity(AbstractEndpoint abstractEndpoint)
     {
+        if (!(abstractEndpoint instanceof Endpoint))
+        {
+            // We only care about endpoints/participants connected to this
+            // bridge, which are of type Endpoint.
+            return;
+        }
+
+        Endpoint endpoint = (Endpoint) abstractEndpoint;
         String endpointId = endpoint.getID();
-        long lastActivity = 0;
-        long mostRecentChannelCreated = 0;
 
         // Go over all RTP channels to get the latest timestamp
-        List<RtpChannel> rtpChannels = endpoint.getChannels(null);
-        for (RtpChannel channel : rtpChannels)
-        {
-            long channelLastActivity = channel.getLastTransportActivityTime();
-            if (channelLastActivity > lastActivity)
-            {
-                lastActivity = channelLastActivity;
-            }
-            long creationTimestamp = channel.getCreationTimestamp();
-            if (creationTimestamp > mostRecentChannelCreated)
-            {
-                mostRecentChannelCreated = creationTimestamp;
-            }
-        }
+        List<RtpChannel> rtpChannels = endpoint.getChannels();
+        long lastActivity
+            = rtpChannels.stream()
+                .mapToLong(RtpChannel::getLastTransportActivityTime)
+                .max().orElse(0);
+        long mostRecentChannelCreated
+            = rtpChannels.stream()
+                .mapToLong(RtpChannel::getCreationTimestamp)
+                .max().orElse(0);
+
         // Also check SctpConnection
         SctpConnection sctpConnection = endpoint.getSctpConnection();
         if (sctpConnection != null)
@@ -335,7 +334,7 @@ public class EndpointConnectionStatus
             else
             {
                 // Send only to the receiver endpoint
-                ArrayList<Endpoint> receivers = new ArrayList<>(1);
+                ArrayList<AbstractEndpoint> receivers = new ArrayList<>(1);
                 receivers.add(msgReceiver);
 
                 conference.sendMessage(msg, receivers);
@@ -352,23 +351,15 @@ public class EndpointConnectionStatus
 
     private void cleanupExpiredEndpointsStatus()
     {
-        Iterator<Endpoint> endpoints = inactiveEndpoints.iterator();
-        while (endpoints.hasNext())
+        inactiveEndpoints.removeIf(e -> e.getConference().isExpired());
+        if (logger.isDebugEnabled())
         {
-            Endpoint endpoint = endpoints.next();
-            if (endpoint.getConference().isExpired())
-            {
-                logger.debug("Removing endpoint from expired conference: "
-                        + endpoint.getID());
-
-                endpoints.remove();
-            }
-            else if (endpoint.isExpired() && logger.isDebugEnabled())
-            {
-                logger.debug(
-                        "Endpoint has expired: " + endpoint.getID()
-                            + ", but still on the list");
-            }
+            inactiveEndpoints.stream()
+                .filter(Endpoint::isExpired)
+                .forEach(
+                    e ->
+                        logger.debug("Endpoint has expired: " + e.getID()
+                            + ", but is still on the list"));
         }
     }
 
@@ -404,13 +395,8 @@ public class EndpointConnectionStatus
         //
         // Looping over all inactive endpoints of all conferences maybe is not
         // the most efficient, but it should not be extremely large number.
-        for (Endpoint potentialSubject : inactiveEndpoints)
-        {
-            if (potentialSubject.getConference() == conference)
-            {
-                sendEndpointConnectionStatus(
-                        potentialSubject, false, endpoint);
-            }
-        }
+        inactiveEndpoints.stream()
+            .filter(e -> e.getConference() == conference)
+            .forEach(e -> sendEndpointConnectionStatus(e, false, endpoint));
     }
 }
