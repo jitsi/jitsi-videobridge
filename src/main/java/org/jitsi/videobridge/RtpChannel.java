@@ -657,7 +657,7 @@ public class RtpChannel
     @Override
     protected void closeStream()
     {
-        if (!streamClosed)
+        if (!streamClosed && stream != null)
         {
             MediaStreamStats2 mss = stream.getMediaStreamStats();
             statistics.bytesReceived = mss.getReceiveStats().getBytes();
