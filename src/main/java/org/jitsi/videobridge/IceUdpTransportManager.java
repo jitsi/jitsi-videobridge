@@ -1913,52 +1913,47 @@ public class IceUdpTransportManager
         {
             if (connectThread == null)
             {
-                connectThread = new Thread()
-                {
-                    @Override
-                    public void run()
+                connectThread = new Thread(() -> {
+                    try
                     {
-                        try
-                        {
-                            wrapupConnectivityEstablishment();
-                        }
-                        catch (OperationFailedException ofe)
-                        {
-                            logger.info(
-                                "Failed to connect IceUdpTransportManager: "
-                                         + ofe);
+                        wrapupConnectivityEstablishment();
+                    }
+                    catch (OperationFailedException ofe)
+                    {
+                        logger.info(
+                            "Failed to connect IceUdpTransportManager: "
+                                     + ofe);
 
-                            synchronized (connectThreadSyncRoot)
-                            {
-                                connectThread = null;
-                                return;
-                            }
-                        }
-
-                        // XXX The value of the field iceAgent is null at times.
-                        Agent iceAgent = IceUdpTransportManager.this.iceAgent;
-
-                        if (iceAgent == null)
+                        synchronized (connectThreadSyncRoot)
                         {
-                            // This TransportManager has (probably) been closed.
+                            connectThread = null;
                             return;
                         }
-
-                        IceProcessingState state = iceAgent.getState();
-
-                        if (state.isEstablished())
-                        {
-                            onIceConnected();
-                        }
-                        else
-                        {
-                            logger.log(Level.WARNING,
-                                       Logger.Category.STATISTICS,
-                                       "ice_failed," + getLoggingId()
-                                       + " state=" + state);
-                        }
                     }
-                };
+
+                    // XXX The value of the field iceAgent is null at times.
+                    Agent iceAgent = IceUdpTransportManager.this.iceAgent;
+
+                    if (iceAgent == null)
+                    {
+                        // This TransportManager has (probably) been closed.
+                        return;
+                    }
+
+                    IceProcessingState state = iceAgent.getState();
+
+                    if (state.isEstablished())
+                    {
+                        onIceConnected();
+                    }
+                    else
+                    {
+                        logger.log(Level.WARNING,
+                                   Logger.Category.STATISTICS,
+                                   "ice_failed," + getLoggingId()
+                                   + " state=" + state);
+                    }
+                });
 
                 connectThread.setDaemon(true);
                 connectThread.setName("IceUdpTransportManager connect thread");
