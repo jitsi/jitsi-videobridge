@@ -437,7 +437,11 @@ public class MediaStreamTrackFactory
         });
 
         if (!sourceGroupsCopy.isEmpty()) {
-            logger.warn("Unprocessed source groups: " + sourceGroupsCopy);
+            logger.warn(
+                "Unprocessed source groups: " +
+                    sourceGroupsCopy.stream()
+                        .map(SourceGroupPacketExtension::toXML)
+                        .reduce(String::concat));
         }
 
         // The remaining sources are not part of any group. Add them as tracks
