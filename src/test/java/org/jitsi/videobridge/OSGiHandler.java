@@ -5,6 +5,8 @@ import org.jitsi.meet.*;
 import org.jitsi.videobridge.osgi.*;
 import org.osgi.framework.*;
 
+import java.lang.reflect.*;
+
 /**
  *
  */
@@ -23,6 +25,7 @@ public class OSGiHandler
             "net.java.sip.communicator.impl.configuration.USE_PROPFILE_CONFIG",
             "true");
         OSGi.setBundleConfig(new JvbBundleConfig());
+        OSGi.setClassLoader(getPlatformClassLoader());
 
         activator =
             new BundleActivator()
@@ -79,6 +82,24 @@ public class OSGiHandler
     public BundleContext getBundleContext()
     {
         return bc;
+    }
+
+    private ClassLoader getPlatformClassLoader() {
+        ClassLoader cl;
+        //JDK 9
+        try
+        {
+            Method getPlatformClassLoader =
+                    ClassLoader.class.getMethod("getPlatformClassLoader");
+            cl = (ClassLoader) getPlatformClassLoader.invoke(null);
+        }
+        catch (NoSuchMethodException | IllegalAccessException |
+                InvocationTargetException t)
+        {
+        // pre-JDK9
+            cl = ClassLoader.getSystemClassLoader();
+        }
+        return cl;
     }
 
     public <T> T getService(Class<T> serviceClass)
