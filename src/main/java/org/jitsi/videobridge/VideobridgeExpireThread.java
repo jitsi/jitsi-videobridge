@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
@@ -46,6 +47,14 @@ class VideobridgeExpireThread
     private static final RecurringRunnableExecutor EXECUTOR
         = new RecurringRunnableExecutor(
             VideobridgeExpireThread.class.getSimpleName());
+
+    /**
+     * The executor used to expire the individual {@link Channel}s,
+     * {@link Content}s, or {@link Conference}s.
+     */
+    private static final Executor EXPIRE_EXECUTOR
+        = ExecutorUtils.newCachedThreadPool(
+            true, VideobridgeExpireThread.class.getSimpleName() + "-channel");
 
     /**
      * The name of the property which specifies the interval in seconds at which
@@ -160,7 +169,7 @@ class VideobridgeExpireThread
             // The Conferences will live an iteration more than the Contents.
             if (conference.shouldExpire())
             {
-                conference.safeExpire();
+                EXPIRE_EXECUTOR.execute(conference::safeExpire);
             }
             else
             {
@@ -170,7 +179,7 @@ class VideobridgeExpireThread
                      // Channels.
                     if (content.shouldExpire())
                     {
-                        content.safeExpire();
+                        EXPIRE_EXECUTOR.execute(content::safeExpire);
                     }
                     else
                     {
@@ -178,7 +187,7 @@ class VideobridgeExpireThread
                         {
                             if (channel.shouldExpire())
                             {
-                                channel.safeExpire();
+                                EXPIRE_EXECUTOR.execute(channel::safeExpire);
                             }
                         }
                     }
