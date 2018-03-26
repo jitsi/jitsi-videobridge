@@ -49,9 +49,10 @@ class VideobridgeExpireThread
             VideobridgeExpireThread.class.getSimpleName());
 
     /**
-     * The executor used to expire individual {@link Channel}s.
+     * The executor used to expire the individual {@link Channel}s,
+     * {@link Content}s, or {@link Conference}s.
      */
-    private static final Executor CHANNEL_EXPIRE_EXECUTOR
+    private static final Executor EXPIRE_EXECUTOR
         = ExecutorUtils.newCachedThreadPool(
             true, VideobridgeExpireThread.class.getSimpleName() + "-channel");
 
@@ -168,7 +169,7 @@ class VideobridgeExpireThread
             // The Conferences will live an iteration more than the Contents.
             if (conference.shouldExpire())
             {
-                conference.safeExpire();
+                EXPIRE_EXECUTOR.execute(conference::safeExpire);
             }
             else
             {
@@ -178,7 +179,7 @@ class VideobridgeExpireThread
                      // Channels.
                     if (content.shouldExpire())
                     {
-                        content.safeExpire();
+                        EXPIRE_EXECUTOR.execute(content::safeExpire);
                     }
                     else
                     {
@@ -186,18 +187,7 @@ class VideobridgeExpireThread
                         {
                             if (channel.shouldExpire())
                             {
-                                // Expiring Conference and Content objects is
-                                // relatively simple and hasn't been observed
-                                // to cause any problem.
-                                // Expiring a Channel on the other hand may
-                                // result in the MediaStream being closed which
-                                // has been observed to block for a prolonged
-                                // period of time due to a variety of reasons.
-                                // We execute the expiration of a channel in
-                                // a separate thread in order to make sure that
-                                // the main expire thread keeps running.
-                                CHANNEL_EXPIRE_EXECUTOR
-                                    .execute(channel::safeExpire);
+                                EXPIRE_EXECUTOR.execute(channel::safeExpire);
                             }
                         }
                     }
