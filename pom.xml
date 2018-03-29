@@ -86,12 +86,12 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-20171010.184527-1</version>
+      <version>1.1-20180327.183532-3</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-android-osgi</artifactId>
-      <version>1.0-20150723.002702-1</version>
+      <version>1.0-20180322.162617-2</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
