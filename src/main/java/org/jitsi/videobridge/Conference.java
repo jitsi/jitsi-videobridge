@@ -461,19 +461,29 @@ public class Conference
      * Adds the channel-bundles of this <tt>Conference</tt> as
      * <tt>ColibriConferenceIQ.ChannelBundle</tt> instances in <tt>iq</tt>.
      * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
+     * @param channelBundleIdsToDescribe a filter of the IDs of channel bundles
+     * to describe. Channel bundles with IDs not on the list will not be
+     * described. If {@code channelBundleIdsToDescribe} is {@code null}, all
+     * channel bundles will be described.
      */
-    void describeChannelBundles(ColibriConferenceIQ iq)
+    void describeChannelBundles(
+        ColibriConferenceIQ iq, Set<String> channelBundleIdsToDescribe)
     {
         synchronized (transportManagers)
         {
             for (Map.Entry<String, IceUdpTransportManager> entry
                     : transportManagers.entrySet())
             {
-                ColibriConferenceIQ.ChannelBundle responseBundleIQ
-                    = new ColibriConferenceIQ.ChannelBundle(entry.getKey());
+                String id = entry.getKey();
+                if (channelBundleIdsToDescribe == null
+                    || channelBundleIdsToDescribe.contains(id))
+                {
+                    ColibriConferenceIQ.ChannelBundle responseBundleIQ
+                        = new ColibriConferenceIQ.ChannelBundle(id);
 
-                entry.getValue().describe(responseBundleIQ);
-                iq.addChannelBundle(responseBundleIQ);
+                    entry.getValue().describe(responseBundleIQ);
+                    iq.addChannelBundle(responseBundleIQ);
+                }
             }
         }
     }

@@ -723,6 +723,7 @@ public class Videobridge
 
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
+        Set<String> channelBundleIdsToDescribe = new HashSet<>();
 
         responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
 
@@ -797,6 +798,10 @@ public class Videobridge
                 String channelID = channelIQ.getID();
                 int channelExpire = channelIQ.getExpire();
                 String channelBundleId = channelIQ.getChannelBundleId();
+
+                // Channel bundles mentioned in "channel" elements in the
+                // request should be included in the response.
+                channelBundleIdsToDescribe.add(channelBundleId);
                 RtpChannel channel;
                 boolean channelCreated = false;
                 String transportNamespace
@@ -995,6 +1000,7 @@ public class Videobridge
                 SctpConnection sctpConn;
                 int expire = sctpConnIq.getExpire();
                 String channelBundleId = sctpConnIq.getChannelBundleId();
+                channelBundleIdsToDescribe.add(channelBundleId);
 
                 // No ID means SCTP connection is to either be created
                 // or focus uses endpoint identity.
@@ -1131,6 +1137,9 @@ public class Videobridge
         for (ColibriConferenceIQ.ChannelBundle channelBundleIq
                 : conferenceIQ.getChannelBundles())
         {
+            // Channel bundles mentioned in the request should be included in
+            // the response.
+            channelBundleIdsToDescribe.add(channelBundleIq.getId());
             TransportManager transportManager
                 = conference.getTransportManager(channelBundleIq.getId());
             IceUdpTransportPacketExtension transportIq
@@ -1150,7 +1159,9 @@ public class Videobridge
             conference.updateEndpoint(colibriEndpoint);
         }
 
-        conference.describeChannelBundles(responseConferenceIQ);
+        conference.describeChannelBundles(
+            responseConferenceIQ,
+            channelBundleIdsToDescribe);
         conference.describeEndpoints(responseConferenceIQ);
 
         responseConferenceIQ.setType(
