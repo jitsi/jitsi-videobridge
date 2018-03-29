@@ -732,6 +732,29 @@ class EndpointMessageTransport
     }
 
     /**
+     * Closes this {@link EndpointMessageTransport}.
+     */
+    void close()
+    {
+        synchronized (webSocketSyncRoot)
+        {
+            if (webSocket != null)
+            {
+                // 410 Gone indicates that the resource requested is no longer
+                // available and will not be available again.
+                webSocket.getSession().close(410, "replaced");
+                webSocket = null;
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug(
+                        "Endpoint expired, closed colibri web-socket.");
+                }
+            }
+        }
+
+    }
+
+    /**
      * Notifies this {@link EndpointMessageTransport} that a message has been
      * received from a specific {@link ColibriWebSocket} instance associated
      * with its {@link Endpoint}.

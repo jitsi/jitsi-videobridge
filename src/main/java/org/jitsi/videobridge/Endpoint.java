@@ -206,6 +206,17 @@ public class Endpoint
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void expire()
+    {
+        super.expire();
+
+        messageTransport.close();
+    }
+
+    /**
      * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
      *
      * @param sctpConnection the <tt>SctpConnection</tt> to be bound to this
