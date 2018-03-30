@@ -171,7 +171,7 @@ public class Endpoint
             if (logger.isDebugEnabled())
             {
                 logger.debug(getID() + " selected "
-                    + Arrays.toString(pinnedEndpoints.toArray()));
+                    + Arrays.toString(selectedEndpoints.toArray()));
             }
 
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
@@ -203,6 +203,17 @@ public class Endpoint
         {
             expire();
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void expire()
+    {
+        super.expire();
+
+        messageTransport.close();
     }
 
     /**
