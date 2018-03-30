@@ -91,6 +91,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private boolean expired = false;
 
     /**
+     * The instance handling the transport of COLIBRI messages for this endpoint.
+     */
+    private final AbstractEndpointMessageTransport messageTransport;
+
+    /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
      * part of.
@@ -101,6 +106,26 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.conference = Objects.requireNonNull(conference, "conference");
         this.id = Objects.requireNonNull(id, "id");
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
+        this.messageTransport = createTransportChannel();
+    }
+
+    /**
+     * Creates and return a {@link AbstractEndpointMessageTransport} for this
+     * endpoint.
+     * @return the created {@link AbstractEndpointMessageTransport}.
+     */
+    protected AbstractEndpointMessageTransport createTransportChannel()
+    {
+        return null;
+    }
+
+    /**
+     * @return the {@link AbstractEndpointMessageTransport} associated with
+     * this endpoint.
+     */
+    public AbstractEndpointMessageTransport getMessageTransport()
+    {
+        return messageTransport;
     }
 
     /**

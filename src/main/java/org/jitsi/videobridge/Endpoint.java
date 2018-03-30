@@ -78,11 +78,6 @@ public class Endpoint
     private final Logger logger;
 
     /**
-     * The instance handling the transport of COLIBRI messages for this endpoint.
-     */
-    private final EndpointMessageTransport messageTransport;
-
-    /**
      * The password of the ICE Agent associated with this endpoint: note that
      * without bundle an endpoint might have multiple channels with different
      * ICE Agents. In this case one of the channels will be chosen (in an
@@ -105,7 +100,24 @@ public class Endpoint
         super(conference, id);
 
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-        this.messageTransport = new EndpointMessageTransport(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected EndpointMessageTransport createTransportChannel()
+    {
+        return new EndpointMessageTransport(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public EndpointMessageTransport getMessageTransport()
+    {
+        return (EndpointMessageTransport) super.getMessageTransport();
     }
 
     /**
@@ -118,7 +130,7 @@ public class Endpoint
      */
     public SctpConnection getSctpConnection()
     {
-        return messageTransport.getSctpConnection();
+        return getMessageTransport().getSctpConnection();
     }
 
     /**
@@ -190,7 +202,7 @@ public class Endpoint
     public void sendMessage(String msg)
         throws IOException
     {
-        messageTransport.sendMessage(msg);
+        getMessageTransport().sendMessage(msg);
     }
 
     /**
@@ -213,7 +225,7 @@ public class Endpoint
     {
         super.expire();
 
-        messageTransport.close();
+        getMessageTransport().close();
     }
 
     /**
@@ -224,7 +236,7 @@ public class Endpoint
      */
     void setSctpConnection(SctpConnection sctpConnection)
     {
-        messageTransport.setSctpConnection(sctpConnection);
+        getMessageTransport().setSctpConnection(sctpConnection);
 
         if (getSctpConnection() == null)
         {
@@ -259,7 +271,7 @@ public class Endpoint
      */
     public void onWebSocketConnect(ColibriWebSocket ws)
     {
-        messageTransport.onWebSocketConnect(ws);
+        getMessageTransport().onWebSocketConnect(ws);
     }
 
     /**
@@ -270,7 +282,7 @@ public class Endpoint
     public void onWebSocketClose(
             ColibriWebSocket ws, int statusCode, String reason)
     {
-        messageTransport.onWebSocketClose(ws, statusCode, reason);
+        getMessageTransport().onWebSocketClose(ws, statusCode, reason);
     }
 
     /**
@@ -280,14 +292,14 @@ public class Endpoint
      */
     public void onWebSocketText(ColibriWebSocket ws, String message)
     {
-        messageTransport.onWebSocketText(ws, message);
+        getMessageTransport().onWebSocketText(ws, message);
     }
 
     /**
      * @return the password of the ICE Agent associated with this
      * {@link Endpoint}.
      */
-    String getIcePassword()
+    private String getIcePassword()
     {
         if (icePassword != null)
         {
