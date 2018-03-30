@@ -1461,7 +1461,7 @@ public class Conference
      * @param endpoint the {@link Endpoint} whose transport channel has become
      * available.
      */
-    void endpointMessageTransportConnected(@NotNull Endpoint endpoint)
+    void endpointMessageTransportConnected(@NotNull AbstractEndpoint endpoint)
     {
         if (!isExpired())
         {

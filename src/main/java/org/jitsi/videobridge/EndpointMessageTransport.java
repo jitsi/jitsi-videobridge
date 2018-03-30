@@ -16,11 +16,9 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.eventadmin.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.rest.*;
 import org.json.simple.*;
-import org.json.simple.parser.*;
 
 import java.io.*;
 import java.lang.ref.*;
@@ -36,6 +34,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author Boris Grozev
  */
 class EndpointMessageTransport
+    extends AbstractEndpointMessageTransport
     implements WebRtcDataStream.DataCallback
 {
 
@@ -126,16 +125,18 @@ class EndpointMessageTransport
      */
     EndpointMessageTransport(Endpoint endpoint)
     {
-        this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
+        super(endpoint);
+        this.endpoint = endpoint;
         this.logger
             = Logger.getLogger(
                     classLogger, endpoint.getConference().getLogger());
     }
 
     /**
-     * Fires the message transport ready event for the associated endpoint.
+     * {@inheritDoc}
      */
-    private void notifyTransportChannelConnected()
+    @Override
+    protected void notifyTransportChannelConnected()
     {
         EventAdmin eventAdmin = endpoint.getConference().getEventAdmin();
 
@@ -154,21 +155,17 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a {@code ClientHello} has been
-     * received.
-     *
-     * @param src the transport channel on which {@code jsonObject} has
-     * been received
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code ClientHello} which has been received by the associated
-     * {@code SctpConnection}
+     * {@inheritDoc}
      */
-    private void onClientHello(Object src, JSONObject jsonObject)
+    @Override
+    protected void onClientHello(Object src, JSONObject jsonObject)
     {
         // ClientHello was introduced for functional testing purposes. It
         // triggers a ServerHello response from Videobridge. The exchange
         // reveals (to the client) that the transport channel between the
         // remote endpoint and the Videobridge is operational.
+        // We take care to send the reply using the same transport channel on
+        // which we received the request..
         sendMessage(src, createServerHelloEvent(), "response to ClientHello");
     }
 
@@ -246,136 +243,10 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a specific JSON object has been
-     * received.
-     *
-     * @param src the transport channel by which the specified
-     * {@code jsonObject} has been received.
-     * @param jsonObject the JSON data received by {@code src}.
-     * @param colibriClass the non-{@code null} value of the mandatory JSON
-     * property {@link Videobridge#COLIBRI_CLASS} required of all JSON objects
-     * received.
+     * {@inheritDoc}
      */
-    private void onJSONData(
-        Object src,
-        JSONObject jsonObject,
-        String colibriClass)
-    {
-        switch (colibriClass)
-        {
-        case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
-            onSelectedEndpointChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
-            onSelectedEndpointsChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
-            onPinnedEndpointChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
-            onPinnedEndpointsChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_CLIENT_HELLO:
-            onClientHello(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_ENDPOINT_MESSAGE:
-            onClientEndpointMessage(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_LASTN_CHANGED:
-            onLastNChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
-            onReceiverVideoConstraintEvent(src, jsonObject);
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * Handles an opaque message from this {@code Endpoint} that should be
-     * forwarded to either: a) another client in this conference (1:1
-     * message) or b) all other clients in this conference (broadcast message)
-     *
-     * @param src the transport channel on which {@code jsonObject} has
-     * been received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code EndpointMessage} which has been received.
-     *
-     * EndpointMessage definition:
-     * 'to': If the 'to' field contains the endpoint id of another endpoint
-     * in this conference, the message will be treated as a 1:1 message and
-     * forwarded just to that endpoint. If the 'to' field is an empty
-     * string, the message will be treated as a broadcast and sent to all other
-     * endpoints in this conference.
-     * 'msgPayload': An opaque payload. The bridge does not need to know or
-     * care what is contained in the 'msgPayload' field, it will just forward
-     * it blindly.
-     *
-     * NOTE: This message is designed to allow endpoints to pass their own
-     * application-specific messaging to one another without requiring the
-     * bridge to know of or understand every message type. These messages
-     * will be forwarded by the bridge using the same transport channel as other
-     * jitsi messages (e.g. active speaker and last-n notifications).
-     * It is not recommended to send high-volume message traffic on this
-     * channel (e.g. file transfer), such that it may interfere with other
-     * jitsi messages.
-     */
-    @SuppressWarnings("unchecked")
-    private void onClientEndpointMessage(
-        Object src,
-        JSONObject jsonObject)
-    {
-        String to = (String)jsonObject.get("to");
-
-        // First insert the "from" to prevent spoofing.
-        jsonObject.put("from", endpoint.getID());
-        Conference conference = endpoint.getConference();
-        if (conference == null || conference.isExpired())
-        {
-            logger.warn(
-                "Unable to send EndpointMessage, conference is null or expired");
-            return;
-        }
-
-        List<AbstractEndpoint> endpointSubset;
-        if ("".equals(to))
-        {
-            // Broadcast message
-            endpointSubset = new LinkedList<>(conference.getEndpoints());
-            endpointSubset.removeIf(
-                e -> endpoint.getID().equalsIgnoreCase(e.getID()));
-        }
-        else
-        {
-            // 1:1 message
-            AbstractEndpoint targetEndpoint = conference.getEndpoint(to);
-            if (targetEndpoint != null)
-            {
-                endpointSubset = Collections.singletonList(targetEndpoint);
-            }
-            else
-            {
-                endpointSubset = Collections.emptyList();
-                logger.warn(
-                    "Unable to find endpoint " + to
-                        + " to send EndpointMessage");
-            }
-        }
-
-        conference.sendMessage(jsonObject.toString(), endpointSubset);
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@code PinnedEndpointChangedEvent}
-     * has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code PinnedEndpointChangedEvent} which has been received.
-     */
-    private void onPinnedEndpointChangedEvent(
+    @Override
+    protected void onPinnedEndpointChangedEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -392,15 +263,9 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a {@code PinnedEndpointsChangedEvent}
-     * has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code PinnedEndpointChangedEvent} which has been received.
+     * {@inheritDoc}
      */
-    private void onPinnedEndpointsChangedEvent(
+    protected void onPinnedEndpointsChangedEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -433,15 +298,10 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a {@code SelectedEndpointChangedEvent}
-     * has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code SelectedEndpointChangedEvent} which has been received.
+     * {@inheritDoc}
      */
-    private void onSelectedEndpointChangedEvent(
+    @Override
+    protected void onSelectedEndpointChangedEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -458,15 +318,10 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a
-     * {@code SelectedEndpointsChangedEvent} has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has
-     * been received
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code SelectedEndpointChangedEvent} which has been received.
+     * {@inheritDoc}
      */
-    private void onSelectedEndpointsChangedEvent(
+    @Override
+    protected void onSelectedEndpointsChangedEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -492,62 +347,6 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}
-     * has been received.
-     *
-     * @param src the transport channel by which {@code jsonObject} has been
-     * received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code LastNChangedEvent} which has been received.
-     */
-    private void onLastNChangedEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        // Find the new value for LastN.
-        Object o = jsonObject.get("lastN");
-        if (!(o instanceof Number))
-        {
-            return;
-        }
-        int lastN = ((Number) o).intValue();
-
-        for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO)) {
-            channel.setLastN(lastN);
-        }
-    }
-
-    /**
-     * Notifies this {@code Endpoint} that a {@code ReceiverVideoConstraint}
-     * event has been received
-     *
-     * @param src the transport channel by which {@code jsonObject} has been
-     * received.
-     * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code LastNChangedEvent} which has been received.
-     */
-    private void onReceiverVideoConstraintEvent(
-        Object src,
-        JSONObject jsonObject)
-    {
-        Object o = jsonObject.get("maxFrameHeight");
-        if (!(o instanceof Number))
-        {
-            logger.warn("Received a non-number maxFrameHeight video constraint from " + endpoint.getID() +
-                ": " + o.toString());
-            return;
-        }
-        int maxFrameHeight = ((Number) o).intValue();
-        logger.debug("Received a maxFrameHeight video constraint from " + endpoint.getID() + ": " + maxFrameHeight);
-
-        for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
-        {
-            VideoChannel videoChannel = (VideoChannel)channel;
-            videoChannel.setMaxFrameHeight(maxFrameHeight);
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -561,58 +360,10 @@ class EndpointMessageTransport
     }
 
     /**
-     * Notifies this {@link EndpointMessageTransport} that a specific message
-     * has been received on a specific transport channel.
-     * @param src the transport channel on which the message has been received.
-     * @param msg the message which has been received.
+     * {@inheritDoc}
      */
-    private void onMessage(Object src, String msg)
-    {
-        Object obj;
-        JSONParser parser = new JSONParser(); // JSONParser is NOT thread-safe.
-
-        try
-        {
-            obj = parser.parse(msg);
-        }
-        catch (ParseException ex)
-        {
-            logger.warn(
-                    "Malformed JSON received from endpoint " + endpoint.getID(),
-                    ex);
-            obj = null;
-        }
-
-        // We utilize JSONObjects only.
-        if (obj instanceof JSONObject)
-        {
-            JSONObject jsonObject = (JSONObject) obj;
-            // We utilize JSONObjects with colibriClass only.
-            String colibriClass
-                = (String)jsonObject.get(Videobridge.COLIBRI_CLASS);
-
-            if (colibriClass != null)
-            {
-                onJSONData(src, jsonObject, colibriClass);
-            }
-            else
-            {
-                logger.warn(
-                    "Malformed JSON received from endpoint " + endpoint.getID()
-                        + ". JSON object does not contain the colibriClass"
-                        + " field.");
-            }
-        }
-    }
-
-    /**
-     * Sends a specific message over the active transport channels of this
-     * {@link EndpointMessageTransport}.
-     *
-     * @param msg message text to send.
-     * @throws IOException
-     */
-    void sendMessage(String msg)
+    @Override
+    protected void sendMessage(String msg)
         throws IOException
     {
         Object dst = getActiveTransportChannel();
@@ -732,9 +483,10 @@ class EndpointMessageTransport
     }
 
     /**
-     * Closes this {@link EndpointMessageTransport}.
+     * {@inheritDoc}
      */
-    void close()
+    @Override
+    protected void close()
     {
         synchronized (webSocketSyncRoot)
         {
@@ -751,7 +503,6 @@ class EndpointMessageTransport
                 }
             }
         }
-
     }
 
     /**
@@ -822,5 +573,4 @@ class EndpointMessageTransport
             }
         }
     }
-
 }

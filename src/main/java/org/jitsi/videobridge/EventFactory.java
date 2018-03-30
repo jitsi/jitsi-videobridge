@@ -228,7 +228,7 @@ public class EventFactory
      *
      * @return the <tt>Event</tt> which was created.
      */
-    public static Event endpointMessageTransportReady(Endpoint endpoint)
+    public static Event endpointMessageTransportReady(AbstractEndpoint endpoint)
     {
         Dictionary<String, Object> properties = new Hashtable<>(1);
 
