@@ -336,7 +336,7 @@ public class Conference
      }
 
     /**
-     * Used to send a message to a subset of endpoints in the call, primary use
+     * Sends a message to a subset of endpoints in the call, primary use
      * case being a message that has originated from an endpoint (as opposed to
      * a message originating from the bridge and being sent to all endpoints in
      * the call, for that see {@link #broadcastMessage(String)}.
@@ -345,7 +345,10 @@ public class Conference
      * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
      * be sent.
      */
-    public void sendMessage(String msg, List<AbstractEndpoint> endpoints)
+    public void sendMessage(
+        String msg,
+        List<AbstractEndpoint> endpoints,
+        boolean sendToOcto)
     {
         for (AbstractEndpoint endpoint : endpoints)
         {
@@ -360,6 +363,37 @@ public class Conference
                         + endpoint.getID() + ", msg: " + msg, e);
             }
         }
+
+        OctoEndpoints octoEndpoints = this.octoEndpoints;
+        if (sendToOcto && octoEndpoints != null)
+        {
+            octoEndpoints.sendMessage(msg);
+        }
+    }
+
+    /**
+     * Used to send a message to a subset of endpoints in the call, primary use
+     * case being a message that has originated from an endpoint (as opposed to
+     * a message originating from the bridge and being sent to all endpoints in
+     * the call, for that see {@link #broadcastMessage(String)}.
+     *
+     * @param msg the message to be sent
+     * @param endpoints the list of <tt>Endpoint</tt>s to which the message will
+     * be sent.
+     */
+    public void sendMessage(String msg, List<AbstractEndpoint> endpoints)
+    {
+        sendMessage(msg, endpoints, false);
+    }
+
+    /**
+     * Broadcasts a string message to all endpoints of the conference.
+     *
+     * @param msg the message to be broadcast.
+     */
+    public void broadcastMessage(String msg, boolean sendToOcto)
+    {
+        sendMessage(msg, getEndpoints(), sendToOcto);
     }
 
     /**
@@ -369,7 +403,7 @@ public class Conference
      */
     public void broadcastMessage(String msg)
     {
-        sendMessage(msg, getEndpoints());
+        broadcastMessage(msg, false);
     }
 
     /**
