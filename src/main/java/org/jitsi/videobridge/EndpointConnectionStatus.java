@@ -328,15 +328,14 @@ public class EndpointConnectionStatus
             if (msgReceiver == null)
             {
                 // We broadcast the message also to the endpoint itself for
-                // debugging purposes
-                conference.broadcastMessage(msg);
+                // debugging purposes.
+                conference.broadcastMessage(msg, true);
             }
             else
             {
                 // Send only to the receiver endpoint
-                ArrayList<AbstractEndpoint> receivers = new ArrayList<>(1);
-                receivers.add(msgReceiver);
-
+                List<AbstractEndpoint> receivers
+                    = Collections.singletonList(msgReceiver);
                 conference.sendMessage(msg, receivers);
             }
         }
