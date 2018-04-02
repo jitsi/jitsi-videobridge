@@ -20,11 +20,13 @@ import net.java.sip.communicator.util.*;
 import org.ice4j.socket.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.*;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.*;
 import java.util.*;
 
 /**
@@ -263,7 +265,7 @@ public class OctoTransportManager
             public void send(DatagramPacket p)
                 throws IOException
             {
-                doSend(p);
+                doSend(p, true);
             }
         };
     }
@@ -368,37 +370,39 @@ public class OctoTransportManager
      * size Octo header is prepended).
      *
      * @param p the packet to send.
+     * @param addHeaders whether this call should add the Octo headers to the
+     * packet before sending or not.
      * @throws IOException if calling {@code send()} on any of the target
      * sockets results in an {@link IOException}.
      */
-    private void doSend(DatagramPacket p)
+    private void doSend(DatagramPacket p, boolean addHeaders)
         throws IOException
     {
-        SocketAddress originalAddress = p.getSocketAddress();
-        p = addOctoHeaders(p);
+        if (addHeaders)
+        {
+            p = addOctoHeaders(p);
+        }
         DatagramSocket relaySocket = octoRelay.getSocket();
         IOException exception = null;
         int exceptions = 0;
 
-        for (SocketAddress remoteAddress : remoteRelays)
+        if (remoteRelays != null)
         {
-            try
+            for (SocketAddress remoteAddress : remoteRelays)
             {
-                p.setSocketAddress(remoteAddress);
+                try
+                {
+                    p.setSocketAddress(remoteAddress);
 
-                relaySocket.send(p);
-            }
-            catch (IOException ioe)
-            {
-                exceptions++;
-                exception = ioe;
+                    relaySocket.send(p);
+                }
+                catch (IOException ioe)
+                {
+                    exceptions++;
+                    exception = ioe;
+                }
             }
         }
-
-        // Restore the original address. Note that we don't currently restore
-        // the payload (i.e. we haven't removed the headers we added). Should
-        // we do that?
-        p.setSocketAddress(originalAddress);
 
         if (exception != null)
         {
@@ -455,5 +459,51 @@ public class OctoTransportManager
             channel.getConferenceId(),
             /* todo: add source endpoint id */ "ffffffff");
         return p;
+    }
+
+    /**
+     * Sends a string message with a specific Octo conference ID and a specific
+     * source endpoint over the Octo transport.
+     * @param msg the message to send.
+     * @param sourceEndpointId the ID of the source endpoint or {@code null}.
+     * @param conferenceId the Octo conference ID.
+     */
+    void sendMessage(String msg, String sourceEndpointId, String conferenceId)
+    {
+        if (StringUtils.isNullOrEmpty(sourceEndpointId))
+        {
+            sourceEndpointId = "ffffffff";
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Sending a message through Octo: " + msg);
+        }
+
+        byte[] msgBytes = msg.getBytes(StandardCharsets.UTF_8);
+        byte[] buf = new byte[msgBytes.length + OctoPacket.OCTO_HEADER_LENGTH];
+        System.arraycopy(
+            msgBytes, 0,
+            buf, OctoPacket.OCTO_HEADER_LENGTH,
+            msgBytes.length);
+
+        OctoPacket.writeHeaders(
+            buf, 0,
+            true /* source is a relay */,
+            MediaType.DATA,
+            0 /* simulcast layers info */,
+            conferenceId,
+            sourceEndpointId);
+
+        try
+        {
+            doSend(
+                new DatagramPacket(buf, 0, buf.length),
+                false);
+        }
+        catch (IOException ioe)
+        {
+            logger.error("Failed to send Octo data message: ", ioe);
+        }
     }
 }

@@ -15,12 +15,10 @@
  */
 package org.jitsi.videobridge.octo;
 
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 
-import java.io.*;
 import java.util.*;
 import java.util.stream.*;
 
@@ -37,7 +35,7 @@ public class OctoEndpoints
      * information. Note that instances should use {@link #logger} instead.
      */
     private static final Logger classLogger
-        = Logger.getLogger(OctoChannel.class);
+        = Logger.getLogger(OctoEndpoints.class);
 
     /**
      * The owning conference.
@@ -65,6 +63,13 @@ public class OctoEndpoints
     private final Object endpointsSyncRoot = new Object();
 
     /**
+     * The {@link OctoEndpointMessageTransport} used to parse and handle
+     * incoming data messages from Octo.
+     */
+    final OctoEndpointMessageTransport messageTransport
+        = new OctoEndpointMessageTransport(this);
+
+    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -74,6 +79,15 @@ public class OctoEndpoints
     {
         this.conference = conference;
         logger = Logger.getLogger(classLogger, conference.getLogger());
+    }
+
+    /**
+     * @return  the {@link Conference} associated with this
+     * {@link OctoEndpoints}.
+     */
+    Conference getConference()
+    {
+        return conference;
     }
 
     /**
@@ -192,7 +206,7 @@ public class OctoEndpoints
         OctoEndpoint endpoint;
         synchronized (endpointsSyncRoot)
         {
-            endpoint = new OctoEndpoint(id);
+            endpoint = new OctoEndpoint(conference, id);
             if (audioChannel != null)
             {
                 endpoint.addChannel(audioChannel);
@@ -229,65 +243,24 @@ public class OctoEndpoints
     }
 
     /**
-     * Represents an endpoint in a conference, which is connected to another
-     * jitsi-videobridge instance.
-     *
-     * @author Boris Grozev
+     * Sends a message through the Octo channel.
+     * @param msg the message to send.
      */
-    private class OctoEndpoint
-        extends AbstractEndpoint
+    public void sendMessage(String msg)
     {
-        private OctoEndpoint(String id)
+        OctoChannel channel = audioChannel;
+        if (channel == null)
         {
-            super(OctoEndpoints.this.conference, id);
+            channel = videoChannel;
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void sendMessage(String msg)
-            throws IOException
+        if (channel != null)
         {
-            // This is intentionally a no-op. Since a conference can have
-            // multiple OctoEndpoint instances, but we want a single message
-            // to be sent through Octo, the message should be sent through the
-            // single OctoEndpoints instance.
+            channel.sendMessage(msg, null);
         }
-
-        /**
-         * {@inheritDoc}
-         * </p>
-         * {@link OctoEndpoint}s are added/removed solely based on signaling. An
-         * endpoint is expired when the signaled media stream tracks for the
-         * Octo channels do not include any tracks for this endpoint.
-         */
-        @Override
-        protected void maybeExpire()
+        else
         {
-            MediaStreamTrackDesc[] audioTracks
-                = getMediaStreamTracks(MediaType.AUDIO);
-            MediaStreamTrackDesc[] videoTracks
-                = getMediaStreamTracks(MediaType.VIDEO);
-
-            if (ArrayUtils.isNullOrEmpty(audioTracks)
-                && ArrayUtils.isNullOrEmpty(videoTracks))
-            {
-                expire();
-            }
-        }
-
-        /**
-         * @return the list of all {@link MediaStreamTrackDesc} (both audio and
-         * video) of this endpoint.
-         */
-        private List<MediaStreamTrackDesc> getMediaStreamTracks()
-        {
-            List<MediaStreamTrackDesc> tracks = new LinkedList<>();
-            tracks.addAll(Arrays.asList(getMediaStreamTracks(MediaType.AUDIO)));
-            tracks.addAll(Arrays.asList(getMediaStreamTracks(MediaType.VIDEO)));
-
-            return tracks;
+            logger.warn("Can not send a message, no channels.");
         }
     }
 }

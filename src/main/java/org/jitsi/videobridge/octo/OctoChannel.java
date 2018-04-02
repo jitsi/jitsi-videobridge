@@ -23,6 +23,7 @@ import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 
 import java.net.*;
+import java.nio.charset.*;
 import java.util.*;
 import java.util.stream.*;
 
@@ -348,11 +349,23 @@ public class OctoChannel
     }
 
     /**
-     * TODO
+     * Handles an incoming Octo packet of type {@code data}.
      */
     private void handleDataPacket(DatagramPacket p)
     {
-        logger.info("Received data packet from Octo");
+        byte[] msgBytes = new byte[p.getLength() - OctoPacket.OCTO_HEADER_LENGTH];
+        System.arraycopy(
+            p.getData(), p.getOffset() + OctoPacket.OCTO_HEADER_LENGTH,
+            msgBytes, 0,
+            msgBytes.length);
+        String msg = new String(msgBytes, StandardCharsets.UTF_8);
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Received a message in an Octo data packet: " + msg);
+        }
+
+        octoEndpoints.messageTransport.onMessage(this, msg);
     }
 
     /**
@@ -362,5 +375,16 @@ public class OctoChannel
     public AbstractEndpoint getEndpoint(long ssrc)
     {
         return octoEndpoints == null ? null : octoEndpoints.findEndpoint(ssrc);
+    }
+
+    /**
+     * Sends a string message through the Octo transport.
+     * @param msg the message to send
+     * @param sourceEndpointId the ID of the source endpoint.
+     */
+    void sendMessage(String msg, String sourceEndpointId)
+    {
+        getOctoTransportManager()
+            .sendMessage(msg, sourceEndpointId, getConferenceId());
     }
 }

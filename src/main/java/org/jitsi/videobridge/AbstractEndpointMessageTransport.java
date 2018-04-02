@@ -59,7 +59,8 @@ public abstract class AbstractEndpointMessageTransport
         this.endpoint = endpoint;
         this.logger
             = Logger.getLogger(
-                classLogger, endpoint.getConference().getLogger());
+                classLogger,
+                endpoint == null ? null : endpoint.getConference().getLogger());
     }
 
     /**
@@ -255,11 +256,9 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    protected void onPinnedEndpointChangedEvent(
+    abstract protected void onPinnedEndpointChangedEvent(
         Object src,
-        JSONObject jsonObject)
-    {
-    }
+        JSONObject jsonObject);
 
     /**
      * Notifies this {@code Endpoint} that a {@code PinnedEndpointsChangedEvent}
@@ -270,11 +269,9 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code PinnedEndpointChangedEvent} which has been received.
      */
-    protected void onPinnedEndpointsChangedEvent(
+    abstract protected void onPinnedEndpointsChangedEvent(
         Object src,
-        JSONObject jsonObject)
-    {
-    }
+        JSONObject jsonObject);
 
     /**
      * Notifies this {@code Endpoint} that a {@code SelectedEndpointChangedEvent}
@@ -285,11 +282,9 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    protected void onSelectedEndpointChangedEvent(
+    abstract protected void onSelectedEndpointChangedEvent(
         Object src,
-        JSONObject jsonObject)
-    {
-    }
+        JSONObject jsonObject);
 
     /**
      * Notifies this {@code Endpoint} that a
@@ -300,11 +295,9 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code SelectedEndpointChangedEvent} which has been received.
      */
-    protected void onSelectedEndpointsChangedEvent(
+    abstract protected void onSelectedEndpointsChangedEvent(
         Object src,
-        JSONObject jsonObject)
-    {
-    }
+        JSONObject jsonObject);
 
     /**
      * Notifies this {@code Endpoint} that a {@code LastNChangedEvent}
@@ -315,7 +308,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code LastNChangedEvent} which has been received.
      */
-    private void onLastNChangedEvent(
+    protected void onLastNChangedEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -345,7 +338,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
      * {@code LastNChangedEvent} which has been received.
      */
-    private void onReceiverVideoConstraintEvent(
+    protected void onReceiverVideoConstraintEvent(
         Object src,
         JSONObject jsonObject)
     {
@@ -383,7 +376,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param src the transport channel on which the message has been received.
      * @param msg the message which has been received.
      */
-    protected void onMessage(Object src, String msg)
+    public void onMessage(Object src, String msg)
     {
         Object obj;
         JSONParser parser = new JSONParser(); // JSONParser is NOT thread-safe.
