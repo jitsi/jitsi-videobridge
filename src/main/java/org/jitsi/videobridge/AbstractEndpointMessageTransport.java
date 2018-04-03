@@ -26,6 +26,9 @@ import java.util.*;
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
+ * Handles the functionality related to sending and receiving COLIBRI messages
+ * for an {@link Endpoint}. An abstract implementation.
+ *
  * @author Boris Grozev
  */
 public abstract class AbstractEndpointMessageTransport
@@ -40,7 +43,6 @@ public abstract class AbstractEndpointMessageTransport
     /**
      * The {@link Endpoint} associated with this
      * {@link EndpointMessageTransport}.
-     *
      */
     protected final AbstractEndpoint endpoint;
 
@@ -127,6 +129,9 @@ public abstract class AbstractEndpointMessageTransport
             onReceiverVideoConstraintEvent(src, jsonObject);
             break;
         default:
+            logger.info(
+                "Received a message with unknown colibri class: "
+                    + colibriClass);
             break;
         }
     }
