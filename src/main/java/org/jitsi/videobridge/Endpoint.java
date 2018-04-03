@@ -87,6 +87,8 @@ public class Endpoint
      */
     private String icePassword;
 
+    private final EndpointMessageTransport messageTransport;
+
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
@@ -99,16 +101,8 @@ public class Endpoint
     {
         super(conference, id);
 
+        messageTransport = new EndpointMessageTransport(this);
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected EndpointMessageTransport createTransportChannel()
-    {
-        return new EndpointMessageTransport(this);
     }
 
     /**
@@ -117,7 +111,7 @@ public class Endpoint
     @Override
     public EndpointMessageTransport getMessageTransport()
     {
-        return (EndpointMessageTransport) super.getMessageTransport();
+        return messageTransport;
     }
 
     /**
@@ -202,7 +196,12 @@ public class Endpoint
     public void sendMessage(String msg)
         throws IOException
     {
-        getMessageTransport().sendMessage(msg);
+        EndpointMessageTransport messageTransport
+            = getMessageTransport();
+        if (messageTransport != null)
+        {
+            messageTransport.sendMessage(msg);
+        }
     }
 
     /**
@@ -225,7 +224,12 @@ public class Endpoint
     {
         super.expire();
 
-        getMessageTransport().close();
+        AbstractEndpointMessageTransport messageTransport
+            = getMessageTransport();
+        if (messageTransport != null)
+        {
+            messageTransport.close();
+        }
     }
 
     /**
@@ -236,7 +240,12 @@ public class Endpoint
      */
     void setSctpConnection(SctpConnection sctpConnection)
     {
-        getMessageTransport().setSctpConnection(sctpConnection);
+        EndpointMessageTransport messageTransport
+            = getMessageTransport();
+        if (messageTransport != null)
+        {
+            messageTransport.setSctpConnection(sctpConnection);
+        }
 
         if (getSctpConnection() == null)
         {
@@ -271,7 +280,12 @@ public class Endpoint
      */
     public void onWebSocketConnect(ColibriWebSocket ws)
     {
-        getMessageTransport().onWebSocketConnect(ws);
+        EndpointMessageTransport messageTransport
+            = getMessageTransport();
+        if (messageTransport != null)
+        {
+            messageTransport.onWebSocketConnect(ws);
+        }
     }
 
     /**
@@ -282,7 +296,12 @@ public class Endpoint
     public void onWebSocketClose(
             ColibriWebSocket ws, int statusCode, String reason)
     {
-        getMessageTransport().onWebSocketClose(ws, statusCode, reason);
+        EndpointMessageTransport messageTransport
+            = getMessageTransport();
+        if (messageTransport != null)
+        {
+            messageTransport.onWebSocketClose(ws, statusCode, reason);
+        }
     }
 
     /**
@@ -292,7 +311,12 @@ public class Endpoint
      */
     public void onWebSocketText(ColibriWebSocket ws, String message)
     {
-        getMessageTransport().onWebSocketText(ws, message);
+        EndpointMessageTransport messageTransport
+            = getMessageTransport();
+        if (messageTransport != null)
+        {
+            messageTransport.onWebSocketText(ws, message);
+        }
     }
 
     /**
