@@ -42,6 +42,13 @@ public class OctoRelayService
      */
     public static final String ADDRESS_PNAME
         = "org.jitsi.videobridge.octo.BIND_ADDRESS";
+        
+    /**
+     * The name of the configuration property which controls the public address which 
+     * will be used as part of relayId.
+     */
+    public static final String PUBLIC_ADDRESS_PNAME
+        = "org.jitsi.videobridge.octo.PUBLIC_ADDRESS";
 
     /**
      * The name of the property which controls the port number which the Octo
@@ -81,6 +88,7 @@ public class OctoRelayService
                     bundleContext, ConfigurationService.class);
 
         String address = cfg.getString(ADDRESS_PNAME, null);
+        String publicAddress = cfg.getString(PUBLIC_ADDRESS_PNAME, address);
         int port = cfg.getInt(PORT_PNAME, -1);
 
         if (address != null && NetworkUtils.isValidPortNumber(port))
@@ -88,7 +96,7 @@ public class OctoRelayService
             try
             {
                 relay = new OctoRelay(address, port);
-
+                relay.setPublicAddress(publicAddress);
                 bundleContext
                     .registerService(OctoRelayService.class.getName(), this,
                                      null);
