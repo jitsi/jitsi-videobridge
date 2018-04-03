@@ -328,8 +328,8 @@ public class EndpointConnectionStatus
             if (msgReceiver == null)
             {
                 // We broadcast the message also to the endpoint itself for
-                // debugging purposes.
-                conference.broadcastMessage(msg, true);
+                // debugging purposes, and we also broadcast it through Octo.
+                conference.broadcastMessage(msg, true /* sendToOcto */);
             }
             else
             {
