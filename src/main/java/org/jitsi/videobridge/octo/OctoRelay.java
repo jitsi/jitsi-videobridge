@@ -50,6 +50,8 @@ public class OctoRelay
      * e.g. "10.0.0.1:20000"
      */
     private String relayId;
+    
+    private String publicAddress;
 
     /**
      * Initializes a new {@link OctoRelay} instance, binding on a specific
@@ -64,7 +66,8 @@ public class OctoRelay
             = new DatagramSocket(
                     new InetSocketAddress(InetAddress.getByName(address), port));
         socket = new MultiplexingDatagramSocket(s, true /* persistent */);
-        relayId = address + ":" + port;
+        String id = address + ":" + port;
+        setRelayId(id);
     }
 
     /**
@@ -88,6 +91,22 @@ public class OctoRelay
     public String getId()
     {
         return relayId;
+    }
+    
+    /**
+    * Set the relayId
+    **/
+    public void setRelayId(String id){
+        relayId = id;
+    }
+    
+    /**
+    * Set the public address to be used as part of relayId
+    **/
+    public void setPublicAddress(String address){
+         publicAddress = address;
+         String id = publicAddress + ":" + port;
+         setRelayId(id);
     }
 
     /**
