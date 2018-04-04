@@ -53,6 +53,8 @@ public class OctoRelay
     
     private String publicAddress;
 
+    private int port;
+
     /**
      * Initializes a new {@link OctoRelay} instance, binding on a specific
      * address and port.
@@ -66,6 +68,7 @@ public class OctoRelay
             = new DatagramSocket(
                     new InetSocketAddress(InetAddress.getByName(address), port));
         socket = new MultiplexingDatagramSocket(s, true /* persistent */);
+        this.port = port;
         String id = address + ":" + port;
         setRelayId(id);
     }
@@ -96,14 +99,16 @@ public class OctoRelay
     /**
     * Set the relayId
     **/
-    public void setRelayId(String id){
+    public void setRelayId(String id)
+    {
         relayId = id;
     }
     
     /**
     * Set the public address to be used as part of relayId
     **/
-    public void setPublicAddress(String address){
+    public void setPublicAddress(String address)
+    {
          publicAddress = address;
          String id = publicAddress + ":" + port;
          setRelayId(id);
