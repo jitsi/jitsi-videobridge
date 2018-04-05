@@ -133,7 +133,7 @@ mode and that we have no further improvements planned for it.
 
 ## Signaling
 
-Simulcast routing is enabled through COLIBRI sinaling. We signal simulcast to
+Simulcast routing is enabled through COLIBRI signaling. We signal simulcast to
 the bridge through COLIBRI like this:
 
 	<content name='video'>
