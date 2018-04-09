@@ -145,6 +145,11 @@ public class Health
             throw new Exception("Address discovery through STUN failed");
         }
 
+        if (!IceUdpTransportManager.healthy)
+        {
+            throw new Exception("Failed to bind single-port");
+        }
+
         // Conference
         Conference conference
             = videobridge.createConference(
