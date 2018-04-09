@@ -164,6 +164,13 @@ public class IceUdpTransportManager
     private static List<SinglePortUdpHarvester> singlePortHarvesters = null;
 
     /**
+     * Global variable do we consider this transport manager as healthy.
+     * By default we consider healthy, if we fail to bind to the single port
+     * port we consider the bridge as unhealthy.
+     */
+    public static boolean healthy = true;
+
+    /**
      * The flag which indicates whether application-wide harvesters, stored
      * in the static fields {@link #tcpHarvester} and
      * {@link #singlePortHarvesters} have been initialized.
@@ -220,6 +227,8 @@ public class IceUdpTransportManager
                     singlePortHarvesters = null;
                     classLogger.info("No single-port harvesters created.");
                 }
+
+                IceUdpTransportManager.healthy = singlePortHarvesters != null;
             }
 
             if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
