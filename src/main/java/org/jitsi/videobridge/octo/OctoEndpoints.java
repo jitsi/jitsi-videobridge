@@ -144,10 +144,10 @@ public class OctoEndpoints
                 {
                     logger.error("Replacing an existing audio channel");
 
-                    octoEndpoints.forEach(e -> e.removeChannel(videoChannel));
+                    octoEndpoints.forEach(e -> e.removeChannel(audioChannel));
                 }
                 audioChannel = channel;
-                octoEndpoints.forEach(e -> e.addChannel(videoChannel));
+                octoEndpoints.forEach(e -> e.addChannel(audioChannel));
             }
             else
             {
