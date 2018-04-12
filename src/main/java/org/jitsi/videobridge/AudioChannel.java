@@ -33,15 +33,6 @@ public class AudioChannel
     extends RtpChannel
 {
     /**
-     * The <tt>CsrcAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setCsrcAudioLevelListener(
-     * CsrcAudioLevelListener)} in order to receive the audio levels of the
-     * contributing sources.
-     */
-    private CsrcAudioLevelListener csrcAudioLevelListener;
-
-    /**
      * The {@link LipSyncHack} from the {@link VideoChannel}.
      */
     private LipSyncHack associatedLipSyncHack;
@@ -83,24 +74,6 @@ public class AudioChannel
     }
 
     /**
-     * Gets the <tt>CsrcAudioLevelListener</tt> instance which is set on
-     * <tt>AudioMediaStream</tt> via
-     * {@link AudioMediaStream#setCsrcAudioLevelListener(
-     * CsrcAudioLevelListener)} in order to receive the audio levels of the
-     * contributing sources.
-     *
-     * @return the <tt>CsrcAudioLevelListener</tt> instance
-     */
-    private CsrcAudioLevelListener getCsrcAudioLevelListener()
-    {
-        if (csrcAudioLevelListener == null)
-        {
-            csrcAudioLevelListener = this::streamAudioLevelsReceived;
-        }
-        return csrcAudioLevelListener;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -114,15 +87,7 @@ public class AudioChannel
 
             if (stream instanceof AudioMediaStream)
             {
-                AudioMediaStream audioStream = (AudioMediaStream) stream;
-                CsrcAudioLevelListener csrcAudioLevelListener
-                    = this.csrcAudioLevelListener;
-
-                if (csrcAudioLevelListener != null)
-                {
-                    audioStream.setCsrcAudioLevelListener(
-                        csrcAudioLevelListener);
-                }
+                ((AudioMediaStream) stream).setCsrcAudioLevelListener(null);
             }
         }
         catch (Throwable t)
@@ -171,83 +136,19 @@ public class AudioChannel
     }
 
     /**
-     * Notifies this instance that {@link #stream} has received the audio levels
-     * of the contributors to this <tt>Channel</tt>.
-     *
-     * @param levels a <tt>long</tt> array in which the elements at the even
-     * indices specify the CSRC IDs and the elements at the odd indices
-     * specify the respective audio levels
+     * {@inheritDoc}
+     * </p>
+     * Registers this channel's {@link AudioChannelAudioLevelListener} with
+     * the media stream.
      */
-    private void streamAudioLevelsReceived(long[] levels)
-    {
-        if (levels != null)
-        {
-            /*
-             * Forward the audio levels of the contributors to this Channel to
-             * the active/dominant speaker detection/identification algorithm.
-             */
-            int[] receiveSSRCs = getReceiveSSRCs();
-
-            if (receiveSSRCs.length != 0)
-            {
-                /*
-                 * The SSRCs are at the even indices, their audio levels at the
-                 * immediately subsequent odd indices.
-                 */
-                for (int i = 0, count = levels.length / 2; i < count; i++)
-                {
-                    int i2 = i * 2;
-                    long ssrc = levels[i2];
-                    /*
-                     * The contributing SSRCs may not all be from sources
-                     * associated with this Channel and we're only interested in
-                     * the latter here.
-                     */
-                    boolean isReceiveSSRC = false;
-
-                    for (int receiveSSRC : receiveSSRCs)
-                    {
-                        if (ssrc == (0xFFFF_FFFFL & receiveSSRC))
-                        {
-                            isReceiveSSRC = true;
-                            break;
-                        }
-                    }
-                    if (isReceiveSSRC)
-                    {
-                        ConferenceSpeechActivity conferenceSpeechActivity
-                            = this.conferenceSpeechActivity;
-
-                        if (conferenceSpeechActivity != null)
-                        {
-                            int level = (int) levels[i2 + 1];
-
-                            conferenceSpeechActivity.levelChanged(
-                                    this,
-                                    ssrc,
-                                    level);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     @Override
-    protected void addRtpHeaderExtension(
-            RTPHdrExtPacketExtension rtpHdrExtPacketExtension)
+    protected void configureStream(MediaStream stream)
     {
-        super.addRtpHeaderExtension(rtpHdrExtPacketExtension);
-
-        if (RTPExtension.SSRC_AUDIO_LEVEL_URN
-                .equals(rtpHdrExtPacketExtension.getURI().toString()))
+        if (stream != null && stream instanceof AudioMediaStream)
         {
-            MediaStream stream = getStream();
-            if (stream != null && stream instanceof AudioMediaStream)
-            {
-                ((AudioMediaStream) stream).setCsrcAudioLevelListener(
-                        getCsrcAudioLevelListener());
-            }
+            ((AudioMediaStream) stream)
+                .setCsrcAudioLevelListener(
+                    new AudioChannelAudioLevelListener(this));
         }
     }
 
