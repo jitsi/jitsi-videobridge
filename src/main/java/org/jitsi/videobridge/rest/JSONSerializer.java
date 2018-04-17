@@ -43,6 +43,10 @@ final class JSONSerializer
     static final String CANDIDATE_LIST
         = CandidatePacketExtension.ELEMENT_NAME + "s";
 
+    /**
+     * The name of the JSON pair which specifies the value of the
+     *  <tt>webSockets</tt> property of <tt>WebSocketPacketExtension</tt>.
+     */
     static final String WEBSOCKET_LIST
             = WebSocketPacketExtension.ELEMENT_NAME + "s";
 
@@ -171,6 +175,30 @@ final class JSONSerializer
 
             jsonObject.put(name, value);
         }
+    }
+
+    private static String serializeWebSocket(
+             WebSocketPacketExtension webSocket)
+    {
+        return webSocket.getUrl();
+    }
+
+    private static JSONArray serializeWebSockets(
+             List<WebSocketPacketExtension> webSocketList)
+    {
+        JSONArray webSocketsJSONArray;
+
+        if (webSocketList == null)
+        {
+            webSocketsJSONArray = null;
+        }
+        else
+        {
+            webSocketsJSONArray = new JSONArray();
+            for (WebSocketPacketExtension webSocket : webSocketList)
+                webSocketsJSONArray.add(serializeWebSocket(webSocket));
+        }
+        return webSocketsJSONArray;
     }
 
     public static JSONObject serializeCandidate(
@@ -982,12 +1010,12 @@ final class JSONSerializer
                         DtlsFingerprintPacketExtension.class);
             List<CandidatePacketExtension> candidateList
                 = transport.getCandidateList();
-            List<WebSocketPacketExtension> websocketList
-                    = transport.getChildExtensionsOfType(WebSocketPacketExtension.class);
+            List<WebSocketPacketExtension> webSocketList
+                = transport.getChildExtensionsOfType(
+                        WebSocketPacketExtension.class);
             RemoteCandidatePacketExtension remoteCandidate
                 = transport.getRemoteCandidate();
             boolean rtcpMux = transport.isRtcpMux();
-
 
             jsonObject = new JSONObject();
             // xmlns
@@ -1016,9 +1044,11 @@ final class JSONSerializer
                         remoteCandidate.getElementName(),
                         serializeCandidate(remoteCandidate));
             }
-            if ( (websocketList != null) && (!websocketList.isEmpty()) ) {
-                jsonObject.put(WEBSOCKET_LIST,
-                        serializeWebsockets(websocketList));
+            if ( (webSocketList != null) && (!webSocketList.isEmpty()) )
+            {
+                jsonObject.put(
+                        WEBSOCKET_LIST,
+                        serializeWebSockets(webSocketList));
             }
             // rtcpMux
             if (rtcpMux)
@@ -1027,29 +1057,8 @@ final class JSONSerializer
                         RtcpmuxPacketExtension.ELEMENT_NAME,
                         Boolean.valueOf(rtcpMux));
             }
-
         }
         return jsonObject;
-    }
-
-    private static JSONArray serializeWebsockets(List<WebSocketPacketExtension> websocketList) {
-        JSONArray websocketJSONArray;
-
-        if (websocketList == null)
-        {
-            websocketJSONArray = null;
-        }
-        else
-        {
-            websocketJSONArray = new JSONArray();
-            for (WebSocketPacketExtension wsp : websocketList)
-                websocketJSONArray.add(serializeWebsocket(wsp));
-        }
-        return websocketJSONArray;
-    }
-
-    private static String serializeWebsocket(WebSocketPacketExtension wsp) {
-        return wsp.getUrl();
     }
 
     /** Prevents the initialization of new <tt>JSONSerializer</tt> instances. */
