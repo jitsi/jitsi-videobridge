@@ -1292,6 +1292,7 @@ public class BitrateController
 
                 if (ArrayUtils.isNullOrEmpty(ret))
                 {
+                    pkts[i] = null;
                     continue;
                 }
 
