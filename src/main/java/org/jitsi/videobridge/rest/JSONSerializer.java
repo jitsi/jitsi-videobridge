@@ -45,13 +45,6 @@ final class JSONSerializer
 
     /**
      * The name of the JSON pair which specifies the value of the
-     *  <tt>webSockets</tt> property of <tt>WebSocketPacketExtension</tt>.
-     */
-    static final String WEBSOCKET_LIST
-            = WebSocketPacketExtension.ELEMENT_NAME + "s";
-
-    /**
-     * The name of the JSON pair which specifies the value of the
      * <tt>channelBundles</tt> property of <tt>ColibriConferenceIQ</tt>.
      */
     static final String CHANNEL_BUNDLES
@@ -144,6 +137,13 @@ final class JSONSerializer
 
     /**
      * The name of the JSON pair which specifies the value of the
+     *  <tt>webSockets</tt> property of <tt>WebSocketPacketExtension</tt>.
+     */
+    static final String WEBSOCKET_LIST
+            = WebSocketPacketExtension.ELEMENT_NAME + "s";
+
+    /**
+     * The name of the JSON pair which specifies the value of the
      * <tt>namespace</tt> property of <tt>IceUdpTransportPacketExtension</tt>.
      */
     static final String XMLNS = "xmlns";
@@ -175,30 +175,6 @@ final class JSONSerializer
 
             jsonObject.put(name, value);
         }
-    }
-
-    private static String serializeWebSocket(
-             WebSocketPacketExtension webSocket)
-    {
-        return webSocket.getUrl();
-    }
-
-    private static JSONArray serializeWebSockets(
-             List<WebSocketPacketExtension> webSocketList)
-    {
-        JSONArray webSocketsJSONArray;
-
-        if (webSocketList == null)
-        {
-            webSocketsJSONArray = null;
-        }
-        else
-        {
-            webSocketsJSONArray = new JSONArray();
-            for (WebSocketPacketExtension webSocket : webSocketList)
-                webSocketsJSONArray.add(serializeWebSocket(webSocket));
-        }
-        return webSocketsJSONArray;
     }
 
     public static JSONObject serializeCandidate(
@@ -1059,6 +1035,30 @@ final class JSONSerializer
             }
         }
         return jsonObject;
+    }
+
+    private static String serializeWebSocket(
+             WebSocketPacketExtension webSocket)
+    {
+        return webSocket.getUrl();
+    }
+
+    private static JSONArray serializeWebSockets(
+             List<WebSocketPacketExtension> webSocketList)
+    {
+        JSONArray webSocketsJSONArray;
+
+        if (webSocketList == null)
+        {
+            webSocketsJSONArray = null;
+        }
+        else
+        {
+            webSocketsJSONArray = new JSONArray();
+            for (WebSocketPacketExtension webSocket : webSocketList)
+                webSocketsJSONArray.add(serializeWebSocket(webSocket));
+        }
+        return webSocketsJSONArray;
     }
 
     /** Prevents the initialization of new <tt>JSONSerializer</tt> instances. */
