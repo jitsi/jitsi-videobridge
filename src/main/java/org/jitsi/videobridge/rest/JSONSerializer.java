@@ -137,6 +137,13 @@ final class JSONSerializer
 
     /**
      * The name of the JSON pair which specifies the value of the
+     *  <tt>webSockets</tt> property of <tt>WebSocketPacketExtension</tt>.
+     */
+    static final String WEBSOCKET_LIST
+            = WebSocketPacketExtension.ELEMENT_NAME + "s";
+
+    /**
+     * The name of the JSON pair which specifies the value of the
      * <tt>namespace</tt> property of <tt>IceUdpTransportPacketExtension</tt>.
      */
     static final String XMLNS = "xmlns";
@@ -979,6 +986,9 @@ final class JSONSerializer
                         DtlsFingerprintPacketExtension.class);
             List<CandidatePacketExtension> candidateList
                 = transport.getCandidateList();
+            List<WebSocketPacketExtension> webSocketList
+                = transport.getChildExtensionsOfType(
+                        WebSocketPacketExtension.class);
             RemoteCandidatePacketExtension remoteCandidate
                 = transport.getRemoteCandidate();
             boolean rtcpMux = transport.isRtcpMux();
@@ -1010,6 +1020,12 @@ final class JSONSerializer
                         remoteCandidate.getElementName(),
                         serializeCandidate(remoteCandidate));
             }
+            if ( (webSocketList != null) && (!webSocketList.isEmpty()) )
+            {
+                jsonObject.put(
+                        WEBSOCKET_LIST,
+                        serializeWebSockets(webSocketList));
+            }
             // rtcpMux
             if (rtcpMux)
             {
@@ -1019,6 +1035,30 @@ final class JSONSerializer
             }
         }
         return jsonObject;
+    }
+
+    private static String serializeWebSocket(
+             WebSocketPacketExtension webSocket)
+    {
+        return webSocket.getUrl();
+    }
+
+    private static JSONArray serializeWebSockets(
+             List<WebSocketPacketExtension> webSocketList)
+    {
+        JSONArray webSocketsJSONArray;
+
+        if (webSocketList == null)
+        {
+            webSocketsJSONArray = null;
+        }
+        else
+        {
+            webSocketsJSONArray = new JSONArray();
+            for (WebSocketPacketExtension webSocket : webSocketList)
+                webSocketsJSONArray.add(serializeWebSocket(webSocket));
+        }
+        return webSocketsJSONArray;
     }
 
     /** Prevents the initialization of new <tt>JSONSerializer</tt> instances. */
