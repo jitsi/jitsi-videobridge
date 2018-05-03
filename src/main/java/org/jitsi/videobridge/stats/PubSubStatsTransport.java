@@ -64,15 +64,7 @@ public class PubSubStatsTransport
      * in which this <tt>StatsTransport</tt> is started in order to track when
      * <tt>ComponentImpl</tt>s are registered and unregistering.
      */
-    private final ServiceListener serviceListener
-        = new ServiceListener()
-        {
-            @Override
-            public void serviceChanged(ServiceEvent ev)
-            {
-                PubSubStatsTransport.this.serviceChanged(ev);
-            }
-        };
+    private final ServiceListener serviceListener = this::serviceChanged;
 
     /**
      * The name of the service.
