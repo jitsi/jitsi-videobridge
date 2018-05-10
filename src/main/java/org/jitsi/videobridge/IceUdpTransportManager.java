@@ -570,11 +570,15 @@ public class IceUdpTransportManager
             // channelForDtls, because it needs DTLS packets for the application
             // data inside them.
             sctpConnection = (SctpConnection) channel;
-            if (channelForDtls != null)
+            if (channelForDtls != null && channelForDtls instanceof RtpChannel)
             {
-                // channelForDtls is necessarily an RtpChannel, because we don't
-                // add more than one SctpConnection. The SctpConnection socket
-                // will automatically accept DTLS.
+                // channelForDtls is usually an RtpChannel, unless a second
+                // SctpConnection is added for this transport manager. This has
+                // been observed to happen when an endpoint ID is reused and
+                // new channels (including a new SctpConnection) are allocated
+                // before the IceUdpTransportManager instance is disposed. In
+                // this case, we just replace the old SctpConnection with the
+                // new one.
                 RtpChannel rtpChannelForDtls = (RtpChannel) channelForDtls;
 
                 rtpChannelForDtls.getDatagramFilter(false).setAcceptNonRtp(
