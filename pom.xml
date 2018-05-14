@@ -137,6 +137,16 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-stats</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-simple</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-jdk14</artifactId>
+        </exclusion>
+      </exclusions>
       <version>1.0-20171010.224039-4</version>
     </dependency>
     <dependency>
