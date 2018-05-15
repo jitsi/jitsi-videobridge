@@ -11,3 +11,4 @@
 *.swp
 **/.idea/
 *.iml
+.mvn/
