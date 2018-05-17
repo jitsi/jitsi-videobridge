@@ -1598,8 +1598,36 @@ public class Videobridge
     void stop(BundleContext bundleContext)
         throws Exception
     {
-        videobridgeExpireThread.stop(bundleContext);
-        this.bundleContext = null;
+        try
+        {
+            ConfigurationService cfg
+                = ServiceUtils2.getService(
+                    bundleContext,
+                    ConfigurationService.class);
+
+            stopIce4j(bundleContext, cfg);
+        }
+        finally
+        {
+            videobridgeExpireThread.stop(bundleContext);
+            this.bundleContext = null;
+        }
+    }
+
+    /**
+     * Implements the ice4j-related portion of {@link #stop(BundleContext)}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code Videobridge} is to start
+     * @param cfg the {@code ConfigurationService} registered in
+     * {@code bundleContext}. Explicitly provided for the sake of performance.
+     */
+    private void stopIce4j(
+        BundleContext bundleContext,
+        ConfigurationService cfg)
+    {
+        // Shut down harvesters.
+        IceUdpTransportManager.closeStaticConfiguration(cfg);
     }
 
     /**

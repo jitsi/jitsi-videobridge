@@ -299,6 +299,37 @@ public class IceUdpTransportManager
     }
 
     /**
+     * Stops the static <tt>Harvester</tt> instances used by all
+     * <tt>IceUdpTransportManager</tt> instances, that is
+     * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
+     *
+     * @param cfg the {@link ConfigurationService} which provides values to
+     * configurable properties of the behavior/logic of the method
+     * implementation
+     */
+    public static void closeStaticConfiguration(ConfigurationService cfg)
+    {
+        synchronized (IceUdpTransportManager.class)
+        {
+            if (!staticConfigurationInitialized)
+            {
+                return;
+            }
+            staticConfigurationInitialized = false;
+
+            if (singlePortHarvesters != null)
+            {
+                singlePortHarvesters.forEach(AbstractUdpListener::close);
+            }
+
+            if (tcpHarvester != null)
+            {
+                tcpHarvester.close();
+            }
+        }
+    }
+
+    /**
      * The single (if any) <tt>Channel</tt> instance, whose sockets are
      * currently configured to accept DTLS packets.
      */
