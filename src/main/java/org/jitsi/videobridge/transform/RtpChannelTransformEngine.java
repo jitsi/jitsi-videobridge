@@ -67,8 +67,11 @@ public class RtpChannelTransformEngine
      * Initializes a new <tt>RtpChannelTransformEngine</tt> for a specific
      * <tt>RtpChannel</tt>.
      * @param channel the <tt>RtpChannel</tt>.
+     * @param manipulators video chain manipulators
      */
-    public RtpChannelTransformEngine(RtpChannel channel)
+    public RtpChannelTransformEngine(
+            RtpChannel channel,
+            Iterable<VideoTransformChainManipulator> manipulators)
     {
         this.channel = channel;
         this.logger
@@ -76,7 +79,16 @@ public class RtpChannelTransformEngine
                     classLogger,
                     channel.getContent().getConference().getLogger());
 
-        engineChain = createChain();
+        TransformEngine[] chain = createChain();
+
+        if (manipulators != null)
+        {
+            for (VideoTransformChainManipulator manipulator : manipulators)
+            {
+                chain = manipulator.manipulate(chain);
+            }
+        }
+        engineChain = chain;
     }
 
     /**

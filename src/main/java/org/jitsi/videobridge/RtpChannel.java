@@ -47,6 +47,9 @@ import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jxmpp.jid.*;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -964,6 +967,45 @@ public class RtpChannel
     }
 
     /**
+     * Gives back a collection of VideoTransformChainManipulator services
+     * @return collection of VideoTransformChainManipulator services
+     */
+    private Iterable<VideoTransformChainManipulator>
+        getVideoTransformChainManipulators()
+    {
+        try
+        {
+            ArrayList<VideoTransformChainManipulator> manipulators =
+                    new ArrayList<>();
+
+            BundleContext bundleContext = getBundleContext();
+
+            Collection<ServiceReference<VideoTransformChainManipulator>>
+                    serviceReferences = bundleContext.getServiceReferences(
+                            VideoTransformChainManipulator.class,
+                            null);
+
+            for (ServiceReference<VideoTransformChainManipulator>
+                    serviceReference : serviceReferences)
+            {
+                VideoTransformChainManipulator videoTransformChainManipulators =
+                        bundleContext.getService(serviceReference);
+                if (videoTransformChainManipulators != null)
+                {
+                    manipulators.add(videoTransformChainManipulators);
+                }
+            }
+            return manipulators;
+
+        }
+        catch (InvalidSyntaxException e)
+        {
+            logger.warn("Cannot fetch VideoTransformChainManipulators", e);
+            return null;
+        }
+    }
+
+    /**
      * Initializes the <tt>RtpChannelTransformEngine</tt> that will be used by
      * this <tt>RtpChannel</tt>.
      *
@@ -971,7 +1013,12 @@ public class RtpChannel
      */
     RtpChannelTransformEngine initializeTransformerEngine()
     {
-        transformEngine = new RtpChannelTransformEngine(this);
+        Iterable<VideoTransformChainManipulator> manipulators =
+                getVideoTransformChainManipulators();
+
+        transformEngine = new RtpChannelTransformEngine(
+                this,
+                manipulators);
         if (stream != null)
         {
             stream.setExternalTransformer(transformEngine);
