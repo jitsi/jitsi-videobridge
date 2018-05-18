@@ -16,6 +16,8 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.service.configuration.ConfigurationService;
+import org.jitsi.service.libjitsi.LibJitsi;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
 
@@ -35,6 +37,18 @@ import java.util.stream.*;
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
 {
+    /**
+     * The name of the property used to disable filtering tracks by owner.
+     */
+    public static final String DISABLE_FILTERING_TRACKS_BY_OWNER_PNAME
+        = "org.jitsi.videobridge.DISABLE_FILTERING_TRACKS_BY_OWNER";
+
+    /**
+     * The ConfigurationService to get config values from.
+     */
+    private static final ConfigurationService cfg
+        = LibJitsi.getConfigurationService();
+
     /**
      * Filters a list of {@code tracks}, and returns the list consisting of the
      * tracks which have a given {@code owner}.
@@ -425,9 +439,21 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                 trackReceiver -> allTracks.addAll(
                     Arrays.asList(trackReceiver.getMediaStreamTracks())));
 
-        return
-            filterTracksByOwner(allTracks, getID())
-                .toArray(new MediaStreamTrackDesc[0]);
+        boolean disableFilteringTracks = cfg != null
+            && cfg.getBoolean(DISABLE_FILTERING_TRACKS_BY_OWNER_PNAME, false);
+
+        List<MediaStreamTrackDesc> filteredTracks;
+
+        if (disableFilteringTracks)
+        {
+            filteredTracks = allTracks;
+        }
+        else
+        {
+            filteredTracks = filterTracksByOwner(allTracks, getID());
+        }
+
+        return filteredTracks.toArray(new MediaStreamTrackDesc[0]);
     }
 
 
