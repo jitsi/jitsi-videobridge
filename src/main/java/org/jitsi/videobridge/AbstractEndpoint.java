@@ -37,7 +37,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 {
     /**
      * Filters a list of {@code tracks}, and returns the list consisting of the
-     * tracks which have a given {@code owner}.
+     * tracks which have a given {@code owner} or do not have an owner
+     * specified.
      * @param tracks the tracks to filter (not null).
      * @param owner the owner to match (not null).
      * @return the list of tracks from {@code tracks} which are owned by
@@ -49,7 +50,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         Objects.requireNonNull(owner, "owner");
         return tracks.stream()
-            .filter(track -> owner.equals(track.getOwner()))
+            .filter(track ->
+                track.getOwner() == null || owner.equals(track.getOwner()))
             .collect(Collectors.toList());
     }
 
