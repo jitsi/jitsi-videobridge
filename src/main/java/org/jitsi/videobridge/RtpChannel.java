@@ -47,9 +47,7 @@ import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jxmpp.jid.*;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
+import org.osgi.framework.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -967,32 +965,32 @@ public class RtpChannel
     }
 
     /**
-     * Gives back a collection of VideoTransformChainManipulator services
-     * @return collection of VideoTransformChainManipulator services
+     * Gives back a collection of TransformChainManipulator services
+     * @return collection of TransformChainManipulator services
      */
-    private Iterable<VideoTransformChainManipulator>
-        getVideoTransformChainManipulators()
+    private Iterable<TransformChainManipulator>
+        getTransformChainManipulators()
     {
         try
         {
-            ArrayList<VideoTransformChainManipulator> manipulators =
+            ArrayList<TransformChainManipulator> manipulators =
                     new ArrayList<>();
 
             BundleContext bundleContext = getBundleContext();
 
-            Collection<ServiceReference<VideoTransformChainManipulator>>
+            Collection<ServiceReference<TransformChainManipulator>>
                     serviceReferences = bundleContext.getServiceReferences(
-                            VideoTransformChainManipulator.class,
+                            TransformChainManipulator.class,
                             null);
 
-            for (ServiceReference<VideoTransformChainManipulator>
+            for (ServiceReference<TransformChainManipulator>
                     serviceReference : serviceReferences)
             {
-                VideoTransformChainManipulator videoTransformChainManipulators =
+                TransformChainManipulator transformChainManipulators =
                         bundleContext.getService(serviceReference);
-                if (videoTransformChainManipulators != null)
+                if (transformChainManipulators != null)
                 {
-                    manipulators.add(videoTransformChainManipulators);
+                    manipulators.add(transformChainManipulators);
                 }
             }
             return manipulators;
@@ -1000,7 +998,7 @@ public class RtpChannel
         }
         catch (InvalidSyntaxException e)
         {
-            logger.warn("Cannot fetch VideoTransformChainManipulators", e);
+            logger.warn("Cannot fetch TransformChainManipulators", e);
             return null;
         }
     }
@@ -1013,8 +1011,8 @@ public class RtpChannel
      */
     RtpChannelTransformEngine initializeTransformerEngine()
     {
-        Iterable<VideoTransformChainManipulator> manipulators =
-                getVideoTransformChainManipulators();
+        Iterable<TransformChainManipulator> manipulators =
+                getTransformChainManipulators();
 
         transformEngine = new RtpChannelTransformEngine(
                 this,
