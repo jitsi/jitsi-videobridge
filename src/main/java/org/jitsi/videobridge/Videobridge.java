@@ -1628,6 +1628,46 @@ public class Videobridge
     {
         // Shut down harvesters.
         IceUdpTransportManager.closeStaticConfiguration(cfg);
+
+        // Clear all system properties that were ice4j properties.
+        if (cfg != null)
+        {
+            List<String> ice4jPropertyNames
+                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
+
+            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
+            {
+                for (String propertyName : ice4jPropertyNames)
+                {
+                    System.clearProperty(propertyName);
+                }
+            }
+
+            // These properties are moved to ice4j. This is to make sure that we
+            // still support the old names.
+            String oldPrefix = "org.jitsi.videobridge";
+            String newPrefix = "org.ice4j.ice.harvest";
+            for (String propertyName : new String[]{
+                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
+                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
+                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
+                HarvesterConfiguration.FORCE_AWS_HARVESTER,
+                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
+            {
+                String propertyValue = cfg.getString(propertyName);
+
+                if (propertyValue != null)
+                {
+                    String newPropertyName
+                        = newPrefix
+                        + propertyName.substring(oldPrefix.length());
+                    System.clearProperty(newPropertyName);
+                }
+            }
+
+            System.clearProperty(VideoChannel.ENABLE_LIPSYNC_HACK_PNAME);
+            System.clearProperty(RtxTransformer.DISABLE_NACK_TERMINATION_PNAME);
+        }
     }
 
     /**
