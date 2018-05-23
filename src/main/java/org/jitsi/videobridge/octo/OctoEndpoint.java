@@ -82,4 +82,18 @@ public class OctoEndpoint
 
         return tracks;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
+    {
+        // With Octo a channel can have tracks belonging to different endpoints,
+        // so filter out only those that belong to this endpoint.
+        String id = getID();
+        return getAllMediaStreamTracks(mediaType).stream()
+            .filter(track -> id.equals(track.getOwner()))
+            .toArray(MediaStreamTrackDesc[]::new);
+    }
 }

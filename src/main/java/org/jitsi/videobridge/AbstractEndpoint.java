@@ -36,24 +36,6 @@ import java.util.stream.*;
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
 {
     /**
-     * Filters a list of {@code tracks}, and returns the list consisting of the
-     * tracks which have a given {@code owner}.
-     * @param tracks the tracks to filter (not null).
-     * @param owner the owner to match (not null).
-     * @return the list of tracks from {@code tracks} which are owned by
-     * {@code owner}.
-     */
-    private static List<MediaStreamTrackDesc> filterTracksByOwner(
-        List<MediaStreamTrackDesc> tracks,
-        String owner)
-    {
-        Objects.requireNonNull(owner, "owner");
-        return tracks.stream()
-            .filter(track -> owner.equals(track.getOwner()))
-            .collect(Collectors.toList());
-    }
-
-    /**
      * The (unique) identifier/ID of the endpoint of a participant in a
      * <tt>Conference</tt>.
      */
@@ -411,11 +393,27 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
     {
+        return
+            getAllMediaStreamTracks(mediaType)
+                .toArray(new MediaStreamTrackDesc[0]);
+    }
+
+    /**
+     * @return all {@link MediaStreamTrackDesc} of all channels of type
+     * {@code mediaType} associated with this endpoint. Note that this may
+     * include {@link MediaStreamTrackDesc}s which do not belong to this
+     * endpoint.
+     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
+     * get.
+     */
+    protected List<MediaStreamTrackDesc> getAllMediaStreamTracks(
+        MediaType mediaType)
+    {
         List<RtpChannel> channels = getChannels(mediaType);
 
         if (channels == null || channels.isEmpty())
         {
-            return new MediaStreamTrackDesc[0];
+            return Collections.EMPTY_LIST;
         }
 
         List<MediaStreamTrackDesc> allTracks = new LinkedList<>();
@@ -424,10 +422,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
             .forEach(
                 trackReceiver -> allTracks.addAll(
                     Arrays.asList(trackReceiver.getMediaStreamTracks())));
-
-        return
-            filterTracksByOwner(allTracks, getID())
-                .toArray(new MediaStreamTrackDesc[0]);
+        return allTracks;
     }
 
 
