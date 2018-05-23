@@ -691,11 +691,10 @@ public class MediaStreamTrackFactory
         int numEncodings
             = primarySsrcs.size()
                 * numSpatialLayersPerStream * numTemporalLayersPerStream;
-        boolean isSimulcast = primarySsrcs.size() > 1;
         RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
         MediaStreamTrackDesc track
             = new MediaStreamTrackDesc(
-                receiver, rtpEncodings, isSimulcast, primarySsrcs.owner);
+                receiver, rtpEncodings, primarySsrcs.owner);
 
         RTPEncodingDesc[] encodings
             = createRTPEncodings(

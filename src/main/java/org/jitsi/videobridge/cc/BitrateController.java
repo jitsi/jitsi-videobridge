@@ -591,7 +591,7 @@ public class BitrateController
                         long trackOptimalBps
                             = trackBitrateAllocation.getOptimalBitrate();
                         long trackCurrentBps
-                            = sourceTrack.getBps(trackCurrentIdx, false);
+                            = sourceTrack.getBps(trackCurrentIdx);
                         targetBps += trackTargetBps;
                         optimalBps += trackOptimalBps;
                         currentBps += trackCurrentBps;
