@@ -511,7 +511,7 @@ public class MediaStreamTrackFactory
      * the owner.
      * @return the owner/endpoint ID as a {@link String}.
      */
-    private static String getOwner(SourcePacketExtension source)
+    public static String getOwner(SourcePacketExtension source)
     {
         SSRCInfoPacketExtension ssrcInfoPacketExtension
             = source == null

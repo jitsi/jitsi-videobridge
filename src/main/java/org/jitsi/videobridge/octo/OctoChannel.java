@@ -21,6 +21,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
+import org.jitsi.videobridge.xmpp.*;
 
 import java.net.*;
 import java.nio.charset.*;
@@ -177,6 +178,14 @@ public class OctoChannel
                         .getMediaStreamTracks())
                     .map(MediaStreamTrackDesc::getOwner)
                     .collect(Collectors.toSet()));
+
+            for (SourcePacketExtension s : sources)
+            {
+                if (MediaStreamTrackFactory.getOwner(s) == null)
+                {
+                    logger.warn("Received a source without an owner tag.");
+                }
+            }
         }
 
         return changed;
