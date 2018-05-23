@@ -332,14 +332,13 @@ public class SimulcastController
             // XXX if we end up requesting a key frame, the request are
             // throttled by the {@link RTCPFeedbackMessageSender}, so we don't
             // risk spamming the sender with FIRs/PLIs.
-            maybeRequestKeyFrame(nowMs, false, true);
+            maybeRequestKeyFrame(nowMs);
             return false;
         }
 
         int targetBaseLayerIndex
             = sourceEncodings[targetIndex].getBaseLayer().getIndex();
 
-        // We do want to switch to another layer
         if (shouldSwitchToBaseLayer(
                     nowMs,
                     currentBaseLayerIndex,
@@ -361,18 +360,9 @@ public class SimulcastController
     protected void setTargetIndex(int newTargetIdx)
     {
         bitstreamController.setTargetIndex(newTargetIdx);
-
-        if (newTargetIdx < 0)
-        {
-            return;
-        }
-
-        maybeRequestKeyFrame(System.currentTimeMillis(), true, false);
     }
 
-    private void maybeRequestKeyFrame(long nowMs,
-            boolean requestIfTargetIsNotCurrent,
-            boolean requestIfCurrentIsSuspended)
+    private void maybeRequestKeyFrame(long nowMs)
     {
         int targetIdx = bitstreamController.getTargetIndex();
         if (targetIdx < 0)
@@ -420,15 +410,51 @@ public class SimulcastController
             = sourceEncodings[targetIdx].getBaseLayer().getIndex();
 
         String reason;
-        if (requestIfTargetIsNotCurrent && targetTL0Idx != currentTL0Idx)
-        {
-            reason = "target_changed";
-        }
-        else if (requestIfCurrentIsSuspended
-                && !currentTL0IsActive
-                && currentTL0Idx > 0)
+        if (!currentTL0IsActive && currentTL0Idx > 0)
         {
             reason = "suspended";
+        }
+        else if (targetTL0Idx != currentTL0Idx
+                && nowMs - lastSwitch > MIN_KEY_FRAME_WAIT_MS)
+        {
+            // XXX This code path takes care of target idx changes and also
+            // late/lost key frames causing the wrong resolution to be
+            // forwarded.
+            boolean switchPossible = false;
+            for (int i = currentTL0Idx + 1;
+                    i < Math.min(targetTL0Idx + 1, sourceEncodings.length); i++)
+            {
+                if (sourceEncodings[i].getBaseLayer() == sourceEncodings[i]
+                        && sourceEncodings[i].isActive(nowMs))
+                {
+                    // Upscale possible.
+                    switchPossible = true;
+                    break;
+                }
+            }
+
+            if (!switchPossible && targetTL0Idx > SUSPENDED_INDEX)
+            {
+                for (int i = currentTL0Idx - 1; i > targetTL0Idx - 1; i--)
+                {
+                    if (sourceEncodings[i].getBaseLayer() == sourceEncodings[i]
+                            && sourceEncodings[i].isActive(nowMs))
+                    {
+                        // Downscale possible.
+                        switchPossible = true;
+                        break;
+                    }
+                }
+            }
+
+            if (switchPossible)
+            {
+                reason = "switch_possible";
+            }
+            else
+            {
+                return;
+            }
         }
         else
         {
