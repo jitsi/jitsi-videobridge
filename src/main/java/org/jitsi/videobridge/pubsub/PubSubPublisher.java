@@ -494,7 +494,7 @@ public class PubSubPublisher
                         if(nodeName != null)
                         {
                             logger.error(
-                                    "Times out a publish request: " + nodeName);
+                                    "Timed out a publish request: " + nodeName);
                         }
                     }
                 },
