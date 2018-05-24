@@ -217,8 +217,9 @@ public class SimulcastController
         }
         else
         {
-            // Upscale/downscale happens in a window of 300ms since the
-            // reception of the first key frame of a key frame group.
+            // We're withing the 300ms window since the reception of the first
+            // key frame of a key frame group, let's check whether an
+            // upscale/downscale is possible.
             if ((currentBaseLayerIndex < incomingFrameBaseLayerIndex) &&
                     incomingFrameBaseLayerIndex <= targetBaseLayerIndex)
             {
