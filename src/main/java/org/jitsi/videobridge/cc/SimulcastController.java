@@ -461,12 +461,12 @@ public class SimulcastController
             return;
         }
 
-        if (timeSeriesLogger.isTraceEnabled())
+        if (timeSeriesLogger.isInfoEnabled())
         {
             DiagnosticContext diagnosticContext
                 = getDiagnosticContext();
 
-            timeSeriesLogger.trace(diagnosticContext
+            timeSeriesLogger.info(diagnosticContext
                     .makeTimeSeriesPoint("send_fir")
                     .addField("reason", reason)
                     .addField("current_tl0", currentTL0Idx)
@@ -841,10 +841,10 @@ public class SimulcastController
                 this.isAdaptive = availableQualityIndices.length > 1;
             }
 
-            if (timeSeriesLogger.isTraceEnabled())
+            if (timeSeriesLogger.isInfoEnabled())
             {
                 DiagnosticContext diagnosticContext = getDiagnosticContext();
-                timeSeriesLogger.trace(diagnosticContext
+                timeSeriesLogger.info(diagnosticContext
                         .makeTimeSeriesPoint("tl0_changed")
                         .addField("frame_heap_size", seenFrames.size())
                         .addField("new_tl0_ssrc", tl0Ssrc)
@@ -942,11 +942,11 @@ public class SimulcastController
                             availableQualityIndices, targetIdx);
 
                     if (newCurrentIdx != this.currentIdx
-                            && timeSeriesLogger.isTraceEnabled())
+                            && timeSeriesLogger.isInfoEnabled())
                     {
                         DiagnosticContext diagnosticContext
                             = getDiagnosticContext();
-                        timeSeriesLogger.trace(diagnosticContext
+                        timeSeriesLogger.info(diagnosticContext
                                 .makeTimeSeriesPoint("current_idx_changed")
                                 .addField("frame_heap_size", seenFrames.size())
                                 .addField("old_idx", this.currentIdx)
@@ -1237,11 +1237,11 @@ public class SimulcastController
             long localTl0SsrcCopy = this.tl0Ssrc;
             if (pktIn.getSSRCAsLong() != localTl0SsrcCopy)
             {
-                if (timeSeriesLogger.isTraceEnabled())
+                if (timeSeriesLogger.isWarnEnabled())
                 {
                     DiagnosticContext
                         diagnosticContext = getDiagnosticContext();
-                    timeSeriesLogger.trace(diagnosticContext
+                    timeSeriesLogger.warn(diagnosticContext
                             .makeTimeSeriesPoint("invalid_ssrc")
                             .addField("frame_heap_size", seenFrames.size())
                             .addField("expecting", localTl0SsrcCopy)
@@ -1255,11 +1255,11 @@ public class SimulcastController
             SeenFrame destFrame = seenFrames.get(pktIn.getTimestamp());
             if (destFrame == null)
             {
-                if (timeSeriesLogger.isTraceEnabled())
+                if (timeSeriesLogger.isWarnEnabled())
                 {
                     DiagnosticContext
                         diagnosticContext = getDiagnosticContext();
-                    timeSeriesLogger.trace(diagnosticContext
+                    timeSeriesLogger.warn(diagnosticContext
                             .makeTimeSeriesPoint("invalid_timestamp")
                             .addField("frame_heap_size", seenFrames.size())
                             .addField("in_ssrc", pktIn.getSSRCAsLong())
@@ -1469,12 +1469,12 @@ public class SimulcastController
                         seqNum,
                         RTPUtils.applySequenceNumberDelta(srcSeqNumLimit, 1));
 
-                if (!accept && timeSeriesLogger.isTraceEnabled())
+                if (!accept && timeSeriesLogger.isWarnEnabled())
                 {
                     DiagnosticContext
                         diagnosticContext = getDiagnosticContext();
 
-                    timeSeriesLogger.trace(diagnosticContext
+                    timeSeriesLogger.warn(diagnosticContext
                             .makeTimeSeriesPoint("frame_corruption")
                             .addField("seq", seqNum)
                             .addField("seq_start", srcSeqNumStart)
