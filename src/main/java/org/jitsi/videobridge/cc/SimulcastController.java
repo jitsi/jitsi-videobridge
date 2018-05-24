@@ -365,7 +365,7 @@ public class SimulcastController
     private void maybeRequestKeyFrame(long nowMs)
     {
         int targetIdx = bitstreamController.getTargetIndex();
-        if (targetIdx < 0)
+        if (targetIdx <= SUSPENDED_INDEX)
         {
             return;
         }
