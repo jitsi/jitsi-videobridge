@@ -59,6 +59,12 @@ public class SimulcastController
         = "org.jitsi.videobridge.ENABLE_VP8_PICID_REWRITING";
 
     /**
+     * The default maximum frequency (in millis) at which the media engine
+     * generates key frame.
+     */
+    private static final int MIN_KEY_FRAME_WAIT_MS = 300;
+
+    /**
      * The ConfigurationService to get config values from.
      */
     private static final ConfigurationService
@@ -128,6 +134,11 @@ public class SimulcastController
     private int tl0PicIdx = 0;
 
     /**
+     * Holds the time (in millis) of the last simulcast stream switch.
+     */
+    private long lastSwitch = -1;
+
+    /**
      * The {@link BitstreamController} for the currently forwarded RTP stream.
      */
     private final BitstreamController bitstreamController;
@@ -193,24 +204,37 @@ public class SimulcastController
      * @return true if the stream represented by incomingFrameBaseLayerIndex
      * represents a step closer (or all the way) to the targetBaseLayerIndex
      */
-    private static boolean shouldSwitchToBaseLayer(
+    private boolean shouldSwitchToBaseLayer(
+        long nowMs,
         int currentBaseLayerIndex,
         int incomingFrameBaseLayerIndex,
         int targetBaseLayerIndex)
     {
-        if ((currentBaseLayerIndex < incomingFrameBaseLayerIndex) &&
-            incomingFrameBaseLayerIndex <= targetBaseLayerIndex)
+        if (nowMs - lastSwitch > MIN_KEY_FRAME_WAIT_MS)
         {
-            // upscale case
+            lastSwitch = nowMs;
             return true;
         }
-        else if ((currentBaseLayerIndex > incomingFrameBaseLayerIndex) &&
-            (incomingFrameBaseLayerIndex >= targetBaseLayerIndex))
+        else
         {
-            // downscale case
-            return true;
+            // We're withing the 300ms window since the reception of the first
+            // key frame of a key frame group, let's check whether an
+            // upscale/downscale is possible.
+            if ((currentBaseLayerIndex < incomingFrameBaseLayerIndex) &&
+                    incomingFrameBaseLayerIndex <= targetBaseLayerIndex)
+            {
+                // upscale case
+                return true;
+            }
+            else if ((currentBaseLayerIndex > incomingFrameBaseLayerIndex) &&
+                    (incomingFrameBaseLayerIndex >= targetBaseLayerIndex))
+            {
+                // downscale case
+                return true;
+            }
+
+            return false;
         }
-        return false;
     }
 
     /**
@@ -276,8 +300,7 @@ public class SimulcastController
         // current layer we're forwarding is still sending, so we're not
         // "desperate"
         int currentBaseLayerIndex;
-        if (currentIndex == SUSPENDED_INDEX ||
-            !sourceEncodings[currentIndex].getBaseLayer().isActive(true))
+        if (currentIndex == SUSPENDED_INDEX)
         {
             currentBaseLayerIndex = SUSPENDED_INDEX;
         }
@@ -298,33 +321,35 @@ public class SimulcastController
             return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
+        long nowMs = System.currentTimeMillis();
         // At this point we know that we want to be forwarding a stream
         // different from the one that the incoming frame belongs to, so we
         // need to check if there is a layer switch pending and this frame
         // brings us to (or closer to) the stream we want.
         if (!sourceFrameDesc.isIndependent())
         {
-            // If it's not a keyframe we can't switch to it anyway
+            // If it's not a keyframe we can't switch to it anyway.
+
+            // XXX if we end up requesting a key frame, the request are
+            // throttled by the {@link RTCPFeedbackMessageSender}, so we don't
+            // risk spamming the sender with FIRs/PLIs.
+            maybeRequestKeyFrame(nowMs);
             return false;
         }
 
         int targetBaseLayerIndex
             = sourceEncodings[targetIndex].getBaseLayer().getIndex();
 
-        if (currentBaseLayerIndex != targetBaseLayerIndex)
+        if (shouldSwitchToBaseLayer(
+                    nowMs,
+                    currentBaseLayerIndex,
+                    sourceBaseLayerIndex,
+                    targetBaseLayerIndex))
         {
-            // We do want to switch to another layer
-            if (shouldSwitchToBaseLayer(
-                        currentBaseLayerIndex,
-                        sourceBaseLayerIndex,
-                        targetBaseLayerIndex))
-            {
-                // This frame represents, at least, a step in the right
-                // direction towards the stream we want.
-                bitstreamController.setTL0Idx(sourceBaseLayerIndex);
-                return bitstreamController.accept(sourceFrameDesc, pkt);
-            }
+            bitstreamController.setTL0Idx(sourceBaseLayerIndex);
+            return bitstreamController.accept(sourceFrameDesc, pkt);
         }
+
         return false;
     }
 
@@ -336,8 +361,12 @@ public class SimulcastController
     protected void setTargetIndex(int newTargetIdx)
     {
         bitstreamController.setTargetIndex(newTargetIdx);
+    }
 
-        if (newTargetIdx < 0)
+    private void maybeRequestKeyFrame(long nowMs)
+    {
+        int targetIdx = bitstreamController.getTargetIndex();
+        if (targetIdx <= SUSPENDED_INDEX)
         {
             return;
         }
@@ -349,65 +378,105 @@ public class SimulcastController
             return;
         }
 
+        // We need this for sending the FIR. No need to waste cycles if we don't
+        // have it.
+        MediaStream sourceStream
+            = sourceTrack.getMediaStreamTrackReceiver().getStream();
+        if (sourceStream == null)
+        {
+            return;
+        }
+
         RTPEncodingDesc[] sourceEncodings = sourceTrack.getRTPEncodings();
+        if (ArrayUtils.isNullOrEmpty(sourceEncodings))
+        {
+            return;
+        }
 
         int currentTL0Idx = bitstreamController.getCurrentIndex();
+        boolean currentTL0IsActive;
         if (currentTL0Idx > SUSPENDED_INDEX)
         {
             currentTL0Idx
                 = sourceEncodings[currentTL0Idx].getBaseLayer().getIndex();
+            currentTL0IsActive
+                = sourceEncodings[currentTL0Idx].isActive(nowMs);
+        }
+        else
+        {
+            currentTL0IsActive = false;
         }
 
         int targetTL0Idx
-            = sourceEncodings[newTargetIdx].getBaseLayer().getIndex();
+            = sourceEncodings[targetIdx].getBaseLayer().getIndex();
 
-        // Make sure that something is streaming so that a FIR makes sense.
-
-        boolean sendFIR;
-        if (sourceEncodings[0].isActive(true))
+        String reason;
+        if (!currentTL0IsActive && currentTL0Idx > 0)
         {
-            // Something lower than the current must be streaming, so we're able
-            // to make a switch, so ask for a key frame.
-            sendFIR = targetTL0Idx < currentTL0Idx;
-            if (!sendFIR && targetTL0Idx > currentTL0Idx)
+            reason = "suspended";
+        }
+        else if (targetTL0Idx != currentTL0Idx
+                && nowMs - lastSwitch > MIN_KEY_FRAME_WAIT_MS)
+        {
+            // XXX This code path takes care of target idx changes and also
+            // late/lost key frames causing the wrong resolution to be
+            // forwarded.
+            boolean switchPossible = false;
+            for (int i = currentTL0Idx + 1;
+                    i < Math.min(targetTL0Idx + 1, sourceEncodings.length); i++)
             {
-                // otherwise, check if anything higher is streaming.
-                for (int i = currentTL0Idx + 1; i < targetTL0Idx + 1; i++)
+                if (sourceEncodings[i].getBaseLayer() == sourceEncodings[i]
+                        && sourceEncodings[i].isActive(nowMs))
                 {
-                    RTPEncodingDesc tl0 = sourceEncodings[i].getBaseLayer();
-                    if (tl0.isActive(true) && tl0.getIndex() > currentTL0Idx)
+                    // Upscale possible.
+                    switchPossible = true;
+                    break;
+                }
+            }
+
+            if (!switchPossible && targetTL0Idx > SUSPENDED_INDEX)
+            {
+                for (int i = currentTL0Idx - 1; i > targetTL0Idx - 1; i--)
+                {
+                    if (sourceEncodings[i].getBaseLayer() == sourceEncodings[i]
+                            && sourceEncodings[i].isActive(nowMs))
                     {
-                        sendFIR = true;
+                        // Downscale possible.
+                        switchPossible = true;
                         break;
                     }
                 }
             }
+
+            if (switchPossible)
+            {
+                reason = "switch_possible";
+            }
+            else
+            {
+                return;
+            }
         }
         else
         {
-            sendFIR = false;
+            return;
         }
 
-        MediaStream sourceStream
-            = sourceTrack.getMediaStreamTrackReceiver().getStream();
-        if (sendFIR && sourceStream != null)
+        if (timeSeriesLogger.isInfoEnabled())
         {
-            if (timeSeriesLogger.isTraceEnabled())
-            {
-                DiagnosticContext diagnosticContext
-                    = getDiagnosticContext();
+            DiagnosticContext diagnosticContext
+                = getDiagnosticContext();
 
-                timeSeriesLogger.trace(diagnosticContext
-                        .makeTimeSeriesPoint("send_fir")
-                        .addField("reason", "target_changed")
-                        .addField("current_tl0", currentTL0Idx)
-                        .addField("target_tl0", targetTL0Idx));
-            }
-
-            ((RTPTranslatorImpl) sourceStream.getRTPTranslator())
-                .getRtcpFeedbackMessageSender().sendFIR(
-                (int) targetSsrc);
+            timeSeriesLogger.info(diagnosticContext
+                    .makeTimeSeriesPoint("send_fir")
+                    .addField("reason", reason)
+                    .addField("current_tl0", currentTL0Idx)
+                    .addField("target_tl0", targetTL0Idx));
         }
+
+        ((RTPTranslatorImpl) sourceStream.getRTPTranslator())
+            .getRtcpFeedbackMessageSender().sendFIR(
+                    (int) targetSsrc);
     }
 
     /**
@@ -773,10 +842,10 @@ public class SimulcastController
                 this.isAdaptive = availableQualityIndices.length > 1;
             }
 
-            if (timeSeriesLogger.isTraceEnabled())
+            if (timeSeriesLogger.isInfoEnabled())
             {
                 DiagnosticContext diagnosticContext = getDiagnosticContext();
-                timeSeriesLogger.trace(diagnosticContext
+                timeSeriesLogger.info(diagnosticContext
                         .makeTimeSeriesPoint("tl0_changed")
                         .addField("frame_heap_size", seenFrames.size())
                         .addField("new_tl0_ssrc", tl0Ssrc)
@@ -874,11 +943,11 @@ public class SimulcastController
                             availableQualityIndices, targetIdx);
 
                     if (newCurrentIdx != this.currentIdx
-                            && timeSeriesLogger.isTraceEnabled())
+                            && timeSeriesLogger.isInfoEnabled())
                     {
                         DiagnosticContext diagnosticContext
                             = getDiagnosticContext();
-                        timeSeriesLogger.trace(diagnosticContext
+                        timeSeriesLogger.info(diagnosticContext
                                 .makeTimeSeriesPoint("current_idx_changed")
                                 .addField("frame_heap_size", seenFrames.size())
                                 .addField("old_idx", this.currentIdx)
@@ -1169,11 +1238,11 @@ public class SimulcastController
             long localTl0SsrcCopy = this.tl0Ssrc;
             if (pktIn.getSSRCAsLong() != localTl0SsrcCopy)
             {
-                if (timeSeriesLogger.isTraceEnabled())
+                if (timeSeriesLogger.isWarnEnabled())
                 {
                     DiagnosticContext
                         diagnosticContext = getDiagnosticContext();
-                    timeSeriesLogger.trace(diagnosticContext
+                    timeSeriesLogger.warn(diagnosticContext
                             .makeTimeSeriesPoint("invalid_ssrc")
                             .addField("frame_heap_size", seenFrames.size())
                             .addField("expecting", localTl0SsrcCopy)
@@ -1187,11 +1256,11 @@ public class SimulcastController
             SeenFrame destFrame = seenFrames.get(pktIn.getTimestamp());
             if (destFrame == null)
             {
-                if (timeSeriesLogger.isTraceEnabled())
+                if (timeSeriesLogger.isWarnEnabled())
                 {
                     DiagnosticContext
                         diagnosticContext = getDiagnosticContext();
-                    timeSeriesLogger.trace(diagnosticContext
+                    timeSeriesLogger.warn(diagnosticContext
                             .makeTimeSeriesPoint("invalid_timestamp")
                             .addField("frame_heap_size", seenFrames.size())
                             .addField("in_ssrc", pktIn.getSSRCAsLong())
@@ -1401,12 +1470,12 @@ public class SimulcastController
                         seqNum,
                         RTPUtils.applySequenceNumberDelta(srcSeqNumLimit, 1));
 
-                if (!accept && timeSeriesLogger.isTraceEnabled())
+                if (!accept && timeSeriesLogger.isWarnEnabled())
                 {
                     DiagnosticContext
                         diagnosticContext = getDiagnosticContext();
 
-                    timeSeriesLogger.trace(diagnosticContext
+                    timeSeriesLogger.warn(diagnosticContext
                             .makeTimeSeriesPoint("frame_corruption")
                             .addField("seq", seqNum)
                             .addField("seq_start", srcSeqNumStart)
