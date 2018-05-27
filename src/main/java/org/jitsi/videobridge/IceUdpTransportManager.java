@@ -320,12 +320,17 @@ public class IceUdpTransportManager
             if (singlePortHarvesters != null)
             {
                 singlePortHarvesters.forEach(AbstractUdpListener::close);
+                singlePortHarvesters = null;
             }
 
             if (tcpHarvester != null)
             {
                 tcpHarvester.close();
+                tcpHarvester = null;
             }
+
+            // Reset the flag to initial state.
+            healthy = true;
         }
     }
 
