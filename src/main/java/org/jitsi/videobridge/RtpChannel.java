@@ -47,6 +47,7 @@ import org.jitsi.util.event.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jxmpp.jid.*;
+import org.osgi.framework.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -964,6 +965,45 @@ public class RtpChannel
     }
 
     /**
+     * Gives back a collection of TransformChainManipulator services
+     * @return collection of TransformChainManipulator services
+     */
+    private Iterable<TransformChainManipulator>
+        getTransformChainManipulators()
+    {
+        try
+        {
+            ArrayList<TransformChainManipulator> manipulators =
+                    new ArrayList<>();
+
+            BundleContext bundleContext = getBundleContext();
+
+            Collection<ServiceReference<TransformChainManipulator>>
+                    serviceReferences = bundleContext.getServiceReferences(
+                            TransformChainManipulator.class,
+                            null);
+
+            for (ServiceReference<TransformChainManipulator>
+                    serviceReference : serviceReferences)
+            {
+                TransformChainManipulator transformChainManipulators =
+                        bundleContext.getService(serviceReference);
+                if (transformChainManipulators != null)
+                {
+                    manipulators.add(transformChainManipulators);
+                }
+            }
+            return manipulators;
+
+        }
+        catch (InvalidSyntaxException e)
+        {
+            logger.warn("Cannot fetch TransformChainManipulators", e);
+            return null;
+        }
+    }
+
+    /**
      * Initializes the <tt>RtpChannelTransformEngine</tt> that will be used by
      * this <tt>RtpChannel</tt>.
      *
@@ -971,7 +1011,12 @@ public class RtpChannel
      */
     RtpChannelTransformEngine initializeTransformerEngine()
     {
-        transformEngine = new RtpChannelTransformEngine(this);
+        Iterable<TransformChainManipulator> manipulators =
+                getTransformChainManipulators();
+
+        transformEngine = new RtpChannelTransformEngine(
+                this,
+                manipulators);
         if (stream != null)
         {
             stream.setExternalTransformer(transformEngine);
