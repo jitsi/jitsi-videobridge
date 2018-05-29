@@ -137,7 +137,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jitsi-stats</artifactId>
-      <version>1.0-20171010.224039-4</version>
+      <version>1.0-20180523.024051-5</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -153,11 +153,6 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
       <version>1.0-20180525.154234-351</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>newrelic-api-stub</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
