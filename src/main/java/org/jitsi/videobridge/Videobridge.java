@@ -1629,7 +1629,11 @@ public class Videobridge
         // Shut down harvesters.
         IceUdpTransportManager.closeStaticConfiguration(cfg);
 
-        // Clear all system properties that were ice4j properties.
+        // Clear all system properties that were ice4j properties. This is done
+        // to deal with any properties that are conditionally set during
+        // initialization. If the conditions have changed upon restart (of the
+        // component, rather than the JVM), it would not be enough to "not set"
+        // the system property (as it would have survived the restart).
         if (cfg != null)
         {
             List<String> ice4jPropertyNames
