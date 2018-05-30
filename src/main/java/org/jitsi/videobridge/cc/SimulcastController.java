@@ -134,9 +134,9 @@ public class SimulcastController
     private int tl0PicIdx = 0;
 
     /**
-     * Holds the time (in millis) of the last simulcast stream switch.
+     * Holds the arrival time (in millis) of the most recent keyframe group.
      */
-    private long lastSwitch = -1;
+    private long mostRecentKeyframeGroupArrivalTimeMs = -1;
 
     /**
      * The {@link BitstreamController} for the currently forwarded RTP stream.
@@ -210,9 +210,24 @@ public class SimulcastController
         int incomingFrameBaseLayerIndex,
         int targetBaseLayerIndex)
     {
-        if (nowMs - lastSwitch > MIN_KEY_FRAME_WAIT_MS)
+        long deltaMs = nowMs - mostRecentKeyframeGroupArrivalTimeMs;
+        if (deltaMs > MIN_KEY_FRAME_WAIT_MS)
         {
-            lastSwitch = nowMs;
+            mostRecentKeyframeGroupArrivalTimeMs = nowMs;
+            if (timeSeriesLogger.isInfoEnabled())
+            {
+                DiagnosticContext diagnosticContext
+                    = getDiagnosticContext();
+
+                timeSeriesLogger.info(diagnosticContext
+                        .makeTimeSeriesPoint("switch", nowMs)
+                        .addField("hash", hashCode())
+                        .addField("reason", "preemptive")
+                        .addField("delta_ms", deltaMs)
+                        .addField("source_tl0", incomingFrameBaseLayerIndex)
+                        .addField("current_tl0", currentBaseLayerIndex)
+                        .addField("target_tl0", targetBaseLayerIndex));
+            }
             return true;
         }
         else
@@ -224,12 +239,40 @@ public class SimulcastController
                     incomingFrameBaseLayerIndex <= targetBaseLayerIndex)
             {
                 // upscale case
+                if (timeSeriesLogger.isInfoEnabled())
+                {
+                    DiagnosticContext diagnosticContext
+                        = getDiagnosticContext();
+
+                    timeSeriesLogger.info(diagnosticContext
+                            .makeTimeSeriesPoint("switch", nowMs)
+                            .addField("hash", hashCode())
+                            .addField("reason", "upscale")
+                            .addField("delta_ms", deltaMs)
+                            .addField("source_tl0", incomingFrameBaseLayerIndex)
+                            .addField("current_tl0", currentBaseLayerIndex)
+                            .addField("target_tl0", targetBaseLayerIndex));
+                }
                 return true;
             }
             else if ((currentBaseLayerIndex > incomingFrameBaseLayerIndex) &&
                     (incomingFrameBaseLayerIndex >= targetBaseLayerIndex))
             {
                 // downscale case
+                if (timeSeriesLogger.isInfoEnabled())
+                {
+                    DiagnosticContext diagnosticContext
+                        = getDiagnosticContext();
+
+                    timeSeriesLogger.info(diagnosticContext
+                            .makeTimeSeriesPoint("switch", nowMs)
+                            .addField("hash", hashCode())
+                            .addField("reason", "downscale")
+                            .addField("delta_ms", deltaMs)
+                            .addField("source_tl0", incomingFrameBaseLayerIndex)
+                            .addField("current_tl0", currentBaseLayerIndex)
+                            .addField("target_tl0", targetBaseLayerIndex));
+                }
                 return true;
             }
 
@@ -313,15 +356,19 @@ public class SimulcastController
         int sourceBaseLayerIndex
             = sourceEncodings[sourceLayerIndex].getBaseLayer().getIndex();
 
+        long nowMs = System.currentTimeMillis();
         if (sourceBaseLayerIndex == currentBaseLayerIndex)
         {
+            if (sourceFrameDesc.isIndependent())
+            {
+                mostRecentKeyframeGroupArrivalTimeMs = nowMs;
+            }
             // Regardless of whether a switch is pending or not, if an incoming
             // frame belongs to the stream that is currently being forwarded,
             // we'll accept it (if the bitstreamController lets it through)
             return bitstreamController.accept(sourceFrameDesc, pkt);
         }
 
-        long nowMs = System.currentTimeMillis();
         // At this point we know that we want to be forwarding a stream
         // different from the one that the incoming frame belongs to, so we
         // need to check if there is a layer switch pending and this frame
@@ -410,13 +457,14 @@ public class SimulcastController
         int targetTL0Idx
             = sourceEncodings[targetIdx].getBaseLayer().getIndex();
 
+        long deltaMs = nowMs - mostRecentKeyframeGroupArrivalTimeMs;
         String reason;
         if (!currentTL0IsActive && currentTL0Idx > 0)
         {
             reason = "suspended";
         }
         else if (targetTL0Idx != currentTL0Idx
-                && nowMs - lastSwitch > MIN_KEY_FRAME_WAIT_MS)
+                && deltaMs > MIN_KEY_FRAME_WAIT_MS)
         {
             // XXX This code path takes care of target idx changes and also
             // late/lost key frames causing the wrong resolution to be
@@ -468,8 +516,10 @@ public class SimulcastController
                 = getDiagnosticContext();
 
             timeSeriesLogger.info(diagnosticContext
-                    .makeTimeSeriesPoint("send_fir")
+                    .makeTimeSeriesPoint("send_fir", nowMs)
+                    .addField("hash", hashCode())
                     .addField("reason", reason)
+                    .addField("delta_ms", deltaMs)
                     .addField("current_tl0", currentTL0Idx)
                     .addField("target_tl0", targetTL0Idx));
         }

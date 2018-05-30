@@ -658,6 +658,7 @@ public class BitrateController
                     .addField("current_idx", currentIdx)
                     .addField("target_idx", targetIdx)
                     .addField("optimal_idx", optimalIdx)
+                    .addField("available_bps", bweBps)
                     .addField("current_bps", currentBps)
                     .addField("target_bps", targetBps)
                     .addField("optimal_bps", optimalBps));
