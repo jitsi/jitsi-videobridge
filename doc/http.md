@@ -25,7 +25,10 @@ org.jitsi.videobridge.rest.jetty.sslContextFactory.keyStorePassword=changeit
 following to jvb config in etc:
 JVB_OPTS="--apis=rest,xmpp"
 AUTHBIND=yes
-
+5. If working cross domains, configure CORS
+```
+org.jitsi.videobridge.rest.jetty.cors.allowedOrigins=*.meet.jit.si
+```
 It's also possible to disable the Colibri REST API endpoints with:
 
 ```
