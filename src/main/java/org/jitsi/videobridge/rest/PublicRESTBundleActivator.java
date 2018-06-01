@@ -273,12 +273,12 @@ public class PublicRESTBundleActivator
                 if (allowedOrigins != null && allowedOrigins.length() != 0)
                 {
                     FilterHolder filterHolder = servletContextHandler.addFilter(
-                        org.eclipse.jetty.servlets.CrossOriginFilter.class,
+                        CrossOriginFilter.class,
                         "/*",
                         EnumSet.of(DispatcherType.REQUEST)
                     );
                     filterHolder.setInitParameter(
-                        "allowedOrigins",
+                        CrossOriginFilter.ALLOWED_ORIGINS_PARAM,
                         allowedOrigins
                     );
                 }
