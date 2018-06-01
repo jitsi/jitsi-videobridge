@@ -263,9 +263,9 @@ public class PublicRESTBundleActivator
 
                 servletContextHandler.addServlet(holder, pathSpec);
 
-				// CORS
-				String allowedOrigins
-					= ConfigUtils.getString(
+                // CORS
+                String allowedOrigins
+                    = ConfigUtils.getString(
                         cfg,
                         JETTY_PROPERTY_PREFIX
                             + JETTY_CORS_ALLOWED_ORIGINS,
