@@ -239,7 +239,7 @@ public class VideoChannel
                     content.getConference().getLogger());
 
         this.lipSyncHack
-            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, true)
+            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, false)
             ? new LipSyncHack(this) : null;
 
         disableLastNNotifications = cfg != null

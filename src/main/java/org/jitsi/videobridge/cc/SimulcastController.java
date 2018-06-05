@@ -71,9 +71,10 @@ public class SimulcastController
         cfg = LibJitsi.getConfigurationService();
 
     /**
-     * The default number of seen frames to keep track of.
+     * The default number of seen frames to keep track of. This is 10 seconds at
+     * 60fps.
      */
-    private static final int SEEN_FRAME_HISTORY_SIZE_DEFAULT = 120;
+    private static final int SEEN_FRAME_HISTORY_SIZE_DEFAULT = 600;
 
     /**
      * The number of seen frames to keep track of.
@@ -510,12 +511,12 @@ public class SimulcastController
             return;
         }
 
-        if (timeSeriesLogger.isInfoEnabled())
+        if (timeSeriesLogger.isTraceEnabled())
         {
             DiagnosticContext diagnosticContext
                 = getDiagnosticContext();
 
-            timeSeriesLogger.info(diagnosticContext
+            timeSeriesLogger.trace(diagnosticContext
                     .makeTimeSeriesPoint("send_fir", nowMs)
                     .addField("hash", hashCode())
                     .addField("reason", reason)
@@ -776,35 +777,12 @@ public class SimulcastController
         private SeenFrame mostRecentSentFrame;
 
         /**
-         * The {@link SeenFrameAllocator} for this {@link BitstreamController}.
-         */
-        private final SeenFrameAllocator seenFrameAllocator
-            = new SeenFrameAllocator();
-
-        /**
          * At 60fps, this holds 2 seconds worth of frames.
          * At 30fps, this holds 4 seconds worth of frames.
          */
         private final Map<Long, SeenFrame> seenFrames
             = Collections.synchronizedMap(
-                new LRUCache<Long, SeenFrame>(SEEN_FRAME_HISTORY_SIZE)
-        {
-            /**
-             * {@inheritDoc}
-             */
-            protected boolean removeEldestEntry(
-                Map.Entry<Long, SeenFrame> eldest)
-            {
-                boolean removeEldestEntry = super.removeEldestEntry(eldest);
-
-                if (removeEldestEntry)
-                {
-                    seenFrameAllocator.returnSeenFrame(eldest.getValue());
-                }
-
-                return removeEldestEntry;
-            }
-        });
+                new LRUCache<>(SEEN_FRAME_HISTORY_SIZE));
 
         public void suspend()
         {
@@ -1138,7 +1116,7 @@ public class SimulcastController
                             }
                         }
 
-                        destFrame = seenFrameAllocator.getOrCreate();
+                        destFrame = new SeenFrame();
                         destFrame.reset(srcTs, seqNumTranslation, tsTranslation,
                             dstPictureID, dstTL0PICIDX,
                             sourceFrameDesc.isIndependent());
@@ -1158,7 +1136,7 @@ public class SimulcastController
                     }
                     else
                     {
-                        destFrame = seenFrameAllocator.getOrCreate();
+                        destFrame = new SeenFrame();
                         destFrame.reset(srcTs);
                         seenFrames.put(srcTs, destFrame);
                     }
@@ -1167,7 +1145,7 @@ public class SimulcastController
                 {
                     // TODO ask for independent frame if we're filtering a TL0.
 
-                    destFrame = seenFrameAllocator.getOrCreate();
+                    destFrame = new SeenFrame();
                     destFrame.reset(srcTs);
                     seenFrames.put(srcTs, destFrame);
                 }
@@ -1682,9 +1660,10 @@ public class SimulcastController
                             pktOut.setSequenceNumber(dstSeqNum);
                         }
                     }
-                    int dstSeqNum = pktOut.getSequenceNumber();
+
                     if (timeSeriesLogger.isTraceEnabled())
                     {
+                        int dstSeqNum = pktOut.getSequenceNumber();
                         DiagnosticContext diagnosticContext
                             = getDiagnosticContext();
                         timeSeriesLogger.trace(diagnosticContext
@@ -1784,39 +1763,6 @@ public class SimulcastController
             void reset(long srcTs)
             {
                 reset(srcTs, null, null, -1, -1, false);
-            }
-        }
-
-        /**
-         * A very simple {@link SeenFrame} allocator. NOT multi-thread safe.
-         */
-        class SeenFrameAllocator
-        {
-            /**
-             * The pool of available {@link SeenFrame}.
-             */
-            private Queue<SeenFrame> pool = new LinkedList<>();
-
-            /**
-             * Gets a {@link SeenFrame} from the pool of available seen frames,
-             * or creates a new one, if none is available.
-             *
-             * @return a {@link SeenFrame} from the pool of available seen
-             * frames, or a new one, if none is available.
-             */
-            SeenFrame getOrCreate()
-            {
-                return pool.isEmpty() ? new SeenFrame() : pool.remove();
-            }
-
-            /**
-             * Returns a {@link SeenFrame} to this allocator.
-             *
-             * @param value the {@link SeenFrame} to return.
-             */
-            void returnSeenFrame(SeenFrame value)
-            {
-                pool.add(value);
             }
         }
     }
