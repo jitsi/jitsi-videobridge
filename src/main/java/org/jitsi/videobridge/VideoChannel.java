@@ -69,7 +69,8 @@ public class VideoChannel
         = "org.jitsi.videobridge.DISABLE_NACK_TERMINATION";
 
     /**
-     * Configuration property for number of streams to cache
+     * The Java system property name that holds the boolean that indicates
+     * whether or not to enable the lipsync hack.
      */
     final static String ENABLE_LIPSYNC_HACK_PNAME
         = VideoChannel.class.getName() + ".ENABLE_LIPSYNC_HACK";
@@ -102,6 +103,19 @@ public class VideoChannel
     private static final int[] DEFAULT_RTCP_RECV_REPORT_SSRCS
         = DISABLE_DEFAULT_RTCP_RECV_REPORT_SSRCS
             ? new int[0] : new int[] { 1, 2 };
+
+    /**
+     * The default value that indicates whether or not to enable the lipsync
+     * hack.
+     */
+    private static final boolean ENABLE_LIPSYNC_HACK_DEFAULT = false;
+
+    /**
+     * The value that indicates whether or not to enable the lipsync hack.
+     */
+    private static final boolean ENABLE_LIPSYNC_HACK
+        = cfg != null && cfg.getBoolean(
+            ENABLE_LIPSYNC_HACK_PNAME, ENABLE_LIPSYNC_HACK_DEFAULT);
 
     /**
      * The default maximum frame height (in pixels) that can be forwarded to
@@ -238,9 +252,7 @@ public class VideoChannel
                     classLogger,
                     content.getConference().getLogger());
 
-        this.lipSyncHack
-            = cfg != null && cfg.getBoolean(ENABLE_LIPSYNC_HACK_PNAME, false)
-            ? new LipSyncHack(this) : null;
+        this.lipSyncHack = ENABLE_LIPSYNC_HACK ? new LipSyncHack(this) : null;
 
         disableLastNNotifications = cfg != null
             && cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, false);
