@@ -434,4 +434,23 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public abstract void sendMessage(String msg)
         throws IOException;
+
+    /**
+     * Notify this endpoint that another endpoint has set it
+     * as a 'selected' endpoint, meaning its HD stream has another
+     * consumer.
+     */
+    public void incrementSelectedCount()
+    {
+        // No-op
+    }
+
+    /**
+     * Notify this endpoint that another endpoint has stopped consuming
+     * its HD stream.
+     */
+    public void decrementSelectedCount()
+    {
+        // No-op
+    }
 }

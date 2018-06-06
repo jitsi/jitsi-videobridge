@@ -99,6 +99,13 @@ public class EndpointMessageBuilder
         = "SelectedEndpointsChangedEvent";
 
     /**
+     * The {@link Videobridge#COLIBRI_CLASS} value indicating a
+     * {@code SelectedUpdateEvent}.
+     */
+    public static final String COLIBRI_CLASS_SELECTED_UPDATE
+        = "SelectedUpdateEvent";
+
+    /**
      * The string which encodes a COLIBRI {@code ServerHello} message.
      */
     public static final String COLIBRI_CLASS_SERVER_HELLO = "ServerHello";
@@ -176,6 +183,22 @@ public class EndpointMessageBuilder
 
         return msg.toString();
     }
+
+    /**
+     * Create a {@link EndpointMessageBuilder#COLIBRI_CLASS_SELECTED_UPDATE}
+     * colibri message
+     * @param isSelected whether or not this endpoint has been marked as a
+     * selected endpoint
+     * @return a JSON string serialization of the created message
+     */
+    public static String createSelectedUpdateMessage(boolean isSelected)
+    {
+        JSONObject selectedUpdate = new JSONObject();
+        selectedUpdate.put("colibriClass", COLIBRI_CLASS_SELECTED_UPDATE);
+        selectedUpdate.put("isSelected", isSelected);
+        return selectedUpdate.toJSONString();
+    }
+
 
     private static String getJsonString(Collection<String> strings)
     {
