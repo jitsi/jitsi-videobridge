@@ -71,10 +71,12 @@ public class SimulcastController
         cfg = LibJitsi.getConfigurationService();
 
     /**
-     * The default number of seen frames to keep track of. This is 10 seconds at
-     * 60fps.
+     * The default number of seen frames to keep track of. This is 2 seconds at
+     * 60fps and 4 seconds at 30fps. Assuming an RTT of 250ms, it's 8RTTs at
+     * 60fps and 16RTTs at 30fps. This is plenty of time for all packets of
+     * a frame to arrive and be forwarded.
      */
-    private static final int SEEN_FRAME_HISTORY_SIZE_DEFAULT = 600;
+    private static final int SEEN_FRAME_HISTORY_SIZE_DEFAULT = 120;
 
     /**
      * The number of seen frames to keep track of.
