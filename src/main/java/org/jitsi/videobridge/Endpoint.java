@@ -15,15 +15,14 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.util.*;
+import org.jitsi.videobridge.rest.*;
+
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 
-import org.jitsi.util.*;
-import org.jitsi.videobridge.rest.*;
-import org.json.simple.*;
-
-import static org.jitsi.videobridge.EndpointMessageBuilder.createSelectedUpdateMessage;
+import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
