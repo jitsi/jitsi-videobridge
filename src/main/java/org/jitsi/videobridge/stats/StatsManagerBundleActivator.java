@@ -151,7 +151,7 @@ public class StatsManagerBundleActivator
     private void addTransport(
             StatsManager statsMgr,
             ConfigurationService cfg,
-            long interval,
+            int interval,
             String transport)
     {
         StatsTransport t = null;
@@ -189,11 +189,10 @@ public class StatsManagerBundleActivator
                             + " and/or node found.");
             }
         }
-        else if (transport != null && transport.length() != 0)
+        else
         {
             logger.error(
-                    "Unknown/unsupported statistics transport: "
-                        + transport);
+                    "Unknown/unsupported statistics transport: " + transport);
         }
 
         if (t != null)
@@ -204,7 +203,7 @@ public class StatsManagerBundleActivator
                 = ConfigUtils.getInt(
                         cfg,
                         STATISTICS_INTERVAL_PNAME + "." + transport,
-                        (int) interval);
+                        interval);
 
             // The interval/period of the Statistics better be the same as the
             // interval/period of the StatsTransport.
@@ -234,7 +233,7 @@ public class StatsManagerBundleActivator
     private void addTransports(
             StatsManager statsMgr,
             ConfigurationService cfg,
-            long interval)
+            int interval)
     {
         String transports
             = ConfigUtils.getString(
