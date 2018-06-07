@@ -15,10 +15,14 @@
  */
 package org.jitsi.videobridge;
 
-import java.io.*;
-import java.util.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.rest.*;
+
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.atomic.*;
+
+import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
 /**
  * Represents an endpoint of a participant in a <tt>Conference</tt>.
@@ -88,6 +92,11 @@ public class Endpoint
     private String icePassword;
 
     private final EndpointMessageTransport messageTransport;
+
+    /**
+     * A count of how many endpoints have 'selected' this endpoint
+     */
+    private AtomicInteger selectedCount = new AtomicInteger(0);
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -349,5 +358,57 @@ public class Endpoint
         }
 
         return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void incrementSelectedCount()
+    {
+        int newValue = selectedCount.incrementAndGet();
+        if (newValue == 1)
+        {
+            String selectedUpdate = createSelectedUpdateMessage(true);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Endpoint " + getID() + " is now "
+                    + "selected, sending message: " + selectedUpdate);
+            }
+            try
+            {
+                sendMessage(selectedUpdate);
+            }
+            catch (IOException e)
+            {
+                logger.error("Error sending SelectedUpdate message: " + e);
+            }
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void decrementSelectedCount()
+    {
+        int newValue = selectedCount.decrementAndGet();
+        if (newValue == 0)
+        {
+            String selectedUpdate = createSelectedUpdateMessage(false);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Endpoint " + getID() + " is no longer "
+                    + "selected, sending message: " + selectedUpdate);
+            }
+            try
+            {
+                sendMessage(selectedUpdate);
+            }
+            catch (IOException e)
+            {
+                logger.error("Error sending SelectedUpdate message: " + e);
+            }
+        }
     }
 }
