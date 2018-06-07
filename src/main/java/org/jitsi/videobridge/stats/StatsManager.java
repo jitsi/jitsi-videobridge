@@ -94,7 +94,7 @@ public class StatsManager
      * <tt>StatsManager</tt> is to periodically send the <tt>Statistics</tt>
      * added to it.
      * <p>
-     * Warning: {@code StatsTransport}s added to this {@code StatsMamanager}
+     * Warning: {@code StatsTransport}s added to this {@code StatsManager}
      * after {@link #start(BundleContext)} has been invoked will not be called.
      * </p>
      *
