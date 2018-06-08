@@ -332,18 +332,6 @@ public class VideoChannel
         return DEFAULT_RTCP_RECV_REPORT_SSRCS;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Creates media stream.
-     */
-    @Override
-    public void initialize()
-        throws IOException
-    {
-        initialize(null);
-    }
-
     @Override
     void initialize(RTPLevelRelayType rtpLevelRelayType)
         throws IOException
