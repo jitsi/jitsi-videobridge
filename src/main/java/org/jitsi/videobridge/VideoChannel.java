@@ -297,27 +297,6 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
-    public boolean setRtpEncodingParameters(
-        List<SourcePacketExtension> sources,
-        List<SourceGroupPacketExtension> sourceGroups)
-    {
-        boolean changed = super.setRtpEncodingParameters(sources, sourceGroups);
-
-        if (changed)
-        {
-            getContent().getChannels().stream()
-                .filter(c -> c != this && c instanceof VideoChannel)
-                .forEach(
-                    c -> ((VideoChannel) c).bitrateController.update(null, -1));
-        }
-
-        return changed;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected void updateBitrateController()
     {
         bitrateController.update();
