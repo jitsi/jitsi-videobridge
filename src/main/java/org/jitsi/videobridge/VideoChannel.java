@@ -338,8 +338,6 @@ public class VideoChannel
     {
         super.initialize(rtpLevelRelayType);
 
-        bitrateController.update();
-
         ((VideoMediaStream) getStream()).getOrCreateBandwidthEstimator()
             .addListener(bitrateController::update);
     }
