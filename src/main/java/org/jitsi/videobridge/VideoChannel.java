@@ -280,7 +280,10 @@ public class VideoChannel
     protected void maybeStartStream()
         throws IOException
     {
-        boolean previouslyStarted = getStream().isStarted();
+        MediaStream stream = getStream();
+        boolean previouslyStarted
+            = stream != null ? stream.isStarted() : false;
+
         super.maybeStartStream();
 
         // If a recvonly channel is created, existing streams won't be
@@ -290,7 +293,11 @@ public class VideoChannel
         // the bitrate controller when the stream starts which will request a
         // keyframe from other channels if needed.
 
-        if(getStream().isStarted() && !previouslyStarted)
+        stream = getStream();
+        boolean currentlyStarted
+            = stream != null ? stream.isStarted() : false;
+
+        if (currentlyStarted && !previouslyStarted)
         {
             bitrateController.update(null, -1);
         }
