@@ -1598,8 +1598,80 @@ public class Videobridge
     void stop(BundleContext bundleContext)
         throws Exception
     {
-        videobridgeExpireThread.stop(bundleContext);
-        this.bundleContext = null;
+        try
+        {
+            ConfigurationService cfg
+                = ServiceUtils2.getService(
+                    bundleContext,
+                    ConfigurationService.class);
+
+            stopIce4j(bundleContext, cfg);
+        }
+        finally
+        {
+            videobridgeExpireThread.stop(bundleContext);
+            this.bundleContext = null;
+        }
+    }
+
+    /**
+     * Implements the ice4j-related portion of {@link #stop(BundleContext)}.
+     *
+     * @param bundleContext the {@code BundleContext} in which this
+     * {@code Videobridge} is to start
+     * @param cfg the {@code ConfigurationService} registered in
+     * {@code bundleContext}. Explicitly provided for the sake of performance.
+     */
+    private void stopIce4j(
+        BundleContext bundleContext,
+        ConfigurationService cfg)
+    {
+        // Shut down harvesters.
+        IceUdpTransportManager.closeStaticConfiguration(cfg);
+
+        // Clear all system properties that were ice4j properties. This is done
+        // to deal with any properties that are conditionally set during
+        // initialization. If the conditions have changed upon restart (of the
+        // component, rather than the JVM), it would not be enough to "not set"
+        // the system property (as it would have survived the restart).
+        if (cfg != null)
+        {
+            List<String> ice4jPropertyNames
+                = cfg.getPropertyNamesByPrefix("org.ice4j.", false);
+
+            if (ice4jPropertyNames != null && !ice4jPropertyNames.isEmpty())
+            {
+                for (String propertyName : ice4jPropertyNames)
+                {
+                    System.clearProperty(propertyName);
+                }
+            }
+
+            // These properties are moved to ice4j. This is to make sure that we
+            // still support the old names.
+            String oldPrefix = "org.jitsi.videobridge";
+            String newPrefix = "org.ice4j.ice.harvest";
+            for (String propertyName : new String[]{
+                HarvesterConfiguration.NAT_HARVESTER_LOCAL_ADDRESS,
+                HarvesterConfiguration.NAT_HARVESTER_PUBLIC_ADDRESS,
+                HarvesterConfiguration.DISABLE_AWS_HARVESTER,
+                HarvesterConfiguration.FORCE_AWS_HARVESTER,
+                HarvesterConfiguration.STUN_MAPPING_HARVESTER_ADDRESSES})
+            {
+                String propertyValue = cfg.getString(propertyName);
+
+                if (propertyValue != null)
+                {
+                    String newPropertyName
+                        = newPrefix
+                        + propertyName.substring(oldPrefix.length());
+                    System.clearProperty(newPropertyName);
+                }
+            }
+
+            System.clearProperty(VideoChannel.ENABLE_LIPSYNC_HACK_PNAME);
+            System.clearProperty(RtxTransformer.DISABLE_NACK_TERMINATION_PNAME);
+        }
     }
 
     /**
