@@ -17,9 +17,7 @@ package org.jitsi.videobridge.xmpp;
 
 import java.util.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import net.java.sip.communicator.util.*;
 
 import org.jitsi.meet.*;
@@ -27,7 +25,6 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.xmpp.component.*;
 import org.jitsi.xmpp.util.*;
-import org.jivesoftware.smackx.iqversion.packet.Version;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.osgi.framework.*;
@@ -121,19 +118,7 @@ public class ComponentImpl
     @Override
     protected String[] discoInfoFeatureNamespaces()
     {
-        return
-            new String[]
-                    {
-                        ColibriConferenceIQ.NAMESPACE,
-                        HealthCheckIQ.NAMESPACE,
-                        ProtocolProviderServiceJabberImpl
-                            .URN_XMPP_JINGLE_DTLS_SRTP,
-                        ProtocolProviderServiceJabberImpl
-                            .URN_XMPP_JINGLE_ICE_UDP_1,
-                        ProtocolProviderServiceJabberImpl
-                            .URN_XMPP_JINGLE_RAW_UDP_0,
-                        Version.NAMESPACE
-                    };
+        return XmppCommon.FEATURES.clone();
     }
 
     /**

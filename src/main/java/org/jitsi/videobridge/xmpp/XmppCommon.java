@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge.xmpp;
 
+import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import org.jitsi.osgi.*;
@@ -34,6 +35,18 @@ import org.osgi.framework.*;
  */
 class XmppCommon
 {
+
+    static final String[] FEATURES
+        = new String[]
+        {
+            ColibriConferenceIQ.NAMESPACE,
+            HealthCheckIQ.NAMESPACE,
+            ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_DTLS_SRTP,
+            ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_ICE_UDP_1,
+            ProtocolProviderServiceJabberImpl.URN_XMPP_JINGLE_RAW_UDP_0,
+            Version.NAMESPACE
+    };
+
     /**
      * The <tt>BundleContext</tt> in which this instance has been started as an
      * OSGi bundle.
