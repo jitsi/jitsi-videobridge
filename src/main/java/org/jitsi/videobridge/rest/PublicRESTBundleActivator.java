@@ -19,6 +19,7 @@ import org.eclipse.jetty.rewrite.handler.*;
 import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.handler.*;
 import org.eclipse.jetty.servlet.*;
+import org.eclipse.jetty.servlets.*;
 import org.eclipse.jetty.util.resource.*;
 import org.jitsi.rest.*;
 import org.jitsi.util.*;
@@ -59,6 +60,9 @@ public class PublicRESTBundleActivator
 
     public static final String JETTY_RESOURCE_HANDLER_RESOURCE_BASE_PNAME
         = ".jetty.ResourceHandler.resourceBase";
+
+    public static final String JETTY_CORS_ALLOWED_ORIGINS
+        = ".jetty.cors.allowedOrigins";
 
     /**
      * Prefix that can configure multiple location aliases.
@@ -258,6 +262,26 @@ public class PublicRESTBundleActivator
                     holder.setInitParameter("hostHeader", hostHeader);
 
                 servletContextHandler.addServlet(holder, pathSpec);
+
+                // CORS
+                String allowedOrigins
+                    = ConfigUtils.getString(
+                        cfg,
+                        JETTY_PROPERTY_PREFIX
+                            + JETTY_CORS_ALLOWED_ORIGINS,
+                        null);
+                if (allowedOrigins != null && allowedOrigins.length() != 0)
+                {
+                    FilterHolder filterHolder = servletContextHandler.addFilter(
+                        CrossOriginFilter.class,
+                        "/*",
+                        EnumSet.of(DispatcherType.REQUEST)
+                    );
+                    filterHolder.setInitParameter(
+                        CrossOriginFilter.ALLOWED_ORIGINS_PARAM,
+                        allowedOrigins
+                    );
+                }
             }
         }
         return holder;
