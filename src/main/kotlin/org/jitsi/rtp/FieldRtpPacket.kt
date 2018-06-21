@@ -93,48 +93,6 @@ open class Field(val size: Int, val type: FieldSizeType, val bitOffset: Int? = n
         }
         return result
     }
-    inline fun<reified Type> parseAs(buf: ByteBuffer): Type {
-        if (type == FieldSizeType.BITS) {
-            if (size > 8) {
-                TODO()
-            }
-            if (bitOffset != null && bitOffset + size > 8) {
-                TODO()
-            }
-            val originalBufferPosition = buf.position()
-            val bitStartPos = bitOffset ?: 0
-            val result = if (Type::class == Boolean::class) {
-                buf.get().getBitAsBool(bitStartPos) as Type
-            } else {
-                // The .toInt() hack is weird, but compiler complains when trying to
-                // cast a Byte to an Int and this works around it
-                buf.get().getBits(bitStartPos, size).toInt() as Type
-            }
-            // Only advance the buffer one byte if we ended at the byte boundary
-            //println("Starting at position $bitStartPos and read $size bits, ending at bit ${bitStartPos + size - 1}")
-            if ((bitStartPos + size) % 8 != 0) {
-                //println("Didn't reach end of byte, resetting")
-                buf.position(originalBufferPosition)
-            }
-            return result
-        } else {
-            //println("Reading $size bytes to type ${Type::class}")
-            val data: Number = when (size) {
-                1 -> buf.get()
-                2 -> buf.getShort()
-                4 -> buf.getInt()
-                8 -> buf.getLong()
-                else -> throw UnsupportedOperationException()
-            }
-            return when (Type::class) {
-                Byte::class -> data.toByte() as Type
-                Short::class -> data.toShort() as Type
-                Int::class -> data.toInt() as Type
-                Long::class -> data.toLong() as Type
-                else -> TODO()
-            }
-        }
-    }
 }
 
 open class MultiField(val sizeBytes: Int, val numFields: Int) {
@@ -149,25 +107,6 @@ open class MultiField(val sizeBytes: Int, val numFields: Int) {
             }
         }
 
-    }
-    inline fun<reified Type> parse(buf: ByteBuffer): List<Type> {
-        //println("Reading $numFields fields of $sizeBytes each starting at position ${buf.position()}")
-        return (0 until numFields).map {
-            val data: Number = when (sizeBytes) {
-                1 -> buf.get()
-                2 -> buf.getShort()
-                4 -> buf.getInt()
-                8 -> buf.getLong()
-                else -> throw UnsupportedOperationException()
-            }
-            when (Type::class) {
-                Byte::class -> data.toByte() as Type
-                Short::class -> data.toShort() as Type
-                Int::class -> data.toInt() as Type
-                Long::class -> data.toLong() as Type
-                else -> TODO()
-            }
-        }
     }
 }
 
