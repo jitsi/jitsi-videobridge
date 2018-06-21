@@ -756,7 +756,7 @@ public class IceUdpTransportManager
             = ServiceUtils.getService(
                     getBundleContext(),
                     ConfigurationService.class);
-        boolean enableDynamicHostHarvester = true;
+        boolean disableDynamicHostHarvester = false;
 
         if (rtcpmux)
         {
@@ -779,13 +779,17 @@ public class IceUdpTransportManager
                 for (CandidateHarvester harvester : singlePortHarvesters)
                 {
                     iceAgent.addCandidateHarvester(harvester);
-                    enableDynamicHostHarvester = false;
+                    disableDynamicHostHarvester = true;
                 }
             }
         }
 
-        // Use dynamic ports iff we're not using "single port".
-        iceAgent.setUseHostHarvester(enableDynamicHostHarvester);
+        // Disable dynamic ports (UDP) if we're using "single port" (UPD), as
+        // there's no need for a client to try a similar UDP candidate twice.
+        if (disableDynamicHostHarvester)
+        {
+            iceAgent.setUseHostHarvester(false);
+        }
     }
 
     /**
