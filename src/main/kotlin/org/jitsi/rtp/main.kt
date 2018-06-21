@@ -15,18 +15,21 @@
  */
 package org.jitsi.rtp
 
+import java.lang.Thread.sleep
 import java.nio.ByteBuffer
+import kotlin.system.measureTimeMillis
+
+fun perfTest(packetData: ByteBuffer, packetCreator: (ByteBuffer) -> RtpPacket): Long {
+    return measureTimeMillis {
+        repeat(1_000_000) {
+            val packet = packetCreator(packetData)
+            packetData.rewind()
+        }
+    }
+
+}
 
 fun main(args: Array<String>) {
-//    val b: Byte = 0b01001111
-    // << 1 = 0b11111110
-    // >> 4 = 0b00001111
-//    for (i in 0..7) {
-//        println(b.getBit(i))
-//    }
-
-//    println(b.getBits(4, 6))
-
     // v=2, p=1, x=1, cc=3 = 0xB3
     // m=1, pt=96 = 0xE0
     // seqnum 4224 = 0x10 0x80
@@ -35,8 +38,6 @@ fun main(args: Array<String>) {
     // csrc 1 = 0x00 0x00 0x00 0x01
     // csrc 2 = 0x00 0x00 0x00 0x02
     // csrc 3 = 0x00 0x00 0x00 0x03
-
-
     val packetData = ByteBuffer.wrap(byteArrayOf(
         0xB3.toByte(),  0xE0.toByte(),  0x10,           0x80.toByte(),
         0x00,           0x01,           0x81.toByte(),  0xCD.toByte(),
@@ -46,18 +47,31 @@ fun main(args: Array<String>) {
         0x00,           0x00,           0x00,           0x03
     ))
 
-    val packet = RtpPacket(packetData)
-
-    println("version: ${packet.version}")
-    println("has padding: ${packet.hasPadding}")
-    println("has extension: ${packet.hasExtension}")
-    println("csrc count: ${packet.csrcCount}")
-    println("marker: ${packet.marker}")
-    println("pt: ${packet.payloadType}")
-    println("seqnum: ${packet.sequenceNumber}")
-    println("timestamp: ${packet.timestamp}")
-    println("ssrc: ${packet.ssrc}")
-    println("csrcs: ${packet.csrcs}")
+    val bbPacket = BitBufferPacket(packetData.asReadOnlyBuffer())
+    println("BitBufferPacket: \n$bbPacket")
+    packetData.rewind()
 
 
+
+    val fp = FieldRtpPacket(packetData.asReadOnlyBuffer())
+    println("FieldRtpPacket: \n$fp")
+    packetData.rewind()
+
+    val packet = AbsoluteIndexRtpPacket(packetData)
+    println("RtpPacket: \n$packet")
+
+
+    val rtpPacketTimes = mutableListOf<Long>()
+    val bitBufferPacketTimes = mutableListOf<Long>()
+    val fieldPacketTimes = mutableListOf<Long>()
+    sleep(10000)
+    repeat (10) {
+        fieldPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> FieldRtpPacket(p)})
+        bitBufferPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> BitBufferPacket(p)})
+        rtpPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> AbsoluteIndexRtpPacket(p)})
+    }
+    println("RtpPacket took an average of ${rtpPacketTimes.average()}ms")
+    println("BitBufferPacket took an average of ${bitBufferPacketTimes.average()}ms")
+    println("FieldRtpPacket took an average of ${fieldPacketTimes.average()}ms")
 }
+

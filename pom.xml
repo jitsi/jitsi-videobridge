@@ -10,6 +10,8 @@
 
     <properties>
         <kotlin.version>1.2.50</kotlin.version>
+        <kotlintest.version>3.1.6</kotlintest.version>
+        <junit.version>5.2.0</junit.version>
     </properties>
 
     <dependencies>
@@ -24,8 +26,21 @@
             <version>${kotlin.version}</version>
             <scope>test</scope>
         </dependency>
-    </dependencies>
 
+        <!--Testing dependencies-->
+        <dependency>
+            <groupId>io.kotlintest</groupId>
+            <artifactId>kotlintest-runner-junit5</artifactId>
+            <version>${kotlintest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
     <build>
         <plugins>
             <plugin>
