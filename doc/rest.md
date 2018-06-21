@@ -77,7 +77,7 @@ Examples
 ==============
 
 ### Example 1
-Enable only the private interface with HTTP on the default port (8080): no conifguration properties are required.
+Enable only the private interface with HTTP on the default port (8080): no configuration properties are required.
 
 ### Example 2
 Enable only the private interface with HTTPS on port 4443:
