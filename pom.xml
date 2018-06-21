@@ -71,6 +71,9 @@
                 </executions>
                 <configuration>
                     <jvmTarget>1.8</jvmTarget>
+                    <args>
+                        <arg>-Xcoroutines=enable</arg>
+                    </args>
                 </configuration>
             </plugin>
         </plugins>
