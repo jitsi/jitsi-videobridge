@@ -32,8 +32,8 @@ import java.nio.ByteBuffer
 // buf should point to the start of the ID field of this extension
 class RtpTwoByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
     override val id = buf.get().toInt()
-    private val lengthBytes = buf.get().toInt()
-    val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
+    override val lengthBytes = buf.get().toInt()
+    override val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
 
     companion object {
         const val COOKIE: Short = 0x1000.toShort()
@@ -45,6 +45,16 @@ class RtpTwoByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
         buf.position(buf.position() + lengthBytes)
         // Consume any trailing padding
         consumePadding(buf)
+    }
+
+    override fun serializeToBuffer(buf: ByteBuffer) {
+        buf.put(id.toByte())
+        buf.put(lengthBytes.toByte())
+        // Make a new view of the buffer and rewind it so we don't
+        // affect any operation currently operating on data
+        val rewoundData = data.duplicate()
+        rewoundData.rewind()
+        buf.put(rewoundData)
     }
 
     override fun toString(): String {

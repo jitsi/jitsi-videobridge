@@ -38,8 +38,9 @@ import java.nio.ByteBuffer
 class RtpOneByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
     private val bitBuffer = BitBuffer(buf)
     override val id = bitBuffer.getBits(4).toInt()
-    private val lengthBytes = bitBuffer.getBits(4).toInt() + 1
-    val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
+    override val lengthBytes = bitBuffer.getBits(4).toInt() + 1
+    //TODO: readonly?
+    override val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
 
     companion object {
         const val COOKIE: Short = 0xBEDE.toShort()
@@ -51,6 +52,18 @@ class RtpOneByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
         buf.position(buf.position() + lengthBytes)
         // Consume any trailing padding
         consumePadding(buf)
+    }
+
+    override fun serializeToBuffer(buf: ByteBuffer) {
+        with(BitBuffer(buf)) {
+            putBits(id.toByte(), 4)
+            putBits((lengthBytes - 1).toByte(), 4)
+            // Make a new view of the buffer and rewind it so we don't
+            // affect any operation currently operating on data
+            val rewoundData = data.duplicate()
+            rewoundData.rewind()
+            buf.put(rewoundData)
+        }
     }
 
     override fun toString(): String {

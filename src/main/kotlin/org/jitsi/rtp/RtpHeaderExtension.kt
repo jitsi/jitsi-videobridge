@@ -19,6 +19,8 @@ import java.nio.ByteBuffer
 
 abstract class RtpHeaderExtension {
     abstract val id: Int
+    protected abstract val lengthBytes: Int
+    abstract val data: ByteBuffer
     private val Byte.isPadding: Boolean
         get() = this == 0.toByte()
 
@@ -42,4 +44,6 @@ abstract class RtpHeaderExtension {
             buf.rewindOneByte()
         }
     }
+
+    abstract fun serializeToBuffer(buf: ByteBuffer)
 }
