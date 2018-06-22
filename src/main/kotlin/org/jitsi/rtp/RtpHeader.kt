@@ -41,6 +41,9 @@ abstract class RtpHeader {
     abstract var timestamp: Long
     abstract var ssrc: Long
     abstract var csrcs: List<Long>
+    abstract var extensions: Map<Int, RtpHeaderExtension>
+
+    fun getExtension(id: Int): RtpHeaderExtension? = extensions.getOrDefault(id, null)
 
     fun serializeToBuffer(buf: ByteBuffer) {
         with (BitBuffer(buf)) {
@@ -56,6 +59,7 @@ abstract class RtpHeader {
             csrcs.forEach {
                 buf.putInt(it.toInt())
             }
+            //TODO: extensions
         }
     }
 
@@ -71,6 +75,7 @@ abstract class RtpHeader {
             append("timestamp: $timestamp\n")
             append("ssrc: $ssrc\n")
             append("csrcs: $csrcs\n")
+            append("Extensions: $extensions")
             this.toString()
         }
     }

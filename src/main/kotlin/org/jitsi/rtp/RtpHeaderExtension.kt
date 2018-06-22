@@ -19,6 +19,9 @@ import java.nio.ByteBuffer
 
 abstract class RtpHeaderExtension {
     abstract val id: Int
+    private val Byte.isPadding: Boolean
+        get() = this == 0.toByte()
+
     //TODO: do we need to put a size limit on this, incase the first byte
     // of whatever the next field is (the payload) is 0?
     protected fun consumePadding(buf: ByteBuffer) {
@@ -26,11 +29,17 @@ abstract class RtpHeaderExtension {
         // to (maybe) advance it further past any padding bytes.  Padding
         // bytes will always be 0
         var currByte: Byte = 0
-        while (buf.hasRemaining() && currByte == 0.toByte()) {
+        while (buf.hasRemaining() && currByte.isPadding) {
             currByte = buf.get()
         }
-        // Now we've hit the ID of the next extension, so we need to rewind the buffer one
-        // byte
-        buf.rewindOneByte()
+        if (currByte != 0.toByte()) {
+            // We might have stopped because we reached the end of the buffer
+            // or because we hit the payload after padding.  If we hit
+            // the payload, the rewind the buffer by one so the next time
+            // we read we get this next non-padding byte)
+            // Now we've hit the ID of the next extension, so we need to rewind the buffer one
+            // byte
+            buf.rewindOneByte()
+        }
     }
 }

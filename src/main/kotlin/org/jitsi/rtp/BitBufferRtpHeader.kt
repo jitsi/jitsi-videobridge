@@ -21,6 +21,8 @@ import kotlin.reflect.KProperty
 //TODO: is this even necessary? doing it this way, what difference is there between
 // this scheme and just initializing (normal) variables with the buffer value and
 // then changing them to a manually set value later?
+// it will have a value for the payload, at least (which we wouldn't parse and copy
+// values from, just refer to)
 class CopyOnWriteDelegate<T>(private val bufferValue: T) {
     private var overriddenValue: T? = null
     operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
@@ -44,10 +46,12 @@ class BitBufferRtpHeader(buf: ByteBuffer) : RtpHeader() {
     override var timestamp: Long by CopyOnWriteDelegate(buf.getInt().toLong())
     override var ssrc: Long by CopyOnWriteDelegate(buf.getInt().toLong())
     override var csrcs: List<Long> by CopyOnWriteDelegate(listOf())
+    override var extensions: Map<Int, RtpHeaderExtension> by CopyOnWriteDelegate(mapOf())
 
     init {
         csrcs = (0 until csrcCount).map {
             buf.getInt().toLong()
         }
+        extensions = if (hasExtension) RtpHeaderExtensions.parse(buf) else mapOf()
     }
 }
