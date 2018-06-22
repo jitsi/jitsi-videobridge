@@ -44,5 +44,21 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
                 header.csrcs.shouldContainInOrder(listOf<Long>(1, 2, 3))
             }
         }
+        "writing" {
+            "should update the object's value" {
+                val header = BitBufferRtpHeader(headerData.asReadOnlyBuffer())
+                header.version = 10
+                header.version shouldBe 10
+                // We passed the buffer as readonly, so we know it hasn't been changed
+            }
+        }
+        "serializing" {
+            val header = BitBufferRtpHeader(headerData.asReadOnlyBuffer())
+            val newBuf = ByteBuffer.allocate(headerData.limit())
+            header.serializeToBuffer(newBuf)
+            newBuf.rewind()
+            headerData.rewind()
+            newBuf.compareTo(headerData) shouldBe 0
+        }
     }
 }

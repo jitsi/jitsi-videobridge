@@ -17,17 +17,47 @@ package org.jitsi.rtp
 
 import java.nio.ByteBuffer
 
+// https://tools.ietf.org/html/rfc3550#section-5.1
+// 0                   1                   2                   3
+// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                           timestamp                           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |           synchronization source (SSRC) identifier            |
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |            contributing source (CSRC) identifiers             |
+// |                             ....                              |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 abstract class RtpHeader {
-    abstract val version: Int
-    abstract val hasPadding: Boolean
-    abstract val hasExtension: Boolean
-    abstract val csrcCount: Int
-    abstract val marker: Boolean
-    abstract val payloadType: Int
-    abstract val sequenceNumber: Int
-    abstract val timestamp: Long
-    abstract val ssrc: Long
-    abstract val csrcs: List<Long>
+    abstract var version: Int
+    abstract var hasPadding: Boolean
+    abstract var hasExtension: Boolean
+    abstract var csrcCount: Int
+    abstract var marker: Boolean
+    abstract var payloadType: Int
+    abstract var sequenceNumber: Int
+    abstract var timestamp: Long
+    abstract var ssrc: Long
+    abstract var csrcs: List<Long>
+
+    fun serializeToBuffer(buf: ByteBuffer) {
+        with (BitBuffer(buf)) {
+            putBits(version.toByte(), 2)
+            putBoolean(hasPadding)
+            putBoolean(hasExtension)
+            putBits(csrcCount.toByte(), 4)
+            putBoolean(marker)
+            putBits(payloadType.toByte(), 7)
+            buf.putShort(sequenceNumber.toShort())
+            buf.putInt(timestamp.toInt())
+            buf.putInt(ssrc.toInt())
+            csrcs.forEach {
+                buf.putInt(it.toInt())
+            }
+        }
+    }
 
     override fun toString(): String {
         return with (StringBuffer()) {
@@ -44,58 +74,4 @@ abstract class RtpHeader {
             this.toString()
         }
     }
-}
-
-class AbsoluteIndexRtpHeader(private val buf: ByteBuffer) : RtpHeader() {
-    override val version: Int = buf.get(0).getBits(0, 2).toInt()
-    override val hasPadding: Boolean = buf.get(0).getBitAsBool(2)
-    override val hasExtension: Boolean = buf.get(0).getBitAsBool(3)
-    override val csrcCount: Int = buf.get(0).getBits(4, 4).toInt()
-    override val marker: Boolean = buf.get(1).getBitAsBool(0)
-    override val payloadType: Int = buf.get(1).getBits(1, 7).toInt()
-    override val sequenceNumber: Int = buf.getShort(2).toInt()
-    override val timestamp: Long = buf.getInt(4).toLong()
-    override val ssrc: Long = buf.getInt(8).toLong()
-    override val csrcs: List<Long>
-    init {
-        val csrcStartByteIndex = 12
-        val numBytesInInt = 4
-        csrcs = (0 until csrcCount).map { csrcIdx ->
-            val currCsrcByteIndex = csrcStartByteIndex + (csrcIdx * numBytesInInt)
-            buf.getInt(currCsrcByteIndex).toLong()
-        }
-    }
-}
-
-class BitBufferRtpHeader(buf: ByteBuffer) : RtpHeader() {
-    private val bitBuffer = BitBuffer(buf.asReadOnlyBuffer())
-    override val version = bitBuffer.getBits(2).toInt()
-    override val hasPadding = bitBuffer.getBitAsBoolean()
-    override val hasExtension = bitBuffer.getBitAsBoolean()
-    override val csrcCount = bitBuffer.getBits(4).toInt()
-    override val marker = bitBuffer.getBitAsBoolean()
-    override val payloadType = bitBuffer.getBits(7).toInt()
-    override val sequenceNumber = bitBuffer.getShort().toInt()
-    override val timestamp = bitBuffer.getInt().toLong()
-    override val ssrc = bitBuffer.getInt().toLong()
-    override val csrcs: List<Long>
-
-    init {
-        csrcs = (0 until csrcCount).map {
-            bitBuffer.getInt().toLong()
-        }
-    }
-}
-
-class FieldRtpHeader(buf: ByteBuffer) : RtpHeader() {
-    override val version = VersionField.parseAsInt(buf)
-    override val hasPadding = PaddingField.parseAsBoolean(buf)
-    override val hasExtension = ExtensionField.parseAsBoolean(buf)
-    override val csrcCount = CsrcCountField.parseAsInt(buf)
-    override val marker = MarkerField.parseAsBoolean(buf)
-    override val payloadType = PayloadTypeField.parseAsInt(buf)
-    override val sequenceNumber = SequenceNumberField.parseAsInt(buf)
-    override val timestamp = TimestampField.parseAsLong(buf)
-    override val ssrc = SsrcField.parseAsLong(buf)
-    override val csrcs = MultiField(sizeBytes = 4, numFields = csrcCount).parseAsLong(buf)
 }

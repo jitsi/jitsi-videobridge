@@ -16,19 +16,34 @@
 package org.jitsi.rtp
 
 import java.nio.ByteBuffer
+import kotlin.reflect.KProperty
+
+//TODO: is this even necessary? doing it this way, what difference is there between
+// this scheme and just initializing (normal) variables with the buffer value and
+// then changing them to a manually set value later?
+class CopyOnWriteDelegate<T>(private val bufferValue: T) {
+    private var overriddenValue: T? = null
+    operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        return overriddenValue ?: bufferValue
+    }
+
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
+        overriddenValue = value
+    }
+}
 
 class BitBufferRtpHeader(buf: ByteBuffer) : RtpHeader() {
     private val bitBuffer = BitBuffer(buf)
-    override val version = bitBuffer.getBits(2).toInt()
-    override val hasPadding = bitBuffer.getBitAsBoolean()
-    override val hasExtension = bitBuffer.getBitAsBoolean()
-    override val csrcCount = bitBuffer.getBits(4).toInt()
-    override val marker = bitBuffer.getBitAsBoolean()
-    override val payloadType = bitBuffer.getBits(7).toInt()
-    override val sequenceNumber = buf.getShort().toInt()
-    override val timestamp = buf.getInt().toLong()
-    override val ssrc = buf.getInt().toLong()
-    override val csrcs: List<Long>
+    override var version: Int by CopyOnWriteDelegate(bitBuffer.getBits(2).toInt())
+    override var hasPadding: Boolean by CopyOnWriteDelegate(bitBuffer.getBitAsBoolean())
+    override var hasExtension: Boolean by CopyOnWriteDelegate(bitBuffer.getBitAsBoolean())
+    override var csrcCount: Int by CopyOnWriteDelegate(bitBuffer.getBits(4).toInt())
+    override var marker: Boolean by CopyOnWriteDelegate(bitBuffer.getBitAsBoolean())
+    override var payloadType: Int by CopyOnWriteDelegate(bitBuffer.getBits(7).toInt())
+    override var sequenceNumber: Int by CopyOnWriteDelegate(buf.getShort().toInt())
+    override var timestamp: Long by CopyOnWriteDelegate(buf.getInt().toLong())
+    override var ssrc: Long by CopyOnWriteDelegate(buf.getInt().toLong())
+    override var csrcs: List<Long> by CopyOnWriteDelegate(listOf())
 
     init {
         csrcs = (0 until csrcCount).map {
