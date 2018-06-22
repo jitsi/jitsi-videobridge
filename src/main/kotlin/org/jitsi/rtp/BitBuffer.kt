@@ -77,6 +77,44 @@ class BitBuffer(private val buf: ByteBuffer) {
     }
 
     /**
+     * Write the right-most [numBits] bits from [data], e.g.:
+     * If data was the byte: 0b00000011 and numBits was 2,
+     * we'd write '11' into the next two bit positions
+     * of the buffer.
+     */
+    fun putBits(data: Byte, numBits: Int) {
+        maybeResetCurrBitPos()
+        validateOffset(numBits)
+        val currentPosition = buf.position()
+        var byte = buf.get()
+//        println("Byte $currentPosition was ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
+        for (i in (numBits - 1) downTo 0) {
+            // The bits in the given byte are 'right-aligned',
+            // but we write them from left to right, so
+            // we need to invert the position by doing 7 - i
+            val bit = data.getBit(7 - i)
+//            println("Setting bit $currBitPos to ${bit == 1}")
+            byte = putBit(byte, currBitPos++, bit == 1)
+        }
+        buf.put(currentPosition, byte)
+//        println("Byte $currentPosition is now ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
+        maybeResetBufPosition()
+    }
+
+    fun putBoolean(b: Boolean) {
+        maybeResetCurrBitPos()
+        validateOffset(1)
+        val currentPosition = buf.position()
+        var byte = buf.get()
+//        println("Byte $currentPosition was ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
+//        println("Setting bit $currBitPos to $b")
+        byte = putBit(byte, currBitPos++, b)
+//        println("Byte $currentPosition is now ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
+        buf.put(currentPosition, byte)
+        maybeResetBufPosition()
+    }
+
+    /**
      * Get the next bit interpreted as a [Boolean]
      */
     fun getBitAsBoolean(): Boolean {

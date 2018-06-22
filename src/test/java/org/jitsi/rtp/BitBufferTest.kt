@@ -50,5 +50,35 @@ internal class BitBufferTest : ShouldSpec() {
                 }
             }
         }
+        "putBits" {
+            val buffer = ByteBuffer.wrap(byteArrayOf(
+                0x00,   0x00,   0x00, 0x00
+            ))
+            val bitBuffer = BitBuffer(buffer)
+            "in a single byte" {
+                should("set them correctly") {
+                    bitBuffer.putBits(0b1, 1)
+                    buffer.get(0) shouldBe 0b10000000.toByte()
+
+                    bitBuffer.putBits(0b11.toByte(), 2)
+                    buffer.get(0) shouldBe 0b11100000.toByte()
+                }
+            }
+            "to fill one byte and then the next" {
+                should("set them correctly") {
+                    bitBuffer.putBits(0b11111111.toByte(), 8)
+                    bitBuffer.putBits(0b1.toByte(), 1)
+                    buffer.get(1) shouldBe 0b10000000.toByte()
+                }
+            }
+            "across byte boundaries" {
+                should("throw an exception") {
+                    bitBuffer.putBits(0b1111, 4)
+                    shouldThrow<InvalidArgumentException> {
+                        bitBuffer.putBits(0b11111, 5)
+                    }
+                }
+            }
+        }
     }
 }
