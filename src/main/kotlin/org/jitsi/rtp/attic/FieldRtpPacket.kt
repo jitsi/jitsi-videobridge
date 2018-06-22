@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp
+package org.jitsi.rtp.attic
 
+import org.jitsi.rtp.getBitAsBool
+import org.jitsi.rtp.getBits
 import java.nio.ByteBuffer
 
 enum class FieldSizeType {
@@ -121,6 +123,19 @@ object TimestampField : Field(4, FieldSizeType.BYTES)
 object SsrcField : Field(4, FieldSizeType.BYTES)
 //object CsrcField : MultiField(sizeBytes = 4, numFields = csrcCount
 
-class FieldRtpPacket(buf: ByteBuffer) : RtpPacket() {
-    override val header: RtpHeader = FieldRtpHeader(buf)
-}
+//class FieldRtpPacket(buf: ByteBuffer) : RtpPacket() {
+//    override val header: RtpHeader = FieldRtpHeader(buf)
+//}
+
+//class FieldRtpHeader(buf: ByteBuffer) : RtpHeader() {
+//    override val version = VersionField.parseAsInt(buf)
+//    override val hasPadding = PaddingField.parseAsBoolean(buf)
+//    override val hasExtension = ExtensionField.parseAsBoolean(buf)
+//    override val csrcCount = CsrcCountField.parseAsInt(buf)
+//    override val marker = MarkerField.parseAsBoolean(buf)
+//    override val payloadType = PayloadTypeField.parseAsInt(buf)
+//    override val sequenceNumber = SequenceNumberField.parseAsInt(buf)
+//    override val timestamp = TimestampField.parseAsLong(buf)
+//    override val ssrc = SsrcField.parseAsLong(buf)
+//    override val csrcs = MultiField(sizeBytes = 4, numFields = csrcCount).parseAsLong(buf)
+//}
