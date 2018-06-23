@@ -1,7 +1,5 @@
 package org.jitsi.rtp
 
-import io.kotlintest.matchers.maps.shouldContain
-import io.kotlintest.matchers.maps.shouldContainAll
 import io.kotlintest.matchers.maps.shouldContainKeys
 import io.kotlintest.matchers.types.shouldBeTypeOf
 import io.kotlintest.shouldBe
@@ -9,6 +7,8 @@ import io.kotlintest.specs.ShouldSpec
 import java.nio.ByteBuffer
 
 internal class RtpHeaderExtensionsTest : ShouldSpec() {
+    override fun isInstancePerTest(): Boolean = true
+
     private fun idLengthByte(id: Int, length: Int): Byte {
         return ((id shl 4) or length).toByte()
     }
@@ -18,7 +18,7 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
             idLengthByte(1, 0),   0x42,           idLengthByte(2, 1), 0x42,
             0x42,                            0x00,           0x00,                          idLengthByte(3, 3),
             0x42,                            0x42,           0x42,                          0x42,
-            // Fake payload
+            // dummy payload
             0x12,                            0x34,           0x56,                          0x78
         ))
         val twoByteHeaderExtBlock = ByteBuffer.wrap(byteArrayOf(
@@ -29,15 +29,28 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
             // dummy payload
             0x12,           0x34,           0x56,           0x78
         ))
-
         "parsing" {
             "a one byte header extension block" {
                 val extMap = RtpHeaderExtensions.parse(oneByteHeaderExtBlock)
                 should("parse all the extensions") {
                     extMap.size shouldBe 3
                     extMap.shouldContainKeys(1, 2, 3)
-                    for ((k, v) in extMap) {
-                        v.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                    extMap.values.forEach {
+                        it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                    }
+                }
+                "and then serializing it" {
+                    val buf = ByteBuffer.allocate(24)
+                    RtpHeaderExtensions.serialize(extMap, buf)
+                    should("have made sure it was word aligned") {
+                        buf.position() % 4 shouldBe 0
+                    }
+                    should("write it correctly") {
+                        buf.rewind()
+                        // Cookie
+                        buf.getShort() shouldBe RtpOneByteHeaderExtension.COOKIE
+                        // Length
+                        buf.getShort().toInt() shouldBe 3
                     }
                 }
             }
@@ -46,8 +59,22 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                 should("parse all the extensions") {
                     extMap.size shouldBe 3
                     extMap.shouldContainKeys(1, 2, 3)
-                    for ((k, v) in extMap) {
-                        v.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
+                    extMap.values.forEach {
+                        it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
+                    }
+                }
+                "and then serializing it" {
+                    val buf = ByteBuffer.allocate(24)
+                    RtpHeaderExtensions.serialize(extMap, buf)
+                    should("have made sure it was word aligned") {
+                        buf.position() % 4 shouldBe 0
+                    }
+                    should("write it correctly") {
+                        buf.rewind()
+                        // Cookie
+                        buf.getShort() shouldBe RtpTwoByteHeaderExtension.COOKIE
+                        // Length
+                        buf.getShort().toInt() shouldBe 3
                     }
                 }
             }
