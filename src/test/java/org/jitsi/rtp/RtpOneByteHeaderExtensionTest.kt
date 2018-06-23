@@ -22,120 +22,79 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
         // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
         // |                          data                                 |
         // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-        val extensionBlock = ByteBuffer.wrap(byteArrayOf(
-            0xBE.toByte(),                   0xDE.toByte(),  0x00,                          0x03,
-            idLengthByte(1, 0),   0x42,           idLengthByte(2, 1), 0x42,
-            0x42,                            0x00,           0x00,                          idLengthByte(3, 3),
-            0x42,                            0x42,           0x42,                          0x42,
-            // Fake payload
-            0x12,                            0x34,           0x56,                          0x78
-        ))
-
         "parsing" {
             // Read past the cookie and length
-            extensionBlock.position(4)
             "an extension with length 0" {
-                val ext = RtpOneByteHeaderExtension(extensionBlock)
-                should("have the right id, size, and data") {
+                val length0Extension = ByteBuffer.wrap(byteArrayOf(
+                    idLengthByte(1, 0), 0x42
+                ))
+                val ext = RtpOneByteHeaderExtension(length0Extension)
+                should("have the correct id, length and data") {
                     ext.id shouldBe 1
                     ext.data.limit() shouldBe 1
                     ext.data.get() shouldBe 0x42.toByte()
                 }
-                should("leave the buffer position in the right palce") {
-                    extensionBlock.position() shouldBe 6
+                should("parse to the end of the extension") {
+                    length0Extension.remaining() shouldBe 0
+                }
+                "and then serializing it" {
+                    val buf = ByteBuffer.allocate(48)
+                    ext.serializeToBuffer(buf)
+                    should("have written the correct amount of data") {
+                        buf.position() shouldBe 2
+                    }
+                    should("have written the right id, size, and data") {
+                        buf.rewind()
+                        with(BitBuffer(buf)) {
+                            // Id
+                            getBits(4).toInt() shouldBe 1
+                            // Length
+                            getBits(4).toInt() shouldBe 0
+                        }
+                        // Data
+                        buf.get() shouldBe 0x42.toByte()
+                    }
                 }
             }
             "an extension with padding" {
-                extensionBlock.position(6)
-                val ext = RtpOneByteHeaderExtension(extensionBlock)
+                val extensionWithPadding = ByteBuffer.wrap(byteArrayOf(
+                    idLengthByte(1, 3), 0x42, 0x42, 0x42,
+                    0x42, 0x00, 0x00
+                ))
+                val ext = RtpOneByteHeaderExtension(extensionWithPadding)
                 should("have the right id, size, and data") {
-                    ext.id shouldBe 2
-                    ext.data.limit() shouldBe 2
-                    repeat(ext.data.limit()) {
-                        ext.data.get() shouldBe 0x42.toByte()
-                    }
-                }
-                should("have left the buffer position to after the padding") {
-                    extensionBlock.position() shouldBe 11
-                }
-            }
-            "an extension with length 3" {
-                extensionBlock.position(11)
-                val ext = RtpOneByteHeaderExtension(extensionBlock)
-                should("have the right id, size and data") {
-                    ext.id shouldBe 3
+                    ext.id shouldBe 1
                     ext.data.limit() shouldBe 4
                     repeat(ext.data.limit()) {
                         ext.data.get() shouldBe 0x42.toByte()
                     }
                 }
-                should("have left the buffer in the right position") {
-                    extensionBlock.position() shouldBe 16
+                should("parse to the end of the extensions") {
+                    extensionWithPadding.remaining() shouldBe 0
+                }
+                "and then serializing it" {
+                    val buf = ByteBuffer.allocate(48)
+                    ext.serializeToBuffer(buf)
+                    should("have written the correct amount of data") {
+                        buf.position() shouldBe 5
+                    }
+                    should("have written the right id, size, and data") {
+                        buf.rewind()
+                        with(BitBuffer(buf)) {
+                            // Id
+                            getBits(4).toInt() shouldBe 1
+                            // Length
+                            getBits(4).toInt() shouldBe 3
+                        }
+                        // Data
+                        repeat(4) {
+                            buf.get() shouldBe 0x42.toByte()
+                        }
+                    }
                 }
             }
             "an extension with id 15" {
                 //TODO: should throw so we know to stop parsing
-            }
-        }
-        "serializing" {
-            val buf = ByteBuffer.allocate(48)
-            // Read past the cookie and length
-            extensionBlock.position(4)
-            "an extension with length 0" {
-                val ext = RtpOneByteHeaderExtension(extensionBlock)
-                ext.serializeToBuffer(buf)
-                should("have written the correct amount of data") {
-                    buf.position() shouldBe 2
-                }
-                buf.rewind()
-                should("have written the right id, size, and data") {
-                    with (BitBuffer(buf)) {
-                        // Id
-                        getBits(4).toInt() shouldBe 1
-                        // Length (the written length is the actual length - 1)
-                        getBits(4).toInt() shouldBe 0
-                    }
-                    buf.get() shouldBe 0x42.toByte()
-                }
-            }
-            "an extension with length 1" {
-                extensionBlock.position(6)
-                val ext = RtpOneByteHeaderExtension(extensionBlock)
-                ext.serializeToBuffer(buf)
-                should("have written the correct amount of data") {
-                    buf.position() shouldBe 3
-                }
-                buf.rewind()
-                should("have written the right id, size, and data") {
-                    with(BitBuffer(buf)) {
-                        getBits(4).toInt() shouldBe 2
-                        getBits(4).toInt() shouldBe 1
-                    }
-                    repeat(2) {
-                        buf.get() shouldBe 0x42.toByte()
-                    }
-                }
-                should("have left the buffer position to after the padding") {
-                    extensionBlock.position() shouldBe 11
-                }
-            }
-            "an extension with length 3" {
-                extensionBlock.position(11)
-                val ext = RtpOneByteHeaderExtension(extensionBlock)
-                ext.serializeToBuffer(buf)
-                should("have written the correct amount of data") {
-                    buf.position() shouldBe 5
-                }
-                buf.rewind()
-                should("have written the right id, size and data") {
-                    with(BitBuffer(buf)) {
-                        getBits(4).toInt() shouldBe 3
-                        getBits(4).toInt() shouldBe 3
-                    }
-                    repeat(4) {
-                        buf.get() shouldBe 0x42.toByte()
-                    }
-                }
             }
         }
     }
