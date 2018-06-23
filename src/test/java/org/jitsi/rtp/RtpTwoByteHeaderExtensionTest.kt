@@ -2,7 +2,6 @@ package org.jitsi.rtp
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import org.junit.jupiter.api.Assertions.*
 import java.nio.ByteBuffer
 
 internal class RtpTwoByteHeaderExtensionTest : ShouldSpec() {
@@ -19,104 +18,67 @@ internal class RtpTwoByteHeaderExtensionTest : ShouldSpec() {
         // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
         // |                          data                                 |
         // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-        val extensionBlock = ByteBuffer.wrap(byteArrayOf(
-            0x10,           0x00,           0x00,           0x03,
-            0x01,           0x00,           0x02,           0x01,
-            0x42.toByte(),  0x00,           0x03,           0x04,
-            0x42.toByte(),  0x42.toByte(),  0x42.toByte(),  0x42.toByte(),
-            // dummy payload
-            0x12,           0x34,           0x56,           0x78
-        ))
         "parsing" {
-            // Read past the cookie and length
-            extensionBlock.position(4)
-            "an extension with length 0" {
-                val ext = RtpTwoByteHeaderExtension(extensionBlock)
+            "and extension with length 0" {
+                val length0Extension = ByteBuffer.wrap(
+                    byteArrayOf(
+                        0x01, 0x00
+                    )
+                )
+                val ext = RtpTwoByteHeaderExtension(length0Extension)
                 should("have the right id, size and data") {
                     ext.id shouldBe 1
                     ext.data.limit() shouldBe 0
                 }
-                should("have left the buffer in the right position") {
-                    extensionBlock.position() shouldBe 6
+                should("parse to the end of the extension") {
+                    length0Extension.remaining() shouldBe 0
+                }
+                "and then serializing it" {
+                    val buf = ByteBuffer.allocate(24)
+                    ext.serializeToBuffer(buf)
+                    should("have written the correct amount of data") {
+                        buf.position() shouldBe 2
+                    }
+                    should("have written the right id, size, and data") {
+                        buf.rewind()
+                        // id
+                        buf.get().toInt() shouldBe 1
+                        // length
+                        buf.get().toInt() shouldBe 0
+                    }
                 }
             }
-            "an extension with length 1 and padding" {
-                extensionBlock.position(6)
-                val ext = RtpTwoByteHeaderExtension(extensionBlock)
+            "an extension with padding" {
+                val extensionWithPadding = ByteBuffer.wrap(byteArrayOf(
+                    0x01, 0x03, 0x42, 0x42,
+                    0x42, 0x00, 0x00, 0x00
+                ))
+                val ext = RtpTwoByteHeaderExtension(extensionWithPadding)
                 should("have the right id, size and data") {
-                    ext.id shouldBe 2
-                    ext.data.limit() shouldBe 1
-                    ext.data.get() shouldBe 0x42.toByte()
-                }
-                should("have left the buffer in the right position") {
-                    extensionBlock.position() shouldBe 10
-                }
-            }
-            "an extension with length 4" {
-                extensionBlock.position(10)
-                val ext = RtpTwoByteHeaderExtension(extensionBlock)
-                should("have the right id, size and data") {
-                    ext.id shouldBe 3
-                    ext.data.limit() shouldBe 4
-                    repeat(ext.data.limit()) {
+                    ext.id shouldBe 1
+                    ext.data.limit() shouldBe 3
+                    repeat(3) {
                         ext.data.get() shouldBe 0x42.toByte()
                     }
                 }
-                should("have left the buffer in the right position") {
-                    extensionBlock.position() shouldBe 16
+                should("parse to the end of the extensions") {
+                    extensionWithPadding.remaining() shouldBe 0
                 }
-            }
-        }
-        "serializing" {
-            val buf = ByteBuffer.allocate(48)
-            // Read past the cookie and length
-            extensionBlock.position(4)
-            "an extension with length 0" {
-                val ext = RtpTwoByteHeaderExtension(extensionBlock)
-                ext.serializeToBuffer(buf)
-                should("have written the correct amount of data") {
-                    buf.position() shouldBe 2
-                }
-                should("have written the right id and length") {
-                    // Id
-                    buf.get(0).toInt() shouldBe 1
-                    // Length
-                    buf.get(1).toInt() shouldBe 0
-                }
-            }
-            "an extension with length 1" {
-                extensionBlock.position(6)
-                val ext = RtpTwoByteHeaderExtension(extensionBlock)
-                ext.serializeToBuffer(buf)
-                should("have written the correct amount of data") {
-                    buf.position() shouldBe 3
-                }
-                buf.rewind()
-                should("have written the right id, length and data") {
-                    // Id
-                    buf.get(0).toInt() shouldBe 2
-                    // Length
-                    buf.get(1).toInt() shouldBe 1
-                    // Data
-                    buf.get(2) shouldBe 0x42.toByte()
-                }
-            }
-            "an extension with length 4" {
-                extensionBlock.position(10)
-                val ext = RtpTwoByteHeaderExtension(extensionBlock)
-                ext.serializeToBuffer(buf)
-                should("have written the correct amount of data") {
-                    buf.position() shouldBe 6
-                }
-                buf.rewind()
-                should("have written the right id, length and data") {
-                    // Id
-                    buf.get(0).toInt() shouldBe 3
-                    // Length
-                    buf.get(1).toInt() shouldBe 4
-                    // Data
-                    for (i in 2 until 6) {
-                        buf.get(i) shouldBe 0x42.toByte()
+                "and then serializing it" {
+                    val buf = ByteBuffer.allocate(24)
+                    ext.serializeToBuffer(buf)
+                    should("have written the correct amount of data") {
+                        buf.position() shouldBe 5
+                    }
+                    should("have written the right id, size, and data") {
+                        buf.rewind()
+                        // id
+                        buf.get().toInt() shouldBe 1
+                        // length
+                        buf.get().toInt() shouldBe 3
+                        repeat(3) {
+                            buf.get() shouldBe 0x42.toByte()
+                        }
                     }
                 }
             }
