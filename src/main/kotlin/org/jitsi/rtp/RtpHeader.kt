@@ -45,6 +45,8 @@ abstract class RtpHeader {
 
     fun getExtension(id: Int): RtpHeaderExtension? = extensions.getOrDefault(id, null)
 
+    abstract fun clone(): RtpHeader
+
     fun serializeToBuffer(buf: ByteBuffer) {
         with (BitBuffer(buf)) {
             putBits(version.toByte(), 2)

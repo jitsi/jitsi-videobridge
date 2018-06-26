@@ -51,7 +51,7 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
         0x42,                            0x00,           0x00,                          idLengthByte(3, 3),
         0x42,                            0x42,           0x42,                          0x42
     )))
-    val headerWithTwoByteExtensions = ByteBuffer.wrap(headerWithExtensionBit.plus(byteArrayOf(
+    private val headerWithTwoByteExtensions = ByteBuffer.wrap(headerWithExtensionBit.plus(byteArrayOf(
         0x10,           0x00,           0x00,           0x03,
         0x01,           0x00,           0x02,           0x01,
         0x42.toByte(),  0x00,           0x03,           0x04,

@@ -16,42 +16,44 @@
 package org.jitsi.rtp
 
 import java.nio.ByteBuffer
-import kotlin.reflect.KProperty
 
-//TODO: is this even necessary? doing it this way, what difference is there between
-// this scheme and just initializing (normal) variables with the buffer value and
-// then changing them to a manually set value later?
-// it will have a value for the payload, at least (which we wouldn't parse and copy
-// values from, just refer to)
-class CopyOnWriteDelegate<T>(private val bufferValue: T) {
-    private var overriddenValue: T? = null
-    operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
-        return overriddenValue ?: bufferValue
-    }
-
-    operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-        overriddenValue = value
-    }
-}
-
-class BitBufferRtpHeader(buf: ByteBuffer) : RtpHeader() {
+class BitBufferRtpHeader(private val buf: ByteBuffer) : RtpHeader() {
     private val bitBuffer = BitBuffer(buf)
-    override var version: Int by CopyOnWriteDelegate(bitBuffer.getBits(2).toInt())
-    override var hasPadding: Boolean by CopyOnWriteDelegate(bitBuffer.getBitAsBoolean())
-    override var hasExtension: Boolean by CopyOnWriteDelegate(bitBuffer.getBitAsBoolean())
-    override var csrcCount: Int by CopyOnWriteDelegate(bitBuffer.getBits(4).toInt())
-    override var marker: Boolean by CopyOnWriteDelegate(bitBuffer.getBitAsBoolean())
-    override var payloadType: Int by CopyOnWriteDelegate(bitBuffer.getBits(7).toInt())
-    override var sequenceNumber: Int by CopyOnWriteDelegate(buf.getShort().toInt())
-    override var timestamp: Long by CopyOnWriteDelegate(buf.getInt().toLong())
-    override var ssrc: Long by CopyOnWriteDelegate(buf.getInt().toLong())
-    override var csrcs: List<Long> by CopyOnWriteDelegate(listOf())
-    override var extensions: Map<Int, RtpHeaderExtension> by CopyOnWriteDelegate(mapOf())
+    override var version: Int = bitBuffer.getBits(2).toInt()
+    override var hasPadding: Boolean = bitBuffer.getBitAsBoolean()
+    override var hasExtension: Boolean = bitBuffer.getBitAsBoolean()
+    override var csrcCount: Int = bitBuffer.getBits(4).toInt()
+    override var marker: Boolean = bitBuffer.getBitAsBoolean()
+    override var payloadType: Int = bitBuffer.getBits(7).toInt()
+    override var sequenceNumber: Int = buf.getShort().toInt()
+    override var timestamp: Long = buf.getInt().toLong()
+    override var ssrc: Long = buf.getInt().toLong()
+    override var csrcs: List<Long> = listOf()
+    override var extensions: Map<Int, RtpHeaderExtension> = mapOf()
 
     init {
         csrcs = (0 until csrcCount).map {
             buf.getInt().toLong()
         }
         extensions = if (hasExtension) RtpHeaderExtensions.parse(buf) else mapOf()
+    }
+
+    override fun clone(): RtpHeader {
+        val clone = BitBufferRtpHeader(buf.duplicate().rewind() as ByteBuffer)
+        // The above creation will have the clone read all values from the buffer,
+        // so we need to apply any overrides
+        clone.version = version
+        clone.hasPadding = hasPadding
+        clone.hasExtension = hasExtension
+        clone.csrcCount = csrcCount
+        clone.marker = marker
+        clone.payloadType = payloadType
+        clone.sequenceNumber = sequenceNumber
+        clone.timestamp = timestamp
+        clone.ssrc = ssrc
+        clone.csrcs = csrcs.toList()
+        clone.extensions = extensions.toMap()
+
+        return clone
     }
 }
