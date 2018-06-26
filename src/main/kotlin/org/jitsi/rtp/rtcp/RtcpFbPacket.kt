@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp
+package org.jitsi.rtp.rtcp
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.1

@@ -24,7 +24,7 @@ abstract class RtpHeaderExtension {
     private val Byte.isPadding: Boolean
         get() = this == 0.toByte()
 
-    //TODO: do we need to put a size limit on this, incase the first byte
+    //TODO: do we need to put a size limit on this, in case the first byte
     // of whatever the next field is (the payload) is 0?
     protected fun consumePadding(buf: ByteBuffer) {
         // At this point the buffer is at the end of the data.  Now we need

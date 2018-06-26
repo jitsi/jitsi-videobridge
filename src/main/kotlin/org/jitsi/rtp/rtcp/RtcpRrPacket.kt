@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp
+package org.jitsi.rtp.rtcp
 
 import java.nio.ByteBuffer
 
@@ -23,16 +23,18 @@ import java.nio.ByteBuffer
  * https://tools.ietf.org/html/rfc3550#section-6.4.2
  */
 class RtcpRrPacket(buf: ByteBuffer) {
-    val header = RtcpHeader(buf)
+    val header = RtcpHeader.create(buf)
     val reportBlocks = mutableListOf<ReportBlock>()
 
     init {
         var blockStartPositionBytes = 28
+        repeat(header.reportCount) {
+
+        }
         for (i in 0 until header.reportCount) {
             val reportBlockBuf = (buf.position(blockStartPositionBytes) as ByteBuffer).slice()
             reportBlocks.add(ReportBlock(reportBlockBuf))
             blockStartPositionBytes += ReportBlock.SIZE_BYTES
         }
     }
-
 }

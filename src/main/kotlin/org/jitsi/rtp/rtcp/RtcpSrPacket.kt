@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp
+package org.jitsi.rtp.rtcp
 
 import java.nio.ByteBuffer
 
@@ -92,20 +92,21 @@ class SenderInfo(buf: ByteBuffer) {
 }
 
 /**
- * Buf is a buffer which starts at the beginning of the RTCP header
+ * [buf] is a buffer which starts at the beginning of the RTCP header
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
+//TODO: should we actually copy values from the buffer?  or should
+// we read into the buffer on each access (unless they've been overridden)?
+// is there a noticeable performance difference between these two schemes?
+// (both in repeated copy scenarios and repeated access scenarios)
 class RtcpSrPacket(buf: ByteBuffer) {
-    val header = RtcpHeader(buf)
-    val senderInfo = SenderInfo((buf.position(SenderInfo.RTCP_OFFSET_BYTES) as ByteBuffer).slice())
+    val header = RtcpHeader.create(buf)
+    val senderInfo = SenderInfo(buf)
     val reportBlocks = mutableListOf<ReportBlock>()
 
     init {
-        var blockStartPositionBytes = 28
-        for (i in 0 until header.reportCount) {
-            val reportBlockBuf = (buf.position(blockStartPositionBytes) as ByteBuffer).slice()
-            reportBlocks.add(ReportBlock(reportBlockBuf))
-            blockStartPositionBytes += ReportBlock.SIZE_BYTES
+        repeat(header.reportCount) {
+            reportBlocks.add(ReportBlock(buf))
         }
     }
 }

@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp
+package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.getBitAsBool
+import org.jitsi.rtp.getBits
 import java.nio.ByteBuffer
 
 // RTCP Header
@@ -26,38 +28,28 @@ import java.nio.ByteBuffer
 // |                         SSRC of sender                        |
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 
-/**
- * [buf] is a buffer whose start is the start of the RTCP header
- */
-class RtcpHeader(buf: ByteBuffer) {
-    val version: Int = buf.get(0).getBits(0, 1).toInt()
-    val hasPadding: Boolean = buf.get(0).getBitAsBool(2)
-    val reportCount: Int = buf.get(0).getBits(3, 7).toInt()
-    val payloadType: Int = buf.get(1).getBits(1, 7).toInt()
-    val length: Int = buf.get(2).getBits(16, 31).toInt()
-    val senderSsrc: Long = buf.getInt(4).toLong()
+abstract class RtcpHeader {
+    abstract var version: Int
+    abstract var hasPadding: Boolean
+    abstract var reportCount: Int
+    abstract var payloadType: Int
+    abstract var length: Int
+    abstract var senderSsrc: Long
 
-    init {
-        parseFields(buf) {
-            //version = valueOf(2.bits())
-            //padding(1.bit.toBool)
-            //reportCount(7.bits())
-        }
-
+    companion object {
+        var creator: (ByteBuffer) -> RtcpHeader = ::BitBufferRtcpHeader
+        fun create(buf: ByteBuffer): RtcpHeader = creator(buf)
     }
-}
 
-
-
-//class Test(buf: ByteBuffer) {
-//    val version = Field(2, FieldSizeType.BITS)
-//
-//    init {
-//        version.parse(buf)
-//    }
-//}
-
-
-fun parseFields(buf: ByteBuffer, block: RtcpHeader.() -> Unit) {
-
+    override fun toString(): String {
+        return with(StringBuffer()) {
+            appendln("version: $version")
+            appendln("hasPadding: $hasPadding")
+            appendln("reportCount: $reportCount")
+            appendln("payloadType: $payloadType")
+            appendln("length: ${this@RtcpHeader.length}")
+            appendln("senderSsrc: $senderSsrc")
+            this.toString()
+        }
+    }
 }
