@@ -281,8 +281,7 @@ public class VideoChannel
         throws IOException
     {
         MediaStream stream = getStream();
-        boolean previouslyStarted
-            = stream != null ? stream.isStarted() : false;
+        boolean previouslyStarted = stream != null && stream.isStarted();
 
         super.maybeStartStream();
 
@@ -294,8 +293,7 @@ public class VideoChannel
         // keyframe from other channels if needed.
 
         stream = getStream();
-        boolean currentlyStarted
-            = stream != null ? stream.isStarted() : false;
+        boolean currentlyStarted = stream != null && stream.isStarted();
 
         if (currentlyStarted && !previouslyStarted)
         {
@@ -472,6 +470,32 @@ public class VideoChannel
                 .deRegisterRecurringRunnable(bandwidthProbing);
         }
 
+        MediaStream mediaStream = getStream();
+        if (mediaStream instanceof VideoMediaStream)
+        {
+            BandwidthEstimator.Statistics bweStats
+                = ((VideoMediaStream) mediaStream)
+                .getOrCreateBandwidthEstimator().getStatistics();
+            bweStats.update(System.currentTimeMillis());
+
+            Videobridge.Statistics videobridgeStats
+                = getContent().getConference().getVideobridge()
+                .getStatistics();
+
+            long lossLimitedSeconds = bweStats.getLossLimitedMs() / 1000;
+            long lossDegradedSeconds = bweStats.getLossDegradedMs() / 1000;
+            long participantSeconds = bweStats.getLossFreeMs() / 1000
+                + lossDegradedSeconds + lossLimitedSeconds;
+
+            videobridgeStats.totalParticipantSeconds
+                .addAndGet(participantSeconds);
+            videobridgeStats.totalLossLimitedParticipantSeconds
+                .addAndGet(lossLimitedSeconds);
+
+            videobridgeStats.totalLossDegradedParticipantSeconds
+                .addAndGet(lossDegradedSeconds);
+        }
+
         return true;
     }
 
@@ -611,7 +635,7 @@ public class VideoChannel
         }
 
         MediaStream mediaStream = getStream();
-        if (mediaStream != null && mediaStream instanceof VideoMediaStreamImpl)
+        if (mediaStream instanceof VideoMediaStreamImpl)
         {
             ((VideoMediaStreamImpl) mediaStream).setSupportsFir(supportsFir);
             ((VideoMediaStreamImpl) mediaStream).setSupportsPli(supportsPli);

@@ -1834,6 +1834,24 @@ public class Videobridge
         public AtomicLong totalConferenceSeconds = new AtomicLong();
 
         /**
+         * The total duration in seconds of all participants on this
+         * {@link Videobridge}.
+         */
+        public AtomicLong totalParticipantSeconds = new AtomicLong();
+
+        /**
+         * The total duration in seconds of all completed conferences on this
+         * {@link Videobridge}.
+         */
+        public AtomicLong totalLossLimitedParticipantSeconds = new AtomicLong();
+
+        /**
+         * The total duration in seconds of all completed conferences on this
+         * {@link Videobridge}.
+         */
+        public AtomicLong totalLossDegradedParticipantSeconds = new AtomicLong();
+
+        /**
          * The total number of ICE transport managers on this videobridge which
          * successfully connected over UDP.
          */
