@@ -16,19 +16,21 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.util.BitBuffer
+import unsigned.toUInt
+import unsigned.toULong
 import java.nio.ByteBuffer
 
-class BitBufferRtpHeader(private val buf: ByteBuffer) : RtpHeader() {
+internal class BitBufferRtpHeader(private val buf: ByteBuffer) : RtpHeader() {
     private val bitBuffer = BitBuffer(buf)
-    override var version: Int = bitBuffer.getBits(2).toInt()
+    override var version: Int = bitBuffer.getBits(2).toUInt()
     override var hasPadding: Boolean = bitBuffer.getBitAsBoolean()
     override var hasExtension: Boolean = bitBuffer.getBitAsBoolean()
-    override var csrcCount: Int = bitBuffer.getBits(4).toInt()
+    override var csrcCount: Int = bitBuffer.getBits(4).toUInt()
     override var marker: Boolean = bitBuffer.getBitAsBoolean()
-    override var payloadType: Int = bitBuffer.getBits(7).toInt()
-    override var sequenceNumber: Int = buf.getShort().toInt()
-    override var timestamp: Long = buf.getInt().toLong()
-    override var ssrc: Long = buf.getInt().toLong()
+    override var payloadType: Int = bitBuffer.getBits(7).toUInt()
+    override var sequenceNumber: Int = buf.getShort().toUInt()
+    override var timestamp: Long = buf.getInt().toULong()
+    override var ssrc: Long = buf.getInt().toULong()
     override var csrcs: List<Long> = listOf()
     override var extensions: Map<Int, RtpHeaderExtension> = mapOf()
 
