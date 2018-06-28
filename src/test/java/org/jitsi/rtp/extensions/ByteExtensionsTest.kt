@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp
+package org.jitsi.rtp.extensions
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import io.kotlintest.tables.forAll
-import io.kotlintest.tables.headers
-import io.kotlintest.tables.row
-import io.kotlintest.tables.table
-import java.nio.ByteBuffer
 import kotlin.reflect.KMutableProperty0
 
-fun KMutableProperty0<Boolean>.brian() = set(get().not())
-
 class ByteExtensionsTest : ShouldSpec() {
+    override fun isInstancePerTest(): Boolean = true
 
     init {
         "Byte.getBit" {
@@ -48,7 +42,6 @@ class ByteExtensionsTest : ShouldSpec() {
                 putBit(b, 0, true) shouldBe 0b10000000.toByte()
                 putBit(b, 3, true) shouldBe 0b00010000.toByte()
                 putBit(b, 7, true) shouldBe 0b00000001.toByte()
-
             }
             should("Set bits to false correctly") {
                 val b: Byte = 0xFF.toByte()

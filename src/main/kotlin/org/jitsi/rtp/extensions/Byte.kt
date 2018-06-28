@@ -13,11 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp
-
-import java.nio.ByteBuffer
-import kotlin.reflect.KMutableProperty
-import kotlin.reflect.KMutableProperty0
+package org.jitsi.rtp.extensions
 
 /**
  * Return the value of the bit at position [bitPos], where
@@ -29,17 +25,11 @@ fun Byte.getBit(bitPos: Int): Int {
     return (this.toInt() and mask) ushr (7 - bitPos)
 }
 
-// To use this would need to include the kotlin-reflect lib
-// and even then you'd have to call it like:
-// ::myByte.putBit(bitPos, isSet) --> actually even that didn't work
-//fun KMutableProperty0<Byte>.putBit(bitPos: Int, isSet: Boolean) {
-//    if (isSet) {
-//        set((get().toInt() or (0b10000000 ushr bitPos)).toByte())
-//    } else {
-//       set((get().toInt() or (0b10000000 ushr bitPos).inv()).toByte())
-//    }
-//}
-
+/**
+ * Set or unset the bit at [bitPos] of byte [b] according to [isSet]
+ * Unfortunately we can't do this as an extension function because
+ * we can't modify the Byte via 'this' in an extension function.
+ */
 fun putBit(b: Byte, bitPos: Int, isSet: Boolean): Byte {
     return if (isSet) {
         (b.toInt() or (0b10000000 ushr bitPos)).toByte()
@@ -48,13 +38,16 @@ fun putBit(b: Byte, bitPos: Int, isSet: Boolean): Byte {
     }
 }
 
+/**
+ * Get the bit at [bitPos] as a [Boolean].  Will return [true]
+ * if the bit is set (1) and [false] if it is unset (0)
+ */
 fun Byte.getBitAsBool(bitPos: Int): Boolean = getBit(bitPos) == 1
 
 /**
- * Isolate the bits in (bitStartPos, bitEndPos) (inclusive),
- * shift them all the way to the right and return them
- * as an int
- * [bitStartPos] + [numBits] must be <= 8
+ * Get [numBits] bits starting at [bitStartPos], shift them
+ * all the way to the right and return the result as a [Byte]
+ * [numBits] must be <= 8
  */
 fun Byte.getBits(bitStartPos: Int, numBits: Int): Byte {
     // Subtract 1 since the bit at 'bitStartPos' will be included, e.g.:
@@ -71,24 +64,3 @@ fun Byte.getBits(bitStartPos: Int, numBits: Int): Byte {
     return result.toByte()
 }
 
-fun ByteBuffer.rewindOneByte() {
-    this.position(this.position() - 1)
-}
-
-private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
-
-fun ByteBuffer.toHex() : String {
-    val result = StringBuffer()
-
-    val prevPosition = position()
-    for (i in 0 until limit()) {
-        val octet = get(i).toInt()
-        val firstIndex = (octet and 0xF0).ushr(4)
-        val secondIndex = octet and 0x0F
-        result.append(HEX_CHARS[firstIndex])
-        result.append(HEX_CHARS[secondIndex])
-    }
-    position(prevPosition)
-
-    return result.toString()
-}
