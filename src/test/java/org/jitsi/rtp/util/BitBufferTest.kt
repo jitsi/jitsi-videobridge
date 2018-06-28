@@ -1,9 +1,10 @@
-package org.jitsi.rtp
+package org.jitsi.rtp.util
 
 import com.sun.javaws.exceptions.InvalidArgumentException
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 internal class BitBufferTest : ShouldSpec() {

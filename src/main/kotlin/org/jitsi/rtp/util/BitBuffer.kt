@@ -1,11 +1,22 @@
-package org.jitsi.rtp
+package org.jitsi.rtp.util
 
 import com.sun.javaws.exceptions.InvalidArgumentException
+import org.jitsi.rtp.extensions.getBit
+import org.jitsi.rtp.extensions.getBitAsBool
+import org.jitsi.rtp.extensions.getBits
+import org.jitsi.rtp.extensions.putBit
+import org.jitsi.rtp.extensions.rewindOneByte
 import java.nio.ByteBuffer
 
 /**
- * Wraps a [ByteBuffer] and allows reading at a bit level
- * (instead of a byte level).  This means that
+ * A [ByteBuffer] is indexed at the level of [Byte]s:
+ * read and write operations are done at the Byte (or greater)
+ * level, and each read or write increments the ByteBuffer's
+ * position by one Byte.  Some operations require reading and
+ * reading at the bit level (like parsing packet header fields),
+ * so ByteBuffer's byte-level API is awkward to work with.
+ * [BitBuffer] wraps a [ByteBuffer] and allows reading at a bit level
+ * instead of a byte level.  This means that
  * reads of bits will be done relative to the previous bit
  * position in the current byte.  Only when the last bit of
  * a byte is read will the buffer's position increment to
@@ -13,7 +24,8 @@ import java.nio.ByteBuffer
  * not supported.
  *
  * All reads of the [ByteBuffer] do not need to go through
- * this class; changes in the [ByteBuffer]'s will cause
+ * this class; changes in the wrapped [ByteBuffer]'s position
+ * in between accesses from the wrapping [BitBuffer] will cause
  * [BitBuffer]'s bit offset to reset the next time a read is
  * done.
  */
@@ -24,7 +36,11 @@ class BitBuffer(private val buf: ByteBuffer) {
     private var currBitPos: Int = 0
 
     /**
-     * The byte we're reading from in the [ByteBuffer]
+     * The byte we're reading from in the [ByteBuffer].  If the value
+     * of [buf.position()] changes in between calls to this BitBuffer,
+     * we'll reset [currBitPos] since if the buffer's byte position
+     * has advanced, we'll assume the next bit read should be the
+     * first bit of the new byte.
      */
     private var currBytePos: Int = buf.position()
 
@@ -87,17 +103,14 @@ class BitBuffer(private val buf: ByteBuffer) {
         validateOffset(numBits)
         val currentPosition = buf.position()
         var byte = buf.get()
-//        println("Byte $currentPosition was ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
         for (i in (numBits - 1) downTo 0) {
             // The bits in the given byte are 'right-aligned',
             // but we write them from left to right, so
             // we need to invert the position by doing 7 - i
             val bit = data.getBit(7 - i)
-//            println("Setting bit $currBitPos to ${bit == 1}")
             byte = putBit(byte, currBitPos++, bit == 1)
         }
         buf.put(currentPosition, byte)
-//        println("Byte $currentPosition is now ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
         maybeResetBufPosition()
     }
 
@@ -106,10 +119,7 @@ class BitBuffer(private val buf: ByteBuffer) {
         validateOffset(1)
         val currentPosition = buf.position()
         var byte = buf.get()
-//        println("Byte $currentPosition was ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
-//        println("Setting bit $currBitPos to $b")
         byte = putBit(byte, currBitPos++, b)
-//        println("Byte $currentPosition is now ${Integer.toBinaryString(byte.toInt() and 0xFF)}")
         buf.put(currentPosition, byte)
         maybeResetBufPosition()
     }
