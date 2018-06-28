@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.get3Bytes
 import java.nio.ByteBuffer
 
 /**
@@ -34,16 +35,13 @@ import java.nio.ByteBuffer
  * |                   delay since last SR (DLSR)                  |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class ReportBlock(buf: ByteBuffer) {
-    companion object {
-        const val SIZE_BYTES = 24
-    }
+class RtcpReportBlock(buf: ByteBuffer) {
     /**
      * SSRC_n (source identifier): 32 bits
      *     The SSRC identifier of the source to which the information in this
      *     reception report block pertains.
      */
-    val ssrc: Long = buf.getInt(0).toLong()
+    val ssrc: Long = buf.getInt().toLong()
     /**
      * fraction lost: 8 bits
      *     The fraction of RTP data packets from source SSRC_n lost since the
@@ -60,7 +58,7 @@ class ReportBlock(buf: ByteBuffer) {
      *     if all packets from that source sent during the last reporting
      *     interval have been lost.
      */
-    val fractionLost: Int = buf.get(4).toInt()
+    val fractionLost: Int = buf.get().toInt()
     /**
      * cumulative number of packets lost: 24 bits
      *     The total number of RTP data packets from source SSRC_n that have
@@ -74,7 +72,7 @@ class ReportBlock(buf: ByteBuffer) {
      *     defined next, less the initial sequence number received.  This may
      *     be calculated as shown in Appendix A.3.
      */
-    val cumulativePacketsLost: Int = buf.getInt(4) and 0x00FFFFFF // Mask out the fractionLost byte
+    val cumulativePacketsLost: Int = buf.get3Bytes()
     /**
      * extended highest sequence number received: 32 bits
      *     The low 16 bits contain the highest sequence number received in an
@@ -85,8 +83,8 @@ class ReportBlock(buf: ByteBuffer) {
      *     the same session will generate different extensions to the
      *     sequence number if their start times differ significantly.
      */
-    val seqNumCycles: Int = buf.getShort(8).toInt()
-    val seqNum: Int = buf.getShort(10).toInt()
+    val seqNumCycles: Int = buf.getShort().toInt()
+    val seqNum: Int = buf.getShort().toInt()
     /**
      * interarrival jitter: 32 bits
      *     An estimate of the statistical variance of the RTP data packet
@@ -126,7 +124,7 @@ class ReportBlock(buf: ByteBuffer) {
      *     discussion of the effects of varying packet duration and delay
      *     before transmission.
      */
-    val interarrivalJitter: Long = buf.getInt(12).toLong()
+    val interarrivalJitter: Long = buf.getInt().toLong()
 
     /**
      * last SR timestamp (LSR): 32 bits
@@ -135,7 +133,7 @@ class ReportBlock(buf: ByteBuffer) {
      *     (SR) packet from source SSRC_n.  If no SR has been received yet,
      *     the field is set to zero.
      */
-    val lastSrTimestamp: Long = buf.getInt(16).toLong()
+    val lastSrTimestamp: Long = buf.getInt().toLong()
 
     /**
      * delay since last SR (DLSR): 32 bits
@@ -177,5 +175,5 @@ class ReportBlock(buf: ByteBuffer) {
      *
      *             Figure 2: Example for round-trip time computation
      */
-    val delaySinceLastSr: Long = buf.getInt(20).toLong()
+    val delaySinceLastSr: Long = buf.getInt().toLong()
 }
