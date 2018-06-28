@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.util.BitBuffer
+import toUInt
 import java.nio.ByteBuffer
 
 // RTCP Header
@@ -37,6 +39,17 @@ abstract class RtcpHeader {
     companion object {
         var creator: (ByteBuffer) -> RtcpHeader = ::BitBufferRtcpHeader
         fun create(buf: ByteBuffer): RtcpHeader = creator(buf)
+    }
+
+    fun serializeToBuffer(buf: ByteBuffer) {
+        with(BitBuffer(buf)) {
+            putBits(version.toByte(), 2)
+            putBoolean(hasPadding)
+            putBits(reportCount.toByte(), 5)
+            putBits(payloadType.toByte(), 8)
+            buf.putShort(length.toShort())
+            buf.putInt(senderSsrc.toUInt())
+        }
     }
 
     override fun toString(): String {

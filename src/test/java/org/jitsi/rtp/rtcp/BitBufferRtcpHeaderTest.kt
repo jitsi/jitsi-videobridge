@@ -32,7 +32,13 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
                 header.senderSsrc shouldBe 0xFFFFFFFF.toLong()
             }
         }
-
+        "serializing" {
+            val newBuf = ByteBuffer.allocate(8)
+            val header = BitBufferRtcpHeader(headerBuf)
+            header.serializeToBuffer(newBuf)
+            should("write the correct data to the buffer") {
+                newBuf.rewind() shouldBe headerBuf.rewind()
+            }
+        }
     }
-
 }
