@@ -16,8 +16,8 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
             putBoolean(false) // padding
             putBits(1.toByte(), 5) // report count
             headerBuf.put(200.toByte()) // payload type
-            headerBuf.putShort(42.toShort()) // length
-            headerBuf.putInt(12345.toInt()) // sender ssrc
+            headerBuf.putShort(0xFFFF.toShort()) // length
+            headerBuf.putInt(0xFFFFFFFF.toInt()) // sender ssrc
             headerBuf
         }
         headerBuf.rewind()
@@ -28,8 +28,8 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
                 header.hasPadding shouldBe false
                 header.reportCount shouldBe 1
                 header.payloadType shouldBe 200
-                header.length shouldBe 42
-                header.senderSsrc shouldBe 12345.toLong()
+                header.length shouldBe 0xFFFF
+                header.senderSsrc shouldBe 0xFFFFFFFF.toLong()
             }
         }
 

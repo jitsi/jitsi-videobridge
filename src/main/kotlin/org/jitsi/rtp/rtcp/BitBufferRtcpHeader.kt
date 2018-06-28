@@ -16,18 +16,16 @@
 package org.jitsi.rtp.rtcp
 
 import org.jitsi.rtp.util.BitBuffer
+import unsigned.toUInt
+import unsigned.toULong
 import java.nio.ByteBuffer
-
-fun Byte.toUInt(): Int {
-    return this.toInt() and 0xFF
-}
 
 internal class BitBufferRtcpHeader(buf: ByteBuffer) : RtcpHeader() {
     private val bitBuffer = BitBuffer(buf)
-    override var version = bitBuffer.getBits(2).toInt()
+    override var version = bitBuffer.getBits(2).toUInt()
     override var hasPadding = bitBuffer.getBitAsBoolean()
-    override var reportCount = bitBuffer.getBits(5).toInt()
+    override var reportCount = bitBuffer.getBits(5).toUInt()
     override var payloadType = buf.get().toUInt()
-    override var length = buf.getShort().toInt()
-    override var senderSsrc = buf.getInt().toLong()
+    override var length = buf.getShort().toUInt()
+    override var senderSsrc = buf.getInt().toULong()
 }
