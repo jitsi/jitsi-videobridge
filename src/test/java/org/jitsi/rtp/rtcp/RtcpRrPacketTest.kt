@@ -56,7 +56,8 @@ internal class RtcpRrPacketTest : ShouldSpec() {
             packetBuf.rewind() as ByteBuffer
         }
         "parsing" {
-            val rrPacket = RtcpRrPacket(packetBuf)
+            val header = RtcpHeader.create(packetBuf)
+            val rrPacket = RtcpRrPacket(header, packetBuf)
             should("parse all values correctly") {
                 rrPacket.reportBlocks should haveSize(2)
             }

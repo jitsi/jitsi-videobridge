@@ -46,10 +46,10 @@ import java.nio.ByteBuffer
  *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
  *        |                  profile-specific extensions                  |
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * [buf] is a buffer which starts at the beginning of the RTCP header
+ * [buf] is a buffer at the position of the start of the RR data (after the
+ * RTCP header)
  */
-class RtcpRrPacket(buf: ByteBuffer) {
-    val header = RtcpHeader.create(buf)
+class RtcpRrPacket(override val header: RtcpHeader, buf: ByteBuffer) : RtcpPacket() {
     val reportBlocks = (0 until header.reportCount).map {
         RtcpReportBlock(buf)
     }

@@ -18,19 +18,12 @@ package org.jitsi.rtp.rtcp
 import java.nio.ByteBuffer
 
 /**
+ *
  * RTCP SenderInfo block
  * [buf] is a buffer which starts at the beginning
  * of a SenderInfo block
  */
 class SenderInfo(buf: ByteBuffer) {
-    companion object {
-        /**
-         * How far into an RTCP SR packet the SenderInfo
-         * block starts.  Useful for code which is creating
-         * a [SenderInfo] from an [RtcpSrPacket].
-         */
-        const val RTCP_OFFSET_BYTES = 12
-    }
     /**
      * NTP timestamp: 64 bits
      *     Indicates the wallclock time (see Section 4) when this report was
@@ -92,21 +85,48 @@ class SenderInfo(buf: ByteBuffer) {
 }
 
 /**
- * [buf] is a buffer which starts at the beginning of the RTCP header
+ *        0                   1                   2                   3
+ *        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * header |V=2|P|    RC   |   PT=SR=200   |             length            |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                         SSRC of sender                        |
+ *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ * sender |              NTP timestamp, most significant word             |
+ * info   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |             NTP timestamp, least significant word             |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                         RTP timestamp                         |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                     sender's packet count                     |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                      sender's octet count                     |
+ *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ * report |                 SSRC_1 (SSRC of first source)                 |
+ * block  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * 1      | fraction lost |       cumulative number of packets lost       |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |           extended highest sequence number received           |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                      interarrival jitter                      |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                         last SR (LSR)                         |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                   delay since last SR (DLSR)                  |
+ *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ * report |                 SSRC_2 (SSRC of second source)                |
+ * block  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * 2      :                               ...                             :
+ *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ *        |                  profile-specific extensions                  |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * [buf] is a buffer which starts at the beginning of the SR data (after
+ * the RTCP header)
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
-//TODO: should we actually copy values from the buffer?  or should
-// we read into the buffer on each access (unless they've been overridden)?
-// is there a noticeable performance difference between these two schemes?
-// (both in repeated copy scenarios and repeated access scenarios)
-class RtcpSrPacket(buf: ByteBuffer) {
-    val header = RtcpHeader.create(buf)
+class RtcpSrPacket(override val header: RtcpHeader, buf: ByteBuffer) : RtcpPacket() {
     val senderInfo = SenderInfo(buf)
-    val reportBlocks = mutableListOf<ReportBlock>()
-
-    init {
-        repeat(header.reportCount) {
-            reportBlocks.add(ReportBlock(buf))
-        }
+    val reportBlocks = (0 until header.reportCount).map {
+        RtcpReportBlock(buf)
     }
 }
