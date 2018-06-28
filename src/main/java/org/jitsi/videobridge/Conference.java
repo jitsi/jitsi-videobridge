@@ -312,7 +312,7 @@ public class Conference
     public void appendDiagnosticInformation(DiagnosticContext diagnosticContext)
     {
         Objects.requireNonNull(diagnosticContext);
-        diagnosticContext.put("conf_name", name);
+        diagnosticContext.put("conf_name", name.toString());
         diagnosticContext.put("conf_creation_time_ms", creationTimeMs);
     }
 
