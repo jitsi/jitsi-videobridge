@@ -602,7 +602,7 @@ public class BitrateController
                         // gets forwarded to a specific receiver.
                         timeSeriesLogger.trace(diagnosticContext
                                 .makeTimeSeriesPoint("track_quality", nowMs)
-                                .addKey("track_id", sourceTrack.hashCode())
+                                .addField("track_id", sourceTrack.hashCode())
                                 .addField("current_idx", trackCurrentIdx)
                                 .addField("target_idx", trackTargetIdx)
                                 .addField("optimal_idx", trackOptimalIdx)
