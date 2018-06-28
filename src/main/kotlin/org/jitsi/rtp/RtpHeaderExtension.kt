@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.extensions.rewindOneByte
 import java.nio.ByteBuffer
 
 abstract class RtpHeaderExtension {

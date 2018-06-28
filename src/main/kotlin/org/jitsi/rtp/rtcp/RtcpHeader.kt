@@ -15,8 +15,6 @@
  */
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.getBitAsBool
-import org.jitsi.rtp.getBits
 import java.nio.ByteBuffer
 
 // RTCP Header

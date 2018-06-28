@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 // https://tools.ietf.org/html/rfc3550#section-5.1

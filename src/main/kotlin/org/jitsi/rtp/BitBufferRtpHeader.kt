@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 class BitBufferRtpHeader(private val buf: ByteBuffer) : RtpHeader() {

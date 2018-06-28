@@ -15,8 +15,8 @@
  */
 package org.jitsi.rtp.attic
 
-import org.jitsi.rtp.getBitAsBool
-import org.jitsi.rtp.getBits
+import org.jitsi.rtp.extensions.getBitAsBool
+import org.jitsi.rtp.extensions.getBits
 import java.nio.ByteBuffer
 
 enum class FieldSizeType {

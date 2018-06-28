@@ -2,6 +2,7 @@ package org.jitsi.rtp
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {

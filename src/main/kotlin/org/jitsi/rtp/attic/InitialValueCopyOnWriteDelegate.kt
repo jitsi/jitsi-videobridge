@@ -15,12 +15,12 @@
  */
 package org.jitsi.rtp.attic
 
-import org.jitsi.rtp.BitBuffer
+import org.jitsi.rtp.util.BitBuffer
 import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpHeaderExtension
 import org.jitsi.rtp.RtpHeaderExtensions
-import org.jitsi.rtp.getBitAsBool
-import org.jitsi.rtp.getBits
+import org.jitsi.rtp.extensions.getBitAsBool
+import org.jitsi.rtp.extensions.getBits
 import java.nio.ByteBuffer
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
