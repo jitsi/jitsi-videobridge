@@ -24,7 +24,7 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
         "creation" {
             "from a buffer" {
                 val header = BitBufferRtcpHeader.fromBuffer(headerBuf)
-                should("parse the values correctly") {
+                should("fromBuffer the values correctly") {
                     header.version shouldBe 2
                     header.hasPadding shouldBe false
                     header.reportCount shouldBe 1
@@ -34,14 +34,13 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
                 }
             }
             "from a complete set of values" {
-                val header = with(BitBufferRtcpHeader()) {
+                val header = BitBufferRtcpHeader.fromValues {
                     version = 2
                     hasPadding = false
                     reportCount = 1
                     payloadType = 200
                     length = 0xFFFF
                     senderSsrc = 0xFFFFFFFF
-                    this
                 }
                 should("set everything correctly") {
                     header.version shouldBe 2
@@ -53,14 +52,13 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
                 }
             }
             "from an incomplete set of values" {
-                val header = with(BitBufferRtcpHeader()) {
+                val header = BitBufferRtcpHeader.fromValues {
                     // version = 2 Don't set version
                     hasPadding = false
                     reportCount = 1
                     payloadType = 200
                     length = 0xFFFF
                     senderSsrc = 0xFFFFFFFF
-                    this
                 }
                 should("throw when we try to access an unset value") {
                     shouldThrow<IllegalStateException> {

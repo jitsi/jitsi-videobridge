@@ -34,8 +34,6 @@ import kotlin.properties.Delegates
  *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
  *
  * RTCP SenderInfo block
- * [buf] is a buffer which starts at the beginning
- * of a SenderInfo block
  */
 class SenderInfo {
     /**
@@ -108,9 +106,7 @@ class SenderInfo {
             }
         }
         fun fromValues(receiver: SenderInfo.() -> Unit): SenderInfo {
-            val senderInfo = SenderInfo()
-            senderInfo.receiver()
-            return senderInfo
+            return SenderInfo().apply(receiver)
         }
     }
 
@@ -160,8 +156,6 @@ class SenderInfo {
  *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
  *        |                  profile-specific extensions                  |
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * [buf] is a buffer which starts at the beginning of the SR data (after
- * the RTCP header)
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
 class RtcpSrPacket : RtcpPacket() {
@@ -175,10 +169,23 @@ class RtcpSrPacket : RtcpPacket() {
                 this.header = header
                 senderInfo = SenderInfo.fromBuffer(buf)
                 reportBlocks = (0 until header.reportCount).map {
-                    RtcpReportBlock(buf)
+                    RtcpReportBlock.fromBuffer(buf)
                 }
                 this
             }
+        }
+        fun fromValues(receiver: RtcpSrPacket.() -> Unit): RtcpSrPacket {
+            val packet = RtcpSrPacket()
+            packet.receiver()
+            return packet
+        }
+    }
+
+    override fun serializeToBuffer(buf: ByteBuffer) {
+        header.serializeToBuffer(buf)
+        buf.apply {
+            senderInfo.serializeToBuffer(buf)
+            reportBlocks.forEach { it.serializeToBuffer(buf) }
         }
     }
 }

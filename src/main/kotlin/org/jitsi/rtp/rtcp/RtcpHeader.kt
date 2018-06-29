@@ -37,10 +37,8 @@ abstract class RtcpHeader {
     abstract var senderSsrc: Long
 
     companion object {
-        // Use this creator as a way to hide the underlying type as well as provide a hook
-        // to play with different underlying implementations
-        var creator: (ByteBuffer) -> RtcpHeader = BitBufferRtcpHeader.Create::fromBuffer
-        fun create(buf: ByteBuffer): RtcpHeader = creator(buf)
+        fun fromBuffer(buf: ByteBuffer): RtcpHeader = BitBufferRtcpHeader.fromBuffer(buf)
+        fun fromValues(receiver: RtcpHeader.() -> Unit): RtcpHeader = BitBufferRtcpHeader.fromValues(receiver)
     }
 
     fun serializeToBuffer(buf: ByteBuffer) {

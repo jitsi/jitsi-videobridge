@@ -47,8 +47,6 @@ import kotlin.properties.Delegates
  *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
  *        |                  profile-specific extensions                  |
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * [buf] is a buffer at the position of the start of the RR data (after the
- * RTCP header)
  */
 class RtcpRrPacket : RtcpPacket() {
     override var header: RtcpHeader by Delegates.notNull()
@@ -59,7 +57,7 @@ class RtcpRrPacket : RtcpPacket() {
             return with (RtcpRrPacket()) {
                 this.header = header
                 reportBlocks = (0 until header.reportCount).map {
-                    RtcpReportBlock(buf)
+                    RtcpReportBlock.fromBuffer(buf)
                 }
                 this
             }
@@ -68,6 +66,13 @@ class RtcpRrPacket : RtcpPacket() {
             val packet = RtcpRrPacket()
             packet.receiver()
             return packet
+        }
+    }
+
+    override fun serializeToBuffer(buf: ByteBuffer) {
+        header.serializeToBuffer(buf)
+        buf.apply {
+            reportBlocks.forEach { it.serializeToBuffer(buf) }
         }
     }
 }

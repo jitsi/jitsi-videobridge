@@ -21,7 +21,7 @@ abstract class RtcpPacket {
     abstract var header: RtcpHeader
     companion object {
         fun fromBuffer(buf: ByteBuffer): RtcpPacket {
-            val header = RtcpHeader.create(buf)
+            val header = RtcpHeader.fromBuffer(buf)
             return when (header.payloadType) {
                 200 -> RtcpSrPacket.fromBuffer(header, buf)
                 201 -> RtcpRrPacket.fromBuffer(header, buf)
@@ -29,4 +29,5 @@ abstract class RtcpPacket {
             }
         }
     }
+    abstract fun serializeToBuffer(buf: ByteBuffer)
 }
