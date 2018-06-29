@@ -28,7 +28,12 @@ import java.nio.ByteBuffer
  * in between accesses from the wrapping [BitBuffer] will cause
  * [BitBuffer]'s bit offset to reset the next time a read is
  * done.
- */
+ *
+ * This is not done through extension functions because we need
+ * new state (the current bit position) and isn't done through a
+ * subclass because [ByteBuffer] is abstract and the underlying
+ * type isn't instantiated directly (it's done through ByteBuffer.allocate)
+*/
 class BitBuffer(private val buf: ByteBuffer) {
     /**
      * The bit offset into the current byte

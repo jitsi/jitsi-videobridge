@@ -19,13 +19,35 @@ import org.jitsi.rtp.util.BitBuffer
 import unsigned.toUInt
 import unsigned.toULong
 import java.nio.ByteBuffer
+import kotlin.properties.Delegates
 
-internal class BitBufferRtcpHeader(buf: ByteBuffer) : RtcpHeader() {
-    private val bitBuffer = BitBuffer(buf)
-    override var version = bitBuffer.getBits(2).toUInt()
-    override var hasPadding = bitBuffer.getBitAsBoolean()
-    override var reportCount = bitBuffer.getBits(5).toUInt()
-    override var payloadType = buf.get().toUInt()
-    override var length = buf.getShort().toUInt()
-    override var senderSsrc = buf.getInt().toULong()
+internal class BitBufferRtcpHeader : RtcpHeader() {
+    // We don't know how this will be initialized (from a buffer or from
+    // created values) and in order to make construction from values convenient
+    // (where they can be set progressively rather than requiring them all
+    // at once) we can't enforce values be passed for all fields at creation.
+    // However, setting default values is sometimes awkward and can lead
+    // to issues (if someone forgot to set a field) so use Delegates.notNull
+    // to delay instantiation but cause an error if an unset field is accessed.
+    override var version: Int by Delegates.notNull()
+    override var hasPadding: Boolean by Delegates.notNull()
+    override var reportCount: Int by Delegates.notNull()
+    override var payloadType: Int by Delegates.notNull()
+    override var length: Int by Delegates.notNull()
+    override var senderSsrc: Long by Delegates.notNull()
+
+    companion object Create {
+        fun fromBuffer(buf: ByteBuffer): RtcpHeader {
+            val bitBuffer = BitBuffer(buf)
+            return with (BitBufferRtcpHeader()) {
+                version = bitBuffer.getBits(2).toUInt()
+                hasPadding = bitBuffer.getBitAsBoolean()
+                reportCount = bitBuffer.getBits(5).toUInt()
+                payloadType = buf.get().toUInt()
+                length = buf.getShort().toUInt()
+                senderSsrc = buf.getInt().toULong()
+                this
+            }
+        }
+    }
 }
