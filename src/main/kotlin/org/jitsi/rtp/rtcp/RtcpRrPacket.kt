@@ -16,6 +16,7 @@
 package org.jitsi.rtp.rtcp
 
 import java.nio.ByteBuffer
+import kotlin.properties.Delegates
 
 
 /**
@@ -49,8 +50,24 @@ import java.nio.ByteBuffer
  * [buf] is a buffer at the position of the start of the RR data (after the
  * RTCP header)
  */
-class RtcpRrPacket(override val header: RtcpHeader, buf: ByteBuffer) : RtcpPacket() {
-    val reportBlocks = (0 until header.reportCount).map {
-        RtcpReportBlock(buf)
+class RtcpRrPacket : RtcpPacket() {
+    override var header: RtcpHeader by Delegates.notNull()
+    var reportBlocks: List<RtcpReportBlock> = listOf()
+
+    companion object Create {
+        fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpRrPacket {
+            return with (RtcpRrPacket()) {
+                this.header = header
+                reportBlocks = (0 until header.reportCount).map {
+                    RtcpReportBlock(buf)
+                }
+                this
+            }
+        }
+        fun fromValues(receiver: RtcpRrPacket.() -> Unit): RtcpRrPacket {
+            val packet = RtcpRrPacket()
+            packet.receiver()
+            return packet
+        }
     }
 }

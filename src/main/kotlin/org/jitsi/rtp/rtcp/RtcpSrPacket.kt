@@ -15,15 +15,29 @@
  */
 package org.jitsi.rtp.rtcp
 
+import toUInt
+import unsigned.toULong
 import java.nio.ByteBuffer
+import kotlin.properties.Delegates
 
 /**
+ *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ * sender |              NTP timestamp, most significant word             |
+ * info   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |             NTP timestamp, least significant word             |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                         RTP timestamp                         |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                     sender's packet count                     |
+ *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *        |                      sender's octet count                     |
+ *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
  *
  * RTCP SenderInfo block
  * [buf] is a buffer which starts at the beginning
  * of a SenderInfo block
  */
-class SenderInfo(buf: ByteBuffer) {
+class SenderInfo {
     /**
      * NTP timestamp: 64 bits
      *     Indicates the wallclock time (see Section 4) when this report was
@@ -46,7 +60,7 @@ class SenderInfo(buf: ByteBuffer) {
      *     has no notion of wallclock or elapsed time MAY set the NTP
      *     timestamp to zero.
      */
-    val ntpTimestamp: Long = buf.getLong(0)
+    var ntpTimestamp: Long by Delegates.notNull()
 
     /**
      * RTP timestamp: 32 bits
@@ -63,7 +77,7 @@ class SenderInfo(buf: ByteBuffer) {
      *     maintained by periodically checking the wallclock time at a
      *     sampling instant.
      */
-    val rtpTimestamp: Long = buf.getInt(8).toLong()
+    var rtpTimestamp: Long by Delegates.notNull()
     /**
      * sender's packet count: 32 bits
      *     The total number of RTP data packets transmitted by the sender
@@ -71,7 +85,7 @@ class SenderInfo(buf: ByteBuffer) {
      *     generated.  The count SHOULD be reset if the sender changes its
      *     SSRC identifier.
      */
-    val sendersPacketCount: Long = buf.getInt(12).toLong()
+    var sendersPacketCount: Long by Delegates.notNull()
     /**
      * sender's octet count: 32 bits
      *     The total number of payload octets (i.e., not including header or
@@ -81,7 +95,33 @@ class SenderInfo(buf: ByteBuffer) {
      *     SSRC identifier.  This field can be used to estimate the average
      *     payload data rate.
      */
-    val sendersOctetCount: Long = buf.getInt(16).toLong()
+    var sendersOctetCount: Long by Delegates.notNull()
+
+    companion object {
+        fun fromBuffer(buf: ByteBuffer): SenderInfo {
+            return with (SenderInfo()) {
+                ntpTimestamp = buf.getLong()
+                rtpTimestamp = buf.getInt().toULong()
+                sendersPacketCount = buf.getInt().toULong()
+                sendersOctetCount = buf.getInt().toULong()
+                this
+            }
+        }
+        fun fromValues(receiver: SenderInfo.() -> Unit): SenderInfo {
+            val senderInfo = SenderInfo()
+            senderInfo.receiver()
+            return senderInfo
+        }
+    }
+
+    fun serializeToBuffer(buf: ByteBuffer) {
+        buf.apply {
+            putLong(ntpTimestamp)
+            putInt(rtpTimestamp.toUInt())
+            putInt(sendersPacketCount.toUInt())
+            putInt(sendersOctetCount.toUInt())
+        }
+    }
 }
 
 /**
@@ -124,9 +164,21 @@ class SenderInfo(buf: ByteBuffer) {
  * the RTCP header)
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
-class RtcpSrPacket(override val header: RtcpHeader, buf: ByteBuffer) : RtcpPacket() {
-    val senderInfo = SenderInfo(buf)
-    val reportBlocks = (0 until header.reportCount).map {
-        RtcpReportBlock(buf)
+class RtcpSrPacket : RtcpPacket() {
+    override var header: RtcpHeader by Delegates.notNull()
+    var senderInfo: SenderInfo by Delegates.notNull() // = SenderInfo(buf)
+    var reportBlocks: List<RtcpReportBlock> = listOf()
+
+    companion object Create {
+        fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpSrPacket {
+            return with (RtcpSrPacket()) {
+                this.header = header
+                senderInfo = SenderInfo.fromBuffer(buf)
+                reportBlocks = (0 until header.reportCount).map {
+                    RtcpReportBlock(buf)
+                }
+                this
+            }
+        }
     }
 }

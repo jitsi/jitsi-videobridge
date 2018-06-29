@@ -30,7 +30,7 @@ internal class RtcpReportBlockTest : ShouldSpec() {
 
         "parsing" {
             val reportBlock = RtcpReportBlock(reportBlockData)
-            should("parse the values correctly") {
+            should("fromBuffer the values correctly") {
                 reportBlock.ssrc shouldBe ssrc
                 reportBlock.fractionLost shouldBe fractionLost
                 reportBlock.cumulativePacketsLost shouldBe cumulativeLost

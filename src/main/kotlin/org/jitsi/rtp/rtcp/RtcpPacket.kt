@@ -18,13 +18,13 @@ package org.jitsi.rtp.rtcp
 import java.nio.ByteBuffer
 
 abstract class RtcpPacket {
-    abstract val header: RtcpHeader
+    abstract var header: RtcpHeader
     companion object {
-        fun parse(buf: ByteBuffer): RtcpPacket {
+        fun fromBuffer(buf: ByteBuffer): RtcpPacket {
             val header = RtcpHeader.create(buf)
             return when (header.payloadType) {
-                200 -> RtcpSrPacket(header, buf)
-                201 -> RtcpRrPacket(header, buf)
+                200 -> RtcpSrPacket.fromBuffer(header, buf)
+                201 -> RtcpRrPacket.fromBuffer(header, buf)
                 else -> TODO()
             }
         }
