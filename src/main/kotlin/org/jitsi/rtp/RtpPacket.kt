@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp
 
+import java.nio.ByteBuffer
+
 // would https://github.com/kotlin-graphics/kotlin-unsigned be useful?
 
 // https://tools.ietf.org/html/rfc3550#section-5.1
@@ -31,7 +33,21 @@ package org.jitsi.rtp
 // |                             ....                              |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-abstract class RtpPacket() {
+abstract class RtpPacket {
     abstract val header: RtpHeader
+    abstract val payload: ByteBuffer
+
+    companion object {
+        fun parse(buf: ByteBuffer): RtpPacket {
+            return BitBufferRtpPacket(buf)
+        }
+    }
+
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            append(header.toString()).append("\n")
+            toString()
+        }
+    }
 }
 

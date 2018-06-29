@@ -22,9 +22,13 @@
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>test</scope>
+            <artifactId>kotlin-reflect</artifactId>
+            <version>1.2.50</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.kotlin-graphics</groupId>
+            <artifactId>kotlin-unsigned</artifactId>
+            <version>v3.1.3</version>
         </dependency>
 
         <!--Testing dependencies-->
@@ -40,6 +44,13 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.nhaarman</groupId>
+            <artifactId>mockito-kotlin</artifactId>
+            <version>1.6.0</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
     <build>
         <plugins>
@@ -78,6 +89,12 @@
             </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
 
 </project>

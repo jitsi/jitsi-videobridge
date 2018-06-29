@@ -18,6 +18,7 @@ package org.jitsi.rtp
 import java.nio.ByteBuffer
 
 
-class BitBufferRtpPacket(buf: ByteBuffer) : RtpPacket() {
-    override val header = BitBufferRtpHeader(buf)
+internal class BitBufferRtpPacket(buf: ByteBuffer) : RtpPacket() {
+    override val header = BitBufferRtpHeader.fromBuffer(buf)
+    override val payload = buf.slice()
 }

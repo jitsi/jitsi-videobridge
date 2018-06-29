@@ -44,6 +44,11 @@ abstract class RtpHeader {
     abstract var csrcs: List<Long>
     abstract var extensions: Map<Int, RtpHeaderExtension>
 
+    companion object {
+        fun fromBuffer(buf: ByteBuffer) = BitBufferRtpHeader.fromBuffer(buf)
+        fun fromValues(receiver: RtpHeader.() -> Unit): RtpHeader = BitBufferRtpHeader.fromValues(receiver)
+    }
+
     fun getExtension(id: Int): RtpHeaderExtension? = extensions.getOrDefault(id, null)
 
     abstract fun clone(): RtpHeader
@@ -51,8 +56,14 @@ abstract class RtpHeader {
     fun serializeToBuffer(buf: ByteBuffer) {
         with (BitBuffer(buf)) {
             putBits(version.toByte(), 2)
+            // TODO how should hasPadding be set?  can we set it automatically?
+            // (not here since we don't have access to the payload) could RtpPacket
+            // do it?
             putBoolean(hasPadding)
+            // TODO should we make this automatic based on the value of
+            // extensions somehow?
             putBoolean(hasExtension)
+            // TODO should this be automatic based on csrcs?
             putBits(csrcCount.toByte(), 4)
             putBoolean(marker)
             putBits(payloadType.toByte(), 7)
@@ -62,7 +73,7 @@ abstract class RtpHeader {
             csrcs.forEach {
                 buf.putInt(it.toInt())
             }
-            //TODO: extensions
+            extensions.values.forEach { it.serializeToBuffer(buf) }
         }
     }
 

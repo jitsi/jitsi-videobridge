@@ -39,26 +39,34 @@ fun main(args: Array<String>) {
     // csrc 2 = 0x00 0x00 0x00 0x02
     // csrc 3 = 0x00 0x00 0x00 0x03
     val packetData = ByteBuffer.wrap(byteArrayOf(
+        // Header
         0xB3.toByte(),  0xE0.toByte(),  0x10,           0x80.toByte(),
         0x00,           0x01,           0x81.toByte(),  0xCD.toByte(),
         0x00,           0x12,           0xD6.toByte(),  0x87.toByte(),
         0x00,           0x00,           0x00,           0x01,
         0x00,           0x00,           0x00,           0x02,
-        0x00,           0x00,           0x00,           0x03
+        0x00,           0x00,           0x00,           0x03,
+        // Extensions (one byte header)
+        0xBE.toByte(),  0xDE.toByte(),  0x00,           0x03,
+        0x10.toByte(),  0x42,           0x21,           0x42,
+        0x42,           0x00,           0x00,           0x32,
+        0x42,           0x42,           0x42,           0x42,
+        // Payload
+        0x00,           0x00,           0x00,           0x00
     ))
 
-    val bbPacket = BitBufferPacket(packetData.asReadOnlyBuffer())
-    println("BitBufferPacket: \n$bbPacket")
+    val bbPacket = BitBufferRtpPacket(packetData.asReadOnlyBuffer())
+    println("BitBufferRtpPacket: \n$bbPacket")
     packetData.rewind()
 
+    if (true) return
 
+    //val fp = FieldRtpPacket(packetData.asReadOnlyBuffer())
+    //println("FieldRtpPacket: \n$fp")
+    //packetData.rewind()
 
-    val fp = FieldRtpPacket(packetData.asReadOnlyBuffer())
-    println("FieldRtpPacket: \n$fp")
-    packetData.rewind()
-
-    val packet = AbsoluteIndexRtpPacket(packetData)
-    println("RtpPacket: \n$packet")
+    //val packet = AbsoluteIndexRtpPacket(packetData)
+    //println("RtpPacket: \n$packet")
 
 
     val rtpPacketTimes = mutableListOf<Long>()
@@ -66,12 +74,12 @@ fun main(args: Array<String>) {
     val fieldPacketTimes = mutableListOf<Long>()
     sleep(10000)
     repeat (10) {
-        fieldPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> FieldRtpPacket(p)})
-        bitBufferPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> BitBufferPacket(p)})
-        rtpPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> AbsoluteIndexRtpPacket(p)})
+        //fieldPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> FieldRtpPacket(p)})
+        bitBufferPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> BitBufferRtpPacket(p)})
+        //rtpPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> AbsoluteIndexRtpPacket(p)})
     }
     println("RtpPacket took an average of ${rtpPacketTimes.average()}ms")
-    println("BitBufferPacket took an average of ${bitBufferPacketTimes.average()}ms")
+    println("BitBufferRtpPacket took an average of ${bitBufferPacketTimes.average()}ms")
     println("FieldRtpPacket took an average of ${fieldPacketTimes.average()}ms")
 }
 

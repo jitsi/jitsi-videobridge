@@ -61,7 +61,7 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
     init {
         "parsing" {
             "a header without extensions" {
-                val header = BitBufferRtpHeader(headerNoExtensions.asReadOnlyBuffer())
+                val header = BitBufferRtpHeader.fromBuffer(headerNoExtensions.asReadOnlyBuffer())
                 header.version shouldBe 2
                 header.hasPadding shouldBe true
                 header.hasExtension shouldBe false
@@ -76,14 +76,14 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
                 header.extensions.size shouldBe 0
             }
             "a header with one byte extensions" {
-                val header = BitBufferRtpHeader(headerWithOneByteExtensions.asReadOnlyBuffer())
+                val header = BitBufferRtpHeader.fromBuffer(headerWithOneByteExtensions.asReadOnlyBuffer())
                 header.extensions.size shouldBe 3
                 header.extensions.values.forEach {
                     it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
                 }
             }
             "a header with two byte extensions" {
-                val header = BitBufferRtpHeader(headerWithTwoByteExtensions.asReadOnlyBuffer())
+                val header = BitBufferRtpHeader.fromBuffer(headerWithTwoByteExtensions.asReadOnlyBuffer())
                 header.extensions.size shouldBe 3
                 header.extensions.values.forEach {
                     it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
@@ -92,14 +92,14 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
         }
         "writing" {
             "should update the object's value without touching the buffer" {
-                val header = BitBufferRtpHeader(headerNoExtensions.asReadOnlyBuffer())
+                val header = BitBufferRtpHeader.fromBuffer(headerNoExtensions.asReadOnlyBuffer())
                 header.version = 10
                 header.version shouldBe 10
                 // We passed the buffer as readonly, so we know it hasn't been changed
             }
         }
         "serializing" {
-            val header = BitBufferRtpHeader(headerNoExtensions.asReadOnlyBuffer())
+            val header = BitBufferRtpHeader.fromBuffer(headerNoExtensions.asReadOnlyBuffer())
             val newBuf = ByteBuffer.allocate(headerNoExtensions.limit())
             header.serializeToBuffer(newBuf)
             newBuf.rewind()

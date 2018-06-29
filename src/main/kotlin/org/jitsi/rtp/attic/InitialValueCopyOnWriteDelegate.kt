@@ -111,7 +111,7 @@ inline fun <reified R> KProperty0<R>.getOverride(): R? {
 //        csrcs = (0 until csrcCount).map {
 //            buf.getInt().toLong()
 //        }
-//        extensions = if (hasExtension) RtpHeaderExtensions.parse(buf) else mapOf()
+//        extensions = if (hasExtension) RtpHeaderExtensions.fromBuffer(buf) else mapOf()
 //    }
 
 //    override fun clone(): RtpHeader {
