@@ -482,18 +482,18 @@ public class VideoChannel
                 = getContent().getConference().getVideobridge()
                 .getStatistics();
 
-            long lossLimitedSeconds = bweStats.getLossLimitedMs() / 1000;
-            long lossDegradedSeconds = bweStats.getLossDegradedMs() / 1000;
-            long participantSeconds = bweStats.getLossFreeMs() / 1000
-                + lossDegradedSeconds + lossLimitedSeconds;
+            long lossLimitedMs = bweStats.getLossLimitedMs();
+            long lossDegradedMs = bweStats.getLossDegradedMs();
+            long participantMs = bweStats.getLossFreeMs()
+                + lossDegradedMs + lossLimitedMs;
 
-            videobridgeStats.totalParticipantSeconds
-                .addAndGet(participantSeconds);
-            videobridgeStats.totalLossLimitedParticipantSeconds
-                .addAndGet(lossLimitedSeconds);
+            videobridgeStats.totalLossControlledParticipantMs
+                .addAndGet(participantMs);
+            videobridgeStats.totalLossLimitedParticipantMs
+                .addAndGet(lossLimitedMs);
 
-            videobridgeStats.totalLossDegradedParticipantSeconds
-                .addAndGet(lossDegradedSeconds);
+            videobridgeStats.totalLossDegradedParticipantMs
+                .addAndGet(lossDegradedMs);
         }
 
         return true;
