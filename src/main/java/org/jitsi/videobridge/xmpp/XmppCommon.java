@@ -113,11 +113,8 @@ class XmppCommon
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
-     * @throws Exception to reply with <tt>internal-server-error</tt> to the
-     * specified request
      */
     IQ handleIQ(IQ iq)
-        throws Exception
     {
         IQ responseIQ = null;
 
@@ -144,7 +141,6 @@ class XmppCommon
     }
 
     private IQ handleIQRequest(IQ request)
-        throws Exception
     {
         // Requests can be categorized in pieces of Videobridge functionality
         // based on the org.jivesoftware.smack.packet.IQ runtime type (of their
@@ -232,7 +228,6 @@ class XmppCommon
     }
 
     private void handleIQResponse(IQ response)
-        throws Exception
     {
         Videobridge videobridge = getVideobridge();
 

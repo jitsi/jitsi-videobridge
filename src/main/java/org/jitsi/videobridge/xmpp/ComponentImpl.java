@@ -45,6 +45,10 @@ public class ComponentImpl
     extends ComponentBase
     implements BundleActivator
 {
+    /**
+     * The {@link Logger} used by the {@link ComponentImpl} class and its
+     * instances for logging output.
+     */
     private static final org.jitsi.util.Logger logger
             =  org.jitsi.util.Logger.getLogger(ComponentImpl.class);
 

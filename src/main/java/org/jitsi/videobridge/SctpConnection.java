@@ -234,7 +234,6 @@ public class SctpConnection
      * @param channelBundleId the ID of the channel-bundle this
      * <tt>SctpConnection</tt> is to be a part of (or <tt>null</tt> if no it is
      * not to be a part of a channel-bundle).
-     * @throws Exception if an error occurs while initializing the new instance
      */
     public SctpConnection(
             String id,
@@ -243,7 +242,6 @@ public class SctpConnection
             int remoteSctpPort,
             String channelBundleId,
             Boolean initiator)
-        throws Exception
     {
         super(content,
               id,

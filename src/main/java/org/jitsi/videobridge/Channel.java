@@ -214,7 +214,6 @@ public abstract class Channel
      * {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
-     * @throws Exception if an error occurs while initializing the new instance
      */
     public Channel(
             Content content,
@@ -222,7 +221,6 @@ public abstract class Channel
             String channelBundleId,
             String transportNamespace,
             Boolean initiator)
-        throws Exception
     {
         Objects.requireNonNull(content, "content");
         org.jivesoftware.smack.util.StringUtils.requireNotNullOrEmpty(id, "id");

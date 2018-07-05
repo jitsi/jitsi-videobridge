@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.regex.*;
@@ -609,11 +610,8 @@ public class Videobridge
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
-     * @throws Exception to reply with <tt>internal-server-error</tt> to the
-     * specified request
      */
     public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIQ)
-        throws Exception
     {
         return
             handleColibriConferenceIQ(conferenceIQ, defaultProcessingOptions);
@@ -659,13 +657,10 @@ public class Videobridge
      * @return an <tt>org.jivesoftware.smack.packet.IQ</tt> stanza which
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
-     * @throws Exception to reply with <tt>internal-server-error</tt> to the
-     * specified request
      */
     public IQ handleColibriConferenceIQ(
             ColibriConferenceIQ conferenceIQ,
             int options)
-        throws Exception
     {
         Jid focus = conferenceIQ.getFrom();
         Conference conference;
@@ -828,13 +823,22 @@ public class Videobridge
                                 XMPPError.Condition.bad_request,
                                 "Channel expire request for empty ID");
                     }
-                    channel
-                        = content.createRtpChannel(
+
+                    try
+                    {
+                        channel
+                            = content.createRtpChannel(
                                 channelBundleId,
                                 transportNamespace,
                                 channelIQ.isInitiator(),
                                 channelIQ.getRTPLevelRelayType(),
                                 octoChannelIQ != null);
+                    }
+                    catch (IOException ioe)
+                    {
+                        logger.error("Failed to create RtpChannel:", ioe);
+                        channel = null;
+                    }
 
                     if (channel == null)
                     {
@@ -1039,12 +1043,21 @@ public class Videobridge
                     {
                         int sctpPort = sctpConnIq.getPort();
 
-                        sctpConn
-                            = content.createSctpConnection(
+                        try
+                        {
+                            sctpConn
+                                = content.createSctpConnection(
                                     endpoint,
                                     sctpPort,
                                     channelBundleId,
                                     sctpConnIq.isInitiator());
+                        }
+                        catch (IOException ioe)
+                        {
+                            logger.error("Failed to create SctpConnection:", ioe);
+                            sctpConn = null;
+                        }
+
                         if (sctpConn == null)
                         {
                             return IQUtils.createError(
@@ -1269,7 +1282,6 @@ public class Videobridge
     }
 
     public void handleIQResponse(org.jivesoftware.smack.packet.IQ response)
-        throws Exception
     {
         PubSubPublisher.handleIQResponse(response);
     }

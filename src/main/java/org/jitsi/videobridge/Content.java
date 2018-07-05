@@ -283,14 +283,15 @@ public class Content
      * @param rtpLevelRelayType
      * @return the created <tt>RtpChannel</tt> instance.
      * @param octo whether to create a regular channel or an Octo channel.
-     * @throws Exception
+     * @throws IOException if the new {@link RtpChannel} instance failed to
+     * initialize.
      */
     public RtpChannel createRtpChannel(String channelBundleId,
                                        String transportNamespace,
                                        Boolean initiator,
                                        RTPLevelRelayType rtpLevelRelayType,
                                        boolean octo)
-        throws Exception
+        throws IOException
     {
         RtpChannel channel;
 
@@ -384,16 +385,15 @@ public class Content
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
      * @return new <tt>SctpConnection</tt> with given <tt>Endpoint</tt>
-     * @throws Exception if an error occurs while initializing the new instance
-     * @throws IllegalArgumentException if <tt>SctpConnection</tt> exists
-     * already for given <tt>Endpoint</tt>.
+     * @throws IOException if the new {@link SctpConnection} instance fails to
+     * initialize.
      */
     public SctpConnection createSctpConnection(
             AbstractEndpoint endpoint,
             int sctpPort,
             String channelBundleId,
             Boolean initiator)
-        throws Exception
+        throws IOException
     {
         SctpConnection sctpConnection;
 
