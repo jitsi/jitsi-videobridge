@@ -479,24 +479,27 @@ public class VideoChannel
             if (bwe != null)
             {
                 BandwidthEstimator.Statistics bweStats = bwe.getStatistics();
-                bweStats.update(System.currentTimeMillis());
+                if (bweStats != null)
+                {
+                    bweStats.update(System.currentTimeMillis());
 
-                Videobridge.Statistics videobridgeStats
-                    = getContent().getConference().getVideobridge()
-                    .getStatistics();
+                    Videobridge.Statistics videobridgeStats
+                        = getContent().getConference().getVideobridge()
+                        .getStatistics();
 
-                long lossLimitedMs = bweStats.getLossLimitedMs();
-                long lossDegradedMs = bweStats.getLossDegradedMs();
-                long participantMs = bweStats.getLossFreeMs()
-                    + lossDegradedMs + lossLimitedMs;
+                    long lossLimitedMs = bweStats.getLossLimitedMs();
+                    long lossDegradedMs = bweStats.getLossDegradedMs();
+                    long participantMs = bweStats.getLossFreeMs()
+                        + lossDegradedMs + lossLimitedMs;
 
-                videobridgeStats.totalLossControlledParticipantMs
-                    .addAndGet(participantMs);
-                videobridgeStats.totalLossLimitedParticipantMs
-                    .addAndGet(lossLimitedMs);
+                    videobridgeStats.totalLossControlledParticipantMs
+                        .addAndGet(participantMs);
+                    videobridgeStats.totalLossLimitedParticipantMs
+                        .addAndGet(lossLimitedMs);
 
-                videobridgeStats.totalLossDegradedParticipantMs
-                    .addAndGet(lossDegradedMs);
+                    videobridgeStats.totalLossDegradedParticipantMs
+                        .addAndGet(lossDegradedMs);
+                }
             }
         }
 
