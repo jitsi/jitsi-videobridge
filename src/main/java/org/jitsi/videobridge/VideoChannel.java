@@ -473,27 +473,31 @@ public class VideoChannel
         MediaStream mediaStream = getStream();
         if (mediaStream instanceof VideoMediaStream)
         {
-            BandwidthEstimator.Statistics bweStats
-                = ((VideoMediaStream) mediaStream)
-                .getOrCreateBandwidthEstimator().getStatistics();
-            bweStats.update(System.currentTimeMillis());
+            BandwidthEstimator bwe = ((VideoMediaStream) mediaStream)
+                .getOrCreateBandwidthEstimator();
 
-            Videobridge.Statistics videobridgeStats
-                = getContent().getConference().getVideobridge()
-                .getStatistics();
+            if (bwe != null)
+            {
+                BandwidthEstimator.Statistics bweStats = bwe.getStatistics();
+                bweStats.update(System.currentTimeMillis());
 
-            long lossLimitedMs = bweStats.getLossLimitedMs();
-            long lossDegradedMs = bweStats.getLossDegradedMs();
-            long participantMs = bweStats.getLossFreeMs()
-                + lossDegradedMs + lossLimitedMs;
+                Videobridge.Statistics videobridgeStats
+                    = getContent().getConference().getVideobridge()
+                    .getStatistics();
 
-            videobridgeStats.totalLossControlledParticipantMs
-                .addAndGet(participantMs);
-            videobridgeStats.totalLossLimitedParticipantMs
-                .addAndGet(lossLimitedMs);
+                long lossLimitedMs = bweStats.getLossLimitedMs();
+                long lossDegradedMs = bweStats.getLossDegradedMs();
+                long participantMs = bweStats.getLossFreeMs()
+                    + lossDegradedMs + lossLimitedMs;
 
-            videobridgeStats.totalLossDegradedParticipantMs
-                .addAndGet(lossDegradedMs);
+                videobridgeStats.totalLossControlledParticipantMs
+                    .addAndGet(participantMs);
+                videobridgeStats.totalLossLimitedParticipantMs
+                    .addAndGet(lossLimitedMs);
+
+                videobridgeStats.totalLossDegradedParticipantMs
+                    .addAndGet(lossDegradedMs);
+            }
         }
 
         return true;
