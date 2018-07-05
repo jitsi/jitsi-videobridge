@@ -236,14 +236,12 @@ public class VideoChannel
      * or {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
-     * @throws Exception if an error occurs while initializing the new instance
      */
     VideoChannel(Content content,
                  String id,
                  String channelBundleId,
                  String transportNamespace,
                  Boolean initiator)
-        throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
 

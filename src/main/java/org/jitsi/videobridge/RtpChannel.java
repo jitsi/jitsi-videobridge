@@ -262,7 +262,6 @@ public class RtpChannel
      * {@link RawUdpTransportPacketExtension#NAMESPACE}.
      * @param initiator the value to use for the initiator field, or
      * <tt>null</tt> to use the default value.
-     * @throws Exception if an error occurs while initializing the new instance
      */
     public RtpChannel(
             Content content,
@@ -270,7 +269,6 @@ public class RtpChannel
             String channelBundleId,
             String transportNamespace,
             Boolean initiator)
-        throws Exception
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
 
@@ -284,7 +282,7 @@ public class RtpChannel
          * synchronization source identifier (SSRC), which Jitsi Videobridge
          * pre-announces.
          */
-        initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffffffffL;
+        initialLocalSSRC = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
 
         Conference conference = content.getConference();
         conference.addPropertyChangeListener(propertyChangeListener);

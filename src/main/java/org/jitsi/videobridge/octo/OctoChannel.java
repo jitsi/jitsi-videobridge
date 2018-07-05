@@ -107,10 +107,8 @@ public class OctoChannel
      * list of <tt>Channel</tt>s listed in <tt>content</tt> while the new
      * instance
      * is listed there as well.
-     * @throws Exception if an error occurs while initializing the new instance
      */
     public OctoChannel(Content content, String id)
-        throws Exception
     {
         super(
                 content, id, null /*channelBundleId*/,
