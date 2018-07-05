@@ -21,7 +21,7 @@
     <assembly.skipAssembly>true</assembly.skipAssembly>
     <exec.mainClass>org.jitsi.videobridge.Main</exec.mainClass>
     <jitsi-desktop.version>2.13.f0a8003</jitsi-desktop.version>
-    <smack.version>4.2.1</smack.version>
+    <smack.version>4.2.2-b1c107f</smack.version>
   </properties>
 
   <dependencyManagement>
