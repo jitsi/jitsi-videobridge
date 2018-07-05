@@ -1834,6 +1834,26 @@ public class Videobridge
         public AtomicLong totalConferenceSeconds = new AtomicLong();
 
         /**
+         * The total number of participant-milliseconds that are loss-controlled
+         * (i.e. the sum of the lengths is seconds) on this {@link Videobridge}.
+         */
+        public AtomicLong totalLossControlledParticipantMs = new AtomicLong();
+
+        /**
+         * The total number of participant-milliseconds that are loss-limited
+         * on this {@link Videobridge}.
+         */
+        public AtomicLong totalLossLimitedParticipantMs = new AtomicLong();
+
+        /**
+         * The total number of participant-milliseconds that are loss-degraded
+         * on this {@link Videobridge}. We chose the unit to be millis because
+         * we expect that a lot of our calls spend very few ms (<500) in the
+         * lossDegraded state for example, and they might get cut to 0.
+         */
+        public AtomicLong totalLossDegradedParticipantMs = new AtomicLong();
+
+        /**
          * The total number of ICE transport managers on this videobridge which
          * successfully connected over UDP.
          */

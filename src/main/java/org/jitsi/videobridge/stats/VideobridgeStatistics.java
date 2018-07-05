@@ -206,6 +206,27 @@ public class VideobridgeStatistics
         = "total_conference_seconds";
 
     /**
+     * The name of the stat indicating the total number of participant-seconds
+     * that are loss-controlled (i.e. the sum of the lengths is seconds).
+     */
+    private static final String TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS
+        = "total_loss_controlled_participant_seconds";
+
+    /**
+     * The name of the stat indicating the total number of participant-seconds
+     * that are loss-limited.
+     */
+    private static final String TOTAL_LOSS_LIMITED_PARTICIPANT_SECONDS
+        = "total_loss_limited_participant_seconds";
+
+    /**
+     * The name of the stat indicating the total number of participant-seconds
+     * that are loss-degraded.
+     */
+    private static final String TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS
+        = "total_loss_degraded_participant_seconds";
+
+    /**
      * The name of the stat indicating the total number of media connections
      * established over UDP.
      */
@@ -423,7 +444,10 @@ public class VideobridgeStatistics
             totalFailedConferences = 0, totalPartiallyFailedConferences = 0,
             totalNoTransportChannels = 0, totalNoPayloadChannels = 0,
             totalChannels = 0;
-        long totalConferenceSeconds = 0;
+        long totalConferenceSeconds = 0,
+            totalLossControlledParticipantSeconds = 0,
+            totalLossLimitedParticipantSeconds = 0,
+            totalLossDegradedParticipantSeconds = 0;
         int totalUdpConnections = 0, totalTcpConnections = 0;
         long totalDataChannelMessagesReceived = 0;
         long totalDataChannelMessagesSent = 0;
@@ -445,6 +469,12 @@ public class VideobridgeStatistics
             totalConferencesCompleted
                 += jvbStats.totalConferencesCompleted.get();
             totalConferenceSeconds += jvbStats.totalConferenceSeconds.get();
+            totalLossControlledParticipantSeconds
+                += jvbStats.totalLossControlledParticipantMs.get() / 1000;
+            totalLossLimitedParticipantSeconds
+                += jvbStats.totalLossLimitedParticipantMs.get() / 1000;
+            totalLossDegradedParticipantSeconds
+                += jvbStats.totalLossDegradedParticipantMs.get() / 1000;
             totalFailedConferences += jvbStats.totalFailedConferences.get();
             totalPartiallyFailedConferences
                 += jvbStats.totalPartiallyFailedConferences.get();
@@ -655,6 +685,12 @@ public class VideobridgeStatistics
             unlockedSetStat(TOTAL_UDP_CONNECTIONS, totalUdpConnections);
             unlockedSetStat(TOTAL_TCP_CONNECTIONS, totalTcpConnections);
             unlockedSetStat(TOTAL_CONFERENCE_SECONDS, totalConferenceSeconds);
+            unlockedSetStat(TOTAL_LOSS_CONTROLLED_PARTICIPANT_SECONDS,
+                totalLossControlledParticipantSeconds);
+            unlockedSetStat(TOTAL_LOSS_LIMITED_PARTICIPANT_SECONDS,
+                    totalLossLimitedParticipantSeconds);
+            unlockedSetStat(TOTAL_LOSS_DEGRADED_PARTICIPANT_SECONDS,
+                    totalLossDegradedParticipantSeconds);
             unlockedSetStat(TOTAL_CHANNELS, totalChannels);
             unlockedSetStat(CONFERENCES, conferences);
             unlockedSetStat(NUMBEROFPARTICIPANTS, endpoints);

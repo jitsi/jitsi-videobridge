@@ -281,8 +281,7 @@ public class VideoChannel
         throws IOException
     {
         MediaStream stream = getStream();
-        boolean previouslyStarted
-            = stream != null ? stream.isStarted() : false;
+        boolean previouslyStarted = stream != null && stream.isStarted();
 
         super.maybeStartStream();
 
@@ -294,8 +293,7 @@ public class VideoChannel
         // keyframe from other channels if needed.
 
         stream = getStream();
-        boolean currentlyStarted
-            = stream != null ? stream.isStarted() : false;
+        boolean currentlyStarted = stream != null && stream.isStarted();
 
         if (currentlyStarted && !previouslyStarted)
         {
@@ -472,6 +470,39 @@ public class VideoChannel
                 .deRegisterRecurringRunnable(bandwidthProbing);
         }
 
+        MediaStream mediaStream = getStream();
+        if (mediaStream instanceof VideoMediaStream)
+        {
+            BandwidthEstimator bwe = ((VideoMediaStream) mediaStream)
+                .getOrCreateBandwidthEstimator();
+
+            if (bwe != null)
+            {
+                BandwidthEstimator.Statistics bweStats = bwe.getStatistics();
+                if (bweStats != null)
+                {
+                    bweStats.update(System.currentTimeMillis());
+
+                    Videobridge.Statistics videobridgeStats
+                        = getContent().getConference().getVideobridge()
+                        .getStatistics();
+
+                    long lossLimitedMs = bweStats.getLossLimitedMs();
+                    long lossDegradedMs = bweStats.getLossDegradedMs();
+                    long participantMs = bweStats.getLossFreeMs()
+                        + lossDegradedMs + lossLimitedMs;
+
+                    videobridgeStats.totalLossControlledParticipantMs
+                        .addAndGet(participantMs);
+                    videobridgeStats.totalLossLimitedParticipantMs
+                        .addAndGet(lossLimitedMs);
+
+                    videobridgeStats.totalLossDegradedParticipantMs
+                        .addAndGet(lossDegradedMs);
+                }
+            }
+        }
+
         return true;
     }
 
@@ -611,7 +642,7 @@ public class VideoChannel
         }
 
         MediaStream mediaStream = getStream();
-        if (mediaStream != null && mediaStream instanceof VideoMediaStreamImpl)
+        if (mediaStream instanceof VideoMediaStreamImpl)
         {
             ((VideoMediaStreamImpl) mediaStream).setSupportsFir(supportsFir);
             ((VideoMediaStreamImpl) mediaStream).setSupportsPli(supportsPli);
