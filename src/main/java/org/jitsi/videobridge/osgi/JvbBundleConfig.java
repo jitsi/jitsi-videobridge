@@ -103,6 +103,9 @@ public class JvbBundleConfig
             "org/jitsi/videobridge/EndpointConnectionStatus"
         },
         {
+            "org/jitsi/videobridge/xmpp/ClientConnectionImpl"
+        },
+        {
             "org/jitsi/videobridge/octo/OctoRelayService"
         }
     };

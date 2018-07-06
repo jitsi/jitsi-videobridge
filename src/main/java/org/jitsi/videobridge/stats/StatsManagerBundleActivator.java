@@ -101,6 +101,11 @@ public class StatsManagerBundleActivator
     private static final String STAT_TRANSPORT_PUBSUB = "pubsub";
 
     /**
+     * The value used to enable the MUC statistics transport.
+     */
+    private static final String STAT_TRANSPORT_MUC = "muc";
+
+    /**
      * The name of the property which specifies the interval in milliseconds for
      * sending statistics about the Videobridge.
      */
@@ -188,6 +193,11 @@ public class StatsManagerBundleActivator
                         "No configuration properties for PubSub service"
                             + " and/or node found.");
             }
+        }
+        else if (STAT_TRANSPORT_MUC.equalsIgnoreCase(transport))
+        {
+            logger.info("Using a MUC stats transport");
+            t = new MucStatsTransport();
         }
         else
         {
