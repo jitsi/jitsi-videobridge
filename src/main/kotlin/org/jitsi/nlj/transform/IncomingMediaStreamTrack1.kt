@@ -16,7 +16,7 @@
 package org.jitsi.nlj.transform
 
 import org.jitsi.nlj.IncomingMediaStreamTrack
-import org.jitsi.nlj.Packet
+import org.jitsi.rtp.Packet
 import kotlin.system.measureNanoTime
 
 /**

@@ -16,7 +16,7 @@
 package org.jitsi.nlj.transform2
 
 import org.jitsi.nlj.IncomingMediaStreamTrack
-import org.jitsi.nlj.Packet
+import org.jitsi.rtp.Packet
 import kotlin.system.measureNanoTime
 
 class IncomingMediaStreamTrack2 : IncomingMediaStreamTrack {
@@ -48,7 +48,7 @@ class IncomingMediaStreamTrack2 : IncomingMediaStreamTrack {
             demux {
                 name = "RTP/RTCP demuxer"
                 addSubChain {
-                    predicate(Packet::isRtp)
+                    predicate(isRtp)
                     path(ModuleChainBuilder.chain {
                         name("RTP chain")
                         module(PacketLossMonitorModule())
@@ -56,7 +56,7 @@ class IncomingMediaStreamTrack2 : IncomingMediaStreamTrack {
                     })
                 }
                 addSubChain {
-                    predicate(Packet::isRtcp)
+                    predicate(isRtcp)
                     path(ModuleChainBuilder.build {
                         name("RTCP chain")
                         module(RtcpHandlerModule())

@@ -15,16 +15,9 @@
  */
 package org.jitsi.nlj
 
-// TODO: Should rtp lib define a top-level packet type?
-class Packet(val seqNum: Int, val size: Int, val isRtp: Boolean) {
-    val isRtcp = !isRtp
-    override fun toString(): String {
-        return "Pkt $seqNum ${if(isRtp) "RTP" else "RTCP"}"
-    }
-}
+import org.jitsi.rtp.Packet
 
 interface IncomingMediaStreamTrack {
     fun processPackets(pkts: List<Packet>)
     fun getStats(): String
-//    fun onRtpPacket(handler: (Packet) -> Unit)
 }

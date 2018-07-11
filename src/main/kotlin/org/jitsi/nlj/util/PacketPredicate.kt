@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.util
 
-import org.jitsi.nlj.Packet
+import org.jitsi.rtp.Packet
 
 typealias PacketPredicate = (Packet) -> Boolean
 

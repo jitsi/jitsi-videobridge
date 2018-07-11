@@ -15,8 +15,10 @@
  */
 package org.jitsi.nlj.transform
 
-import org.jitsi.nlj.Packet
 import org.jitsi.nlj.util.PacketPredicate
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpHeader
+import org.jitsi.rtp.RtpPacket
 import java.util.*
 import kotlin.properties.Delegates
 
@@ -147,12 +149,14 @@ class PacketLossMonitor : Transformer("Packet loss monitor") {
     override fun doProcessPackets(p: List<Packet>): List<Packet> {
         println("PacketLossMonitor")
         p.forEach { pkt ->
-            lastSeqNumSeen?.let {
-                if (pkt.seqNum > it + 1) {
-                    lostPackets += (pkt.seqNum - it - 1)
+            if (pkt is RtpPacket) {
+                lastSeqNumSeen?.let {
+                    if (pkt.header.sequenceNumber > it + 1) {
+                        lostPackets += (pkt.header.sequenceNumber - it - 1)
+                    }
                 }
+                lastSeqNumSeen = pkt.header.sequenceNumber
             }
-            lastSeqNumSeen = pkt.seqNum
         }
         return p
     }
@@ -174,7 +178,11 @@ class FecHandler : Transformer("FEC") {
             val recoveredSeqNum = 100
             println("FEC handler recreated packet")
             handlers.forEach { it.invoke(recoveredSeqNum)}
-            return p + Packet(recoveredSeqNum, 1000, true)
+            return p + RtpPacket.fromValues {
+                header = RtpHeader.fromValues {
+                    sequenceNumber = recoveredSeqNum
+                }
+            }
         }
         return p
     }
