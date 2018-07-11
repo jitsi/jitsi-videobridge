@@ -17,6 +17,12 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.IncomingMediaStreamTrack1
 import org.jitsi.nlj.transform2.IncomingMediaStreamTrack2
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpHeader
+import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.RtcpSrPacket
+import java.nio.ByteBuffer
 import java.util.*
 
 class PacketGenerator {
@@ -30,9 +36,33 @@ class PacketGenerator {
         }
         return if (currSequenceNumber - lastRtcpSequenceNumber > 10) {
             lastRtcpSequenceNumber = currSequenceNumber
-            Packet(currSequenceNumber++, Random().nextInt(500), false)
+            RtpPacket.fromValues {
+                header = RtpHeader.fromValues {
+                    version = 2
+                    hasPadding = false
+                    hasExtension = false
+                    csrcCount = 3
+                    marker = true
+                    payloadType = 96
+                    sequenceNumber = currSequenceNumber
+                    timestamp = 98765
+                    ssrc = 1234567
+                    csrcs = listOf<Long>(1, 2, 3)
+                    extensions = mapOf()
+                }
+                payload = ByteBuffer.allocate(50)
+            }
         } else {
-            Packet(currSequenceNumber++, Random().nextInt(1000), true)
+            RtcpSrPacket.fromValues {
+                header = RtcpHeader.fromValues {
+                    version = 2
+                    hasPadding = false
+                    reportCount = 2
+                    payloadType = 200
+                    length = 42
+                    senderSsrc = 12345
+                }
+            }
         }
     }
 }
