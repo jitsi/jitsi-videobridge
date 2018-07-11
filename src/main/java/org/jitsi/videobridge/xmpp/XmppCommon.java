@@ -28,8 +28,9 @@ import org.osgi.framework.*;
 
 /**
  * Implements logic for handling incoming IQs represented as Smack {@link IQ}
- * instances. The logic is meant to be reused between {@link ComponentImpl}
- * and other implementations (e.g. one based on an XMPP user connection).
+ * instances. This is used in both {@link ComponentImpl} (which receives IQs
+ * from an XMPP component connection) and {@link ClientConnectionImpl} (which
+ * receives IQs from an XMPP client connection).
  *
  * @author Boris Grozev
  */
