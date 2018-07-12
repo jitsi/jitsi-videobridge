@@ -53,11 +53,11 @@ class ModuleChain<InputPacketType : Packet> {
         > addAndConnect(m: Module<ModuleInputPacketType, ModuleOutputPacketType>) {
         val previousModule = modules.lastOrNull()
         modules.add(m)
-        previousModule?.attach(m::processPackets)
+//        previousModule?.attach(m::processPackets)
     }
 
     fun processPackets(pkts: List<InputPacketType>) {
-        modules[0].processPackets(pkts)
+//        modules[0].processPackets(pkts)
     }
 
     fun getStats(indent: Int = 0): String {
@@ -200,7 +200,7 @@ class PacketPath {
     fun addSubChain(b: PacketPath.() -> Unit) {
         val pp = PacketPath()
         pp.b()
-        transformPaths[pp.predicate] = pp.path
+//        transformPaths[pp.predicate] = pp.path
     }
 
     override fun attach(nextModule: (List<Nothing>) -> Unit) = throw Exception()

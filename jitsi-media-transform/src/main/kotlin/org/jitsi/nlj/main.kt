@@ -27,15 +27,15 @@ import java.util.*
 
 class PacketGenerator {
     private var currSequenceNumber = 1
-    private var lastRtcpSequenceNumber = 1
+    private var packetsSinceRtp = 0
 
     fun generatePacket(): Packet {
         if (Random().nextInt(100) > 90) {
             // Simulate loss
             currSequenceNumber++
         }
-        return if (currSequenceNumber - lastRtcpSequenceNumber > 10) {
-            lastRtcpSequenceNumber = currSequenceNumber
+        return if (packetsSinceRtp < 9) {
+            packetsSinceRtp++
             RtpPacket.fromValues {
                 header = RtpHeader.fromValues {
                     version = 2
@@ -47,12 +47,13 @@ class PacketGenerator {
                     sequenceNumber = currSequenceNumber
                     timestamp = 98765
                     ssrc = 1234567
-                    csrcs = listOf<Long>(1, 2, 3)
+                    csrcs = listOf(1, 2, 3)
                     extensions = mapOf()
                 }
                 payload = ByteBuffer.allocate(50)
             }
         } else {
+            packetsSinceRtp = 0
             RtcpSrPacket.fromValues {
                 header = RtcpHeader.fromValues {
                     version = 2

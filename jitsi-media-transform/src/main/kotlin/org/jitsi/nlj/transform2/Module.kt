@@ -26,37 +26,30 @@ import kotlin.reflect.KClass
 
 typealias NextModule = (List<Packet>) -> Unit
 
-class ModuleChain<InputPacketType : Packet> {
-    private val modules: MutableList<Module<out Packet, out Packet>> = mutableListOf()
+class ModuleChain {
+    private val modules = mutableListOf<Module>()
     private var name: String = ""
 
     fun name(n: String) {
         this.name = n
     }
 
-    fun<
-    ModuleInputPacketType : Packet,
-    ModuleOutputPacketType : Packet
-    >
-    module(m: Module<ModuleInputPacketType, ModuleOutputPacketType>) {
+    fun module(m: Module) {
         addAndConnect(m)
     }
 
-    fun<DemuxerInputPacketType : Packet> demux(b: SplitterModule<DemuxerInputPacketType>.() -> Unit) {
-        val sm = SplitterModule<DemuxerInputPacketType>().apply(b)
+    fun demux(b: SplitterModule.() -> Unit) {
+        val sm = SplitterModule().apply(b)
         addAndConnect(sm)
     }
 
-    private fun<
-    ModuleInputPacketType : Packet,
-    ModuleOutputPacketType : Packet
-        > addAndConnect(m: Module<ModuleInputPacketType, ModuleOutputPacketType>) {
+    private fun addAndConnect(m: Module) {
         val previousModule = modules.lastOrNull()
         modules.add(m)
         previousModule?.attach(m::processPackets)
     }
 
-    fun processPackets(pkts: List<InputPacketType>) {
+    fun processPackets(pkts: List<Packet>) {
         modules[0].processPackets(pkts)
     }
 
@@ -68,7 +61,7 @@ class ModuleChain<InputPacketType : Packet> {
         }
     }
 
-    fun findFirst(moduleClass: KClass<*>): Module<*, *>? {
+    fun findFirst(moduleClass: KClass<*>): Module? {
         for (m in modules) {
             if (m::class == moduleClass) {
                 return m
@@ -80,38 +73,28 @@ class ModuleChain<InputPacketType : Packet> {
         return null
     }
 
-    fun findAll(moduleClass: KClass<*>): List<Module<*, *>> {
+    fun findAll(moduleClass: KClass<*>): List<Module> {
         return modules.filter { it -> it::class == moduleClass }
     }
 }
 
 class ModuleChainBuilder {
     companion object {
-        fun<InputPacketType : Packet> build(f: ModuleChain<InputPacketType>.() -> Unit): ModuleChain<*> {
-            val chain = ModuleChain<InputPacketType>()
-            chain.f()
-            return chain
-        }
-        fun<InputPacketType : Packet> chain(block: ModuleChain<InputPacketType>.() -> Unit): ModuleChain<InputPacketType> = ModuleChain<InputPacketType>().apply(block)
+        fun chain(block: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(block)
     }
 }
 
-// InputPacketType used as an input parameter (processPackets)
-// OutputPacketType used as an input parameter (attach)
-abstract class Module<InputPacketType : Packet, OutputPacketType : Packet>(
-    var name: String,
-    protected val debug: Boolean = false
-) {
-    protected var nextModule: (List<OutputPacketType>) -> Unit = {}
-    protected var startTimeNanos: Long by Delegates.notNull()
-    protected var totalNanos: Long = 0
-    protected var numInputPackets = 0
+abstract class Module(var name: String, protected val debug: Boolean = false) {
+    protected var nextModule: (List<Packet>) -> Unit = {}
+    private var startTimeNanos: Long by Delegates.notNull()
+    private var totalNanos: Long = 0
+    private var numInputPackets = 0
     protected var numOutputPackets = 0
-    open fun attach(nextModule: Function1<List<OutputPacketType>, Unit>) {
+    open fun attach(nextModule: Function1<List<Packet>, Unit>) {
         this.nextModule = nextModule
     }
 
-    private fun onEntry(p: List<InputPacketType>) {
+    private fun onEntry(p: List<Packet>) {
         if (debug) {
             println("Entering module $name")
         }
@@ -127,9 +110,9 @@ abstract class Module<InputPacketType : Packet, OutputPacketType : Packet>(
         totalNanos += time
     }
 
-    protected abstract fun doProcessPackets(p: List<InputPacketType>)
+    protected abstract fun doProcessPackets(p: List<Packet>)
 
-    fun processPackets(p: List<InputPacketType>) {
+    fun processPackets(p: List<Packet>) {
         onEntry(p)
         doProcessPackets(p)
         // TODO: can we do the splitter in such a way that this won't end
@@ -149,7 +132,7 @@ abstract class Module<InputPacketType : Packet, OutputPacketType : Packet>(
     }
 }
 
-class PacketStatsModule : Module<Packet, Packet>("RX Packet stats") {
+class PacketStatsModule : Module("RX Packet stats") {
     var totalBytesRx = 0
     override fun doProcessPackets(p: List<Packet>) {
         p.forEach { pkt -> totalBytesRx += pkt.size }
@@ -166,7 +149,7 @@ class PacketStatsModule : Module<Packet, Packet>("RX Packet stats") {
     }
 }
 
-class SrtpModule : Module<Packet, Packet>("SRTP Decrypt") {
+class SrtpModule : Module("SRTP Decrypt") {
     override fun doProcessPackets(p: List<Packet>) {
         if (debug) {
             println("SRTP Decrypt")
@@ -178,24 +161,24 @@ class SrtpModule : Module<Packet, Packet>("SRTP Decrypt") {
 
 class PacketPath {
     var predicate: PacketPredicate by Delegates.notNull()
-    var path: ModuleChain<*> by Delegates.notNull()
+    var path: ModuleChain by Delegates.notNull()
 
     fun predicate(p: PacketPredicate) {
         predicate = p
     }
 
-    fun path(m: ModuleChain<*>) {
+    fun path(m: ModuleChain) {
         path = m
     }
 }
 
-/*abstract*/ class SplitterModule<InputPacketType : Packet>: Module<InputPacketType, Nothing>("") {
+/*abstract*/ class SplitterModule : Module("") {
     // I think a map in the splitter module (whatever it is) will be useful because
     // it can be handy to have packets potentially go down multiple paths (this allows
     // for easy insertion of debug modules at different points, for example) so the
     // predicates will have to accept ONLY what they want (which seems like a good
     // thing anyway)
-    private var transformPaths: MutableMap<PacketPredicate, ModuleChain<Packet>> = mutableMapOf()
+    private var transformPaths: MutableMap<PacketPredicate, ModuleChain> = mutableMapOf()
 
     fun addSubChain(b: PacketPath.() -> Unit) {
         val pp = PacketPath()
@@ -203,9 +186,9 @@ class PacketPath {
         transformPaths[pp.predicate] = pp.path
     }
 
-    override fun attach(nextModule: (List<Nothing>) -> Unit) = throw Exception()
+    override fun attach(nextModule: (List<Packet>) -> Unit) = throw Exception()
 
-    override fun doProcessPackets(p: List<InputPacketType>) {
+    override fun doProcessPackets(p: List<Packet>) {
         p.forEach { packet ->
             transformPaths.forEach { predicate, chain ->
                 if (predicate(packet)) {
@@ -216,7 +199,7 @@ class PacketPath {
         }
     }
 
-    fun findFirst(moduleClass: KClass<*>): Module<*, *>? {
+    fun findFirst(moduleClass: KClass<*>): Module? {
         for (m in transformPaths.values) {
             val mod = m.findFirst(moduleClass)
             if (mod != null) { return mod }
@@ -247,38 +230,56 @@ class PacketPath {
 //    }
 //}
 
-class PacketLossMonitorModule : Module<RtpPacket, RtpPacket>("Packet loss monitor") {
+class PacketLossMonitorModule : Module("Packet loss monitor") {
     var lastSeqNumSeen: Int? = null
     var lostPackets = 0
-    override fun doProcessPackets(p: List<RtpPacket>) {
+
+    override fun doProcessPackets(p: List<Packet>) {
         if (debug) {
             println("Packet loss monitor")
         }
         p.forEach { pkt ->
-            lastSeqNumSeen?.let {
-                if (pkt.header.sequenceNumber > it + 1) {
-                    lostPackets += (pkt.header.sequenceNumber - it - 1)
+            if (pkt is RtpPacket) {
+                lastSeqNumSeen?.let {
+                    if (pkt.header.sequenceNumber > it + 1) {
+                        lostPackets += (pkt.header.sequenceNumber - it - 1)
+                    }
                 }
+                lastSeqNumSeen = pkt.header.sequenceNumber
+            } else {
+                throw Exception("Expected RtpPacket")
             }
-            lastSeqNumSeen = pkt.header.sequenceNumber
         }
         numOutputPackets += p.size
         nextModule.invoke(p)
     }
 }
 
-class FecReceiver : Module<RtpPacket, RtpPacket>("FEC Receiver") {
+
+inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit): Unit {
+    for (element in this) action(element as Expected)
+}
+
+class FecReceiver : Module("FEC Receiver") {
     val handlers = mutableListOf<(Int) -> Unit>()
-    override fun doProcessPackets(p: List<RtpPacket>) {
-        if (Random().nextInt(100) > 90) {
-            println("FEC receiver recovered packet")
-            handlers.forEach { it.invoke(1000)}
+    fun validate(p: Packet): RtpPacket {
+        return when (p) {
+            is RtpPacket -> p
+            else -> throw Exception()
+        }
+    }
+    override fun doProcessPackets(p: List<Packet>) {
+        p.forEachAs<RtpPacket> {
+            if (Random().nextInt(100) > 90) {
+                println("FEC receiver recovered packet")
+                handlers.forEach { it.invoke(1000)}
+            }
         }
     }
 }
 
-class RtpHandlerModule(private val handler: (Packet) -> Unit) : Module<RtpPacket, RtpPacket>("RTP handler") {
-    override fun doProcessPackets(p: List<RtpPacket>) {
+class RtpHandlerModule(private val handler: (Packet) -> Unit) : Module("RTP handler") {
+    override fun doProcessPackets(p: List<Packet>) {
         if (debug) {
             println("RTP handler")
         }
@@ -286,10 +287,16 @@ class RtpHandlerModule(private val handler: (Packet) -> Unit) : Module<RtpPacket
     }
 }
 
-class RtcpHandlerModule : Module<RtcpPacket, RtcpPacket>("RTCP handler") {
-    override fun doProcessPackets(p: List<RtcpPacket>) {
-        if (debug) {
-            println("RTCP handler")
+class RtcpHandlerModule : Module("RTCP handler") {
+    override fun doProcessPackets(p: List<Packet>) {
+        p.forEach { pkt ->
+            if (pkt is RtcpPacket) {
+                if (debug) {
+                    println("RTCP handler")
+                }
+            } else {
+                throw Exception("Expected RtcpPacket")
+            }
         }
     }
 }
