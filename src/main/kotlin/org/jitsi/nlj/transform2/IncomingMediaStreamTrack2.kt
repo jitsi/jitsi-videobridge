@@ -48,7 +48,7 @@ class IncomingMediaStreamTrack2 : IncomingMediaStreamTrack {
             demux {
                 name = "RTP/RTCP demuxer"
                 addSubChain {
-                    predicate(isRtp)
+                    predicate(Packet::isRtp)
                     path(ModuleChainBuilder.chain {
                         name("RTP chain")
                         module(PacketLossMonitorModule())
@@ -56,8 +56,8 @@ class IncomingMediaStreamTrack2 : IncomingMediaStreamTrack {
                     })
                 }
                 addSubChain {
-                    predicate(isRtcp)
-                    path(ModuleChainBuilder.build {
+                    predicate(Packet::isRtcp)
+                    path(ModuleChainBuilder.chain {
                         name("RTCP chain")
                         module(RtcpHandlerModule())
                     })

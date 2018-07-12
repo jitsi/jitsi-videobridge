@@ -35,19 +35,19 @@ class Circle : Oval()
 open class Quadrilateral : Shape()
 class Square : Quadrilateral()
 
-class NodeChain {
-    val nodes: MutableList<Node<*, *>> = mutableListOf()
+class NodeChain<ShapeType : Shape> {
+    val nodes: MutableList<Node<in ShapeType, out Shape>> = mutableListOf()
 
-    fun node(n: Node<*, *>) {
+    fun node(n: Node<in ShapeType, out Shape>) {
         println("adding node")
         val prevNode = nodes.lastOrNull()
         nodes.add(n)
-        //prevNode?.nextNode = n::processInput
+//        prevNode?.nextNode = n::processInput
     }
 
-    fun processInput(input: List<Shape>) {
+    fun processInput(input: List<ShapeType>) {
         println("Chain processing input")
-        //nodes[0].processInput(input)
+        nodes[0].processInput(input)
     }
 }
 
@@ -144,16 +144,17 @@ class CircleNode2 : Node2() {
 
 
 fun main(args: Array<String>) {
-    val nodeChain = with (NodeChain()) {
+    val nodeChain = with (NodeChain<Circle>()) {
         node(OvalNode())
         node(CircleNode())
-        node(CircleNode() as Node<Shape, Shape>)
+//        node(CircleNode() as Node<Shape, Shape>)
         this
     }
+//    nodeChain.processInput(listOf(Shape()))
 
-    val nodeChain2 = NodeChain2().apply {
-        node(CircleNode2())
-    }
-    nodeChain2.processInput(listOf(Shape()))
+//    val nodeChain2 = NodeChain2().apply {
+//        node(CircleNode2())
+//    }
+//    nodeChain2.processInput(listOf(Shape()))
 
 }
