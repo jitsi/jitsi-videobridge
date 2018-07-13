@@ -13,12 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj
+package org.jitsi.nlj.transform2
 
-import org.jitsi.rtp.Packet
+fun chain(receiver: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(receiver)
 
-interface IncomingMediaStreamTrack {
-    fun processPackets(pkts: List<Packet>)
-    fun getStats(): String
-    fun enqueuePacket(p: Packet)
-}
+

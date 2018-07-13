@@ -17,85 +17,79 @@ package org.jitsi.nlj.transform2
 
 import org.jitsi.nlj.IncomingMediaStreamTrack
 import org.jitsi.rtp.Packet
+import java.lang.Thread.yield
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
 import kotlin.system.measureNanoTime
 
-class IncomingMediaStreamTrack2 : IncomingMediaStreamTrack {
+class IncomingMediaStreamTrack2(val id: Long, val executor: ExecutorService) : IncomingMediaStreamTrack {
     val moduleChain: ModuleChain
-    var rtpHandler: (Packet) -> Unit = {}
+    val incomingPacketQueue = LinkedBlockingQueue<Packet>()
+    var tempNumPackets = 0
 
     init {
-//        moduleChain = ModuleChainBuilder.build {
-//            name("Main chain")
-//            module(PacketStatsModule())
-//            module(SrtpModule())
-//            module(RtpRtcpSplitterModule(
-//                rtpPath = ModuleChainBuilder.build {
-//                    name("RTP chain")
-//                    module(PacketLossMonitorModule())
-//                    module(RtpHandlerModule())
-//                },
-//                rtcpPath = ModuleChainBuilder.build {
-//                    name("RTCP chain")
-//                    module(RtcpHandlerModule())
-//                })
-//            )
-//        }
-
-        moduleChain = ModuleChainBuilder.chain {
+        moduleChain = chain {
             name("Incoming chain")
             module(PacketStatsModule())
-            module(SrtpModule())
+            module(SrtpDecrypt())
             demux {
                 name = "RTP/RTCP demuxer"
-                addSubChain {
-                    predicate(Packet::isRtp)
-                    path(ModuleChainBuilder.chain {
+                packetPath {
+                    predicate = Packet::isRtp
+                    path = chain {
                         name("RTP chain")
                         module(PacketLossMonitorModule())
                         module(FecReceiver())
-                    })
+                    }
                 }
-                addSubChain {
-                    predicate(Packet::isRtcp)
-                    path(ModuleChainBuilder.chain {
+                packetPath {
+                    predicate = Packet::isRtcp
+                    path = chain {
                         name("RTCP chain")
                         module(RtcpHandlerModule())
-                    })
+                    }
                 }
             }
         }
-        moduleChain.findFirst(FecReceiver::class)?.let {
-            println("found fec receiver")
-            (it as FecReceiver).handlers.add {
-                println("fec receiver handler sees it recoevered packet $it")
-            }
-        }
-
-        // Wishlist(?)
-        // chain =
-        // ModuleChain()
-        //    .module(PacketStatsModule())
-        //    .module(SrtpTransformer())
-        //    .module(Splitter()
-        //        .addSubChain(
-        //             isRtp,
-        //             ModuleChain()
-        //                .module(PacketLossMonitor())
-        //                .module(RtpHandler())
-        //        )
-        //        .addSubChain(
-        //            isRtcp,
-        //            ModuleChain()
-        //                .module(RtcpHandler())
-        //        )
-        //
-        //val chain = PacketStatsModule()
-        //chain
-        //    .module(SrtpModule()::processPackets)
-        //moduleCHain =
-        //        PacketStatsModule().module(SrtpModule())
+//        moduleChain.findFirst(FecReceiver::class)?.let {
+//            println("found fec receiver")
+//            (it as FecReceiver).handlers.add {
+//                println("fec receiver handler sees it recoevered packet $it")
+//            }
+//        }
     }
+
+    fun start() {
+        scheduleWork()
+    }
+
+    private fun scheduleWork() {
+        // Rescheduling this job to allow other threads to run doesn't seem
+        // to scale all that well, but doing this in a while (true) loop
+        // holds a single thread exclusively, making it impossible to play
+        // with things like sharing threads across tracks.  Processing a
+        // max amount of packets at a time seems to work as a nice
+        // compromise between the two
+        executor.execute {
+//            while (true) {
+
+//            println("=====Incoming $id reading packet")
+                val packets = mutableListOf<Packet>()
+                do {
+                    val packet = incomingPacketQueue.poll()
+                    if (packet != null) packets += packet
+                } while (packet != null && packets.size <= 5)
+//            println("=====Incoming $id received packet")
+            processPackets(packets)
+//            println("=====Incoming $id processing packet finished")
+            scheduleWork()
+//            }
+        }
+    }
+
     override fun processPackets(pkts: List<Packet>) {
+//        tempNumPackets += pkts.size
         val time = measureNanoTime {
             moduleChain.processPackets(pkts)
         }
@@ -104,12 +98,14 @@ class IncomingMediaStreamTrack2 : IncomingMediaStreamTrack {
 
     override fun getStats(): String {
         return with (StringBuffer()) {
+            appendln("Track $id")
+            appendln("packet rx: $tempNumPackets")
             append(moduleChain.getStats())
             toString()
         }
     }
 
-//    override fun onRtpPacket(handler: (Packet) -> Unit) {
-//        this.rtpHandler = handler
-//    }
+    override fun enqueuePacket(p: Packet) {
+        incomingPacketQueue.add(p)
+    }
 }

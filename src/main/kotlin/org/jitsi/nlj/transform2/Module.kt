@@ -18,8 +18,10 @@ package org.jitsi.nlj.transform2
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
+import java.lang.Thread.sleep
 import java.util.*
 import kotlin.properties.Delegates
 import kotlin.reflect.KClass
@@ -27,7 +29,7 @@ import kotlin.reflect.KClass
 typealias NextModule = (List<Packet>) -> Unit
 
 class ModuleChain {
-    private val modules = mutableListOf<Module>()
+    val modules = mutableListOf<Module>()
     private var name: String = ""
 
     fun name(n: String) {
@@ -41,6 +43,11 @@ class ModuleChain {
     fun demux(b: SplitterModule.() -> Unit) {
         val sm = SplitterModule().apply(b)
         addAndConnect(sm)
+    }
+
+    fun mux(b: MuxerModule.() -> Unit) {
+        val mm = MuxerModule().apply(b)
+        addAndConnect(mm)
     }
 
     private fun addAndConnect(m: Module) {
@@ -78,12 +85,6 @@ class ModuleChain {
     }
 }
 
-class ModuleChainBuilder {
-    companion object {
-        fun chain(block: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(block)
-    }
-}
-
 abstract class Module(var name: String, protected val debug: Boolean = false) {
     protected var nextModule: (List<Packet>) -> Unit = {}
     private var startTimeNanos: Long by Delegates.notNull()
@@ -98,14 +99,16 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
         if (debug) {
             println("Entering module $name")
         }
-        startTimeNanos = System.nanoTime()
+//        startTimeNanos = System.nanoTime()
+        startTimeNanos = System.currentTimeMillis()
         numInputPackets += p.size
     }
 
     private fun onExit() {
-        val time = System.nanoTime() - startTimeNanos
+//        val time = System.nanoTime() - startTimeNanos
+        val time = System.currentTimeMillis() - startTimeNanos
         if (debug) {
-            println("Exiting module $name, took $time nanos")
+//            println("Exiting module $name, took $time nanos")
         }
         totalNanos += time
     }
@@ -115,6 +118,9 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
     fun processPackets(p: List<Packet>) {
         onEntry(p)
         doProcessPackets(p)
+        for (i in 0..1_000_000) {
+
+        }
         // TODO: can we do the splitter in such a way that this won't end
         // up being everything downstream, but just the splitter itself?
         // (like any other module)
@@ -149,7 +155,7 @@ class PacketStatsModule : Module("RX Packet stats") {
     }
 }
 
-class SrtpModule : Module("SRTP Decrypt") {
+class SrtpDecrypt : Module("SRTP Decrypt") {
     override fun doProcessPackets(p: List<Packet>) {
         if (debug) {
             println("SRTP Decrypt")
@@ -162,14 +168,6 @@ class SrtpModule : Module("SRTP Decrypt") {
 class PacketPath {
     var predicate: PacketPredicate by Delegates.notNull()
     var path: ModuleChain by Delegates.notNull()
-
-    fun predicate(p: PacketPredicate) {
-        predicate = p
-    }
-
-    fun path(m: ModuleChain) {
-        path = m
-    }
 }
 
 /*abstract*/ class SplitterModule : Module("") {
@@ -179,24 +177,28 @@ class PacketPath {
     // predicates will have to accept ONLY what they want (which seems like a good
     // thing anyway)
     private var transformPaths: MutableMap<PacketPredicate, ModuleChain> = mutableMapOf()
+    var tempFirstPath: ModuleChain? = null
 
-    fun addSubChain(b: PacketPath.() -> Unit) {
-        val pp = PacketPath()
-        pp.b()
+    fun packetPath(b: PacketPath.() -> Unit) {
+        val pp = PacketPath().apply(b)
         transformPaths[pp.predicate] = pp.path
+        if (tempFirstPath == null) {
+            tempFirstPath = pp.path
+        }
     }
 
     override fun attach(nextModule: (List<Packet>) -> Unit) = throw Exception()
 
     override fun doProcessPackets(p: List<Packet>) {
-        p.forEach { packet ->
-            transformPaths.forEach { predicate, chain ->
-                if (predicate(packet)) {
-                    numOutputPackets++
-                    chain.processPackets(listOf(packet))
-                }
-            }
-        }
+        tempFirstPath?.processPackets(p)
+//        p.forEach { packet ->
+//            transformPaths.forEach { predicate, chain ->
+//                if (predicate(packet)) {
+//                    numOutputPackets++
+//                    chain.processPackets(listOf(packet))
+//                }
+//            }
+//        }
     }
 
     fun findFirst(moduleClass: KClass<*>): Module? {
@@ -225,8 +227,8 @@ class PacketPath {
 //    rtcpPath: ModuleChain
 //) : SplitterModule("RTP/RTCP splitter") {
 //    init {
-//        addSubChain(rtpPath, Packet::isRtp)
-//        addSubChain(rtcpPath) { it -> !it.isRtp }
+//        packetPath(rtpPath, Packet::isRtp)
+//        packetPath(rtcpPath) { it -> !it.isRtp }
 //    }
 //}
 
@@ -271,7 +273,9 @@ class FecReceiver : Module("FEC Receiver") {
     override fun doProcessPackets(p: List<Packet>) {
         p.forEachAs<RtpPacket> {
             if (Random().nextInt(100) > 90) {
-                println("FEC receiver recovered packet")
+                if (debug) {
+                    println("FEC receiver recovered packet")
+                }
                 handlers.forEach { it.invoke(1000)}
             }
         }
@@ -301,4 +305,59 @@ class RtcpHandlerModule : Module("RTCP handler") {
     }
 }
 
+
+// Outgoing
+
+class SrtpEncryptModule : Module("SRTP Encrypt") {
+    override fun doProcessPackets(p: List<Packet>) {
+        if (debug) {
+            println("SRTP Encrypt")
+        }
+        numOutputPackets += p.size
+        nextModule.invoke(p)
+    }
+}
+
+// I don't think we need any special handling in MuxerModule: we can just
+// attach one muxer module to multiple other modules
+// we'd just need to make sure we didn't get into any concurrency issues
+// (so maybe muxer should enforce posting all jobs to be handled
+// by its executor?) if not, do we need it at all?  the first module
+// can just take all the inputs.  we could give each module an executor
+// and then the modules don't need to be aware of the thread boundaries:
+// they'd either be sharing an executor/thread or not but that would be handled
+// at a layer above
+class MuxerModule : Module("Muxer") {
+    override fun doProcessPackets(p: List<Packet>) {
+        nextModule.invoke(p)
+    }
+
+    fun attachInput(m: Module) {
+        m.attach(this::doProcessPackets)
+    }
+
+    fun attachInput(m: ModuleChain) {
+        m.modules.last().attach(this::doProcessPackets)
+    }
+}
+
+class FecSenderModule : Module("FEC sender") {
+    private var packetCount = 0
+    override fun doProcessPackets(p: List<Packet>) {
+        packetCount += p.size
+        if (packetCount % 5 == 0) {
+            // Generate a FEC packet
+            val packet = RtpPacket.fromValues {
+                header = RtpHeader.fromValues {
+                    payloadType = 92
+                    sequenceNumber = packetCount
+                }
+            }
+            nextModule.invoke(p + packet)
+        } else {
+            nextModule.invoke(p)
+        }
+
+    }
+}
 
