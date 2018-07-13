@@ -242,8 +242,8 @@ class PacketPath {
 //    rtcpPath: ModuleChain
 //) : SplitterModule("RTP/RTCP splitter") {
 //    init {
-//        addSubChain(rtpPath, Packet::isRtp)
-//        addSubChain(rtcpPath) { it -> !it.isRtp }
+//        packetPath(rtpPath, Packet::isRtp)
+//        packetPath(rtcpPath) { it -> !it.isRtp }
 //    }
 //}
 

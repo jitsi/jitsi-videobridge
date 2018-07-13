@@ -17,58 +17,22 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.IncomingMediaStreamTrack1
 import org.jitsi.nlj.transform2.IncomingMediaStreamTrack2
+import org.jitsi.nlj.transform2.OutgoingMediaStreamTrack2
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.concurrent.Executors
 
-class PacketGenerator {
-    private var currSequenceNumber = 1
-    private var packetsSinceRtp = 0
-
-    fun generatePacket(): Packet {
-        if (Random().nextInt(100) > 90) {
-            // Simulate loss
-            currSequenceNumber++
-        }
-        return if (packetsSinceRtp < 9) {
-            packetsSinceRtp++
-            RtpPacket.fromValues {
-                header = RtpHeader.fromValues {
-                    version = 2
-                    hasPadding = false
-                    hasExtension = false
-                    csrcCount = 3
-                    marker = true
-                    payloadType = 96
-                    sequenceNumber = currSequenceNumber
-                    timestamp = 98765
-                    ssrc = 1234567
-                    csrcs = listOf(1, 2, 3)
-                    extensions = mapOf()
-                }
-                payload = ByteBuffer.allocate(50)
-            }
-        } else {
-            packetsSinceRtp = 0
-            RtcpSrPacket.fromValues {
-                header = RtcpHeader.fromValues {
-                    version = 2
-                    hasPadding = false
-                    reportCount = 2
-                    payloadType = 200
-                    length = 42
-                    senderSsrc = 12345
-                }
-            }
-        }
-    }
-}
 
 fun main(args: Array<String>) {
+
+
+    /*
     val pg = PacketGenerator()
     val packets = mutableListOf<Packet>()
     repeat(20) {
@@ -90,4 +54,19 @@ fun main(args: Array<String>) {
     }
 
     println(stream2.getStats())
+
+
+
+    println("Outgoing")
+    val outgoingStream2 = OutgoingMediaStreamTrack2()
+    packets.forEach {
+        if (it is RtpPacket) {
+            outgoingStream2.outgoingRtpChain.processPackets(listOf(it))
+
+        } else if (it is RtcpPacket) {
+            outgoingStream2.outgoingRtcpChain.processPackets(listOf(it))
+        }
+    }
+    */
+
 }
