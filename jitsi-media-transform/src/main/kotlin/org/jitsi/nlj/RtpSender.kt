@@ -17,9 +17,23 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.transform2.PacketHandler
 import org.jitsi.rtp.Packet
+import java.util.concurrent.CompletableFuture
 
-abstract class IncomingMediaStreamTrack {
-    abstract fun processPackets(pkts: List<Packet>)
+
+/**
+ * Not an 'RtpSender' in the sense that it sends only RTP (and not
+ * RTCP) but in the sense of a webrtc 'RTCRTPSender' which handles
+ * all RTP and RTP control packets.
+ */
+abstract class RtpSender {
+    var numPacketsSent = 0
+    var done = CompletableFuture<Unit>()
+    var packetSender: PacketHandler = {
+        numPacketsSent += it.size
+        if (numPacketsSent == 2_500_000) {
+            done.complete(Unit)
+        }
+    }
+    abstract fun sendPackets(pkts: List<Packet>)
     abstract fun getStats(): String
-    abstract fun enqueuePacket(p: Packet)
 }

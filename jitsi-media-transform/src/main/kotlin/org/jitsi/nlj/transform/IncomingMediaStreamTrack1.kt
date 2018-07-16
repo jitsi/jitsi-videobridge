@@ -31,7 +31,7 @@ import kotlin.system.measureNanoTime
  * but we'll see if it makes sense to combine it with
  * outgoing logic down the line
  */
-class IncomingMediaStreamTrack1 : IncomingMediaStreamTrack {
+class IncomingMediaStreamTrack1 : IncomingMediaStreamTrack() {
     val incomingTransformChain: List<Transformer>
     init {
         val packetStats = PacketStats()
