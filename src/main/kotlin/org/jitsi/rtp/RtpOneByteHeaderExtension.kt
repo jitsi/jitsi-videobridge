@@ -41,10 +41,12 @@ class RtpOneByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
     private val bitBuffer = BitBuffer(buf)
     override val id = bitBuffer.getBits(4).toInt()
     override val lengthBytes = bitBuffer.getBits(4).toInt() + 1
-    //TODO: readonly?
     override val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
+    override val size: Int
+        get() = RtpOneByteHeaderExtension.HEADER_SIZE + lengthBytes
 
     companion object {
+        const val HEADER_SIZE = 1
         const val COOKIE: Short = 0xBEDE.toShort()
     }
 

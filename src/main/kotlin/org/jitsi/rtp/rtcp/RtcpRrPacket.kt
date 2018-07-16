@@ -51,6 +51,8 @@ import kotlin.properties.Delegates
 class RtcpRrPacket : RtcpPacket() {
     override var header: RtcpHeader by Delegates.notNull()
     var reportBlocks: List<RtcpReportBlock> = listOf()
+    override val size: Int
+        get() = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
 
     companion object Create {
         fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpRrPacket {

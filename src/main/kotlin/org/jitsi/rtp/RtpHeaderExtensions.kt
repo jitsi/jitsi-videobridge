@@ -15,7 +15,6 @@
  */
 package org.jitsi.rtp
 
-import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 
 
@@ -36,14 +35,12 @@ class RtpHeaderExtensions {
         // Buf position should be at the start of the extension block.  This method assumes
         // there are extensions present (i.e. the X bit was set)
         fun parse(buf: ByteBuffer): Map<Int, RtpHeaderExtension> {
-            val TEMPoriginalPos = buf.position()
             val headerExtensionType = buf.getShort()
             val headerExtensionParser = when {
                 headerExtensionType.isOneByteHeaderType() -> ::RtpOneByteHeaderExtension
                 headerExtensionType.isTwoByteHeaderType() -> ::RtpTwoByteHeaderExtension
                 else -> run {
                     println("unrecognized extension type: ${headerExtensionType.toString(16)}")
-                    println("reading from buf ${buf.toHex()} at position $TEMPoriginalPos")
                     TODO()
                 }
             }

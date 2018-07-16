@@ -35,8 +35,11 @@ class RtpTwoByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
     override val id = buf.get().toInt()
     override val lengthBytes = buf.get().toInt()
     override val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
+    override val size: Int
+        get() = RtpTwoByteHeaderExtension.HEADER_SIZE + lengthBytes
 
     companion object {
+        const val HEADER_SIZE = 2
         const val COOKIE: Short = 0x1000.toShort()
     }
 

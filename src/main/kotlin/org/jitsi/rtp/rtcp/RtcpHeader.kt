@@ -37,6 +37,7 @@ abstract class RtcpHeader {
     abstract var senderSsrc: Long
 
     companion object {
+        const val SIZE_BYTES = 8
         fun fromBuffer(buf: ByteBuffer): RtcpHeader = BitBufferRtcpHeader.fromBuffer(buf)
         fun fromValues(receiver: RtcpHeader.() -> Unit): RtcpHeader = BitBufferRtcpHeader.fromValues(receiver)
     }

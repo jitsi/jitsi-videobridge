@@ -19,9 +19,24 @@ import org.jitsi.rtp.extensions.rewindOneByte
 import java.nio.ByteBuffer
 
 abstract class RtpHeaderExtension {
+    /**
+     * This extension's ID
+     */
     abstract val id: Int
-    protected abstract val lengthBytes: Int
+    /**
+     * The length of the data chunk of this extension
+     */
+    abstract val lengthBytes: Int
+    /**
+     * The data for this extension
+     */
     abstract val data: ByteBuffer
+    /**
+     * The size of the extension, in bytes.  This includes the ID, length
+     * and data fields
+     */
+    abstract val size: Int
+
     private val Byte.isPadding: Boolean
         get() = this == 0.toByte()
 

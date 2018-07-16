@@ -184,6 +184,7 @@ class RtcpReportBlock {
      */
     var delaySinceLastSr: Long by Delegates.notNull()
     companion object {
+        const val SIZE_BYTES = 24
         fun fromBuffer(buf: ByteBuffer): RtcpReportBlock {
             return with (RtcpReportBlock()) {
                 ssrc = buf.getInt().toULong()

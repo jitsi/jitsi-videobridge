@@ -43,8 +43,20 @@ abstract class RtpHeader {
     abstract var ssrc: Long
     abstract var csrcs: List<Long>
     abstract var extensions: Map<Int, RtpHeaderExtension>
+    val size: Int
+        get() {
+            var size = RtpHeader.FIXED_SIZE_BYTES + (csrcCount * RtpHeader.CSRC_SIZE_BYTES)
+            if (hasExtension) {
+                size += RtpHeader.EXTENSION_HEADER_SIZE_BYTES
+                size += extensions.values.map(RtpHeaderExtension::size).sum()
+            }
+            return size
+        }
 
     companion object {
+        const val FIXED_SIZE_BYTES = 12
+        const val EXTENSION_HEADER_SIZE_BYTES = 4
+        const val CSRC_SIZE_BYTES = 4
         fun fromBuffer(buf: ByteBuffer) = BitBufferRtpHeader.fromBuffer(buf)
         fun fromValues(receiver: RtpHeader.() -> Unit): RtpHeader = BitBufferRtpHeader.fromValues(receiver)
     }
@@ -79,18 +91,19 @@ abstract class RtpHeader {
 
     override fun toString(): String {
         return with (StringBuffer()) {
-            append("version: $version\n")
-            append("hasPadding: $hasPadding\n")
-            append("hasExtension: $hasExtension\n")
-            append("csrcCount: $csrcCount\n")
-            append("marker: $marker\n")
-            append("payloadType: $payloadType\n")
-            append("sequenceNumber: $sequenceNumber\n")
-            append("timestamp: $timestamp\n")
-            append("ssrc: $ssrc\n")
-            append("csrcs: $csrcs\n")
-            append("Extensions: $extensions")
-            this.toString()
+            appendln("size: $size")
+            appendln("version: $version")
+            appendln("hasPadding: $hasPadding")
+            appendln("hasExtension: $hasExtension")
+            appendln("csrcCount: $csrcCount")
+            appendln("marker: $marker")
+            appendln("payloadType: $payloadType")
+            appendln("sequenceNumber: $sequenceNumber")
+            appendln("timestamp: $timestamp")
+            appendln("ssrc: $ssrc")
+            appendln("csrcs: $csrcs")
+            appendln("Extensions: $extensions")
+            toString()
         }
     }
 }

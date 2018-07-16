@@ -96,6 +96,7 @@ class SenderInfo {
     var sendersOctetCount: Long by Delegates.notNull()
 
     companion object {
+        const val SIZE_BYTES = 20
         fun fromBuffer(buf: ByteBuffer): SenderInfo {
             return with (SenderInfo()) {
                 ntpTimestamp = buf.getLong()
@@ -162,6 +163,8 @@ class RtcpSrPacket : RtcpPacket() {
     override var header: RtcpHeader by Delegates.notNull()
     var senderInfo: SenderInfo by Delegates.notNull() // = SenderInfo(buf)
     var reportBlocks: List<RtcpReportBlock> = listOf()
+    override var size: Int = 0
+        get() = RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
 
     companion object Create {
         fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpSrPacket {

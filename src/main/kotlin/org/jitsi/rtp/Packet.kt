@@ -13,23 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.rtp.rtcp
+package org.jitsi.rtp
 
-import org.jitsi.rtp.Packet
-import java.nio.ByteBuffer
+import org.jitsi.rtp.rtcp.RtcpPacket
 
-abstract class RtcpPacket : Packet() {
-    abstract var header: RtcpHeader
-
-    companion object {
-        fun fromBuffer(buf: ByteBuffer): RtcpPacket {
-            val header = RtcpHeader.fromBuffer(buf)
-            return when (header.payloadType) {
-                200 -> RtcpSrPacket.fromBuffer(header, buf)
-                201 -> RtcpRrPacket.fromBuffer(header, buf)
-                else -> TODO()
-            }
-        }
-    }
-    abstract fun serializeToBuffer(buf: ByteBuffer)
+abstract class Packet {
+    val isRtp
+        get() = this is RtpPacket
+    val isRtcp
+        get() = this is RtcpPacket
+    abstract val size: Int
 }
