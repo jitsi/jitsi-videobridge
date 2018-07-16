@@ -23,7 +23,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.system.measureNanoTime
 
-class IncomingMediaStreamTrack2(val id: Long, val executor: ExecutorService) : IncomingMediaStreamTrack {
+class RtpReceiver(
+    val id: Long,
+    val executor: ExecutorService,
+    val packetHandler: PacketHandler
+) : IncomingMediaStreamTrack() {
     val moduleChain: ModuleChain
     val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var tempNumPackets = 0
@@ -41,6 +45,7 @@ class IncomingMediaStreamTrack2(val id: Long, val executor: ExecutorService) : I
                         name("RTP chain")
                         module(PacketLossMonitorModule())
                         module(FecReceiver())
+                        attach(packetHandler)
                     }
                 }
                 packetPath {
@@ -65,26 +70,24 @@ class IncomingMediaStreamTrack2(val id: Long, val executor: ExecutorService) : I
     }
 
     private fun scheduleWork() {
-        // Rescheduling this job to allow other threads to run doesn't seem
-        // to scale all that well, but doing this in a while (true) loop
+        // Rescheduling this job after reading a single packet to allow
+        // other threads to run doesn't seem  to scale all that well,
+        // but doing this in a while (true) loop
         // holds a single thread exclusively, making it impossible to play
         // with things like sharing threads across tracks.  Processing a
         // max amount of packets at a time seems to work as a nice
         // compromise between the two
         executor.execute {
-//            while (true) {
-
 //            println("=====Incoming $id reading packet")
-                val packets = mutableListOf<Packet>()
-                do {
-                    val packet = incomingPacketQueue.poll()
-                    if (packet != null) packets += packet
-                } while (packet != null && packets.size <= 5)
+            val packets = mutableListOf<Packet>()
+            do {
+                val packet = incomingPacketQueue.poll()
+                if (packet != null) packets += packet
+            } while (packet != null && packets.size <= 5)
 //            println("=====Incoming $id received packet")
             processPackets(packets)
 //            println("=====Incoming $id processing packet finished")
             scheduleWork()
-//            }
         }
     }
 
@@ -100,12 +103,17 @@ class IncomingMediaStreamTrack2(val id: Long, val executor: ExecutorService) : I
         return with (StringBuffer()) {
             appendln("Track $id")
             appendln("packet rx: $tempNumPackets")
+            appendln("failed add: $failedAdds")
+            appendln("queue size: ${incomingPacketQueue.size}")
             append(moduleChain.getStats())
             toString()
         }
     }
 
+    var failedAdds = 0
     override fun enqueuePacket(p: Packet) {
-        incomingPacketQueue.add(p)
+        if (!incomingPacketQueue.add(p)) {
+            failedAdds++
+        }
     }
 }

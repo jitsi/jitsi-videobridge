@@ -15,19 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.IncomingMediaStreamTrack1
-import org.jitsi.nlj.transform2.IncomingMediaStreamTrack2
-import org.jitsi.nlj.transform2.OutgoingMediaStreamTrack2
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpHeader
-import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.rtcp.RtcpHeader
-import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.RtcpSrPacket
-import java.nio.ByteBuffer
-import java.util.*
-import java.util.concurrent.Executors
-
 
 fun main(args: Array<String>) {
 
@@ -40,7 +27,7 @@ fun main(args: Array<String>) {
     }
 
     val stream1 = IncomingMediaStreamTrack1()
-    val stream2 = IncomingMediaStreamTrack2()
+    val stream2 = RtpReceiver()
     // IncomingMediaStreamTrack currently implements the following simulated packet pipeline:
     //
     //                                             RTP   / --> Packet loss monitor --> RTP handler

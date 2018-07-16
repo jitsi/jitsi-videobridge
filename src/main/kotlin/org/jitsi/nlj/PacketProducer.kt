@@ -23,20 +23,19 @@ import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import java.nio.ByteBuffer
 import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
 class PacketGenerator(val ssrc: Long) {
     private var currSequenceNumber = 1
-    private var packetsSinceRtp = 0
+    private var packetsSinceRtcp = 0
 
     fun generatePacket(): Packet {
         if (Random().nextInt(100) > 90) {
             // Simulate loss
             currSequenceNumber++
         }
-        return if (packetsSinceRtp < 9) {
-            packetsSinceRtp++
+        return if (packetsSinceRtcp < 9 || true) {
+            packetsSinceRtcp++
             RtpPacket.fromValues {
                 header = RtpHeader.fromValues {
                     version = 2
@@ -54,7 +53,7 @@ class PacketGenerator(val ssrc: Long) {
                 payload = ByteBuffer.allocate(50)
             }
         } else {
-            packetsSinceRtp = 0
+            packetsSinceRtcp = 0
             RtcpSrPacket.fromValues {
                 header = RtcpHeader.fromValues {
                     version = 2
@@ -86,10 +85,10 @@ class PacketProducer {
         destinations[predicate] = handler
     }
 
-    fun run() {
+    fun run(packetCount: Int) {
         running = true
         thread {
-            while (running) {
+            while (running && packetsWritten < packetCount) {
                 sources.forEach { ssrc, generator ->
                     val packet = generator.generatePacket()
                     destinations.forEach { pred, dest ->

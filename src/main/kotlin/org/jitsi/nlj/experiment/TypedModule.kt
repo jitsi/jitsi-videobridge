@@ -240,7 +240,7 @@ class PacketPath {
 //class RtpRtcpSplitterModule(
 //    rtpPath: ModuleChain,
 //    rtcpPath: ModuleChain
-//) : SplitterModule("RTP/RTCP splitter") {
+//) : Demuxer("RTP/RTCP splitter") {
 //    init {
 //        packetPath(rtpPath, Packet::isRtp)
 //        packetPath(rtcpPath) { it -> !it.isRtp }

@@ -15,13 +15,17 @@
  */
 package org.jitsi.nlj.transform2
 
-import org.jitsi.nlj.IncomingMediaStreamTrack
+import org.jitsi.nlj.RtpSender
 import org.jitsi.rtp.Packet
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.LinkedBlockingQueue
 
-class OutgoingMediaStreamTrack2 : IncomingMediaStreamTrack {
-    val moduleChain: ModuleChain
-    val outgoingRtpChain: ModuleChain
-    val outgoingRtcpChain: ModuleChain
+class OutgoingMediaStreamTrack2(val id: Long, val executor: ExecutorService) : RtpSender() {
+    private val moduleChain: ModuleChain
+    private val outgoingRtpChain: ModuleChain
+    private val outgoingRtcpChain: ModuleChain
+    val incomingPacketQueue = LinkedBlockingQueue<Packet>()
+    var running = true
     init {
         outgoingRtpChain = chain {
             name("Outgoing RTP chain")
@@ -33,23 +37,52 @@ class OutgoingMediaStreamTrack2 : IncomingMediaStreamTrack {
         }
 
         moduleChain = chain {
+            demux {
+                name("RTP/RTCP demuxer")
+                packetPath {
+                    predicate = Packet::isRtp
+                    path = outgoingRtpChain
+                }
+                packetPath {
+                    predicate = Packet::isRtcp
+                    path = outgoingRtcpChain
+                }
+            }
             mux {
                 attachInput(outgoingRtpChain)
                 attachInput(outgoingRtcpChain)
             }
             module(SrtpEncryptModule())
+            attach(packetSender)
+        }
+        scheduleWork()
+    }
+
+    override fun sendPackets(pkts: List<Packet>) {
+        incomingPacketQueue.addAll(pkts)
+    }
+
+    private fun scheduleWork() {
+        executor.execute {
+            if (running) {
+                val packetsToProcess = mutableListOf<Packet>()
+                while (packetsToProcess.size < 5) {
+                    val packet = incomingPacketQueue.poll() ?: break
+                    packetsToProcess += packet
+                }
+                moduleChain.processPackets(packetsToProcess)
+
+                scheduleWork()
+            }
         }
     }
 
-    override fun processPackets(pkts: List<Packet>) {
-        moduleChain.processPackets(pkts)
-    }
-
     override fun getStats(): String {
-        return ""
-    }
-
-    override fun enqueuePacket(p: Packet) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return with (StringBuffer()) {
+            appendln("Track $id")
+            appendln("queue size: ${incomingPacketQueue.size}")
+            append(moduleChain.getStats())
+            toString()
+        }
     }
 }

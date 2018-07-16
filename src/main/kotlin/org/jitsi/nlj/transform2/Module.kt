@@ -21,12 +21,12 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
-import java.lang.Thread.sleep
 import java.util.*
 import kotlin.properties.Delegates
 import kotlin.reflect.KClass
 
 typealias NextModule = (List<Packet>) -> Unit
+typealias PacketHandler = (List<Packet>) -> Unit
 
 class ModuleChain {
     val modules = mutableListOf<Module>()
@@ -40,14 +40,24 @@ class ModuleChain {
         addAndConnect(m)
     }
 
-    fun demux(b: SplitterModule.() -> Unit) {
-        val sm = SplitterModule().apply(b)
+    fun demux(b: Demuxer.() -> Unit) {
+        val sm = Demuxer().apply(b)
         addAndConnect(sm)
     }
 
     fun mux(b: MuxerModule.() -> Unit) {
         val mm = MuxerModule().apply(b)
         addAndConnect(mm)
+    }
+
+    //TODO: trying this as an easy way to add a final output, but that means
+    // should probably enforce that nothing else can be added after this
+    // other option would be to force the user to implement a module to put
+    // the packets somewhere.
+    fun attach(handler: PacketHandler) {
+        val previousModule = modules.lastOrNull()
+        println("Attaching handler to $previousModule")
+        previousModule?.attach(handler)
     }
 
     private fun addAndConnect(m: Module) {
@@ -72,7 +82,7 @@ class ModuleChain {
         for (m in modules) {
             if (m::class == moduleClass) {
                 return m
-            } else if (m is SplitterModule) {
+            } else if (m is Demuxer) {
                 val nested = m.findFirst(moduleClass)
                 if (nested != null) { return nested }
             }
@@ -108,7 +118,7 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
 //        val time = System.nanoTime() - startTimeNanos
         val time = System.currentTimeMillis() - startTimeNanos
         if (debug) {
-//            println("Exiting module $name, took $time nanos")
+            println("Exiting module $name, took $time nanos")
         }
         totalNanos += time
     }
@@ -116,15 +126,20 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
     protected abstract fun doProcessPackets(p: List<Packet>)
 
     fun processPackets(p: List<Packet>) {
+        val originalNumInputPackets = numInputPackets
+        val originalNumOutputPackets = numOutputPackets
         onEntry(p)
         doProcessPackets(p)
-        for (i in 0..1_000_000) {
-
-        }
+        for (i in 0..1_000_000) { }
         // TODO: can we do the splitter in such a way that this won't end
         // up being everything downstream, but just the splitter itself?
         // (like any other module)
         onExit()
+//        val newNumInputPackets = numInputPackets - originalNumInputPackets
+//        val newNumOutputPackets = numOutputPackets - originalNumOutputPackets
+//        if (newNumInputPackets != newNumOutputPackets) {
+//            println("packet stats had different input and output!")
+//        }
     }
 
     open fun getStats(indent: Int = 0): String {
@@ -160,6 +175,7 @@ class SrtpDecrypt : Module("SRTP Decrypt") {
         if (debug) {
             println("SRTP Decrypt")
         }
+        for (i in 0..500_000)
         numOutputPackets += p.size
         nextModule.invoke(p)
     }
@@ -170,12 +186,7 @@ class PacketPath {
     var path: ModuleChain by Delegates.notNull()
 }
 
-/*abstract*/ class SplitterModule : Module("") {
-    // I think a map in the splitter module (whatever it is) will be useful because
-    // it can be handy to have packets potentially go down multiple paths (this allows
-    // for easy insertion of debug modules at different points, for example) so the
-    // predicates will have to accept ONLY what they want (which seems like a good
-    // thing anyway)
+/*abstract*/ class Demuxer : Module("") {
     private var transformPaths: MutableMap<PacketPredicate, ModuleChain> = mutableMapOf()
     var tempFirstPath: ModuleChain? = null
 
@@ -187,18 +198,19 @@ class PacketPath {
         }
     }
 
-    override fun attach(nextModule: (List<Packet>) -> Unit) = throw Exception()
+    override fun attach(nextModule: (List<Packet>) -> Unit) {//= throw Exception()
+    }
 
     override fun doProcessPackets(p: List<Packet>) {
-        tempFirstPath?.processPackets(p)
-//        p.forEach { packet ->
-//            transformPaths.forEach { predicate, chain ->
-//                if (predicate(packet)) {
-//                    numOutputPackets++
-//                    chain.processPackets(listOf(packet))
-//                }
-//            }
-//        }
+//        tempFirstPath?.processPackets(p)
+        p.forEach { packet ->
+            transformPaths.forEach { predicate, chain ->
+                if (predicate(packet)) {
+                    numOutputPackets++
+                    chain.processPackets(listOf(packet))
+                }
+            }
+        }
     }
 
     fun findFirst(moduleClass: KClass<*>): Module? {
@@ -225,7 +237,7 @@ class PacketPath {
 //class RtpRtcpSplitterModule(
 //    rtpPath: ModuleChain,
 //    rtcpPath: ModuleChain
-//) : SplitterModule("RTP/RTCP splitter") {
+//) : Demuxer("RTP/RTCP splitter") {
 //    init {
 //        packetPath(rtpPath, Packet::isRtp)
 //        packetPath(rtcpPath) { it -> !it.isRtp }
@@ -264,12 +276,12 @@ inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit): Unit {
 
 class FecReceiver : Module("FEC Receiver") {
     val handlers = mutableListOf<(Int) -> Unit>()
-    fun validate(p: Packet): RtpPacket {
-        return when (p) {
-            is RtpPacket -> p
-            else -> throw Exception()
-        }
-    }
+//    fun validate(p: Packet): RtpPacket {
+//        return when (p) {
+//            is RtpPacket -> p
+//            else -> throw Exception()
+//        }
+//    }
     override fun doProcessPackets(p: List<Packet>) {
         p.forEachAs<RtpPacket> {
             if (Random().nextInt(100) > 90) {
@@ -279,6 +291,8 @@ class FecReceiver : Module("FEC Receiver") {
                 handlers.forEach { it.invoke(1000)}
             }
         }
+        numOutputPackets += p.size
+        nextModule.invoke(p)
     }
 }
 
@@ -313,6 +327,7 @@ class SrtpEncryptModule : Module("SRTP Encrypt") {
         if (debug) {
             println("SRTP Encrypt")
         }
+        for (i in 0..500_000)
         numOutputPackets += p.size
         nextModule.invoke(p)
     }
@@ -345,7 +360,7 @@ class FecSenderModule : Module("FEC sender") {
     private var packetCount = 0
     override fun doProcessPackets(p: List<Packet>) {
         packetCount += p.size
-        if (packetCount % 5 == 0) {
+        if (false && packetCount % 5 == 0) {
             // Generate a FEC packet
             val packet = RtpPacket.fromValues {
                 header = RtpHeader.fromValues {
