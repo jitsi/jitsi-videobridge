@@ -4,7 +4,7 @@ Upstream-Contact: Emil Ivov <emcho@jitsi.org>
 Source: https://github.com/jitsi/jitsi-videobridge
 
 Files: *
-Copyright: 2015-2018 Atlassian Pty Ltd
+Copyright: 2015-present Atlassian Pty Ltd
 License: Apache-2.0
 
 License: Apache-2.0
