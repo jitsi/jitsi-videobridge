@@ -52,7 +52,7 @@ class ModuleChain {
     // the packets somewhere.
     fun attach(handler: PacketHandler) {
         val previousModule = modules.lastOrNull()
-        println("Attaching handler to $previousModule")
+        //println("Attaching handler to $previousModule")
         previousModule?.attach(handler)
     }
 

@@ -16,6 +16,9 @@
 package org.jitsi.nlj.transform2.module.incoming
 
 import org.jitsi.nlj.transform2.module.Module
+import org.jitsi.nlj.transform2.module.forEachAs
+import org.jitsi.nlj.util.appendIndent
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 
@@ -27,18 +30,26 @@ class PacketLossMonitorModule : Module("Packet loss monitor") {
         if (debug) {
             println("Packet loss monitor")
         }
-        p.forEach { pkt ->
-            if (pkt is RtpPacket) {
-                lastSeqNumSeen?.let {
-                    if (pkt.header.sequenceNumber > it + 1) {
-                        lostPackets += (pkt.header.sequenceNumber - it - 1)
+        p.forEachAs<RtpPacket> { pkt ->
+            lastSeqNumSeen?.let {
+                if (pkt.header.sequenceNumber > it + 1) {
+                    if (debug) {
+                        println("lost packets ${(it + 1 until pkt.header.sequenceNumber).joinToString(" ")} for stream ${pkt.header.ssrc}")
                     }
+                    lostPackets += (pkt.header.sequenceNumber - it - 1)
                 }
-                lastSeqNumSeen = pkt.header.sequenceNumber
-            } else {
-                throw Exception("Expected RtpPacket")
             }
+            lastSeqNumSeen = pkt.header.sequenceNumber
         }
         next(p)
+    }
+
+
+    override fun getStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(super.getStats(indent))
+            appendLnIndent(indent + 2, "lost packets: $lostPackets")
+            toString()
+        }
     }
 }
