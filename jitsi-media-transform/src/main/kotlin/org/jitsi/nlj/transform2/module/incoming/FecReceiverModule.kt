@@ -13,27 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj
+package org.jitsi.nlj.transform2.module.incoming
 
-import org.jitsi.nlj.transform2.PacketHandler
+import org.jitsi.nlj.transform2.module.Module
+import org.jitsi.nlj.transform2.module.forEachAs
 import org.jitsi.rtp.Packet
-import java.util.concurrent.CompletableFuture
+import org.jitsi.rtp.RtpPacket
+import java.util.*
 
-
-/**
- * Not an 'RtpSender' in the sense that it sends only RTP (and not
- * RTCP) but in the sense of a webrtc 'RTCRTPSender' which handles
- * all RTP and RTP control packets.
- */
-abstract class RtpSender {
-    var numPacketsSent = 0
-    var done = CompletableFuture<Unit>()
-    var packetSender: PacketHandler = {
-        numPacketsSent += it.size
-        if (numPacketsSent == 2_500_000) {
-            done.complete(Unit)
+class FecReceiverModule : Module("FEC Receiver") {
+//    val handlers = mutableListOf<(Int) -> Unit>()
+    override fun doProcessPackets(p: List<Packet>) {
+    /*
+        p.forEachAs<RtpPacket> {
+            if (Random().nextInt(100) > 90) {
+                if (debug) {
+                    println("FEC receiver recovered packet")
+                }
+                handlers.forEach { it.invoke(1000)}
+            }
         }
+        */
+        next(p)
     }
-    abstract fun sendPackets(pkts: List<Packet>)
-    abstract fun getStats(): String
 }

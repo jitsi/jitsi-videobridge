@@ -13,12 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2
+package org.jitsi.nlj.transform2.module
 
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 
-abstract class RtpReceiver {
-    abstract fun processPackets(pkts: List<Packet>)
-    abstract fun getStats(): String
-    abstract fun enqueuePacket(p: Packet)
+class PacketStatsModule : Module("RX Packet stats") {
+    var totalBytesRx = 0
+    override fun doProcessPackets(p: List<Packet>) {
+        p.forEach { pkt -> totalBytesRx += pkt.size }
+        next(p)
+    }
+
+    override fun getStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(super.getStats(indent))
+            appendLnIndent(indent + 2, "total bytes rx: $totalBytesRx")
+            toString()
+        }
+    }
 }

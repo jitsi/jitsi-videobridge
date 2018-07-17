@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.transform2
 
+import org.jitsi.nlj.transform2.module.ModuleChain
+
 fun chain(receiver: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(receiver)
 
 

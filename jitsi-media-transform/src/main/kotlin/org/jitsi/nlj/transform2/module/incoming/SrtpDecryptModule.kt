@@ -13,12 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2
+package org.jitsi.nlj.transform2.module.incoming
 
+import org.jitsi.nlj.transform2.module.Module
 import org.jitsi.rtp.Packet
 
-abstract class RtpReceiver {
-    abstract fun processPackets(pkts: List<Packet>)
-    abstract fun getStats(): String
-    abstract fun enqueuePacket(p: Packet)
+class SrtpDecryptModule : Module("SRTP Decrypt") {
+    override fun doProcessPackets(p: List<Packet>) {
+        if (debug) {
+            println("SRTP Decrypt")
+        }
+        for (i in 0..500_000);
+
+        next(p)
+    }
 }
+
