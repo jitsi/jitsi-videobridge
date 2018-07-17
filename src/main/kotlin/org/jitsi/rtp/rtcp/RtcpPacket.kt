@@ -27,8 +27,16 @@ abstract class RtcpPacket : Packet() {
             return when (header.payloadType) {
                 200 -> RtcpSrPacket.fromBuffer(header, buf)
                 201 -> RtcpRrPacket.fromBuffer(header, buf)
-                else -> TODO()
+                205, 206 -> RtcpFbPacket.fromBuffer(header, buf)
+                else -> throw Exception("Unsupported RTCP type ${header.payloadType}")
             }
+        }
+    }
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("RTCP packet")
+            append(header.toString())
+            toString()
         }
     }
     abstract fun serializeToBuffer(buf: ByteBuffer)
