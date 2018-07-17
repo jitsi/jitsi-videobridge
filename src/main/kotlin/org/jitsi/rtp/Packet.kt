@@ -16,6 +16,8 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.rtcp.RtcpPacket
+import unsigned.toUInt
+import java.nio.ByteBuffer
 
 abstract class Packet {
     val isRtp
@@ -23,4 +25,15 @@ abstract class Packet {
     val isRtcp
         get() = this is RtcpPacket
     abstract val size: Int
+
+    companion object {
+        private fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toUInt()
+        fun parse(buf: ByteBuffer): Packet {
+            val packetType = getPacketType(buf)
+            return when (packetType) {
+                in 200..211 -> RtcpPacket.fromBuffer(buf)
+                else -> RtpPacket.fromBuffer(buf)
+            }
+        }
+    }
 }

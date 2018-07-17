@@ -55,7 +55,7 @@ fun main(args: Array<String>) {
         0x00,           0x00,           0x00,           0x00
     ))
 
-    val bbPacket = BitBufferRtpPacket(packetData.asReadOnlyBuffer())
+    val bbPacket = BitBufferRtpPacket.fromBuffer(packetData.asReadOnlyBuffer())
     println("BitBufferRtpPacket: \n$bbPacket")
     packetData.rewind()
 
@@ -75,7 +75,7 @@ fun main(args: Array<String>) {
     sleep(10000)
     repeat (10) {
         //fieldPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> FieldRtpPacket(p)})
-        bitBufferPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> BitBufferRtpPacket(p)})
+        bitBufferPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> BitBufferRtpPacket.fromBuffer(p)})
         //rtpPacketTimes.add(perfTest(packetData.asReadOnlyBuffer()) { p -> AbsoluteIndexRtpPacket(p)})
     }
     println("RtpPacket took an average of ${rtpPacketTimes.average()}ms")

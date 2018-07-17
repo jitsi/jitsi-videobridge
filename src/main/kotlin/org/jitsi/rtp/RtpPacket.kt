@@ -33,19 +33,23 @@ import java.nio.ByteBuffer
 // |                             ....                              |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-abstract class RtpPacket {
-    abstract val header: RtpHeader
-    abstract val payload: ByteBuffer
+abstract class RtpPacket : Packet() {
+    abstract var header: RtpHeader
+    abstract var payload: ByteBuffer
+    override val size: Int
+        get() = header.size + payload.limit()
 
     companion object {
-        fun parse(buf: ByteBuffer): RtpPacket {
-            return BitBufferRtpPacket(buf)
-        }
+        fun fromBuffer(buf: ByteBuffer): RtpPacket = BitBufferRtpPacket.fromBuffer(buf)
+        fun fromValues(receiver: RtpPacket.() -> Unit): RtpPacket = BitBufferRtpPacket().apply(receiver)
     }
 
     override fun toString(): String {
         return with (StringBuffer()) {
-            append(header.toString()).append("\n")
+            appendln("RTP packet")
+            appendln("size: $size")
+            append(header.toString())
+            appendln("payload size: ${payload.limit()}")
             toString()
         }
     }

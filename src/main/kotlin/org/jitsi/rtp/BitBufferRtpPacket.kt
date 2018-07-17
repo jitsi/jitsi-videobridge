@@ -16,9 +16,20 @@
 package org.jitsi.rtp
 
 import java.nio.ByteBuffer
+import kotlin.properties.Delegates
 
 
-internal class BitBufferRtpPacket(buf: ByteBuffer) : RtpPacket() {
-    override val header = BitBufferRtpHeader.fromBuffer(buf)
-    override val payload = buf.slice()
+internal class BitBufferRtpPacket : RtpPacket() {
+    override var header: RtpHeader by Delegates.notNull()
+    override var payload: ByteBuffer by Delegates.notNull()
+
+    companion object {
+        fun fromBuffer(buf: ByteBuffer): RtpPacket {
+            return BitBufferRtpPacket().apply {
+                header = RtpHeader.fromBuffer(buf)
+                payload = buf.slice()
+            }
+        }
+        fun fromValues(receiver: BitBufferRtpPacket.() -> Unit) = BitBufferRtpPacket().apply(receiver)
+    }
 }
