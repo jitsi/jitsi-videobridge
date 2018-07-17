@@ -76,16 +76,19 @@ class RtpReceiverImpl(
         // holds a single thread exclusively, making it impossible to play
         // with things like sharing threads across tracks.  Processing a
         // max amount of packets at a time seems to work as a nice
-        // compromise between the two
+        // compromise between the two.  It would be nice to be able to
+        // avoid the busy-loop style polling for a new packet though
         executor.execute {
             val packets = mutableListOf<Packet>()
             while (packets.size < 5) {
                 val packet = incomingPacketQueue.poll()
                 if (packet != null) {
                     packets += packet
+                } else {
+                    break
                 }
             }
-            processPackets(packets)
+            if (packets.isNotEmpty()) processPackets(packets)
             if (running) {
                 scheduleWork()
             }
