@@ -15,12 +15,12 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform2.RtpReceiver
-import org.jitsi.nlj.transform2.OutgoingMediaStreamTrack2
-import org.jitsi.nlj.transform2.forEachAs
+import org.jitsi.nlj.transform2.RtpReceiverImpl
+import org.jitsi.nlj.transform2.RtpSender
+import org.jitsi.nlj.transform2.RtpSenderImpl
+import org.jitsi.nlj.transform2.module.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
-import java.lang.Thread.sleep
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -79,27 +79,25 @@ class Bridge(val executor: ExecutorService) {
 }
 
 fun main(args: Array<String>) {
-    val trackExecutor = Executors.newFixedThreadPool(1)
+    val trackExecutor = Executors.newFixedThreadPool(4)
     val p = PacketProducer()
     val b = Bridge(trackExecutor)
 
 
     p.addSource(123)
-    val receiver1 = RtpReceiver(123, trackExecutor, b::onIncomingPackets)
-    val sender1 = OutgoingMediaStreamTrack2(123, trackExecutor)
+    val receiver1 = RtpReceiverImpl(123, trackExecutor, b::onIncomingPackets)
+    val sender1 = RtpSenderImpl(123, trackExecutor)
     b.addSender(123, sender1)
-    receiver1.start()
     p.addDestination({ pkt -> pkt.isRtp && (pkt as RtpPacket).header.ssrc == 123L }, receiver1::enqueuePacket)
 
     p.addSource(456)
-    val receiver2 = RtpReceiver(456, trackExecutor, b::onIncomingPackets)
-    val sender2 = OutgoingMediaStreamTrack2(456, trackExecutor)
+    val receiver2 = RtpReceiverImpl(456, trackExecutor, b::onIncomingPackets)
+    val sender2 = RtpSenderImpl(456, trackExecutor)
     b.addSender(456, sender2)
-    receiver2.start()
     p.addDestination({ pkt -> pkt.isRtp && (pkt as RtpPacket).header.ssrc == 456L }, receiver2::enqueuePacket)
 
 //    p.addSource(789)
-//    val stream3 = RtpReceiver(789, trackExecutor)
+//    val stream3 = RtpReceiverImpl(789, trackExecutor)
 //    stream3.start()
 //    p.addDestination({ pkt -> pkt.isRtp && (pkt as RtpPacket).header.ssrc == 789L }, stream3::enqueuePacket)
 
@@ -112,7 +110,9 @@ fun main(args: Array<String>) {
         println("Senders are all done.  Took ${endTime - startTime}ms")
 
         sender1.running = false
+        receiver1.running = false
         sender2.running = false
+        receiver2.running = false
 
         println("Producer wrote ${p.packetsWritten} packets")
         println(receiver1.getStats())

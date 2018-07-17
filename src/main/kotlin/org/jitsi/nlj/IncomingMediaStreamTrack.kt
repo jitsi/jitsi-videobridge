@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform2.PacketHandler
 import org.jitsi.rtp.Packet
 
 abstract class IncomingMediaStreamTrack {

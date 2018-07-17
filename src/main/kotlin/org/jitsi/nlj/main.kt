@@ -27,7 +27,7 @@ fun main(args: Array<String>) {
     }
 
     val stream1 = IncomingMediaStreamTrack1()
-    val stream2 = RtpReceiver()
+    val stream2 = RtpReceiverImpl()
     // IncomingMediaStreamTrack currently implements the following simulated packet pipeline:
     //
     //                                             RTP   / --> Packet loss monitor --> RTP handler
@@ -45,7 +45,7 @@ fun main(args: Array<String>) {
 
 
     println("Outgoing")
-    val outgoingStream2 = OutgoingMediaStreamTrack2()
+    val outgoingStream2 = RtpSenderImpl()
     packets.forEach {
         if (it is RtpPacket) {
             outgoingStream2.outgoingRtpChain.processPackets(listOf(it))

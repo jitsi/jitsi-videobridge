@@ -15,12 +15,15 @@
  */
 package org.jitsi.nlj.transform2
 
-import org.jitsi.nlj.RtpSender
+import org.jitsi.nlj.transform2.module.ModuleChain
+import org.jitsi.nlj.transform2.module.RtcpHandlerModule
+import org.jitsi.nlj.transform2.module.outgoing.FecSenderModule
+import org.jitsi.nlj.transform2.module.outgoing.SrtpEncryptModule
 import org.jitsi.rtp.Packet
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 
-class OutgoingMediaStreamTrack2(val id: Long, val executor: ExecutorService) : RtpSender() {
+class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
     private val moduleChain: ModuleChain
     private val outgoingRtpChain: ModuleChain
     private val outgoingRtcpChain: ModuleChain
