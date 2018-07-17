@@ -10,6 +10,8 @@
 
     <properties>
         <kotlin.version>1.2.51</kotlin.version>
+        <kotlintest.version>3.1.6</kotlintest.version>
+        <junit.version>5.2.0</junit.version>
     </properties>
 
 
@@ -24,7 +26,16 @@
             <artifactId>rtp</artifactId>
             <version>1.0</version>
             <scope>system</scope>
+            <!--<systemPath>/Users/bbaldino/work/rtp/target/rtp-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>-->
             <systemPath>/Users/bbaldino/work/rtp/target/rtp-1.0-SNAPSHOT.jar</systemPath>
+        </dependency>
+        <!-- TODO: This shouldn't be listed as a dependency here, we need to get the rtp lib built
+        with all of its dependencies correctly.  For some reason when i use the with-dependencies jar, this lib
+        doesn't see the classes-->
+        <dependency>
+            <groupId>com.github.kotlin-graphics</groupId>
+            <artifactId>kotlin-unsigned</artifactId>
+            <version>v3.1.3</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-reflect -->
         <dependency>
@@ -38,6 +49,18 @@
             <groupId>io.pkts</groupId>
             <artifactId>pkts-core</artifactId>
             <version>3.0.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kotlintest</groupId>
+            <artifactId>kotlintest-runner-junit5</artifactId>
+            <version>${kotlintest.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
 
