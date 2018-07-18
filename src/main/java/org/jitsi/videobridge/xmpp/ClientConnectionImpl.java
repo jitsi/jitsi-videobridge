@@ -25,7 +25,6 @@ import org.jivesoftware.smack.packet.*;
 import org.osgi.framework.*;
 
 import java.util.*;
-import java.util.function.*;
 
 /**
  * Provides jitsi-videobridge functions through an XMPP client connection.
@@ -33,7 +32,7 @@ import java.util.function.*;
  * @author Boris Grozev
  */
 public class ClientConnectionImpl
-    implements BundleActivator, Function<IQ, IQ>
+    implements BundleActivator, IQListener
 {
     /**
      * The {@link Logger} used by the {@link ClientConnectionImpl}
@@ -95,7 +94,10 @@ public class ClientConnectionImpl
                 ShutdownIQ.createGracefulShutdownIQ());
             mucClientManager.setIQListener(this);
 
-            mucClientManager.addMucClients(config, PREFIX);
+            Collection<MucClientConfiguration> configurations
+                = MucClientConfiguration.loadFromConfigService(
+                    config, PREFIX, true);
+            configurations.forEach(c -> mucClientManager.addMucClient(c));
 
             bundleContext.registerService(
                 ClientConnectionImpl.class, this, null);
@@ -114,7 +116,7 @@ public class ClientConnectionImpl
      * @return the IQ to send as a response, or {@code null}.
      */
     @Override
-    public IQ apply(IQ iq)
+    public IQ handleIq(IQ iq)
     {
         return common.handleIQ(iq);
     }
