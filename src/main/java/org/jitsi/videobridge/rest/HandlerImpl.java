@@ -938,8 +938,8 @@ class HandlerImpl
     {
         if (!colibriEnabled)
         {
-          response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-          return;
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+            return;
         }
 
         if (target == null)
@@ -969,7 +969,7 @@ class HandlerImpl
                 else
                 {
                     response.setStatus(
-                            HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                        HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                 }
             }
             else
@@ -980,24 +980,24 @@ class HandlerImpl
                 {
                     // Retrieve a representation of a Conference of Videobridge.
                     doGetConferenceJSON(
-                            target,
-                            baseRequest,
-                            request,
-                            response);
+                        target,
+                        baseRequest,
+                        request,
+                        response);
                 }
                 else if (PATCH_HTTP_METHOD.equals(requestMethod))
                 {
                     // Modify a Conference of Videobridge.
                     doPatchConferenceJSON(
-                            target,
-                            baseRequest,
-                            request,
-                            response);
+                        target,
+                        baseRequest,
+                        request,
+                        response);
                 }
                 else
                 {
                     response.setStatus(
-                            HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+                        HttpServletResponse.SC_METHOD_NOT_ALLOWED);
                 }
             }
         }
@@ -1023,7 +1023,6 @@ class HandlerImpl
 
             if (POST_HTTP_METHOD.equals(request.getMethod()))
             {
-                // Get the VideobridgeStatistics of Videobridge.
                 doPostShutdownJSON(baseRequest, request, response);
             }
             else
@@ -1092,7 +1091,7 @@ class HandlerImpl
             // Initially, we had VERSION_TARGET equal to /version. But such an
             // HTTP resource could be rewritten by Meet. In order to decrease
             // the risk of rewriting, we moved the VERSION_TARGET to
-            // /about/version. For the sake of compatiblity though, we are
+            // /about/version. For the sake of compatibility though, we are
             // preserving /version.
             String versionTarget = "/version";
 
