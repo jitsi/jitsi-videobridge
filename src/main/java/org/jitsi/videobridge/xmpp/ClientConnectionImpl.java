@@ -22,6 +22,7 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.xmpp.mucclient.*;
 import org.jivesoftware.smack.packet.*;
+import org.json.simple.*;
 import org.osgi.framework.*;
 
 import java.util.*;
@@ -160,5 +161,91 @@ public class ClientConnectionImpl
     public void setPresenceExtension(ExtensionElement extension)
     {
         mucClientManager.setPresenceExtension(extension);
+    }
+
+    /**
+     * Adds a new {@link MucClient} with configuration described in JSON.
+     * @param jsonObject the JSON which describes the configuration of the
+     * client.
+     * <p/>
+     * <pre>{@code
+     * The expected JSON format is:
+     * {
+     *     "id": "muc-client-id",
+     *     "key": "value"
+     * }
+     * }</pre>
+     * The [key, value] pairs are interpreted as property names and values to
+     * set for the client's configuration (see {@link MucClientConfiguration}).
+     *
+     * @return {@code true} if the request was successful (i.e. the JSON
+     * is in the required format and either a new {@link MucClient} was added
+     * or a client with the same ID already existed).
+     */
+    public boolean addMucClient(JSONObject jsonObject)
+    {
+        if (jsonObject == null || !(jsonObject.get("id") instanceof String))
+        {
+            return false;
+        }
+        MucClientConfiguration config
+            = new MucClientConfiguration((String) jsonObject.get("id"));
+
+        for (Object key : jsonObject.keySet())
+        {
+            Object value = jsonObject.get(key);
+            if (key instanceof String && value instanceof String
+                && !"id".equals(key))
+            {
+                config.setProperty((String) key, (String) value);
+            }
+        }
+
+        if (!config.isComplete())
+        {
+            logger.info("Not adding a MucClient, configuration incomplete.");
+            return false;
+        }
+        else
+        {
+            if (mucClientManager == null)
+            {
+                logger.warn("Not adding a MucClient. Not started?");
+                return false;
+            }
+            mucClientManager.addMucClient(config);
+
+            // We consider the case where a client with the given ID already
+            // exists as success. Note however, that the existing client's
+            // configuration was NOT modified.
+            return true;
+        }
+    }
+
+    /**
+     * Removes a {@link MucClient} with an ID described in JSON.
+     * @param jsonObject the JSON which contains the ID of the client to remove.
+     * </p>
+     * <pre>{@code
+     * The expected JSON format is:
+     * {
+     *     "id": "muc-client-id",
+     * }
+     * }</pre>
+     *
+     * @return {@code false} if this instance has not been initialized, or the
+     * JSON is not in the expected format. Otherwise (regardless of whether
+     * a client with the specified ID existed or not), returns {@code true}.
+     */
+    public boolean removeMucClient(JSONObject jsonObject)
+    {
+        if (jsonObject == null || !(jsonObject.get("id") instanceof String)
+            || mucClientManager == null)
+        {
+            return false;
+        }
+
+        mucClientManager.removeMucClient((String) jsonObject.get("id"));
+        return true;
     }
 }
