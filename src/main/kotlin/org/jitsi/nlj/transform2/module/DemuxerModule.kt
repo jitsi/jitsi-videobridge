@@ -19,7 +19,7 @@ import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.Packet
 import kotlin.reflect.KClass
 
-class DemuxerModule : Module("") {
+class DemuxerModule : Module("Demuxer") {
     private var transformPaths: MutableMap<PacketPredicate, ModuleChain> = mutableMapOf()
     private var tempFirstPath: ModuleChain? = null
 
@@ -36,12 +36,11 @@ class DemuxerModule : Module("") {
 
     override fun doProcessPackets(p: List<Packet>) {
 //        next(tempFirstPath!!, p)
-        p.forEach { packet ->
-            transformPaths.forEach { predicate, chain ->
-                if (predicate(packet)) {
-                    next(chain, listOf(packet))
-                }
-            }
+        // Is this scheme always better? Or only when the list of
+        // packets is above a certain size?
+        transformPaths.forEach { predicate, chain ->
+            val pathPackets = p.filter(predicate)
+            next(chain, pathPackets)
         }
     }
 

@@ -19,13 +19,26 @@ import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
+import java.math.BigDecimal
+import java.time.Duration
 import kotlin.properties.Delegates
 import kotlin.reflect.KClass
+import kotlin.system.measureTimeMillis
 
 typealias PacketHandler = (List<Packet>) -> Unit
 
+fun getMbps(numBytes: Long, duration: Duration): String {
+    if (duration.seconds == 0L) {
+        return "Infinity"
+    }
+    val numBits = BigDecimal(numBytes * 8)
+    val megaBits = numBits / BigDecimal(1000000.0)
+    return "%.2f".format(megaBits / BigDecimal(duration.seconds))
+}
+
 class ModuleChain {
     val modules = mutableListOf<Module>()
+    val durations = mutableListOf<Double>()
     private var name: String = ""
 
     fun name(n: String) {
@@ -63,12 +76,17 @@ class ModuleChain {
     }
 
     fun processPackets(pkts: List<Packet>) {
-        modules[0].processPackets(pkts)
+        val time = measureTimeMillis {
+            modules[0].processPackets(pkts)
+        }
+        durations.add(time / pkts.size.toDouble() )
+        durations.dropLastWhile { durations.size > 100 }
     }
 
     fun getStats(indent: Int = 0): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, name)
+            appendLnIndent(indent, "Average time spent in this chain per packet: ${durations.average()} ms")
             modules.forEach { append(it.getStats(indent + 2)) }
             toString()
         }
@@ -97,21 +115,30 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
     private var totalTime: Long = 0
     private var numInputPackets = 0
     private var numOutputPackets = 0
+    private var firstPacketTime: Long = -1
+    private var lastPacketTime: Long = -1
+    private var numBytes: Long = 0
+
     open fun attach(nextModule: Function1<List<Packet>, Unit>) {
         this.nextModule = nextModule
     }
 
-    private fun getTime(): Long = System.currentTimeMillis()
+    private fun getTime(): Long = System.nanoTime()
 
-    private fun onEntry(p: List<Packet>) {
+    private fun onEntry(incomingPackets: List<Packet>) {
         if (debug) {
             println("Entering module $name")
         }
         startTime = getTime()
-        numInputPackets += p.size
+        if (firstPacketTime == -1L) {
+            firstPacketTime = System.currentTimeMillis()
+        }
+        incomingPackets.forEach { numBytes += it.size }
+        lastPacketTime = System.currentTimeMillis()
+        numInputPackets += incomingPackets.size
     }
 
-    private fun onExit() {
+    private fun onExit(outgoingPackets: List<Packet>) {
         val time = getTime() - startTime
         if (debug) {
             println("Exiting module $name, took $time nanos")
@@ -122,13 +149,13 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
     protected abstract fun doProcessPackets(p: List<Packet>)
 
     protected fun next(pkts: List<Packet>) {
-        onExit()
+        onExit(pkts)
         numOutputPackets += pkts.size
         nextModule.invoke(pkts)
     }
 
     protected fun next(chain: ModuleChain, pkts: List<Packet>) {
-        onExit()
+        onExit(pkts)
         numOutputPackets += pkts.size
         chain.processPackets(pkts)
     }
@@ -143,7 +170,11 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
             appendLnIndent(indent, "$name stats:")
             appendLnIndent(indent + 2, "numInputPackets: $numInputPackets")
             appendLnIndent(indent + 2, "numOutputPackets: $numOutputPackets")
-            appendLnIndent(indent + 2, "total time spent: $totalTime")
+            appendLnIndent(indent + 2, "total time spent: ${totalTime / 1000000.0} ms")
+            appendLnIndent(indent + 2, "average time spent per packet: ${(totalTime / Math.max(numInputPackets, 1)) / 1000000.0} ms")
+            appendLnIndent(indent + 2, "$numBytes bytes over ${lastPacketTime - firstPacketTime} ms")
+            appendLnIndent(indent + 2, "throughput: ${getMbps(numBytes, Duration.ofMillis(lastPacketTime - firstPacketTime))} mbps")
+            appendLnIndent(indent + 2, "individual module throughput: ${getMbps(numBytes, Duration.ofNanos(totalTime))} mbps")
             toString()
         }
     }
@@ -169,6 +200,12 @@ class PacketPath {
 inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit): Unit {
     for (element in this) action(element as Expected)
 }
+inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit): Unit {
+    for (element in this) {
+        if (element is Expected) action(element)
+    }
+}
+
 
 
 class RtpHandlerModule(private val handler: (Packet) -> Unit) : Module("RTP handler") {

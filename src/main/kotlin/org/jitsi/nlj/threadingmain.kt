@@ -28,19 +28,35 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.system.exitProcess
+import kotlin.system.measureNanoTime
+import kotlin.system.measureTimeMillis
 
 class Bridge(val executor: ExecutorService) {
     val senders = mutableMapOf<Long, RtpSender>()
     val incomingPacketQueue = LinkedBlockingQueue<Packet>()
-    var numIncomingPackets = AtomicInteger(0)
     var numReadPackets = 0
     var numForwardedPackets = 0
     var processedPacketsPerSsrc = mutableMapOf<Long, Int>()
     var packetsPerDestination = mutableMapOf<Long, Int>()
+    var firstPacketReadTime: Long = -1
+    var lastPacketReadTime: Long = -1
+    val execTimes = mutableListOf<Long>()
+    var numReadBytes: Long = 0
+    var numTimesQueueEmpty = 0
+    var processingTime: Long = 0
+
+    var numIncomingPackets = AtomicInteger(0)
+    var numIncomingBytes = AtomicLong(0)
+    var firstPacketWrittenTime = AtomicLong(0)
+    var lasttPacketWrittenTime = AtomicLong(0)
+
+    var running = true
 
     init {
-        scheduleWork()
+//        scheduleWork()
+//        scheduleWorkDedicated()
     }
 
     fun addSender(ssrc: Long, sender: RtpSender) {
@@ -48,21 +64,31 @@ class Bridge(val executor: ExecutorService) {
     }
 
     fun onIncomingPackets(pkts: List<Packet>) {
+        if (firstPacketWrittenTime.get() == 0L) {
+            firstPacketWrittenTime.set(System.currentTimeMillis())
+        }
+        lasttPacketWrittenTime.set(System.currentTimeMillis())
         if (!incomingPacketQueue.addAll(pkts)) {
             println("Bridge: error adding packets to queue")
         }
+        pkts.forEach { numIncomingBytes.addAndGet(it.size.toLong()) }
         numIncomingPackets.addAndGet(pkts.size)
-//        println("bridge got packet")
     }
 
-    private fun scheduleWork() {
-        executor.execute {
-            val packetsToProcess = mutableListOf<Packet>()
-            while (packetsToProcess.size < 5) {
-                val packet = incomingPacketQueue.poll() ?: break
-                packetsToProcess += packet
-                numReadPackets++
+    private fun doWork() {
+        val packetsToProcess = mutableListOf<Packet>()
+        val time = measureNanoTime {
+            incomingPacketQueue.drainTo(packetsToProcess, 20)
+            if (firstPacketReadTime == -1L) {
+                firstPacketReadTime = System.currentTimeMillis()
             }
+            if (packetsToProcess.isEmpty()) {
+                numTimesQueueEmpty++
+                return
+            }
+            lastPacketReadTime = System.currentTimeMillis()
+            numReadPackets += packetsToProcess.size
+            packetsToProcess.forEach { numReadBytes += it.size }
             packetsToProcess.forEachAs<RtpPacket> { pkt ->
                 val packetSsrc = pkt.header.ssrc
                 processedPacketsPerSsrc[packetSsrc] = processedPacketsPerSsrc.getOrDefault(packetSsrc, 0) + 1
@@ -75,10 +101,36 @@ class Bridge(val executor: ExecutorService) {
                     }
                 }
             }
-            scheduleWork()
+        }
+        processingTime += time
+    }
+
+    fun scheduleWork() {
+        executor.execute {
+            val time = measureNanoTime {
+                doWork()
+            }
+            execTimes.add(time)
+            execTimes.dropLastWhile { execTimes.size > 100 }
+            if (running) {
+                scheduleWork()
+            }
+        }
+    }
+
+    fun scheduleWorkDedicated() {
+        executor.execute {
+            while (running) {
+                val time = measureNanoTime {
+                    doWork()
+                }
+                execTimes.add(time)
+                execTimes.dropLastWhile { execTimes.size > 100 }
+            }
         }
     }
 }
+
 
 fun main(args: Array<String>) {
     val trackExecutor = Executors.newFixedThreadPool(4)

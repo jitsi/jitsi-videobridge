@@ -27,12 +27,20 @@ import java.util.concurrent.CompletableFuture
  */
 abstract class RtpSender {
     var numPacketsSent = 0
+    var numBytesSent: Long = 0
+    var firstPacketSentTime: Long = -1
+    var lastPacketSentTime: Long = -1
     var done = CompletableFuture<Unit>()
     var packetSender: PacketHandler = {
-        numPacketsSent += it.size
-        if (numPacketsSent == 2_500_000) {
-            done.complete(Unit)
+        if (firstPacketSentTime == -1L) {
+            firstPacketSentTime = System.currentTimeMillis()
         }
+        numPacketsSent += it.size
+        it.forEach { numBytesSent += it.size }
+        lastPacketSentTime = System.currentTimeMillis()
+//        if (numPacketsSent == 2_500_000) {
+//            done.complete(Unit)
+//        }
     }
     abstract fun sendPackets(pkts: List<Packet>)
     abstract fun getStats(): String

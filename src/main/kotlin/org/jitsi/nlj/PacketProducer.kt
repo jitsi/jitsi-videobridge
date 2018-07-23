@@ -48,7 +48,7 @@ class PacketGenerator(val ssrc: Long) {
                     timestamp = 98765
                     ssrc = this@PacketGenerator.ssrc
                     csrcs = listOf(1, 2, 3)
-                    extensions = mapOf()
+                    extensions = mutableMapOf()
                 }
                 payload = ByteBuffer.allocate(50)
             }
