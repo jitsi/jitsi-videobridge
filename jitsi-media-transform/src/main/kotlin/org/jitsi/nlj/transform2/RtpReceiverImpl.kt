@@ -19,6 +19,9 @@ import org.jitsi.nlj.transform2.module.ModuleChain
 import org.jitsi.nlj.transform2.module.PacketHandler
 import org.jitsi.nlj.transform2.module.PacketStatsModule
 import org.jitsi.nlj.transform2.module.RtcpHandlerModule
+import org.jitsi.nlj.transform2.module.TimeTagExtensionReader
+import org.jitsi.nlj.transform2.module.TimeTagReader
+import org.jitsi.nlj.transform2.module.TimeTaggerModule
 import org.jitsi.nlj.transform2.module.incoming.FecReceiverModule
 import org.jitsi.nlj.transform2.module.incoming.PacketLossMonitorModule
 import org.jitsi.nlj.transform2.module.incoming.SrtpDecryptModule
@@ -38,6 +41,7 @@ class RtpReceiverImpl(
     init {
         moduleChain = chain {
             name("Incoming chain")
+            module(TimeTaggerModule("Start of incoming chain"))
             module(PacketStatsModule())
             module(SrtpDecryptModule())
             demux {
@@ -48,6 +52,8 @@ class RtpReceiverImpl(
                         name("RTP chain")
                         module(PacketLossMonitorModule())
                         module(FecReceiverModule())
+                        module(TimeTagReader())
+                        module(TimeTaggerModule("End of incoming chain"))
                         attach(packetHandler)
                     }
                 }
@@ -81,12 +87,8 @@ class RtpReceiverImpl(
         executor.execute {
             val packets = mutableListOf<Packet>()
             while (packets.size < 5) {
-                val packet = incomingPacketQueue.poll()
-                if (packet != null) {
-                    packets += packet
-                } else {
-                    break
-                }
+                val packet = incomingPacketQueue.poll() ?: break
+                packets += packet
             }
             if (packets.isNotEmpty()) processPackets(packets)
             if (running) {
@@ -99,7 +101,7 @@ class RtpReceiverImpl(
 
     override fun getStats(): String {
         return with (StringBuffer()) {
-            appendln("Track $id")
+            appendln("RTP Receiver $id")
             appendln("queue size: ${incomingPacketQueue.size}")
             append(moduleChain.getStats())
             toString()

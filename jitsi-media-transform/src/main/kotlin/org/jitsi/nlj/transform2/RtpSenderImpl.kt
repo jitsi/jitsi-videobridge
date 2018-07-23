@@ -17,9 +17,13 @@ package org.jitsi.nlj.transform2
 
 import org.jitsi.nlj.transform2.module.ModuleChain
 import org.jitsi.nlj.transform2.module.RtcpHandlerModule
+import org.jitsi.nlj.transform2.module.TimeTagExtensionReader
+import org.jitsi.nlj.transform2.module.TimeTagReader
+import org.jitsi.nlj.transform2.module.getMbps
 import org.jitsi.nlj.transform2.module.outgoing.FecSenderModule
 import org.jitsi.nlj.transform2.module.outgoing.SrtpEncryptModule
 import org.jitsi.rtp.Packet
+import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -28,6 +32,9 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
     private val outgoingRtpChain: ModuleChain
     private val outgoingRtcpChain: ModuleChain
     val incomingPacketQueue = LinkedBlockingQueue<Packet>()
+    var numIncomingBytes: Long = 0
+    var firstPacketWrittenTime = -1L
+    var lastPacketWrittenTime = -1L
     var running = true
     init {
         outgoingRtpChain = chain {
@@ -40,6 +47,7 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
         }
 
         moduleChain = chain {
+            module(TimeTagReader())
             demux {
                 name("RTP/RTCP demuxer")
                 packetPath {
@@ -56,24 +64,40 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
                 attachInput(outgoingRtcpChain)
             }
             module(SrtpEncryptModule())
+            module(TimeTagReader())
             attach(packetSender)
         }
         scheduleWork()
+//        scheduleWorkDedicated()
     }
 
     override fun sendPackets(pkts: List<Packet>) {
         incomingPacketQueue.addAll(pkts)
+        pkts.forEach { numIncomingBytes += it.size }
+        if (firstPacketWrittenTime == -1L) {
+            firstPacketWrittenTime = System.currentTimeMillis()
+        }
+        lastPacketWrittenTime = System.currentTimeMillis()
+    }
+
+    private fun scheduleWorkDedicated() {
+        executor.execute {
+            while (running) {
+                val packetsToProcess = mutableListOf<Packet>()
+                while (packetsToProcess.size < 5) {
+                    packetsToProcess.add(incomingPacketQueue.take())
+                }
+                moduleChain.processPackets(packetsToProcess)
+            }
+        }
     }
 
     private fun scheduleWork() {
         executor.execute {
             if (running) {
                 val packetsToProcess = mutableListOf<Packet>()
-                while (packetsToProcess.size < 5) {
-                    val packet = incomingPacketQueue.poll() ?: break
-                    packetsToProcess += packet
-                }
-                moduleChain.processPackets(packetsToProcess)
+                incomingPacketQueue.drainTo(packetsToProcess, 20)
+                if (packetsToProcess.isNotEmpty()) moduleChain.processPackets(packetsToProcess)
 
                 scheduleWork()
             }
@@ -81,9 +105,13 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
     }
 
     override fun getStats(): String {
+        val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
         return with (StringBuffer()) {
-            appendln("Track $id")
+            appendln("RTP Sender $id")
             appendln("queue size: ${incomingPacketQueue.size}")
+            appendln("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
+            appendln("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
+            appendln("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
             append(moduleChain.getStats())
             toString()
         }
