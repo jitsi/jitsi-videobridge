@@ -34,6 +34,7 @@ import org.ice4j.socket.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
+import org.jitsi.nlj.transform2.module.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -370,7 +371,7 @@ public class IceUdpTransportManager
      * The <tt>Conference</tt> object that this <tt>TransportManager</tt> is
      * associated with.
      */
-    private final Conference conference;
+    protected final Conference conference;
 
     /**
      * The {@link DiagnosticContext} of this diagnostic instance provider.
@@ -401,7 +402,7 @@ public class IceUdpTransportManager
     /**
      * The ICE {@link Agent}.
      */
-    private Agent iceAgent;
+    protected Agent iceAgent;
 
     /**
      * The <tt>PropertyChangeListener</tt> which is (to be) notified about
@@ -627,8 +628,10 @@ public class IceUdpTransportManager
             // channelForDtls, because it needs DTLS packets for the application
             // data inside them.
             sctpConnection = (SctpConnection) channel;
+//            if (channelForDtls != null && channelForDtls instanceof RtpChannel && false)
             if (channelForDtls != null && channelForDtls instanceof RtpChannel)
             {
+                System.out.println("BRIAN: CHANGING DTLS CHANNEL TO SCTP CONNECTION");
                 // channelForDtls is usually an RtpChannel, unless a second
                 // SctpConnection is added for this transport manager. This has
                 // been observed to happen when an endpoint ID is reused and
@@ -650,6 +653,7 @@ public class IceUdpTransportManager
             channelForDtls = channel;
 
             RtpChannel rtpChannel = (RtpChannel) channel;
+            System.out.println("BRIAN: SETTING DTLS CHANNEL TO AN RTP CHANNEL");
 
             // The new channelForDtls will always accept DTLS packets on its
             // RTP socket.
@@ -1537,6 +1541,7 @@ public class IceUdpTransportManager
 
     /**
      * {@inheritDoc}
+     * TODO: BRIAN
      */
     @Override
     public SrtpControl getSrtpControl(Channel channel)

@@ -19,6 +19,7 @@ import java.io.*;
 import java.util.*;
 
 import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.transform2.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;

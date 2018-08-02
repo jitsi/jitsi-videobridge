@@ -600,6 +600,9 @@ public class VideobridgeStatistics
                             }
                             MediaStreamStats2 stats
                                 = stream.getMediaStreamStats();
+                            if (stats == null) {
+                                continue;
+                            }
                             ReceiveTrackStats receiveStats
                                 = stats.getReceiveStats();
                             SendTrackStats sendStats = stats.getSendStats();

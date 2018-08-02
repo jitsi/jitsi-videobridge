@@ -1334,9 +1334,11 @@ public class Conference
             {
                 try
                 {
-                    transportManager
-                        = new IceUdpTransportManager(
-                            this, initiator, 1, channelBundleId);
+                    logger.info("BRIAN: CREATING NEW TRANSPORT MANAGER");
+//                    transportManager
+//                        = new IceUdpTransportManager(
+//                            this, initiator, 1, channelBundleId);
+                    transportManager = new IceDtlsTransportManager(this);
                 }
                 catch (IOException ioe)
                 {

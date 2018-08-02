@@ -18,10 +18,14 @@ package org.jitsi.videobridge;
 import java.beans.*;
 import java.io.*;
 import java.net.*;
+import java.nio.*;
+import java.security.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import javax.media.rtp.*;
 
+import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
@@ -29,12 +33,18 @@ import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 
+import org.bouncycastle.crypto.tls.*;
 import org.ice4j.socket.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
+import org.jitsi.nlj.transform2.*;
+import org.jitsi.nlj.transform2.module.*;
+import org.jitsi.nlj.transform2.module.incoming.*;
+import org.jitsi.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
@@ -44,6 +54,8 @@ import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.brian_dtls.*;
+import org.jitsi.videobridge.brian_mediastream.*;
 import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jxmpp.jid.*;
@@ -173,6 +185,14 @@ public class RtpChannel
      * of <tt>neomedia</tt>.
      */
     private MediaStream stream;
+
+    private RtpReceiver rtpReceiver = new RtpReceiverImpl(123, Executors.newSingleThreadExecutor(), packets -> {
+        System.out.println("BRIAN: PACKETS WENT THROUGH RTP RECEIVER PIPELINE");
+        return null;
+    });
+    private Thread receiverReadThread;
+    private DtlsControlImpl dtlsControl;
+    private DtlsTransformEngine dtlsTransformEngine;
 
     /**
      * Used to synchronize access to {@link #stream}.
@@ -899,8 +919,8 @@ public class RtpChannel
             TransportCCEngine transportCCEngine
                 = transportManager.getTransportCCEngine();
 
-            stream
-                = mediaService.createMediaStream(
+//            stream = new NewMediaStream();
+            stream = mediaService.createMediaStream(
                         null,
                         mediaType,
                         getSrtpControl());
@@ -1094,6 +1114,115 @@ public class RtpChannel
             stream.setTarget(streamTarget);
         }
         stream.setConnector(connector);
+
+//        receiverReadThread = new Thread(() -> {
+//            DatagramSocket socket = connector.getDataSocket();
+//            // packets come in from connector.getDataSocket(); -> we want to connect them to something that will
+//            // demux dtls and srtp, dtls should go to a dtls client transport
+//            SecureRandom random = new SecureRandom();
+//            DTLSClientProtocol dtlsClientProtocol = new DTLSClientProtocol(random);
+//            DatagramTransport transport = new BrianUdpTransport(socket);
+//            TlsClient client = new BrianTlsClient((DtlsControl)getTransportManager().getSrtpControl(this));
+//
+//            new Thread(() -> {
+//                System.out.println("BRIAN: starting dtls client connect");
+//                try
+//                {
+//                    // this is where we read/write the post/pre-encrypted dtls packets from
+//                    DTLSTransport dtlsTransport = dtlsClientProtocol.connect(client, transport);
+//                    System.out.println("BRIAN: dtls client connect finished " + dtlsTransport);
+//                } catch (IOException e) {
+//                    System.out.println("BRIAN: error doing client connect: " + e.toString());
+//                    e.printStackTrace(System.out);
+//                }
+//            }).start();
+//
+//            System.out.println("BRIAN: starting rtp receiver thread");
+//            ModuleChain dtlsChain = new ModuleChain();
+//            dtlsChain.module(new Module("dtls chain", false) {
+//                @Override
+//                protected void doProcessPackets(List<? extends Packet> packets)
+//                {
+//                    System.out.println("BRIAN: DTLS CHAIN GOT PACKETS");
+//                    packets.forEach(((BrianUdpTransport) transport)::enqueuePacket);
+//                }
+//            });
+//
+//            // RTP Chain
+//            ModuleChain srtpChain = new ModuleChain();
+//            PacketLossMonitorModule packetLossMonitorModule = new PacketLossMonitorModule();
+//            FecReceiverModule fecReceiverModule = new FecReceiverModule();
+//            srtpChain.module(new Module("RTP parser", false) {
+//                @Override
+//                protected void doProcessPackets(List<? extends Packet> packets)
+//                {
+//                    System.out.println("BRIAN: SRTP chain got packets");
+//                    List<Packet> outPackets = new ArrayList<>();
+//                    packets.forEach(pkt -> {
+//                        UnparsedPacket uPkt = (UnparsedPacket)pkt;
+//                        Packet parsedPkt = Packet.Companion.parse(uPkt.getBuf());
+//                        outPackets.add(parsedPkt);
+//                    });
+//                    next(outPackets);
+//                }
+//            });
+//            srtpChain.module(packetLossMonitorModule);
+//            srtpChain.module(fecReceiverModule);
+//
+//            // DTLS / SRTP demuxing
+//            DemuxerModule dtlsSrtpDemuxer = new DemuxerModule();
+//            PacketPath dtlsPacketPath = new PacketPath();
+//            dtlsPacketPath.setPredicate((packet) -> {
+//                int b = packet.getBuf().get(0) & 0xFF;
+//                System.out.println("BRIAN: dtls path predicate got packet with first byte " + b);
+//                return (b >= 20 && b <= 63);
+//            });
+//            dtlsPacketPath.setPath(dtlsChain);
+//            dtlsSrtpDemuxer.addPacketPath(dtlsPacketPath);
+//
+//            PacketPath srtpPacketPath = new PacketPath();
+//            srtpPacketPath.setPredicate((packet) -> {
+//                int b = packet.getBuf().get(0) & 0xFF;
+//                System.out.println("BRIAN: srtp path predicate got packet with first byte " + b);
+//                return (b > 127 && b < 192);
+//            });
+//            srtpPacketPath.setPath(srtpChain);
+//            dtlsSrtpDemuxer.addPacketPath(srtpPacketPath);
+//
+//            ModuleChain mainChain = new ModuleChain();
+//            mainChain.module(dtlsSrtpDemuxer);
+//
+//            System.out.println("BRIAN: starting channel receiver loop");
+//            System.out.println("BRIAN: accepts non rtp? " + this.getDatagramFilter(false).getAcceptNonRtp());
+//            final byte[] buffer = new byte[1500];
+//            DatagramPacket p = new DatagramPacket(buffer, 0, 1500);
+//            int numPackets = 0;
+//            while (true) {
+//                try
+//                {
+//                    System.out.println("BRIAN: trying to read from incoming socket");
+//                    socket.receive(p);
+//                } catch (IOException e) {
+//                    System.out.println("BRIAN: io exception receiving packet: " + e.toString());
+//                    break;
+//                }
+//                System.out.println("BRIAN: Enqueuing packet into module chain");
+////                ((BrianUdpTransport) transport).enqueuePacket(Packet.Companion.parse(ByteBuffer.wrap(buffer)));
+//                // DTLS chain
+//                List<Packet> pkts = new ArrayList<>();
+//                pkts.add(new UnparsedPacket(ByteBuffer.wrap(buffer, 0, p.getLength())));
+//                mainChain.processPackets(pkts);
+//                numPackets++;
+////                System.out.println("BRIAN: sending packet through new chain");
+////                rtpReceiver.enqueuePacket(Packet.Companion.parse(ByteBuffer.wrap(buffer)));
+//                if (numPackets % 100 == 0) {
+//                    System.out.println("BRIAN: receive chain stats: " + mainChain.getStats(0));
+//                }
+//            }
+//        });
+//        receiverReadThread.start();
+
+//        if (true) return;
 
         Content content = getContent();
         Conference conference = content.getConference();

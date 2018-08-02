@@ -1217,7 +1217,8 @@ public class Videobridge
 
         try
         {
-            healthCheck();
+//            System.out.println("BRIAN: skipping health check");
+//            healthCheck();
 
             return IQ.createResultIQ(healthCheckIQ);
         }

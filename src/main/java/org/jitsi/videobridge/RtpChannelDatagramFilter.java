@@ -214,4 +214,9 @@ public class RtpChannelDatagramFilter
     {
         this.acceptNonRtp = acceptNonRtp;
     }
+
+    public boolean getAcceptNonRtp()
+    {
+        return this.acceptNonRtp;
+    }
 }
