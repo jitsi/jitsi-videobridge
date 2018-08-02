@@ -23,12 +23,16 @@ class DemuxerModule : Module("Demuxer") {
     private var transformPaths: MutableMap<PacketPredicate, ModuleChain> = mutableMapOf()
     private var tempFirstPath: ModuleChain? = null
 
-    fun packetPath(b: PacketPath.() -> Unit) {
-        val pp = PacketPath().apply(b)
+//    fun packetPath(b: PacketPath.() -> Unit) {
+//        val pp = PacketPath().apply(b)
+//        transformPaths[pp.predicate] = pp.path
+//        if (tempFirstPath == null) {
+//            tempFirstPath = pp.path
+//        }
+//    }
+
+    fun addPacketPath(pp: PacketPath) {
         transformPaths[pp.predicate] = pp.path
-        if (tempFirstPath == null) {
-            tempFirstPath = pp.path
-        }
     }
 
     override fun attach(nextModule: (List<Packet>) -> Unit) {//= throw Exception()

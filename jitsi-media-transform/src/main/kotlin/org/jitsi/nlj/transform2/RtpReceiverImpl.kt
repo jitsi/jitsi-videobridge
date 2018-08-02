@@ -22,10 +22,14 @@ import org.jitsi.nlj.transform2.module.RtcpHandlerModule
 import org.jitsi.nlj.transform2.module.TimeTagExtensionReader
 import org.jitsi.nlj.transform2.module.TimeTagReader
 import org.jitsi.nlj.transform2.module.TimeTaggerModule
+import org.jitsi.nlj.transform2.module.getMbps
 import org.jitsi.nlj.transform2.module.incoming.FecReceiverModule
 import org.jitsi.nlj.transform2.module.incoming.PacketLossMonitorModule
 import org.jitsi.nlj.transform2.module.incoming.SrtpDecryptModule
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.util.BitBuffer
+import java.nio.ByteBuffer
+import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -38,12 +42,32 @@ class RtpReceiverImpl(
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var running = true
 
+    var firstPacketWrittenTime: Long = 0
+    var lastPacketWrittenTime: Long = 0
+    var bytesReceived: Long = 0
+
     init {
         moduleChain = chain {
             name("Incoming chain")
             module(TimeTaggerModule("Start of incoming chain"))
             module(PacketStatsModule())
             module(SrtpDecryptModule())
+//            demux {
+//                name = "DTLS/SRTP demuxer"
+//                packetPath {
+//                    predicate = { packet ->
+//                        // https://tools.ietf.org/html/rfc5764#section-5.1.2
+//                        val firstByte = packet.buf.get(0)
+//                        when (firstByte.toInt()) {
+//                            in 20..63 -> true
+//                            else -> false
+//                        }
+//                    }
+//                    path = chain {
+//                        name("DTLS chain")
+//                    }
+//                }
+//            }
             demux {
                 name = "RTP/RTCP demuxer"
                 packetPath {
@@ -103,6 +127,7 @@ class RtpReceiverImpl(
         return with (StringBuffer()) {
             appendln("RTP Receiver $id")
             appendln("queue size: ${incomingPacketQueue.size}")
+            appendln("Received $bytesReceived bytes in ${lastPacketWrittenTime - firstPacketWrittenTime}ms (${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             append(moduleChain.getStats())
             toString()
         }
@@ -110,5 +135,10 @@ class RtpReceiverImpl(
 
     override fun enqueuePacket(p: Packet) {
         incomingPacketQueue.add(p)
+        bytesReceived += p.size
+        if (firstPacketWrittenTime == 0L) {
+            firstPacketWrittenTime = System.currentTimeMillis()
+        }
+        lastPacketWrittenTime = System.currentTimeMillis()
     }
 }

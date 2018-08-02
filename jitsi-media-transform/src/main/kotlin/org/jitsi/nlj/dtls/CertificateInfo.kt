@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2
+package org.jitsi.nlj.dtls
 
-import org.jitsi.nlj.transform2.module.DemuxerModule
-import org.jitsi.nlj.transform2.module.ModuleChain
-import org.jitsi.nlj.transform2.module.PacketPath
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair
 
-fun chain(receiver: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(receiver)
-
-fun DemuxerModule.packetPath(b: PacketPath.() -> Unit) {
-    this.addPacketPath(PacketPath().apply(b))
-}
-
+data class CertificateInfo(
+    val keyPair: AsymmetricCipherKeyPair,
+    val certificate: org.bouncycastle.crypto.tls.Certificate,
+    val localFingerprintHashFunction: String,
+    val localFingerprint: String,
+    val timestamp: Long
+)
