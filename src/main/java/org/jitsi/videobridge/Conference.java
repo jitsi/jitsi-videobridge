@@ -753,6 +753,23 @@ public class Conference
         videobridgeStatistics.totalChannels.addAndGet(
             statistics.totalChannels.get());
 
+        videobridgeStatistics.totalBytesReceived.addAndGet(
+            statistics.totalBytesReceived.get());
+        videobridgeStatistics.totalBytesSent.addAndGet(
+            statistics.totalBytesSent.get());
+        videobridgeStatistics.totalPacketsReceived.addAndGet(
+            statistics.totalPacketsReceived.get());
+        videobridgeStatistics.totalPacketsSent.addAndGet(
+            statistics.totalPacketsSent.get());
+        videobridgeStatistics.totalBytesReceivedOcto.addAndGet(
+            statistics.totalBytesReceivedOcto.get());
+        videobridgeStatistics.totalBytesSentOcto.addAndGet(
+            statistics.totalBytesSentOcto.get());
+        videobridgeStatistics.totalPacketsReceivedOcto.addAndGet(
+            statistics.totalPacketsReceivedOcto.get());
+        videobridgeStatistics.totalPacketsSentOcto.addAndGet(
+            statistics.totalPacketsSentOcto.get());
+
         boolean hasFailed
             = statistics.totalNoPayloadChannels.get()
                 >= statistics.totalChannels.get();
@@ -1902,7 +1919,7 @@ public class Conference
     /**
      * Holds conference statistics.
      */
-    class Statistics
+    public class Statistics
     {
         /**
          * The total number of channels where the transport failed to connect.
@@ -1930,5 +1947,53 @@ public class Conference
          * successfully connected over TCP.
          */
         AtomicInteger totalTcpTransportManagers = new AtomicInteger();
+
+        /**
+         * The total number of bytes received in RTP packets in channels in this
+         * conference. Note that this is only updated when channels expire.
+         */
+        AtomicLong totalBytesReceived = new AtomicLong();
+
+        /**
+         * The total number of bytes sent in RTP packets in channels in this
+         * conference. Note that this is only updated when channels expire.
+         */
+        AtomicLong totalBytesSent = new AtomicLong();
+
+        /**
+         * The total number of RTP packets received in channels in this
+         * conference. Note that this is only updated when channels expire.
+         */
+        AtomicLong totalPacketsReceived = new AtomicLong();
+
+        /**
+         * The total number of RTP packets received in channels in this
+         * conference. Note that this is only updated when channels expire.
+         */
+        AtomicLong totalPacketsSent = new AtomicLong();
+
+        /**
+         * The total number of bytes received via Octo in this conference. Note
+         * that this is only updated when the Octo channels expire.
+         */
+        public AtomicLong totalBytesReceivedOcto = new AtomicLong();
+
+        /**
+         * The total number of bytes sent via Octo in this conference. Note
+         * that this is only updated when the Octo channels expire.
+         */
+        public AtomicLong totalBytesSentOcto = new AtomicLong();
+
+        /**
+         * The total number of packets received via Octo in this conference.
+         * Note that this is only updated when the Octo channels expire.
+         */
+        public AtomicLong totalPacketsReceivedOcto = new AtomicLong();
+
+        /**
+         * The total number of packets sent via Octo in this conference. Note
+         * that this is only updated when the Octo channels expire.
+         */
+        public AtomicLong totalPacketsSentOcto = new AtomicLong();
     }
 }

@@ -1900,5 +1900,59 @@ public class Videobridge
          * {@link Endpoint}s of this conference.
          */
         public AtomicLong totalColibriWebSocketMessagesSent = new AtomicLong();
+
+        /**
+         * The total number of bytes received in RTP packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalBytesReceived = new AtomicLong();
+
+        /**
+         * The total number of bytes sent in RTP packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalBytesSent = new AtomicLong();
+
+        /**
+         * The total number of RTP packets received in conferences on this
+         * videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalPacketsReceived = new AtomicLong();
+
+        /**
+         * The total number of RTP packets sent in conferences on this
+         * videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalPacketsSent = new AtomicLong();
+
+        /**
+         * The total number of bytes received in Octo packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalBytesReceivedOcto = new AtomicLong();
+
+        /**
+         * The total number of bytes sent in Octo packets in conferences on
+         * this videobridge. Note that this is only updated when conferences
+         * expire.
+         */
+        public AtomicLong totalBytesSentOcto = new AtomicLong();
+
+        /**
+         * The total number of Octo packets received in conferences on this
+         * videobridge. Note that this is only updated when conferences expire.
+         */
+        public AtomicLong totalPacketsReceivedOcto = new AtomicLong();
+
+        /**
+         * The total number of Octo packets sent in conferences on this
+         * videobridge. Note that this is only updated when conferences expire.
+         */
+        public AtomicLong totalPacketsSentOcto = new AtomicLong();
     }
 }

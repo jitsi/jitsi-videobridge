@@ -267,6 +267,54 @@ public class VideobridgeStatistics
         = "total_colibri_web_socket_messages_sent";
 
     /**
+     * The name of the stat indicating the total number of bytes received in
+     * RTP packets.
+     */
+    private static final String TOTAL_BYTES_RECEIVED = "total_bytes_received";
+
+    /**
+     * The name of the stat indicating the total number of bytes sent in RTP
+     * packets.
+     */
+    private static final String TOTAL_BYTES_SENT = "total_bytes_sent";
+
+    /**
+     * The name of the stat indicating the total number of RTP packets received.
+     */
+    private static final String TOTAL_PACKETS_RECEIVED
+        = "total_packets_received";
+
+    /**
+     * The name of the stat indicating the total number of RTP packets sent.
+     */
+    private static final String TOTAL_PACKETS_SENT = "total_packets_sent";
+
+    /**
+     * The name of the stat indicating the total number of bytes received in
+     * Octo packets.
+     */
+    private static final String TOTAL_BYTES_RECEIVED_OCTO
+        = "total_bytes_received_octo";
+
+    /**
+     * The name of the stat indicating the total number of bytes sent in Octo
+     * packets.
+     */
+    private static final String TOTAL_BYTES_SENT_OCTO = "total_bytes_sent_octo";
+
+    /**
+     * The name of the stat indicating the total number of Octo packets received.
+     */
+    private static final String TOTAL_PACKETS_RECEIVED_OCTO
+        = "total_packets_received_octo";
+
+    /**
+     * The name of the stat indicating the total number of Octo packets sent.
+     */
+    private static final String TOTAL_PACKETS_SENT_OCTO
+        = "total_packets_sent_octo";
+
+    /**
      * The name of used memory statistic. Its runtime type is {@code Integer}.
      */
     public static final String USED_MEMORY = "used_memory";
@@ -453,6 +501,14 @@ public class VideobridgeStatistics
         long totalDataChannelMessagesSent = 0;
         long totalColibriWebSocketMessagesReceived = 0;
         long totalColibriWebSocketMessagesSent = 0;
+        long totalBytesReceived = 0;
+        long totalBytesSent = 0;
+        long totalPacketsReceived = 0;
+        long totalPacketsSent = 0;
+        long totalBytesReceivedOcto = 0;
+        long totalBytesSentOcto = 0;
+        long totalPacketsReceivedOcto = 0;
+        long totalPacketsSentOcto = 0;
 
         BundleContext bundleContext
             = StatsManagerBundleActivator.getBundleContext();
@@ -491,6 +547,14 @@ public class VideobridgeStatistics
                 += jvbStats.totalColibriWebSocketMessagesReceived.get();
             totalColibriWebSocketMessagesSent
                 += jvbStats.totalColibriWebSocketMessagesSent.get();
+            totalBytesReceived += jvbStats.totalBytesReceived.get();
+            totalBytesSent += jvbStats.totalBytesSent.get();
+            totalPacketsReceived += jvbStats.totalPacketsReceived.get();
+            totalPacketsSent += jvbStats.totalPacketsSent.get();
+            totalBytesReceivedOcto += jvbStats.totalBytesReceivedOcto.get();
+            totalBytesSentOcto += jvbStats.totalBytesSentOcto.get();
+            totalPacketsReceivedOcto += jvbStats.totalPacketsReceivedOcto.get();
+            totalPacketsSentOcto += jvbStats.totalPacketsSentOcto.get();
 
 
             for (Conference conference : videobridge.getConferences())
@@ -711,6 +775,15 @@ public class VideobridgeStatistics
                             totalColibriWebSocketMessagesReceived);
             unlockedSetStat(TOTAL_COLIBRI_WEB_SOCKET_MESSAGES_SENT,
                             totalColibriWebSocketMessagesSent);
+            unlockedSetStat(TOTAL_BYTES_RECEIVED, totalBytesReceived);
+            unlockedSetStat(TOTAL_BYTES_SENT, totalBytesSent);
+            unlockedSetStat(TOTAL_PACKETS_RECEIVED, totalPacketsReceived);
+            unlockedSetStat(TOTAL_PACKETS_SENT, totalPacketsSent);
+            unlockedSetStat(TOTAL_BYTES_RECEIVED_OCTO, totalBytesReceivedOcto);
+            unlockedSetStat(TOTAL_BYTES_SENT_OCTO, totalBytesSentOcto);
+            unlockedSetStat(TOTAL_PACKETS_RECEIVED_OCTO,
+                            totalPacketsReceivedOcto);
+            unlockedSetStat(TOTAL_PACKETS_SENT_OCTO, totalPacketsSentOcto);
 
             unlockedSetStat(TIMESTAMP, timestamp);
             if (relayId != null)

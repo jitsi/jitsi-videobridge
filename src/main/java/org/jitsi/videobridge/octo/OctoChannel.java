@@ -415,4 +415,26 @@ public class OctoChannel
         getOctoTransportManager()
             .sendMessage(msg, sourceEndpointId, getConferenceId());
     }
+
+    /**
+     * {@inheritDoc}
+     * </p>
+     * Updates the octo-specific fields.
+     */
+    @Override
+    protected void updatePacketsAndBytes(
+        Conference.Statistics conferenceStatistics)
+    {
+        if (conferenceStatistics != null)
+        {
+            conferenceStatistics.totalBytesReceivedOcto
+                .addAndGet(statistics.bytesReceived);
+            conferenceStatistics.totalBytesSentOcto
+                .addAndGet(statistics.bytesSent);
+            conferenceStatistics.totalPacketsReceivedOcto
+                .addAndGet(statistics.packetsReceived);
+            conferenceStatistics.totalPacketsSentOcto
+                .addAndGet(statistics.packetsSent);
+        }
+    }
 }
