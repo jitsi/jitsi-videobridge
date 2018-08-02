@@ -9,12 +9,10 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <kotlin.version>1.2.51</kotlin.version>
+        <kotlin.version>1.2.41</kotlin.version>
         <kotlintest.version>3.1.6</kotlintest.version>
         <junit.version>5.2.0</junit.version>
     </properties>
-
-
     <dependencies>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -24,24 +22,31 @@
         <dependency>
             <groupId>groupId</groupId>
             <artifactId>rtp</artifactId>
-            <version>1.0</version>
+            <version>1.0-SNAPSHOT</version>
             <scope>system</scope>
-            <!--<systemPath>/Users/bbaldino/work/rtp/target/rtp-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>-->
-            <systemPath>/Users/bbaldino/work/rtp/target/rtp-1.0-SNAPSHOT.jar</systemPath>
+            <systemPath>/Users/bbaldino/work/rtp/target/rtp-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
         </dependency>
-        <!-- TODO: This shouldn't be listed as a dependency here, we need to get the rtp lib built
-        with all of its dependencies correctly.  For some reason when i use the with-dependencies jar, this lib
-        doesn't see the classes-->
-        <dependency>
-            <groupId>com.github.kotlin-graphics</groupId>
-            <artifactId>kotlin-unsigned</artifactId>
-            <version>v3.1.3</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-reflect -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
             <version>1.2.50</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-debug-jdk15on</artifactId>
+            <version>1.60</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk15on -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>1.60</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.bouncycastle/bctls-jdk15on -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bctls-jdk15on</artifactId>
+            <version>1.60</version>
         </dependency>
 
         <!-- test -->
@@ -63,43 +68,119 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
+        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <plugins>
             <plugin>
-                <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
+                <groupId>org.jetbrains.kotlin</groupId>
                 <version>${kotlin.version}</version>
                 <executions>
                     <execution>
                         <id>compile</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>compile</goal>
-                        </goals>
+                        <goals> <goal>compile</goal> </goals>
                         <configuration>
                             <sourceDirs>
-                                <source>src/main/java</source>
-                                <source>src/main/kotlin</source>
+                                <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
+                                <sourceDir>${project.basedir}/src/main/java</sourceDir>
                             </sourceDirs>
                         </configuration>
                     </execution>
                     <execution>
                         <id>test-compile</id>
-                        <phase>test-compile</phase>
-                        <goals>
-                            <goal>test-compile</goal>
-                        </goals>
+                        <goals> <goal>test-compile</goal> </goals>
+                        <configuration>
+                            <sourceDirs>
+                                <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
+                                <sourceDir>${project.basedir}/src/test/java</sourceDir>
+                            </sourceDirs>
+                        </configuration>
                     </execution>
                 </executions>
                 <configuration>
                     <jvmTarget>1.8</jvmTarget>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <!-- Replacing default-compile as it is treated specially by maven -->
+                    <execution>
+                        <id>default-compile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <!-- Replacing default-testCompile as it is treated specially by maven -->
+                    <execution>
+                        <id>default-testCompile</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>java-compile</id>
+                        <phase>compile</phase>
+                        <goals> <goal>compile</goal> </goals>
+                    </execution>
+                    <execution>
+                        <id>java-test-compile</id>
+                        <phase>test-compile</phase>
+                        <goals> <goal>testCompile</goal> </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.6</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                </configuration>
+            </plugin>
+
+            <!--<plugin>-->
+                <!--<groupId>org.apache.maven.plugins</groupId>-->
+                <!--<artifactId>maven-assembly-plugin</artifactId>-->
+                <!--<version>2.6</version>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<id>make-assembly</id>-->
+                        <!--<phase>package</phase>-->
+                        <!--<goals> <goal>single</goal> </goals>-->
+                        <!--<configuration>-->
+                            <!--<archive>-->
+                                <!--<manifest>-->
+                                <!--</manifest>-->
+                            <!--</archive>-->
+                            <!--<descriptorRefs>-->
+                                <!--<descriptorRef>jar-with-dependencies</descriptorRef>-->
+                            <!--</descriptorRefs>-->
+                        <!--</configuration>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+            <!--</plugin>-->
         </plugins>
     </build>
+
 
 
 </project>

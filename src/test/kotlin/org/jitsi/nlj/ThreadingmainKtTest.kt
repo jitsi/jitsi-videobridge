@@ -104,7 +104,7 @@ internal class ThreadingmainKtTest : ShouldSpec() {
             println("Packet sender stopped")
         }
 
-        sleep(20000)
+        sleep(30000)
 
         sendingPackets = false
         receivers.forEach { _, receiver -> receiver.running = false }
@@ -118,9 +118,9 @@ internal class ThreadingmainKtTest : ShouldSpec() {
         println("Bridge:")
         println("  received ${b.numIncomingPackets} packets")
         println("  received ${b.numIncomingBytes.get()} bytes in ${b.lasttPacketWrittenTime.get() - b.firstPacketWrittenTime.get()} ms (${getMbps(b.numIncomingBytes.get(), Duration.ofMillis(b.lasttPacketWrittenTime.get() - b.firstPacketWrittenTime.get()))} mbps)")
-        println("  queue size: ${b.incomingPacketQueue.size}")
-        println("  num times queue empty: ${b.numTimesQueueEmpty}")
-        println("  read ${b.numReadPackets} packets from queue")
+        println("  incomingQueue size: ${b.incomingPacketQueue.size}")
+        println("  num times incomingQueue empty: ${b.numTimesQueueEmpty}")
+        println("  read ${b.numReadPackets} packets from incomingQueue")
         println("  read ${b.numReadBytes} bytes in ${b.lastPacketReadTime - b.firstPacketReadTime} ms (${getMbps(b.numReadBytes, Duration.ofMillis(b.lastPacketReadTime - b.firstPacketReadTime))} mbps)")
         println("  forwarded ${b.numForwardedPackets} packets")
         println("      per packet ssrc: ${b.processedPacketsPerSsrc}")

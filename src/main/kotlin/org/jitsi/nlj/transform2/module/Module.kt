@@ -32,8 +32,8 @@ fun getMbps(numBytes: Long, duration: Duration): String {
         return "Infinity"
     }
     val numBits = BigDecimal(numBytes * 8)
-    val megaBits = numBits / BigDecimal(1000000.0)
-    return "%.2f".format(megaBits / BigDecimal(duration.seconds))
+    val megaBits = (numBits / BigDecimal(1000000.0)).toFloat()
+    return "%.2f".format(megaBits / duration.seconds)
 }
 
 class ModuleChain {
