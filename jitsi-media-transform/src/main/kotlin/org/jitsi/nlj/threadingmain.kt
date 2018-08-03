@@ -15,9 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.RtpReceiverImpl
-import org.jitsi.nlj.transform.RtpSender
-import org.jitsi.nlj.transform.RtpSenderImpl
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
