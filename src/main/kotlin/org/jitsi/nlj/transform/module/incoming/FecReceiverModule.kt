@@ -13,16 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2.module
+package org.jitsi.nlj.transform.module.incoming
 
+import org.jitsi.nlj.transform.module.Module
 import org.jitsi.rtp.Packet
 
-
-/**
- * Responsible
- */
-class DtlsModule : Module("DtlsModule") {
+class FecReceiverModule : Module("FEC Receiver") {
+//    val handlers = mutableListOf<(Int) -> Unit>()
     override fun doProcessPackets(p: List<Packet>) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    /*
+        p.forEachAs<RtpPacket> {
+            if (Random().nextInt(100) > 90) {
+                if (debug) {
+                    println("FEC receiver recovered packet")
+                }
+                handlers.forEach { it.invoke(1000)}
+            }
+        }
+        */
+        next(p)
     }
 }

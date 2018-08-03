@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2.module.incoming
+package org.jitsi.nlj.transform.module.outgoing
 
-import org.jitsi.nlj.transform2.module.Module
+import org.jitsi.nlj.transform.module.Module
 import org.jitsi.rtp.Packet
 
-class SrtpDecryptModule : Module("SRTP Decrypt") {
+class SrtpEncryptModule : Module("SRTP Encrypt") {
     override fun doProcessPackets(p: List<Packet>) {
         if (debug) {
-            println("SRTP Decrypt")
+            println("SRTP Encrypt")
         }
         for (i in 0..500_000);
-
         next(p)
     }
 }
-

@@ -13,27 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2.module.incoming
+package org.jitsi.nlj.transform.module.outgoing
 
-import org.jitsi.nlj.transform2.module.Module
-import org.jitsi.nlj.transform2.module.forEachAs
+import org.jitsi.nlj.transform.module.Module
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpPacket
-import java.util.*
 
-class FecReceiverModule : Module("FEC Receiver") {
-//    val handlers = mutableListOf<(Int) -> Unit>()
+class FecSenderModule : Module("FEC sender") {
+    private var packetCount = 0
     override fun doProcessPackets(p: List<Packet>) {
-    /*
-        p.forEachAs<RtpPacket> {
-            if (Random().nextInt(100) > 90) {
-                if (debug) {
-                    println("FEC receiver recovered packet")
+        packetCount += p.size
+        if (false && packetCount % 5 == 0) {
+            // Generate a FEC packet
+            val packet = RtpPacket.fromValues {
+                header = RtpHeader.fromValues {
+                    payloadType = 92
+                    sequenceNumber = packetCount
                 }
-                handlers.forEach { it.invoke(1000)}
             }
+            next(p + packet)
+        } else {
+            next(p)
         }
-        */
-        next(p)
+
     }
 }

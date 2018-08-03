@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2.module.incoming
+package org.jitsi.nlj.transform.module.incoming
 
-import org.jitsi.nlj.transform2.module.Module
-import org.jitsi.nlj.transform2.module.forEachAs
-import org.jitsi.nlj.util.appendIndent
+import org.jitsi.nlj.transform.module.Module
+import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
