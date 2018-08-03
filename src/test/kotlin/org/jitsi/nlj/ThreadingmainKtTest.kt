@@ -4,8 +4,6 @@ import io.kotlintest.specs.ShouldSpec
 import io.pkts.Pcap
 import io.pkts.packet.UDPPacket
 import io.pkts.protocol.Protocol
-import org.jitsi.nlj.transform.RtpReceiverImpl
-import org.jitsi.nlj.transform.RtpSenderImpl
 import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket

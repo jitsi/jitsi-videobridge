@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform
+package org.jitsi.nlj
 
 import org.jitsi.rtp.Packet
 
