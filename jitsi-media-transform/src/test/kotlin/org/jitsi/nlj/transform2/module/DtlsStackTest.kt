@@ -16,10 +16,14 @@ import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
+import org.jitsi.nlj.dtls.DtlsClientStack
+import org.jitsi.nlj.dtls.QueueDatagramTransport
+import org.jitsi.nlj.dtls.TlsClientImpl
 import org.jitsi.rtp.Packet
 import java.math.BigInteger
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
@@ -45,27 +49,6 @@ class FakeTransport : DatagramTransport {
 
     override fun send(buf: ByteArray, off: Int, length: Int) {
         sendFunc(buf, off, length)
-    }
-
-    override fun close() {
-    }
-
-    override fun getReceiveLimit(): Int = 1350
-
-    override fun getSendLimit(): Int = 1350
-}
-
-class SocketTransport(val socket: DatagramSocket) : DatagramTransport {
-    override fun receive(buf: ByteArray, off: Int, length: Int, waitMillis: Int): Int {
-        val p = DatagramPacket(buf, off, length)
-        socket.soTimeout = waitMillis
-        socket.receive(p)
-
-        return p.length
-    }
-
-    override fun send(buf: ByteArray, off: Int, length: Int) {
-        socket.send(DatagramPacket(buf, off, length))
     }
 
     override fun close() {
@@ -151,13 +134,15 @@ internal class DtlsStackTest : ShouldSpec() {
 
 internal class DtlsStack2Test : ShouldSpec() {
     init {
-        val dtlsInputQueue = LinkedBlockingQueue<Packet>();
-        val dtlsOutputQueue = LinkedBlockingQueue<Packet>();
-        val transport = DatagramTransportImpl(dtlsInputQueue, dtlsOutputQueue)
-        val dtlsStack = DtlsClientStack(transport);
-
+//        val dtlsInputQueue = LinkedBlockingQueue<ByteBuffer>();
+//        val dtlsOutputQueue = LinkedBlockingQueue<ByteBuffer>();
+//        val transport = QueueDatagramTransport(dtlsInputQueue, dtlsOutputQueue)
+//        val dtlsStack = DtlsClientStack(transport);
+//
+//        dtlsStack.connect()
+//
+//        Thread.sleep(60000)
+//
 //        println("local fingperint: ${dtlsStack.localFingerprint}")
-
     }
-
 }

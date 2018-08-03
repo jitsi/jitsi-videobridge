@@ -19,7 +19,6 @@ import org.jitsi.nlj.transform2.module.ModuleChain
 import org.jitsi.nlj.transform2.module.PacketHandler
 import org.jitsi.nlj.transform2.module.PacketStatsModule
 import org.jitsi.nlj.transform2.module.RtcpHandlerModule
-import org.jitsi.nlj.transform2.module.TimeTagExtensionReader
 import org.jitsi.nlj.transform2.module.TimeTagReader
 import org.jitsi.nlj.transform2.module.TimeTaggerModule
 import org.jitsi.nlj.transform2.module.getMbps
@@ -27,8 +26,6 @@ import org.jitsi.nlj.transform2.module.incoming.FecReceiverModule
 import org.jitsi.nlj.transform2.module.incoming.PacketLossMonitorModule
 import org.jitsi.nlj.transform2.module.incoming.SrtpDecryptModule
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.util.BitBuffer
-import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -49,9 +46,9 @@ class RtpReceiverImpl(
     init {
         moduleChain = chain {
             name("Incoming chain")
-            module(TimeTaggerModule("Start of incoming chain"))
-            module(PacketStatsModule())
-            module(SrtpDecryptModule())
+            addModule(TimeTaggerModule("Start of incoming chain"))
+            addModule(PacketStatsModule())
+            addModule(SrtpDecryptModule())
 //            demux {
 //                name = "DTLS/SRTP demuxer"
 //                packetPath {
@@ -74,10 +71,10 @@ class RtpReceiverImpl(
                     predicate = Packet::isRtp
                     path = chain {
                         name("RTP chain")
-                        module(PacketLossMonitorModule())
-                        module(FecReceiverModule())
-                        module(TimeTagReader())
-                        module(TimeTaggerModule("End of incoming chain"))
+                        addModule(PacketLossMonitorModule())
+                        addModule(FecReceiverModule())
+                        addModule(TimeTagReader())
+                        addModule(TimeTaggerModule("End of incoming chain"))
                         attach(packetHandler)
                     }
                 }
@@ -85,7 +82,7 @@ class RtpReceiverImpl(
                     predicate = Packet::isRtcp
                     path = chain {
                         name("RTCP chain")
-                        module(RtcpHandlerModule())
+                        addModule(RtcpHandlerModule())
                     }
                 }
             }

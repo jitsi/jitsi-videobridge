@@ -17,7 +17,6 @@ package org.jitsi.nlj.transform2
 
 import org.jitsi.nlj.transform2.module.ModuleChain
 import org.jitsi.nlj.transform2.module.RtcpHandlerModule
-import org.jitsi.nlj.transform2.module.TimeTagExtensionReader
 import org.jitsi.nlj.transform2.module.TimeTagReader
 import org.jitsi.nlj.transform2.module.getMbps
 import org.jitsi.nlj.transform2.module.outgoing.FecSenderModule
@@ -39,15 +38,15 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
     init {
         outgoingRtpChain = chain {
             name("Outgoing RTP chain")
-            module(FecSenderModule())
+            addModule(FecSenderModule())
         }
         outgoingRtcpChain = chain {
             name("Outgoing RTCP chain")
-            module(RtcpHandlerModule())
+            addModule(RtcpHandlerModule())
         }
 
         moduleChain = chain {
-            module(TimeTagReader())
+            addModule(TimeTagReader())
             demux {
                 name("RTP/RTCP demuxer")
                 packetPath {
@@ -63,8 +62,8 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
                 attachInput(outgoingRtpChain)
                 attachInput(outgoingRtcpChain)
             }
-            module(SrtpEncryptModule())
-            module(TimeTagReader())
+            addModule(SrtpEncryptModule())
+            addModule(TimeTagReader())
             attach(packetSender)
         }
         scheduleWork()

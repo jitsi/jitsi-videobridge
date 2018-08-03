@@ -24,4 +24,3 @@ fun chain(receiver: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(r
 fun DemuxerModule.packetPath(b: PacketPath.() -> Unit) {
     this.addPacketPath(PacketPath().apply(b))
 }
-
