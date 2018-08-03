@@ -35,11 +35,11 @@ abstract class Transformer(val name: String) {
         return result
     }
 
-    // Maybe the time tracking/telemetry module should be another subclass, instead of in Transformer,
+    // Maybe the time tracking/telemetry addModule should be another subclass, instead of in Transformer,
     // which modules can choose to inherit from (or use in some other way: composition? maybe we want to be able to
     // leverage multiple 'helper' modules?)
     private fun onEntry(p: List<Packet>) {
-//        println("Entering module $name")
+//        println("Entering addModule $name")
         moduleEntryTime = System.nanoTime()
         numInputPackets += p.size
     }
@@ -48,7 +48,7 @@ abstract class Transformer(val name: String) {
         val currTime = System.nanoTime() - moduleEntryTime
         totalTimeSpentInModule += currTime
         numOutputPackets += p.size
-//        println("Exiting module $name, took $currTime nanosecs")
+//        println("Exiting addModule $name, took $currTime nanosecs")
     }
 
     open fun getStats(): String {

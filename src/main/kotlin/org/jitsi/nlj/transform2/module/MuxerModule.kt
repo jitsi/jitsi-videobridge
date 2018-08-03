@@ -17,22 +17,16 @@ package org.jitsi.nlj.transform2.module
 
 import org.jitsi.rtp.Packet
 
-// I don't think we need any special handling in MuxerModule: we can just
-// attach one muxer module to multiple other modules
-// we'd just need to make sure we didn't get into any concurrency issues
-// (so maybe muxer should enforce posting all jobs to be handled
-// by its executor?) if not, do we need it at all?  the first module
-// can just take all the inputs.  we could give each module an executor
-// and then the modules don't need to be aware of the thread boundaries:
-// they'd either be sharing an executor/thread or not but that would be handled
-// at a layer above
+// Maybe this should add a thread context boundary (all incoming packets written to a queue)
+// and then use an executor to schedule the reading?  otherwise this module doesn't do
+// much, a thread calls doProcessPackets which just invokes the next thing on the chain
 class MuxerModule : Module("MuxerModule") {
     override fun doProcessPackets(p: List<Packet>) {
         next(p)
     }
 
     fun attachInput(m: Module) {
-        m.attach(this::doProcessPackets)
+        m.attach(this::processPackets)
     }
 
     fun attachInput(m: ModuleChain) {

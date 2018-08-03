@@ -36,78 +36,6 @@ fun getMbps(numBytes: Long, duration: Duration): String {
     return "%.2f".format(megaBits / duration.seconds)
 }
 
-class ModuleChain {
-    val modules = mutableListOf<Module>()
-    val durations = mutableListOf<Double>()
-    private var name: String = ""
-
-    fun name(n: String) {
-        this.name = n
-    }
-
-    fun module(m: Module) {
-        addAndConnect(m)
-    }
-
-    fun demux(b: DemuxerModule.() -> Unit) {
-        val sm = DemuxerModule().apply(b)
-        addAndConnect(sm)
-    }
-
-    fun mux(b: MuxerModule.() -> Unit) {
-        val mm = MuxerModule().apply(b)
-        addAndConnect(mm)
-    }
-
-    //TODO: trying this as an easy way to add a final output, but that means
-    // should probably enforce that nothing else can be added after this
-    // other option would be to force the user to implement a module to put
-    // the packets somewhere.
-    fun attach(handler: PacketHandler) {
-        val previousModule = modules.lastOrNull()
-        //println("Attaching handler to $previousModule")
-        previousModule?.attach(handler)
-    }
-
-    private fun addAndConnect(m: Module) {
-        val previousModule = modules.lastOrNull()
-        modules.add(m)
-        previousModule?.attach(m::processPackets)
-    }
-
-    fun processPackets(pkts: List<Packet>) {
-        val time = measureTimeMillis {
-            modules[0].processPackets(pkts)
-        }
-        durations.add(time / pkts.size.toDouble() )
-        durations.dropLastWhile { durations.size > 100 }
-    }
-
-    fun getStats(indent: Int = 0): String {
-        return with (StringBuffer()) {
-            appendLnIndent(indent, name)
-            appendLnIndent(indent, "Average time spent in this chain per packet: ${durations.average()} ms")
-            modules.forEach { append(it.getStats(indent + 2)) }
-            toString()
-        }
-    }
-
-    fun findFirst(moduleClass: KClass<*>): Module? {
-        for (m in modules) {
-            if (m::class == moduleClass) {
-                return m
-            } else if (m is DemuxerModule) {
-                val nested = m.findFirst(moduleClass)
-                if (nested != null) { return nested }
-            }
-        }
-        return null
-    }
-
-    fun findAll(moduleClass: KClass<*>): List<Module> {
-        return modules.filter { it -> it::class == moduleClass }
-    }
-}
 
 abstract class Module(var name: String, protected val debug: Boolean = false) {
     private var nextModule: (List<Packet>) -> Unit = {}
@@ -186,17 +114,6 @@ class PacketPath {
     var path: ModuleChain by Delegates.notNull()
 }
 
-
-//class RtpRtcpSplitterModule(
-//    rtpPath: ModuleChain,
-//    rtcpPath: ModuleChain
-//) : DemuxerModule("RTP/RTCP splitter") {
-//    init {
-//        packetPath(rtpPath, Packet::isRtp)
-//        packetPath(rtcpPath) { it -> !it.isRtp }
-//    }
-//}
-
 inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit): Unit {
     for (element in this) action(element as Expected)
 }
@@ -205,8 +122,6 @@ inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit):
         if (element is Expected) action(element)
     }
 }
-
-
 
 class RtpHandlerModule(private val handler: (Packet) -> Unit) : Module("RTP handler") {
     override fun doProcessPackets(p: List<Packet>) {

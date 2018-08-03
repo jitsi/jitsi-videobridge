@@ -113,7 +113,7 @@ abstract class Module<InputPacketType : Packet, OutputPacketType : Packet>(
 
     private fun onEntry(p: List<InputPacketType>) {
         if (debug) {
-            println("Entering module $name")
+            println("Entering addModule $name")
         }
         startTimeNanos = System.nanoTime()
         numInputPackets += p.size
@@ -122,7 +122,7 @@ abstract class Module<InputPacketType : Packet, OutputPacketType : Packet>(
     private fun onExit() {
         val time = System.nanoTime() - startTimeNanos
         if (debug) {
-            println("Exiting module $name, took $time nanos")
+            println("Exiting addModule $name, took $time nanos")
         }
         totalNanos += time
     }
@@ -134,7 +134,7 @@ abstract class Module<InputPacketType : Packet, OutputPacketType : Packet>(
         doProcessPackets(p)
         // TODO: can we do the splitter in such a way that this won't end
         // up being everything downstream, but just the splitter itself?
-        // (like any other module)
+        // (like any other addModule)
         onExit()
     }
 
@@ -190,7 +190,7 @@ class PacketPath {
 }
 
 /*abstract*/ class SplitterModule<InputPacketType : Packet>: Module<InputPacketType, Nothing>("") {
-    // I think a map in the splitter module (whatever it is) will be useful because
+    // I think a map in the splitter addModule (whatever it is) will be useful because
     // it can be handy to have packets potentially go down multiple paths (this allows
     // for easy insertion of debug modules at different points, for example) so the
     // predicates will have to accept ONLY what they want (which seems like a good

@@ -23,14 +23,6 @@ class DemuxerModule : Module("Demuxer") {
     private var transformPaths: MutableMap<PacketPredicate, ModuleChain> = mutableMapOf()
     private var tempFirstPath: ModuleChain? = null
 
-//    fun packetPath(b: PacketPath.() -> Unit) {
-//        val pp = PacketPath().apply(b)
-//        transformPaths[pp.predicate] = pp.path
-//        if (tempFirstPath == null) {
-//            tempFirstPath = pp.path
-//        }
-//    }
-
     fun addPacketPath(pp: PacketPath) {
         transformPaths[pp.predicate] = pp.path
     }
@@ -39,7 +31,6 @@ class DemuxerModule : Module("Demuxer") {
     }
 
     override fun doProcessPackets(p: List<Packet>) {
-//        next(tempFirstPath!!, p)
         // Is this scheme always better? Or only when the list of
         // packets is above a certain size?
         transformPaths.forEach { predicate, chain ->
@@ -55,8 +46,6 @@ class DemuxerModule : Module("Demuxer") {
         }
         return null
     }
-
-
 
     override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
