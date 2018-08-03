@@ -15,14 +15,17 @@
  */
 package org.jitsi.videobridge;
 
+import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
 import org.bouncycastle.crypto.tls.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
-import org.ice4j.ice.harvest.*;
 import org.ice4j.socket.*;
-import org.jitsi.nlj.transform2.module.*;
+import org.jitsi.nlj.dtls.*;
+import org.jitsi.nlj.transform.module.*;
+import org.jitsi.nlj.transform.module.incoming.*;
+import org.jitsi.nlj.transform.module.outgoing.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -33,7 +36,6 @@ import java.net.*;
 import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.*;
 
 /**
  * @author bbaldino
@@ -45,11 +47,10 @@ public class IceDtlsTransportManager
             = Logger.getLogger(IceDtlsTransportManager.class);
     private final ExecutorService executor;
     private static final String ICE_STREAM_NAME = "ice-stream-name";
-//    private final TlsClient tlsClient = new TlsClientImpl();
-    private final BlockingQueue<Packet> dtlsInputQueue = new LinkedBlockingQueue<>();
-    private final BlockingQueue<Packet> dtlsOutputQueue = new LinkedBlockingQueue<>();
-    private final DatagramTransportImpl tlsTransport = new DatagramTransportImpl(dtlsInputQueue, dtlsOutputQueue, 1500);
-    private final DtlsStack dtlsStack = new DtlsClientStack(tlsTransport);
+    private DtlsStack dtlsStack = new DtlsClientStack();
+
+    private ModuleChain incomingModuleChain;
+    private ModuleChain outgoingModuleChain;
 
     public IceDtlsTransportManager(Conference conference)
             throws IOException
@@ -157,6 +158,123 @@ public class IceDtlsTransportManager
         return IceUdpTransportPacketExtension.NAMESPACE;
     }
 
+    private ModuleChain createIncomingModuleChain() {
+        ModuleChain incomingModuleChain = new ModuleChain();
+
+        DemuxerModule dtlsSrtpDemuxer = new DemuxerModule();
+        // DTLS path
+        PacketPath dtlsPath = new PacketPath();
+        dtlsPath.setPredicate((packet) -> {
+            int b = packet.getBuf().get(0) & 0xFF;
+            return (b >= 20 && b <= 63);
+        });
+        ModuleChain dtlsChain = new ModuleChain();
+        dtlsChain.addModule(new DtlsReceiverModule());
+        dtlsPath.setPath(dtlsChain);
+        dtlsSrtpDemuxer.addPacketPath(dtlsPath);
+
+        incomingModuleChain.addModule(dtlsSrtpDemuxer);
+
+        return incomingModuleChain;
+    }
+
+    private ModuleChain createOutgoingModuleChain() {
+        ModuleChain outgoingModuleChain = new ModuleChain();
+
+        MuxerModule muxer = new MuxerModule();
+        outgoingModuleChain.addModule(muxer);
+
+        muxer.attachInput(new DtlsSenderModule());
+
+        return outgoingModuleChain;
+    }
+
+    private void onIceConnected() {
+        MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
+
+        //TODO have to do this here rather than a helper for now since the modulechain.find
+        // methods aren't working as expected
+        incomingModuleChain = new ModuleChain();
+
+        DemuxerModule dtlsSrtpDemuxer = new DemuxerModule();
+        // DTLS path
+        PacketPath dtlsPath = new PacketPath();
+        dtlsPath.setPredicate((packet) -> {
+            int b = packet.getBuf().get(0) & 0xFF;
+            return (b >= 20 && b <= 63);
+        });
+        ModuleChain dtlsChain = new ModuleChain();
+        DtlsReceiverModule dtlsReceiver = new DtlsReceiverModule();
+        dtlsChain.addModule(dtlsReceiver);
+        dtlsPath.setPath(dtlsChain);
+        dtlsSrtpDemuxer.addPacketPath(dtlsPath);
+
+        incomingModuleChain.addModule(dtlsSrtpDemuxer);
+
+        //TODO have to do this here rather than a helper for now since the modulechain.find
+        // methods aren't working as expected
+        outgoingModuleChain = new ModuleChain();
+
+        MuxerModule muxer = new MuxerModule();
+        outgoingModuleChain.addModule(muxer);
+
+        DtlsSenderModule dtlsSender = new DtlsSenderModule();
+        muxer.attachInput(dtlsSender);
+
+
+        // Socket reader thread.  Read from the underlying socket and pass to the incoming
+        // module chain
+        new Thread(() -> {
+            byte[] buf = new byte[1500];
+            while (true) {
+                DatagramPacket p = new DatagramPacket(buf, 0, 1500);
+                try
+                {
+                    s.receive(p);
+                    Packet pkt = new UnparsedPacket(ByteBuffer.wrap(buf, 0, p.getLength()));
+                    incomingModuleChain.processPackets(Collections.singletonList(pkt));
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }, "Incoming read thread").start();
+
+
+        outgoingModuleChain.addModule(new Module("Outgoing socket writer", false) {
+            @Override
+            protected void doProcessPackets(List<? extends Packet> packets)
+            {
+                packets.forEach(pkt -> {
+                    try
+                    {
+                        s.send(new DatagramPacket(pkt.getBuf().array(), 0, pkt.getBuf().limit()));
+                    } catch (IOException e)
+                    {
+                        e.printStackTrace();
+                    }
+                });
+            }
+        });
+
+        DatagramTransport tlsTransport = new QueueDatagramTransport(
+                dtlsReceiver::receive,
+                (buf, off, length) -> { dtlsSender.send(buf, off, length); return Unit.INSTANCE; },
+                1500);
+        new Thread(() -> {
+            try
+            {
+                DTLSTransport transport = dtlsStack.connect(new TlsClientImpl(), tlsTransport).get();
+                dtlsReceiver.setDtlsTransport(transport);
+                logger.info("BRIAN: dtls handshake finished");
+            } catch (InterruptedException | ExecutionException e)
+            {
+                e.printStackTrace();
+            }
+        }, "DTLS Connect thread").start();
+
+    }
+
     private void iceAgentStateChange(PropertyChangeEvent ev)
     {
         IceProcessingState oldState = (IceProcessingState) ev.getOldValue();
@@ -168,50 +286,7 @@ public class IceDtlsTransportManager
                         + ",new_state=" + newState);
         if (newState.isEstablished()) {
             logger.info("BRIAN: ICE connected, need to start dtls");
-            MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
-
-            // DTLS reader thread.  This reads from the multiplexing socket and adds it to the
-            // DTLS stack's input queue
-            new Thread(() -> {
-                byte[] buf = new byte[1500];
-                while (true) {
-                    DatagramPacket p = new DatagramPacket(buf, 0, 1500);
-                    try
-                    {
-                        s.receive(p);
-                        //TODO might still need a copy in this spot if we're gonna re-use the buf
-                        Packet pkt = new UnparsedPacket(ByteBuffer.wrap(buf, 0, p.getLength()));
-//                        logger.info("BRIAN: Enqueing packets to dtls stack from connected ice socket");
-                        dtlsInputQueue.add(pkt);
-                    } catch (IOException e)
-                    {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
-
-            // DTLS writer thread.  This reads from the DTLS stack's output queue and writes
-            // it to the socket
-            new Thread(() -> {
-                while (true) {
-                    Packet p = null;
-                    try
-                    {
-//                        logger.info("BRIAN: waiting for dtls output packet");
-                        p = dtlsOutputQueue.take();
-//                        logger.info("BRIAN: taking dtls output packet and sending on socket");
-                        s.send(new DatagramPacket(p.getBuf().array(), 0, p.getSize()));
-                    } catch (InterruptedException e)
-                    {
-                        e.printStackTrace();
-                    } catch (IOException e)
-                    {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
-
-            dtlsStack.connect();
+            onIceConnected();
         }
     }
 
