@@ -13,17 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2.module.outgoing
+package org.jitsi.nlj.transform.module.outgoing
 
-import org.jitsi.nlj.transform2.module.Module
+import org.jitsi.nlj.transform.module.Module
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.UnparsedPacket
+import java.nio.ByteBuffer
 
-class SrtpEncryptModule : Module("SRTP Encrypt") {
+class DtlsSenderModule : Module("DTLS Sender") {
     override fun doProcessPackets(p: List<Packet>) {
-        if (debug) {
-            println("SRTP Encrypt")
-        }
-        for (i in 0..500_000);
         next(p)
+    }
+
+    //TODO: change thread contexts here?
+    fun send(buf: ByteArray, off: Int, length: Int) {
+        processPackets(listOf(UnparsedPacket(ByteBuffer.wrap(buf, off, length))))
     }
 }

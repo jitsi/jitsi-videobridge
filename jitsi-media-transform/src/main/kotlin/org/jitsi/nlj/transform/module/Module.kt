@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2.module
+package org.jitsi.nlj.transform.module
 
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
@@ -22,8 +22,6 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import java.math.BigDecimal
 import java.time.Duration
 import kotlin.properties.Delegates
-import kotlin.reflect.KClass
-import kotlin.system.measureTimeMillis
 
 typealias PacketHandler = (List<Packet>) -> Unit
 

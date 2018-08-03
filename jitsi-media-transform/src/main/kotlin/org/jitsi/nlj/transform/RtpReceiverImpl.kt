@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2
+package org.jitsi.nlj.transform
 
-import org.jitsi.nlj.transform2.module.ModuleChain
-import org.jitsi.nlj.transform2.module.PacketHandler
-import org.jitsi.nlj.transform2.module.PacketStatsModule
-import org.jitsi.nlj.transform2.module.RtcpHandlerModule
-import org.jitsi.nlj.transform2.module.TimeTagReader
-import org.jitsi.nlj.transform2.module.TimeTaggerModule
-import org.jitsi.nlj.transform2.module.getMbps
-import org.jitsi.nlj.transform2.module.incoming.FecReceiverModule
-import org.jitsi.nlj.transform2.module.incoming.PacketLossMonitorModule
-import org.jitsi.nlj.transform2.module.incoming.SrtpDecryptModule
+import org.jitsi.nlj.transform.module.ModuleChain
+import org.jitsi.nlj.transform.module.PacketHandler
+import org.jitsi.nlj.transform.module.PacketStatsModule
+import org.jitsi.nlj.transform.module.RtcpHandlerModule
+import org.jitsi.nlj.transform.module.TimeTagReader
+import org.jitsi.nlj.transform.module.TimeTaggerModule
+import org.jitsi.nlj.transform.module.getMbps
+import org.jitsi.nlj.transform.module.incoming.FecReceiverModule
+import org.jitsi.nlj.transform.module.incoming.PacketLossMonitorModule
+import org.jitsi.nlj.transform.module.incoming.SrtpDecryptModule
 import org.jitsi.rtp.Packet
 import java.time.Duration
 import java.util.concurrent.ExecutorService

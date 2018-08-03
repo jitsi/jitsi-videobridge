@@ -13,14 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2
+package org.jitsi.nlj.transform.module
 
-import org.jitsi.nlj.transform2.module.DemuxerModule
-import org.jitsi.nlj.transform2.module.ModuleChain
-import org.jitsi.nlj.transform2.module.PacketPath
+import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.rtp.Packet
 
-fun chain(receiver: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(receiver)
+class PacketStatsModule : Module("RX Packet stats") {
+    var totalBytesRx = 0
+    override fun doProcessPackets(p: List<Packet>) {
+        p.forEach { pkt -> totalBytesRx += pkt.size }
+        next(p)
+    }
 
-fun DemuxerModule.packetPath(b: PacketPath.() -> Unit) {
-    this.addPacketPath(PacketPath().apply(b))
+    override fun getStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(super.getStats(indent))
+            appendLnIndent(indent + 2, "total bytes rx: $totalBytesRx")
+            toString()
+        }
+    }
 }

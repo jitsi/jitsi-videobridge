@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2
+package org.jitsi.nlj.transform
 
-import org.jitsi.nlj.transform2.module.PacketHandler
+import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.rtp.Packet
 import java.util.concurrent.CompletableFuture
 

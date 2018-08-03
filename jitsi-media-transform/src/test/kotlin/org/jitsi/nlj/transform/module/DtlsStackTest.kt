@@ -1,4 +1,4 @@
-package org.jitsi.nlj.transform2.module
+package org.jitsi.nlj.transform.module
 
 import io.kotlintest.specs.ShouldSpec
 import org.bouncycastle.cert.X509CertificateHolder
@@ -16,14 +16,8 @@ import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
-import org.jitsi.nlj.dtls.DtlsClientStack
-import org.jitsi.nlj.dtls.QueueDatagramTransport
 import org.jitsi.nlj.dtls.TlsClientImpl
-import org.jitsi.rtp.Packet
 import java.math.BigInteger
-import java.net.DatagramPacket
-import java.net.DatagramSocket
-import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.SecureRandom

@@ -13,21 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform2.module.outgoing
+package org.jitsi.nlj.transform.module
 
-import org.jitsi.nlj.transform2.module.Module
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.UnparsedPacket
-import java.nio.ByteBuffer
-import java.util.concurrent.LinkedBlockingQueue
 
-class DtlsSenderModule : Module("DTLS Sender") {
+
+/**
+ * Responsible
+ */
+class DtlsModule : Module("DtlsModule") {
     override fun doProcessPackets(p: List<Packet>) {
-        next(p)
-    }
-
-    //TODO: change thread contexts here?
-    fun send(buf: ByteArray, off: Int, length: Int) {
-        processPackets(listOf(UnparsedPacket(ByteBuffer.wrap(buf, off, length))))
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }
