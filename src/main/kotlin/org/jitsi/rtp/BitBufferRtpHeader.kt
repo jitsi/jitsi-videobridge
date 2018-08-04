@@ -22,6 +22,7 @@ import java.nio.ByteBuffer
 import kotlin.properties.Delegates
 
 internal class BitBufferRtpHeader : RtpHeader() {
+    override var buf: ByteBuffer by Delegates.notNull()
     override var version: Int by Delegates.notNull()
     override var hasPadding: Boolean by Delegates.notNull()
     override var hasExtension: Boolean by Delegates.notNull()
@@ -32,12 +33,13 @@ internal class BitBufferRtpHeader : RtpHeader() {
     override var timestamp: Long by Delegates.notNull()
     override var ssrc: Long by Delegates.notNull()
     override var csrcs: List<Long> = listOf()
-    override var extensions: Map<Int, RtpHeaderExtension> = mapOf()
+    override var extensions: MutableMap<Int, RtpHeaderExtension> = mutableMapOf()
 
     companion object {
         fun fromBuffer(buf: ByteBuffer) : RtpHeader {
             val bitBuffer = BitBuffer(buf)
-            return with (BitBufferRtpHeader()) {
+            return BitBufferRtpHeader().apply {
+                this.buf = buf.slice()
                 version = bitBuffer.getBits(2).toUInt()
                 hasPadding = bitBuffer.getBitAsBoolean()
                 hasExtension = bitBuffer.getBitAsBoolean()
@@ -50,8 +52,7 @@ internal class BitBufferRtpHeader : RtpHeader() {
                 csrcs = (0 until csrcCount).map {
                     buf.getInt().toULong()
                 }
-                extensions = if (hasExtension) RtpHeaderExtensions.parse(buf) else mapOf()
-                this
+                extensions = if (hasExtension) RtpHeaderExtensions.parse(buf) else mutableMapOf()
             }
         }
 
@@ -72,7 +73,7 @@ internal class BitBufferRtpHeader : RtpHeader() {
             timestamp = this@BitBufferRtpHeader.timestamp
             ssrc = this@BitBufferRtpHeader.ssrc
             csrcs = this@BitBufferRtpHeader.csrcs.toList()
-            extensions = this@BitBufferRtpHeader.extensions.toMap()
+            extensions = this@BitBufferRtpHeader.extensions.toMutableMap()
         }
     }
 }

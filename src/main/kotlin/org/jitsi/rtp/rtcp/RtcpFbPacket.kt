@@ -107,6 +107,7 @@ class PayloadSpecificFeedbackInformation : FeedbackControlInformation() {
 // generically?  Should it make it abstract?  Should it ignore it
 // altogether?
 class RtcpFbPacket : RtcpPacket() {
+    override var buf: ByteBuffer by Delegates.notNull()
     override var header: RtcpHeader by Delegates.notNull()
     var mediaSourceSsrc: Long by Delegates.notNull()
     var feedbackControlInformation: FeedbackControlInformation by Delegates.notNull()
@@ -115,6 +116,7 @@ class RtcpFbPacket : RtcpPacket() {
         fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpFbPacket {
             val fmt = header.reportCount
             return RtcpFbPacket().apply {
+                this.buf = buf.slice()
                 mediaSourceSsrc = buf.getInt().toULong()
                 if (header.payloadType == 205) {
                     when (fmt) {

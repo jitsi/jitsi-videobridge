@@ -32,6 +32,7 @@ import java.nio.ByteBuffer
 // |                             ....                              |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 abstract class RtpHeader {
+    abstract var buf: ByteBuffer
     abstract var version: Int
     abstract var hasPadding: Boolean
     abstract var hasExtension: Boolean
@@ -42,7 +43,7 @@ abstract class RtpHeader {
     abstract var timestamp: Long
     abstract var ssrc: Long
     abstract var csrcs: List<Long>
-    abstract var extensions: Map<Int, RtpHeaderExtension>
+    abstract var extensions: MutableMap<Int, RtpHeaderExtension>
     val size: Int
         get() {
             var size = RtpHeader.FIXED_SIZE_BYTES + (csrcCount * RtpHeader.CSRC_SIZE_BYTES)

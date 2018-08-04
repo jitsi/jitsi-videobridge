@@ -34,7 +34,7 @@ class RtpHeaderExtensions {
     companion object {
         // Buf position should be at the start of the extension block.  This method assumes
         // there are extensions present (i.e. the X bit was set)
-        fun parse(buf: ByteBuffer): Map<Int, RtpHeaderExtension> {
+        fun parse(buf: ByteBuffer): MutableMap<Int, RtpHeaderExtension> {
             val headerExtensionType = buf.getShort()
             val headerExtensionParser = when {
                 headerExtensionType.isOneByteHeaderType() -> ::RtpOneByteHeaderExtension

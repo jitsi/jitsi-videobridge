@@ -160,6 +160,7 @@ class SenderInfo {
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
 class RtcpSrPacket : RtcpPacket() {
+    override var buf: ByteBuffer by Delegates.notNull()
     override var header: RtcpHeader by Delegates.notNull()
     var senderInfo: SenderInfo by Delegates.notNull() // = SenderInfo(buf)
     var reportBlocks: List<RtcpReportBlock> = listOf()
@@ -168,13 +169,13 @@ class RtcpSrPacket : RtcpPacket() {
 
     companion object Create {
         fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpSrPacket {
-            return with (RtcpSrPacket()) {
+            return RtcpSrPacket().apply {
+                this.buf = buf.slice()
                 this.header = header
                 senderInfo = SenderInfo.fromBuffer(buf)
                 reportBlocks = (0 until header.reportCount).map {
                     RtcpReportBlock.fromBuffer(buf)
                 }
-                this
             }
         }
         fun fromValues(receiver: RtcpSrPacket.() -> Unit): RtcpSrPacket {

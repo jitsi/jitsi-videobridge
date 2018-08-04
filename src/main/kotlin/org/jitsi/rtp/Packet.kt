@@ -20,11 +20,13 @@ import unsigned.toUInt
 import java.nio.ByteBuffer
 
 abstract class Packet {
+    abstract var buf: ByteBuffer
     val isRtp
         get() = this is RtpPacket
     val isRtcp
         get() = this is RtcpPacket
     abstract val size: Int
+    val tags = mutableMapOf<String, Any>()
 
     companion object {
         private fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toUInt()
@@ -36,4 +38,8 @@ abstract class Packet {
             }
         }
     }
+}
+
+class UnparsedPacket(override var buf: ByteBuffer) : Packet() {
+    override val size: Int = buf.limit()
 }

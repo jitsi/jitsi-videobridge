@@ -50,6 +50,13 @@ private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
 /**
  * Print the entire contents of the [ByteBuffer] as hex
  * digits
+ * TODO: should the spacing here (every 4 chunks) be right-justified?
+ * (meaning, if you have a buffer with a size that isn't a multiple
+ * of 8, the right-most chunks should be represented as a chunk
+ * of 8, rather than the left-most.  for example:
+ * data: 01000A00 64006400 7B000000 00
+ * should probably be printed as:
+ * data: 01 000A0064 0064007B 00000000
  */
 fun ByteBuffer.toHex() : String {
     val result = StringBuffer()

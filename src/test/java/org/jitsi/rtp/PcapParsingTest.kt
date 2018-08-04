@@ -15,23 +15,25 @@
  */
 package org.jitsi.rtp
 
+import io.kotlintest.specs.ShouldSpec
+import io.pkts.Pcap
+import io.pkts.packet.UDPPacket
+import io.pkts.protocol.Protocol
 import java.nio.ByteBuffer
-import kotlin.properties.Delegates
 
+internal class PcapParsingTest : ShouldSpec() {
+    init {
+        val pcap = Pcap.openStream("/Users/bbaldino/Downloads/chrome_flexfec_and_video_capture.pcap")
 
-internal class BitBufferRtpPacket : RtpPacket() {
-    override var buf: ByteBuffer by Delegates.notNull()
-    override var header: RtpHeader by Delegates.notNull()
-    override var payload: ByteBuffer by Delegates.notNull()
-
-    companion object {
-        fun fromBuffer(buf: ByteBuffer): RtpPacket {
-            return BitBufferRtpPacket().apply {
-                this.buf = buf.slice()
-                header = RtpHeader.fromBuffer(buf)
-                payload = buf.slice()
+        pcap.loop { pkt ->
+            if (pkt.hasProtocol(Protocol.UDP)) {
+                val udpPacket = pkt.getPacket(Protocol.UDP) as UDPPacket
+                val buf = ByteBuffer.wrap(udpPacket.payload.array)
+                val p = RtpPacket.fromBuffer(buf)
+                println(p)
             }
+
+            true
         }
-        fun fromValues(receiver: BitBufferRtpPacket.() -> Unit) = BitBufferRtpPacket().apply(receiver)
     }
 }

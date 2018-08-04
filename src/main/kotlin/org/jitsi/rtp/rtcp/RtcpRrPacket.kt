@@ -49,6 +49,7 @@ import kotlin.properties.Delegates
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 class RtcpRrPacket : RtcpPacket() {
+    override var buf: ByteBuffer by Delegates.notNull()
     override var header: RtcpHeader by Delegates.notNull()
     var reportBlocks: List<RtcpReportBlock> = listOf()
     override val size: Int
@@ -56,12 +57,12 @@ class RtcpRrPacket : RtcpPacket() {
 
     companion object Create {
         fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpRrPacket {
-            return with (RtcpRrPacket()) {
+            return RtcpRrPacket().apply {
+                this.buf = buf.slice()
                 this.header = header
                 reportBlocks = (0 until header.reportCount).map {
                     RtcpReportBlock.fromBuffer(buf)
                 }
-                this
             }
         }
         fun fromValues(receiver: RtcpRrPacket.() -> Unit): RtcpRrPacket {
