@@ -52,7 +52,7 @@ class RtcpRrPacket : RtcpPacket() {
     override var buf: ByteBuffer by Delegates.notNull()
     override var header: RtcpHeader by Delegates.notNull()
     var reportBlocks: List<RtcpReportBlock> = listOf()
-    override val size: Int
+    override var size: Int = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
         get() = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
 
     companion object Create {

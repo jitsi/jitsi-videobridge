@@ -136,7 +136,7 @@ class RtcpFbPacket : RtcpPacket() {
         }
     }
 
-    override val size: Int
+    override var size: Int = (header.length + 1) * 4
         get() = (header.length + 1) * 4
 
     override fun serializeToBuffer(buf: ByteBuffer) {

@@ -36,7 +36,7 @@ import java.nio.ByteBuffer
 abstract class RtpPacket : Packet() {
     abstract var header: RtpHeader
     abstract var payload: ByteBuffer
-    override val size: Int
+    override var size: Int = 0
         get() = header.size + payload.limit()
 
     companion object {
