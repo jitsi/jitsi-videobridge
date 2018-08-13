@@ -63,7 +63,8 @@ public class ConferencePeriodicRunnable
         super(conference,
             period,
             statsService,
-            conference.getName().toString(),
+            conference.getName() == null
+                  ? "null" : conference.getName().toString(),
             conferenceIDPrefix,
             initiatorID);
     }
