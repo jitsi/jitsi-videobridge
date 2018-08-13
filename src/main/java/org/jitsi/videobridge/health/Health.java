@@ -53,6 +53,24 @@ public class Health
     private static Random RANDOM = Videobridge.RANDOM;
 
     /**
+     * The exception thrown from the last health check we performed, or
+     * {@code null} if the last health check did not throw an exception (i.e.
+     * it succeeded).
+     */
+    private static Exception cachedException = null;
+
+    /**
+     * The time when we ran our last health check.
+     */
+    private static long cachedExceptionTimestamp = -1;
+
+    /**
+     * The maximum number of millis that we cache the result of a health
+     * check for.
+     */
+    private static final int CACHE_INTERVAL = 10000;
+
+    /**
      * Checks the health (status) of the {@link Videobridge} associated with a
      * specific {@link Conference}. The specified {@code conference} will be
      * used to perform the check i.e. for testing purposes.
@@ -144,7 +162,62 @@ public class Health
     }
 
     /**
-     * Checks the health (status) of a specific {@link Videobridge}.
+     * Checks the health (status) of a specific {@link Videobridge}. Uses
+     * caching, i.e. if a health check was performed less than
+     * {@link #CACHE_INTERVAL} ago, it returns the result of the last health
+     * check (otherwise it performs a health check, updates the cache and
+     * returns the result).
+     *
+     * @param videobridge the {@code Videobridge} to check the health (status)
+     * of.
+     * @throws Exception if an error occurs while checking the health (status)
+     * of {@code videobridge} or the check determines that {@code videobridge}
+     * is not healthy
+     */
+    public static void check(Videobridge videobridge)
+        throws Exception
+    {
+        Exception cachedException = Health.cachedException;
+        long cachedExceptionTimestamp = Health.cachedExceptionTimestamp;
+
+        if (cachedExceptionTimestamp > 0 &&
+            System.currentTimeMillis() - cachedExceptionTimestamp
+                > CACHE_INTERVAL)
+        {
+            if (cachedException == null)
+            {
+                return;
+            }
+            else
+            {
+                throw new Exception(cachedException);
+            }
+        }
+
+        synchronized (Health.class)
+        {
+            Exception exception = null;
+            try
+            {
+                doCheck(videobridge);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+
+            Health.cachedException = exception;
+            Health.cachedExceptionTimestamp = System.currentTimeMillis();
+
+            if (exception != null)
+            {
+                throw exception;
+            }
+        }
+    }
+
+    /**
+     * Performs a health check on a specific {@link Videobridge}.
      *
      * @param videobridge the {@code Videobridge} to check the health (status)
      * of
@@ -152,7 +225,7 @@ public class Health
      * of {@code videobridge} or the check determines that {@code videobridge}
      * is not healthy 
      */
-    public static void check(Videobridge videobridge)
+    private static void doCheck(Videobridge videobridge)
         throws Exception
     {
         if (MappingCandidateHarvesters.stunDiscoveryFailed)
