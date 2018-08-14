@@ -56,6 +56,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     var firstPacketWrittenTime: Long = 0
     var lastPacketWrittenTime: Long = 0
     var bytesReceived: Long = 0
+    var packetsReceived: Long = 0
 
     var dtlsReceiver = DtlsReceiverModule()
     var dtlsSender = DtlsSenderModule()
@@ -106,18 +107,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 path = chain {
                                     addModule(object : Module("SRTP parser") {
                                         override fun doProcessPackets(p: List<Packet>) {
-                                            println("BRIAN: SRTP parser $this got ${p.size} packets")
-                                            val outPackets = mutableListOf<SrtpPacket>()
-                                            p.forEach { pkt ->
-                                                pkt as SrtpProtocolPacket
-                                                println("BRIAN: srtp parser looking at packet with size ${pkt.size}")
-                                                val op = SrtpPacket(pkt.buf)
-                                                println("BRIAN: srtp parser $this passing on packet ${op.ssrc} ${op.seqNum} size ${op.size}")
-                                                outPackets.add(op)
-                                            }
-                                            println("BRIAN: SRTP parser $this forwarding ${outPackets.size} packets")
-                                            next(outPackets)
-//                                            next(p.map(Packet::buf).map(::SrtpPacket))
+                                            next(p.map(Packet::buf).map(::SrtpPacket))
                                         }
                                     })
                                     val decryptWrapper = SrtpTransformerWrapperDecrypt()
@@ -128,36 +118,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                         decryptWrapper.srtpTransformer = transformer
                                     }
                                     addModule(decryptWrapper)
-//                                    val srtpDecrypt = SrtpDecryptModule()
-//                                    dtlsStack.subscribe { dtlsTransport, tlsContext ->
-//                                        try {
-//                                            val protectionProfileInformation =
-//                                                Util.getProtectionProfileInformation(dtlsStack.getChosenSrtpProtectionProfile())
-//                                            val keyingMaterial =
-//                                                tlsContext.exportKeyingMaterial(
-//                                                    ExporterLabel.dtls_srtp,
-//                                                    null,
-//                                                    2 * (protectionProfileInformation.cipherKeyLength + protectionProfileInformation.cipherSaltLength)
-//                                                )
-//                                            println("BRIAN rtp receiver creating context factories")
-//                                            val factories =
-//                                                Util.createSrtpContextFactories(
-//                                                    protectionProfileInformation,
-//                                                    keyingMaterial,
-//                                                    tlsContext is TlsClientContext
-//                                                )
-//                                            println("BRIAN: setting decrypt factory on srtpdecrypt ${srtpDecrypt.hashCode()}")
-////                                            srtpDecrypt.setDecryptFactory(factories.decryptFactory)
-//                                            srtpDecrypt.setDecryptFactory(factories.encryptFactory)
-//                                        } catch (e: Exception) {
-//                                            println("BRIAN: exception creating factories: $e")
-//                                            e.printStackTrace(System.out)
-//                                        } catch (t: Throwable) {
-//                                            println("BRIAN: excption creating factories: $t")
-//                                            t.printStackTrace(System.out)
-//                                        }
-//                                    }
-//                                    addModule(srtpDecrypt)
                                     addModule(object : Module("vp8 filter") {
                                         override fun doProcessPackets(p: List<Packet>) {
                                             val outpackets = p.map { it as RtpPacket}
@@ -167,21 +127,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                         }
                                     })
                                     addModule(PacketWriter())
-//                                    addModule(object : Module("RTP handler") {
-//                                        override fun doProcessPackets(p: List<Packet>) {
-//                                            p.forEachAs<RtpPacket> { pkt ->
-////                                                println("BRIAN: received rtp packet: " +
-////                                                        "${pkt.header.ssrc} ${pkt.header.sequenceNumber} ${pkt.header.payloadType}\n" +
-////                                                        pkt.payload.toHex()
-////                                                )
-//                                                if (pkt.header.payloadType == 100) {
-//                                                    val vp8pd = Vp8PayloadDescriptor(pkt.payload)
-//                                                    println("BRIAN: received vp8 packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} " +
-//                                                            "with descriptor:\n$vp8pd")
-//                                                }
-//                                            }
-//                                        }
-//                                    })
                                 }
                             }
                             packetPath {
@@ -193,7 +138,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                             next(p.map(Packet::buf).map(::SrtcpPacket))
                                         }
                                     })
-                                    //addModule(srtcpDecrypt)
                                 }
                             }
                         }
@@ -230,6 +174,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         // max amount of packets at a time seems to work as a nice
         // compromise between the two.  It would be nice to be able to
         // avoid the busy-loop style polling for a new packet though
+        //TODO: use drainTo (?)
         executor.execute {
             val packets = mutableListOf<Packet>()
             while (packets.size < 5) {
@@ -259,9 +204,14 @@ class RtpReceiverImpl @JvmOverloads constructor(
         println("BRIAN: RtpReceiver enqueing packet of size ${p.size}")
         incomingPacketQueue.add(p)
         bytesReceived += p.size
+        packetsReceived++
         if (firstPacketWrittenTime == 0L) {
             firstPacketWrittenTime = System.currentTimeMillis()
         }
         lastPacketWrittenTime = System.currentTimeMillis()
+        if (packetsReceived % 200 == 0L) {
+            println("BRIAN: module chain stats: ${moduleChain.getStats()}")
+
+        }
     }
 }

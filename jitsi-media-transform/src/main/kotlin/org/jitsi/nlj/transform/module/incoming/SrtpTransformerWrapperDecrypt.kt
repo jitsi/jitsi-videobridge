@@ -33,13 +33,8 @@ class SrtpTransformerWrapperDecrypt() : Module("SRTP decrypt wrapper") {
 
         if (cachedPackets.isNotEmpty() && srtpTransformer != null) {
             cachedPackets.forEachAs<SrtpPacket> {
-                val rp = RawPacket(it.buf.array(), 0, it.buf.array().size)
-                println("BRIAN: decrypting cached ${rp.ssrcAsLong} ${rp.sequenceNumber} packet with size ${rp.length}")
-                val output = srtpTransformer?.reverseTransform(rp) ?: return@forEachAs
-                println("BRIAN: decrypted cached packet ${output.ssrcAsLong} ${output.sequenceNumber} now has size ${output.length}")
-                val outPacket = RtpPacket.fromBuffer(ByteBuffer.wrap(output.buffer, output.offset, output.length))
-                println("BRIAN: decrypted cached packet parsed as RtpPacket ${outPacket.header.ssrc} ${outPacket.header.sequenceNumber} now has size ${outPacket.size}")
-                outPackets.add(outPacket)
+                val rtpPacket = doDecrypt(it) ?: return@forEachAs
+                outPackets.add(rtpPacket)
             }
             cachedPackets.clear()
         }
@@ -49,14 +44,20 @@ class SrtpTransformerWrapperDecrypt() : Module("SRTP decrypt wrapper") {
             return
         }
         p.forEachAs<SrtpPacket> {
-            val rp = RawPacket(it.buf.array(), 0, it.buf.array().size)
-            println("BRIAN: decrypting ${rp.ssrcAsLong} ${rp.sequenceNumber} packet with size ${rp.length}")
-            val output = srtpTransformer?.reverseTransform(rp) ?: return@forEachAs
-            println("BRIAN: decrypted cached packet ${output.ssrcAsLong} ${output.sequenceNumber} now has size ${output.length}")
-            val outPacket = RtpPacket.fromBuffer(ByteBuffer.wrap(output.buffer, output.offset, output.length))
-            println("BRIAN: decrypted cached packet parsed as RtpPacket ${outPacket.header.ssrc} ${outPacket.header.sequenceNumber} now has size ${outPacket.size}")
-            outPackets.add(outPacket)
+            val rtpPacket = doDecrypt(it) ?: return@forEachAs
+            outPackets.add(rtpPacket)
         }
         next(outPackets)
+    }
+
+    private fun doDecrypt(srtpPacket: SrtpPacket): RtpPacket? {
+        val rp = RawPacket(srtpPacket.buf.array(), 0, srtpPacket.buf.array().size)
+//        println("BRIAN: decrypting ${rp.ssrcAsLong} ${rp.sequenceNumber} packet with size ${rp.length}")
+        val output = srtpTransformer?.reverseTransform(rp) ?: return null
+//        println("BRIAN: decrypted packet ${output.ssrcAsLong} ${output.sequenceNumber} now has size ${output.length}")
+        val outPacket = RtpPacket.fromBuffer(ByteBuffer.wrap(output.buffer, output.offset, output.length))
+//        println("BRIAN: decrypted packet parsed as RtpPacket ${outPacket.header.ssrc} ${outPacket.header.sequenceNumber} now has size ${outPacket.size}")
+
+        return outPacket
     }
 }
