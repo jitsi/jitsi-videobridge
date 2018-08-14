@@ -34,14 +34,13 @@ package org.jitsi.nlj.srtp_og;
  * limitations under the License.
  */
 
-import java.lang.reflect.*;
-import java.security.*;
-import java.util.*;
-
 import org.bouncycastle.crypto.*;
 import org.bouncycastle.crypto.engines.*;
 import org.bouncycastle.crypto.params.*;
-import org.jitsi.nlj.srtp.*;
+
+import java.lang.reflect.*;
+import java.security.*;
+import java.util.*;
 
 /**
  * Implements a factory for an AES <tt>BlockCipher</tt>.

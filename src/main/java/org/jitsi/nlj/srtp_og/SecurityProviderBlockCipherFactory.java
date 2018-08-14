@@ -1,4 +1,26 @@
 /*
+ * Copyright @ 2018 Atlassian Pty Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jitsi.nlj.srtp_og;
+
+import org.bouncycastle.crypto.*;
+
+import javax.crypto.*;
+import java.security.*;
+
+/*
  * Copyright @ 2015 Atlassian Pty Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +35,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.srtp;
-
-import java.security.*;
-
-import javax.crypto.*;
-
-import org.bouncycastle.crypto.*;
 
 /**
  * Implements a <tt>BlockCipherFactory</tt> which initializes
@@ -29,7 +44,7 @@ import org.bouncycastle.crypto.*;
  * @author Lyubomir Marinov
  */
 public class SecurityProviderBlockCipherFactory
-    implements BlockCipherFactory
+        implements BlockCipherFactory
 {
     /**
      * The <tt>java.security.Provider</tt> which provides the implementations of
@@ -73,7 +88,7 @@ public class SecurityProviderBlockCipherFactory
      * <tt>java.security.Provider</tt>.
      *
      * @param transformation the name of the transformation
-     * @param provider the name of the <tt>java.security.Provider</tt> which
+     * @param providerName the name of the <tt>java.security.Provider</tt> which
      * provides the implementations of the <tt>BlockCipher</tt>s to be
      * initialized by the new instance
      */
@@ -89,14 +104,15 @@ public class SecurityProviderBlockCipherFactory
      */
     @Override
     public BlockCipher createBlockCipher(int keySize)
-        throws Exception
+            throws Exception
     {
         return
-            new BlockCipherAdapter(
-                    Cipher.getInstance(
-                            transformation.replaceFirst(
-                                    "<size>",
-                                    Integer.toString(keySize * 8)),
-                            provider));
+                new BlockCipherAdapter(
+                        Cipher.getInstance(
+                                transformation.replaceFirst(
+                                        "<size>",
+                                        Integer.toString(keySize * 8)),
+                                provider));
     }
 }
+
