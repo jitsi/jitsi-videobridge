@@ -1,4 +1,28 @@
 /*
+ * Copyright @ 2018 Atlassian Pty Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jitsi.nlj.srtp_og;
+
+import org.bouncycastle.crypto.*;
+import org.bouncycastle.crypto.params.*;
+
+import javax.crypto.*;
+import javax.crypto.spec.*;
+import java.security.*;
+
+/*
  * Copyright @ 2015 Atlassian Pty Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,31 +37,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.srtp;
-
-import java.security.*;
-
-import javax.crypto.*;
-import javax.crypto.spec.*;
-
-import org.bouncycastle.crypto.*;
-import org.bouncycastle.crypto.params.*;
 
 /**
  * Adapts the <tt>javax.crypto.Cipher</tt> class to the
- * <tt>org.bouncycastle.crypto.BlockCipher</tt> interface. 
+ * <tt>org.bouncycastle.crypto.BlockCipher</tt> interface.
  *
  * @author Lyubomir Marinov
  */
 public class BlockCipherAdapter
-    implements BlockCipher
+        implements BlockCipher
 {
     /**
      * The <tt>Logger</tt> used by the <tt>BlockCipherAdapter</tt> class and its
      * instance to print out debug information.
      */
 //    private static final Logger logger
-//        = Logger.getLogger(BlockCipherAdapter.class);
+//            = Logger.getLogger(BlockCipherAdapter.class);
 
     /**
      * The name of the algorithm implemented by this instance.
@@ -87,8 +102,8 @@ public class BlockCipherAdapter
 
             if ((len > 4)
                     && (algorithmName.endsWith("_128")
-                            || algorithmName.endsWith("_192")
-                            || algorithmName.endsWith("_256")))
+                    || algorithmName.endsWith("_192")
+                    || algorithmName.endsWith("_256")))
             {
                 algorithmName = algorithmName.substring(0, len - 4);
             }
@@ -133,7 +148,7 @@ public class BlockCipherAdapter
      */
     @Override
     public void init(boolean forEncryption, CipherParameters params)
-        throws IllegalArgumentException
+            throws IllegalArgumentException
     {
         Key key = null;
 
@@ -153,7 +168,7 @@ public class BlockCipherAdapter
         }
         catch (InvalidKeyException ike)
         {
-            System.out.println("BlockCipherAdapater#init error: " + ike.toString());
+//            logger.error(ike, ike);
             throw new IllegalArgumentException(ike);
         }
     }
@@ -163,7 +178,7 @@ public class BlockCipherAdapter
      */
     @Override
     public int processBlock(byte[] in, int inOff, byte[] out, int outOff)
-        throws DataLengthException, IllegalStateException
+            throws DataLengthException, IllegalStateException
     {
         try
         {
@@ -171,7 +186,7 @@ public class BlockCipherAdapter
         }
         catch (ShortBufferException sbe)
         {
-            System.out.println("BlockCipherAdapter#processBlock error: " + sbe.toString());
+//            logger.error(sbe, sbe);
 
             DataLengthException dle = new DataLengthException();
 
@@ -192,7 +207,8 @@ public class BlockCipherAdapter
         }
         catch (GeneralSecurityException gse)
         {
-            System.out.println("CipherBlockAdapter#reset error: " + gse.toString());
+//            logger.error(gse, gse);
         }
     }
 }
+
