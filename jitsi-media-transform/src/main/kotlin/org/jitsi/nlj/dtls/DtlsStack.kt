@@ -53,7 +53,7 @@ abstract class DtlsStack {
 
     abstract fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport)
 
-    abstract fun subscribe(func: (DTLSTransport, TlsContext) -> Unit)
+    abstract fun onHandshakeComplete(func: (DTLSTransport, TlsContext) -> Unit)
 
     abstract fun getChosenSrtpProtectionProfile(): Int
 

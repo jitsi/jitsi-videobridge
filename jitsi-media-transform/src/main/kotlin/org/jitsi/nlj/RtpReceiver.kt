@@ -15,10 +15,15 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.srtp_og.SRTPTransformer
+import org.jitsi.nlj.srtp_og.SinglePacketTransformer
+import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.rtp.Packet
 
 abstract class RtpReceiver {
+    abstract val moduleChain: ModuleChain
     abstract fun processPackets(pkts: List<Packet>)
     abstract fun getStats(): String
     abstract fun enqueuePacket(p: Packet)
+    abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
 }

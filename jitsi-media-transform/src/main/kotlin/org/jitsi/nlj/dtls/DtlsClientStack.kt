@@ -41,7 +41,7 @@ class DtlsClientStack @JvmOverloads constructor(
         executor.submit {
             try {
                 val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.datagramTransport)
-                println("BRIAN: dtls connection finished")
+                println("BRIAN: dtls handshake finished")
                 subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
             } catch (e: Exception) {
                 println("BRIAN: error during dtls connection: $e")
@@ -49,7 +49,7 @@ class DtlsClientStack @JvmOverloads constructor(
         }
     }
 
-    override fun subscribe(func: (DTLSTransport, TlsContext) -> Unit) {
+    override fun onHandshakeComplete(func: (DTLSTransport, TlsContext) -> Unit) {
         subscribers.add(func)
     }
 
