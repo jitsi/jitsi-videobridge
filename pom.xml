@@ -75,19 +75,7 @@
       <groupId>groupId</groupId>
       <artifactId>nlj</artifactId>
       <version>1.0-SNAPSHOT</version>
-      <!--<scope>system</scope>-->
-      <!--<systemPath> /Users/bbaldino/work/nlj/target/nlj-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>-->
-      <!--<systemPath> /Users/bbaldino/work/nlj/target/nlj-1.0-SNAPSHOT.jar</systemPath>-->
     </dependency>
-      <!-- TEMP (hopefully) until nlj lib gets built with dependencies properly -->
-    <dependency>
-      <groupId>groupId</groupId>
-      <artifactId>rtp</artifactId>
-      <version>1.0-SNAPSHOT</version>
-      <scope>system</scope>
-      <systemPath>/Users/bbaldino/work/rtp/target/rtp-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
-    </dependency>
-    <!-- https://mvnrepository.com/artifact/org.jetbrains/annotations -->
     <dependency>
       <groupId>org.jetbrains</groupId>
       <artifactId>annotations</artifactId>
