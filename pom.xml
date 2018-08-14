@@ -23,8 +23,6 @@
             <groupId>groupId</groupId>
             <artifactId>rtp</artifactId>
             <version>1.0-SNAPSHOT</version>
-            <scope>system</scope>
-            <systemPath>/Users/bbaldino/work/rtp/target/rtp-1.0-SNAPSHOT-jar-with-dependencies.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
@@ -34,19 +32,13 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-debug-jdk15on</artifactId>
-            <version>1.60</version>
+            <version>1.53</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk15on -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk15on</artifactId>
-            <version>1.60</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/org.bouncycastle/bctls-jdk15on -->
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bctls-jdk15on</artifactId>
-            <version>1.60</version>
+            <version>1.53</version>
         </dependency>
 
         <!-- test -->
@@ -71,7 +63,7 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
+        <!--<sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>-->
         <plugins>
             <plugin>
                 <artifactId>kotlin-maven-plugin</artifactId>
@@ -104,6 +96,40 @@
                 </configuration>
             </plugin>
             <plugin>
+                <!-- To try and get both java and kotlin sources in the sources jar -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/main/kotlin</source>
+                                <source>${project.basedir}/src/main/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.5.1</version>
@@ -129,55 +155,11 @@
                         <goals> <goal>testCompile</goal> </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.6</version>
                 <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                        </manifest>
-                    </archive>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                </configuration>
-            </plugin>
-
-            <!--<plugin>-->
-                <!--<groupId>org.apache.maven.plugins</groupId>-->
-                <!--<artifactId>maven-assembly-plugin</artifactId>-->
-                <!--<version>2.6</version>-->
-                <!--<executions>-->
-                    <!--<execution>-->
-                        <!--<id>make-assembly</id>-->
-                        <!--<phase>package</phase>-->
-                        <!--<goals> <goal>single</goal> </goals>-->
-                        <!--<configuration>-->
-                            <!--<archive>-->
-                                <!--<manifest>-->
-                                <!--</manifest>-->
-                            <!--</archive>-->
-                            <!--<descriptorRefs>-->
-                                <!--<descriptorRef>jar-with-dependencies</descriptorRef>-->
-                            <!--</descriptorRefs>-->
-                        <!--</configuration>-->
-                    <!--</execution>-->
-                <!--</executions>-->
-            <!--</plugin>-->
         </plugins>
     </build>
 
