@@ -70,6 +70,7 @@ class ModuleChain {
     fun getStats(indent: Int = 0): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, name)
+            //TODO: concurrent modification issue with durations (between here and processPackets)
             appendLnIndent(indent, "Average time spent in this chain per packet: ${durations.average()} ms")
             modules.forEach { append(it.getStats(indent + 2)) }
             toString()
