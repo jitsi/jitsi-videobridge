@@ -18,6 +18,8 @@ package org.jitsi.nlj
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.RtpProtocolPacket
+import org.jitsi.rtp.util.RtpProtocol
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -136,13 +138,13 @@ fun main(args: Array<String>) {
     val receiver1 = RtpReceiverImpl(123, trackExecutor, b::onIncomingPackets)
     val sender1 = RtpSenderImpl(123, trackExecutor)
     b.addSender(123, sender1)
-    p.addDestination({ pkt -> pkt.isRtp && (pkt as RtpPacket).header.ssrc == 123L }, receiver1::enqueuePacket)
+    p.addDestination({ pkt -> RtpProtocol.isRtp(pkt.buf) && (pkt as RtpPacket).header.ssrc == 123L }, receiver1::enqueuePacket)
 
     p.addSource(456)
     val receiver2 = RtpReceiverImpl(456, trackExecutor, b::onIncomingPackets)
     val sender2 = RtpSenderImpl(456, trackExecutor)
     b.addSender(456, sender2)
-    p.addDestination({ pkt -> pkt.isRtp && (pkt as RtpPacket).header.ssrc == 456L }, receiver2::enqueuePacket)
+    p.addDestination({ pkt -> RtpProtocol.isRtp(pkt.buf) && (pkt as RtpPacket).header.ssrc == 456L }, receiver2::enqueuePacket)
 
 //    p.addSource(789)
 //    val stream3 = RtpReceiverImpl(789, trackExecutor)

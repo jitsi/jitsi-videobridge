@@ -11,12 +11,17 @@ import org.bouncycastle.crypto.tls.DatagramTransport
 import org.bouncycastle.crypto.tls.DefaultTlsServer
 import org.bouncycastle.crypto.tls.DefaultTlsSignerCredentials
 import org.bouncycastle.crypto.tls.ProtocolVersion
+import org.bouncycastle.crypto.tls.SRTPProtectionProfile
+import org.bouncycastle.crypto.tls.TlsSRTPUtils
 import org.bouncycastle.crypto.tls.TlsSignerCredentials
+import org.bouncycastle.crypto.tls.TlsUtils
+import org.bouncycastle.crypto.tls.UseSRTPData
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
 import org.jitsi.nlj.dtls.TlsClientImpl
+import java.lang.Thread.sleep
 import java.math.BigInteger
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -76,6 +81,11 @@ fun generateCert(keyPair: KeyPair): Certificate {
 class TlsServerImpl : DefaultTlsServer() {
     val keyPair: KeyPair
     val certificate: Certificate
+    private val mki = TlsUtils.EMPTY_BYTES
+    private val srtpProtectionProfiles = intArrayOf(
+        SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80,
+        SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32
+    )
     init {
         val keypairGen = KeyPairGenerator.getInstance("RSA")
         keypairGen.initialize(1024, SecureRandom())
@@ -86,6 +96,22 @@ class TlsServerImpl : DefaultTlsServer() {
     override fun getMaximumVersion(): ProtocolVersion = ProtocolVersion.DTLSv10
     override fun getRSASignerCredentials(): TlsSignerCredentials {
         return DefaultTlsSignerCredentials(context, certificate, PrivateKeyFactory.createKey(keyPair.private.encoded))
+    }
+
+    override fun getServerExtensions(): Hashtable<*, *> {
+        var serverExtensions = super.getServerExtensions();
+        if (TlsSRTPUtils.getUseSRTPExtension(serverExtensions) == null) {
+            if (serverExtensions == null) {
+                serverExtensions = Hashtable<Int, ByteArray>()
+            }
+
+            TlsSRTPUtils.addUseSRTPExtension(
+                serverExtensions,
+                UseSRTPData(srtpProtectionProfiles, mki)
+            )
+        }
+
+        return serverExtensions
     }
 }
 
@@ -123,6 +149,9 @@ internal class DtlsStackTest : ShouldSpec() {
         println("Client done connecting")
         val message = "Hello, world"
         dtlsTransport.send(message.toByteArray(), 0, message.length)
+
+        sleep(5000)
+        println(tlsClient.getContext().securityParameters.masterSecret)
     }
 }
 

@@ -18,7 +18,9 @@ package org.jitsi.nlj.dtls
 import org.bouncycastle.crypto.tls.DTLSClientProtocol
 import org.bouncycastle.crypto.tls.DTLSTransport
 import org.bouncycastle.crypto.tls.DatagramTransport
+import org.bouncycastle.crypto.tls.SRTPProtectionProfile
 import org.bouncycastle.crypto.tls.TlsClient
+import org.bouncycastle.crypto.tls.TlsContext
 import java.security.SecureRandom
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
@@ -31,13 +33,30 @@ class DtlsClientStack @JvmOverloads constructor(
 ) : DtlsStack() {
     private var tlsClient: TlsClient? = null
     private var datagramTransport: DatagramTransport? = null
+    private var subscribers = mutableListOf<(DTLSTransport, TlsContext) -> Unit>()
 
-    override fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport): Future<DTLSTransport> {
+    override fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport) {
         this.tlsClient = tlsClient
         this.datagramTransport = datagramTransport
-        return executor.submit(
-            Callable<DTLSTransport> { dtlsClientProtocol.connect(this.tlsClient, this.datagramTransport) }
-        )
+        executor.submit {
+            try {
+                val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.datagramTransport)
+                println("BRIAN: dtls connection finished")
+                subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
+            } catch (e: Exception) {
+                println("BRIAN: error during dtls connection: $e")
+            }
+        }
     }
+
+    override fun subscribe(func: (DTLSTransport, TlsContext) -> Unit) {
+        subscribers.add(func)
+    }
+
+    //TODO: better way we can get the chosen profile out without having to cast?
+    override fun getChosenSrtpProtectionProfile(): Int = (tlsClient as? TlsClientImpl)?.chosenSrtpProtectionProfile ?: 0
+
+    //TODO: same as above
+    override fun getTlsContext(): TlsContext? = (tlsClient as? TlsClientImpl)?.getContext()
 }
 

@@ -35,7 +35,9 @@ class DemuxerModule : Module("Demuxer") {
         // packets is above a certain size?
         transformPaths.forEach { predicate, chain ->
             val pathPackets = p.filter(predicate)
-            next(chain, pathPackets)
+            if (pathPackets.isNotEmpty()) {
+                next(chain, pathPackets)
+            }
         }
     }
 

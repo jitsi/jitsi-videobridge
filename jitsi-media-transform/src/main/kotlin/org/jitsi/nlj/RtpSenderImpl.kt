@@ -49,23 +49,23 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
 
         moduleChain = chain {
             addModule(TimeTagReader())
-            demux {
-                name("RTP/RTCP demuxer")
-                packetPath {
-                    predicate = Packet::isRtp
-                    path = outgoingRtpChain
-                }
-                packetPath {
-                    predicate = Packet::isRtcp
-                    path = outgoingRtcpChain
-                }
-            }
-            mux {
-                attachInput(outgoingRtpChain)
-                attachInput(outgoingRtcpChain)
-            }
-            addModule(SrtpEncryptModule())
-            addModule(TimeTagReader())
+//            demux {
+//                name("RTP/RTCP demuxer")
+//                packetPath {
+//                    predicate = Packet::isRtp
+//                    path = outgoingRtpChain
+//                }
+//                packetPath {
+//                    predicate = Packet::isRtcp
+//                    path = outgoingRtcpChain
+//                }
+//            }
+//            mux {
+//                attachInput(outgoingRtpChain)
+//                attachInput(outgoingRtcpChain)
+//            }
+//            addModule(SrtpEncryptModule())
+//            addModule(TimeTagReader())
             attach(packetSender)
         }
         scheduleWork()
