@@ -15,154 +15,85 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.dtls.DtlsClientStack
-import org.jitsi.nlj.dtls.QueueDatagramTransport
-import org.jitsi.nlj.dtls.TlsClientImpl
-import org.jitsi.nlj.srtp_og.SRTPTransformer
+import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.nlj.transform.module.PacketWriter
 import org.jitsi.nlj.transform.module.getMbps
-import org.jitsi.nlj.transform.module.incoming.DtlsReceiverModule
 import org.jitsi.nlj.transform.module.incoming.SrtpTransformerWrapperDecrypt
-import org.jitsi.nlj.transform.module.outgoing.DtlsSenderModule
 import org.jitsi.nlj.transform.packetPath
-import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
 import org.jitsi.rtp.util.RtpProtocol
-import unsigned.toUInt
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
-import kotlin.experimental.and
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
     val executor: ExecutorService = Executors.newSingleThreadExecutor(),
     val packetHandler: PacketHandler? = null
 ) : RtpReceiver() {
-    private val moduleChain: ModuleChain
+    /*private*/ override val moduleChain: ModuleChain
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var running = true
-    var dtlsStack = DtlsClientStack()
+    private val decryptWrapper = SrtpTransformerWrapperDecrypt()
 
     var firstPacketWrittenTime: Long = 0
     var lastPacketWrittenTime: Long = 0
     var bytesReceived: Long = 0
     var packetsReceived: Long = 0
 
-    var dtlsReceiver = DtlsReceiverModule()
-    var dtlsSender = DtlsSenderModule()
-
     init {
         moduleChain = chain {
-            name("$id Incoming packet chain")
+            name("SRTP chain")
+            addModule(object : Module("SRTP protocol parser") {
+                override fun doProcessPackets(p: List<Packet>) {
+                    next(p.map(Packet::buf).map(::SrtpProtocolPacket))
+                }
+            })
             demux {
-                name = "DTLS/SRTP demuxer"
+                name = "SRTP/SRTCP demuxer"
                 packetPath {
-                    predicate = { packet ->
-                        val byte = (packet.buf.get(0) and 0xFF.toByte()).toUInt()
-                        when (byte) {
-                            in 20..63 -> true
-                            else -> false
-                        }
-                    }
+                    predicate = { pkt -> RtpProtocol.isRtp(pkt.buf) }
                     path = chain {
-                        name ("DTLS chain")
-                        addModule(object : Module("DTLS parser") {
+                        addModule(object : Module("SRTP parser") {
                             override fun doProcessPackets(p: List<Packet>) {
-                                println("BRIAN: dtls parser got data")
-                                next(p.map(Packet::buf).map(::DtlsProtocolPacket))
+                                next(p.map(Packet::buf).map(::SrtpPacket))
                             }
                         })
-                        addModule(dtlsReceiver)
+                        addModule(decryptWrapper)
+                        addModule(object : Module("vp8 filter") {
+                            override fun doProcessPackets(p: List<Packet>) {
+                                val outpackets = p.map { it as RtpPacket}
+                                    .filter { it.header.payloadType == 100}
+                                    .toCollection(ArrayList())
+                                next(outpackets)
+                            }
+                        })
+                        addModule(PacketWriter())
                     }
                 }
                 packetPath {
-                    predicate = { packet ->
-                        val byte = (packet.buf.get(0) and 0xFF.toByte()).toUInt()
-                        when (byte) {
-                            in 20..63 -> false
-                            else -> true
-                        }
-                    }
+                    predicate = { pkt -> RtpProtocol.isRtcp(pkt.buf) }
                     path = chain {
-                        name("SRTP chain")
-                        addModule(object : Module("SRTP protocol parser") {
+                        addModule(object : Module("SRTCP parser") {
                             override fun doProcessPackets(p: List<Packet>) {
-                                next(p.map(Packet::buf).map(::SrtpProtocolPacket))
+                                println("BRIAN: got srtcp")
+                                next(p.map(Packet::buf).map(::SrtcpPacket))
                             }
                         })
-                        demux {
-                            name = "SRTP/SRTCP demuxer"
-                            packetPath {
-                                predicate = { pkt -> RtpProtocol.isRtp(pkt.buf) }
-                                path = chain {
-                                    addModule(object : Module("SRTP parser") {
-                                        override fun doProcessPackets(p: List<Packet>) {
-                                            next(p.map(Packet::buf).map(::SrtpPacket))
-                                        }
-                                    })
-                                    val decryptWrapper = SrtpTransformerWrapperDecrypt()
-                                    dtlsStack.subscribe { dtlsTransport, tlsContext ->
-                                        val transformer = SRTPTransformer.initializeSRTPTransformer(
-                                            dtlsStack.getChosenSrtpProtectionProfile(), tlsContext, false
-                                        )
-                                        decryptWrapper.srtpTransformer = transformer
-                                    }
-                                    addModule(decryptWrapper)
-                                    addModule(object : Module("vp8 filter") {
-                                        override fun doProcessPackets(p: List<Packet>) {
-                                            val outpackets = p.map { it as RtpPacket}
-                                                .filter { it.header.payloadType == 100}
-                                                .toCollection(ArrayList())
-                                            next(outpackets)
-                                        }
-                                    })
-                                    addModule(PacketWriter())
-                                }
-                            }
-                            packetPath {
-                                predicate = { pkt -> RtpProtocol.isRtcp(pkt.buf) }
-                                path = chain {
-                                    addModule(object : Module("SRTCP parser") {
-                                        override fun doProcessPackets(p: List<Packet>) {
-                                            println("BRIAN: got srtcp")
-                                            next(p.map(Packet::buf).map(::SrtcpPacket))
-                                        }
-                                    })
-                                }
-                            }
-                        }
                     }
                 }
             }
         }
         scheduleWork()
-    }
-
-    fun connectDtls() {
-        println("BRIAN: submitting dtls connect task")
-        val tlsTransport = QueueDatagramTransport(
-            dtlsReceiver::receive,
-            { buf, off, len -> dtlsSender.send(buf, off, len) },
-            1500
-        )
-        executor.submit {
-            println("BRIAN: running dtlsStack.connect")
-            try {
-                dtlsStack.connect(TlsClientImpl(), tlsTransport)
-            } catch (e: Exception) {
-                println("BRIAN: exception during dtls connect: $e")
-            }
-        }
     }
 
     private fun scheduleWork() {
@@ -213,5 +144,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
             println("BRIAN: module chain stats: ${moduleChain.getStats()}")
 
         }
+    }
+
+    override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
+        decryptWrapper.srtpTransformer = srtpTransformer
     }
 }

@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.srtp_og.SRTPTransformer
+import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.RtcpHandlerModule
@@ -26,9 +28,13 @@ import org.jitsi.nlj.transform.packetPath
 import org.jitsi.rtp.Packet
 import java.time.Duration
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 
-class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
+class RtpSenderImpl(
+    val id: Long,
+    val executor: ExecutorService = Executors.newSingleThreadExecutor()
+) : RtpSender() {
     private val moduleChain: ModuleChain
     private val outgoingRtpChain: ModuleChain
     private val outgoingRtcpChain: ModuleChain
@@ -40,7 +46,6 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
     init {
         outgoingRtpChain = chain {
             name("Outgoing RTP chain")
-            addModule(FecSenderModule())
         }
         outgoingRtcpChain = chain {
             name("Outgoing RTCP chain")
@@ -48,24 +53,6 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
         }
 
         moduleChain = chain {
-            addModule(TimeTagReader())
-//            demux {
-//                name("RTP/RTCP demuxer")
-//                packetPath {
-//                    predicate = Packet::isRtp
-//                    path = outgoingRtpChain
-//                }
-//                packetPath {
-//                    predicate = Packet::isRtcp
-//                    path = outgoingRtcpChain
-//                }
-//            }
-//            mux {
-//                attachInput(outgoingRtpChain)
-//                attachInput(outgoingRtcpChain)
-//            }
-//            addModule(SrtpEncryptModule())
-//            addModule(TimeTagReader())
             attach(packetSender)
         }
         scheduleWork()
@@ -79,6 +66,10 @@ class RtpSenderImpl(val id: Long, val executor: ExecutorService) : RtpSender() {
             firstPacketWrittenTime = System.currentTimeMillis()
         }
         lastPacketWrittenTime = System.currentTimeMillis()
+    }
+
+    override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
+        //TODO
     }
 
     private fun scheduleWorkDedicated() {

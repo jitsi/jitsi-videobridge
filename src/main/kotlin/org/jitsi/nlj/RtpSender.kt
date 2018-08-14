@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.srtp_og.SRTPTransformer
+import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.rtp.Packet
 import java.util.concurrent.CompletableFuture
@@ -44,4 +46,5 @@ abstract class RtpSender {
     }
     abstract fun sendPackets(pkts: List<Packet>)
     abstract fun getStats(): String
+    abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
 }
