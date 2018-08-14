@@ -17,8 +17,8 @@ package org.jitsi.nlj.transform.module.incoming
 
 import org.bouncycastle.crypto.tls.DTLSTransport
 import org.jitsi.nlj.transform.module.Module
+import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.UnparsedPacket
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -50,6 +50,7 @@ class DtlsReceiverModule : Module("DTLS Receiver") {
      * expose the DTLS transport for sending and receiving application data.
      */
     override fun doProcessPackets(p: List<Packet>) {
+//        println("BRIAN: dtls receiver module received packets")
         incomingQueue.addAll(p)
         // If dtlsTransport is not null, then that means that the DTLS handshake has
         // completed.  If it has completed, then the thread doing the connect is no
@@ -62,7 +63,7 @@ class DtlsReceiverModule : Module("DTLS Receiver") {
         do {
             bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 1) ?: 0
             if (bytesReceived > 0) {
-                outPackets.add(UnparsedPacket(dtlsAppDataBuf.duplicate()))
+                outPackets.add(DtlsProtocolPacket(dtlsAppDataBuf.duplicate()))
             }
         } while (bytesReceived > 0)
         if (outPackets.isNotEmpty()) {

@@ -24,6 +24,7 @@ import org.bouncycastle.cert.X509v3CertificateBuilder
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair
 import org.bouncycastle.crypto.generators.RSAKeyPairGenerator
 import org.bouncycastle.crypto.params.RSAKeyGenerationParameters
+import org.bouncycastle.crypto.tls.SRTPProtectionProfile
 import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder

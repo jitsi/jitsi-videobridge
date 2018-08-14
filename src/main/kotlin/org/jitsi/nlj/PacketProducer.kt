@@ -21,6 +21,7 @@ import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpSrPacket
+import org.jitsi.rtp.util.BufferView
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.concurrent.thread
@@ -50,7 +51,7 @@ class PacketGenerator(val ssrc: Long) {
                     csrcs = listOf(1, 2, 3)
                     extensions = mutableMapOf()
                 }
-                payload = ByteBuffer.allocate(50)
+                payload = BufferView(ByteArray(50), 0, 50)
             }
         } else {
             packetsSinceRtcp = 0

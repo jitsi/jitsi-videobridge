@@ -16,13 +16,6 @@
 package org.jitsi.nlj.dtls
 
 import org.bouncycastle.crypto.tls.DatagramTransport
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.UnparsedPacket
-import java.lang.Math.min
-import java.nio.ByteBuffer
-import java.time.Duration
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.TimeUnit
 
 /**
  * [QueueDatagramTransport] is an implementation of [DatagramTransport] which
