@@ -215,4 +215,16 @@ class RtcpReportBlock {
             putInt(delaySinceLastSr.toUInt())
         }
     }
+
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("Report block")
+            appendln("  Source ssrc: $ssrc")
+            appendln("  fraction lost: $fractionLost")
+            appendln("  cumulative lost: $cumulativePacketsLost")
+            appendln("  interarrival jitter: $interarrivalJitter")
+
+            toString()
+        }
+    }
 }

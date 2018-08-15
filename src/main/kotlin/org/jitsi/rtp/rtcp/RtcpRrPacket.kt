@@ -56,6 +56,7 @@ class RtcpRrPacket : RtcpPacket() {
         get() = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
 
     companion object Create {
+        val PT: Int = 201
         fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpRrPacket {
             return RtcpRrPacket().apply {
                 this.buf = buf.slice()
@@ -76,6 +77,18 @@ class RtcpRrPacket : RtcpPacket() {
         header.serializeToBuffer(buf)
         buf.apply {
             reportBlocks.forEach { it.serializeToBuffer(buf) }
+        }
+    }
+
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("RR packet:")
+            appendln("RR sender: ${header.senderSsrc}")
+            reportBlocks.forEach {
+                appendln(it.toString())
+            }
+
+            toString()
         }
     }
 }

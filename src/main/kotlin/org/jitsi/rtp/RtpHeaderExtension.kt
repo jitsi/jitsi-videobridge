@@ -42,6 +42,7 @@ abstract class RtpHeaderExtension {
 
     //TODO: do we need to put a size limit on this, in case the first byte
     // of whatever the next field is (the payload) is 0?
+    // Returns the amount of padding consumed (in bytes)
     protected fun consumePadding(buf: ByteBuffer) {
         // At this point the buffer is at the end of the data.  Now we need
         // to (maybe) advance it further past any padding bytes.  Padding

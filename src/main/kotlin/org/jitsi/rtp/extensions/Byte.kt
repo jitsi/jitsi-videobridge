@@ -39,6 +39,31 @@ fun putBit(b: Byte, bitPos: Int, isSet: Boolean): Byte {
 }
 
 /**
+ * Puts the right-most [numBits] bits from [src] into [dest]  starting at
+ * [bitStartPos]
+ * [bitStartPos] is a 0 based index into the byte [dest], where the MSB
+ * is position 0 and the LSB is position 7.
+ * Given the values:
+ * bitStartPos = 4
+ * numBits = 3
+ * src = 0b101
+ * dest = 0b00000000
+ *
+ * The returned Byte will be:
+ * 0b00001010
+ */
+fun putBits(dest: Byte, bitStartPos: Int, numBits: Int, src: Byte): Byte {
+    // Start the position in src to the first bit we'll assign.
+    val valueBitPosition = 7 - numBits + 1
+    var result = dest
+    for (i in 0 until numBits) {
+        val isSet = src.getBitAsBool(valueBitPosition + i)
+        result = putBit(result, bitStartPos + i, isSet)
+    }
+    return result
+}
+
+/**
  * Get the bit at [bitPos] as a [Boolean].  Will return [true]
  * if the bit is set (1) and [false] if it is unset (0)
  */

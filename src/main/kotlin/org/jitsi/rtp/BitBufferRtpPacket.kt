@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.util.BufferView
 import java.nio.ByteBuffer
 import kotlin.properties.Delegates
 
@@ -22,14 +23,24 @@ import kotlin.properties.Delegates
 internal class BitBufferRtpPacket : RtpPacket() {
     override var buf: ByteBuffer by Delegates.notNull()
     override var header: RtpHeader by Delegates.notNull()
-    override var payload: ByteBuffer by Delegates.notNull()
+    override var payload: BufferView by Delegates.notNull()
 
     companion object {
+        /**
+         * [buf] should be a ByteBuffer whose position
+         * starts at the beginning of the RTP packet and whose
+         * limit is the end of the RTP packet.
+         */
         fun fromBuffer(buf: ByteBuffer): RtpPacket {
             return BitBufferRtpPacket().apply {
                 this.buf = buf.slice()
                 header = RtpHeader.fromBuffer(buf)
-                payload = buf.slice()
+                payload = BufferView(
+                    buf.array(),
+                    // Since we've just parsed the header, the current position should now
+                    // be at the start of the payload
+                    buf.position(),
+                    buf.limit() - buf.position())
             }
         }
         fun fromValues(receiver: BitBufferRtpPacket.() -> Unit) = BitBufferRtpPacket().apply(receiver)

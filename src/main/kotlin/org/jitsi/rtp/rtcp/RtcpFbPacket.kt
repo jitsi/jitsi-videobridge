@@ -106,7 +106,7 @@ class PayloadSpecificFeedbackInformation : FeedbackControlInformation() {
 // the RC field).  Should the header parse that field, but hold it
 // generically?  Should it make it abstract?  Should it ignore it
 // altogether?
-class RtcpFbPacket : RtcpPacket() {
+class RtcpFbPacket : RtcpPacket {
     override var buf: ByteBuffer by Delegates.notNull()
     override var header: RtcpHeader by Delegates.notNull()
     var mediaSourceSsrc: Long by Delegates.notNull()
@@ -117,6 +117,7 @@ class RtcpFbPacket : RtcpPacket() {
             val fmt = header.reportCount
             return RtcpFbPacket().apply {
                 this.buf = buf.slice()
+                this.header = header
                 mediaSourceSsrc = buf.getInt().toULong()
                 if (header.payloadType == 205) {
                     when (fmt) {
@@ -125,10 +126,12 @@ class RtcpFbPacket : RtcpPacket() {
                         else -> throw Exception("Unrecognized RTCPFB format: $fmt")
                     }
                 } else if (header.payloadType == 206) {
+                    println("BRIAN: got rtcfb packet with fmt $fmt")
                     when (fmt) {
                         1 -> TODO("pli")
                         2 -> TODO("sli")
                         3 -> TODO("rpsi")
+                        4 -> TODO("fir")
                         15 -> TODO("afb")
                     }
                 }
@@ -136,7 +139,20 @@ class RtcpFbPacket : RtcpPacket() {
         }
     }
 
-    override var size: Int = (header.length + 1) * 4
+    constructor() : super()
+
+    constructor(fmt: Int, pt: Int, senderSsrc: Long, mediaSsrc: Int) : super() {
+        val header = RtcpHeader(
+            version = 2,
+            hasPadding = false,
+            reportCount = fmt,
+            payloadType = pt,
+            senderSsrc = senderSsrc
+        )
+
+    }
+
+    override val size: Int
         get() = (header.length + 1) * 4
 
     override fun serializeToBuffer(buf: ByteBuffer) {

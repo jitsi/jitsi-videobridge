@@ -16,13 +16,14 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.util.BitBuffer
+import org.jitsi.rtp.util.BufferView
 import unsigned.toUInt
 import unsigned.toULong
 import java.nio.ByteBuffer
 import kotlin.properties.Delegates
 
 internal class BitBufferRtpHeader : RtpHeader() {
-    override var buf: ByteBuffer by Delegates.notNull()
+    override var buffer: BufferView by Delegates.notNull()
     override var version: Int by Delegates.notNull()
     override var hasPadding: Boolean by Delegates.notNull()
     override var hasExtension: Boolean by Delegates.notNull()
@@ -39,7 +40,7 @@ internal class BitBufferRtpHeader : RtpHeader() {
         fun fromBuffer(buf: ByteBuffer) : RtpHeader {
             val bitBuffer = BitBuffer(buf)
             return BitBufferRtpHeader().apply {
-                this.buf = buf.slice()
+                val startOfHeader = buf.position()
                 version = bitBuffer.getBits(2).toUInt()
                 hasPadding = bitBuffer.getBitAsBoolean()
                 hasExtension = bitBuffer.getBitAsBoolean()
@@ -53,6 +54,10 @@ internal class BitBufferRtpHeader : RtpHeader() {
                     buf.getInt().toULong()
                 }
                 extensions = if (hasExtension) RtpHeaderExtensions.parse(buf) else mutableMapOf()
+
+                // Create the BufferView last, since we don't know the size of the
+                // header until we've parsed it
+                buffer = BufferView(buf.array(), startOfHeader, size)
             }
         }
 

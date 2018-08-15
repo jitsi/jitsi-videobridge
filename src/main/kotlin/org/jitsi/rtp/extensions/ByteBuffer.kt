@@ -45,6 +45,23 @@ fun ByteBuffer.get3Bytes(): Int {
     return byte1 or byte2 or byte3
 }
 
+/**
+ * Put the right-most [numBits] bits from [src] into the byte at [byteIndex]
+ * starting at position [destBitPos].  [destBitPos] is a 0-based index of the
+ * bit in the byte at [byteIndex], where 0 is the MSB and 7 is the LSB.
+ */
+fun ByteBuffer.putBits(byteIndex: Int, destBitPos: Int, src: Byte, numBits: Int) {
+    var byte = get(byteIndex)
+    byte = putBits(byte, destBitPos, numBits, src)
+    put(byteIndex, byte)
+}
+
+fun ByteBuffer.putBitAsBoolean(byteIndex: Int, destBitPos: Int, isSet: Boolean) {
+    var byte = get(byteIndex)
+    byte = putBit(byte, destBitPos, isSet)
+    put(byteIndex, byte)
+}
+
 private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
 
 /**

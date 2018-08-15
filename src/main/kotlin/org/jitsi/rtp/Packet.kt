@@ -17,14 +17,15 @@ package org.jitsi.rtp
 
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.util.BufferView
 import org.jitsi.rtp.util.RtpProtocol
 import toUInt
 import unsigned.toUInt
 import java.nio.ByteBuffer
 
 abstract class Packet {
-    abstract var buf: ByteBuffer
-    abstract var size: Int
+    abstract val buf: ByteBuffer
+    abstract val size: Int
     val tags = mutableMapOf<String, Any>()
 
     companion object {
@@ -40,35 +41,40 @@ abstract class Packet {
     }
 }
 
-class UnparsedPacket(override var buf: ByteBuffer) : Packet() {
-    override var size: Int = buf.limit()
+/**
+ * Basically just a wrapper around a buffer that inherits from [Packet]
+ * so that it can be passed to logic which will further handle it.
+ * [buf] must be sized to matched the data within (i.e. [buf.limit()]
+ * should return the length of the data in the buffer).
+ */
+class UnparsedPacket(override val buf: ByteBuffer) : Packet() {
+    override val size: Int = buf.limit()
 }
 
-open class SrtpProtocolPacket(override var buf: ByteBuffer) : Packet() {
-    override var size: Int = 0
+open class SrtpProtocolPacket(override val buf: ByteBuffer) : Packet() {
+    override val size: Int
         get() = buf.limit()
-//    fun getAuthTag(tagLength: Int): ByteBuffer = TODO()
-//    fun setAuthTag(tag: ByteBuffer): Unit = TODO()
-//    var mki: ByteBuffer
-//    val ssrc: Int = TODO()
-//    val seqNum: Int = TODO()
-//    val payload: ByteBuffer = TODO()
 }
 
 // https://tools.ietf.org/html/rfc3711#section-3.1
 class SrtpPacket(buf: ByteBuffer) : SrtpProtocolPacket(buf) {
-    fun getAuthTag(tagLength: Int): ByteBuffer {
-        println("BRIAN: getting auth tag, buf limit is: ${buf.limit()}, capacitt is: ${buf.capacity()}")
-        buf.mark()
-        buf.position(buf.limit() - tagLength)
-        val authTag = buf.slice()
-        buf.reset()
-        //TODO: temp implementation!
-        return ByteBuffer.allocate(tagLength).put(authTag)
+    override val size: Int
+        get() {
+            return header.size + payload.length
+        }
+
+    fun getAuthTag(tagLength: Int): BufferView {
+        return BufferView(buf.array(), buf.limit() - tagLength, tagLength)
     }
-    fun setAuthTag(tag: ByteBuffer): Unit = TODO()
-    val header = RtpHeader.fromBuffer(buf)
-    val payload: ByteBuffer = buf.slice()
+    fun removeAuthTag(tagLength: Int) {
+        buf.limit(buf.limit() - tagLength)
+    }
+    private val header = RtpHeader.fromBuffer(buf)
+    // The size of the payload may change depending on whether or not the auth tag has been
+    //  removed, but we know it always occupies the space between the end of the header
+    //  and the end of the buffer.
+    val payload: BufferView
+        get() = BufferView(buf.array(), header.size, buf.limit() - header.size)
     val ssrc: Int = header.ssrc.toUInt()
     val seqNum: Int = header.sequenceNumber
 }
@@ -78,15 +84,11 @@ class SrtpPacket(buf: ByteBuffer) : SrtpProtocolPacket(buf) {
 // instance (which could be an UnparsedRtcpPacket?)
 // https://tools.ietf.org/html/rfc3711#section-3.4
 class SrtcpPacket(buf: ByteBuffer) : SrtpProtocolPacket(buf) {
-    val header = RtcpHeader.fromBuffer(buf)
-    val payload: ByteBuffer = buf.slice()
+    val header = RtcpHeader(buf)
+    val payload = BufferView(buf.array(), buf.position(), buf.limit() - buf.position())
     val ssrc: Int = header.senderSsrc.toUInt()
-    fun getAuthTag(tagLength: Int): ByteBuffer {
-        buf.mark()
-        buf.position(buf.limit() - tagLength)
-        val authTag = buf.slice()
-        buf.reset()
-        return ByteBuffer.allocate(tagLength).put(authTag)
+    fun getAuthTag(tagLength: Int): BufferView {
+        return BufferView(buf.array(), buf.limit() - tagLength, tagLength)
     }
     fun setAuthTag(tag: ByteBuffer): Unit = TODO()
     fun getSrtcpIndex(tagLength: Int): Int {
@@ -98,12 +100,13 @@ class SrtcpPacket(buf: ByteBuffer) : SrtpProtocolPacket(buf) {
 
 }
 
-public class RtpProtocolPacket(override var buf: ByteBuffer) : Packet() {
+//TODO: rtppacket/rtcppacket derive from this
+class RtpProtocolPacket(override var buf: ByteBuffer) : Packet() {
     val isRtp: Boolean = RtpProtocol.isRtp(buf)
-    override var size: Int = TODO()
+    override val size: Int = TODO()
     var ssrc: Int
 }
 
-public class DtlsProtocolPacket(override var buf: ByteBuffer) : Packet() {
-    override var size: Int = buf.limit()
+class DtlsProtocolPacket(override var buf: ByteBuffer) : Packet() {
+    override val size: Int = buf.limit()
 }

@@ -25,9 +25,9 @@ import java.nio.ByteBuffer
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |       0xBE    |    0xDE       |           length=3            |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |  ID   | L=0   |     data      |  ID   |  L=1  |   data...
+// |  ID   | L=0   |     data      |  ID   |  L=1  |   data...     |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// ...data   |    0 (pad)    |    0 (pad)    |  ID   | L=3   |
+// ...data   |    0 (pad)    |    0 (pad)    |  ID   | L=3   |     |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |                          data                                 |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -42,8 +42,7 @@ class RtpOneByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
     override val id = bitBuffer.getBits(4).toInt()
     override val lengthBytes = bitBuffer.getBits(4).toInt() + 1
     override val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
-    override val size: Int
-        get() = RtpOneByteHeaderExtension.HEADER_SIZE + lengthBytes
+    override val size: Int = RtpOneByteHeaderExtension.HEADER_SIZE + lengthBytes
 
     companion object {
         const val HEADER_SIZE = 1

@@ -17,7 +17,6 @@ package org.jitsi.rtp.extensions
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
-import kotlin.reflect.KMutableProperty0
 
 class ByteExtensionsTest : ShouldSpec() {
     override fun isInstancePerTest(): Boolean = true
@@ -60,6 +59,29 @@ class ByteExtensionsTest : ShouldSpec() {
                     b = putBit(b, it, false)
                 }
                 b shouldBe 0b00000000.toByte()
+            }
+        }
+        "Byte.putBits" {
+            should("correctly put bits") {
+                val dest: Byte = 0b00000000
+                val src: Byte = 0b00000101
+
+                val result = putBits(dest, 0, 3, src)
+                result shouldBe 0b10100000.toByte()
+            }
+            should("overwrite existing values correctly") {
+                val dest: Byte = 0b11111111.toByte()
+                val src: Byte = 0b00000000
+
+                val result = putBits(dest, 0, 3, src)
+                result shouldBe 0b00011111.toByte()
+            }
+            should("work correctly with different offsets") {
+                val dest: Byte = 0b00000000
+                val src: Byte = 0b11001100.toByte()
+
+                val result = putBits(dest, 2, 4, src)
+                result shouldBe 0b00110000.toByte()
             }
         }
     }

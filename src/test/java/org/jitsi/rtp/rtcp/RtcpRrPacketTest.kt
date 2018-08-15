@@ -62,7 +62,7 @@ internal class RtcpRrPacketTest : ShouldSpec() {
         }
         "creation" {
             "from a buffer" {
-                val header = RtcpHeader.fromBuffer(packetBuf)
+                val header = RtcpHeader(packetBuf)
                 val rrPacket = RtcpRrPacket.fromBuffer(header, packetBuf)
                 should("read all values correctly") {
                     rrPacket.reportBlocks should haveSize(2)
@@ -90,7 +90,7 @@ internal class RtcpRrPacketTest : ShouldSpec() {
             }
         }
         "serialization" {
-            val header = RtcpHeader.fromBuffer(packetBuf)
+            val header = RtcpHeader(packetBuf)
             val rrPacket = RtcpRrPacket.fromBuffer(header, packetBuf)
             val newBuf = ByteBuffer.allocate(packetBuf.limit())
             rrPacket.serializeToBuffer(newBuf)

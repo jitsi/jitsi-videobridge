@@ -84,6 +84,17 @@ class BitBuffer(private val buf: ByteBuffer) {
     }
 
     /**
+     * Move the current bit position backwards by
+     * [numBitsToRewind] bits.  Will NOT rewind
+     * to a previous byte (i.e. will not go
+     * past bit position 0 of the current byte)
+     */
+    fun rewindBits(numBitsToRewind: Int) {
+        currBitPos = Math.max(currBitPos - numBitsToRewind, 0)
+
+    }
+
+    /**
      * Get [numBits] bits starting at the current bit offset
      * of the current byte. Returns them in the form of a [Byte]
      */

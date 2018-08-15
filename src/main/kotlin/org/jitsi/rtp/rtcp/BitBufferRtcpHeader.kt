@@ -15,36 +15,58 @@
  */
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.util.BitBuffer
-import unsigned.toUInt
-import unsigned.toULong
 import java.nio.ByteBuffer
-import kotlin.properties.Delegates
 
-internal class BitBufferRtcpHeader : RtcpHeader() {
-    override var version: Int by Delegates.notNull()
-    override var hasPadding: Boolean by Delegates.notNull()
-    override var reportCount: Int by Delegates.notNull()
-    override var payloadType: Int by Delegates.notNull()
-    override var length: Int by Delegates.notNull()
-    override var senderSsrc: Long by Delegates.notNull()
-
-    companion object Create {
-        fun fromBuffer(buf: ByteBuffer): RtcpHeader {
-            val bitBuffer = BitBuffer(buf)
-            return with (BitBufferRtcpHeader()) {
-                version = bitBuffer.getBits(2).toUInt()
-                hasPadding = bitBuffer.getBitAsBoolean()
-                reportCount = bitBuffer.getBits(5).toUInt()
-                payloadType = buf.get().toUInt()
-                length = buf.getShort().toUInt()
-                senderSsrc = buf.getInt().toULong()
-                this
-            }
-        }
-
-        fun fromValues(receiver: BitBufferRtcpHeader.() -> Unit): BitBufferRtcpHeader {
-            return BitBufferRtcpHeader().apply(receiver)
-        }
-    }
-}
+//internal class BitBufferRtcpHeader : RtcpHeader {
+//    private val buf: ByteBuffer
+//    override var version: Int
+//        get() = RtcpHeaderUtils.getVersion(buf)
+//        set(version) = RtcpHeaderUtils.setVersion(buf, version)
+//
+//    override var hasPadding: Boolean
+//        get() = RtcpHeaderUtils.hasPadding(buf)
+//        set(hasPadding) = RtcpHeaderUtils.setPadding(buf, hasPadding)
+//
+//    override var reportCount: Int
+//        get() = RtcpHeaderUtils.getReportCount(buf)
+//        set(reportCount) = RtcpHeaderUtils.setReportCount(buf, reportCount)
+//
+//    override var payloadType: Int
+//        get() = RtcpHeaderUtils.getPayloadType(buf)
+//        set(payloadType) = RtcpHeaderUtils.setPayloadType(buf, payloadType)
+//
+//    override var length: Int
+//        get() = RtcpHeaderUtils.getLength(buf)
+//        set(length) = RtcpHeaderUtils.setLength(buf, length)
+//
+//    override var senderSsrc: Long
+//        get() = RtcpHeaderUtils.getSenderSsrc(buf)
+//        set(senderSsrc) = RtcpHeaderUtils.setSenderSsrc(buf, senderSsrc)
+//
+//    constructor(buf: ByteBuffer) : super() {
+//        this.buf = buf
+//    }
+//
+//    constructor(
+//        version: Int = 2,
+//        hasPadding: Boolean = false,
+//        reportCount: Int = 0,
+//        payloadType: Int = 0,
+//        length: Int = 0,
+//        senderSsrc: Long = 0
+//    ) : super() {
+//        this.buf = ByteBuffer.allocate(8)
+//        this.version = version
+//        this.hasPadding = hasPadding
+//        this.reportCount = reportCount
+//        this.payloadType = payloadType
+//        this.length = length
+//        this.senderSsrc = senderSsrc
+//    }
+//
+//    // These are deprecated
+//    companion object Create {
+//        fun fromBuffer(buf: ByteBuffer): RtcpHeader = BitBufferRtcpHeader(buf)
+//        fun fromValues(receiver: BitBufferRtcpHeader.() -> Unit): BitBufferRtcpHeader = BitBufferRtcpHeader().apply(receiver)
+//    }
+//}

@@ -16,6 +16,7 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.util.BitBuffer
+import org.jitsi.rtp.util.BufferView
 import java.nio.ByteBuffer
 
 // https://tools.ietf.org/html/rfc3550#section-5.1
@@ -32,7 +33,7 @@ import java.nio.ByteBuffer
 // |                             ....                              |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 abstract class RtpHeader {
-    abstract var buf: ByteBuffer
+    abstract var buffer: BufferView
     abstract var version: Int
     abstract var hasPadding: Boolean
     abstract var hasExtension: Boolean
@@ -50,6 +51,11 @@ abstract class RtpHeader {
             if (hasExtension) {
                 size += RtpHeader.EXTENSION_HEADER_SIZE_BYTES
                 size += extensions.values.map(RtpHeaderExtension::size).sum()
+                // The extensions must be word-aligned, account for any padding
+                // here
+                if (size % 4 != 0) {
+                    size += (4 - (size % 4))
+                }
             }
             return size
         }
@@ -106,5 +112,34 @@ abstract class RtpHeader {
             appendln("Extensions: $extensions")
             toString()
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other?.javaClass != javaClass) {
+            return false
+        }
+        other as RtpHeader
+        return (size == other.size &&
+                version == other.version &&
+                hasPadding == other.hasPadding &&
+                hasExtension == other.hasExtension &&
+                csrcCount == other.csrcCount &&
+                marker == other.marker &&
+                payloadType == other.payloadType &&
+                sequenceNumber == other.sequenceNumber &&
+                timestamp == other.timestamp &&
+                ssrc == other.ssrc &&
+                csrcs.equals(other.csrcs) &&
+                extensions.equals(other.extensions))
+    }
+
+    override fun hashCode(): Int {
+        return size.hashCode() + version.hashCode() + hasPadding.hashCode() +
+                hasExtension.hashCode() + csrcCount.hashCode() + marker.hashCode() +
+                payloadType.hashCode() + sequenceNumber.hashCode() + timestamp.hashCode() +
+                ssrc.hashCode() + csrcs.hashCode() + extensions.hashCode()
     }
 }

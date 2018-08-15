@@ -11,14 +11,14 @@ import kotlin.math.exp
 internal class RtcpSrPacketTest : ShouldSpec() {
     override fun isInstancePerTest(): Boolean = true
 
-    private val expectedHeader = RtcpHeader.fromValues {
-        version = 2
-        hasPadding = false
-        reportCount = 2
-        payloadType = 200
-        length = 42 // TODO make this accurate?
+    private val expectedHeader = RtcpHeader(
+        version = 2,
+        hasPadding = false,
+        reportCount = 2,
+        payloadType = 200,
+        length = 42, // TODO make this accurate?
         senderSsrc = 12345
-    }
+    )
 
     // Sender info
     private val expectedSenderInfo = SenderInfo.fromValues {

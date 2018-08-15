@@ -88,6 +88,20 @@ class ByteBufferExtensionsTest : ShouldSpec() {
                 }
 
             }
+            "putBits" {
+                should("write the bits into the buffer correctly") {
+                    val buf = ByteBuffer.allocate(4)
+                    val src: Byte = 0b00001111
+
+                    buf.putBits(1, 0, src, 4)
+
+                    buf.get(1) shouldBe 0b11110000.toByte()
+                    // Nothing else should've changed
+                    listOf(0, 2, 3).forEach {
+                        buf.get(it) shouldBe 0b00000000.toByte()
+                    }
+                }
+            }
         }
 
     }

@@ -1,12 +1,11 @@
 package org.jitsi.rtp.rtcp
 
 import io.kotlintest.shouldBe
-import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
-internal class BitBufferRtcpHeaderTest : ShouldSpec() {
+internal class RtcpHeaderTest : ShouldSpec() {
     override fun isInstancePerTest(): Boolean = true
 
     private val headerBuf = with(ByteBuffer.allocate(8)) {
@@ -23,7 +22,7 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
     init {
         "creation" {
             "from a buffer" {
-                val header = BitBufferRtcpHeader.fromBuffer(headerBuf)
+                val header = RtcpHeader(headerBuf)
                 should("fromBuffer the values correctly") {
                     header.version shouldBe 2
                     header.hasPadding shouldBe false
@@ -34,14 +33,14 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
                 }
             }
             "from a complete set of values" {
-                val header = BitBufferRtcpHeader.fromValues {
-                    version = 2
-                    hasPadding = false
-                    reportCount = 1
-                    payloadType = 200
-                    length = 0xFFFF
+                val header = RtcpHeader(
+                    version = 2,
+                    hasPadding = false,
+                    reportCount = 1,
+                    payloadType = 200,
+                    length = 0xFFFF,
                     senderSsrc = 0xFFFFFFFF
-                }
+                )
                 should("set everything correctly") {
                     header.version shouldBe 2
                     header.hasPadding shouldBe false
@@ -51,25 +50,21 @@ internal class BitBufferRtcpHeaderTest : ShouldSpec() {
                     header.senderSsrc shouldBe 0xFFFFFFFF
                 }
             }
-            "from an incomplete set of values" {
-                val header = BitBufferRtcpHeader.fromValues {
-                    // version = 2 Don't set version
-                    hasPadding = false
-                    reportCount = 1
-                    payloadType = 200
-                    length = 0xFFFF
-                    senderSsrc = 0xFFFFFFFF
+            "passing a subset of values in the constructor" {
+                val header = RtcpHeader(senderSsrc = 12345L)
+                should("set the passed values") {
+                    header.senderSsrc shouldBe 12345L
                 }
-                should("throw when we try to access an unset value") {
-                    shouldThrow<IllegalStateException> {
-                        header.version
-                    }
+
+                should("set the default version") {
+                    header.version shouldBe 2
+
                 }
             }
         }
         "serialization" {
             val newBuf = ByteBuffer.allocate(8)
-            val header = BitBufferRtcpHeader.fromBuffer(headerBuf)
+            val header = RtcpHeader(headerBuf)
             header.serializeToBuffer(newBuf)
             should("write the correct data to the buffer") {
                 newBuf.rewind() shouldBe headerBuf.rewind()

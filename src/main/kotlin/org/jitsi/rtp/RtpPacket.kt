@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.util.BufferView
 import java.nio.ByteBuffer
 
 // would https://github.com/kotlin-graphics/kotlin-unsigned be useful?
@@ -35,9 +36,9 @@ import java.nio.ByteBuffer
 
 abstract class RtpPacket : Packet() {
     abstract var header: RtpHeader
-    abstract var payload: ByteBuffer
-    override var size: Int = 0
-        get() = header.size + payload.limit()
+    abstract var payload: BufferView
+    override val size: Int
+        get() = header.size + payload.length
 
     companion object {
         fun fromBuffer(buf: ByteBuffer): RtpPacket = BitBufferRtpPacket.fromBuffer(buf)
@@ -49,7 +50,7 @@ abstract class RtpPacket : Packet() {
             appendln("RTP packet")
             appendln("size: $size")
             append(header.toString())
-            appendln("payload size: ${payload.limit()}")
+            appendln("payload size: ${payload.length}")
             toString()
         }
     }
