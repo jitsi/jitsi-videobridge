@@ -21,16 +21,43 @@ import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.SrtpPacket
 import java.nio.ByteBuffer
 
 class SrtpTransformerWrapperEncrypt : Module("SRTP encrypt wrapper") {
     var srtpTransformer: SinglePacketTransformer? = null
+    private var cachedPackets = mutableListOf<Packet>()
     override fun doProcessPackets(p: List<Packet>) {
-        next(p
-            .map { RawPacket(it.buf.array(), 0, it.buf.array().size) }
-            .map { srtpTransformer?.transform(it) }
-            .filter { it != null }
-            .map { RtpPacket.fromBuffer(ByteBuffer.wrap(it!!.buffer, it.offset, it.length)) }
-            .toList())
+        println("BRIAN: encrypt wrapper got ${p.size} packets.  srtpTransformer? $srtpTransformer")
+        val outPackets = mutableListOf<SrtpPacket>()
+
+        if (cachedPackets.isNotEmpty() && srtpTransformer != null) {
+            cachedPackets.forEachAs<RtpPacket> {
+                val rtpPacket = doEncrypt(it) ?: return@forEachAs
+                outPackets.add(rtpPacket)
+            }
+            cachedPackets.clear()
+        }
+
+        if (srtpTransformer == null) {
+            cachedPackets.addAll(p)
+            return
+        }
+        p.forEachAs<RtpPacket> {
+            val rtpPacket = doEncrypt(it) ?: return@forEachAs
+            outPackets.add(rtpPacket)
+        }
+        next(outPackets)
+    }
+
+    private fun doEncrypt(srtpPacket: RtpPacket): SrtpPacket? {
+        val rp = RawPacket(srtpPacket.buf.array(), 0, srtpPacket.buf.array().size)
+//        println("BRIAN: encrypting ${rp.ssrcAsLong} ${rp.sequenceNumber} packet with size ${rp.length}")
+        val output = srtpTransformer?.transform(rp) ?: return null
+//        println("BRIAN: encrypted packet ${output.ssrcAsLong} ${output.sequenceNumber} now has size ${output.length}")
+        val outPacket = SrtpPacket(ByteBuffer.wrap(output.buffer, output.offset, output.length))
+//        println("BRIAN: encrypted packet parsed as SrtpPacket ${outPacket.header.ssrc} ${outPacket.header.sequenceNumber} now has size ${outPacket.size}")
+
+        return outPacket
     }
 }

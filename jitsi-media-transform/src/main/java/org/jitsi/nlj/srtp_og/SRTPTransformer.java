@@ -205,10 +205,10 @@ public class SRTPTransformer
     @Override
     public RawPacket reverseTransform(RawPacket pkt)
     {
-        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
-                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " before decrypt: " +
-                toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()) +
-                "\n will get context from factory " + reverseFactory.hashCode());
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " before decrypt: " +
+//                toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()) +
+//                "\n will get context from factory " + reverseFactory.hashCode());
         // only accept RTP version 2 (SNOM phones send weird packages when on
         // hold, ignore them with this check (RTP Version must be equal to 2)
         if((pkt.readByte(0) & 0xC0) != 0x80)
@@ -224,9 +224,9 @@ public class SRTPTransformer
                 ((context != null) && context.reverseTransformPacket(pkt))
                         ? pkt
                         : null;
-        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
-                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " after decrypt: " +
-                toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " after decrypt: " +
+//                toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
         return res;
     }
 
@@ -397,14 +397,14 @@ public class SRTPTransformer
 
         SinglePacketTransformer srtpTransformer;
 
-//        if (rtcp)
-//        {
-//            srtpTransformer
-//                    = new SRTCPTransformer(
-//                    forwardSRTPContextFactory,
-//                    reverseSRTPContextFactory);
-//        }
-//        else
+        if (rtcp)
+        {
+            srtpTransformer
+                    = new SRTCPTransformer(
+                    forwardSRTPContextFactory,
+                    reverseSRTPContextFactory);
+        }
+        else
         {
             srtpTransformer
                     = new SRTPTransformer(

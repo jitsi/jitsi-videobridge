@@ -52,9 +52,9 @@ class PacketWriter(filePath: String = "/tmp/${System.currentTimeMillis()}.rtpdum
     }
     override fun doProcessPackets(p: List<Packet>) {
         p.forEachAs<RtpPacket> {
-            println("BRIAN: writing packet ${it.header.ssrc} ${it.header.sequenceNumber} size ${it.size} to file $path")
+//            println("BRIAN: writing packet ${it.header.ssrc} ${it.header.sequenceNumber} size ${it.size} to file $path")
             if (!ssrcs.contains(it.header.ssrc)) {
-                println("BRIAN: writing ssrc ${it.header.ssrc} to file $path")
+//                println("BRIAN: writing ssrc ${it.header.ssrc} to file $path")
                 ssrcs.add(it.header.ssrc)
             }
             intBuffer.putInt(0, it.size)

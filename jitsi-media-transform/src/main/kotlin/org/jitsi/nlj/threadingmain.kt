@@ -135,16 +135,16 @@ fun main(args: Array<String>) {
 
 
     p.addSource(123)
-    val receiver1 = RtpReceiverImpl(123, trackExecutor, b::onIncomingPackets)
+//    val receiver1 = RtpReceiverImpl(123, trackExecutor, b::onIncomingPackets)
     val sender1 = RtpSenderImpl(123, trackExecutor)
     b.addSender(123, sender1)
-    p.addDestination({ pkt -> RtpProtocol.isRtp(pkt.buf) && (pkt as RtpPacket).header.ssrc == 123L }, receiver1::enqueuePacket)
+//    p.addDestination({ pkt -> RtpProtocol.isRtp(pkt.buf) && (pkt as RtpPacket).header.ssrc == 123L }, receiver1::enqueuePacket)
 
     p.addSource(456)
-    val receiver2 = RtpReceiverImpl(456, trackExecutor, b::onIncomingPackets)
+//    val receiver2 = RtpReceiverImpl(456, trackExecutor, b::onIncomingPackets)
     val sender2 = RtpSenderImpl(456, trackExecutor)
     b.addSender(456, sender2)
-    p.addDestination({ pkt -> RtpProtocol.isRtp(pkt.buf) && (pkt as RtpPacket).header.ssrc == 456L }, receiver2::enqueuePacket)
+//    p.addDestination({ pkt -> RtpProtocol.isRtp(pkt.buf) && (pkt as RtpPacket).header.ssrc == 456L }, receiver2::enqueuePacket)
 
 //    p.addSource(789)
 //    val stream3 = RtpReceiverImpl(789, trackExecutor)
@@ -155,35 +155,35 @@ fun main(args: Array<String>) {
     val startTime = System.currentTimeMillis()
     p.run(5_000_000)
 
-    CompletableFuture.allOf(sender1.done, sender2.done).thenAccept {
-        val endTime = System.currentTimeMillis()
-        println("Senders are all done.  Took ${endTime - startTime}ms")
-
-        sender1.running = false
-        receiver1.running = false
-        sender2.running = false
-        receiver2.running = false
-
-        println("Producer wrote ${p.packetsWritten} packets")
-        println(receiver1.getStats())
-        println(receiver2.getStats())
-//    println(stream3.getStats())
-
-        println("=======")
-        println("Bridge:")
-        println("  received ${b.numIncomingPackets} packets")
-        println("  read ${b.numIncomingPackets} packets from queue")
-        println("  forwarded ${b.numForwardedPackets} packets")
-        println("      per packet ssrc: ${b.processedPacketsPerSsrc}")
-        println("      per destination ssrc: ${b.packetsPerDestination}")
-        println(sender1.getStats())
-        println(sender2.getStats())
-
-        val totalPacketsSent = listOf(sender1, sender2).map(RtpSender::numPacketsSent).sum()
-        println("Transmitted $totalPacketsSent packets")
-
-        exitProcess(0)
-    }
+//    CompletableFuture.allOf(sender1.done, sender2.done).thenAccept {
+//        val endTime = System.currentTimeMillis()
+//        println("Senders are all done.  Took ${endTime - startTime}ms")
+//
+//        sender1.running = false
+//        receiver1.running = false
+//        sender2.running = false
+//        receiver2.running = false
+//
+//        println("Producer wrote ${p.packetsWritten} packets")
+//        println(receiver1.getStats())
+//        println(receiver2.getStats())
+////    println(stream3.getStats())
+//
+//        println("=======")
+//        println("Bridge:")
+//        println("  received ${b.numIncomingPackets} packets")
+//        println("  read ${b.numIncomingPackets} packets from queue")
+//        println("  forwarded ${b.numForwardedPackets} packets")
+//        println("      per packet ssrc: ${b.processedPacketsPerSsrc}")
+//        println("      per destination ssrc: ${b.packetsPerDestination}")
+//        println(sender1.getStats())
+//        println(sender2.getStats())
+//
+//        val totalPacketsSent = listOf(sender1, sender2).map(RtpSender::numPacketsSent).sum()
+//        println("Transmitted $totalPacketsSent packets")
+//
+//        exitProcess(0)
+//    }
 
 
 }

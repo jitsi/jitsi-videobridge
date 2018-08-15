@@ -72,64 +72,64 @@ fun readAndSendPackets(pcapFile: String, receivers: Map<Long, RtpReceiverImpl>) 
     println("Finished writing $numPackets packets ($numBytes bytes) in $time ms ($bitRateMbps mbps)")
 }
 
-internal class ThreadingmainKtTest : ShouldSpec() {
-    init {
-        val trackExecutor = Executors.newFixedThreadPool(30)
-        val bridgeExecutor = Executors.newSingleThreadExecutor()
-//        val b = Bridge(trackExecutor)
-        val b = Bridge(bridgeExecutor)
-
-        val ssrcs = getSsrcsInPcap("/Users/bbaldino/2_participants_sim_sending_to_bridge_5_mins.pcap")
-        println("ssrcs in trace: $ssrcs")
-        val receivers = ssrcs.map { ssrc ->
-            ssrc to RtpReceiverImpl(ssrc, trackExecutor, b::onIncomingPackets)
-        }.toMap()
-        val senders = ssrcs.map { ssrc ->
-//            ssrc to RtpSenderImpl(ssrc, trackExecutor)
-            ssrc to RtpSenderImpl(ssrc, Executors.newSingleThreadExecutor())
-        }.toMap()
-
-        senders.forEach(b::addSender)
-
-        b.scheduleWorkDedicated()
-        var sendingPackets = true
-        var packetSender = thread {
-            var numIters = 0
-            while (sendingPackets) {
-                println("Send packet iteration ${++numIters}")
-                readAndSendPackets("/Users/bbaldino/2_participants_sim_sending_to_bridge_5_mins.pcap", receivers)
-            }
-            println("Packet sender stopped")
-        }
-
-        sleep(30000)
-
-        sendingPackets = false
-        receivers.forEach { _, receiver -> receiver.running = false }
-        b.running = false
-        senders.forEach { _, sender -> sender.running = false }
-
-        receivers.forEach { _, receiver ->
-            println(receiver.getStats())
-        }
-        println("=======")
-        println("Bridge:")
-        println("  received ${b.numIncomingPackets} packets")
-        println("  received ${b.numIncomingBytes.get()} bytes in ${b.lasttPacketWrittenTime.get() - b.firstPacketWrittenTime.get()} ms (${getMbps(b.numIncomingBytes.get(), Duration.ofMillis(b.lasttPacketWrittenTime.get() - b.firstPacketWrittenTime.get()))} mbps)")
-        println("  incomingQueue size: ${b.incomingPacketQueue.size}")
-        println("  num times incomingQueue empty: ${b.numTimesQueueEmpty}")
-        println("  read ${b.numReadPackets} packets from incomingQueue")
-        println("  read ${b.numReadBytes} bytes in ${b.lastPacketReadTime - b.firstPacketReadTime} ms (${getMbps(b.numReadBytes, Duration.ofMillis(b.lastPacketReadTime - b.firstPacketReadTime))} mbps)")
-        println("  forwarded ${b.numForwardedPackets} packets")
-        println("      per packet ssrc: ${b.processedPacketsPerSsrc}")
-        println("      per destination ssrc: ${b.packetsPerDestination}")
-        println("average job time: ${b.execTimes.average()} nanos")
-        println("processing time per packet: ${b.processingTime / b.numReadPackets} nanos")
-        println("=======")
-
-        senders.forEach { _, sender ->
-            println(sender.getStats())
-        }
-    }
-
-}
+//internal class ThreadingmainKtTest : ShouldSpec() {
+//    init {
+//        val trackExecutor = Executors.newFixedThreadPool(30)
+//        val bridgeExecutor = Executors.newSingleThreadExecutor()
+////        val b = Bridge(trackExecutor)
+//        val b = Bridge(bridgeExecutor)
+//
+//        val ssrcs = getSsrcsInPcap("/Users/bbaldino/2_participants_sim_sending_to_bridge_5_mins.pcap")
+//        println("ssrcs in trace: $ssrcs")
+//        val receivers = ssrcs.map { ssrc ->
+//            ssrc to RtpReceiverImpl(ssrc, trackExecutor, b::onIncomingPackets)
+//        }.toMap()
+//        val senders = ssrcs.map { ssrc ->
+////            ssrc to RtpSenderImpl(ssrc, trackExecutor)
+//            ssrc to RtpSenderImpl(ssrc, Executors.newSingleThreadExecutor())
+//        }.toMap()
+//
+//        senders.forEach(b::addSender)
+//
+//        b.scheduleWorkDedicated()
+//        var sendingPackets = true
+//        var packetSender = thread {
+//            var numIters = 0
+//            while (sendingPackets) {
+//                println("Send packet iteration ${++numIters}")
+//                readAndSendPackets("/Users/bbaldino/2_participants_sim_sending_to_bridge_5_mins.pcap", receivers)
+//            }
+//            println("Packet sender stopped")
+//        }
+//
+//        sleep(30000)
+//
+//        sendingPackets = false
+//        receivers.forEach { _, receiver -> receiver.running = false }
+//        b.running = false
+//        senders.forEach { _, sender -> sender.running = false }
+//
+//        receivers.forEach { _, receiver ->
+//            println(receiver.getStats())
+//        }
+//        println("=======")
+//        println("Bridge:")
+//        println("  received ${b.numIncomingPackets} packets")
+//        println("  received ${b.numIncomingBytes.get()} bytes in ${b.lasttPacketWrittenTime.get() - b.firstPacketWrittenTime.get()} ms (${getMbps(b.numIncomingBytes.get(), Duration.ofMillis(b.lasttPacketWrittenTime.get() - b.firstPacketWrittenTime.get()))} mbps)")
+//        println("  incomingQueue size: ${b.incomingPacketQueue.size}")
+//        println("  num times incomingQueue empty: ${b.numTimesQueueEmpty}")
+//        println("  read ${b.numReadPackets} packets from incomingQueue")
+//        println("  read ${b.numReadBytes} bytes in ${b.lastPacketReadTime - b.firstPacketReadTime} ms (${getMbps(b.numReadBytes, Duration.ofMillis(b.lastPacketReadTime - b.firstPacketReadTime))} mbps)")
+//        println("  forwarded ${b.numForwardedPackets} packets")
+//        println("      per packet ssrc: ${b.processedPacketsPerSsrc}")
+//        println("      per destination ssrc: ${b.packetsPerDestination}")
+//        println("average job time: ${b.execTimes.average()} nanos")
+//        println("processing time per packet: ${b.processingTime / b.numReadPackets} nanos")
+//        println("=======")
+//
+//        senders.forEach { _, sender ->
+//            println(sender.getStats())
+//        }
+//    }
+//
+//}

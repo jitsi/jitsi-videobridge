@@ -15,16 +15,13 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.chain
+import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.RtcpHandlerModule
-import org.jitsi.nlj.transform.module.TimeTagReader
 import org.jitsi.nlj.transform.module.getMbps
-import org.jitsi.nlj.transform.module.outgoing.FecSenderModule
-import org.jitsi.nlj.transform.module.outgoing.SrtpEncryptModule
-import org.jitsi.nlj.transform.packetPath
+import org.jitsi.nlj.transform.module.outgoing.SrtpTransformerWrapperEncrypt
 import org.jitsi.rtp.Packet
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -43,9 +40,12 @@ class RtpSenderImpl(
     var firstPacketWrittenTime = -1L
     var lastPacketWrittenTime = -1L
     var running = true
+
+    private val encryptWrapper = SrtpTransformerWrapperEncrypt()
     init {
         outgoingRtpChain = chain {
             name("Outgoing RTP chain")
+            addModule(encryptWrapper)
         }
         outgoingRtcpChain = chain {
             name("Outgoing RTCP chain")
@@ -53,13 +53,19 @@ class RtpSenderImpl(
         }
 
         moduleChain = chain {
-            attach(packetSender)
+            //TODO: for now just hard-code the rtp path
+            addModule(encryptWrapper)
+            addModule(object : Module("Packet sender") {
+                override fun doProcessPackets(p: List<Packet>) {
+                    packetSender.invoke(p)
+                }
+            })
         }
         scheduleWork()
-//        scheduleWorkDedicated()
     }
 
     override fun sendPackets(pkts: List<Packet>) {
+        println("BRIAN: sender got ${pkts.size} packets to send")
         incomingPacketQueue.addAll(pkts)
         pkts.forEach { numIncomingBytes += it.size }
         if (firstPacketWrittenTime == -1L) {
@@ -69,26 +75,16 @@ class RtpSenderImpl(
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
-        //TODO
-    }
-
-    private fun scheduleWorkDedicated() {
-        executor.execute {
-            while (running) {
-                val packetsToProcess = mutableListOf<Packet>()
-                while (packetsToProcess.size < 5) {
-                    packetsToProcess.add(incomingPacketQueue.take())
-                }
-                moduleChain.processPackets(packetsToProcess)
-            }
-        }
+        encryptWrapper.srtpTransformer = srtpTransformer
     }
 
     private fun scheduleWork() {
         executor.execute {
             if (running) {
+//                println("BRIAN: rtp sender job running")
                 val packetsToProcess = mutableListOf<Packet>()
                 incomingPacketQueue.drainTo(packetsToProcess, 20)
+//                println("BRIAN: rtp sender job got ${packetsToProcess.size} packets to give to chain")
                 if (packetsToProcess.isNotEmpty()) moduleChain.processPackets(packetsToProcess)
 
                 scheduleWork()
