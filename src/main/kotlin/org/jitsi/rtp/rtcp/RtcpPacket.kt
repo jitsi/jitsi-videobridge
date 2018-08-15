@@ -23,8 +23,8 @@ abstract class RtcpPacket : Packet() {
 
     companion object {
         fun fromBuffer(buf: ByteBuffer): RtcpPacket {
-            val header = RtcpHeader(buf)
-            return when (header.payloadType) {
+            val payloadType = RtcpHeaderUtils.getPayloadType(buf)
+            return when (payloadType) {
                 200 -> RtcpSrPacket.fromBuffer(header, buf)
                 RtcpRrPacket.PT -> RtcpRrPacket.fromBuffer(header, buf)
                 205, 206 -> RtcpFbPacket.fromBuffer(header, buf)

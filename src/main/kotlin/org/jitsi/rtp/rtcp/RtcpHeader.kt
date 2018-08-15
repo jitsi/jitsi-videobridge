@@ -55,6 +55,7 @@ open class RtcpHeader {
         set(senderSsrc) = RtcpHeaderUtils.setSenderSsrc(buf, senderSsrc)
 
     constructor(buf: ByteBuffer) : super() {
+        //TODO duplicate it?
         this.buf = buf
     }
 

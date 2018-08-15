@@ -16,6 +16,7 @@
 package org.jitsi.rtp.rtcp
 
 import toUInt
+import toUlong
 import unsigned.toULong
 import java.nio.ByteBuffer
 import kotlin.properties.Delegates
@@ -36,6 +37,7 @@ import kotlin.properties.Delegates
  * RTCP SenderInfo block
  */
 class SenderInfo {
+    private var buf: ByteBuffer
     /**
      * NTP timestamp: 64 bits
      *     Indicates the wallclock time (see Section 4) when this report was
@@ -58,7 +60,9 @@ class SenderInfo {
      *     has no notion of wallclock or elapsed time MAY set the NTP
      *     timestamp to zero.
      */
-    var ntpTimestamp: Long by Delegates.notNull()
+    var ntpTimestamp: Long
+        get() = SenderInfo.getNtpTimestamp(buf)
+        set(ntpTimestamp) = SenderInfo.setNtpTimestamp(buf, ntpTimestamp)
 
     /**
      * RTP timestamp: 32 bits
@@ -75,7 +79,9 @@ class SenderInfo {
      *     maintained by periodically checking the wallclock time at a
      *     sampling instant.
      */
-    var rtpTimestamp: Long by Delegates.notNull()
+    var rtpTimestamp: Long
+        get() = SenderInfo.getRtpTimestamp(buf)
+        set(rtpTimestamp) = SenderInfo.setRtpTimestamp(buf, rtpTimestamp)
     /**
      * sender's packet count: 32 bits
      *     The total number of RTP data packets transmitted by the sender
@@ -83,7 +89,9 @@ class SenderInfo {
      *     generated.  The count SHOULD be reset if the sender changes its
      *     SSRC identifier.
      */
-    var sendersPacketCount: Long by Delegates.notNull()
+    var sendersPacketCount: Long
+        get() = SenderInfo.getSendersPacketCount(buf)
+        set(sendersPacketCount) = SenderInfo.setSendersPacketCount(buf, sendersPacketCount)
     /**
      * sender's octet count: 32 bits
      *     The total number of payload octets (i.e., not including header or
@@ -93,32 +101,48 @@ class SenderInfo {
      *     SSRC identifier.  This field can be used to estimate the average
      *     payload data rate.
      */
-    var sendersOctetCount: Long by Delegates.notNull()
+    var sendersOctetCount: Long
+        get() = SenderInfo.getSendersOctetCount(buf)
+        set(sendersOctetCount) = SenderInfo.setSendersOctetCount(buf, sendersOctetCount)
 
     companion object {
         const val SIZE_BYTES = 20
-        fun fromBuffer(buf: ByteBuffer): SenderInfo {
-            return with (SenderInfo()) {
-                ntpTimestamp = buf.getLong()
-                rtpTimestamp = buf.getInt().toULong()
-                sendersPacketCount = buf.getInt().toULong()
-                sendersOctetCount = buf.getInt().toULong()
-                this
-            }
-        }
+        fun getNtpTimestamp(buf: ByteBuffer): Long = buf.getLong(0)
+        fun setNtpTimestamp(buf: ByteBuffer, ntpTimestamp: Long) { buf.putLong(0, ntpTimestamp) }
+
+        fun getRtpTimestamp(buf: ByteBuffer): Long = buf.getInt(8).toULong()
+        fun setRtpTimestamp(buf: ByteBuffer, rtpTimestamp: Long) { buf.putInt(8, rtpTimestamp.toUInt()) }
+
+        fun getSendersPacketCount(buf: ByteBuffer): Long = buf.getInt(12).toULong()
+        fun setSendersPacketCount(buf: ByteBuffer, sendersPacketCount: Long) { buf.putInt(12, sendersPacketCount.toUInt()) }
+
+        fun getSendersOctetCount(buf: ByteBuffer): Long = buf.getInt(16).toULong()
+        fun setSendersOctetCount(buf: ByteBuffer, sendersOctetCount: Long) { buf.putInt(16, sendersOctetCount.toUInt()) }
+
+        fun fromBuffer(buf: ByteBuffer): SenderInfo = SenderInfo(buf)
         fun fromValues(receiver: SenderInfo.() -> Unit): SenderInfo {
             return SenderInfo().apply(receiver)
         }
     }
 
-    fun serializeToBuffer(buf: ByteBuffer) {
-        buf.apply {
-            putLong(ntpTimestamp)
-            putInt(rtpTimestamp.toUInt())
-            putInt(sendersPacketCount.toUInt())
-            putInt(sendersOctetCount.toUInt())
-        }
+    constructor(buf: ByteBuffer) {
+        this.buf = buf.duplicate()
     }
+
+    constructor(
+        ntpTimestamp: Long = 0,
+        rtpTimestamp: Long = 0,
+        sendersPacketCount: Long = 0,
+        sendersOctetCount: Long = 0
+    ) {
+        this.buf = ByteBuffer.allocate(SenderInfo.SIZE_BYTES)
+        this.ntpTimestamp = ntpTimestamp
+        this.rtpTimestamp = rtpTimestamp
+        this.sendersPacketCount = sendersPacketCount
+        this.sendersOctetCount = sendersOctetCount
+    }
+
+    fun serializeToBuffer(buf: ByteBuffer) = buf.put(this.buf)
 }
 
 /**
@@ -159,10 +183,18 @@ class SenderInfo {
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
-class RtcpSrPacket : RtcpPacket() {
-    override var buf: ByteBuffer by Delegates.notNull()
-    override var header: RtcpHeader by Delegates.notNull()
-    var senderInfo: SenderInfo by Delegates.notNull() // = SenderInfo(buf)
+class RtcpSrPacket : RtcpPacket {
+    override var buf: ByteBuffer
+    override var header: RtcpHeader
+        get() = RtcpHeader(buf)
+        set(header) {
+            header.serializeToBuffer(this.buf)
+        }
+    var senderInfo: SenderInfo
+        get() = SenderInfo(buf.duplicate().position(8) as ByteBuffer)
+        set(senderInfo) {
+            senderInfo.serializeToBuffer(buf.duplicate().position(8) as ByteBuffer)
+        }
     var reportBlocks: List<RtcpReportBlock> = listOf()
     override var size: Int = 0
         get() = RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
@@ -183,6 +215,18 @@ class RtcpSrPacket : RtcpPacket() {
             packet.receiver()
             return packet
         }
+    }
+
+    constructor(buf: ByteBuffer) : super() {
+        this.buf = buf
+    }
+
+    constructor(
+        header: RtcpHeader = RtcpHeader()
+        //, senderInfo = ... etc
+    ) {
+        this.buf = ByteBuffer.allocate(100)//TODO: size
+        this.header = header
     }
 
     override fun serializeToBuffer(buf: ByteBuffer) {

@@ -15,13 +15,16 @@
  */
 package org.jitsi.rtp.rtcp
 
+import toUInt
 import unsigned.toUInt
 import unsigned.toULong
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.properties.Delegates
 
-abstract class FeedbackControlInformation
+abstract class FeedbackControlInformation {
+    protected abstract var buf: ByteBuffer
+}
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.2.1
@@ -31,13 +34,14 @@ abstract class FeedbackControlInformation
  * |            PID                |             BLP               |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class Nack : FeedbackControlInformation() {
+class Nack : FeedbackControlInformation {
+    override var buf: ByteBuffer
     /**
      * Packet ID (PID): 16 bits
      *  The PID field is used to specify a lost packet.  The PID field
      *  refers to the RTP sequence number of the lost packet.
      */
-    private var packetId: Int by Delegates.notNull()
+    var packetId: Int
 
     /**
      * bitmask of following lost packets (BLP): 16 bits
@@ -57,10 +61,11 @@ class Nack : FeedbackControlInformation() {
      *  0; all the sender knows is that the receiver has not reported them
      *  as lost at this time.
      */
-    private var lostPacketBitmask: Int by Delegates.notNull()
+//    private var lostPacketBitmask: Int by Delegates.notNull()
 
-    val missingSeqNums: List<Int>
+    var missingSeqNums: List<Int>
         get() {
+            val lostPacketBitmask = Nack.getLostPacketBitmask(buf)
             val bitSet = BitSet.valueOf(longArrayOf(lostPacketBitmask.toLong()))
             var i = bitSet.nextSetBit(0)
             val missingSeqNums = mutableListOf<Int>()
@@ -70,23 +75,48 @@ class Nack : FeedbackControlInformation() {
             }
             return missingSeqNums
         }
+        set(missingSeqNums) {
+            val bitMask: Short = 0
+            val bitSet = BitSet.valueOf(longArrayOf(bitMask.toLong()))
+            missingSeqNums.forEach {
+                val index = it - packetId
+                bitSet.set(index)
+            }
+            Nack.setLostPacketBitmask(buf, bitMask)
+        }
 
     companion object {
-        fun fromBuffer(buf: ByteBuffer): Nack {
-            return Nack().apply {
-                packetId = buf.getShort().toUInt()
-                lostPacketBitmask = buf.getShort().toUInt()
-            }
+        fun fromBuffer(buf: ByteBuffer): Nack = Nack(buf)
+
+        fun getPacketId(buf: ByteBuffer): Int = buf.getShort(0).toUInt()
+        fun setPacketId(buf: ByteBuffer, packetId: Int) {
+            buf.putShort(0, packetId.toShort())
         }
+
+        fun getLostPacketBitmask(buf: ByteBuffer): Short = buf.getShort(2)
+        fun setLostPacketBitmask(buf: ByteBuffer, bitmask: Short) = buf.putShort(2, bitmask)
+    }
+
+    constructor(buf: ByteBuffer) {
+        this.buf = buf
+    }
+
+    constructor(
+        packetId: Int = 0,
+        missingSeqNums: List<Int> = listOf()
+    ) {
+        this.buf = ByteBuffer.allocate(4)
+        this.packetId = packetId
+        this.missingSeqNums = missingSeqNums
     }
 }
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.2.1
  */
-class PayloadSpecificFeedbackInformation : FeedbackControlInformation() {
-
-}
+//class PayloadSpecificFeedbackInformation : FeedbackControlInformation() {
+//
+//}
 
 /**
  * https://tools.ietf.org/html/rfc4585#section-6.1
@@ -107,49 +137,76 @@ class PayloadSpecificFeedbackInformation : FeedbackControlInformation() {
 // generically?  Should it make it abstract?  Should it ignore it
 // altogether?
 class RtcpFbPacket : RtcpPacket {
-    override var buf: ByteBuffer by Delegates.notNull()
-    override var header: RtcpHeader by Delegates.notNull()
-    var mediaSourceSsrc: Long by Delegates.notNull()
-    var feedbackControlInformation: FeedbackControlInformation by Delegates.notNull()
+    override var buf: ByteBuffer
+    override var header: RtcpHeader
+        get() = RtcpHeader(buf)
+        set(header) {
+            header.serializeToBuffer(this.buf)
+        }
+    var mediaSourceSsrc: Long
+        get() = RtcpFbPacket.getMediaSourceSsrc(buf)
+        set(mediaSourceSsrc) = RtcpFbPacket.setMediaSourceSsrc(buf, mediaSourceSsrc)
 
-    companion object {
-        fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpFbPacket {
+    var feedbackControlInformation: FeedbackControlInformation
+        get() {
+            val payloadType = header.payloadType
             val fmt = header.reportCount
-            return RtcpFbPacket().apply {
-                this.buf = buf.slice()
-                this.header = header
-                mediaSourceSsrc = buf.getInt().toULong()
-                if (header.payloadType == 205) {
-                    when (fmt) {
-                        1 -> feedbackControlInformation = Nack.fromBuffer(buf)
-                        15 -> TODO("tcc https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1")
-                        else -> throw Exception("Unrecognized RTCPFB format: $fmt")
-                    }
-                } else if (header.payloadType == 206) {
-                    println("BRIAN: got rtcfb packet with fmt $fmt")
-                    when (fmt) {
-                        1 -> TODO("pli")
-                        2 -> TODO("sli")
-                        3 -> TODO("rpsi")
-                        4 -> TODO("fir")
-                        15 -> TODO("afb")
-                    }
+            when (payloadType) {
+                205 -> {
+
                 }
+                206 -> TODO()
+
             }
         }
+
+    companion object {
+        fun getMediaSourceSsrc(buf: ByteBuffer): Long = buf.getInt(8).toULong()
+        fun setMediaSourceSsrc(buf: ByteBuffer, mediaSourceSsrc: Long) { buf.putInt(8, mediaSourceSsrc.toUInt()) }
+
+        fun getFeedbackControlInformation(buf: ByteBuffer): FeedbackControlInformation {
+
+        }
+//        fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpFbPacket {
+//            val fmt = header.reportCount
+//            return RtcpFbPacket().apply {
+//                this.buf = buf.slice()
+//                this.header = header
+//                mediaSourceSsrc = buf.getInt().toULong()
+//                if (header.payloadType == 205) {
+//                    when (fmt) {
+//                        1 -> feedbackControlInformation = Nack.fromBuffer(buf)
+//                        15 -> TODO("tcc https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1")
+//                        else -> throw Exception("Unrecognized RTCPFB format: $fmt")
+//                    }
+//                } else if (header.payloadType == 206) {
+//                    println("BRIAN: got rtcfb packet with fmt $fmt")
+//                    when (fmt) {
+//                        1 -> TODO("pli")
+//                        2 -> TODO("sli")
+//                        3 -> TODO("rpsi")
+//                        4 -> TODO("fir")
+//                        15 -> TODO("afb")
+//                    }
+//                }
+//            }
+//        }
     }
 
-    constructor() : super()
+    constructor(buf: ByteBuffer) : super() {
+        this.buf = buf
+    }
 
-    constructor(fmt: Int, pt: Int, senderSsrc: Long, mediaSsrc: Int) : super() {
+    constructor(fmt: Int, pt: Int, senderSsrc: Long, mediaSsrc: Long) : super() {
+        this.buf = ByteBuffer.allocate(100) // TODO: size
         val header = RtcpHeader(
-            version = 2,
-            hasPadding = false,
             reportCount = fmt,
             payloadType = pt,
             senderSsrc = senderSsrc
         )
+        header.serializeToBuffer(buf)
 
+        this.mediaSourceSsrc = mediaSsrc
     }
 
     override val size: Int
