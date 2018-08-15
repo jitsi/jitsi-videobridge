@@ -182,7 +182,7 @@ public class Health
 
         if (cachedExceptionTimestamp > 0 &&
             System.currentTimeMillis() - cachedExceptionTimestamp
-                > CACHE_INTERVAL)
+                < CACHE_INTERVAL)
         {
             if (cachedException == null)
             {
