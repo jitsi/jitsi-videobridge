@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.module.ModuleChain
+import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.rtp.Packet
 
 abstract class RtpReceiver {
@@ -26,4 +27,6 @@ abstract class RtpReceiver {
     abstract fun getStats(): String
     abstract fun enqueuePacket(p: Packet)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
+    abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
+    abstract var rtpPacketHandler: PacketHandler
 }

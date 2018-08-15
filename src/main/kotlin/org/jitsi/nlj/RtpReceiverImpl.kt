@@ -20,12 +20,10 @@ import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.PacketHandler
-import org.jitsi.nlj.transform.module.PacketWriter
 import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.nlj.transform.module.incoming.SrtpTransformerWrapperDecrypt
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
@@ -37,13 +35,15 @@ import java.util.concurrent.LinkedBlockingQueue
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
-    val executor: ExecutorService = Executors.newSingleThreadExecutor(),
-    val packetHandler: PacketHandler? = null
+    val executor: ExecutorService = Executors.newSingleThreadExecutor()
 ) : RtpReceiver() {
     /*private*/ override val moduleChain: ModuleChain
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var running = true
-    private val decryptWrapper = SrtpTransformerWrapperDecrypt()
+    private val srtpDecryptWrapper = SrtpTransformerWrapperDecrypt()
+    private val srtcpDecryptWrapper = SrtpTransformerWrapperDecrypt()
+
+    override var rtpPacketHandler: PacketHandler = {}
 
     var firstPacketWrittenTime: Long = 0
     var lastPacketWrittenTime: Long = 0
@@ -68,16 +68,21 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 next(p.map(Packet::buf).map(::SrtpPacket))
                             }
                         })
-                        addModule(decryptWrapper)
-                        addModule(object : Module("vp8 filter") {
+                        addModule(srtpDecryptWrapper)
+//                        addModule(object : Module("vp8 filter") {
+//                            override fun doProcessPackets(p: List<Packet>) {
+//                                val outpackets = p.map { it as RtpPacket}
+//                                    .filter { it.header.payloadType == 100}
+//                                    .toCollection(ArrayList())
+//                                next(outpackets)
+//                            }
+//                        })
+//                        addModule(PacketWriter())
+                        addModule(object : Module("packet handler") {
                             override fun doProcessPackets(p: List<Packet>) {
-                                val outpackets = p.map { it as RtpPacket}
-                                    .filter { it.header.payloadType == 100}
-                                    .toCollection(ArrayList())
-                                next(outpackets)
+                                rtpPacketHandler.invoke(p)
                             }
                         })
-                        addModule(PacketWriter())
                     }
                 }
                 packetPath {
@@ -147,6 +152,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
-        decryptWrapper.srtpTransformer = srtpTransformer
+        srtpDecryptWrapper.srtpTransformer = srtpTransformer
+    }
+    override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
+        srtcpDecryptWrapper.srtpTransformer = srtcpTransformer
     }
 }

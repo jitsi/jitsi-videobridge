@@ -37,6 +37,11 @@ import kotlin.experimental.and
  * Handles all packets (incoming and outgoing) for a particular stream.
  * (TODO: 'stream' defined as what, exactly, here?)
  * Handles the DTLS negotiation
+ *
+ * Incoming packets should be written to [incomingQueue].  Outgoing
+ * packets are put in [outgoingQueue] (and should be read by something)
+ * TODO: maybe we want to have this 'push' the outgoing packets somewhere
+ * else instead
  */
 class Transceiver(
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
@@ -45,8 +50,8 @@ class Transceiver(
     private val dtlsReceiver = DtlsReceiverModule()
     private val dtlsSender = DtlsSenderModule()
 
-    private val rtpReceiver: RtpReceiver = RtpReceiverImpl(123)
-    private val rtpSender: RtpSender = RtpSenderImpl(123)
+    /*private*/ val rtpReceiver: RtpReceiver = RtpReceiverImpl(123)
+    /*private*/ val rtpSender: RtpSender = RtpSenderImpl(123)
 
     // The incoming chain in the Transceiver handles the DTLS
     // handshake and then defers to the RtpReceiver's input chain
@@ -60,11 +65,14 @@ class Transceiver(
     init {
         dtlsStack.onHandshakeComplete { dtlsTransport, tlsContext ->
             //TODO: in the future we'll want to pass the dtls transport to the sctp connection
-            val transformer = SRTPTransformer.initializeSRTPTransformer(
+            val srtpTransformer = SRTPTransformer.initializeSRTPTransformer(
                 dtlsStack.getChosenSrtpProtectionProfile(), tlsContext, false
             )
-            rtpReceiver.setSrtpTransformer(transformer)
-            rtpSender.setSrtpTransformer(transformer)
+            val srtcpTransformer = SRTPTransformer.initializeSRTPTransformer(
+                dtlsStack.getChosenSrtpProtectionProfile(), tlsContext, true
+            )
+            rtpReceiver.setSrtpTransformer(srtpTransformer)
+            rtpSender.setSrtpTransformer(srtpTransformer)
         }
 
         incomingChain = chain {
@@ -100,6 +108,13 @@ class Transceiver(
                 }
             }
         }
+
+
+        // rewire the sender's hacked packet handler
+        rtpSender.packetSender = { pkts ->
+            outgoingQueue.addAll(pkts)
+        }
+
         scheduleWork()
     }
 
@@ -127,6 +142,10 @@ class Transceiver(
     fun getLocalFingerprintHashFunction(): String = dtlsStack.localFingerprintHashFunction
     fun setRemoteFingerprints(remoteFingerprints: Map<String, String>) {
         dtlsStack.remoteFingerprints = remoteFingerprints
+    }
+
+    fun sendPackets(p: List<Packet>) {
+        rtpSender.sendPackets(p)
     }
 
     private fun scheduleWork() {

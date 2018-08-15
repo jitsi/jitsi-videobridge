@@ -616,7 +616,7 @@ public class SRTPCryptoContext
             // Authenticate the packet.
             if (authenticatePacket(pkt))
             {
-                System.out.println("BRIAN: authentication succeeded");
+//                System.out.println("BRIAN: authentication succeeded");
                 // If a RawPacket is flagged with Buffer.FLAG_DISCARD, then it
                 // should have been discarded earlier. Anyway, at least skip its
                 // decrypting. We flag a RawPacket with Buffer.FLAG_SILENCE when
@@ -683,6 +683,7 @@ public class SRTPCryptoContext
      */
     synchronized public boolean transformPacket(RawPacket pkt)
     {
+        System.out.println("BRIAN: encrypting packet");
         int seqNo = pkt.getSequenceNumber();
 
         if (!seqNumSet)
@@ -700,7 +701,10 @@ public class SRTPCryptoContext
          * replay protection but as a consistency check of our implementation.
          */
         if (!checkReplay(seqNo, guessedIndex))
+        {
+            System.out.println("BRIAN: replay issue, encryption failed");
             return false;
+        }
 
         switch (policy.getEncType())
         {
