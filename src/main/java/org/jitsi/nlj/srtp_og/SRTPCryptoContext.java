@@ -231,7 +231,7 @@ public class SRTPCryptoContext
         super(ssrc, masterK, masterS, policy);
         System.out.println("BRIAN: creating srtp crypto context with: \n" +
                 "sender? " + sender +
-                "\nssrc: " + ssrc +
+                "\nssrc: " + (ssrc & 0xFFFFFFFFL) +
                 "\nroc: " + roc +
                 "\nkeyDerivationRate: " + keyDerivationRate +
                 "\nmasterK: " + toHex(masterK) +
@@ -494,7 +494,7 @@ public class SRTPCryptoContext
      *
      * @param pkt the RTP packet to be encrypted/decrypted
      */
-    public void processPacketAESCM(RawPacket pkt)
+    public void processPacketAESCM(RawPacket pkt, String eOrD)
     {
         int ssrc = pkt.getSSRC();
         int seqNo = pkt.getSequenceNumber();
@@ -532,6 +532,8 @@ public class SRTPCryptoContext
 
         int payloadOffset = pkt.getHeaderLength();
         int payloadLength = pkt.getPayloadLength();
+        System.out.println("BRIAN: " + eOrD + " packet " + pkt.getSSRCAsLong() + " " + pkt.getSequenceNumber() +
+                " header length: " + payloadOffset);
 
         cipherCtr.process(
                 pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength,
@@ -631,7 +633,7 @@ public class SRTPCryptoContext
                         // Decrypt the packet using Counter Mode encryption.
                         case SRTPPolicy.AESCM_ENCRYPTION:
                         case SRTPPolicy.TWOFISH_ENCRYPTION:
-                            processPacketAESCM(pkt);
+                            processPacketAESCM(pkt, "decrypting");
                             break;
 
                         // Decrypt the packet using F8 Mode encryption.
@@ -683,8 +685,8 @@ public class SRTPCryptoContext
      */
     synchronized public boolean transformPacket(RawPacket pkt)
     {
-        System.out.println("BRIAN: encrypting packet");
         int seqNo = pkt.getSequenceNumber();
+        System.out.println("BRIAN: encrypting packet " + pkt.getSSRCAsLong() + " " + seqNo);
 
         if (!seqNumSet)
         {
@@ -711,7 +713,7 @@ public class SRTPCryptoContext
             // Encrypt the packet using Counter Mode encryption.
             case SRTPPolicy.AESCM_ENCRYPTION:
             case SRTPPolicy.TWOFISH_ENCRYPTION:
-                processPacketAESCM(pkt);
+                processPacketAESCM(pkt, "encrypting");
                 break;
 
             // Encrypt the packet using F8 Mode encryption.

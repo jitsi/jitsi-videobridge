@@ -224,6 +224,10 @@ public class SRTPTransformer
                 ((context != null) && context.reverseTransformPacket(pkt))
                         ? pkt
                         : null;
+        if (res == null) {
+            System.out.println("BRIAN: decryption of packet " + pkt.getSSRCAsLong() + " " + pkt.getSequenceNumber() +
+                    " failed");
+        }
 //        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
 //                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " after decrypt: " +
 //                toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
@@ -239,12 +243,21 @@ public class SRTPTransformer
     @Override
     public RawPacket transform(RawPacket pkt)
     {
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " before encrypt: " +
+//                toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()) +
+//                "\n will get context from factory " + reverseFactory.hashCode());
         SRTPCryptoContext context
                 = getContext(pkt.getSSRC(), forwardFactory, 0);
 
         if (context == null)
             return null;
-        return context.transformPacket(pkt) ? pkt : null;
+
+        RawPacket res = context.transformPacket(pkt) ? pkt : null;
+//        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
+//                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " after encrypt: " +
+//                toHexArrayDef(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
+        return res;
     }
 
     // Copied from DtlsPacketTransformer

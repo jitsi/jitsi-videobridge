@@ -89,7 +89,7 @@ class DtlsReceiverModule : Module("DTLS Receiver") {
      */
     fun receive(buf: ByteArray, off: Int, length: Int, timeoutMs: Int): Int {
         val packet = incomingQueue.poll(timeoutMs.toLong(), TimeUnit.MILLISECONDS) ?: return 0
-        System.arraycopy(packet.buf.array(), 0, buf, off, Math.min(length, packet.size))
+        System.arraycopy(packet.getBuffer().array(), 0, buf, off, Math.min(length, packet.size))
 
         return packet.size
     }

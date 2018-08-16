@@ -20,9 +20,12 @@ import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.RtcpHandlerModule
+import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.nlj.transform.module.outgoing.SrtpTransformerWrapperEncrypt
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.extensions.toHex
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -66,6 +69,9 @@ class RtpSenderImpl(
 
     override fun sendPackets(pkts: List<Packet>) {
         println("BRIAN: sender got ${pkts.size} packets to send")
+//        pkts.forEachAs<RtpPacket> {
+//            println("BRIAN: sender sendign packet ${it.header} with buf ${it.getBuffer().toHex()}")
+//        }
         incomingPacketQueue.addAll(pkts)
         pkts.forEach { numIncomingBytes += it.size }
         if (firstPacketWrittenTime == -1L) {
