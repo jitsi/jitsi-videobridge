@@ -48,11 +48,7 @@ public class IceDtlsTransportManager
             = Logger.getLogger(IceDtlsTransportManager.class);
     private final ExecutorService executor;
     private static final String ICE_STREAM_NAME = "ice-stream-name";
-    private RtpReceiverImpl rtpReceiver = new RtpReceiverImpl(1234L);
-//    private DtlsStack dtlsStack = new DtlsClientStack();
-
-//    private ModuleChain incomingModuleChain;
-//    private ModuleChain outgoingModuleChain;
+    public Transceiver transceiver = new Transceiver();
 
     public IceDtlsTransportManager(Conference conference)
             throws IOException
@@ -80,8 +76,7 @@ public class IceDtlsTransportManager
                 logger.info("Adding fingerprint " + dfpe.getHash() + " -> " + dfpe.getFingerprint());
                 remoteFingerprints.put(dfpe.getHash(), dfpe.getFingerprint());
             });
-            rtpReceiver.getDtlsStack().setRemoteFingerprints(remoteFingerprints);
-//            dtlsStack.setRemoteFingerprints(remoteFingerprints);
+            transceiver.setRemoteFingerprints(remoteFingerprints);
 
         // Set the remote ufrag/password
         if (transport.getUfrag() != null) {
@@ -152,10 +147,8 @@ public class IceDtlsTransportManager
             fingerprintPE = new DtlsFingerprintPacketExtension();
             pe.addChildExtension(fingerprintPE);
         }
-//        fingerprintPE.setFingerprint(dtlsStack.getLocalFingerprint());
-        fingerprintPE.setFingerprint(rtpReceiver.getDtlsStack().getLocalFingerprint());
-//        fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
-        fingerprintPE.setHash(rtpReceiver.getDtlsStack().getLocalFingerprintHashFunction());
+        fingerprintPE.setFingerprint(transceiver.getLocalFingerprint());
+        fingerprintPE.setHash(transceiver.getLocalFingerprintHashFunction());
         fingerprintPE.setSetup("ACTPASS");
     }
 
@@ -172,7 +165,7 @@ public class IceDtlsTransportManager
         // DTLS path
         PacketPath dtlsPath = new PacketPath();
         dtlsPath.setPredicate((packet) -> {
-            int b = packet.getBuf().get(0) & 0xFF;
+            int b = packet.getBuffer().get(0) & 0xFF;
             return (b >= 20 && b <= 63);
         });
         ModuleChain dtlsChain = new ModuleChain();
@@ -199,21 +192,21 @@ public class IceDtlsTransportManager
     private void onIceConnected() {
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
+        // Socket writer thread
         new Thread(() -> {
-            rtpReceiver.getDtlsSender().attach((pkts) -> {
-                System.out.println("BRIAN: dtls packet sender received packets");
-                pkts.forEach(pkt -> {
-                    try
-                    {
-                        s.send(new DatagramPacket(pkt.getBuf().array(), 0, pkt.getBuf().limit()));
-                    } catch (IOException e)
-                    {
-                        e.printStackTrace();
-                    }
-                });
-                return Unit.INSTANCE;
-            });
-        }, "Dtls send thread").start();
+            while (true) {
+                try
+                {
+                    Packet p = transceiver.getOutgoingQueue().take();
+                    System.out.println("BRIAN: transceiver writer thread got data");
+                    s.send(new DatagramPacket(p.getBuffer().array(), 0, p.getBuffer().limit()));
+                } catch (InterruptedException | IOException e)
+                {
+                    e.printStackTrace();
+                    break;
+                }
+            }
+        }).start();
 
         // Socket reader thread.  Read from the underlying socket and pass to the incoming
         // module chain
@@ -225,11 +218,11 @@ public class IceDtlsTransportManager
                 {
                     s.receive(p);
                     ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
-                    System.out.println("BRIAN: received packet with length " + p.getLength());
+//                    System.out.println("BRIAN: received packet with length " + p.getLength());
                     packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
                     Packet pkt = new UnparsedPacket(packetBuf);
-                    System.out.println("BRIAN: put into UnparsedPacket, length is " + pkt.getSize());
-                    rtpReceiver.enqueuePacket(pkt);
+//                    System.out.println("BRIAN: put into UnparsedPacket, length is " + pkt.getSize());
+                    transceiver.getIncomingQueue().add(pkt);
                 } catch (IOException e)
                 {
                     e.printStackTrace();
@@ -238,8 +231,7 @@ public class IceDtlsTransportManager
             }
         }, "Incoming read thread").start();
 
-        rtpReceiver.connectDtls();
-
+        transceiver.connectDtls();
     }
 
     private void iceAgentStateChange(PropertyChangeEvent ev)

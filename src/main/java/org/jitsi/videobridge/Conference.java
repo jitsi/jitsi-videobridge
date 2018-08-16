@@ -17,18 +17,22 @@ package org.jitsi.videobridge;
 
 import java.beans.*;
 import java.io.*;
+import java.lang.*;
+import java.lang.Deprecated;
 import java.lang.reflect.*;
 import java.text.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 
+import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
 import net.java.sip.communicator.util.*;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
@@ -1339,6 +1343,34 @@ public class Conference
 //                        = new IceUdpTransportManager(
 //                            this, initiator, 1, channelBundleId);
                     transportManager = new IceDtlsTransportManager(this);
+                    final TransportManager newTransportManager = transportManager;
+                    // Cross wire this transport manager with the other, if it exists yet
+                    if (!transportManagers.isEmpty()) {
+                        String otherBundleId = transportManagers.keySet().iterator().next();
+                        TransportManager otherTransportManager = transportManagers.get(otherBundleId);
+                        logger.info("BRIAN: connecting transport managers " +
+                                channelBundleId + " and " + otherBundleId);
+
+                        ((IceDtlsTransportManager)newTransportManager).transceiver
+                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
+                            System.out.println("BRIAN: in rtp handler for receiver " + channelBundleId);
+                            pkts.forEach(pkt -> {
+                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
+                            });
+                            ((IceDtlsTransportManager)otherTransportManager).transceiver.sendPackets(pkts);
+                            return Unit.INSTANCE;
+                        });
+
+                        ((IceDtlsTransportManager)otherTransportManager).transceiver
+                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
+                            System.out.println("BRIAN: in rtp handler for receiver " + otherBundleId);
+                            pkts.forEach(pkt -> {
+                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
+                            });
+                            ((IceDtlsTransportManager)newTransportManager).transceiver.sendPackets(pkts);
+                            return Unit.INSTANCE;
+                        });
+                    }
                 }
                 catch (IOException ioe)
                 {

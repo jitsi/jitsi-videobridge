@@ -48,8 +48,8 @@ public class BrianUdpTransport implements DatagramTransport
             Packet p = incomingQueue.poll(waitMillis, TimeUnit.MILLISECONDS);
             if (p != null) {
                 System.out.println("BRIAN: BC GOT PACKET FROM TRANSPORT");
-                System.arraycopy(p.getBuf().array(), 0, buf, off, p.getBuf().limit());
-                return p.getBuf().limit();
+                System.arraycopy(p.getBuffer().array(), 0, buf, off, p.getBuffer().limit());
+                return p.getBuffer().limit();
             } else {
                 return 0;
             }
