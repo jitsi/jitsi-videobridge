@@ -6,9 +6,10 @@ import io.kotlintest.matchers.types.shouldBeTypeOf
 import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
-internal class BitBufferRtpHeaderTest : ShouldSpec() {
+internal class RtpHeaderTest : ShouldSpec() {
     // v=2, p=1, x=0, cc=3 = 0xA3
     // m=1, pt=96 = 0xE0
     // seqnum 4224 = 0x10 0x80
@@ -17,14 +18,17 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
     // csrc 1 = 0x00 0x00 0x00 0x01
     // csrc 2 = 0x00 0x00 0x00 0x02
     // csrc 3 = 0x00 0x00 0x00 0x03
-    private val headerNoExtensions = ByteBuffer.wrap(byteArrayOf(
+    private val headerNoExtensions = byteArrayOf(
         0xA3.toByte(),  0xE0.toByte(),  0x10,           0x80.toByte(),
         0x00,           0x01,           0x81.toByte(),  0xCD.toByte(),
         0x00,           0x12,           0xD6.toByte(),  0x87.toByte(),
         0x00,           0x00,           0x00,           0x01,
         0x00,           0x00,           0x00,           0x02,
         0x00,           0x00,           0x00,           0x03
-    ))
+    )
+    private val headerNoExtensionsWithPayload = ByteBuffer.wrap(headerNoExtensions.plus(byteArrayOf(
+        0x01,           0x02,           0x03,           0x04
+    )))
     private fun idLengthByte(id: Int, length: Int): Byte {
         return ((id shl 4) or length).toByte()
     }
@@ -61,29 +65,33 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
     init {
         "parsing" {
             "a header without extensions" {
-                val header = BitBufferRtpHeader.fromBuffer(headerNoExtensions.asReadOnlyBuffer())
-                header.version shouldBe 2
-                header.hasPadding shouldBe true
-                header.hasExtension shouldBe false
-                header.csrcCount shouldBe 3
-                header.marker shouldBe true
-                header.payloadType shouldBe 96
-                header.sequenceNumber shouldBe 4224
-                header.timestamp shouldBe 98765
-                header.ssrc shouldBe 1234567
-                header.csrcs should haveSize(3)
-                header.csrcs.shouldContainInOrder(listOf<Long>(1, 2, 3))
-                header.extensions.size shouldBe 0
+                val header = RtpHeader(headerNoExtensionsWithPayload)
+                should("parse correctly") {
+                    header.version shouldBe 2
+                    header.hasPadding shouldBe true
+                    header.hasExtension shouldBe false
+                    header.csrcCount shouldBe 3
+                    header.marker shouldBe true
+                    header.payloadType shouldBe 96
+                    header.sequenceNumber shouldBe 4224
+                    header.timestamp shouldBe 98765
+                    header.ssrc shouldBe 1234567
+                    header.csrcs should haveSize(3)
+                    header.csrcs.shouldContainInOrder(listOf<Long>(1, 2, 3))
+                    header.extensions.size shouldBe 0
+                    // Size should match just the header parts, not the rest of the buffer
+                    header.size shouldBe 24
+                }
             }
             "a header with one byte extensions" {
-                val header = BitBufferRtpHeader.fromBuffer(headerWithOneByteExtensions.asReadOnlyBuffer())
+                val header = RtpHeader(headerWithOneByteExtensions)
                 header.extensions.size shouldBe 3
                 header.extensions.values.forEach {
                     it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
                 }
             }
             "a header with two byte extensions" {
-                val header = BitBufferRtpHeader.fromBuffer(headerWithTwoByteExtensions.asReadOnlyBuffer())
+                val header = RtpHeader(headerWithTwoByteExtensions)
                 header.extensions.size shouldBe 3
                 header.extensions.values.forEach {
                     it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
@@ -91,22 +99,36 @@ internal class BitBufferRtpHeaderTest : ShouldSpec() {
             }
         }
         "writing" {
+            //TODO: do we still want to do a test like this?
             "should update the object's value without touching the buffer" {
-                val header = BitBufferRtpHeader.fromBuffer(headerNoExtensions.asReadOnlyBuffer())
+                val header = RtpHeader(ByteBuffer.wrap(headerNoExtensions))
                 header.version = 10
                 header.version shouldBe 10
-                // We passed the buffer as readonly, so we know it hasn't been changed
             }
         }
         "serializing" {
-            val header = BitBufferRtpHeader.fromBuffer(headerNoExtensions.asReadOnlyBuffer())
-            val newBuf = ByteBuffer.allocate(headerNoExtensions.limit())
-            header.serializeToBuffer(newBuf)
-            newBuf.rewind()
-            headerNoExtensions.rewind()
-            should("match the original buffer") {
-                newBuf.compareTo(headerNoExtensions) shouldBe 0
+            "a header with no extensions" {
+                val buf = ByteBuffer.wrap(headerNoExtensions)
+                val header = RtpHeader(buf)
+                val newBuf = header.getBuffer()
+                newBuf.rewind()
+                buf.rewind()
+                should("match the original buffer") {
+                    newBuf.compareTo(buf.subBuffer(0, 24)) shouldBe 0
+                }
+            }
+            "a header with one byte extensions" {
+                val header = RtpHeader(headerWithOneByteExtensions)
+                val newBuf = header.getBuffer()
+
+                newBuf.rewind()
+                headerWithOneByteExtensions.rewind()
+                should("match the original buffer") {
+                    newBuf.compareTo(headerWithOneByteExtensions) shouldBe 0
+                }
+
             }
         }
+        //TODO: verify header extension header is written correctly
     }
 }

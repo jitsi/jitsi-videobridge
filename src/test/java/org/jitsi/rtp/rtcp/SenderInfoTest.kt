@@ -2,6 +2,7 @@ package org.jitsi.rtp.rtcp
 
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.extensions.toHex
 import toUInt
 import java.nio.ByteBuffer
 
@@ -23,7 +24,7 @@ internal class SenderInfoTest : ShouldSpec() {
     init {
         "creation" {
             "from a buffer" {
-                val senderInfo = SenderInfo.fromBuffer(senderInfoBuf)
+                val senderInfo = SenderInfo(senderInfoBuf)
                 should("read all values correctly") {
                     senderInfo.ntpTimestamp shouldBe expectedNtpTimestamp
                     senderInfo.rtpTimestamp shouldBe expectedRtpTimestamp
@@ -32,12 +33,12 @@ internal class SenderInfoTest : ShouldSpec() {
                 }
             }
             "from values" {
-                val senderInfo = SenderInfo.fromValues {
-                    ntpTimestamp = expectedNtpTimestamp
-                    rtpTimestamp = expectedRtpTimestamp
-                    sendersPacketCount = expectedSendersPacketCount
+                val senderInfo = SenderInfo(
+                    ntpTimestamp = expectedNtpTimestamp,
+                    rtpTimestamp = expectedRtpTimestamp,
+                    sendersPacketCount = expectedSendersPacketCount,
                     sendersOctetCount = expectedSendersOctetCount
-                }
+                )
                 should("save all values correctly") {
                     senderInfo.ntpTimestamp shouldBe expectedNtpTimestamp
                     senderInfo.rtpTimestamp shouldBe expectedRtpTimestamp
@@ -47,14 +48,13 @@ internal class SenderInfoTest : ShouldSpec() {
             }
         }
         "serialization" {
-            val senderInfo = SenderInfo.fromValues {
-                ntpTimestamp = expectedNtpTimestamp
-                rtpTimestamp = expectedRtpTimestamp
-                sendersPacketCount = expectedSendersPacketCount
+            val senderInfo = SenderInfo(
+                ntpTimestamp = expectedNtpTimestamp,
+                rtpTimestamp = expectedRtpTimestamp,
+                sendersPacketCount = expectedSendersPacketCount,
                 sendersOctetCount = expectedSendersOctetCount
-            }
-            val newBuf = ByteBuffer.allocate(20)
-            senderInfo.serializeToBuffer(newBuf)
+            )
+            val newBuf = senderInfo.getBuffer()
             should("write the data correctly") {
                 newBuf.rewind() shouldBe senderInfoBuf.rewind()
             }

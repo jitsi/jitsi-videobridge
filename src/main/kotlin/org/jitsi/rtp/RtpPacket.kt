@@ -34,15 +34,40 @@ import java.nio.ByteBuffer
 // |                             ....                              |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-abstract class RtpPacket : Packet() {
-    abstract var header: RtpHeader
-    abstract var payload: BufferView
+open class RtpPacket : Packet {
+    private var buf: ByteBuffer? = null
+    var header: RtpHeader
+    var payload: ByteBuffer
     override val size: Int
-        get() = header.size + payload.length
+        get() = header.size + payload.limit()
 
-    companion object {
-        fun fromBuffer(buf: ByteBuffer): RtpPacket = BitBufferRtpPacket.fromBuffer(buf)
-        fun fromValues(receiver: RtpPacket.() -> Unit): RtpPacket = BitBufferRtpPacket().apply(receiver)
+    constructor(buf: ByteBuffer) {
+        this.buf = buf
+        this.header = RtpHeader(buf)
+        this.payload = (buf.position(header.size) as ByteBuffer).slice().duplicate()
+    }
+
+    constructor(
+        header: RtpHeader = RtpHeader(),
+        payload: ByteBuffer = ByteBuffer.allocate(0)
+    ) {
+        this.header = header
+        this.payload = payload
+    }
+
+    override fun getBuffer(): ByteBuffer {
+        if (this.buf == null) {
+            this.buf = ByteBuffer.allocate(header.size + payload.limit())
+        }
+        this.buf!!.rewind()
+        println("curr buf position: ${this.buf!!.position()}")
+        println("curr buf size: ${this.buf!!.limit()}")
+        println("header buf size: ${header.getBuffer().limit()}")
+        this.buf!!.put(header.getBuffer())
+        this.buf!!.put(payload)
+
+        this.buf!!.rewind()
+        return this.buf!!
     }
 
     override fun toString(): String {
@@ -50,7 +75,7 @@ abstract class RtpPacket : Packet() {
             appendln("RTP packet")
             appendln("size: $size")
             append(header.toString())
-            appendln("payload size: ${payload.length}")
+            appendln("payload size: ${payload.limit()}")
             toString()
         }
     }

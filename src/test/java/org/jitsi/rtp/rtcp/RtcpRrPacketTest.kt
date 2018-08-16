@@ -62,38 +62,24 @@ internal class RtcpRrPacketTest : ShouldSpec() {
         }
         "creation" {
             "from a buffer" {
-                val header = RtcpHeader(packetBuf)
-                val rrPacket = RtcpRrPacket.fromBuffer(header, packetBuf)
+                val rrPacket = RtcpRrPacket(packetBuf)
                 should("read all values correctly") {
                     rrPacket.reportBlocks should haveSize(2)
                 }
             }
             "from values" {
                 val header: RtcpHeader = mock()
-                val reportBlocks: List<RtcpReportBlock> = listOf(mock(), mock())
-                val rrPacket = RtcpRrPacket.fromValues {
-                    this.header = header
-                    this.reportBlocks = reportBlocks
-                }
+                val reportBlocks: MutableList<RtcpReportBlock> = mutableListOf(mock(), mock())
+                val rrPacket = RtcpRrPacket(header, reportBlocks)
                 should("set all values correctly") {
                     rrPacket.header shouldBe header
                     rrPacket.reportBlocks should containAll(reportBlocks)
                 }
             }
-            "with missing values" {
-                should("throw on access") {
-                    val rrPacket = RtcpRrPacket()
-                    shouldThrow<IllegalStateException> {
-                        rrPacket.header
-                    }
-                }
-            }
         }
         "serialization" {
-            val header = RtcpHeader(packetBuf)
-            val rrPacket = RtcpRrPacket.fromBuffer(header, packetBuf)
-            val newBuf = ByteBuffer.allocate(packetBuf.limit())
-            rrPacket.serializeToBuffer(newBuf)
+            val rrPacket = RtcpRrPacket(packetBuf)
+            val newBuf = rrPacket.getBuffer()
             should("write everything correctly") {
                 newBuf.rewind() shouldBe packetBuf.rewind()
             }

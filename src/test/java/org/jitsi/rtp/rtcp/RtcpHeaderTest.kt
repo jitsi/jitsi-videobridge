@@ -63,9 +63,8 @@ internal class RtcpHeaderTest : ShouldSpec() {
             }
         }
         "serialization" {
-            val newBuf = ByteBuffer.allocate(8)
             val header = RtcpHeader(headerBuf)
-            header.serializeToBuffer(newBuf)
+            val newBuf = header.getBuffer()
             should("write the correct data to the buffer") {
                 newBuf.rewind() shouldBe headerBuf.rewind()
             }

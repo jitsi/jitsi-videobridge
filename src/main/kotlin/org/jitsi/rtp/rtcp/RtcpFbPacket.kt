@@ -15,15 +15,18 @@
  */
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.subBuffer
+import sun.security.util.Length
 import toUInt
 import unsigned.toUInt
 import unsigned.toULong
 import java.nio.ByteBuffer
 import java.util.*
-import kotlin.properties.Delegates
 
 abstract class FeedbackControlInformation {
-    protected abstract var buf: ByteBuffer
+    abstract val size: Int
+    protected abstract var buf: ByteBuffer?
+    abstract fun getBuffer(): ByteBuffer
 }
 
 /**
@@ -35,7 +38,8 @@ abstract class FeedbackControlInformation {
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 class Nack : FeedbackControlInformation {
-    override var buf: ByteBuffer
+    override var buf: ByteBuffer? = null
+    override val size: Int = 4
     /**
      * Packet ID (PID): 16 bits
      *  The PID field is used to specify a lost packet.  The PID field
@@ -64,8 +68,15 @@ class Nack : FeedbackControlInformation {
 //    private var lostPacketBitmask: Int by Delegates.notNull()
 
     var missingSeqNums: List<Int>
-        get() {
-            val lostPacketBitmask = Nack.getLostPacketBitmask(buf)
+
+    companion object {
+        fun getPacketId(buf: ByteBuffer): Int = buf.getShort(0).toUInt()
+        fun setPacketId(buf: ByteBuffer, packetId: Int) {
+            buf.putShort(0, packetId.toShort())
+        }
+
+        fun getLostPacketBitmask(buf: ByteBuffer, packetId: Int): List<Int> {
+            val lostPacketBitmask = buf.getShort(2)
             val bitSet = BitSet.valueOf(longArrayOf(lostPacketBitmask.toLong()))
             var i = bitSet.nextSetBit(0)
             val missingSeqNums = mutableListOf<Int>()
@@ -74,40 +85,42 @@ class Nack : FeedbackControlInformation {
                 i = bitSet.nextSetBit(i + 1)
             }
             return missingSeqNums
+
         }
-        set(missingSeqNums) {
+
+        fun setLostPacketBitmask(buf: ByteBuffer, packetId: Int, missingSeqNums: List<Int>) {
             val bitMask: Short = 0
             val bitSet = BitSet.valueOf(longArrayOf(bitMask.toLong()))
             missingSeqNums.forEach {
                 val index = it - packetId
                 bitSet.set(index)
             }
-            Nack.setLostPacketBitmask(buf, bitMask)
+            buf.putShort(2, bitMask)
         }
-
-    companion object {
-        fun fromBuffer(buf: ByteBuffer): Nack = Nack(buf)
-
-        fun getPacketId(buf: ByteBuffer): Int = buf.getShort(0).toUInt()
-        fun setPacketId(buf: ByteBuffer, packetId: Int) {
-            buf.putShort(0, packetId.toShort())
-        }
-
-        fun getLostPacketBitmask(buf: ByteBuffer): Short = buf.getShort(2)
-        fun setLostPacketBitmask(buf: ByteBuffer, bitmask: Short) = buf.putShort(2, bitmask)
     }
 
     constructor(buf: ByteBuffer) {
         this.buf = buf
+        this.packetId = getPacketId(buf)
+        this.missingSeqNums = getLostPacketBitmask(buf, packetId)
     }
 
     constructor(
         packetId: Int = 0,
         missingSeqNums: List<Int> = listOf()
     ) {
-        this.buf = ByteBuffer.allocate(4)
         this.packetId = packetId
         this.missingSeqNums = missingSeqNums
+    }
+
+    override fun getBuffer(): ByteBuffer {
+        if (this.buf == null) {
+            this.buf = ByteBuffer.allocate(4)
+        }
+        setPacketId(buf!!, packetId)
+        setLostPacketBitmask(buf!!, packetId, missingSeqNums)
+
+        return buf!!
     }
 }
 
@@ -137,83 +150,72 @@ class Nack : FeedbackControlInformation {
 // generically?  Should it make it abstract?  Should it ignore it
 // altogether?
 class RtcpFbPacket : RtcpPacket {
-    override var buf: ByteBuffer
+    private var buf: ByteBuffer? = null
     override var header: RtcpHeader
-        get() = RtcpHeader(buf)
-        set(header) {
-            header.serializeToBuffer(this.buf)
-        }
     var mediaSourceSsrc: Long
-        get() = RtcpFbPacket.getMediaSourceSsrc(buf)
-        set(mediaSourceSsrc) = RtcpFbPacket.setMediaSourceSsrc(buf, mediaSourceSsrc)
-
     var feedbackControlInformation: FeedbackControlInformation
-        get() {
-            val payloadType = header.payloadType
-            val fmt = header.reportCount
-            when (payloadType) {
-                205 -> {
-
-                }
-                206 -> TODO()
-
-            }
-        }
+    override val size: Int
+        get() = RtcpHeader.SIZE_BYTES + 4 /* mediaSourceSsrc */ + feedbackControlInformation.size
 
     companion object {
         fun getMediaSourceSsrc(buf: ByteBuffer): Long = buf.getInt(8).toULong()
         fun setMediaSourceSsrc(buf: ByteBuffer, mediaSourceSsrc: Long) { buf.putInt(8, mediaSourceSsrc.toUInt()) }
 
-        fun getFeedbackControlInformation(buf: ByteBuffer): FeedbackControlInformation {
-
+        /**
+         * Note that the buffer passed to these two methods, unlike in most other helpers, must already
+         * begin at the start of the FCI portion of the header.
+         */
+        fun getFeedbackControlInformation(fciBuf: ByteBuffer, payloadType: Int, fmt: Int): FeedbackControlInformation {
+            return when (payloadType) {
+                205 -> {
+                    when (fmt) {
+                        1 -> Nack(fciBuf)
+                        15 -> TODO("tcc https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1")
+                        else -> throw Exception("Unrecognized RTCPFB format: $fmt")
+                    }
+                }
+                206 -> {
+                    when (fmt) {
+                        1 -> TODO("pli")
+                        2 -> TODO("sli")
+                        3 -> TODO("rpsi")
+                        4 -> TODO("fir")
+                        15 -> TODO("afb")
+                        else -> throw Exception("Unrecognized RTCPFB format: pt 206, fmt $fmt")
+                    }
+                }
+                else -> throw Exception("Unrecognized RTCPFB pt: $payloadType")
+            }
         }
-//        fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpFbPacket {
-//            val fmt = header.reportCount
-//            return RtcpFbPacket().apply {
-//                this.buf = buf.slice()
-//                this.header = header
-//                mediaSourceSsrc = buf.getInt().toULong()
-//                if (header.payloadType == 205) {
-//                    when (fmt) {
-//                        1 -> feedbackControlInformation = Nack.fromBuffer(buf)
-//                        15 -> TODO("tcc https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1")
-//                        else -> throw Exception("Unrecognized RTCPFB format: $fmt")
-//                    }
-//                } else if (header.payloadType == 206) {
-//                    println("BRIAN: got rtcfb packet with fmt $fmt")
-//                    when (fmt) {
-//                        1 -> TODO("pli")
-//                        2 -> TODO("sli")
-//                        3 -> TODO("rpsi")
-//                        4 -> TODO("fir")
-//                        15 -> TODO("afb")
-//                    }
-//                }
-//            }
-//        }
     }
 
     constructor(buf: ByteBuffer) : super() {
         this.buf = buf
+        this.header = RtcpHeader(buf)
+        this.mediaSourceSsrc = getMediaSourceSsrc(buf)
+        this.feedbackControlInformation = getFeedbackControlInformation(buf.subBuffer(12), header.payloadType, header.reportCount)
     }
 
-    constructor(fmt: Int, pt: Int, senderSsrc: Long, mediaSsrc: Long) : super() {
-        this.buf = ByteBuffer.allocate(100) // TODO: size
-        val header = RtcpHeader(
-            reportCount = fmt,
-            payloadType = pt,
-            senderSsrc = senderSsrc
-        )
-        header.serializeToBuffer(buf)
-
-        this.mediaSourceSsrc = mediaSsrc
+    constructor(
+        header: RtcpHeader = RtcpHeader(),
+        mediaSourceSsrc: Long = 0,
+        feedbackControlInformation: FeedbackControlInformation
+    ) : super() {
+        this.header = header
+        this.mediaSourceSsrc = mediaSourceSsrc
+        this.feedbackControlInformation = feedbackControlInformation
     }
 
-    override val size: Int
-        get() = (header.length + 1) * 4
+    override fun getBuffer(): ByteBuffer {
+        if (this.buf == null) {
+            this.buf = ByteBuffer.allocate(header.size + 4 + feedbackControlInformation.size)
+        }
+        this.buf!!.put(header.getBuffer())
+        this.buf!!.putInt(mediaSourceSsrc.toUInt())
+        this.buf!!.put(feedbackControlInformation.getBuffer())
 
-    override fun serializeToBuffer(buf: ByteBuffer) {
-        header.serializeToBuffer(buf)
+        return this.buf!!
     }
+
 
 }

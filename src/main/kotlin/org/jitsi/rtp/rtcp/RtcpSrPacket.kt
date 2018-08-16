@@ -15,11 +15,11 @@
  */
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.extensions.toHex
 import toUInt
-import toUlong
 import unsigned.toULong
 import java.nio.ByteBuffer
-import kotlin.properties.Delegates
 
 /**
  *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
@@ -37,7 +37,7 @@ import kotlin.properties.Delegates
  * RTCP SenderInfo block
  */
 class SenderInfo {
-    private var buf: ByteBuffer
+    private var buf: ByteBuffer? = null
     /**
      * NTP timestamp: 64 bits
      *     Indicates the wallclock time (see Section 4) when this report was
@@ -61,8 +61,6 @@ class SenderInfo {
      *     timestamp to zero.
      */
     var ntpTimestamp: Long
-        get() = SenderInfo.getNtpTimestamp(buf)
-        set(ntpTimestamp) = SenderInfo.setNtpTimestamp(buf, ntpTimestamp)
 
     /**
      * RTP timestamp: 32 bits
@@ -80,8 +78,6 @@ class SenderInfo {
      *     sampling instant.
      */
     var rtpTimestamp: Long
-        get() = SenderInfo.getRtpTimestamp(buf)
-        set(rtpTimestamp) = SenderInfo.setRtpTimestamp(buf, rtpTimestamp)
     /**
      * sender's packet count: 32 bits
      *     The total number of RTP data packets transmitted by the sender
@@ -90,8 +86,6 @@ class SenderInfo {
      *     SSRC identifier.
      */
     var sendersPacketCount: Long
-        get() = SenderInfo.getSendersPacketCount(buf)
-        set(sendersPacketCount) = SenderInfo.setSendersPacketCount(buf, sendersPacketCount)
     /**
      * sender's octet count: 32 bits
      *     The total number of payload octets (i.e., not including header or
@@ -102,8 +96,6 @@ class SenderInfo {
      *     payload data rate.
      */
     var sendersOctetCount: Long
-        get() = SenderInfo.getSendersOctetCount(buf)
-        set(sendersOctetCount) = SenderInfo.setSendersOctetCount(buf, sendersOctetCount)
 
     companion object {
         const val SIZE_BYTES = 20
@@ -118,15 +110,14 @@ class SenderInfo {
 
         fun getSendersOctetCount(buf: ByteBuffer): Long = buf.getInt(16).toULong()
         fun setSendersOctetCount(buf: ByteBuffer, sendersOctetCount: Long) { buf.putInt(16, sendersOctetCount.toUInt()) }
-
-        fun fromBuffer(buf: ByteBuffer): SenderInfo = SenderInfo(buf)
-        fun fromValues(receiver: SenderInfo.() -> Unit): SenderInfo {
-            return SenderInfo().apply(receiver)
-        }
     }
 
     constructor(buf: ByteBuffer) {
         this.buf = buf.duplicate()
+        this.ntpTimestamp = SenderInfo.getNtpTimestamp(buf)
+        this.rtpTimestamp = SenderInfo.getRtpTimestamp(buf)
+        this.sendersPacketCount = SenderInfo.getSendersPacketCount(buf)
+        this.sendersOctetCount = SenderInfo.getSendersOctetCount(buf)
     }
 
     constructor(
@@ -142,7 +133,17 @@ class SenderInfo {
         this.sendersOctetCount = sendersOctetCount
     }
 
-    fun serializeToBuffer(buf: ByteBuffer) = buf.put(this.buf)
+    fun getBuffer(): ByteBuffer {
+        if (buf == null) {
+            buf = ByteBuffer.allocate(SenderInfo.SIZE_BYTES)
+        }
+        SenderInfo.setNtpTimestamp(buf!!, ntpTimestamp)
+        SenderInfo.setRtpTimestamp(buf!!, rtpTimestamp)
+        SenderInfo.setSendersPacketCount(buf!!, sendersPacketCount)
+        SenderInfo.setSendersOctetCount(buf!!, sendersOctetCount)
+
+        return buf!!
+    }
 }
 
 /**
@@ -184,56 +185,53 @@ class SenderInfo {
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
 class RtcpSrPacket : RtcpPacket {
-    override var buf: ByteBuffer
+    private var buf: ByteBuffer? = null
     override var header: RtcpHeader
-        get() = RtcpHeader(buf)
-        set(header) {
-            header.serializeToBuffer(this.buf)
-        }
     var senderInfo: SenderInfo
-        get() = SenderInfo(buf.duplicate().position(8) as ByteBuffer)
-        set(senderInfo) {
-            senderInfo.serializeToBuffer(buf.duplicate().position(8) as ByteBuffer)
-        }
-    var reportBlocks: List<RtcpReportBlock> = listOf()
+    var reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
     override var size: Int = 0
         get() = RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
 
-    companion object Create {
-        fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpSrPacket {
-            return RtcpSrPacket().apply {
-                this.buf = buf.slice()
-                this.header = header
-                senderInfo = SenderInfo.fromBuffer(buf)
-                reportBlocks = (0 until header.reportCount).map {
-                    RtcpReportBlock.fromBuffer(buf)
-                }
-            }
-        }
-        fun fromValues(receiver: RtcpSrPacket.() -> Unit): RtcpSrPacket {
-            val packet = RtcpSrPacket()
-            packet.receiver()
-            return packet
-        }
+    companion object {
+        const val PT: Int = 200
     }
 
-    constructor(buf: ByteBuffer) : super() {
-        this.buf = buf
+    constructor(buf: ByteBuffer) {
+        this.header = RtcpHeader(buf)
+        this.senderInfo = SenderInfo(buf.subBuffer(RtcpHeader.SIZE_BYTES, SenderInfo.SIZE_BYTES))
+        val reportBlockStartPos = RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES
+        repeat (header.reportCount) {
+            val reportBlock =
+                RtcpReportBlock(
+                    buf.duplicate()
+                        .position(reportBlockStartPos + (it * RtcpReportBlock.SIZE_BYTES))
+                            as ByteBuffer)
+            reportBlocks.add(reportBlock)
+        }
+        // Do this last so we know the size
+        this.buf = buf.subBuffer(0, this.size)
     }
 
     constructor(
-        header: RtcpHeader = RtcpHeader()
-        //, senderInfo = ... etc
+        header: RtcpHeader = RtcpHeader(),
+        senderInfo: SenderInfo = SenderInfo(),
+        reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
     ) {
-        this.buf = ByteBuffer.allocate(100)//TODO: size
         this.header = header
+        this.senderInfo = senderInfo
+        this.reportBlocks = reportBlocks
     }
 
-    override fun serializeToBuffer(buf: ByteBuffer) {
-        header.serializeToBuffer(buf)
-        buf.apply {
-            senderInfo.serializeToBuffer(buf)
-            reportBlocks.forEach { it.serializeToBuffer(buf) }
+    override fun getBuffer(): ByteBuffer {
+        if (this.buf == null) {
+            this.buf = ByteBuffer.allocate(this.size)
         }
+        this.buf!!.put(header.getBuffer())
+        this.buf!!.put(senderInfo.getBuffer())
+        reportBlocks.forEach {
+            this.buf!!.put(it.getBuffer())
+        }
+
+        return this.buf!!
     }
 }

@@ -34,6 +34,12 @@ fun ByteBuffer.put3Bytes(value: Int) {
     this.put((value and 0x000000FF).toByte())
 }
 
+fun ByteBuffer.put3Bytes(index: Int, value: Int) {
+    this.put(index, ((value and 0x00FF0000) ushr 16).toByte())
+    this.put(index + 1, ((value and 0x0000FF00) ushr 8).toByte())
+    this.put(index + 2, (value and 0x000000FF).toByte())
+}
+
 /**
  * Reads the next 3 bytes into the right-most
  * 3 bytes of an Int
@@ -43,6 +49,14 @@ fun ByteBuffer.get3Bytes(): Int {
     val byte2 = get().toInt() shl 8
     val byte3 = get().toInt() and 0xFF
     return byte1 or byte2 or byte3
+}
+
+fun ByteBuffer.get3Bytes(index: Int): Int {
+    val byte1 = get(index).toInt() shl 16
+    val byte2 = get(index + 1).toInt() shl 8
+    val byte3 = get(index + 2).toInt() and 0xFF
+    return byte1 or byte2 or byte3
+
 }
 
 /**
@@ -94,4 +108,22 @@ fun ByteBuffer.toHex() : String {
     position(prevPosition)
 
     return result.toString()
+}
+
+/**
+ * Returns a newly constructed [ByteBuffer] whose position 0 will
+ * start at [startPosition] in the current buffer and whose limit
+ * will be [size]
+ */
+fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer {
+    return (duplicate().position(startPosition) as ByteBuffer).slice().limit(size) as ByteBuffer
+}
+
+/**
+ * Returns a newly constructed [ByteBuffer] whose position 0 will
+ * start at [startPosition] in the current buffer and whose limit
+ * will be the end of the original buffer
+ */
+fun ByteBuffer.subBuffer(startPosition: Int): ByteBuffer {
+    return (duplicate().position(startPosition) as ByteBuffer).slice()
 }

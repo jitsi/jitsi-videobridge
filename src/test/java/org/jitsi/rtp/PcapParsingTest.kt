@@ -29,7 +29,7 @@ internal class PcapParsingTest : ShouldSpec() {
             if (pkt.hasProtocol(Protocol.UDP)) {
                 val udpPacket = pkt.getPacket(Protocol.UDP) as UDPPacket
                 val buf = ByteBuffer.wrap(udpPacket.payload.array)
-                val p = RtpPacket.fromBuffer(buf)
+                val p = RtpPacket(buf)
                 println(p)
             }
 

@@ -15,13 +15,20 @@
  */
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.util.BitBuffer
+import org.jitsi.rtp.extensions.getBitAsBool
+import org.jitsi.rtp.extensions.getBits
+import org.jitsi.rtp.extensions.putBitAsBoolean
+import org.jitsi.rtp.extensions.putBits
+import org.jitsi.rtp.extensions.subBuffer
 import toUInt
+import unsigned.toUInt
+import unsigned.toULong
+import unsigned.toUShort
 import java.nio.ByteBuffer
 
 // https://tools.ietf.org/html/rfc3550#section-6.1
-// 0                   1                   2                   3
-// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |V=2|P|    RC   |   PT=SR=200   |             length            |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -29,34 +36,23 @@ import java.nio.ByteBuffer
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 
 open class RtcpHeader {
-    private val buf: ByteBuffer
+    private var buf: ByteBuffer? = null
+    val size: Int = RtcpHeader.SIZE_BYTES
     var version: Int
-        get() = RtcpHeaderUtils.getVersion(buf)
-        set(version) = RtcpHeaderUtils.setVersion(buf, version)
-
     var hasPadding: Boolean
-        get() = RtcpHeaderUtils.hasPadding(buf)
-        set(hasPadding) = RtcpHeaderUtils.setPadding(buf, hasPadding)
-
     var reportCount: Int
-        get() = RtcpHeaderUtils.getReportCount(buf)
-        set(reportCount) = RtcpHeaderUtils.setReportCount(buf, reportCount)
-
     var payloadType: Int
-        get() = RtcpHeaderUtils.getPayloadType(buf)
-        set(payloadType) = RtcpHeaderUtils.setPayloadType(buf, payloadType)
-
     var length: Int
-        get() = RtcpHeaderUtils.getLength(buf)
-        set(length) = RtcpHeaderUtils.setLength(buf, length)
-
     var senderSsrc: Long
-        get() = RtcpHeaderUtils.getSenderSsrc(buf)
-        set(senderSsrc) = RtcpHeaderUtils.setSenderSsrc(buf, senderSsrc)
 
     constructor(buf: ByteBuffer) : super() {
-        //TODO duplicate it?
-        this.buf = buf
+        this.buf = buf.subBuffer(0, RtcpHeader.SIZE_BYTES)
+        this.version = RtcpHeader.getVersion(buf)
+        this.hasPadding = RtcpHeader.hasPadding(buf)
+        this.reportCount = RtcpHeader.getReportCount(buf)
+        this.payloadType = RtcpHeader.getPayloadType(buf)
+        this.length = RtcpHeader.getLength(buf)
+        this.senderSsrc = RtcpHeader.getSenderSsrc(buf)
     }
 
     constructor(
@@ -67,7 +63,6 @@ open class RtcpHeader {
         length: Int = 0,
         senderSsrc: Long = 0
     ) : super() {
-        this.buf = ByteBuffer.allocate(RtcpHeader.SIZE_BYTES)
         this.version = version
         this.hasPadding = hasPadding
         this.reportCount = reportCount
@@ -76,15 +71,48 @@ open class RtcpHeader {
         this.senderSsrc = senderSsrc
     }
 
-    companion object {
-        const val SIZE_BYTES = 8
-//        fun fromBuffer(buf: ByteBuffer): RtcpHeader = BitBufferRtcpHeader.fromBuffer(buf)
-//        fun fromValues(receiver: RtcpHeader.() -> Unit): RtcpHeader = BitBufferRtcpHeader.fromValues(receiver)
+    fun getBuffer(): ByteBuffer {
+        if (this.buf == null) {
+            this.buf = ByteBuffer.allocate(RtcpHeader.SIZE_BYTES)
+        }
+        //TODO: in the future we can use a dirty flag to check
+        // if/which we need to sync
+        RtcpHeader.setVersion(buf!!, version)
+        RtcpHeader.setPadding(buf!!, hasPadding)
+        RtcpHeader.setReportCount(buf!!, reportCount)
+        RtcpHeader.setPayloadType(buf!!, payloadType)
+        RtcpHeader.setLength(buf!!, length)
+        RtcpHeader.setSenderSsrc(buf!!, senderSsrc)
+
+        //TODO: return as readonly?
+        return this.buf!!
     }
 
+    companion object {
+        const val SIZE_BYTES = 8
+        fun getVersion(buf: ByteBuffer): Int = buf.get(0).getBits(0, 2).toUInt()
+        fun setVersion(buf: ByteBuffer, version: Int) = buf.putBits(0, 0, version.toByte(), 2)
 
-    fun serializeToBuffer(buf: ByteBuffer) {
-        buf.put(this.buf)
+        fun hasPadding(buf: ByteBuffer): Boolean = buf.get(0).getBitAsBool(2)
+        fun setPadding(buf: ByteBuffer, hasPadding: Boolean) = buf.putBitAsBoolean(0, 3, hasPadding)
+
+        fun getReportCount(buf: ByteBuffer): Int = buf.get(0).getBits(3, 5).toUInt()
+        fun setReportCount(buf: ByteBuffer, reportCount: Int) = buf.putBits(0, 3, reportCount.toByte(), 5)
+
+        fun getPayloadType(buf: ByteBuffer): Int = buf.get(1).toUInt()
+        fun setPayloadType(buf: ByteBuffer, payloadType: Int) {
+            buf.put(1, payloadType.toByte())
+        }
+
+        fun getLength(buf: ByteBuffer): Int = buf.getShort(2).toUInt()
+        fun setLength(buf: ByteBuffer, length: Int) {
+            buf.putShort(2, length.toUShort())
+        }
+
+        fun getSenderSsrc(buf: ByteBuffer): Long = buf.getInt(3).toULong()
+        fun setSenderSsrc(buf: ByteBuffer, senderSsrc: Long) {
+            buf.putInt(3, senderSsrc.toUInt())
+        }
     }
 
     override fun toString(): String {

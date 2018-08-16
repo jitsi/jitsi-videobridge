@@ -31,7 +31,7 @@ internal class RtcpReportBlockTest : ShouldSpec() {
 
         "creation" {
             "from a buffer" {
-                val reportBlock = RtcpReportBlock.fromBuffer(reportBlockData)
+                val reportBlock = RtcpReportBlock(reportBlockData)
                 should("read the values correctly") {
                     reportBlock.ssrc shouldBe expectedSsrc
                     reportBlock.fractionLost shouldBe expectedFractionLost
@@ -44,16 +44,16 @@ internal class RtcpReportBlockTest : ShouldSpec() {
                 }
             }
             "from values" {
-                val reportBlock = RtcpReportBlock.fromValues {
-                    ssrc = expectedSsrc
-                    fractionLost = expectedFractionLost
-                    cumulativePacketsLost = expectedCumulativeLost
-                    seqNumCycles = expectedSeqNumCycles
-                    seqNum = expectedSeqNum
-                    interarrivalJitter = expectedInterarrivalJitter
-                    lastSrTimestamp = expectedLastSrTimestamp
+                val reportBlock = RtcpReportBlock(
+                    ssrc = expectedSsrc,
+                    fractionLost = expectedFractionLost,
+                    cumulativePacketsLost = expectedCumulativeLost,
+                    seqNumCycles = expectedSeqNumCycles,
+                    seqNum = expectedSeqNum,
+                    interarrivalJitter = expectedInterarrivalJitter,
+                    lastSrTimestamp = expectedLastSrTimestamp,
                     delaySinceLastSr = expectedDelaySinceLastSr
-                }
+                )
                 should("set the values correctly") {
                     reportBlock.ssrc shouldBe expectedSsrc
                     reportBlock.fractionLost shouldBe expectedFractionLost
@@ -67,18 +67,17 @@ internal class RtcpReportBlockTest : ShouldSpec() {
             }
         }
         "serialization" {
-            val reportBlock = RtcpReportBlock.fromValues {
-                ssrc = expectedSsrc
-                fractionLost = expectedFractionLost
-                cumulativePacketsLost = expectedCumulativeLost
-                seqNumCycles = expectedSeqNumCycles
-                seqNum = expectedSeqNum
-                interarrivalJitter = expectedInterarrivalJitter
-                lastSrTimestamp = expectedLastSrTimestamp
+            val reportBlock = RtcpReportBlock(
+                ssrc = expectedSsrc,
+                fractionLost = expectedFractionLost,
+                cumulativePacketsLost = expectedCumulativeLost,
+                seqNumCycles = expectedSeqNumCycles,
+                seqNum = expectedSeqNum,
+                interarrivalJitter = expectedInterarrivalJitter,
+                lastSrTimestamp = expectedLastSrTimestamp,
                 delaySinceLastSr = expectedDelaySinceLastSr
-            }
-            val newBuf = ByteBuffer.allocate(24)
-            reportBlock.serializeToBuffer(newBuf)
+                )
+            val newBuf = reportBlock.getBuffer()
             should("write the values correctly") {
                 println(newBuf.toHex())
                 println(reportBlockData.toHex())

@@ -32,6 +32,7 @@ fun Short.isTwoByteHeaderType(): Boolean = this.compareTo(RtpTwoByteHeaderExtens
 
 class RtpHeaderExtensions {
     companion object {
+        const val GENERIC_HEADER_SIZE_BYTES = 4
         // Buf position should be at the start of the extension block.  This method assumes
         // there are extensions present (i.e. the X bit was set)
         fun parse(buf: ByteBuffer): MutableMap<Int, RtpHeaderExtension> {
@@ -39,10 +40,7 @@ class RtpHeaderExtensions {
             val headerExtensionParser = when {
                 headerExtensionType.isOneByteHeaderType() -> ::RtpOneByteHeaderExtension
                 headerExtensionType.isTwoByteHeaderType() -> ::RtpTwoByteHeaderExtension
-                else -> run {
-                    println("unrecognized extension type: ${headerExtensionType.toString(16)}")
-                    TODO()
-                }
+                else -> throw Exception("unrecognized extension type: ${headerExtensionType.toString(16)}")
             }
             val lengthInWords = buf.getShort()
             val extensionStartPosition = buf.position()

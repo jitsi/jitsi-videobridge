@@ -48,36 +48,49 @@ import kotlin.properties.Delegates
  *        |                  profile-specific extensions                  |
  *        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
-class RtcpRrPacket : RtcpPacket() {
-    override var buf: ByteBuffer by Delegates.notNull()
-    override var header: RtcpHeader by Delegates.notNull()
-    var reportBlocks: List<RtcpReportBlock> = listOf()
-    override var size: Int = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
+class RtcpRrPacket : RtcpPacket {
+    private var buf: ByteBuffer? = null
+    override var header: RtcpHeader
+    var reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
+    override val size: Int
         get() = RtcpHeader.SIZE_BYTES + reportBlocks.size * RtcpReportBlock.SIZE_BYTES
 
-    companion object Create {
-        val PT: Int = 201
-        fun fromBuffer(header: RtcpHeader, buf: ByteBuffer): RtcpRrPacket {
-            return RtcpRrPacket().apply {
-                this.buf = buf.slice()
-                this.header = header
-                reportBlocks = (0 until header.reportCount).map {
-                    RtcpReportBlock.fromBuffer(buf)
-                }
-            }
-        }
-        fun fromValues(receiver: RtcpRrPacket.() -> Unit): RtcpRrPacket {
-            val packet = RtcpRrPacket()
-            packet.receiver()
-            return packet
+    companion object {
+        const val PT: Int = 201
+    }
+
+    constructor(buf: ByteBuffer) {
+        this.buf = buf.duplicate()
+        this.header = RtcpHeader(buf)
+        val reportBlockStartPos = RtcpHeader.SIZE_BYTES
+        repeat (header.reportCount) {
+            val reportBlock =
+                RtcpReportBlock(
+                    buf.duplicate()
+                        .position(reportBlockStartPos + (it * RtcpReportBlock.SIZE_BYTES))
+                            as ByteBuffer)
+            reportBlocks.add(reportBlock)
         }
     }
 
-    override fun serializeToBuffer(buf: ByteBuffer) {
-        header.serializeToBuffer(buf)
-        buf.apply {
-            reportBlocks.forEach { it.serializeToBuffer(buf) }
+    constructor(
+        header: RtcpHeader = RtcpHeader(),
+        reportBlocks: MutableList<RtcpReportBlock> = mutableListOf()
+    ) {
+        this.header = header
+        this.reportBlocks = reportBlocks
+    }
+
+    override fun getBuffer(): ByteBuffer {
+        if (this.buf == null) {
+            this.buf = ByteBuffer.allocate(this.size)
         }
+        this.buf!!.put(header.getBuffer())
+        reportBlocks.forEach {
+            this.buf!!.put(it.getBuffer())
+        }
+
+        return this.buf!!
     }
 
     override fun toString(): String {
