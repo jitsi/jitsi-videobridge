@@ -37,34 +37,34 @@ class PacketGenerator(val ssrc: Long) {
         }
         return if (packetsSinceRtcp < 9 || true) {
             packetsSinceRtcp++
-            RtpPacket.fromValues {
-                header = RtpHeader.fromValues {
-                    version = 2
-                    hasPadding = false
-                    hasExtension = false
-                    csrcCount = 3
-                    marker = true
-                    payloadType = 96
-                    sequenceNumber = currSequenceNumber
-                    timestamp = 98765
-                    ssrc = this@PacketGenerator.ssrc
-                    csrcs = listOf(1, 2, 3)
+            RtpPacket(
+                header = RtpHeader(
+                    version = 2,
+                    hasPadding = false,
+                    hasExtension = false,
+                    csrcCount = 3,
+                    marker = true,
+                    payloadType = 96,
+                    sequenceNumber = currSequenceNumber,
+                    timestamp = 98765,
+                    ssrc = this@PacketGenerator.ssrc,
+                    csrcs = mutableListOf(1, 2, 3),
                     extensions = mutableMapOf()
-                }
-                payload = BufferView(ByteArray(50), 0, 50)
-            }
+                ),
+                payload = ByteBuffer.wrap(ByteArray(50), 0, 50)
+            )
         } else {
             packetsSinceRtcp = 0
-            RtcpSrPacket.fromValues {
-                header = RtcpHeader.fromValues {
-                    version = 2
-                    hasPadding = false
-                    reportCount = 2
-                    payloadType = 200
-                    length = 42
+            RtcpSrPacket(
+                header = RtcpHeader(
+                    version = 2,
+                    hasPadding = false,
+                    reportCount = 2,
+                    payloadType = 200,
+                    length = 42,
                     senderSsrc = this@PacketGenerator.ssrc
-                }
-            }
+                )
+            )
         }
     }
 }

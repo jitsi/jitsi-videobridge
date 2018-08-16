@@ -22,11 +22,13 @@ import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
+import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.incoming.DtlsReceiverModule
 import org.jitsi.nlj.transform.module.outgoing.DtlsSenderModule
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpPacket
 import unsigned.toUInt
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -72,6 +74,7 @@ class Transceiver(
                 dtlsStack.getChosenSrtpProtectionProfile(), tlsContext, true
             )
             rtpReceiver.setSrtpTransformer(srtpTransformer)
+            rtpReceiver.setSrtcpTransformer(srtcpTransformer)
             rtpSender.setSrtpTransformer(srtpTransformer)
         }
 
@@ -80,7 +83,7 @@ class Transceiver(
             demux {
                 packetPath {
                     predicate = { packet ->
-                        val byte = (packet.buf.get(0) and 0xFF.toByte()).toUInt()
+                        val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
                         when (byte) {
                             in 20..63 -> true
                             else -> false
@@ -90,7 +93,7 @@ class Transceiver(
                         name ("DTLS chain")
                         addModule(object : Module("DTLS parser") {
                             override fun doProcessPackets(p: List<Packet>) {
-                                next(p.map(Packet::buf).map(::DtlsProtocolPacket))
+                                next(p.map(Packet::getBuffer).map(::DtlsProtocolPacket))
                             }
                         })
                         addModule(dtlsReceiver)
@@ -98,7 +101,7 @@ class Transceiver(
                 }
                 packetPath {
                     predicate = { packet ->
-                        val byte = (packet.buf.get(0) and 0xFF.toByte()).toUInt()
+                        val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
                         when (byte) {
                             in 20..63 -> false
                             else -> true
@@ -145,6 +148,10 @@ class Transceiver(
     }
 
     fun sendPackets(p: List<Packet>) {
+        println("BRIAN: transceiver sending ${p.size} packets")
+        p.forEachAs<RtpPacket> {
+            println("BRIAN: transceiver sending packet ${it.header}")
+        }
         rtpSender.sendPackets(p)
     }
 

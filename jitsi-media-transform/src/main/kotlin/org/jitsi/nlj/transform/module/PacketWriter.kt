@@ -63,13 +63,11 @@ class PacketWriter(filePath: String = "/tmp/${System.currentTimeMillis()}.rtpdum
             if (sizeWritten != 4) {
                 println("BRIAN: DID NOT WRITE ALL SIZE DATA: expected 4, wrote $sizeWritten")
             }
-            it.buf.rewind()
-            it.buf.limit(it.size)
 //            println("BRIAN: writing size ${it.size} and a buffer with position ${it.buf.position()} and limit ${it.buf.limit()}")
 //            println("BRIAN: file $path writing buf to position ${fileWriter.position()}")
-            val written = fileWriter.write(it.buf)
-            if (written != it.buf.limit()) {
-                println("BRIAN: DID NOT WRITE ALL DATA: expected ${it.buf.limit()}, wrote $written")
+            val written = fileWriter.write(it.getBuffer())
+            if (written != it.getBuffer().limit()) {
+                println("BRIAN: DID NOT WRITE ALL DATA: expected ${it.getBuffer().limit()}, wrote $written")
             }
             intBuffer.rewind()
         }
@@ -95,9 +93,9 @@ fun main(args: Array<String>) {
 //        println("Reading packet from position ${reader.position()}")
         reader.read(packetBuf)
         packetBuf.flip()
-        val rtpPacket = RtpPacket.fromBuffer(packetBuf)
+        val rtpPacket = RtpPacket(packetBuf)
         println("Read packet ${rtpPacket.header.ssrc} ${rtpPacket.header.sequenceNumber} ${rtpPacket.header.timestamp}")
-        val vp8PayloadDescriptor = Vp8PayloadDescriptor(rtpPacket.payload)
+        val vp8PayloadDescriptor = Vp8PayloadDescriptor(BufferView(rtpPacket.payload.array(), rtpPacket.payload.arrayOffset(), rtpPacket.payload.array().size))
         println("parsed vp8 payload desc: $vp8PayloadDescriptor")
         intBuffer.rewind()
     }

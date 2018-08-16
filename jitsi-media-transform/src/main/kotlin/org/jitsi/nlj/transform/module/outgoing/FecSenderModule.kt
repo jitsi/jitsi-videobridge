@@ -20,22 +20,22 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpPacket
 
-class FecSenderModule : Module("FEC sender") {
-    private var packetCount = 0
-    override fun doProcessPackets(p: List<Packet>) {
-        packetCount += p.size
-        if (false && packetCount % 5 == 0) {
-            // Generate a FEC packet
-            val packet = RtpPacket.fromValues {
-                header = RtpHeader.fromValues {
-                    payloadType = 92
-                    sequenceNumber = packetCount
-                }
-            }
-            next(p + packet)
-        } else {
-            next(p)
-        }
-
-    }
-}
+//class FecSenderModule : Module("FEC sender") {
+//    private var packetCount = 0
+//    override fun doProcessPackets(p: List<Packet>) {
+//        packetCount += p.size
+//        if (false && packetCount % 5 == 0) {
+//            // Generate a FEC packet
+//            val packet = RtpPacket.fromValues {
+//                header = RtpHeader.fromValues {
+//                    payloadType = 92
+//                    sequenceNumber = packetCount
+//                }
+//            }
+//            next(p + packet)
+//        } else {
+//            next(p)
+//        }
+//
+//    }
+//}

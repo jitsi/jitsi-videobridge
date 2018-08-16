@@ -20,13 +20,19 @@ import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.PacketHandler
+import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.getMbps
+import org.jitsi.nlj.transform.module.incoming.SrtcpTransformerWrapperDecrypt
 import org.jitsi.nlj.transform.module.incoming.SrtpTransformerWrapperDecrypt
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
+import org.jitsi.rtp.rtcp.RtcpFbPacket
+import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.util.RtpProtocol
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -41,7 +47,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var running = true
     private val srtpDecryptWrapper = SrtpTransformerWrapperDecrypt()
-    private val srtcpDecryptWrapper = SrtpTransformerWrapperDecrypt()
+    private val srtcpDecryptWrapper = SrtcpTransformerWrapperDecrypt()
 
     override var rtpPacketHandler: PacketHandler = {}
 
@@ -55,17 +61,25 @@ class RtpReceiverImpl @JvmOverloads constructor(
             name("SRTP chain")
             addModule(object : Module("SRTP protocol parser") {
                 override fun doProcessPackets(p: List<Packet>) {
-                    next(p.map(Packet::buf).map(::SrtpProtocolPacket))
+                    next(p.map(Packet::getBuffer).map(::SrtpProtocolPacket))
                 }
             })
             demux {
                 name = "SRTP/SRTCP demuxer"
                 packetPath {
-                    predicate = { pkt -> RtpProtocol.isRtp(pkt.buf) }
+                    predicate = { pkt -> RtpProtocol.isRtp(pkt.getBuffer()) }
                     path = chain {
                         addModule(object : Module("SRTP parser") {
                             override fun doProcessPackets(p: List<Packet>) {
-                                next(p.map(Packet::buf).map(::SrtpPacket))
+                                next(p.map(Packet::getBuffer).map(::SrtpPacket))
+                            }
+                        })
+                        addModule(object : Module("rtp header logger") {
+                            override fun doProcessPackets(p: List<Packet>) {
+                                p.forEachAs<SrtpPacket> {
+                                    println("BRIAN: received encrypted packet ${it.ssrc} ${it.seqNum}")
+                                }
+                                next(p)
                             }
                         })
                         addModule(srtpDecryptWrapper)
@@ -78,6 +92,14 @@ class RtpReceiverImpl @JvmOverloads constructor(
 //                            }
 //                        })
 //                        addModule(PacketWriter())
+                        addModule(object : Module("rtp header logger") {
+                            override fun doProcessPackets(p: List<Packet>) {
+                                p.forEachAs<RtpPacket> {
+                                    println("BRIAN: received decrypted packet ${it.header}")
+                                }
+                                next(p)
+                            }
+                        })
                         addModule(object : Module("packet handler") {
                             override fun doProcessPackets(p: List<Packet>) {
                                 rtpPacketHandler.invoke(p)
@@ -86,12 +108,23 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     }
                 }
                 packetPath {
-                    predicate = { pkt -> RtpProtocol.isRtcp(pkt.buf) }
+                    predicate = { pkt -> RtpProtocol.isRtcp(pkt.getBuffer()) }
                     path = chain {
                         addModule(object : Module("SRTCP parser") {
                             override fun doProcessPackets(p: List<Packet>) {
                                 println("BRIAN: got srtcp")
-                                next(p.map(Packet::buf).map(::SrtcpPacket))
+                                next(p.map(Packet::getBuffer).map(::SrtcpPacket))
+                            }
+                        })
+                        addModule(srtcpDecryptWrapper)
+                        addModule(object : Module("RTCP Handler") {
+                            override fun doProcessPackets(p: List<Packet>) {
+                                p.forEachAs<RtcpPacket> {
+                                    println("BRIAN: got rtcp of type ${it::class}")
+                                    println("BRIAN: rtcp packet:\n$it")
+
+                                    RtcpFbPacket
+                                }
                             }
                         })
                     }
@@ -155,6 +188,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
         srtpDecryptWrapper.srtpTransformer = srtpTransformer
     }
     override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
-        srtcpDecryptWrapper.srtpTransformer = srtcpTransformer
+        srtcpDecryptWrapper.srtcpTransformer = srtcpTransformer
     }
 }
