@@ -1353,20 +1353,20 @@ public class Conference
 
                         ((IceDtlsTransportManager)newTransportManager).transceiver
                                 .getRtpReceiver().setRtpPacketHandler((pkts) -> {
-                            System.out.println("BRIAN: in rtp handler for receiver " + channelBundleId);
-                            pkts.forEach(pkt -> {
-                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
-                            });
+//                            System.out.println("BRIAN: in rtp handler for receiver " + channelBundleId);
+//                            pkts.forEach(pkt -> {
+//                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
+//                            });
                             ((IceDtlsTransportManager)otherTransportManager).transceiver.sendPackets(pkts);
                             return Unit.INSTANCE;
                         });
 
                         ((IceDtlsTransportManager)otherTransportManager).transceiver
                                 .getRtpReceiver().setRtpPacketHandler((pkts) -> {
-                            System.out.println("BRIAN: in rtp handler for receiver " + otherBundleId);
-                            pkts.forEach(pkt -> {
-                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
-                            });
+//                            System.out.println("BRIAN: in rtp handler for receiver " + otherBundleId);
+//                            pkts.forEach(pkt -> {
+//                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
+//                            });
                             ((IceDtlsTransportManager)newTransportManager).transceiver.sendPackets(pkts);
                             return Unit.INSTANCE;
                         });

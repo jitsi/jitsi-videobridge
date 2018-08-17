@@ -44,11 +44,12 @@ import java.util.concurrent.*;
 public class IceDtlsTransportManager
     extends IceUdpTransportManager
 {
+    private static final ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
     private static final Logger logger
             = Logger.getLogger(IceDtlsTransportManager.class);
     private final ExecutorService executor;
     private static final String ICE_STREAM_NAME = "ice-stream-name";
-    public Transceiver transceiver = new Transceiver();
+    public Transceiver transceiver = new Transceiver(transceiverExecutor);
 
     public IceDtlsTransportManager(Conference conference)
             throws IOException
@@ -198,7 +199,7 @@ public class IceDtlsTransportManager
                 try
                 {
                     Packet p = transceiver.getOutgoingQueue().take();
-                    System.out.println("BRIAN: transceiver writer thread got data");
+//                    System.out.println("BRIAN: transceiver writer thread got data");
                     s.send(new DatagramPacket(p.getBuffer().array(), 0, p.getBuffer().limit()));
                 } catch (InterruptedException | IOException e)
                 {
