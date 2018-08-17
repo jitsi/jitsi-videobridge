@@ -1382,6 +1382,7 @@ public class Videobridge
                     ConfigurationService.class);
 
         videobridgeExpireThread.start(bundleContext);
+        Health.start(this);
 
         defaultProcessingOptions
             = (cfg == null)
@@ -1610,6 +1611,7 @@ public class Videobridge
     void stop(BundleContext bundleContext)
         throws Exception
     {
+        Health.stop(this);
         try
         {
             ConfigurationService cfg
