@@ -2,10 +2,10 @@ package org.jitsi.rtp.rtcp
 
 import io.kotlintest.matchers.beOfType
 import io.kotlintest.matchers.haveSize
-import io.kotlintest.matchers.types.shouldBeTypeOf
 import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import java.nio.ByteBuffer
 
 internal class RtcpIteratorTest : ShouldSpec() {

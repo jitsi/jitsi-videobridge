@@ -16,6 +16,7 @@
 package org.jitsi.rtp.rtcp
 
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import java.nio.ByteBuffer
 
 abstract class RtcpPacket : Packet() {
