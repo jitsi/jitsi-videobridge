@@ -83,7 +83,7 @@ public class ClientConnectionImpl
         {
             common.start(bundleContext);
 
-            mucClientManager = new MucClientManager(XmppCommon.FEATURES, config);
+            mucClientManager = new MucClientManager(XmppCommon.FEATURES);
 
             // These are the IQs that we are interested in.
             mucClientManager.registerIQ(new HealthCheckIQ());
