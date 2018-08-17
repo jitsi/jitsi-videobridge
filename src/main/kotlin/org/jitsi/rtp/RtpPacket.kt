@@ -60,9 +60,6 @@ open class RtpPacket : Packet {
             this.buf = ByteBuffer.allocate(header.size + payload.limit())
         }
         this.buf!!.rewind()
-        println("curr buf position: ${this.buf!!.position()}")
-        println("curr buf size: ${this.buf!!.limit()}")
-        println("header buf size: ${header.getBuffer().limit()}")
         this.buf!!.put(header.getBuffer())
         this.buf!!.put(payload)
 
