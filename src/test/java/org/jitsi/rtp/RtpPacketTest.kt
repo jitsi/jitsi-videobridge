@@ -48,15 +48,31 @@ internal class RtpPacketTest : ShouldSpec() {
         }
 
         "f:from another buf" {
-            val packetData = byteArrayOf(
-                0x90.toByte(), 0xEF.toByte(), 0x71.toByte(), 0xA6.toByte(), 0x62.toByte(), 0xA2.toByte(), 0xD3.toByte(), 0x22.toByte(), 0xDF.toByte(), 0xA4.toByte(), 0x91.toByte(), 0x23.toByte(), 0xBE.toByte(), 0xDE.    toByte(), 0x00.toByte(), 0x01.toByte(), 0x10.toByte(), 0xFF.toByte(), 0x00.toByte(), 0x00.toByte(), 0x78.toByte(), 0x0B.toByte(), 0xE4.toByte(), 0xC1.toByte(), 0x36.toByte(), 0xEC.toByte(), 0xC5.toByte(), 0x8D.toByte(), 0x8C.toByte(), 0x49.toByte(), 0x46.toByte(), 0x99.toByte(), 0x04.toByte(), 0xC5.toByte(), 0xAA.toByte(), 0xED.toByte(), 0x92.toByte(), 0xE7.toByte(), 0x63.toByte(), 0x4A.toByte(),     0x3A.toByte(), 0x18.toByte(), 0x98.toByte(), 0xEE.toByte(), 0x62.toByte(), 0xCB.toByte(), 0x60.toByte(), 0xFF.toByte(), 0x6C.toByte(), 0x1B.toByte(), 0x29.toByte(), 0x00
-
+            // sender ssrc should be 2656546059
+            val packetBuf = byteArrayOf(
+                0x80.toByte(), 0xC8.toByte(), 0x00.toByte(), 0x06.toByte(),
+                0x9E.toByte(), 0x57.toByte(), 0xAD.toByte(), 0x0B.toByte(),
+                0x6F.toByte(), 0x88.toByte(), 0x3D.toByte(), 0x57.toByte(),
+                0xD1.toByte(), 0x1C.toByte(), 0x10.toByte(), 0xF9.toByte(),
+                0x35.toByte(), 0x56.toByte(), 0x9D.toByte(), 0x1E.toByte(),
+                0x28.toByte(), 0x06.toByte(), 0x3F.toByte(), 0x76.toByte(),
+                0x61.toByte(), 0x4E.toByte(), 0xA1.toByte(), 0x00.toByte(),
+                0xB6.toByte(), 0x73.toByte(), 0xFE.toByte(), 0x86.toByte(),
+                0x74.toByte(), 0x47.toByte(), 0x77.toByte(), 0x8A.toByte(),
+                0x92.toByte(), 0x52.toByte(), 0x00.toByte(), 0x36.toByte(),
+                0x13.toByte(), 0x89.toByte(), 0x3A.toByte(), 0x88.toByte(),
+                0xD2.toByte(), 0x3F.toByte(), 0x2F.toByte(), 0x6F.toByte(),
+                0x9D.toByte(), 0x62.toByte(), 0xCD.toByte(), 0x41.toByte(),
+                0xC8.toByte(), 0x59.toByte(), 0x95.toByte(), 0xA4.toByte(),
+                0x80.toByte(), 0x00.toByte(), 0x00.toByte(), 0x01.toByte(),
+                0x28.toByte(), 0xD6.toByte(), 0xFD.toByte(), 0x27.toByte(),
+                0x40.toByte(), 0x88.toByte(), 0xED.toByte(), 0xC0.toByte(),
+                0x40.toByte(), 0xA4.toByte()
             )
-            val outPacket = RtpPacket(ByteBuffer.wrap(packetData, 0, packetData.size))
 
-            println(outPacket.header.extensions)
+            val p = SrtcpPacket(ByteBuffer.wrap(packetBuf))
 
-            println(outPacket.getBuffer().toHex())
+            println(p.header.senderSsrc)
         }
     }
 }

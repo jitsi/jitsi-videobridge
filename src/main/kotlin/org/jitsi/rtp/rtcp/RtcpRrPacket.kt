@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 import kotlin.properties.Delegates
 
@@ -64,11 +66,7 @@ class RtcpRrPacket : RtcpPacket {
         this.header = RtcpHeader(buf)
         val reportBlockStartPos = RtcpHeader.SIZE_BYTES
         repeat (header.reportCount) {
-            val reportBlock =
-                RtcpReportBlock(
-                    buf.duplicate()
-                        .position(reportBlockStartPos + (it * RtcpReportBlock.SIZE_BYTES))
-                            as ByteBuffer)
+            val reportBlock = RtcpReportBlock(buf.subBuffer(reportBlockStartPos + (it * RtcpReportBlock.SIZE_BYTES), RtcpReportBlock.SIZE_BYTES))
             reportBlocks.add(reportBlock)
         }
     }
@@ -95,12 +93,12 @@ class RtcpRrPacket : RtcpPacket {
 
     override fun toString(): String {
         return with (StringBuffer()) {
-            appendln("RR packet:")
-            appendln("RR sender: ${header.senderSsrc}")
+            appendln("RR packet")
+            appendln(super.toString())
+            appendln("Report blocks:")
             reportBlocks.forEach {
-                appendln(it.toString())
+                appendln("  ${it}")
             }
-
             toString()
         }
     }

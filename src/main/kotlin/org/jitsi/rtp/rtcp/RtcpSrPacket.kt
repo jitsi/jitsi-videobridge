@@ -144,6 +144,17 @@ class SenderInfo {
 
         return buf!!
     }
+
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("ntpTimestamp: $ntpTimestamp")
+            appendln("rtpTimestamp: $rtpTimestamp")
+            appendln("sendersPacketCount: $sendersPacketCount")
+            appendln("sendersOctetCount: $sendersOctetCount")
+
+            toString()
+        }
+    }
 }
 
 /**
@@ -233,5 +244,17 @@ class RtcpSrPacket : RtcpPacket {
         }
 
         return this.buf!!
+    }
+
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("SR Packet")
+            appendln(super.toString())
+            appendln(senderInfo.toString())
+            reportBlocks.forEach {
+                appendln(it.toString())
+            }
+            toString()
+        }
     }
 }

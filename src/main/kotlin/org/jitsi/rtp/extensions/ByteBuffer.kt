@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp.extensions
 
+import unsigned.toUInt
 import java.nio.ByteBuffer
 
 /**
@@ -52,11 +53,10 @@ fun ByteBuffer.get3Bytes(): Int {
 }
 
 fun ByteBuffer.get3Bytes(index: Int): Int {
-    val byte1 = get(index).toInt() shl 16
-    val byte2 = get(index + 1).toInt() shl 8
-    val byte3 = get(index + 2).toInt() and 0xFF
+    val byte1 = get(index).toUInt() shl 16
+    val byte2 = get(index + 1).toUInt() shl 8
+    val byte3 = get(index + 2).toUInt()
     return byte1 or byte2 or byte3
-
 }
 
 /**

@@ -109,7 +109,7 @@ open class RtcpHeader {
             buf.putShort(2, length.toUShort())
         }
 
-        fun getSenderSsrc(buf: ByteBuffer): Long = buf.getInt(3).toULong()
+        fun getSenderSsrc(buf: ByteBuffer): Long = buf.getInt(4).toULong()
         fun setSenderSsrc(buf: ByteBuffer, senderSsrc: Long) {
             buf.putInt(3, senderSsrc.toUInt())
         }

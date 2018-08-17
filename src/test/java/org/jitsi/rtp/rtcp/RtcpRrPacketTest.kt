@@ -84,5 +84,22 @@ internal class RtcpRrPacketTest : ShouldSpec() {
                 newBuf.rewind() shouldBe packetBuf.rewind()
             }
         }
+
+        "f:blah" {
+            val packetBuf = byteArrayOf(
+                0x81.toByte(), 0xC9.toByte(), 0x00.toByte(), 0x07.toByte(),
+                0x7D.toByte(), 0xA5.toByte(), 0x33.toByte(), 0xE5.toByte(),
+                0xCE.toByte(), 0x7A.toByte(), 0xFA.toByte(), 0x88.toByte(),
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                0x00.toByte(), 0x00.toByte(), 0x3C.toByte(), 0x38.toByte(),
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0xD0.toByte(),
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00
+            )
+
+            val rrPacket = RtcpRrPacket(ByteBuffer.wrap(packetBuf))
+
+            println(rrPacket)
+        }
     }
 }
