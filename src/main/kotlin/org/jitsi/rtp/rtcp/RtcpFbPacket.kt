@@ -30,6 +30,22 @@ abstract class FeedbackControlInformation {
 }
 
 /**
+ * https://tools.ietf.org/html/rfc4585#section-6.3.1
+ * PLI does not require parameters.  Therefore, the length field MUST be
+*  2, and there MUST NOT be any Feedback Control Information.
+ */
+class Pli : FeedbackControlInformation() {
+    override val size: Int = 0
+    override var buf: ByteBuffer? = ByteBuffer.allocate(0)
+
+    override fun getBuffer(): ByteBuffer = buf!!
+
+    override fun toString(): String {
+        return "PLI packet"
+    }
+}
+
+/**
  * https://tools.ietf.org/html/rfc4585#section-6.2.1
  * 0                   1                   2                   3
  * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -80,6 +96,8 @@ class Nack : FeedbackControlInformation {
             val bitSet = BitSet.valueOf(longArrayOf(lostPacketBitmask.toLong()))
             var i = bitSet.nextSetBit(0)
             val missingSeqNums = mutableListOf<Int>()
+            // The packed id denotes a missing packet as well, add that first
+            missingSeqNums.add(getPacketId(buf))
             while (i != -1) {
                 missingSeqNums.add(packetId + i + 1)
                 i = bitSet.nextSetBit(i + 1)
@@ -121,6 +139,15 @@ class Nack : FeedbackControlInformation {
         setLostPacketBitmask(buf!!, packetId, missingSeqNums)
 
         return buf!!
+    }
+
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("NACK packet")
+            appendln("Missing packets: ${missingSeqNums}")
+
+            toString()
+        }
     }
 }
 
@@ -176,7 +203,7 @@ class RtcpFbPacket : RtcpPacket {
                 }
                 206 -> {
                     when (fmt) {
-                        1 -> TODO("pli")
+                        1 -> Pli()
                         2 -> TODO("sli")
                         3 -> TODO("rpsi")
                         4 -> TODO("fir")
@@ -217,5 +244,11 @@ class RtcpFbPacket : RtcpPacket {
         return this.buf!!
     }
 
-
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("RTCPFB packet")
+            appendln(feedbackControlInformation.toString())
+            toString()
+        }
+    }
 }
