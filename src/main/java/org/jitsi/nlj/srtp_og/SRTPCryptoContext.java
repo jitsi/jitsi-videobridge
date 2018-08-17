@@ -53,6 +53,7 @@ package org.jitsi.nlj.srtp_og;
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
  */
 
+import java.nio.*;
 import java.util.*;
 
 
@@ -229,14 +230,14 @@ public class SRTPCryptoContext
             SRTPPolicy policy)
     {
         super(ssrc, masterK, masterS, policy);
-        System.out.println("BRIAN: creating srtp crypto context with: \n" +
-                "sender? " + sender +
-                "\nssrc: " + (ssrc & 0xFFFFFFFFL) +
-                "\nroc: " + roc +
-                "\nkeyDerivationRate: " + keyDerivationRate +
-                "\nmasterK: " + toHex(masterK) +
-                "\nmasterS: " + toHex(masterS) +
-                "\npolicy: " + policy.toString());
+//        System.out.println("BRIAN: creating srtp crypto context with: \n" +
+//                "sender? " + sender +
+//                "\nssrc: " + (ssrc & 0xFFFFFFFFL) +
+//                "\nroc: " + roc +
+//                "\nkeyDerivationRate: " + keyDerivationRate +
+//                "\nmasterK: " + toHex(masterK) +
+//                "\nmasterS: " + toHex(masterS) +
+//                "\npolicy: " + policy.toString());
 
         this.sender = sender;
         this.roc = roc;
@@ -532,8 +533,7 @@ public class SRTPCryptoContext
 
         int payloadOffset = pkt.getHeaderLength();
         int payloadLength = pkt.getPayloadLength();
-        System.out.println("BRIAN: " + eOrD + " packet " + pkt.getSSRCAsLong() + " " + pkt.getSequenceNumber() +
-                " header length: " + payloadOffset);
+//        System.out.println("BRIAN: " + eOrD + " packet " + pkt.getSSRCAsLong() + " " + pkt.getSequenceNumber());
 
         cipherCtr.process(
                 pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength,
@@ -585,6 +585,8 @@ public class SRTPCryptoContext
      */
     synchronized public boolean reverseTransformPacket(RawPacket pkt)
     {
+//        System.out.println("BRIAN: srtcpcryptocontext#reversetransform has packet with buffer: " +
+//                ByteBuffer.wrap(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
 //        if (logger.isDebugEnabled())
 //        {
 //            logger.debug(
@@ -686,7 +688,7 @@ public class SRTPCryptoContext
     synchronized public boolean transformPacket(RawPacket pkt)
     {
         int seqNo = pkt.getSequenceNumber();
-        System.out.println("BRIAN: encrypting packet " + pkt.getSSRCAsLong() + " " + seqNo);
+//        System.out.println("BRIAN: encrypting packet " + pkt.getSSRCAsLong() + " " + seqNo);
 
         if (!seqNumSet)
         {

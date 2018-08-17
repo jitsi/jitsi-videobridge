@@ -20,8 +20,8 @@ import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtcpPacket
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.nio.ByteBuffer
 
@@ -50,15 +50,18 @@ class SrtcpTransformerWrapperDecrypt : Module("SRTCP Decrypt wrapper") {
         next(outPackets)
     }
 
-    private fun doDecrypt(srtpPacket: SrtcpPacket): RtcpPacket? {
-        val packetBuf = srtpPacket.getBuffer()
-        val rp = RawPacket(packetBuf.array(), 0, packetBuf.array().size)
-//        println("BRIAN: decrypting ${rp.ssrcAsLong} ${rp.sequenceNumber} packet with size ${rp.length}")
+    private fun doDecrypt(srtcpPacket: SrtcpPacket): RtcpPacket? {
+        val packetBuf = srtcpPacket.getBuffer()
+        val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
+//        println("BRIAN: decrypting ${RawPacket.getRTCPSSRC(rp)} rtcp packet with size ${rp.length} and buffer before decrypt: " +
+//                packetBuf.toHex())
         val output = srtcpTransformer?.reverseTransform(rp) ?: return null
-//        println("BRIAN: decrypted packet ${output.ssrcAsLong} ${output.sequenceNumber} now has size ${output.length}")
+//        println("BRIAN: decrypted raw rtcp packet ${RawPacket.getRTCPSSRC(output)} ${output.sequenceNumber} now has size ${output.length} " +
+//            "and buffer " + ByteBuffer.wrap(output.buffer, output.offset, output.length).toHex())
         try {
             val outPacket = RtcpPacket.fromBuffer(ByteBuffer.wrap(output.buffer, output.offset, output.length))
-//            println("BRIAN: decrypted packet parsed as RtpPacket ${outPacket.header} now has size ${outPacket.size}")
+//            println("BRIAN: decrypted packet parsed as RtcpPacket $outPacket now has size ${outPacket.size} and buffer after decrypt: " +
+//                outPacket.getBuffer().toHex())
             return outPacket
         } catch (e: Error) {
             println("BRIAN: exception parsing decrypted rtcp packet: $e")

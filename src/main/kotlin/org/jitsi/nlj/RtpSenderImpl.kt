@@ -68,7 +68,7 @@ class RtpSenderImpl(
     }
 
     override fun sendPackets(pkts: List<Packet>) {
-        println("BRIAN: sender got ${pkts.size} packets to send")
+//        println("BRIAN: sender got ${pkts.size} packets to send")
 //        pkts.forEachAs<RtpPacket> {
 //            println("BRIAN: sender sendign packet ${it.header} with buf ${it.getBuffer().toHex()}")
 //        }
