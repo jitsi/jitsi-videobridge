@@ -34,6 +34,7 @@ package org.jitsi.nlj.srtp_og;
  * limitations under the License.
  */
 
+import java.nio.*;
 import java.util.*;
 
 import org.bouncycastle.crypto.params.*;
@@ -265,10 +266,43 @@ public class SRTCPCryptoContext
         // Encrypted part excludes fixed header (8 bytes)
         int payloadOffset = 8;
         int payloadLength = pkt.getLength() - payloadOffset;
+//        System.out.println("BRIAN: decrypting srtcp buffer with offset " + (pkt.getOffset() + payloadOffset) +
+//                " and size " + payloadLength + " which is buffer: " + toHex(pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength));
 
         cipherCtr.process(
                 pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength,
                 ivStore);
+//        System.out.println("BRIAN: srtcp buffer after decrypt (from after header offset): " +
+//                toHex(pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength));
+//        System.out.println("BRIAN: srtcp buffer after decrypt (entire buf): " +
+//                toHex(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
+    }
+    private static final char[] HEX_ENCODE_TABLE
+            = {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+    };
+
+    public static String toHex(byte[] data, int off, int length)
+    {
+        try
+        {
+            char[] chars = new char[3 * length - 1];
+
+            for (int f = off, fLast = off + length - 1, c = 0;
+                 f <= fLast;
+                 f++)
+            {
+                int b = data[f] & 0xff;
+
+                chars[c++] = HEX_ENCODE_TABLE[b >>> 4];
+                chars[c++] = HEX_ENCODE_TABLE[b & 0x0f];
+            }
+            return new String(chars);
+        } catch (Exception e) {
+            System.out.println("BRIAN: exception converting to hex: " + e.toString());
+            return e.toString();
+        }
     }
 
     /**
@@ -332,6 +366,8 @@ public class SRTCPCryptoContext
             decrypt = true;
 
         int index = indexEflag & ~0x80000000;
+//        System.out.println("BRIAN: srtcp packet from " + RawPacket.getRTCPSSRC(pkt) + " has srtcp index " + index +
+//                " and is it encrypted? " + decrypt);
 
         /* Replay control */
         if (!checkReplay(index))
@@ -348,6 +384,9 @@ public class SRTCPCryptoContext
 
             // Shrink packet to remove the authentication tag and index
             // because this is part of authenicated data
+//            System.out.println("BRIAN: srtcp packet from " + RawPacket.getRTCPSSRC(pkt) + " with srtcp index " + index +
+//                    " shrinking to erase tag and index, old size = " + pkt.getLength() + " new size = " +
+//                    (pkt.getLength() - (tagLength + 4)));
             pkt.shrink(tagLength + 4);
 
             // compute, then save authentication in tagStore
@@ -365,6 +404,8 @@ public class SRTCPCryptoContext
 
         if (decrypt)
         {
+//            System.out.println("BRIAN: srtcp packet from " + RawPacket.getRTCPSSRC(pkt) + " auth succeeded, decrypting");
+
             /* Decrypt the packet using Counter Mode encryption */
             if (policy.getEncType() == SRTPPolicy.AESCM_ENCRYPTION
                     || policy.getEncType() == SRTPPolicy.TWOFISH_ENCRYPTION)
