@@ -175,6 +175,11 @@ public class Main
                 DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
                 minPort_);
 
+        // enable h264 format registering in libjitsi
+        System.setProperty(
+                MediaService.ENABLE_H264_FORMAT_PNAME,
+                "true");
+
         // Jingle ICE-UDP transport
         TransportManager.portTracker.tryRange(minPort_, maxPort_);
 
