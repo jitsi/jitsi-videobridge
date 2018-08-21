@@ -17,6 +17,7 @@ package org.jitsi.videobridge.health;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
@@ -24,6 +25,8 @@ import javax.servlet.http.*;
 import org.eclipse.jetty.server.*;
 import org.ice4j.ice.harvest.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
+import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.xmpp.*;
 
@@ -37,6 +40,12 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
  */
 public class Health
 {
+    /**
+     * The {@link Logger} used by the {@link Health} class and its
+     * instances to print debug information.
+     */
+    private static final Logger logger = Logger.getLogger(Health.class);
+
     /**
      * The {@link MediaType}s of {@link RtpChannel}s supported by
      * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
@@ -53,22 +62,29 @@ public class Health
     private static Random RANDOM = Videobridge.RANDOM;
 
     /**
-     * The exception thrown from the last health check we performed, or
-     * {@code null} if the last health check did not throw an exception (i.e.
-     * it succeeded).
+     * The executor used to perform periodic health checks.
      */
-    private static Exception cachedException = null;
+    private static final RecurringRunnableExecutor executor
+        = new RecurringRunnableExecutor(Health.class.getName());
 
     /**
-     * The time when we ran our last health check.
+     * The interval between health checks.
      */
-    private static long cachedExceptionTimestamp = -1;
+    private static final long HEALTH_CHECK_INTERVAL = 10000;
 
     /**
-     * The maximum number of millis that we cache the result of a health
-     * check for.
+     * The {@link #check(Videobridge)} API will return failure unless a there
+     * was a health check performed in the last that many milliseconds.
      */
-    private static final int CACHE_INTERVAL = 10000;
+    private static final long HEALTH_CHECK_TIMEOUT = 30000;
+
+    /**
+     * Maps a {@link Videobridge} it the single
+     * {@link VideobridgePeriodicChecker} instance responsible for checking its
+     * health.
+     */
+    private static final Map<Videobridge,VideobridgePeriodicChecker> checkers
+        = new ConcurrentHashMap<>();
 
     /**
      * Checks the health (status) of the {@link Videobridge} associated with a
@@ -162,58 +178,43 @@ public class Health
     }
 
     /**
-     * Checks the health (status) of a specific {@link Videobridge}. Uses
-     * caching, i.e. if a health check was performed less than
-     * {@link #CACHE_INTERVAL} ago, it returns the result of the last health
-     * check (otherwise it performs a health check, updates the cache and
-     * returns the result).
+     * Checks the health (status) of a specific {@link Videobridge}. This method
+     * only returns the cache results, it does not do the actual health check
+     * (i.e. creating a test conference).
      *
      * @param videobridge the {@code Videobridge} to check the health (status)
      * of.
      * @throws Exception if an error occurs while checking the health (status)
      * of {@code videobridge} or the check determines that {@code videobridge}
-     * is not healthy
+     * is not healthy.
      */
     public static void check(Videobridge videobridge)
         throws Exception
     {
-        Exception cachedException = Health.cachedException;
-        long cachedExceptionTimestamp = Health.cachedExceptionTimestamp;
-
-        if (cachedExceptionTimestamp > 0 &&
-            System.currentTimeMillis() - cachedExceptionTimestamp
-                < CACHE_INTERVAL)
+        VideobridgePeriodicChecker checker = checkers.get(videobridge);
+        if (checker == null || checker.lastResultMs < 0)
         {
-            if (cachedException == null)
-            {
-                return;
-            }
-            else
-            {
-                throw new Exception(cachedException);
-            }
+            throw new Exception(
+                "No health checks running for this videobridge.");
         }
 
-        synchronized (Health.class)
+        Exception lastResult = checker.lastResult;
+        long lastResultMs = checker.lastResultMs;
+        long timeSinceLastResult = System.currentTimeMillis() - lastResultMs;
+
+        if (timeSinceLastResult > HEALTH_CHECK_TIMEOUT)
         {
-            Exception exception = null;
-            try
-            {
-                doCheck(videobridge);
-            }
-            catch (Exception e)
-            {
-                exception = e;
-            }
-
-            Health.cachedException = exception;
-            Health.cachedExceptionTimestamp = System.currentTimeMillis();
-
-            if (exception != null)
-            {
-                throw exception;
-            }
+            throw new Exception(
+                "No health checks performed recently, the last result was "
+                    + timeSinceLastResult + "ms ago.");
         }
+
+        if (lastResult != null)
+        {
+            throw new Exception(lastResult);
+        }
+
+        // We've had a recent result, and it is successful (no exception).
     }
 
     /**
@@ -474,5 +475,111 @@ public class Health
     {
         for (int i = 0; i < endpoints.length;)
             connect(endpoints[i++], endpoints[i++]);
+    }
+
+    /**
+     * Starts a runnable which checks the health of {@code videobridge}
+     * periodically (at an interval of ({@link #HEALTH_CHECK_INTERVAL}).
+     * @param videobridge the {@link Videobridge} to run checks on.
+     */
+    public static void start(Videobridge videobridge)
+    {
+        if (checkers.get(videobridge) != null)
+        {
+            logger.error("Already running checks for " + videobridge);
+            return;
+        }
+
+        checkers.put(videobridge, new VideobridgePeriodicChecker(videobridge));
+    }
+
+    /**
+     * Stops running health checks for a specific {@link Videobridge}.
+     * @param videobridge the {@link Videobridge}.
+     */
+    public static void stop(Videobridge videobridge)
+    {
+        VideobridgePeriodicChecker checker = checkers.remove(videobridge);
+        if (checker != null)
+        {
+            checker.stop();
+        }
+    }
+
+    /**
+     * Periodically checks the health for a specific {@link Videobridge}
+     * instance and stores the results.
+     */
+    private static class VideobridgePeriodicChecker
+        extends PeriodicRunnableWithObject<Videobridge>
+    {
+        /**
+         * The exception resulting from the last health check performed on this
+         * videobridge. When the health check is successful, this is
+         * {@code null}.
+         */
+        private Exception lastResult = null;
+
+        /**
+         * The time the last health check finished being performed. A value of
+         * {@code -1} indicates that no health check has been performed yet.
+         */
+        private long lastResultMs = -1;
+
+        /**
+         * Initializes a new {@link VideobridgePeriodicChecker} instance for
+         * a specific {@link Videobridge} and registers this
+         * {@link PeriodicRunnable} with the executor.
+         *
+         * @param videobridge the {@link Videobridge}.
+         */
+        VideobridgePeriodicChecker(Videobridge videobridge)
+        {
+            super(videobridge, HEALTH_CHECK_INTERVAL, true);
+
+            executor.registerRecurringRunnable(this);
+        }
+
+        /**
+         * Performs a health check and updates this instance's state.
+         */
+        @Override
+        protected void doRun()
+        {
+            long start = System.currentTimeMillis();
+            Exception exception = null;
+
+            try
+            {
+                Health.doCheck(this.o);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+
+            long duration = System.currentTimeMillis() - start;
+            lastResult = exception;
+            lastResultMs = start + duration;
+
+            if (exception == null)
+            {
+                logger.info(
+                    "Performed a successful health check in " + duration + "ms.");
+            }
+            else
+            {
+                logger.error(
+                    "Health check failed in " + duration + "ms:", exception);
+            }
+        }
+
+        /**
+         * Stops performing health checks for this {@link Videobridge}.
+         */
+        private void stop()
+        {
+            executor.deRegisterRecurringRunnable(this);
+        }
     }
 }

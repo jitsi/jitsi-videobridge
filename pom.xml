@@ -91,7 +91,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-20180719.172533-6</version>
+      <version>1.1-20180821.201527-7</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -157,7 +157,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20180821.014729-360</version>
+      <version>1.0-20180821.201225-361</version>
     </dependency>
 
     <dependency>

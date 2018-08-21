@@ -151,10 +151,14 @@ public class BridgeShutdownTest
         respConfIq.setFrom(focusJid);
         respConfIq.setType(IQ.Type.set);
 
-        respIq = bridge.handleColibriConferenceIQ(respConfIq);
+        bridge.handleColibriConferenceIQ(respConfIq);
 
-        // Channels should be expired
-        assertEquals(0, bridge.getChannelCount());
+        // There could be some channels due to health checks running
+        // periodically, but they should be expired rather quickly.
+        Util.waitForEquals(
+            "Channels should be expired",
+            0,
+            () -> bridge.getChannelCount());
 
         if (bridge.getConferenceCount() > 0)
         {
@@ -166,8 +170,10 @@ public class BridgeShutdownTest
             }
         }
 
-        // The bridge should trigger a shutdown after last conference is expired
-        assertTrue(testShutdownService.shutdownStarted);
+        assertTrue(
+            "The bridge should trigger a shutdown after last conference is "
+                + "expired",
+            testShutdownService.shutdownStarted);
     }
 
     private void validateErrorResponse(IQ respIqRaw)
