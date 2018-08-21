@@ -63,6 +63,7 @@ class Nack : FeedbackControlInformation {
     var missingSeqNums: List<Int>
 
     companion object {
+        const val FMT = 1
         const val SIZE_BYTES = 4
         fun getPacketId(buf: ByteBuffer): Int = buf.getShort(0).toUInt()
         fun setPacketId(buf: ByteBuffer, packetId: Int) {

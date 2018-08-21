@@ -76,8 +76,8 @@ class RtcpFbPacket : RtcpPacket {
             return when (payloadType) {
                 205 -> {
                     when (fmt) {
-                        1 -> Nack(fciBuf)
-                        15 -> TODO("tcc https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1")
+                        Nack.FMT -> Nack(fciBuf)
+                        Tcc.FMT -> Tcc(fciBuf)
                         else -> throw Exception("Unrecognized RTCPFB format: $fmt")
                     }
                 }
@@ -86,7 +86,7 @@ class RtcpFbPacket : RtcpPacket {
                         1 -> Pli()
                         2 -> TODO("sli")
                         3 -> TODO("rpsi")
-                        4 -> TODO("fir")
+                        4 -> Fir(fciBuf)
                         15 -> TODO("afb")
                         else -> throw Exception("Unrecognized RTCPFB format: pt 206, fmt $fmt")
                     }
