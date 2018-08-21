@@ -535,7 +535,7 @@ public class Health
          */
         VideobridgePeriodicChecker(Videobridge videobridge)
         {
-            super(videobridge, HEALTH_CHECK_INTERVAL);
+            super(videobridge, HEALTH_CHECK_INTERVAL, true);
 
             executor.registerRecurringRunnable(this);
         }
