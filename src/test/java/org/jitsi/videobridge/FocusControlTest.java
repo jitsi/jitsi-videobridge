@@ -78,14 +78,6 @@ public class FocusControlTest
         assertTrue(respIq instanceof ColibriConferenceIQ);
     }
 
-    private static void expectResult(HealthCheckIQ healthIq)
-        throws Exception
-    {
-        IQ respIq = bridge.handleHealthCheckIQ(healthIq);
-
-        assertEquals(IQ.Type.result, respIq.getType());
-    }
-
     private static void expectNotAuthorized(ColibriConferenceIQ confIq,
                                             int processingOptions)
         throws Exception
@@ -249,7 +241,13 @@ public class FocusControlTest
         HealthCheckIQ healthCheckIQ = new HealthCheckIQ();
 
         healthCheckIQ.setFrom(JidCreate.from("focus@auth.domain.com/fdsfwetg"));
-        expectResult(healthCheckIQ);
+
+        // The bridge returns an error until the first health check completes,
+        // and it runs in a separate thread. So give it a few seconds
+        Util.waitForEquals(
+            "Health check should be successful",
+            IQ.Type.result,
+            () -> bridge.handleHealthCheckIQ(healthCheckIQ).getType());
 
         healthCheckIQ.setFrom(JidCreate.from("focus@auth.domain4.com/fdsfwetg"));
         expectNotAuthorized(healthCheckIQ);
