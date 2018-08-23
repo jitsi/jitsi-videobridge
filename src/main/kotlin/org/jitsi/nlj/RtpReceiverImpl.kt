@@ -24,16 +24,15 @@ import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.nlj.transform.module.incoming.SrtcpTransformerWrapperDecrypt
 import org.jitsi.nlj.transform.module.incoming.SrtpTransformerWrapperDecrypt
+import org.jitsi.nlj.transform.module.incoming.TccGeneratorModule
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
 import org.jitsi.rtp.extensions.toHex
-import org.jitsi.rtp.rtcp.RtcpFbPacket
+import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.util.RtpProtocol
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -42,7 +41,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
-    val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpReceiver() {
     /*private*/ override val moduleChain: ModuleChain
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
@@ -58,6 +57,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     var packetsReceived: Long = 0
 
     init {
+        println("Receiver ${this.hashCode()} using executor ${executor.hashCode()}")
         moduleChain = chain {
             name("SRTP chain")
             addModule(object : Module("SRTP protocol parser") {
@@ -76,6 +76,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 next(p.map(Packet::getBuffer).map(::SrtpPacket))
                             }
                         })
+//                        addModule(TccGeneratorModule(5) {
+//                            println("Tcc packet ready to send: $it")
+//                            //TODO: fill out rtcp header information and inject
+//                        })
                         addModule(srtpDecryptWrapper)
                         addModule(object : Module("packet handler") {
                             override fun doProcessPackets(p: List<Packet>) {
@@ -90,20 +94,29 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     path = chain {
                         addModule(object : Module("SRTCP parser") {
                             override fun doProcessPackets(p: List<Packet>) {
-//                                p.forEach {
-//                                    println("BRIAN got rtcp with buffer: ${it.getBuffer().toHex()}")
-//                                    val srtcp = SrtcpPacket(it.getBuffer())
-//                                    println("BRIAN: received encrypted SRTCP packet: ${srtcp.header} with buffer\n ${srtcp.getBuffer().toHex()}")
-//                                }
                                 next(p.map(Packet::getBuffer).map(::SrtcpPacket))
                             }
                         })
                         addModule(srtcpDecryptWrapper)
+                        addModule(object : Module("Compound RTCP splitter") {
+                            override fun doProcessPackets(p: List<Packet>) {
+                                val outPackets = mutableListOf<RtcpPacket>()
+                                p.forEach {
+                                    val iter = RtcpIterator(it.getBuffer())
+                                    val pkts = iter.getAll()
+                                    println("BRIAN: extracted ${pkts.size} rtcp packets from compound $it")
+                                    outPackets.addAll(pkts)
+                                }
+                                if (outPackets.isNotEmpty()) {
+                                    next(outPackets)
+                                }
+                            }
+                        })
                         addModule(object : Module("RTCP Handler") {
                             override fun doProcessPackets(p: List<Packet>) {
                                 p.forEachAs<RtcpPacket> {
-                                    println("BRIAN: got decrypted rtcp of type ${it::class}")
-                                    println("BRIAN: rtcp packet:\n$it\n with buffer:\n ${it.getBuffer().toHex()}")
+//                                    println("BRIAN: got decrypted rtcp $it")
+//                                    println("BRIAN: rtcp packet:\n$it\n with buffer:\n ${it.getBuffer().toHex()}")
                                 }
                             }
                         })

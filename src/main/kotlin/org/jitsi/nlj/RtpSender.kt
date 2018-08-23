@@ -41,4 +41,5 @@ abstract class RtpSender {
     abstract fun sendPackets(pkts: List<Packet>)
     abstract fun getStats(): String
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
+    abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
 }
