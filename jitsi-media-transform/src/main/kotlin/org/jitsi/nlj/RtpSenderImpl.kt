@@ -20,20 +20,16 @@ import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.RtcpHandlerModule
-import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.nlj.transform.module.outgoing.SrtpTransformerWrapperEncrypt
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.extensions.toHex
 import java.time.Duration
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 
 class RtpSenderImpl(
     val id: Long,
-    val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpSender() {
     private val moduleChain: ModuleChain
     private val outgoingRtpChain: ModuleChain
@@ -46,6 +42,7 @@ class RtpSenderImpl(
 
     private val encryptWrapper = SrtpTransformerWrapperEncrypt()
     init {
+        println("Sender ${this.hashCode()} using executor ${executor.hashCode()}")
         outgoingRtpChain = chain {
             name("Outgoing RTP chain")
             addModule(encryptWrapper)
@@ -82,6 +79,9 @@ class RtpSenderImpl(
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
         encryptWrapper.srtpTransformer = srtpTransformer
+    }
+
+    override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
     }
 
     private fun scheduleWork() {

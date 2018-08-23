@@ -46,7 +46,7 @@ import kotlin.experimental.and
  * else instead
  */
 class Transceiver(
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) {
     private val dtlsStack = DtlsClientStack()
     private val dtlsReceiver = DtlsReceiverModule()
@@ -65,6 +65,7 @@ class Transceiver(
     var running = true
 
     init {
+        println("Transceiver ${this.hashCode()} using executor ${executor.hashCode()}")
         dtlsStack.onHandshakeComplete { dtlsTransport, tlsContext ->
             //TODO: in the future we'll want to pass the dtls transport to the sctp connection
             val srtpTransformer = SRTPTransformer.initializeSRTPTransformer(

@@ -51,17 +51,20 @@ class SrtcpTransformerWrapperDecrypt : Module("SRTCP Decrypt wrapper") {
     }
 
     private fun doDecrypt(srtcpPacket: SrtcpPacket): RtcpPacket? {
+//        println("BRIAN: decrypting srtcp packet.  packet length is ${srtcpPacket.getBuffer().limit()}, rtcp header length" +
+//                " is ${srtcpPacket.header.length}")
         val packetBuf = srtcpPacket.getBuffer()
         val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
 //        println("BRIAN: decrypting ${RawPacket.getRTCPSSRC(rp)} rtcp packet with size ${rp.length} and buffer before decrypt: " +
 //                packetBuf.toHex())
         val output = srtcpTransformer?.reverseTransform(rp) ?: return null
 //        println("BRIAN: decrypted raw rtcp packet ${RawPacket.getRTCPSSRC(output)} ${output.sequenceNumber} now has size ${output.length} " +
-//            "and buffer " + ByteBuffer.wrap(output.buffer, output.offset, output.length).toHex())
+//            "and buffer\n" + ByteBuffer.wrap(output.buffer, output.offset, output.length).toHex())
         try {
+//            println("BRIAN: about to parse decrypted packet into RtcpPacket")
             val outPacket = RtcpPacket.fromBuffer(ByteBuffer.wrap(output.buffer, output.offset, output.length))
-//            println("BRIAN: decrypted packet parsed as RtcpPacket $outPacket now has size ${outPacket.size} and buffer after decrypt: " +
-//                outPacket.getBuffer().toHex())
+//            println("BRIAN: decrypted packet parsed as RtcpPacket ${outPacket.hashCode()} now has size ${outPacket.size} and buffer after decrypt: " +
+//                "(size: ${outPacket.getBuffer().limit()}):\n" + outPacket.getBuffer().toHex())
             return outPacket
         } catch (e: Error) {
             println("BRIAN: exception parsing decrypted rtcp packet: $e")
