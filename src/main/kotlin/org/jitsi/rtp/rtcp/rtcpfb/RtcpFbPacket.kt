@@ -16,6 +16,7 @@
 package org.jitsi.rtp.rtcp.rtcpfb
 
 import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import toUInt
@@ -97,7 +98,7 @@ class RtcpFbPacket : RtcpPacket {
     }
 
     constructor(buf: ByteBuffer) : super() {
-        this.buf = buf
+        this.buf = buf.slice()
         this.header = RtcpHeader(buf)
         this.mediaSourceSsrc = getMediaSourceSsrc(buf)
         this.feedbackControlInformation =
@@ -119,12 +120,29 @@ class RtcpFbPacket : RtcpPacket {
     }
 
     override fun getBuffer(): ByteBuffer {
-        if (this.buf == null) {
-            this.buf = ByteBuffer.allocate(header.size + 4 + feedbackControlInformation.size)
+        val neededSize = header.size + 4 + feedbackControlInformation.size
+        if (this.buf == null || this.buf!!.capacity() < neededSize) {
+            this.buf = ByteBuffer.allocate(neededSize)
         }
+        buf!!.rewind()
+        // We need to update the length in the header to match the current content
+        // of the packet (which may have changed)
+        header.length = ((neededSize + 3) / 4 - 1)
+        //TODO: we should also not do padding anywhere else (except for in 'internal'
+        // fields which need it) and handle it here (add any padding, set the padding bit)
+        //TODO: should have explicit setters for these instead of using relative positions
         this.buf!!.put(header.getBuffer())
         this.buf!!.putInt(mediaSourceSsrc.toUInt())
-        this.buf!!.put(feedbackControlInformation.getBuffer())
+        val bufPositionBefore = buf!!.position()
+        try {
+            this.buf!!.put(feedbackControlInformation.getBuffer())
+        } catch (e: Exception) {
+            println("exception serializing fci, buf position was $bufPositionBefore, " +
+                    "capacity is ${buf!!.capacity()}, fci size is ${feedbackControlInformation.size} ")
+            throw e
+        }
+
+        this.buf!!.rewind()
 
         return this.buf!!
     }
@@ -132,6 +150,7 @@ class RtcpFbPacket : RtcpPacket {
     override fun toString(): String {
         return with (StringBuffer()) {
             appendln("RTCPFB packet")
+            append(header.toString())
             appendln(feedbackControlInformation.toString())
             toString()
         }

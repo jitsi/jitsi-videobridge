@@ -32,6 +32,15 @@ abstract class RtcpPacket : Packet() {
                 else -> throw Exception("Unsupported RTCP type $payloadType")
             }
         }
+
+        /**
+         * [buf] should be a buffer whose start represents the start of the
+         * RTCP packet (i.e. the start of the RTCP header)
+         */
+        protected fun setHeader(buf: ByteBuffer, header: RtcpHeader) {
+            buf.put(buf)
+
+        }
     }
 
     override fun toString(): String {

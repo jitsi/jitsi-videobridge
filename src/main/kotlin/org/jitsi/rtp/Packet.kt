@@ -27,19 +27,6 @@ abstract class Packet {
     abstract fun getBuffer(): ByteBuffer
     abstract val size: Int
     val tags = mutableMapOf<String, Any>()
-
-//    companion object {
-//        //TODO: should we still have this here?
-//        private fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toUInt()
-//        fun parse(buf: ByteBuffer): Packet {
-//            val packetType = getPacketType(buf)
-//            return when (packetType) {
-//                in 200..211 -> RtcpPacket.fromBuffer(buf)
-//                else -> RtpPacket(buf)
-//            }
-//        }
-//    }
-
 }
 
 /**

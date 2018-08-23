@@ -83,11 +83,13 @@ class RtcpRrPacket : RtcpPacket {
         if (this.buf == null) {
             this.buf = ByteBuffer.allocate(this.size)
         }
+        this.buf!!.rewind()
         this.buf!!.put(header.getBuffer())
         reportBlocks.forEach {
             this.buf!!.put(it.getBuffer())
         }
 
+        this.buf!!.rewind()
         return this.buf!!
     }
 

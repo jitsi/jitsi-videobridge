@@ -234,14 +234,16 @@ class RtcpSrPacket : RtcpPacket {
     }
 
     override fun getBuffer(): ByteBuffer {
-        if (this.buf == null) {
+        if (this.buf == null || this.buf!!.capacity() < this.size) {
             this.buf = ByteBuffer.allocate(this.size)
         }
+        this.buf!!.rewind()
         this.buf!!.put(header.getBuffer())
         this.buf!!.put(senderInfo.getBuffer())
         reportBlocks.forEach {
             this.buf!!.put(it.getBuffer())
         }
+        this.buf!!.rewind()
 
         return this.buf!!
     }

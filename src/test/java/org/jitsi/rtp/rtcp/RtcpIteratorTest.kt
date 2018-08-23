@@ -35,6 +35,43 @@ internal class RtcpIteratorTest : ShouldSpec() {
         0x00.toByte(), 0x00.toByte(), 0x01.toByte(), 0x14.toByte()
     ))
 
+    private val blah = ByteBuffer.wrap(byteArrayOf(
+        0x8F.toByte(), 0xCD.toByte(), 0x00.toByte(), 0x21.toByte(),
+        0x72.toByte(), 0x45.toByte(), 0x7C.toByte(), 0xE5.toByte(),
+        0x03.toByte(), 0xA3.toByte(), 0x76.toByte(), 0x0E.toByte(),
+        0x00.toByte(), 0x01.toByte(), 0x00.toByte(), 0x58.toByte(),
+        0x11.toByte(), 0xE8.toByte(), 0xC2.toByte(), 0x00.toByte(),
+        0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
+        0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
+        0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
+        0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
+        0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
+        0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
+        0xD5.toByte(), 0x40.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()
+    ))
+
     init {
         "when parsing a compound packet" {
             val iter = RtcpIterator(compoundPacketBuf)
@@ -67,6 +104,13 @@ internal class RtcpIteratorTest : ShouldSpec() {
             val pkt = iter.next()
             pkt should beOfType<RtcpSrPacket>()
             iter.hasNext() shouldBe false
+        }
+        "f:blah" {
+            val pkt = RtcpPacket.fromBuffer(blah)
+            val newBuf = pkt.getBuffer()
+            val iter = RtcpIterator(newBuf)
+
+            val pkts = iter.getAll()
         }
     }
 

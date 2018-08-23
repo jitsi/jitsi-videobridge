@@ -16,6 +16,7 @@
 package org.jitsi.rtp.rtcp
 
 import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 
 /**
@@ -28,11 +29,21 @@ import java.nio.ByteBuffer
 class RtcpIterator(buf: ByteBuffer) {
     private val buf = buf.slice()
 
-    fun hasNext(): Boolean = buf.remaining() >= RtcpHeader.SIZE_BYTES
+    fun hasNext(): Boolean {
+        return buf.remaining() >= RtcpHeader.SIZE_BYTES
+    }
 
     fun next(): RtcpPacket {
-        val packet = RtcpPacket.fromBuffer(buf.subBuffer(buf.position()))
-        buf.position(buf.position() + packet.size)
+        if (!hasNext()) {
+            throw Exception("No more items left on iterator")
+        }
+        val subBuf = buf.slice()
+        val packet = RtcpPacket.fromBuffer(subBuf)
+        // It's important we use the length from the header here instead of
+        // packet.size, because packet.size will give us the size the packet
+        // will be serialized to, not necessarily the size it was in the given
+        // buffer (tcc packets, for example)
+        buf.position(buf.position() + (packet.header.length + 1) * 4)
         return packet
     }
 

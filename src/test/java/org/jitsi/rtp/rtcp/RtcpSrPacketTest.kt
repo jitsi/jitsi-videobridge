@@ -50,8 +50,8 @@ internal class RtcpSrPacketTest : ShouldSpec() {
     )
 
     init {
-        "creation" {
-            "from a buffer" {
+        "f:creation" {
+            "!from a buffer" {
                 val buf = ByteBuffer.allocate(1024)
                 buf.put(expectedHeader.getBuffer())
                 buf.put(expectedSenderInfo.getBuffer())
@@ -67,7 +67,28 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                     srPacket.reportBlocks should haveSize(2)
                 }
             }
-            "from values" {
+            "blah" {
+                val pktBuf = ByteBuffer.wrap(byteArrayOf(
+                    0x80.toByte(), 0xC8.toByte(), 0x00.toByte(), 0x06.toByte(),
+                    0xF0.toByte(), 0xA7.toByte(), 0x6B.toByte(), 0x36.toByte(),
+                    0xDF.toByte(), 0x29.toByte(), 0xBB.toByte(), 0x6C.toByte(),
+                    0x0C.toByte(), 0xC2.toByte(), 0xF8.toByte(), 0x38.toByte(),
+                    0x87.toByte(), 0x52.toByte(), 0x0D.toByte(), 0x00.toByte(),
+                    0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x28.toByte(),
+                    0x00.toByte(), 0x00.toByte(), 0x7F.toByte(), 0x49.toByte(),
+                    0x81.toByte(), 0xCA.toByte(), 0x00.toByte(), 0x06.toByte(),
+                    0xF0.toByte(), 0xA7.toByte(), 0x6B.toByte(), 0x36.toByte(),
+                    0x01.toByte(), 0x10.toByte(), 0x77.toByte(), 0x69.toByte(),
+                    0x4E.toByte(), 0x74.toByte(), 0x6F.toByte(), 0x4B.toByte(),
+                    0x39.toByte(), 0x67.toByte(), 0x6F.toByte(), 0x79.toByte(),
+                    0x58.toByte(), 0x4F.toByte(), 0x39.toByte(), 0x58.toByte(),
+                    0x49.toByte(), 0x77.toByte(), 0x00.toByte(), 0x00.toByte()
+                ))
+                val sr = RtcpSrPacket(pktBuf)
+                val newBuf = sr.getBuffer()
+                val newBuf2 = sr.getBuffer()
+            }
+            "!from values" {
                 val srPacket = RtcpSrPacket(
                     header = expectedHeader,
                     senderInfo = expectedSenderInfo,
