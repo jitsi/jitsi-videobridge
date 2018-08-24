@@ -17,43 +17,25 @@ package org.jitsi.nlj.transform.module.outgoing
 
 import org.jitsi.nlj.srtp_og.RawPacket
 import org.jitsi.nlj.srtp_og.SinglePacketTransformer
-import org.jitsi.nlj.transform.module.Module
-import org.jitsi.nlj.transform.module.forEachAs
+import org.jitsi.nlj.transform.module.AbstractSrtpTransformerWrapper
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtpPacket
 import java.nio.ByteBuffer
 
-class SrtpTransformerWrapperEncrypt : Module("SRTP encrypt wrapper") {
-    var srtpTransformer: SinglePacketTransformer? = null
-    private var cachedPackets = mutableListOf<Packet>()
-    override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<SrtpPacket>()
-
-        srtpTransformer?.let { pktTransformer ->
-            outPackets.addAll(encryptPackets(cachedPackets, pktTransformer))
-            cachedPackets.clear()
-            outPackets.addAll(encryptPackets(p, pktTransformer))
-            if (outPackets.isNotEmpty()) {
-                next(outPackets)
-            }
-        } ?: run {
-            cachedPackets.addAll(p)
-        }
-    }
-
-    private fun encryptPackets(packets: List<Packet>, pktTransformer: SinglePacketTransformer): List<SrtpPacket> {
+class SrtpTransformerWrapperEncrypt : AbstractSrtpTransformerWrapper("SRTP Encrypt wrapper") {
+    override fun doTransform(pkts: List<Packet>, transformer: SinglePacketTransformer): List<Packet> {
         val encryptedPackets = mutableListOf<SrtpPacket>()
-        packets.forEachAs<RtpPacket> {
-            doEncrypt(it, pktTransformer)?.let(encryptedPackets::add)
+        pkts.forEach {
+            val packetBuf = it.getBuffer()
+            val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
+            transformer.transform(rp)?.let { encryptedRawPacket ->
+                val srtpPacket = SrtpPacket(ByteBuffer.wrap(
+                    encryptedRawPacket.buffer,
+                    encryptedRawPacket.offset,
+                    encryptedRawPacket.length))
+                encryptedPackets.add(srtpPacket)
+            }
         }
         return encryptedPackets
-    }
-
-    private fun doEncrypt(rtpPacket: RtpPacket, transformer: SinglePacketTransformer): SrtpPacket? {
-        val packetBuf = rtpPacket.getBuffer()
-        val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
-        val output = srtpTransformer?.transform(rp) ?: return null
-        return SrtpPacket(ByteBuffer.wrap(output.buffer, output.offset, output.length))
     }
 }
