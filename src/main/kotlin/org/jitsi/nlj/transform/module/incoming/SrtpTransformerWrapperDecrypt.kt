@@ -16,51 +16,26 @@
 package org.jitsi.nlj.transform.module.incoming
 
 import org.jitsi.nlj.srtp_og.RawPacket
-import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.nlj.srtp_og.SinglePacketTransformer
-import org.jitsi.nlj.transform.module.Module
-import org.jitsi.nlj.transform.module.forEachAs
+import org.jitsi.nlj.transform.module.AbstractSrtpTransformerWrapper
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.SrtpPacket
-import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 
-class SrtpTransformerWrapperDecrypt() : Module("SRTP decrypt wrapper") {
-    var srtpTransformer: SinglePacketTransformer? = null
-    private var cachedPackets = mutableListOf<Packet>()
-    override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<RtpPacket>()
-
-        if (cachedPackets.isNotEmpty() && srtpTransformer != null) {
-            cachedPackets.forEachAs<SrtpPacket> {
-                val rtpPacket = doDecrypt(it) ?: return@forEachAs
-                outPackets.add(rtpPacket)
+class SrtpTransformerWrapperDecrypt : AbstractSrtpTransformerWrapper("SRTP decrypt wrapper") {
+    override fun doTransform(pkts: List<Packet>, transformer: SinglePacketTransformer): List<Packet> {
+        val decryptedPackets = mutableListOf<RtpPacket>()
+        pkts.forEach {
+            val packetBuf = it.getBuffer()
+            val rp = RawPacket(packetBuf.array(), 0, packetBuf.array().size)
+            transformer.reverseTransform(rp)?.let { decryptedRawPacket ->
+                val rtpPacket = RtpPacket(ByteBuffer.wrap(
+                    decryptedRawPacket.buffer,
+                    decryptedRawPacket.offset,
+                    decryptedRawPacket.length))
+                decryptedPackets.add(rtpPacket)
             }
-            cachedPackets.clear()
         }
-
-        if (srtpTransformer == null) {
-            cachedPackets.addAll(p)
-            return
-        }
-        p.forEachAs<SrtpPacket> {
-            val rtpPacket = doDecrypt(it) ?: return@forEachAs
-            outPackets.add(rtpPacket)
-        }
-        next(outPackets)
-    }
-
-    private fun doDecrypt(srtpPacket: SrtpPacket): RtpPacket? {
-        val packetBuf = srtpPacket.getBuffer()
-        val rp = RawPacket(packetBuf.array(), 0, packetBuf.array().size)
-//        println("BRIAN: decrypting ${rp.ssrcAsLong} ${rp.sequenceNumber} packet with size ${rp.length}")
-        val output = srtpTransformer?.reverseTransform(rp) ?: return null
-//        println("BRIAN: decrypted packet ${output.ssrcAsLong} ${output.sequenceNumber} now has size ${output.length}")
-        val outPacket = RtpPacket(ByteBuffer.wrap(output.buffer, output.offset, output.length))
-//        println("BRIAN: decrypted packet parsed as RtpPacket ${outPacket.header.ssrc} ${outPacket.header.sequenceNumber} now has size ${outPacket.size} " +
-//                "and buffer : ${outPacket.getBuffer().toHex()}")
-
-        return outPacket
+        return decryptedPackets
     }
 }

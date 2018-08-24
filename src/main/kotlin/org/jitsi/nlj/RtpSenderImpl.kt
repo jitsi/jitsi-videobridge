@@ -121,11 +121,11 @@ class RtpSenderImpl(
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
-        srtpEncryptWrapper.srtpTransformer = srtpTransformer
+        srtpEncryptWrapper.setTransformer(srtpTransformer)
     }
 
     override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
-        srtcpEncryptWrapper.srtcpTransformer = srtcpTransformer
+        srtcpEncryptWrapper.setTransformer(srtcpTransformer)
     }
 
     private fun scheduleWork() {

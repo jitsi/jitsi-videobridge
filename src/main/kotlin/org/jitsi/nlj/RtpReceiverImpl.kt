@@ -176,9 +176,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
-        srtpDecryptWrapper.srtpTransformer = srtpTransformer
+        srtpDecryptWrapper.setTransformer(srtpTransformer)
     }
     override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
-        srtcpDecryptWrapper.srtcpTransformer = srtcpTransformer
+        srtcpDecryptWrapper.setTransformer(srtcpTransformer)
     }
 }
