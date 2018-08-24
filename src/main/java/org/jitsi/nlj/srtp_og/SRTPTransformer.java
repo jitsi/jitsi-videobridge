@@ -262,6 +262,7 @@ public class SRTPTransformer
 
 
     // Copied from DtlsPacketTransformer
+    // Now DEPRECATED.  use SrtpUtil#initializeTransformer
     public static SinglePacketTransformer initializeSRTPTransformer(
             int srtpProtectionProfile,
             TlsContext tlsContext,
