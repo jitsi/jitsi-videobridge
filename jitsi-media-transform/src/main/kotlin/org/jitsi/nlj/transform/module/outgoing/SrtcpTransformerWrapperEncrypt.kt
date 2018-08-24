@@ -30,22 +30,22 @@ class SrtcpTransformerWrapperEncrypt : Module("SRTCP Encrypt wrapper") {
 
     private var cachedPackets = mutableListOf<Packet>()
     override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<Packet>()
+        val transformer = srtcpTransformer ?: run {
+            cachedPackets.addAll(p)
+            return
+        }
 
-        if (cachedPackets.isNotEmpty() && srtcpTransformer != null) {
+        val outPackets = mutableListOf<Packet>()
+        if (cachedPackets.isNotEmpty()) {
             cachedPackets.forEachAs<RtcpPacket> {
-                val rtpPacket = doEncrypt(it) ?: return@forEachAs
+                val rtpPacket = doEncrypt(it, transformer) ?: return@forEachAs
                 outPackets.add(rtpPacket)
             }
             cachedPackets.clear()
         }
 
-        if (srtcpTransformer == null) {
-            cachedPackets.addAll(p)
-            return
-        }
         p.forEachAs<RtcpPacket> {
-            val srtcpPacket = doEncrypt(it) ?: return@forEachAs
+            val srtcpPacket = doEncrypt(it, transformer) ?: return@forEachAs
             outPackets.add(srtcpPacket)
         }
         if (outPackets.isNotEmpty()) {
@@ -54,14 +54,14 @@ class SrtcpTransformerWrapperEncrypt : Module("SRTCP Encrypt wrapper") {
         }
     }
 
-    private fun doEncrypt(rtcpPacket: RtcpPacket): SrtcpPacket? {
+    private fun doEncrypt(rtcpPacket: RtcpPacket, transformer: SinglePacketTransformer): SrtcpPacket? {
 //        println("BRIAN: decrypting rtcp packet.  packet length is ${rtcpPacket.getBuffer().limit()}, rtcp header length" +
 //                " is ${rtcpPacket.header.length}")
         val packetBuf = rtcpPacket.getBuffer()
         val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
 //        println("BRIAN: encrypting ${RawPacket.getRTCPSSRC(rp)} rtcp packet with size ${rp.length} and buffer before decrypt: " +
 //                packetBuf.toHex())
-        val output = srtcpTransformer?.transform(rp) ?: return null
+        val output = transformer.transform(rp) ?: return null
 //        println("BRIAN: encrypted raw rtcp packet ${RawPacket.getRTCPSSRC(output)} ${output.sequenceNumber} now has size ${output.length} " +
 //            "and buffer\n" + ByteBuffer.wrap(output.buffer, output.offset, output.length).toHex())
         try {
