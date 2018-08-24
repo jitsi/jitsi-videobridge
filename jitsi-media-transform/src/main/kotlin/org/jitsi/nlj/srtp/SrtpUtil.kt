@@ -26,6 +26,21 @@ import org.jitsi.nlj.srtp_og.SRTPPolicy
 import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 
+enum class TlsRole {
+    CLIENT,
+    SERVER;
+
+    companion object {
+        fun fromTlsContext(tlsContext: TlsContext): TlsRole {
+            return when (tlsContext) {
+                is TlsClientContext -> CLIENT
+                is TlsServerContext -> SERVER
+                else -> throw Exception("Unsupported tls role: ${tlsContext::class}")
+            }
+        }
+    }
+}
+
 class SrtpUtil {
     companion object {
         fun getSrtpProfileInformationFromSrtpProtectionProfile(srtpProtectionProfile: Int): SrtpProfileInformation {
@@ -89,15 +104,13 @@ class SrtpUtil {
         fun initializeTransformer(
             srtpProfileInformation: SrtpProfileInformation,
             keyingMaterial: ByteArray,
-//            tlsContext: TlsContext,
-            tlsContext: TlsContext,
+            tlsRole: TlsRole,
             isRtcp: Boolean
         ): SinglePacketTransformer {
             val clientWriteSrtpMasterKey = ByteArray(srtpProfileInformation.cipherKeyLength)
             val serverWriteSrtpMasterKey = ByteArray(srtpProfileInformation.cipherKeyLength)
             val clientWriterSrtpMasterSalt = ByteArray(srtpProfileInformation.cipherSaltLength)
             val serverWriterSrtpMasterSalt = ByteArray(srtpProfileInformation.cipherSaltLength)
-//            val keyingMaterialValues = ByteArray((2 * srtpProfileInformation.cipherKeyLength) + (2 * srtpProfileInformation.cipherSaltLength))
             val keyingMaterialValues = listOf(
                 clientWriteSrtpMasterKey,
                 serverWriteSrtpMasterKey,
@@ -133,14 +146,14 @@ class SrtpUtil {
             )
 
             val clientSrtpContextFactory = SRTPContextFactory(
-                tlsContext is TlsClientContext,
+                tlsRole == TlsRole.CLIENT,
                 clientWriteSrtpMasterKey,
                 clientWriterSrtpMasterSalt,
                 srtpPolicy,
                 srtcpPolicy
             )
             val serverSrtpContextFactory = SRTPContextFactory(
-                tlsContext is TlsServerContext,
+                tlsRole == TlsRole.SERVER,
                 serverWriteSrtpMasterKey,
                 serverWriterSrtpMasterSalt,
                 srtpPolicy,
@@ -149,14 +162,15 @@ class SrtpUtil {
             val forwardSrtpContextFactory: SRTPContextFactory
             val reverseSrtpContextFactory: SRTPContextFactory
 
-            if (tlsContext is TlsClientContext) {
-                forwardSrtpContextFactory = clientSrtpContextFactory
-                reverseSrtpContextFactory = serverSrtpContextFactory
-            } else if (tlsContext is TlsServerContext) {
-                forwardSrtpContextFactory = serverSrtpContextFactory
-                reverseSrtpContextFactory = clientSrtpContextFactory
-            } else {
-                throw IllegalArgumentException("TlsContext is not client or server: ${tlsContext::class}")
+            when (tlsRole) {
+                TlsRole.CLIENT -> {
+                    forwardSrtpContextFactory = clientSrtpContextFactory
+                    reverseSrtpContextFactory = serverSrtpContextFactory
+                }
+                TlsRole.SERVER -> {
+                    forwardSrtpContextFactory = serverSrtpContextFactory
+                    reverseSrtpContextFactory = clientSrtpContextFactory
+                }
             }
 
             return if (isRtcp) {

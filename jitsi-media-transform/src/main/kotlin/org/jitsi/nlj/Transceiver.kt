@@ -19,6 +19,7 @@ import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.dtls.QueueDatagramTransport
 import org.jitsi.nlj.dtls.TlsClientImpl
 import org.jitsi.nlj.srtp.SrtpUtil
+import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
@@ -76,17 +77,23 @@ class Transceiver(
         println("Transceiver ${this.hashCode()} using executor ${executor.hashCode()}")
         dtlsStack.onHandshakeComplete { dtlsTransport, tlsContext ->
             //TODO: in the future we'll want to pass the dtls transport to the sctp connection
-            val srtpProfileInfo = SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(dtlsStack.getChosenSrtpProtectionProfile())
-            val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
-            val srtpTransformer = SrtpUtil.initializeTransformer(srtpProfileInfo, keyingMaterial, tlsContext, false)
-            val srtcpTransformer = SrtpUtil.initializeTransformer(srtpProfileInfo, keyingMaterial, tlsContext, true)
 
-//            val srtpTransformer = SRTPTransformer.initializeSRTPTransformer(
-//                dtlsStack.getChosenSrtpProtectionProfile(), tlsContext, false
-//            )
-//            val srtcpTransformer = SRTPTransformer.initializeSRTPTransformer(
-//                dtlsStack.getChosenSrtpProtectionProfile(), tlsContext, true
-//            )
+            val srtpProfileInfo =
+                SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(dtlsStack.getChosenSrtpProtectionProfile())
+            val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
+            val srtpTransformer = SrtpUtil.initializeTransformer(
+                srtpProfileInfo,
+                keyingMaterial,
+                TlsRole.fromTlsContext(tlsContext),
+                false
+            )
+            val srtcpTransformer = SrtpUtil.initializeTransformer(
+                srtpProfileInfo,
+                keyingMaterial,
+                TlsRole.fromTlsContext(tlsContext),
+                true
+            )
+
             rtpReceiver.setSrtpTransformer(srtpTransformer)
             rtpReceiver.setSrtcpTransformer(srtcpTransformer)
             rtpSender.setSrtpTransformer(srtpTransformer)
