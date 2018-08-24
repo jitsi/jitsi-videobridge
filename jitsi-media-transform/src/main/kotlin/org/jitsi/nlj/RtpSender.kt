@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtcp.RtcpPacket
 
 
 /**
@@ -39,6 +40,7 @@ abstract class RtpSender {
         lastPacketSentTime = System.currentTimeMillis()
     }
     abstract fun sendPackets(pkts: List<Packet>)
+    abstract fun sendRtcp(pkts: List<RtcpPacket>)
     abstract fun getStats(): String
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)

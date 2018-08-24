@@ -52,8 +52,15 @@ class Transceiver(
     private val dtlsReceiver = DtlsReceiverModule()
     private val dtlsSender = DtlsSenderModule()
 
-    /*private*/ val rtpReceiver: RtpReceiver = RtpReceiverImpl(123, executor)
     /*private*/ val rtpSender: RtpSender = RtpSenderImpl(123, executor)
+    /*private*/ val rtpReceiver: RtpReceiver =
+        RtpReceiverImpl(
+            123,
+            { rtcpPacket ->
+                println("BRIAN: Sending outgoing rtcp $rtcpPacket")
+                rtpSender.sendRtcp(listOf(rtcpPacket))
+            },
+            executor)
 
     // The incoming chain in the Transceiver handles the DTLS
     // handshake and then defers to the RtpReceiver's input chain
@@ -77,6 +84,7 @@ class Transceiver(
             rtpReceiver.setSrtpTransformer(srtpTransformer)
             rtpReceiver.setSrtcpTransformer(srtcpTransformer)
             rtpSender.setSrtpTransformer(srtpTransformer)
+            rtpSender.setSrtcpTransformer(srtcpTransformer)
         }
 
         incomingChain = chain {

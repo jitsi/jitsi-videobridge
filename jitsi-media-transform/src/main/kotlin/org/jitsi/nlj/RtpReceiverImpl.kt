@@ -41,6 +41,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
+    val rtcpSender: (RtcpPacket) -> Unit = {},
     val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpReceiver() {
     /*private*/ override val moduleChain: ModuleChain
@@ -76,10 +77,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 next(p.map(Packet::getBuffer).map(::SrtpPacket))
                             }
                         })
-//                        addModule(TccGeneratorModule(5) {
-//                            println("Tcc packet ready to send: $it")
-//                            //TODO: fill out rtcp header information and inject
-//                        })
+                        addModule(TccGeneratorModule(5, rtcpSender))
                         addModule(srtpDecryptWrapper)
                         addModule(object : Module("packet handler") {
                             override fun doProcessPackets(p: List<Packet>) {
