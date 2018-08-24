@@ -30,28 +30,25 @@ class SrtcpTransformerWrapperEncrypt : Module("SRTCP Encrypt wrapper") {
 
     private var cachedPackets = mutableListOf<Packet>()
     override fun doProcessPackets(p: List<Packet>) {
-        val transformer = srtcpTransformer ?: run {
-            cachedPackets.addAll(p)
-            return
-        }
-
         val outPackets = mutableListOf<Packet>()
-        if (cachedPackets.isNotEmpty()) {
-            cachedPackets.forEachAs<RtcpPacket> {
-                val rtpPacket = doEncrypt(it, transformer) ?: return@forEachAs
-                outPackets.add(rtpPacket)
-            }
+        srtcpTransformer?.let { pktTransformer ->
+            outPackets.addAll(encryptPackets(cachedPackets, pktTransformer))
             cachedPackets.clear()
+            outPackets.addAll(encryptPackets(p, pktTransformer))
+            if (outPackets.isNotEmpty()) {
+                next(outPackets)
+            }
+        } ?: run {
+            cachedPackets.addAll(p)
         }
+    }
 
-        p.forEachAs<RtcpPacket> {
-            val srtcpPacket = doEncrypt(it, transformer) ?: return@forEachAs
-            outPackets.add(srtcpPacket)
+    private fun encryptPackets(packets: List<Packet>, pktTransformer: SinglePacketTransformer): List<SrtcpPacket> {
+        val encryptedPackets = mutableListOf<SrtcpPacket>()
+        packets.forEachAs<RtcpPacket> {
+            doEncrypt(it, pktTransformer)?.let(encryptedPackets::add)
         }
-        if (outPackets.isNotEmpty()) {
-            println("SrtcpEncrypt forwarding ${outPackets.size} packets")
-            next(outPackets)
-        }
+        return encryptedPackets
     }
 
     private fun doEncrypt(rtcpPacket: RtcpPacket, transformer: SinglePacketTransformer): SrtcpPacket? {
@@ -75,5 +72,4 @@ class SrtcpTransformerWrapperEncrypt : Module("SRTCP Encrypt wrapper") {
             return null
         }
     }
-
 }

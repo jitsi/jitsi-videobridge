@@ -24,8 +24,7 @@ import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtpPacket
 import java.nio.ByteBuffer
 
-//TODO: having replay issues
-class SrtpTransformerWrapperEncryptNew : Module("SRTP encrypt wrapper") {
+class SrtpTransformerWrapperEncrypt : Module("SRTP encrypt wrapper") {
     var srtpTransformer: SinglePacketTransformer? = null
     private var cachedPackets = mutableListOf<Packet>()
     override fun doProcessPackets(p: List<Packet>) {
@@ -33,8 +32,11 @@ class SrtpTransformerWrapperEncryptNew : Module("SRTP encrypt wrapper") {
 
         srtpTransformer?.let { pktTransformer ->
             outPackets.addAll(encryptPackets(cachedPackets, pktTransformer))
+            cachedPackets.clear()
             outPackets.addAll(encryptPackets(p, pktTransformer))
-            next(outPackets)
+            if (outPackets.isNotEmpty()) {
+                next(outPackets)
+            }
         } ?: run {
             cachedPackets.addAll(p)
         }
@@ -43,10 +45,7 @@ class SrtpTransformerWrapperEncryptNew : Module("SRTP encrypt wrapper") {
     private fun encryptPackets(packets: List<Packet>, pktTransformer: SinglePacketTransformer): List<SrtpPacket> {
         val encryptedPackets = mutableListOf<SrtpPacket>()
         packets.forEachAs<RtpPacket> {
-            val encPacket = doEncrypt(it, pktTransformer)
-            if (encPacket != null) {
-                encryptedPackets.add(encPacket)
-            }
+            doEncrypt(it, pktTransformer)?.let(encryptedPackets::add)
         }
         return encryptedPackets
     }

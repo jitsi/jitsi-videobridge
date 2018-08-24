@@ -19,14 +19,12 @@ import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
-import org.jitsi.nlj.transform.module.RtcpHandlerModule
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.forEachIf
 import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.nlj.transform.module.outgoing.SrtcpTransformerWrapperEncrypt
 import org.jitsi.nlj.transform.module.outgoing.SrtpTransformerWrapperEncrypt
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.extensions.toHex
@@ -68,7 +66,7 @@ class RtpSenderImpl(
                     tempSenderSsrc?.let { senderSsrc ->
                         p.forEachAs<RtcpPacket> {
                             it.header.senderSsrc = senderSsrc
-                            println("Sending rtcp $it")
+//                            println("Sending rtcp $it")
                         }
                         next(p)
                     } ?: run {
@@ -79,9 +77,9 @@ class RtpSenderImpl(
             addModule(srtcpEncryptWrapper)
             addModule(object : Module("Packet sender") {
                 override fun doProcessPackets(p: List<Packet>) {
-                    p.forEachAs<SrtcpPacket> {
-                        println("Rtcp chain sending rtcp packet: $it\n${it.getBuffer().toHex()}")
-                    }
+//                    p.forEachAs<SrtcpPacket> {
+//                        println("Rtcp chain sending rtcp packet: $it\n${it.getBuffer().toHex()}")
+//                    }
                     packetSender.invoke(p)
                 }
             })
@@ -118,7 +116,7 @@ class RtpSenderImpl(
     }
 
     override fun sendRtcp(pkts: List<RtcpPacket>) {
-        println("RtpSenderImpl#sendRtcp sending ${pkts.size} rtcp packets")
+//        println("RtpSenderImpl#sendRtcp sending ${pkts.size} rtcp packets")
         outgoingRtcpChain.processPackets(pkts)
     }
 
