@@ -20,9 +20,17 @@ import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.RtcpHandlerModule
+import org.jitsi.nlj.transform.module.forEachAs
+import org.jitsi.nlj.transform.module.forEachIf
 import org.jitsi.nlj.transform.module.getMbps
+import org.jitsi.nlj.transform.module.outgoing.SrtcpTransformerWrapperEncrypt
 import org.jitsi.nlj.transform.module.outgoing.SrtpTransformerWrapperEncrypt
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.SrtcpPacket
+import org.jitsi.rtp.SrtpPacket
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -32,7 +40,7 @@ class RtpSenderImpl(
     val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpSender() {
     private val moduleChain: ModuleChain
-    private val outgoingRtpChain: ModuleChain
+//    private val outgoingRtpChain: ModuleChain
     private val outgoingRtcpChain: ModuleChain
     val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var numIncomingBytes: Long = 0
@@ -40,23 +48,55 @@ class RtpSenderImpl(
     var lastPacketWrittenTime = -1L
     var running = true
 
-    private val encryptWrapper = SrtpTransformerWrapperEncrypt()
+    private val srtpEncryptWrapper = SrtpTransformerWrapperEncrypt()
+    private val srtcpEncryptWrapper = SrtcpTransformerWrapperEncrypt()
+
+    private var tempSenderSsrc: Long? = null
+
     init {
         println("Sender ${this.hashCode()} using executor ${executor.hashCode()}")
-        outgoingRtpChain = chain {
-            name("Outgoing RTP chain")
-            addModule(encryptWrapper)
-        }
+//        outgoingRtpChain = chain {
+//            name("Outgoing RTP chain")
+//            addModule(srtpEncryptWrapper)
+//        }
         outgoingRtcpChain = chain {
             name("Outgoing RTCP chain")
-            addModule(RtcpHandlerModule())
+            addModule(object : Module("RTCP field setter") {
+                override fun doProcessPackets(p: List<Packet>) {
+                    //TODO: for now, hard code an ssrc we've sent out
+                    // before as the senderSsrc in this packet
+                    tempSenderSsrc?.let { senderSsrc ->
+                        p.forEachAs<RtcpPacket> {
+                            it.header.senderSsrc = senderSsrc
+                            println("Sending rtcp $it")
+                        }
+                        next(p)
+                    } ?: run {
+                        println("RTCP chain no sender ssrc set")
+                    }
+                }
+            })
+            addModule(srtcpEncryptWrapper)
+            addModule(object : Module("Packet sender") {
+                override fun doProcessPackets(p: List<Packet>) {
+                    p.forEachAs<SrtcpPacket> {
+                        println("Rtcp chain sending rtcp packet: $it\n${it.getBuffer().toHex()}")
+                    }
+                    packetSender.invoke(p)
+                }
+            })
         }
 
         moduleChain = chain {
             //TODO: for now just hard-code the rtp path
-            addModule(encryptWrapper)
+            addModule(srtpEncryptWrapper)
             addModule(object : Module("Packet sender") {
                 override fun doProcessPackets(p: List<Packet>) {
+                    if (tempSenderSsrc == null) {
+                        p.forEachIf<SrtpPacket> {
+                            tempSenderSsrc = it.header.ssrc
+                        }
+                    }
                     packetSender.invoke(p)
                 }
             })
@@ -77,11 +117,17 @@ class RtpSenderImpl(
         lastPacketWrittenTime = System.currentTimeMillis()
     }
 
+    override fun sendRtcp(pkts: List<RtcpPacket>) {
+        println("RtpSenderImpl#sendRtcp sending ${pkts.size} rtcp packets")
+        outgoingRtcpChain.processPackets(pkts)
+    }
+
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
-        encryptWrapper.srtpTransformer = srtpTransformer
+        srtpEncryptWrapper.srtpTransformer = srtpTransformer
     }
 
     override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
+        srtcpEncryptWrapper.srtcpTransformer = srtcpTransformer
     }
 
     private fun scheduleWork() {

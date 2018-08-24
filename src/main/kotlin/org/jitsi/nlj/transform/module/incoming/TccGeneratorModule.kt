@@ -30,7 +30,8 @@ class TccGeneratorModule(
     private val onTccPacketReady: (RtcpPacket) -> Unit = {}
 ) : Module("TCC generator") {
     private var currTccSeqNum: Int = 0
-    private var currTcc: Tcc = Tcc(currTccSeqNum++)
+    private var currTcc: Tcc = Tcc(feedbackPacketCount = currTccSeqNum++)
+    private var tempDetectedSsrc: Long? = null
     override fun doProcessPackets(p: List<Packet>) {
         val now = System.currentTimeMillis()
         p.forEachAs<SrtpPacket> {
@@ -38,6 +39,9 @@ class TccGeneratorModule(
                 //TODO: check if it's a one byte or two byte ext?
                 val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@let
                 addPacket(tccSeqNum, now)
+            }
+            if (tempDetectedSsrc == null) {
+                tempDetectedSsrc = it.header.ssrc
             }
         }
         next(p)
@@ -48,11 +52,12 @@ class TccGeneratorModule(
 
         if (isTccReadyToSend()) {
             val pkt = RtcpFbPacket(feedbackControlInformation = currTcc)
+            pkt.mediaSourceSsrc = tempDetectedSsrc!!
             onTccPacketReady(pkt)
             // Create a new TCC instance for the next set of information
-            currTcc = Tcc(currTccSeqNum++)
+            currTcc = Tcc(feedbackPacketCount = currTccSeqNum++)
         }
     }
 
-    private fun isTccReadyToSend(): Boolean = currTcc.size >= 20
+    private fun isTccReadyToSend(): Boolean = currTcc.packetInfo.size >= 20
 }
