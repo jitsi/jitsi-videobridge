@@ -125,12 +125,7 @@ internal class TccTest : ShouldSpec() {
                     tcc.packetInfo.filter { it.value != NOT_RECEIVED_TS }.size shouldBe 7
                 }
             }
-            "!blah" {
-                val tcc = Tcc(pktFromCall)
-                println(tcc.packetInfo)
-                tcc.getBuffer()
-            }
-            "Creating a TCC packet" {
+            "!Creating a TCC packet" {
                 val tcc = Tcc(fciAll2BitVectorChunks)
                 val buf = tcc.getBuffer()
                 should("write the data to the buffer correctly") {
@@ -145,6 +140,15 @@ internal class TccTest : ShouldSpec() {
 //                    packetStatusList.add(Pair(i, PacketStatusSymbol.RECEIVED_SMALL_DELTA))
 //                    packetDeltas.add(ReceiveDelta.create(20.0))
 //                }
+            }
+            "Creating a TCC packet from values" {
+                val tcc = Tcc(feedbackPacketCount = 10)
+                should("set the values correctly") {
+//                    tcc.referenceTime shouldBe 10
+                    println(tcc)
+                    tcc.addPacket(10, 20)
+                    println(tcc)
+                }
             }
         }
         "PacketStatusChunk" {

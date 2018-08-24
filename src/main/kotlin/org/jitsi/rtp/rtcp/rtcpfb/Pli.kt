@@ -23,6 +23,7 @@ import java.nio.ByteBuffer
  *  2, and there MUST NOT be any Feedback Control Information.
  */
 class Pli : FeedbackControlInformation() {
+    override val fmt: Int = 1
     override val size: Int = 0
     override var buf: ByteBuffer? = ByteBuffer.allocate(0)
 

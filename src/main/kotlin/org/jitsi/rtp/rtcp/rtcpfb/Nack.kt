@@ -30,6 +30,7 @@ import java.util.*
 class Nack : FeedbackControlInformation {
     override var buf: ByteBuffer? = null
     override val size: Int = 4
+    override val fmt: Int = Nack.FMT
     /**
      * Packet ID (PID): 16 bits
      *  The PID field is used to specify a lost packet.  The PID field

@@ -15,7 +15,6 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
-import com.sun.org.apache.bcel.internal.classfile.Unknown
 import org.jitsi.rtp.extensions.get3Bytes
 import org.jitsi.rtp.extensions.getBit
 import org.jitsi.rtp.extensions.getBits
@@ -68,9 +67,10 @@ const val NOT_RECEIVED_TS: Long = -1
  */
 class Tcc : FeedbackControlInformation {
     override var buf: ByteBuffer? = null
+    override val fmt: Int = Tcc.FMT
     var feedbackPacketCount: Int
     var packetInfo: PacketMap
-    var referenceTime: Int
+    var referenceTime: Long
     override val size: Int
         get() {
             var currReferenceTime = this.referenceTime
@@ -83,12 +83,19 @@ class Tcc : FeedbackControlInformation {
                 // first calculate the delta size
                 .map {
                     val delta = (it - currReferenceTime).toDouble()
-                    currReferenceTime = it.toInt()
+                    currReferenceTime = it
                     delta
                 }
                 // Now map it to a status symbol.  We will always use 2 bit symbols
                 // when serializing
-                .map { TwoBitPacketStatusSymbol.fromDeltaMs(it) }
+                .map {
+                    val symbol = TwoBitPacketStatusSymbol.fromDeltaMs(it)
+                    if (symbol == UnknownSymbol) {
+                        println("BRIAN GOT UNKNOWN SYMBOL FROM DELTA $it")
+                    }
+
+                    symbol
+                }
                 // And now map it to the size of the delta block
                 .map { it.getDeltaSizeBytes() }
                 .sum()
@@ -174,7 +181,6 @@ class Tcc : FeedbackControlInformation {
                     currOffset += deltaSizeBytes
                 }
             }
-            println("parsing fci ended at position $currOffset")
 
             return Pair(packetStatuses, packetDeltas)
         }
@@ -215,8 +221,10 @@ class Tcc : FeedbackControlInformation {
         fun setPacketInfo(buf: ByteBuffer, packetInfo: PacketMap) {
             setBaseSeqNum(buf, packetInfo.firstKey())
             setPacketStatusCount(buf, packetInfo.size)
-            val referenceTime = packetInfo.firstEntry().value.toUInt()
-            setReferenceTime(buf, referenceTime)
+            //TODO: keep this consistent with the stored reference time member?
+            val referenceTimestamp = packetInfo.firstEntry().value
+            val referenceTimeValue = ((referenceTimestamp / 64) and 0xFFFFFF).toInt()
+            setReferenceTime(buf, referenceTimeValue)
 
             // Set the buffer's position to the start of the status chunks
             buf.position(8)
@@ -224,7 +232,7 @@ class Tcc : FeedbackControlInformation {
             val vectorChunks = mutableListOf<StatusVectorChunk>()
             val receiveDeltas = mutableListOf<ReceiveDelta>()
             val seqNums = packetInfo.keys.toList()
-            var currReferenceTime = referenceTime
+            var currReferenceTime = referenceTimestamp
             // Each vector chunk will contain 7 packet status symbols
             for (i in 0 until packetInfo.size step 7) {
                 val packetStatuses = mutableListOf<PacketStatusSymbol>()
@@ -236,7 +244,7 @@ class Tcc : FeedbackControlInformation {
                     val seqNum = seqNums[i]
                     val timestamp = packetInfo[seqNum]!!
                     val deltaMs = (timestamp - currReferenceTime).toDouble()
-                    currReferenceTime = timestamp.toInt()
+                    currReferenceTime = timestamp
                     val symbol = when(timestamp) {
                         NOT_RECEIVED_TS -> TwoBitPacketStatusSymbol.NOT_RECEIVED
                         else -> TwoBitPacketStatusSymbol.fromDeltaMs(deltaMs)
@@ -266,13 +274,13 @@ class Tcc : FeedbackControlInformation {
      */
     constructor(buf: ByteBuffer) : super() {
         this.buf = buf.slice()
-        this.referenceTime = getReferenceTime(buf)
+        this.referenceTime = getReferenceTime(buf).toLong()
         this.feedbackPacketCount = getFeedbackPacketCount(buf)
         this.packetInfo = getPacketInfo(buf)
     }
 
     constructor(
-        referenceTime: Int = -1,
+        referenceTime: Long = -1,
         feedbackPacketCount: Int = -1,
         packetInfo: PacketMap = PacketMap()
     ) {
@@ -281,8 +289,11 @@ class Tcc : FeedbackControlInformation {
         this.packetInfo = packetInfo
     }
 
-    fun addPacket(tccSeqNum: Int, timestamp: Long) {
-        packetInfo[tccSeqNum] = timestamp
+    fun addPacket(seqNum: Int, timestamp: Long) {
+        if (this.referenceTime == -1L) {
+            this.referenceTime = timestamp
+        }
+        packetInfo[seqNum] = timestamp
     }
 
     override fun getBuffer(): ByteBuffer {

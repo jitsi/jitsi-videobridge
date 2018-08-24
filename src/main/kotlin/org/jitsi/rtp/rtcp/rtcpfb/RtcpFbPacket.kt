@@ -27,6 +27,7 @@ import java.util.*
 
 abstract class FeedbackControlInformation {
     abstract val size: Int
+    abstract val fmt: Int
     protected abstract var buf: ByteBuffer?
     abstract fun getBuffer(): ByteBuffer
 }
@@ -115,6 +116,8 @@ class RtcpFbPacket : RtcpPacket {
         feedbackControlInformation: FeedbackControlInformation
     ) : super() {
         this.header = header
+        // TODO: hard code this here? or elsewhere?
+        this.header.payloadType = 205
         this.mediaSourceSsrc = mediaSourceSsrc
         this.feedbackControlInformation = feedbackControlInformation
     }
@@ -128,6 +131,7 @@ class RtcpFbPacket : RtcpPacket {
         // We need to update the length in the header to match the current content
         // of the packet (which may have changed)
         header.length = ((neededSize + 3) / 4 - 1)
+        header.reportCount = feedbackControlInformation.fmt
         //TODO: we should also not do padding anywhere else (except for in 'internal'
         // fields which need it) and handle it here (add any padding, set the padding bit)
         //TODO: should have explicit setters for these instead of using relative positions
@@ -150,7 +154,9 @@ class RtcpFbPacket : RtcpPacket {
     override fun toString(): String {
         return with (StringBuffer()) {
             appendln("RTCPFB packet")
+            // TODO: the header may not have been "sync'd" at this point (e.g. length, fmt not set)
             append(header.toString())
+            appendln("media source ssrc: $mediaSourceSsrc")
             appendln(feedbackControlInformation.toString())
             toString()
         }

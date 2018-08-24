@@ -36,6 +36,7 @@ class Fir : FeedbackControlInformation {
     var seqNum: Int
     override val size: Int = 4
     override var buf: ByteBuffer? = null
+    override val fmt: Int = 4
 
     companion object {
         const val SIZE_BYTES = 4
