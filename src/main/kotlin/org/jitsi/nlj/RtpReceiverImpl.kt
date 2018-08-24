@@ -30,13 +30,11 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
-import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
 import java.time.Duration
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 
 class RtpReceiverImpl @JvmOverloads constructor(
@@ -102,7 +100,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 p.forEach {
                                     val iter = RtcpIterator(it.getBuffer())
                                     val pkts = iter.getAll()
-                                    println("BRIAN: extracted ${pkts.size} rtcp packets from compound $it")
+//                                    println("BRIAN: extracted ${pkts.size} rtcp packets from compound:\n$pkts")
                                     outPackets.addAll(pkts)
                                 }
                                 if (outPackets.isNotEmpty()) {
