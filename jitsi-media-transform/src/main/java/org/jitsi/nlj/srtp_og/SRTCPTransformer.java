@@ -15,6 +15,8 @@
  */
 package org.jitsi.nlj.srtp_og;
 
+import org.jitsi.nlj.transform_og.*;
+
 import java.util.*;
 
 /*

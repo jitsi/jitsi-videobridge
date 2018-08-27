@@ -16,8 +16,8 @@
 package org.jitsi.nlj.transform.module.incoming
 
 import org.jitsi.nlj.srtp_og.RawPacket
-import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.module.AbstractSrtpTransformerWrapper
+import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.nio.ByteBuffer
