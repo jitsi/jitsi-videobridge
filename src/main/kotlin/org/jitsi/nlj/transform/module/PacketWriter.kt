@@ -23,16 +23,11 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-import java.nio.channels.SeekableByteChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
-import java.nio.file.attribute.FileAttribute
-import java.nio.file.attribute.PosixFilePermission
-import java.nio.file.attribute.PosixFilePermissions
 import java.nio.file.attribute.PosixFileAttributes
-
+import java.nio.file.attribute.PosixFilePermission
 
 
 class PacketWriter(filePath: String = "/tmp/${System.currentTimeMillis()}.rtpdump") : Module("PacketWriter") {

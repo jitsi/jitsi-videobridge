@@ -18,15 +18,11 @@ package org.jitsi.nlj
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.RtpProtocolPacket
-import org.jitsi.rtp.util.RtpProtocol
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.system.exitProcess
 import kotlin.system.measureNanoTime
 
 class Bridge(val executor: ExecutorService) {

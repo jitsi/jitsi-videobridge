@@ -15,14 +15,11 @@
  */
 package org.jitsi.nlj.dtls
 
-import org.bouncycastle.crypto.tls.DTLSClientProtocol
 import org.bouncycastle.crypto.tls.DTLSTransport
 import org.bouncycastle.crypto.tls.DatagramTransport
-import org.bouncycastle.crypto.tls.SRTPProtectionProfile
 import org.bouncycastle.crypto.tls.TlsClient
 import org.bouncycastle.crypto.tls.TlsContext
 import java.time.Duration
-import java.util.concurrent.Future
 
 /**
  * Acts as a DTLS client and handles the DTLS negotiation
