@@ -25,6 +25,8 @@ import kotlin.properties.Delegates
 
 typealias PacketHandler = (List<Packet>) -> Unit
 
+//TODO: can we get it more accurate than requiring things
+// take over a second?
 fun getMbps(numBytes: Long, duration: Duration): String {
     if (duration.seconds == 0L) {
         return "Infinity"

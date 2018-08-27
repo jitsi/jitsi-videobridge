@@ -20,20 +20,18 @@ import org.jitsi.nlj.dtls.QueueDatagramTransport
 import org.jitsi.nlj.dtls.TlsClientImpl
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
-import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.incoming.DtlsReceiverModule
 import org.jitsi.nlj.transform.module.outgoing.DtlsSenderModule
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.extensions.toHex
 import unsigned.toUInt
+import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.experimental.and
 
@@ -45,9 +43,12 @@ import kotlin.experimental.and
  * Incoming packets should be written to [incomingQueue].  Outgoing
  * packets are put in [outgoingQueue] (and should be read by something)
  * TODO: maybe we want to have this 'push' the outgoing packets somewhere
- * else instead
+ * else instead (then we could have all senders push to a single queue and
+ * have the one thread just read from the queue and send, rather than that thread
+ * having to read from a bunch of individual queues)
  */
 class Transceiver(
+    private val id: String,
     private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) {
     private val dtlsStack = DtlsClientStack()
@@ -59,7 +60,7 @@ class Transceiver(
         RtpReceiverImpl(
             123,
             { rtcpPacket ->
-                println("BRIAN: Sending outgoing rtcp $rtcpPacket")
+//                println("BRIAN: Sending outgoing rtcp $rtcpPacket")
                 rtpSender.sendRtcp(listOf(rtcpPacket))
             },
             executor)
@@ -81,6 +82,10 @@ class Transceiver(
             val srtpProfileInfo =
                 SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(dtlsStack.getChosenSrtpProtectionProfile())
             val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
+            println("Transceiver $id creating transformers with:\n" +
+                    "profile info:\n$srtpProfileInfo\n" +
+                    "keyingMaterial:\n${ByteBuffer.wrap(keyingMaterial).toHex()}\n" +
+                    "tls role: ${TlsRole.fromTlsContext(tlsContext)}")
             val srtpTransformer = SrtpUtil.initializeTransformer(
                 srtpProfileInfo,
                 keyingMaterial,

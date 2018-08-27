@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.srtp_og.SinglePacketTransformer
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
@@ -26,6 +25,7 @@ import org.jitsi.nlj.transform.module.incoming.SrtcpTransformerWrapperDecrypt
 import org.jitsi.nlj.transform.module.incoming.SrtpTransformerWrapperDecrypt
 import org.jitsi.nlj.transform.module.incoming.TccGeneratorModule
 import org.jitsi.nlj.transform.packetPath
+import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
@@ -58,7 +58,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     init {
         println("Receiver ${this.hashCode()} using executor ${executor.hashCode()}")
         moduleChain = chain {
-            name("SRTP chain")
+            name("Receive chain")
             addModule(object : Module("SRTP protocol parser") {
                 override fun doProcessPackets(p: List<Packet>) {
                     next(p.map(Packet::getBuffer).map(::SrtpProtocolPacket))
@@ -139,7 +139,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 val packet = incomingPacketQueue.poll() ?: break
                 packets += packet
             }
-            if (packets.isNotEmpty()) processPackets(packets)
+            if (packets.isNotEmpty()) {
+                processPackets(packets)
+            }
             if (running) {
                 scheduleWork()
             }
@@ -152,14 +154,15 @@ class RtpReceiverImpl @JvmOverloads constructor(
         return with (StringBuffer()) {
             appendln("RTP Receiver $id")
             appendln("queue size: ${incomingPacketQueue.size}")
-            appendln("Received $bytesReceived bytes in ${lastPacketWrittenTime - firstPacketWrittenTime}ms (${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
+            appendln("Received $packetsReceived packets ($bytesReceived bytes) in " +
+                    "${lastPacketWrittenTime - firstPacketWrittenTime}ms " +
+                    "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             append(moduleChain.getStats())
             toString()
         }
     }
 
     override fun enqueuePacket(p: Packet) {
-        println("BRIAN: RtpReceiver enqueing packet of size ${p.size}")
         incomingPacketQueue.add(p)
         bytesReceived += p.size
         packetsReceived++
@@ -167,10 +170,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
             firstPacketWrittenTime = System.currentTimeMillis()
         }
         lastPacketWrittenTime = System.currentTimeMillis()
-        if (packetsReceived % 200 == 0L) {
-            println("BRIAN: module chain stats: ${moduleChain.getStats()}")
-
-        }
+//        if (packetsReceived % 200 == 0L) {
+//            println("BRIAN: module chain stats: ${moduleChain.getStats()}")
+//        }
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {

@@ -18,14 +18,11 @@ package org.jitsi.nlj.dtls
 import org.bouncycastle.crypto.tls.DTLSClientProtocol
 import org.bouncycastle.crypto.tls.DTLSTransport
 import org.bouncycastle.crypto.tls.DatagramTransport
-import org.bouncycastle.crypto.tls.SRTPProtectionProfile
 import org.bouncycastle.crypto.tls.TlsClient
 import org.bouncycastle.crypto.tls.TlsContext
 import java.security.SecureRandom
-import java.util.concurrent.Callable
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 
 class DtlsClientStack @JvmOverloads constructor(
     private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol(SecureRandom()),
