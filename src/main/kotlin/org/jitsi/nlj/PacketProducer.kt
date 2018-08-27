@@ -21,7 +21,6 @@ import org.jitsi.rtp.RtpHeader
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpSrPacket
-import org.jitsi.rtp.util.BufferView
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.concurrent.thread

@@ -24,7 +24,7 @@ import org.jitsi.nlj.srtp_og.SRTCPTransformer
 import org.jitsi.nlj.srtp_og.SRTPContextFactory
 import org.jitsi.nlj.srtp_og.SRTPPolicy
 import org.jitsi.nlj.srtp_og.SRTPTransformer
-import org.jitsi.nlj.srtp_og.SinglePacketTransformer
+import org.jitsi.nlj.transform_og.SinglePacketTransformer
 
 enum class TlsRole {
     CLIENT,

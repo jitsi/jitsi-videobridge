@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.module
 
-import org.jitsi.nlj.srtp_og.SinglePacketTransformer
+import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 
 abstract class AbstractSrtpTransformerWrapper(name: String) : Module(name) {

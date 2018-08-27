@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.srtp_og;
+package org.jitsi.nlj.transform_og;
 
 /**
  * @author bbaldino
@@ -33,6 +33,8 @@ package org.jitsi.nlj.srtp_og;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import org.jitsi.nlj.srtp_og.*;
 
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
