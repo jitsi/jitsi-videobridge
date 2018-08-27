@@ -27,7 +27,7 @@ class SrtpTransformerWrapperEncrypt : AbstractSrtpTransformerWrapper("SRTP Encry
         val encryptedPackets = mutableListOf<SrtpPacket>()
         pkts.forEach {
             val packetBuf = it.getBuffer()
-            val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
+            val rp = RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
             transformer.transform(rp)?.let { encryptedRawPacket ->
                 val srtpPacket = SrtpPacket(ByteBuffer.wrap(
                     encryptedRawPacket.buffer,
