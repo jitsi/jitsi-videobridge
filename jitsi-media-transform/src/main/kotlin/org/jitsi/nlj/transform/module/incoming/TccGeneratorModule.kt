@@ -17,9 +17,9 @@ package org.jitsi.nlj.transform.module.incoming
 
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.forEachAs
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtpPacket
-import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.Tcc
@@ -32,6 +32,7 @@ class TccGeneratorModule(
     private var currTccSeqNum: Int = 0
     private var currTcc: Tcc = Tcc(feedbackPacketCount = currTccSeqNum++)
     private var tempDetectedSsrc: Long? = null
+    private var numTccSent: Int = 0
     override fun doProcessPackets(p: List<Packet>) {
         val now = System.currentTimeMillis()
         p.forEachAs<SrtpPacket> {
@@ -54,10 +55,19 @@ class TccGeneratorModule(
             val pkt = RtcpFbPacket(feedbackControlInformation = currTcc)
             pkt.mediaSourceSsrc = tempDetectedSsrc!!
             onTccPacketReady(pkt)
+            numTccSent++
             // Create a new TCC instance for the next set of information
             currTcc = Tcc(feedbackPacketCount = currTccSeqNum++)
         }
     }
 
     private fun isTccReadyToSend(): Boolean = currTcc.packetInfo.size >= 20
+
+    override fun getStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(super.getStats(indent))
+            appendLnIndent(indent + 2, "num tcc packets sent: $numTccSent")
+            toString()
+        }
+    }
 }
