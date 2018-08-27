@@ -29,6 +29,8 @@ import org.jitsi.nlj.transform.packetPath
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.service.neomedia.RTPExtension
+import org.jitsi.service.neomedia.format.MediaFormat
 import unsigned.toUInt
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
@@ -54,13 +56,14 @@ class Transceiver(
     private val dtlsStack = DtlsClientStack()
     private val dtlsReceiver = DtlsReceiverModule()
     private val dtlsSender = DtlsSenderModule()
+    private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
+    private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
 
     /*private*/ val rtpSender: RtpSender = RtpSenderImpl(123, executor)
     /*private*/ val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(
             123,
             { rtcpPacket ->
-//                println("BRIAN: Sending outgoing rtcp $rtcpPacket")
                 rtpSender.sendRtcp(listOf(rtcpPacket))
             },
             executor)
@@ -77,8 +80,6 @@ class Transceiver(
     init {
         println("Transceiver ${this.hashCode()} using executor ${executor.hashCode()}")
         dtlsStack.onHandshakeComplete { dtlsTransport, tlsContext ->
-            //TODO: in the future we'll want to pass the dtls transport to the sctp connection
-
             val srtpProfileInfo =
                 SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(dtlsStack.getChosenSrtpProtectionProfile())
             val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
@@ -109,6 +110,7 @@ class Transceiver(
             name("Transceiver incoming chain")
             demux {
                 packetPath {
+                    name = "DTLS protocol chain"
                     predicate = { packet ->
                         val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
                         when (byte) {
@@ -127,6 +129,7 @@ class Transceiver(
                     }
                 }
                 packetPath {
+                    name = "RTP protocol chain"
                     predicate = { packet ->
                         val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
                         when (byte) {
@@ -191,5 +194,35 @@ class Transceiver(
                 scheduleWork()
             }
         }
+    }
+
+    fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
+        // Add the payload type to a map, fire a 'rtpPayloadTypeChange' event for
+        // interested subscribers
+        payloadTypes[rtpPayloadType] = format
+        //TODO: notify all
+        println("Payload type added: $rtpPayloadType -> $format")
+    }
+
+    fun clearDynamicRtpPayloadTypes() {
+        //TODO: notify all
+        println("All payload types being cleared")
+    }
+
+    fun addDynamicRtpPayloadTypeOverride(originalPt: Byte, overloadPt: Byte) {
+        //TODO
+        println("Overriding payload type $originalPt to $overloadPt")
+    }
+
+    fun addRtpExtension(extensionId: Byte, rtpExtension: RTPExtension) {
+        println("Adding RTP extension: $extensionId -> $rtpExtension")
+        rtpExtensions[extensionId] = rtpExtension
+        rtpReceiver.onRtpExtensionAdded(extensionId, rtpExtension)
+    }
+
+    fun clearRtpExtensions() {
+        println("Clearing all RTP extensions")
+        rtpExtensions.keys.forEach(rtpReceiver::onRtpExtensionRemoved)
+        rtpExtensions.clear()
     }
 }

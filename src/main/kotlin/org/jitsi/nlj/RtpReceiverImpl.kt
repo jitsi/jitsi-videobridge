@@ -19,6 +19,7 @@ import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.PacketHandler
+import org.jitsi.nlj.transform.module.PayloadTypeFilterModule
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.nlj.transform.module.incoming.SrtcpTransformerWrapperDecrypt
@@ -33,23 +34,41 @@ import org.jitsi.rtp.SrtpProtocolPacket
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
+import org.jitsi.service.neomedia.RTPExtension
+import org.jitsi.service.neomedia.format.MediaFormat
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
-    val rtcpSender: (RtcpPacket) -> Unit = {},
-    val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
+    /**
+     * A function to be used when these receiver wants to send RTCP packets to the
+     * participant it's receiving data from (NACK packets, for example)
+     */
+    private val rtcpSender: (RtcpPacket) -> Unit = {},
+    /**
+     * The executor this class will use for its work
+     */
+    private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpReceiver() {
-    /*private*/ override val moduleChain: ModuleChain
+    override val moduleChain: ModuleChain
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var running = true
     private val srtpDecryptWrapper = SrtpTransformerWrapperDecrypt()
     private val srtcpDecryptWrapper = SrtcpTransformerWrapperDecrypt()
+    private val tccGenerator = TccGeneratorModule(rtcpSender)
+    private val payloadTypeFilter = PayloadTypeFilterModule()
 
+    /**
+     * This [RtpReceiver] will invoke this method with RTP packets that have
+     * made it through the entire receive pipeline.  A caller should set this
+     * variable to a function for handling fully-processed RTP packets from
+     * this receiver.
+     */
     override var rtpPacketHandler: PacketHandler = {}
 
+    // Stat tracking values
     var firstPacketWrittenTime: Long = 0
     var lastPacketWrittenTime: Long = 0
     var bytesReceived: Long = 0
@@ -75,7 +94,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 next(p.map(Packet::getBuffer).map(::SrtpPacket))
                             }
                         })
-                        addModule(TccGeneratorModule(5, rtcpSender))
+                        addModule(tccGenerator)
                         addModule(srtpDecryptWrapper)
                         addModule(object : Module("packet handler") {
                             override fun doProcessPackets(p: List<Packet>) {
@@ -93,6 +112,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 next(p.map(Packet::getBuffer).map(::SrtcpPacket))
                             }
                         })
+                        addModule(payloadTypeFilter)
                         addModule(srtcpDecryptWrapper)
                         addModule(object : Module("Compound RTCP splitter") {
                             override fun doProcessPackets(p: List<Packet>) {
@@ -180,5 +200,22 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
     override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
         srtcpDecryptWrapper.setTransformer(srtcpTransformer)
+    }
+
+    override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
+        //TODO: change these to iterate through a list of modules
+        tccGenerator.onRtpExtensionAdded(extensionId, rtpExtension)
+    }
+
+    override fun onRtpExtensionRemoved(extensionId: Byte) {
+        tccGenerator.onRtpExtensionRemoved(extensionId)
+    }
+
+    override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
+        payloadTypeFilter.onRtpPayloadTypeAdded(payloadType, format)
+    }
+
+    override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
+        payloadTypeFilter.onRtpPayloadTypeRemoved(payloadType)
     }
 }

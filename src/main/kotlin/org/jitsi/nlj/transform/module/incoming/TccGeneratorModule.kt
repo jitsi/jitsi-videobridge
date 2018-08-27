@@ -23,29 +23,46 @@ import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.Tcc
+import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
 class TccGeneratorModule(
-    private val tccExtId: Int,
     private val onTccPacketReady: (RtcpPacket) -> Unit = {}
 ) : Module("TCC generator") {
+    private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var currTcc: Tcc = Tcc(feedbackPacketCount = currTccSeqNum++)
     private var tempDetectedSsrc: Long? = null
     private var numTccSent: Int = 0
+
     override fun doProcessPackets(p: List<Packet>) {
         val now = System.currentTimeMillis()
-        p.forEachAs<SrtpPacket> {
-            it.header.getExtension(tccExtId).let { tccExt ->
-                //TODO: check if it's a one byte or two byte ext?
-                val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@let
-                addPacket(tccSeqNum, now)
-            }
-            if (tempDetectedSsrc == null) {
-                tempDetectedSsrc = it.header.ssrc
+        tccExtensionId?.let { tccExtId ->
+            p.forEachAs<SrtpPacket> {
+                it.header.getExtension(tccExtId).let { tccExt ->
+                    //TODO: check if it's a one byte or two byte ext?
+                    val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@let
+                    addPacket(tccSeqNum, now)
+                }
+                if (tempDetectedSsrc == null) {
+                    tempDetectedSsrc = it.header.ssrc
+                }
             }
         }
         next(p)
+    }
+
+    override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
+        if (RTPExtension.TRANSPORT_CC_URN.equals(rtpExtension.uri)) {
+            tccExtensionId = extensionId.toUInt()
+            println("TCC generator setting extension id to $tccExtensionId")
+        }
+    }
+
+    override fun onRtpExtensionRemoved(extensionId: Byte) {
+        if (extensionId.toUInt() == tccExtensionId) {
+            tccExtensionId = null
+        }
     }
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long) {
