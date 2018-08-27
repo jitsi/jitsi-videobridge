@@ -27,7 +27,7 @@ class SrtpTransformerWrapperDecrypt : AbstractSrtpTransformerWrapper("SRTP decry
         val decryptedPackets = mutableListOf<RtpPacket>()
         pkts.forEach {
             val packetBuf = it.getBuffer()
-            val rp = RawPacket(packetBuf.array(), 0, packetBuf.array().size)
+            val rp = RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
             transformer.reverseTransform(rp)?.let { decryptedRawPacket ->
                 val rtpPacket = RtpPacket(ByteBuffer.wrap(
                     decryptedRawPacket.buffer,
