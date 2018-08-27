@@ -20,7 +20,8 @@ import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 
-abstract class RtpReceiver {
+abstract class RtpReceiver :
+    RtpExtensionEventListener, RtpPayloadTypeEventListener {
     abstract val moduleChain: ModuleChain
     abstract fun processPackets(pkts: List<Packet>)
     abstract fun getStats(): String

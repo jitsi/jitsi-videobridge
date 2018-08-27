@@ -15,10 +15,14 @@
  */
 package org.jitsi.nlj.transform.module
 
+import org.jitsi.nlj.RtpExtensionEventListener
+import org.jitsi.nlj.RtpPayloadTypeEventListener
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.service.neomedia.RTPExtension
+import org.jitsi.service.neomedia.format.MediaFormat
 import java.math.BigDecimal
 import java.time.Duration
 import kotlin.properties.Delegates
@@ -37,8 +41,24 @@ fun getMbps(numBytes: Long, duration: Duration): String {
 }
 
 
-abstract class Module(var name: String, protected val debug: Boolean = false) {
+abstract class Module(
+    var name: String,
+    protected val debug: Boolean = false
+) : RtpExtensionEventListener, RtpPayloadTypeEventListener {
+    /**
+     * The next handler in the chain, after this one.  This is held
+     * as a method, instead of an entire [Module], because a module
+     * only needs to have a method to call, it doesn't need to know
+     * anything else about the next handler in the chain.  By making it private
+     * we can enforce that module implementations will have to call the
+     * [next] method defined in [Module] to invoke the next handler
+     * in the chain, which means we can put common logic for statistics
+     * in this class.
+     * TODO: maybe define a 'PacketHandler' interface that module
+     * implements and use that type here?
+     */
     private var nextModule: (List<Packet>) -> Unit = {}
+    // Stats stuff
     private var startTime: Long by Delegates.notNull()
     private var totalTime: Long = 0
     private var numInputPackets = 0
@@ -47,6 +67,9 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
     private var lastPacketTime: Long = -1
     private var numBytes: Long = 0
 
+    /**
+     * Attach a handler to come in the chain after this one
+     */
     open fun attach(nextModule: Function1<List<Packet>, Unit>) {
         this.nextModule = nextModule
     }
@@ -91,6 +114,22 @@ abstract class Module(var name: String, protected val debug: Boolean = false) {
     fun processPackets(p: List<Packet>) {
         onEntry(p)
         doProcessPackets(p)
+    }
+
+    override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
+        //No-op by default
+    }
+
+    override fun onRtpExtensionRemoved(extensionId: Byte) {
+        // No-op by default
+    }
+
+    override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
+        // No-op by default
+    }
+
+    override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
+        // No-op by default
     }
 
     open fun getStats(indent: Int = 0): String {
