@@ -21,10 +21,8 @@ import io.pkts.protocol.Protocol
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.service.neomedia.format.AbstractMediaFormat
-import org.jitsi.service.neomedia.format.MediaFormat
 import java.lang.Thread.sleep
 import java.nio.ByteBuffer
 import java.time.Duration

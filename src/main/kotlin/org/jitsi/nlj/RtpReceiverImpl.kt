@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain

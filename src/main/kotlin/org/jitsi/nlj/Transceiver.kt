@@ -17,11 +17,8 @@ package org.jitsi.nlj
 
 import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.nlj.dtls.DtlsClientStack
-import org.jitsi.nlj.dtls.QueueDatagramTransport
-import org.jitsi.nlj.dtls.TlsClientImpl
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain

@@ -17,12 +17,11 @@ package org.jitsi.nlj.transform.module
 
 import org.jitsi.nlj.RtpExtensionEventListener
 import org.jitsi.nlj.RtpPayloadTypeEventListener
-import org.jitsi.nlj.transform.PacketHandler
+import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
 import java.math.BigDecimal

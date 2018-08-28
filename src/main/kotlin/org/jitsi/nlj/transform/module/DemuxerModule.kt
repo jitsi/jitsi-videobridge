@@ -15,13 +15,12 @@
  */
 package org.jitsi.nlj.transform.module
 
-import org.jitsi.nlj.transform.PacketHandler
+import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.Packet
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
-import kotlin.reflect.KClass
 
 class DemuxerModule : Module("Demuxer") {
     private var transformPaths: MutableMap<PacketPredicate, PacketHandler> = mutableMapOf()
