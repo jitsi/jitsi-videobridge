@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.module.PacketHandler
+import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -31,7 +31,7 @@ abstract class RtpSender {
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
     var lastPacketSentTime: Long = -1
-    var packetSender: PacketHandler = {
+    var packetSender: PacketHandler = PacketHandler.create {
         if (firstPacketSentTime == -1L) {
             firstPacketSentTime = System.currentTimeMillis()
         }

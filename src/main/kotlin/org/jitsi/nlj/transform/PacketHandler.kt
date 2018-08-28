@@ -13,23 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform.module
+package org.jitsi.nlj.transform
 
 import org.jitsi.rtp.Packet
 
-// Maybe this should add a thread context boundary (all incoming packets written to a queue)
-// and then use an executor to schedule the reading?  otherwise this module doesn't do
-// much, a thread calls doProcessPackets which just invokes the next thing on the chain.
-class MuxerModule : Module("MuxerModule") {
-    override fun doProcessPackets(p: List<Packet>) {
-        next(p)
-    }
-
-    fun attachInput(m: Module) {
-        m.attach(this)
-    }
-
-    fun attachInput(m: ModuleChain) {
-        m.attach(this)
+interface PacketHandler {
+    fun processPackets(pkts: List<Packet>)
+    companion object {
+        fun create(handler: (List<Packet>) -> Unit): PacketHandler {
+            return object : PacketHandler {
+                override fun processPackets(pkts: List<Packet>) {
+                    handler(pkts)
+                }
+            }
+        }
     }
 }

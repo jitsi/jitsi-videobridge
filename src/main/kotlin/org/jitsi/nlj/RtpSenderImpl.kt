@@ -78,7 +78,7 @@ class RtpSenderImpl(
 //                    p.forEachAs<SrtcpPacket> {
 //                        println("Rtcp chain sending rtcp packet: $it\n${it.getBuffer().toHex()}")
 //                    }
-                    packetSender.invoke(p)
+                    packetSender.processPackets(p)
                 }
             })
         }
@@ -93,7 +93,7 @@ class RtpSenderImpl(
                             tempSenderSsrc = it.header.ssrc
                         }
                     }
-                    packetSender.invoke(p)
+                    packetSender.processPackets(p)
                 }
             })
         }

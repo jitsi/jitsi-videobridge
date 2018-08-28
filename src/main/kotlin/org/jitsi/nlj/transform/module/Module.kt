@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.module
 
 import org.jitsi.nlj.RtpExtensionEventListener
 import org.jitsi.nlj.RtpPayloadTypeEventListener
+import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
@@ -26,8 +27,6 @@ import org.jitsi.service.neomedia.format.MediaFormat
 import java.math.BigDecimal
 import java.time.Duration
 import kotlin.properties.Delegates
-
-typealias PacketHandler = (List<Packet>) -> Unit
 
 fun getMbps(numBytes: Long, duration: Duration): String {
     val numBits = BigDecimal(numBytes * 8)
@@ -39,7 +38,7 @@ fun getMbps(numBytes: Long, duration: Duration): String {
 abstract class Module(
     var name: String,
     protected val debug: Boolean = false
-) : RtpExtensionEventListener, RtpPayloadTypeEventListener {
+) : RtpExtensionEventListener, RtpPayloadTypeEventListener, PacketHandler {
     /**
      * The next handler in the chain, after this one.  This is held
      * as a method, instead of an entire [Module], because a module
@@ -49,11 +48,8 @@ abstract class Module(
      * [next] method defined in [Module] to invoke the next handler
      * in the chain, which means we can put common logic for statistics
      * in this class.
-     * TODO: maybe define a 'PacketHandler' interface that module
-     * implements and use that type here? -> but then we have to create
-     * an anonymous instance instead of being able to pass a lambda
      */
-    private var nextModule: PacketHandler = {}
+    private var nextModule: PacketHandler? = null
     // Stats stuff
     private var startTime: Long = 0
     private var totalTime: Long = 0
@@ -66,7 +62,7 @@ abstract class Module(
     /**
      * Attach a handler to come in the chain after this one
      */
-    open fun attach(nextModule: Function1<List<Packet>, Unit>) {
+    open fun attach(nextModule: PacketHandler) {
         this.nextModule = nextModule
     }
 
@@ -96,24 +92,22 @@ abstract class Module(
     protected abstract fun doProcessPackets(p: List<Packet>)
 
     protected fun next(pkts: List<Packet>) {
-        //TODO: add handling for empty 'pkts' here, instead of having
-        // submodules do it
         onExit(pkts)
         numOutputPackets += pkts.size
         if (pkts.isNotEmpty()) {
-            nextModule.invoke(pkts)
+            nextModule?.processPackets(pkts)
         }
     }
 
-    protected fun next(chain: ModuleChain, pkts: List<Packet>) {
+    protected fun next(chain: PacketHandler, pkts: List<Packet>) {
         onExit(pkts)
         numOutputPackets += pkts.size
         chain.processPackets(pkts)
     }
 
-    fun processPackets(p: List<Packet>) {
-        onEntry(p)
-        doProcessPackets(p)
+    override fun processPackets(pkts: List<Packet>) {
+        onEntry(pkts)
+        doProcessPackets(pkts)
     }
 
     override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
@@ -150,7 +144,7 @@ abstract class Module(
 
 class PacketPath {
     var predicate: PacketPredicate by Delegates.notNull()
-    var path: ModuleChain by Delegates.notNull()
+    var path: PacketHandler by Delegates.notNull()
 }
 
 inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit): Unit {
@@ -159,24 +153,5 @@ inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit): Unit {
 inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit): Unit {
     for (element in this) {
         if (element is Expected) action(element)
-    }
-}
-
-class RtpHandlerModule(private val handler: (Packet) -> Unit) : Module("RTP handler") {
-    override fun doProcessPackets(p: List<Packet>) {
-        if (debug) {
-            println("RTP handler")
-        }
-        p.forEach(handler)
-    }
-}
-
-class RtcpHandlerModule : Module("RTCP handler") {
-    override fun doProcessPackets(p: List<Packet>) {
-        p.forEachAs<RtcpPacket> { pkt ->
-            if (debug) {
-                println("RTCP handler")
-            }
-        }
     }
 }

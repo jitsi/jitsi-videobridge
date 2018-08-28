@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.module
 
+import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.Packet
 import org.jitsi.service.neomedia.RTPExtension
@@ -22,14 +23,14 @@ import org.jitsi.service.neomedia.format.MediaFormat
 import kotlin.reflect.KClass
 
 class DemuxerModule : Module("Demuxer") {
-    private var transformPaths: MutableMap<PacketPredicate, ModuleChain> = mutableMapOf()
+    private var transformPaths: MutableMap<PacketPredicate, PacketHandler> = mutableMapOf()
     private var tempFirstPath: ModuleChain? = null
 
     fun addPacketPath(pp: PacketPath) {
         transformPaths[pp.predicate] = pp.path
     }
 
-    override fun attach(nextModule: (List<Packet>) -> Unit) {//= throw Exception()
+    override fun attach(nextModule: PacketHandler) {//= throw Exception()
     }
 
     override fun doProcessPackets(p: List<Packet>) {
@@ -41,42 +42,53 @@ class DemuxerModule : Module("Demuxer") {
         }
     }
     override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
-        transformPaths.forEach { (_, chain) ->
-            chain.modules.forEach { it.onRtpExtensionAdded(extensionId, rtpExtension) }
+        transformPaths.forEach { (_, handler) ->
+            if (handler is ModuleChain) {
+                handler.modules.forEach { it.onRtpExtensionAdded(extensionId, rtpExtension) }
+            }
         }
     }
     override fun onRtpExtensionRemoved(extensionId: Byte) {
-        transformPaths.forEach { (_, chain) ->
-            chain.modules.forEach { it.onRtpExtensionRemoved(extensionId) }
+        transformPaths.forEach { (_, handler) ->
+            if (handler is ModuleChain) {
+                handler.modules.forEach { it.onRtpExtensionRemoved(extensionId) }
+            }
         }
     }
 
     override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
-        transformPaths.forEach { (_, chain) ->
-            chain.modules.forEach { it.onRtpPayloadTypeAdded(payloadType, format) }
+        transformPaths.forEach { (_, handler) ->
+            if (handler is ModuleChain) {
+                handler.modules.forEach { it.onRtpPayloadTypeAdded(payloadType, format) }
+            }
         }
     }
 
     override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
-        transformPaths.forEach { (_, chain) ->
-            chain.modules.forEach { it.onRtpPayloadTypeRemoved(payloadType) }
+        transformPaths.forEach { (_, handler) ->
+            if (handler is ModuleChain) {
+                handler.modules.forEach { it.onRtpPayloadTypeRemoved(payloadType) }
+            }
         }
     }
 
-
-    fun findFirst(moduleClass: KClass<*>): Module? {
-        for (m in transformPaths.values) {
-            val mod = m.findFirst(moduleClass)
-            if (mod != null) { return mod }
-        }
-        return null
-    }
+//    fun findFirst(moduleClass: KClass<*>): Module? {
+//        for (m in transformPaths.values) {
+//            val mod = m.findFirst(moduleClass)
+//            if (mod != null) { return mod }
+//        }
+//        return null
+//    }
 
     override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
             append(super.getStats(indent))
             transformPaths.values.forEach {
-                append(it.getStats(indent + 2))
+                if (it is Module) {
+                    append(it.getStats(indent + 2))
+                } else if (it is ModuleChain) {
+                    append(it.getStats(indent + 2))
+                }
             }
             toString()
         }
