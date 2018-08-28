@@ -1339,32 +1339,9 @@ public class Conference
             {
                 try
                 {
-//                    transportManager
-//                        = new IceUdpTransportManager(
-//                            this, initiator, 1, channelBundleId);
                     transportManager = new IceDtlsTransportManager(this);
                     logger.info("BRIAN: CREATING NEW TRANSPORT MANAGER " + transportManager.hashCode() +
                             " for bundle id " + channelBundleId);
-                    final TransportManager newTransportManager = transportManager;
-                    // Cross wire this transport manager with the other, if it exists yet
-                    if (!transportManagers.isEmpty()) {
-                        String otherBundleId = transportManagers.keySet().iterator().next();
-                        TransportManager otherTransportManager = transportManagers.get(otherBundleId);
-                        logger.info("BRIAN: connecting transport managers " +
-                                channelBundleId + " and " + otherBundleId);
-
-//                        ((IceDtlsTransportManager)newTransportManager).transceiver
-//                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
-//                            ((IceDtlsTransportManager)otherTransportManager).transceiver.sendPackets(pkts);
-//                            return Unit.INSTANCE;
-//                        });
-//
-//                        ((IceDtlsTransportManager)otherTransportManager).transceiver
-//                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
-//                            ((IceDtlsTransportManager)newTransportManager).transceiver.sendPackets(pkts);
-//                            return Unit.INSTANCE;
-//                        });
-                    }
                 }
                 catch (IOException ioe)
                 {

@@ -294,27 +294,6 @@ public class IceDtlsTransportManager
         // Socket reader thread.  Read from the underlying socket and pass to the incoming
         // module chain
         installIncomingPacketReader(s);
-//        new Thread(() -> {
-//            byte[] buf = new byte[1500];
-//            while (true) {
-//                DatagramPacket p = new DatagramPacket(buf, 0, 1500);
-//                try
-//                {
-//                    s.receive(p);
-//                    ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
-//                    packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
-//                    Packet pkt = new UnparsedPacket(packetBuf);
-//                    getTransceivers().forEach(transceiver -> {
-//                        transceiver.getIncomingQueue().add(pkt);
-//                    });
-////                    transceiver.getIncomingQueue().add(pkt);
-//                } catch (IOException e)
-//                {
-//                    e.printStackTrace();
-//                    break;
-//                }
-//            }
-//        }, "Incoming read thread").start();
 
         DatagramTransport tlsTransport = new QueueDatagramTransport(
                 dtlsReceiver::receive,

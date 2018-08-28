@@ -349,12 +349,10 @@ public class Content
                 if (channelEntry.getValue() != channel) {
                     RtpChannel otherChannel = (RtpChannel)channelEntry.getValue();
                     channel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
-//                        System.out.println("BRIAN: forwarding packets from channel " + channel.toString() + " to " + otherChannel.toString());
                         otherChannel.transceiver.sendPackets(pkts);
                         return Unit.INSTANCE;
                     });
                     otherChannel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
-//                        System.out.println("BRIAN: forwarding packets from channel " + otherChannel.toString() + " to " + channel.toString());
                         channel.transceiver.sendPackets(pkts);
                         return Unit.INSTANCE;
                     });
