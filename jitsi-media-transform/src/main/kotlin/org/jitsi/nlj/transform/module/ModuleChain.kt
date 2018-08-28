@@ -15,12 +15,11 @@
  */
 package org.jitsi.nlj.transform.module
 
-import org.jitsi.nlj.transform.PacketHandler
+import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.EvictingConcurrentQueue
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
-import kotlin.reflect.KClass
 import kotlin.system.measureTimeMillis
 
 class ModuleChain : PacketHandler, StatsProducer {
