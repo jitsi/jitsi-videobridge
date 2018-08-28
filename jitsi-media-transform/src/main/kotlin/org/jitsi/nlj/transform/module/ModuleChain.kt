@@ -23,12 +23,16 @@ import org.jitsi.rtp.Packet
 import kotlin.system.measureTimeMillis
 
 class ModuleChain : PacketHandler, StatsProducer {
-    val modules = mutableListOf<Module>()
+    val modules = mutableListOf<PacketHandler>()
     private val packetProcessingDurations = EvictingConcurrentQueue<Double>(100)
     private var name: String = ""
 
     fun name(n: String) {
         this.name = n
+    }
+
+    override fun attach(nextHandler: PacketHandler) {
+        addAndConnect(nextHandler)
     }
 
     fun addModule(m: Module) {
@@ -45,20 +49,10 @@ class ModuleChain : PacketHandler, StatsProducer {
         addAndConnect(mm)
     }
 
-    //TODO: trying this as an easy way to add a final output, but that means
-    // should probably enforce that nothing else can be added after this
-    // other option would be to force the user to implement a addModule to put
-    // the packets somewhere.
-    fun attach(handler: PacketHandler) {
+    private fun addAndConnect(handler: PacketHandler) {
         val previousModule = modules.lastOrNull()
-        //println("Attaching handler to $previousModule")
+        modules.add(handler)
         previousModule?.attach(handler)
-    }
-
-    private fun addAndConnect(m: Module) {
-        val previousModule = modules.lastOrNull()
-        modules.add(m)
-        previousModule?.attach(m)
     }
 
     override fun processPackets(pkts: List<Packet>) {
@@ -72,7 +66,11 @@ class ModuleChain : PacketHandler, StatsProducer {
         return with (StringBuffer()) {
             appendLnIndent(indent, name)
             appendLnIndent(indent, "Average time spent in this chain per packet: ${packetProcessingDurations.average()} ms")
-            modules.forEach { append(it.getStats(indent + 2)) }
+            modules.forEach {
+                if (it is StatsProducer) {
+                    append(it.getStats(indent + 2))
+                }
+            }
             toString()
         }
     }

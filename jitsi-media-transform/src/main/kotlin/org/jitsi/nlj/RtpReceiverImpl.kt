@@ -75,6 +75,52 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     init {
         println("Receiver ${this.hashCode()} using executor ${executor.hashCode()}")
+        /**
+         * incomingPacketHandler = packetTree {
+         *     handler {
+         *       name = XXX
+         *       onPackets { pkts ->
+         *           pkts.map(Packet::getBuffer).map(::SrtpProtocolPacket)
+         *       }
+         *     }
+         *     demux {
+         *       name = SRTP/SRTCP demuxer
+         *       conditionalPacketPath {
+         *         predicate { ... }
+         *         packetTree {
+         *           handler {
+         *             name = "SRTP parser"
+         *             onPackets { pkts ->
+         *               pkts.map(Packet::getBuffer).map(::SrtpPacket)
+         *             }
+         *           }
+         *           handler { payloadTypeFilter }
+         *           handler { tccGenerator }
+         *           handler { srtpDecryptWrapper }
+         *           handler { rtpPacketHandler }
+         *         }
+         *       }
+         *       conditionalPacketPath {
+         *         predicate { ... }
+         *         packetTree {
+         *           handler { pkts -> pkts.map(Packet::getBuffer).map(::SrtcpPacket) }
+         *           handler { srtpDecryptWrapper }
+         *           handler {
+         *             name = "Compound RTCP splitter"
+         *             onPackets { pkts ->
+         *               val outPackets = mutableListOf<RtcpPacket>
+         *               pkts.forEach {
+         *                   val iter = RtcpIterator(it.getBuffer())
+         *                   outPackets.addAll(iter.getAll())
+         *               }
+         *               outPackets
+         *             }
+         *         }
+         *       }
+         *     }
+         * }
+         */
+
         moduleChain = chain {
             name("Receive chain")
             addModule(object : Module("SRTP protocol parser") {
@@ -205,6 +251,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
     override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
         srtcpDecryptWrapper.setTransformer(srtcpTransformer)
+    }
+
+    override fun handleEvent(event: Event) {
+
     }
 
     override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {

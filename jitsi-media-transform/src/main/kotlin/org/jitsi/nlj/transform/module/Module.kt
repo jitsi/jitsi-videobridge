@@ -49,7 +49,7 @@ abstract class Module(
      * in the chain, which means we can put common logic for statistics
      * in this class.
      */
-    private var nextModule: PacketHandler? = null
+    private var nextHandler: PacketHandler? = null
     // Stats stuff
     private var startTime: Long = 0
     private var totalTime: Long = 0
@@ -59,11 +59,8 @@ abstract class Module(
     private var lastPacketTime: Long = -1
     private var numBytes: Long = 0
 
-    /**
-     * Attach a handler to come in the chain after this one
-     */
-    open fun attach(nextModule: PacketHandler) {
-        this.nextModule = nextModule
+    override fun attach(nextHandler: PacketHandler) {
+        this.nextHandler = nextHandler
     }
 
     private fun getTime(): Long = System.nanoTime()
@@ -81,7 +78,7 @@ abstract class Module(
         numInputPackets += incomingPackets.size
     }
 
-    private fun onExit(outgoingPackets: List<Packet>) {
+    private fun onExit() {
         val time = getTime() - startTime
         if (debug) {
             println("Exiting module $name, took $time nanos")
@@ -89,20 +86,32 @@ abstract class Module(
         totalTime += time
     }
 
+    /**
+     * The function that all subclasses should implement to do the actual
+     * packet processing.  A protected method is used for this so we can
+     * guarantee all packets pass through this base for stat-tracking
+     * purposes.
+     */
     protected abstract fun doProcessPackets(p: List<Packet>)
 
     protected fun next(pkts: List<Packet>) {
-        onExit(pkts)
+        onExit()
         numOutputPackets += pkts.size
         if (pkts.isNotEmpty()) {
-            nextModule?.processPackets(pkts)
+            nextHandler?.processPackets(pkts)
         }
     }
 
-    protected fun next(chain: PacketHandler, pkts: List<Packet>) {
-        onExit(pkts)
+    /**
+     * Allow the implementing class to specify the next handler to invoke with the
+     * given packets.  This is necessary for things like [DemuxerModule] which have
+     * multiple subsequent paths packets can flow down, so they don't use the singular
+     * [nextHandler].
+     */
+    protected fun next(handler: PacketHandler, pkts: List<Packet>) {
+        onExit()
         numOutputPackets += pkts.size
-        chain.processPackets(pkts)
+        handler.processPackets(pkts)
     }
 
     override fun processPackets(pkts: List<Packet>) {
@@ -153,10 +162,10 @@ class PacketPath {
  * throwing an exception if that isn't the case is desired.
  */
 @Suppress("UNCHECKED_CAST")
-inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit): Unit {
+inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit) {
     for (element in this) action(element as Expected)
 }
-inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit): Unit {
+inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit) {
     for (element in this) {
         if (element is Expected) action(element)
     }

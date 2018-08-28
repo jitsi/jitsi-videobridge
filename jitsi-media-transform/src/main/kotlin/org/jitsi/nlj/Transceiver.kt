@@ -143,7 +143,7 @@ class Transceiver(
 
 
         // rewire the sender's hacked packet handler
-        rtpSender.packetSender = PacketHandler.create { pkts -> outgoingQueue.addAll(pkts) }
+        rtpSender.packetSender = PacketHandler.createSimple { pkts -> outgoingQueue.addAll(pkts) }
         scheduleWork()
     }
 

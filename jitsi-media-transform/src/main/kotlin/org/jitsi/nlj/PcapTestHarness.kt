@@ -108,7 +108,7 @@ fun main(args: Array<String>) {
         val rtpReceiver = createRtpReceiver(executor)
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
-        rtpReceiver.rtpPacketHandler = PacketHandler.create { pkts ->
+        rtpReceiver.rtpPacketHandler = PacketHandler.createSimple { pkts ->
             numReceivedPackets += pkts.size
             if (numReceivedPackets == numExpectedPackets) {
                 println("ALL PACKETS FORWARDED")
