@@ -19,7 +19,7 @@ import org.jitsi.rtp.Packet
 
 // Maybe this should add a thread context boundary (all incoming packets written to a queue)
 // and then use an executor to schedule the reading?  otherwise this module doesn't do
-// much, a thread calls doProcessPackets which just invokes the next thing on the chain
+// much, a thread calls doProcessPackets which just invokes the next thing on the chain.
 class MuxerModule : Module("MuxerModule") {
     override fun doProcessPackets(p: List<Packet>) {
         next(p)
@@ -30,7 +30,6 @@ class MuxerModule : Module("MuxerModule") {
     }
 
     fun attachInput(m: ModuleChain) {
-        //TODO: need to add something so we don't have to reach into m.modules
-        m.modules.last().attach(this::processPackets)
+        m.attach(this::processPackets)
     }
 }
