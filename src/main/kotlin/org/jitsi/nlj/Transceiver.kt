@@ -179,10 +179,6 @@ class Transceiver(
     }
 
     fun sendPackets(p: List<Packet>) {
-//        println("BRIAN: transceiver sending ${p.size} packets")
-//        p.forEachAs<RtpPacket> {
-//            println("BRIAN: transceiver sending packet ${it.header}")
-//        }
         rtpSender.sendPackets(p)
     }
 
@@ -198,16 +194,12 @@ class Transceiver(
     }
 
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
-        // Add the payload type to a map, fire a 'rtpPayloadTypeChange' event for
-        // interested subscribers
         payloadTypes[rtpPayloadType] = format
-        //TODO: notify all
         println("Payload type added: $rtpPayloadType -> $format")
         rtpReceiver.onRtpPayloadTypeAdded(rtpPayloadType, format)
     }
 
     fun clearDynamicRtpPayloadTypes() {
-        //TODO: notify all
         println("All payload types being cleared")
         payloadTypes.keys.forEach { pt ->
             rtpReceiver.onRtpExtensionRemoved(pt)

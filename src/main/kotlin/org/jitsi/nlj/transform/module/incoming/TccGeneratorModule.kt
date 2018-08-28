@@ -39,9 +39,9 @@ class TccGeneratorModule(
         val now = System.currentTimeMillis()
         tccExtensionId?.let { tccExtId ->
             p.forEachAs<SrtpPacket> {
-                it.header.getExtension(tccExtId).let { tccExt ->
+                it.header.getExtension(tccExtId).let currPkt@ { tccExt ->
                     //TODO: check if it's a one byte or two byte ext?
-                    val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@let
+                    val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@currPkt
                     addPacket(tccSeqNum, now)
                 }
                 if (tempDetectedSsrc == null) {
