@@ -28,6 +28,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
+import org.jitsi.nlj.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
@@ -173,6 +174,8 @@ public class RtpChannel
      * of <tt>neomedia</tt>.
      */
     private MediaStream stream;
+
+    Transceiver transceiver;
 
 //    private RtpReceiver rtpReceiver = new RtpReceiverImpl(123, Executors.newSingleThreadExecutor(), packets -> {
 //        System.out.println("BRIAN: PACKETS WENT THROUGH RTP RECEIVER PIPELINE");
@@ -893,6 +896,7 @@ public class RtpChannel
         initialize(null);
     }
 
+    private static ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
     void initialize(RTPLevelRelayType rtpLevelRelayType)
         throws IOException
     {
@@ -907,11 +911,11 @@ public class RtpChannel
             TransportCCEngine transportCCEngine
                 = transportManager.getTransportCCEngine();
 
-//            stream = new NewMediaStream();
             stream = mediaService.createMediaStream(
                         null,
                         mediaType,
                         getSrtpControl());
+            transceiver = new Transceiver(mediaType.toString(), transceiverExecutor);
 
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes
@@ -1440,6 +1444,7 @@ public class RtpChannel
 
                 receivePTs = new int[payloadTypeCount];
                 stream.clearDynamicRTPPayloadTypes();
+                transceiver.clearDynamicRtpPayloadTypes();
                 for (int i = 0; i < payloadTypeCount; i++)
                 {
                     PayloadTypePacketExtension payloadType
@@ -1458,6 +1463,7 @@ public class RtpChannel
                         stream.addDynamicRTPPayloadType(
                                 (byte) payloadType.getID(),
                                 mediaFormat);
+                        transceiver.addDynamicRtpPayloadType((byte)payloadType.getID(), mediaFormat);
                     }
                 }
 
@@ -1486,6 +1492,7 @@ public class RtpChannel
         if ((rtpHeaderExtensions != null) && (rtpHeaderExtensions.size() > 0))
         {
             stream.clearRTPExtensions();
+            transceiver.clearRtpExtensions();
 
             for (RTPHdrExtPacketExtension rtpHdrExtPacketExtension
                     : rtpHeaderExtensions)
@@ -1545,6 +1552,7 @@ public class RtpChannel
         if (stream != null)
         {
             stream.addRTPExtension(id, new RTPExtension(uri));
+            transceiver.addRtpExtension(id, new RTPExtension(uri));
         }
     }
 
@@ -1816,6 +1824,7 @@ public class RtpChannel
 
         // Set the newly signaled ssrcs.
         signaledSSRCs = newSignaledSSRCs;
+        System.out.println("BRIAN: channel bundle " + getChannelBundleId() + " has ssrcs " + signaledSSRCs);
 
         } // synchronized (receiveSSRCsSyncRoot)
 

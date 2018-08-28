@@ -16,9 +16,12 @@
 package org.jitsi.videobridge;
 
 import java.io.*;
+import java.lang.*;
+import java.lang.Deprecated;
 import java.lang.ref.*;
 import java.util.*;
 
+import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
@@ -337,6 +340,27 @@ public class Content
 
         // Initialize channel
         channel.initialize(rtpLevelRelayType);
+
+        if (channel instanceof RtpChannel) {
+            // BRIAN: hard-wire this channel to the other one
+            // in this content, if it exists yet
+            System.out.println("BRIAN: hard-wiring channels of type " + getMediaType());
+            channels.entrySet().forEach(channelEntry -> {
+                if (channelEntry.getValue() != channel) {
+                    RtpChannel otherChannel = (RtpChannel)channelEntry.getValue();
+                    channel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
+//                        System.out.println("BRIAN: forwarding packets from channel " + channel.toString() + " to " + otherChannel.toString());
+                        otherChannel.transceiver.sendPackets(pkts);
+                        return Unit.INSTANCE;
+                    });
+                    otherChannel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
+//                        System.out.println("BRIAN: forwarding packets from channel " + otherChannel.toString() + " to " + channel.toString());
+                        channel.transceiver.sendPackets(pkts);
+                        return Unit.INSTANCE;
+                    });
+                }
+            });
+        }
 
         if (logger.isInfoEnabled())
         {

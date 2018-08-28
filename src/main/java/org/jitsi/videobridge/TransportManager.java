@@ -24,6 +24,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.util.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
+import org.jitsi.nlj.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 

@@ -1324,6 +1324,7 @@ public class Conference
      * @return the <tt>TransportManager</tt> instance for the channel-bundle
      * with ID <tt>channelBundleId</tt>.
      */
+    private static int numForwarded = 0;
     IceUdpTransportManager getTransportManager(
             String channelBundleId,
             boolean create,
@@ -1338,11 +1339,12 @@ public class Conference
             {
                 try
                 {
-                    logger.info("BRIAN: CREATING NEW TRANSPORT MANAGER");
 //                    transportManager
 //                        = new IceUdpTransportManager(
 //                            this, initiator, 1, channelBundleId);
                     transportManager = new IceDtlsTransportManager(this);
+                    logger.info("BRIAN: CREATING NEW TRANSPORT MANAGER " + transportManager.hashCode() +
+                            " for bundle id " + channelBundleId);
                     final TransportManager newTransportManager = transportManager;
                     // Cross wire this transport manager with the other, if it exists yet
                     if (!transportManagers.isEmpty()) {
@@ -1351,25 +1353,17 @@ public class Conference
                         logger.info("BRIAN: connecting transport managers " +
                                 channelBundleId + " and " + otherBundleId);
 
-                        ((IceDtlsTransportManager)newTransportManager).transceiver
-                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
-//                            System.out.println("BRIAN: in rtp handler for receiver " + channelBundleId);
-//                            pkts.forEach(pkt -> {
-//                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
-//                            });
-                            ((IceDtlsTransportManager)otherTransportManager).transceiver.sendPackets(pkts);
-                            return Unit.INSTANCE;
-                        });
-
-                        ((IceDtlsTransportManager)otherTransportManager).transceiver
-                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
-//                            System.out.println("BRIAN: in rtp handler for receiver " + otherBundleId);
-//                            pkts.forEach(pkt -> {
-//                                System.out.println("BRIAN: rtp handler got rtp packet: " + ((RtpPacket)pkt).getHeader());
-//                            });
-                            ((IceDtlsTransportManager)newTransportManager).transceiver.sendPackets(pkts);
-                            return Unit.INSTANCE;
-                        });
+//                        ((IceDtlsTransportManager)newTransportManager).transceiver
+//                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
+//                            ((IceDtlsTransportManager)otherTransportManager).transceiver.sendPackets(pkts);
+//                            return Unit.INSTANCE;
+//                        });
+//
+//                        ((IceDtlsTransportManager)otherTransportManager).transceiver
+//                                .getRtpReceiver().setRtpPacketHandler((pkts) -> {
+//                            ((IceDtlsTransportManager)newTransportManager).transceiver.sendPackets(pkts);
+//                            return Unit.INSTANCE;
+//                        });
                     }
                 }
                 catch (IOException ioe)

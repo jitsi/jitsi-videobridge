@@ -22,6 +22,7 @@ import org.bouncycastle.crypto.tls.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.socket.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.dtls.*;
 import org.jitsi.nlj.transform.module.*;
@@ -47,15 +48,16 @@ public class IceDtlsTransportManager
     private static final ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
     private static final Logger logger
             = Logger.getLogger(IceDtlsTransportManager.class);
-    private final ExecutorService executor;
     private static final String ICE_STREAM_NAME = "ice-stream-name";
-    public Transceiver transceiver = new Transceiver(transceiverExecutor);
+    private DtlsStack dtlsStack = new DtlsClientStack();
+    private DtlsReceiverModule dtlsReceiver = new DtlsReceiverModule();
+    private DtlsSenderModule dtlsSender = new DtlsSenderModule();
+    private ModuleChain incomingModuleChain = createIncomingModuleChain();
 
     public IceDtlsTransportManager(Conference conference)
             throws IOException
     {
         super(conference, true, 1, ICE_STREAM_NAME, null);
-        executor = Executors.newSingleThreadExecutor();
         iceAgent = createIceAgent(true);
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
         logger.info("BRIAN: finished IceDtlsTransportManager ctor");
@@ -77,7 +79,10 @@ public class IceDtlsTransportManager
                 logger.info("Adding fingerprint " + dfpe.getHash() + " -> " + dfpe.getFingerprint());
                 remoteFingerprints.put(dfpe.getHash(), dfpe.getFingerprint());
             });
-            transceiver.setRemoteFingerprints(remoteFingerprints);
+            getTransceivers().forEach(transceiver -> {
+                transceiver.setRemoteFingerprints(remoteFingerprints);
+            });
+//            transceiver.setRemoteFingerprints(remoteFingerprints);
 
         // Set the remote ufrag/password
         if (transport.getUfrag() != null) {
@@ -95,6 +100,18 @@ public class IceDtlsTransportManager
         logger.info("BRIAN: starting connectivity establishment");
         iceAgent.startConnectivityEstablishment();
         logger.info("BRIAN: call to startConnectivityEstablishment returned");
+    }
+
+    private List<Transceiver> getTransceivers() {
+        List<Transceiver> transceivers = new ArrayList<>();
+        getChannels().forEach(channel -> {
+            if (channel instanceof RtpChannel)
+            {
+                RtpChannel rtpChannel = (RtpChannel) channel;
+                transceivers.add(rtpChannel.transceiver);
+            }
+        });
+        return transceivers;
     }
 
     @Override
@@ -148,8 +165,10 @@ public class IceDtlsTransportManager
             fingerprintPE = new DtlsFingerprintPacketExtension();
             pe.addChildExtension(fingerprintPE);
         }
-        fingerprintPE.setFingerprint(transceiver.getLocalFingerprint());
-        fingerprintPE.setHash(transceiver.getLocalFingerprintHashFunction());
+//        fingerprintPE.setFingerprint(transceiver.getLocalFingerprint());
+        fingerprintPE.setFingerprint(dtlsStack.getLocalFingerprint());
+//        fingerprintPE.setHash(transceiver.getLocalFingerprintHashFunction());
+        fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
         fingerprintPE.setSetup("ACTPASS");
     }
 
@@ -170,12 +189,33 @@ public class IceDtlsTransportManager
             return (b >= 20 && b <= 63);
         });
         ModuleChain dtlsChain = new ModuleChain();
-        dtlsChain.addModule(new DtlsReceiverModule());
+        dtlsChain.addModule(dtlsReceiver);
         dtlsPath.setPath(dtlsChain);
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
 
-        incomingModuleChain.addModule(dtlsSrtpDemuxer);
+        // SRTP path
+        PacketPath srtpPath = new PacketPath();
+        srtpPath.setPredicate(packet -> {
+            int b = packet.getBuffer().get(0) & 0xFF;
+            return (b < 20 || b > 63);
+        });
+        ModuleChain srtpChain = new ModuleChain();
+        srtpChain.addModule(new Module("SRTP path", false) {
+            @Override
+            protected void doProcessPackets(@NotNull List<? extends Packet> packets)
+            {
+                // Every packet will go to every transceiver
+                getTransceivers().forEach(transceiver -> {
+                   packets.forEach(pkt -> {
+                       transceiver.getIncomingQueue().add(pkt);
+                   });
+                });
+            }
+        });
+        srtpPath.setPath(srtpChain);
+        dtlsSrtpDemuxer.addPacketPath(srtpPath);
 
+        incomingModuleChain.addModule(dtlsSrtpDemuxer);
         return incomingModuleChain;
     }
 
@@ -190,27 +230,29 @@ public class IceDtlsTransportManager
         return outgoingModuleChain;
     }
 
-    private void onIceConnected() {
-        MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
-
-        // Socket writer thread
-        new Thread(() -> {
-            while (true) {
-                try
-                {
-                    Packet p = transceiver.getOutgoingQueue().take();
-//                    System.out.println("BRIAN: transceiver writer thread got data");
-                    s.send(new DatagramPacket(p.getBuffer().array(), 0, p.getBuffer().limit()));
-                } catch (InterruptedException | IOException e)
-                {
-                    e.printStackTrace();
-                    break;
+    // Start a thread for each transceiver.  Each thread will read from the transceiver's outgoing queue
+    // and send that data on the shared socket
+    private void installTransceiverOutgoingPacketSenders(MultiplexingDatagramSocket s) {
+        getTransceivers().forEach(transceiver -> {
+            new Thread(() -> {
+                while (true) {
+                    try
+                    {
+                        Packet p = transceiver.getOutgoingQueue().take();
+//                    System.out.println("BRIAN: transceiver writer thread sending packet " + p.toString());
+                        s.send(new DatagramPacket(p.getBuffer().array(), 0, p.getBuffer().limit()));
+                    } catch (InterruptedException | IOException e)
+                    {
+                        e.printStackTrace();
+                        break;
+                    }
                 }
-            }
-        }).start();
+            }).start();
+        });
+    }
 
-        // Socket reader thread.  Read from the underlying socket and pass to the incoming
-        // module chain
+    // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver
+    private void installIncomingPacketReader(MultiplexingDatagramSocket s) {
         new Thread(() -> {
             byte[] buf = new byte[1500];
             while (true) {
@@ -219,11 +261,13 @@ public class IceDtlsTransportManager
                 {
                     s.receive(p);
                     ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
-//                    System.out.println("BRIAN: received packet with length " + p.getLength());
                     packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
                     Packet pkt = new UnparsedPacket(packetBuf);
-//                    System.out.println("BRIAN: put into UnparsedPacket, length is " + pkt.getSize());
-                    transceiver.getIncomingQueue().add(pkt);
+                    incomingModuleChain.processPackets(Collections.singletonList(pkt));
+//                    getTransceivers().forEach(transceiver -> {
+//                        transceiver.getIncomingQueue().add(pkt);
+//                    });
+//                    transceiver.getIncomingQueue().add(pkt);
                 } catch (IOException e)
                 {
                     e.printStackTrace();
@@ -232,7 +276,73 @@ public class IceDtlsTransportManager
             }
         }, "Incoming read thread").start();
 
-        transceiver.connectDtls();
+    }
+
+    private boolean iceConnectedProcessed = false;
+
+    private void onIceConnected() {
+        if (iceConnectedProcessed) {
+            System.out.println("Already processed ice connected, ignoring new event");
+            return;
+        }
+        iceConnectedProcessed = true;
+        MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
+
+        // Socket writer thread
+        installTransceiverOutgoingPacketSenders(s);
+
+        // Socket reader thread.  Read from the underlying socket and pass to the incoming
+        // module chain
+        installIncomingPacketReader(s);
+//        new Thread(() -> {
+//            byte[] buf = new byte[1500];
+//            while (true) {
+//                DatagramPacket p = new DatagramPacket(buf, 0, 1500);
+//                try
+//                {
+//                    s.receive(p);
+//                    ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
+//                    packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
+//                    Packet pkt = new UnparsedPacket(packetBuf);
+//                    getTransceivers().forEach(transceiver -> {
+//                        transceiver.getIncomingQueue().add(pkt);
+//                    });
+////                    transceiver.getIncomingQueue().add(pkt);
+//                } catch (IOException e)
+//                {
+//                    e.printStackTrace();
+//                    break;
+//                }
+//            }
+//        }, "Incoming read thread").start();
+
+        DatagramTransport tlsTransport = new QueueDatagramTransport(
+                dtlsReceiver::receive,
+                (buf, off, len) -> { dtlsSender.send(buf, off, len); return Unit.INSTANCE; },
+                1500
+        );
+        dtlsStack.onHandshakeComplete((dtlsTransport, tlsContext) -> {
+            System.out.println("BRIAN: dtls handshake complete, got srtp profile: " + dtlsStack.getChosenSrtpProtectionProfile());
+            getTransceivers().forEach(transceiver -> {
+                transceiver.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
+            });
+            return Unit.INSTANCE;
+        });
+        dtlsSender.attach(pkts -> {
+            pkts.forEach(pkt -> {
+                try
+                {
+                    s.send(new DatagramPacket(pkt.getBuffer().array(), 0, pkt.getBuffer().limit()));
+                } catch (IOException e)
+                {
+                    System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
+                }
+            });
+            return Unit.INSTANCE;
+        });
+        System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
+        //TODO: prevent starting dtls more than once
+        dtlsStack.connect(new TlsClientImpl(), tlsTransport);
     }
 
     private void iceAgentStateChange(PropertyChangeEvent ev)

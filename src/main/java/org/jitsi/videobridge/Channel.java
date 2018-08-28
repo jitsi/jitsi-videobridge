@@ -982,9 +982,10 @@ public abstract class Channel
     @Override
     public boolean shouldExpire()
     {
-        return
-            getLastActivityTime() + 1000L * getExpire()
-                < System.currentTimeMillis();
+        return false;
+//        return
+//            getLastActivityTime() + 1000L * getExpire()
+//                < System.currentTimeMillis();
     }
 
     /**
