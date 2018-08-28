@@ -22,6 +22,9 @@ import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.service.neomedia.format.AbstractMediaFormat
+import org.jitsi.service.neomedia.format.MediaFormat
+import java.lang.Thread.sleep
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
@@ -38,8 +41,8 @@ fun ByteBuffer.clone(): ByteBuffer {
 }
 
 // All of this information is specific to the pcap file
-val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1.pcap"
-val numExpectedPackets = 24501
+const val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1.pcap"
+const val numExpectedPackets = 24501
 val srtpProfileInformation = SrtpProfileInformation(
     cipherKeyLength=16,
     cipherSaltLength=14,
@@ -89,12 +92,15 @@ fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
     rtpReceiver.setSrtpTransformer(srtpTransformer)
     rtpReceiver.setSrtcpTransformer(srtcpTransformer)
 
+    rtpReceiver.onRtpPayloadTypeAdded(100, AbstractMediaFormat())
+    rtpReceiver.onRtpPayloadTypeAdded(111, AbstractMediaFormat())
+
     return rtpReceiver
 }
 
 fun main(args: Array<String>) {
     val executor = Executors.newSingleThreadExecutor()
-    val numReceivers = 32
+    val numReceivers = 1
     val receivers = mutableListOf<RtpReceiver>()
     val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()
 
@@ -136,7 +142,8 @@ fun main(args: Array<String>) {
         true
     }
     println("loop done")
-    receiverDoneFutures.map { it.join() }
+//    receiverDoneFutures.map { it.join() }
+    sleep(10000)
     val finishTime = System.nanoTime()
     val time = Duration.ofNanos(finishTime - startTime)
     receivers.forEach { println(it.getStats()) }
