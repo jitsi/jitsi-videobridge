@@ -47,9 +47,7 @@ abstract class AbstractSrtpTransformerWrapper(name: String) : Module(name) {
             outPackets.addAll(doTransform(cachedPackets, it))
             cachedPackets.clear()
             outPackets.addAll(doTransform(p, it))
-            if (outPackets.isNotEmpty()) {
-                next(outPackets)
-            }
+            next(outPackets)
         } ?: run {
             cachedPackets.addAll(p)
         }
