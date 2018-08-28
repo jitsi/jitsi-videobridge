@@ -16,13 +16,14 @@
 package org.jitsi.nlj.transform.module
 
 import org.jitsi.nlj.transform.PacketHandler
+import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.EvictingConcurrentQueue
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import kotlin.reflect.KClass
 import kotlin.system.measureTimeMillis
 
-class ModuleChain : PacketHandler {
+class ModuleChain : PacketHandler, StatsProducer {
     val modules = mutableListOf<Module>()
     private val packetProcessingDurations = EvictingConcurrentQueue<Double>(100)
     private var name: String = ""
@@ -68,7 +69,7 @@ class ModuleChain : PacketHandler {
         packetProcessingDurations.add(time / pkts.size.toDouble() )
     }
 
-    fun getStats(indent: Int = 0): String {
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, name)
             appendLnIndent(indent, "Average time spent in this chain per packet: ${packetProcessingDurations.average()} ms")
@@ -76,34 +77,4 @@ class ModuleChain : PacketHandler {
             toString()
         }
     }
-
-    // Better than below? But can't be called by java... :/
-//    inline fun <reified T : Any>findFirst2() : T? {
-//        for (m in modules) {
-//            if (m::class == T::class) {
-//                return m as T
-//            } else if (m is DemuxerModule) {
-//                val nested = m.findFirst(T::class)
-//                if (nested != null) { return nested as T }
-//            }
-//        }
-//        return null
-//    }
-//
-//    // TODO: can we make this cleaner to call from java? (don't take in a kclass)
-//    fun findFirst(moduleClass: KClass<*>): Module? {
-//        for (m in modules) {
-//            if (m::class == moduleClass) {
-//                return m
-//            } else if (m is DemuxerModule) {
-//                val nested = m.findFirst(moduleClass)
-//                if (nested != null) { return nested }
-//            }
-//        }
-//        return null
-//    }
-//
-//    fun findAll(moduleClass: KClass<*>): List<Module> {
-//        return modules.filter { it -> it::class == moduleClass }
-//    }
 }
