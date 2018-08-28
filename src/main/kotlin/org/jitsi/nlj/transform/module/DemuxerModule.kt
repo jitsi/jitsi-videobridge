@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.module
 
 import org.jitsi.nlj.PacketHandler
+import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.Packet
@@ -42,9 +43,7 @@ class DemuxerModule : Module("Demuxer") {
     }
     override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
         transformPaths.forEach { (_, handler) ->
-            if (handler is ModuleChain) {
-                handler.modules.forEach { it.onRtpExtensionAdded(extensionId, rtpExtension) }
-            }
+            handler.handleEvent(RtpExtensionAddedEvent(extensionId, rtpExtension))
         }
     }
     override fun onRtpExtensionRemoved(extensionId: Byte) {

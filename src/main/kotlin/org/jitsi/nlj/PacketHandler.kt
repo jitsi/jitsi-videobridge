@@ -17,15 +17,37 @@ package org.jitsi.nlj
 
 import org.jitsi.rtp.Packet
 
-interface PacketHandler {
+interface PacketHandler : EventHandler {
+    /**
+     * Process the given packets
+     */
     fun processPackets(pkts: List<Packet>)
+    /**
+     * Attach a handler to come in the chain after this one
+     */
+    fun attach(nextHandler: PacketHandler)
+
     companion object {
-        fun create(handler: (List<Packet>) -> Unit): PacketHandler {
-            return object : PacketHandler {
-                override fun processPackets(pkts: List<Packet>) {
-                    handler(pkts)
-                }
-            }
-        }
+//        fun createSimple(handler: (List<Packet>) -> Unit): PacketHandler {
+//            return object : PacketHandler {
+//                override fun processPackets(pkts: List<Packet>) {
+//                    handler(pkts)
+//                }
+//            }
+//        }
+    }
+}
+
+/**
+ * [SimplePacketHandler] will take care of holding the [next] member and
+ * assigning it correctly, but the given [handler] is responsible for invoking it
+ * once it's finished
+ */
+class SimplePacketHandler(private val handler: SimplePacketHandler.(List<Packet>) -> Unit) : PacketHandler {
+    private var next: PacketHandler? = null
+    override fun processPackets(pkts: List<Packet>) = handler(pkts)
+
+    override fun attach(nextHandler: PacketHandler) {
+        this.next = nextHandler
     }
 }
