@@ -17,6 +17,8 @@ package org.jitsi.nlj.transform.module
 
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.Packet
+import org.jitsi.service.neomedia.RTPExtension
+import org.jitsi.service.neomedia.format.MediaFormat
 import kotlin.reflect.KClass
 
 class DemuxerModule : Module("Demuxer") {
@@ -38,6 +40,29 @@ class DemuxerModule : Module("Demuxer") {
             next(chain, pathPackets)
         }
     }
+    override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
+        transformPaths.forEach { (_, chain) ->
+            chain.modules.forEach { it.onRtpExtensionAdded(extensionId, rtpExtension) }
+        }
+    }
+    override fun onRtpExtensionRemoved(extensionId: Byte) {
+        transformPaths.forEach { (_, chain) ->
+            chain.modules.forEach { it.onRtpExtensionRemoved(extensionId) }
+        }
+    }
+
+    override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
+        transformPaths.forEach { (_, chain) ->
+            chain.modules.forEach { it.onRtpPayloadTypeAdded(payloadType, format) }
+        }
+    }
+
+    override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
+        transformPaths.forEach { (_, chain) ->
+            chain.modules.forEach { it.onRtpPayloadTypeRemoved(payloadType) }
+        }
+    }
+
 
     fun findFirst(moduleClass: KClass<*>): Module? {
         for (m in transformPaths.values) {
