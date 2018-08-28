@@ -15,11 +15,14 @@
  */
 package org.jitsi.nlj.util
 
-class EvictingQueue<T>(private val maxSize: Int) : ArrayList<T>() {
+import java.util.concurrent.ConcurrentLinkedQueue
+
+class EvictingConcurrentQueue<T>(private val maxSize: Int) : ConcurrentLinkedQueue<T>() {
     override fun add(element: T): Boolean {
         val result = super.add(element)
         if (size > maxSize) {
-            removeRange(0, size - maxSize - 1)
+            // We check on every add, so we can't be more than 1 over the max size
+            poll()
         }
         return result
     }

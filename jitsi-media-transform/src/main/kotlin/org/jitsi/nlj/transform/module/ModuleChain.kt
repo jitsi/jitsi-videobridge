@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.module
 
+import org.jitsi.nlj.util.EvictingConcurrentQueue
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import kotlin.reflect.KClass
@@ -22,7 +23,7 @@ import kotlin.system.measureTimeMillis
 
 class ModuleChain {
     val modules = mutableListOf<Module>()
-    val durations = mutableListOf<Double>()
+    private val packetProcessingDurations = EvictingConcurrentQueue<Double>(100)
     private var name: String = ""
 
     fun name(n: String) {
@@ -63,15 +64,13 @@ class ModuleChain {
         val time = measureTimeMillis {
             modules[0].processPackets(pkts)
         }
-        durations.add(time / pkts.size.toDouble() )
-        durations.dropLastWhile { durations.size > 100 }
+        packetProcessingDurations.add(time / pkts.size.toDouble() )
     }
 
     fun getStats(indent: Int = 0): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, name)
-            //TODO: concurrent modification issue with durations (between here and processPackets)
-            appendLnIndent(indent, "Average time spent in this chain per packet: ${durations.average()} ms")
+            appendLnIndent(indent, "Average time spent in this chain per packet: ${packetProcessingDurations.average()} ms")
             modules.forEach { append(it.getStats(indent + 2)) }
             toString()
         }

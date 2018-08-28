@@ -29,15 +29,10 @@ import kotlin.properties.Delegates
 
 typealias PacketHandler = (List<Packet>) -> Unit
 
-//TODO: can we get it more accurate than requiring things
-// take over a second?
 fun getMbps(numBytes: Long, duration: Duration): String {
-    if (duration.seconds == 0L) {
-        return "Infinity"
-    }
     val numBits = BigDecimal(numBytes * 8)
     val megaBits = (numBits / BigDecimal(1000000.0)).toFloat()
-    return "%.2f".format(megaBits / duration.seconds)
+    return "%.2f".format((megaBits / duration.toMillis()) * Duration.ofSeconds(1).toMillis())
 }
 
 
@@ -55,7 +50,8 @@ abstract class Module(
      * in the chain, which means we can put common logic for statistics
      * in this class.
      * TODO: maybe define a 'PacketHandler' interface that module
-     * implements and use that type here?
+     * implements and use that type here? -> but then we have to create
+     * an anonymous instance instead of being able to pass a lambda
      */
     private var nextModule: (List<Packet>) -> Unit = {}
     // Stats stuff

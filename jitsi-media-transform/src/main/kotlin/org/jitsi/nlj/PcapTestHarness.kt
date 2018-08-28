@@ -30,6 +30,7 @@ import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 fun ByteBuffer.clone(): ByteBuffer {
     val clone = ByteBuffer.allocate(capacity())
@@ -137,16 +138,19 @@ fun main(args: Array<String>) {
         for (receiver in receivers) {
             val p = UnparsedPacket(buf.clone())
             receiver.enqueuePacket(p)
-
         }
         true
     }
     println("loop done")
 //    receiverDoneFutures.map { it.join() }
-    sleep(10000)
+    sleep(5000)
     val finishTime = System.nanoTime()
     val time = Duration.ofNanos(finishTime - startTime)
     receivers.forEach { println(it.getStats()) }
 
     println("$numReceivers receiver pipelines processed $numExpectedPackets packets each in a total of ${time.toMillis()}ms")
+
+    receivers.forEach(RtpReceiver::stop)
+    executor.shutdownNow()
+    executor.awaitTermination(5, TimeUnit.SECONDS)
 }
