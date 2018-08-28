@@ -350,11 +350,9 @@ public class Content
                     RtpChannel otherChannel = (RtpChannel)channelEntry.getValue();
                     channel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
                         otherChannel.transceiver.sendPackets(pkts);
-                        return Unit.INSTANCE;
                     });
                     otherChannel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
                         channel.transceiver.sendPackets(pkts);
-                        return Unit.INSTANCE;
                     });
                 }
             });

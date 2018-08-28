@@ -79,9 +79,9 @@ public class IceDtlsTransportManager
                 logger.info("Adding fingerprint " + dfpe.getHash() + " -> " + dfpe.getFingerprint());
                 remoteFingerprints.put(dfpe.getHash(), dfpe.getFingerprint());
             });
-            getTransceivers().forEach(transceiver -> {
-                transceiver.setRemoteFingerprints(remoteFingerprints);
-            });
+//            getTransceivers().forEach(transceiver -> {
+//                transceiver.setRemoteFingerprints(remoteFingerprints);
+//            });
 //            transceiver.setRemoteFingerprints(remoteFingerprints);
 
         // Set the remote ufrag/password
@@ -206,9 +206,9 @@ public class IceDtlsTransportManager
             {
                 // Every packet will go to every transceiver
                 getTransceivers().forEach(transceiver -> {
-                   packets.forEach(pkt -> {
-                       transceiver.getIncomingQueue().add(pkt);
-                   });
+                    packets.forEach(pkt -> {
+                        transceiver.getIncomingQueue().add(pkt);
+                    });
                 });
             }
         });
@@ -317,7 +317,6 @@ public class IceDtlsTransportManager
                     System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
                 }
             });
-            return Unit.INSTANCE;
         });
         System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         //TODO: prevent starting dtls more than once
