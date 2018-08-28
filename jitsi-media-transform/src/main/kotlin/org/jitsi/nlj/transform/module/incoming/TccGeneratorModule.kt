@@ -53,7 +53,7 @@ class TccGeneratorModule(
     }
 
     override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
-        if (RTPExtension.TRANSPORT_CC_URN.equals(rtpExtension.uri)) {
+        if (RTPExtension.TRANSPORT_CC_URN.equals(rtpExtension.uri.toString())) {
             tccExtensionId = extensionId.toUInt()
             println("TCC generator setting extension id to $tccExtensionId")
         }
