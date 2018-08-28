@@ -202,20 +202,18 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
-        println("RTP receiver adding extension ${rtpExtension.uri}")
-        //TODO: change these to iterate through a list of modules
-        tccGenerator.onRtpExtensionAdded(extensionId, rtpExtension)
+        moduleChain.modules.forEach { it.onRtpExtensionAdded(extensionId, rtpExtension) }
     }
 
     override fun onRtpExtensionRemoved(extensionId: Byte) {
-        tccGenerator.onRtpExtensionRemoved(extensionId)
+        moduleChain.modules.forEach { it.onRtpExtensionRemoved(extensionId) }
     }
 
     override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
-        payloadTypeFilter.onRtpPayloadTypeAdded(payloadType, format)
+        moduleChain.modules.forEach { it.onRtpPayloadTypeAdded(payloadType, format) }
     }
 
     override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
-        payloadTypeFilter.onRtpPayloadTypeRemoved(payloadType)
+        moduleChain.modules.forEach { it.onRtpPayloadTypeRemoved(payloadType) }
     }
 }
