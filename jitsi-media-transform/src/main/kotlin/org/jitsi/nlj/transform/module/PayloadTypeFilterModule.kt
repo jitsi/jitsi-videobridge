@@ -29,9 +29,7 @@ class PayloadTypeFilterModule : Module("RTP payload type filter") {
             .map { it as SrtpPacket }
             .filter { acceptedPayloadTypes.contains(it.header.payloadType) }
             .toList()
-        if (filteredPackets.isNotEmpty()) {
-            next(filteredPackets)
-        }
+        next(filteredPackets)
     }
 
     override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {

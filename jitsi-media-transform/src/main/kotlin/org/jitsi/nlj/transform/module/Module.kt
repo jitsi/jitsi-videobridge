@@ -53,9 +53,9 @@ abstract class Module(
      * implements and use that type here? -> but then we have to create
      * an anonymous instance instead of being able to pass a lambda
      */
-    private var nextModule: (List<Packet>) -> Unit = {}
+    private var nextModule: PacketHandler = {}
     // Stats stuff
-    private var startTime: Long by Delegates.notNull()
+    private var startTime: Long = 0
     private var totalTime: Long = 0
     private var numInputPackets = 0
     private var numOutputPackets = 0
@@ -100,7 +100,9 @@ abstract class Module(
         // submodules do it
         onExit(pkts)
         numOutputPackets += pkts.size
-        nextModule.invoke(pkts)
+        if (pkts.isNotEmpty()) {
+            nextModule.invoke(pkts)
+        }
     }
 
     protected fun next(chain: ModuleChain, pkts: List<Packet>) {
