@@ -18,6 +18,7 @@ package org.jitsi.nlj.transform.module
 import org.jitsi.nlj.RtpExtensionEventListener
 import org.jitsi.nlj.RtpPayloadTypeEventListener
 import org.jitsi.nlj.transform.PacketHandler
+import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
@@ -38,7 +39,7 @@ fun getMbps(numBytes: Long, duration: Duration): String {
 abstract class Module(
     var name: String,
     protected val debug: Boolean = false
-) : RtpExtensionEventListener, RtpPayloadTypeEventListener, PacketHandler {
+) : RtpExtensionEventListener, RtpPayloadTypeEventListener, PacketHandler, StatsProducer {
     /**
      * The next handler in the chain, after this one.  This is held
      * as a method, instead of an entire [Module], because a module
@@ -126,7 +127,7 @@ abstract class Module(
         // No-op by default
     }
 
-    open fun getStats(indent: Int = 0): String {
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, "$name stats:")
             appendLnIndent(indent + 2, "numInputPackets: $numInputPackets")
