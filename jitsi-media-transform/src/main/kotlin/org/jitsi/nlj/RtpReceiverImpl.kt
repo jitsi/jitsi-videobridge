@@ -15,10 +15,10 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
-import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.nlj.transform.module.PayloadTypeFilterModule
 import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.module.getMbps
@@ -31,6 +31,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
@@ -65,7 +66,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * variable to a function for handling fully-processed RTP packets from
      * this receiver.
      */
-    override var rtpPacketHandler: PacketHandler = {}
+    override var rtpPacketHandler: PacketHandler? = null
 
     // Stat tracking values
     var firstPacketWrittenTime: Long = 0
@@ -98,7 +99,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         addModule(srtpDecryptWrapper)
                         addModule(object : Module("packet handler") {
                             override fun doProcessPackets(p: List<Packet>) {
-                                rtpPacketHandler.invoke(p)
+                                rtpPacketHandler?.processPackets(p)
                             }
                         })
                     }
@@ -118,9 +119,15 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 val outPackets = mutableListOf<RtcpPacket>()
                                 p.forEach {
                                     val iter = RtcpIterator(it.getBuffer())
-                                    val pkts = iter.getAll()
-//                                    println("BRIAN: extracted ${pkts.size} rtcp packets from compound:\n$pkts")
-                                    outPackets.addAll(pkts)
+                                    try {
+                                        val pkts = iter.getAll()
+                                        // println("BRIAN: extracted ${pkts.size} rtcp packets from compound:\n$pkts")
+                                        outPackets.addAll(pkts)
+                                    } catch (e: Exception) {
+                                        println("BRIAN: exception parsing rtcp packet: $e\n" +
+                                                "original packet buf:\n${it.getBuffer().toHex()}")
+
+                                    }
                                 }
                                 if (outPackets.isNotEmpty()) {
                                     next(outPackets)
@@ -189,9 +196,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
             firstPacketWrittenTime = System.currentTimeMillis()
         }
         lastPacketWrittenTime = System.currentTimeMillis()
-//        if (packetsReceived % 200 == 0L) {
-//            println("BRIAN: module chain stats: ${moduleChain.getStats()}")
-//        }
+        if (packetsReceived % 200 == 0L) {
+            println("BRIAN: module chain stats: ${moduleChain.getStats()}")
+        }
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {

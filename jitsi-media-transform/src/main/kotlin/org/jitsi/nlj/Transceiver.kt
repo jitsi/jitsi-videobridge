@@ -21,6 +21,7 @@ import org.jitsi.nlj.dtls.QueueDatagramTransport
 import org.jitsi.nlj.dtls.TlsClientImpl
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.transform.chain
 import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.module.ModuleChain
@@ -80,32 +81,32 @@ class Transceiver(
 
     init {
         println("Transceiver ${this.hashCode()} using executor ${executor.hashCode()}")
-        dtlsStack.onHandshakeComplete { dtlsTransport, tlsContext ->
-            val srtpProfileInfo =
-                SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(dtlsStack.getChosenSrtpProtectionProfile())
-            val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
-            println("Transceiver $id creating transformers with:\n" +
-                    "profile info:\n$srtpProfileInfo\n" +
-                    "keyingMaterial:\n${ByteBuffer.wrap(keyingMaterial).toHex()}\n" +
-                    "tls role: ${TlsRole.fromTlsContext(tlsContext)}")
-            val srtpTransformer = SrtpUtil.initializeTransformer(
-                srtpProfileInfo,
-                keyingMaterial,
-                TlsRole.fromTlsContext(tlsContext),
-                false
-            )
-            val srtcpTransformer = SrtpUtil.initializeTransformer(
-                srtpProfileInfo,
-                keyingMaterial,
-                TlsRole.fromTlsContext(tlsContext),
-                true
-            )
-
-            rtpReceiver.setSrtpTransformer(srtpTransformer)
-            rtpReceiver.setSrtcpTransformer(srtcpTransformer)
-            rtpSender.setSrtpTransformer(srtpTransformer)
-            rtpSender.setSrtcpTransformer(srtcpTransformer)
-        }
+//        dtlsStack.onHandshakeComplete { dtlsTransport, tlsContext ->
+//            val srtpProfileInfo =
+//                SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(dtlsStack.getChosenSrtpProtectionProfile())
+//            val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
+//            println("Transceiver $id creating transformers with:\n" +
+//                    "profile info:\n$srtpProfileInfo\n" +
+//                    "keyingMaterial:\n${ByteBuffer.wrap(keyingMaterial).toHex()}\n" +
+//                    "tls role: ${TlsRole.fromTlsContext(tlsContext)}")
+//            val srtpTransformer = SrtpUtil.initializeTransformer(
+//                srtpProfileInfo,
+//                keyingMaterial,
+//                TlsRole.fromTlsContext(tlsContext),
+//                false
+//            )
+//            val srtcpTransformer = SrtpUtil.initializeTransformer(
+//                srtpProfileInfo,
+//                keyingMaterial,
+//                TlsRole.fromTlsContext(tlsContext),
+//                true
+//            )
+//
+//            rtpReceiver.setSrtpTransformer(srtpTransformer)
+//            rtpReceiver.setSrtcpTransformer(srtcpTransformer)
+//            rtpSender.setSrtpTransformer(srtpTransformer)
+//            rtpSender.setSrtcpTransformer(srtcpTransformer)
+//        }
 
         incomingChain = chain {
             name("Transceiver incoming chain")
@@ -138,45 +139,42 @@ class Transceiver(
                             else -> true
                         }
                     }
-                    path = rtpReceiver.moduleChain
+                    path = rtpReceiver
                 }
             }
         }
 
 
         // rewire the sender's hacked packet handler
-        rtpSender.packetSender = { pkts ->
-            outgoingQueue.addAll(pkts)
-        }
-
+        rtpSender.packetSender = PacketHandler.create { pkts -> outgoingQueue.addAll(pkts) }
         scheduleWork()
     }
 
-    fun connectDtls() {
-        dtlsSender.attach { pkts ->
-            println("BRIAN: dtls adding packets to outgoing queue")
-            outgoingQueue.addAll(pkts)
-        }
-        val tlsTransport = QueueDatagramTransport(
-            dtlsReceiver::receive,
-            { buf, off, len -> dtlsSender.send(buf, off, len) },
-            1500
-        )
-        executor.submit {
-            println("BRIAN: starting DTLS handshake")
-            try {
-                dtlsStack.connect(TlsClientImpl(), tlsTransport)
-            } catch (e: Exception) {
-                println("BRIAN: exception during dtls connect: $e")
-            }
-        }
-    }
-
-    fun getLocalFingerprint(): String = dtlsStack.localFingerprint
-    fun getLocalFingerprintHashFunction(): String = dtlsStack.localFingerprintHashFunction
-    fun setRemoteFingerprints(remoteFingerprints: Map<String, String>) {
-        dtlsStack.remoteFingerprints = remoteFingerprints
-    }
+//    fun connectDtls() {
+//        dtlsSender.attach { pkts ->
+//            println("BRIAN: dtls adding packets to outgoing queue")
+//            outgoingQueue.addAll(pkts)
+//        }
+//        val tlsTransport = QueueDatagramTransport(
+//            dtlsReceiver::receive,
+//            { buf, off, len -> dtlsSender.send(buf, off, len) },
+//            1500
+//        )
+//        executor.submit {
+//            println("BRIAN: starting DTLS handshake")
+//            try {
+//                dtlsStack.connect(TlsClientImpl(), tlsTransport)
+//            } catch (e: Exception) {
+//                println("BRIAN: exception during dtls connect: $e")
+//            }
+//        }
+//    }
+//
+//    fun getLocalFingerprint(): String = dtlsStack.localFingerprint
+//    fun getLocalFingerprintHashFunction(): String = dtlsStack.localFingerprintHashFunction
+//    fun setRemoteFingerprints(remoteFingerprints: Map<String, String>) {
+//        dtlsStack.remoteFingerprints = remoteFingerprints
+//    }
 
     fun sendPackets(p: List<Packet>) {
         rtpSender.sendPackets(p)

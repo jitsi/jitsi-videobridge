@@ -21,6 +21,7 @@ import io.pkts.protocol.Protocol
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.service.neomedia.format.AbstractMediaFormat
 import org.jitsi.service.neomedia.format.MediaFormat
@@ -109,7 +110,7 @@ fun main(args: Array<String>) {
         val rtpReceiver = createRtpReceiver(executor)
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
-        rtpReceiver.rtpPacketHandler = { pkts ->
+        rtpReceiver.rtpPacketHandler = PacketHandler.create { pkts ->
             numReceivedPackets += pkts.size
             if (numReceivedPackets == numExpectedPackets) {
                 println("ALL PACKETS FORWARDED")

@@ -15,21 +15,20 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.transform.PacketHandler
 import org.jitsi.nlj.transform.module.ModuleChain
-import org.jitsi.nlj.transform.module.PacketHandler
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 
 abstract class RtpReceiver :
-    RtpExtensionEventListener, RtpPayloadTypeEventListener {
+    RtpExtensionEventListener, RtpPayloadTypeEventListener, PacketHandler {
     protected var running = true
-    abstract val moduleChain: ModuleChain
-    abstract fun processPackets(pkts: List<Packet>)
+    protected abstract val moduleChain: ModuleChain
     abstract fun getStats(): String
     abstract fun enqueuePacket(p: Packet)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
-    abstract var rtpPacketHandler: PacketHandler
+    abstract var rtpPacketHandler: PacketHandler?
     fun stop() {
         running = false
     }
