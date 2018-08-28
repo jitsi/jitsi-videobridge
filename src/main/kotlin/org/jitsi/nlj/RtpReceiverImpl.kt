@@ -94,6 +94,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 next(p.map(Packet::getBuffer).map(::SrtpPacket))
                             }
                         })
+                        addModule(payloadTypeFilter)
                         addModule(tccGenerator)
                         addModule(srtpDecryptWrapper)
                         addModule(object : Module("packet handler") {
@@ -112,7 +113,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 next(p.map(Packet::getBuffer).map(::SrtcpPacket))
                             }
                         })
-                        addModule(payloadTypeFilter)
                         addModule(srtcpDecryptWrapper)
                         addModule(object : Module("Compound RTCP splitter") {
                             override fun doProcessPackets(p: List<Packet>) {

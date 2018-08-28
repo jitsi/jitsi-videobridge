@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.dtls.QueueDatagramTransport
 import org.jitsi.nlj.dtls.TlsClientImpl
@@ -202,11 +203,16 @@ class Transceiver(
         payloadTypes[rtpPayloadType] = format
         //TODO: notify all
         println("Payload type added: $rtpPayloadType -> $format")
+        rtpReceiver.onRtpPayloadTypeAdded(rtpPayloadType, format)
     }
 
     fun clearDynamicRtpPayloadTypes() {
         //TODO: notify all
         println("All payload types being cleared")
+        payloadTypes.keys.forEach { pt ->
+            rtpReceiver.onRtpExtensionRemoved(pt)
+        }
+        payloadTypes.clear()
     }
 
     fun addDynamicRtpPayloadTypeOverride(originalPt: Byte, overloadPt: Byte) {
@@ -224,5 +230,32 @@ class Transceiver(
         println("Clearing all RTP extensions")
         rtpExtensions.keys.forEach(rtpReceiver::onRtpExtensionRemoved)
         rtpExtensions.clear()
+    }
+
+    fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsContext: TlsContext) {
+        val srtpProfileInfo =
+            SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
+        val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
+        println("Transceiver $id creating transformers with:\n" +
+                "profile info:\n$srtpProfileInfo\n" +
+                "keyingMaterial:\n${ByteBuffer.wrap(keyingMaterial).toHex()}\n" +
+                "tls role: ${TlsRole.fromTlsContext(tlsContext)}")
+        val srtpTransformer = SrtpUtil.initializeTransformer(
+            srtpProfileInfo,
+            keyingMaterial,
+            TlsRole.fromTlsContext(tlsContext),
+            false
+        )
+        val srtcpTransformer = SrtpUtil.initializeTransformer(
+            srtpProfileInfo,
+            keyingMaterial,
+            TlsRole.fromTlsContext(tlsContext),
+            true
+        )
+
+        rtpReceiver.setSrtpTransformer(srtpTransformer)
+        rtpReceiver.setSrtcpTransformer(srtcpTransformer)
+        rtpSender.setSrtpTransformer(srtpTransformer)
+        rtpSender.setSrtcpTransformer(srtcpTransformer)
     }
 }

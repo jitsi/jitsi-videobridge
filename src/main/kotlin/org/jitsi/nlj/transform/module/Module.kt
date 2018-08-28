@@ -100,6 +100,8 @@ abstract class Module(
     protected abstract fun doProcessPackets(p: List<Packet>)
 
     protected fun next(pkts: List<Packet>) {
+        //TODO: add handling for empty 'pkts' here, instead of having
+        // submodules do it
         onExit(pkts)
         numOutputPackets += pkts.size
         nextModule.invoke(pkts)

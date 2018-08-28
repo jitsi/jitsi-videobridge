@@ -29,10 +29,13 @@ class PayloadTypeFilterModule : Module("RTP payload type filter") {
             .map { it as SrtpPacket }
             .filter { acceptedPayloadTypes.contains(it.header.payloadType) }
             .toList()
-        next(filteredPackets)
+        if (filteredPackets.isNotEmpty()) {
+            next(filteredPackets)
+        }
     }
 
     override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
+        println("BRIAN: payload type filter ${hashCode()} now accepting PT ${payloadType.toUInt()}")
         acceptedPayloadTypes.add(payloadType.toUInt())
     }
 

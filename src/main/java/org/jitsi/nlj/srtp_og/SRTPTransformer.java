@@ -213,7 +213,10 @@ public class SRTPTransformer
         // only accept RTP version 2 (SNOM phones send weird packages when on
         // hold, ignore them with this check (RTP Version must be equal to 2)
         if((pkt.readByte(0) & 0xC0) != 0x80)
+        {
+            System.out.println("SRTPTransformer#reverseTransform received invalid packet");
             return null;
+        }
 
         SRTPCryptoContext context
                 = getContext(
