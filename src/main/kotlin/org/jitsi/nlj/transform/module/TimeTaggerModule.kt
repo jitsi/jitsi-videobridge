@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.module
 
-import org.jitsi.nlj.util.EvictingQueue
+import org.jitsi.nlj.util.EvictingConcurrentQueue
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpHeaderExtension
@@ -90,7 +90,7 @@ class TimeTagExtensionReader(private val shouldStrip: Boolean = false) : Module(
 }
 
 class TimeTagReader : Module("TimeTag Reader") {
-    val durations = mutableMapOf<String, EvictingQueue<Long>>()
+    val durations = mutableMapOf<String, EvictingConcurrentQueue<Long>>()
     override fun doProcessPackets(p: List<Packet>) {
         val currentTime = TimeTag.getTime()
         p.forEachIf<RtpPacket> { pkt ->
@@ -98,7 +98,7 @@ class TimeTagReader : Module("TimeTag Reader") {
                 val tags = it as List<TimeTag>
                 tags.forEach { tag ->
                     val duration = currentTime - tag.timestamp
-                    durations.computeIfAbsent(tag.context) { EvictingQueue(100) }.add(duration)
+                    durations.computeIfAbsent(tag.context) { EvictingConcurrentQueue(100) }.add(duration)
                 }
             }
         }

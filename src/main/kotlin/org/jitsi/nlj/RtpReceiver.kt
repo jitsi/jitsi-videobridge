@@ -22,6 +22,7 @@ import org.jitsi.rtp.Packet
 
 abstract class RtpReceiver :
     RtpExtensionEventListener, RtpPayloadTypeEventListener {
+    protected var running = true
     abstract val moduleChain: ModuleChain
     abstract fun processPackets(pkts: List<Packet>)
     abstract fun getStats(): String
@@ -29,4 +30,7 @@ abstract class RtpReceiver :
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
     abstract var rtpPacketHandler: PacketHandler
+    fun stop() {
+        running = false
+    }
 }

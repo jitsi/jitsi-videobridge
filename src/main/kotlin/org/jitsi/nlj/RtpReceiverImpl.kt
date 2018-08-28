@@ -54,7 +54,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
 ) : RtpReceiver() {
     override val moduleChain: ModuleChain
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
-    var running = true
     private val srtpDecryptWrapper = SrtpTransformerWrapperDecrypt()
     private val srtcpDecryptWrapper = SrtcpTransformerWrapperDecrypt()
     private val tccGenerator = TccGeneratorModule(rtcpSender)
@@ -203,6 +202,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
+        println("RTP receiver adding extension ${rtpExtension.uri}")
         //TODO: change these to iterate through a list of modules
         tccGenerator.onRtpExtensionAdded(extensionId, rtpExtension)
     }
