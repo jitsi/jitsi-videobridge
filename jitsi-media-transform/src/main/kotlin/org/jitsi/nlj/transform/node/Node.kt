@@ -33,6 +33,9 @@ interface NodeVisitor {
 class NodeStatsVisitor(val sb: StringBuffer = StringBuffer()) : NodeVisitor {
     override fun visit(node: Node) {
         //TODO: How to do the indent?
+        // if, instead of returning a string, we returned some stat structure
+        // which could support nesting (for sub paths like demuxer) then i
+        // think we could get better formatting
         sb.append(node.getStats())
     }
 }
@@ -49,6 +52,7 @@ class NodeEventVisitor(val event: Event) : NodeVisitor {
  * 1) Attaching the next node in the chain
  * 2) Basic stat tracking (time duration, packets in/out, bytes in/out,
  * throughput, etc.)
+ * 3) Propagating [visit] calls
  *
  */
 abstract class Node(

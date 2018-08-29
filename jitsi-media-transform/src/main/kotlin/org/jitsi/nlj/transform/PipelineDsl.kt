@@ -21,12 +21,6 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketPath
 import org.jitsi.rtp.Packet
 
-//fun chain(receiver: ModuleChain.() -> Unit): ModuleChain = ModuleChain().apply(receiver)
-
-//fun DemuxerModule.packetPath(b: PacketPath.() -> Unit) {
-//    this.addPacketPath(PacketPath().apply(b))
-//}
-
 fun DemuxerNode.packetPath(b: PacketPath.() -> Unit) {
     this.addPacketPath(PacketPath().apply(b))
 }
@@ -102,62 +96,3 @@ class PipelineManager(private val parentPipelineManager: PipelineManager? = null
 
 fun pipelineManager(block: PipelineManager.() -> Unit): PipelineManager = PipelineManager().apply(block)
 fun pipelineManager(parentPipelineManager: PipelineManager, block: PipelineManager.() -> Unit): PipelineManager = PipelineManager(parentPipelineManager).apply(block)
-
-// A packet tree is defined by a single root PacketHandler and represents
-// potentially multiple packet paths (as it may branch out)
-//class PacketTreeBuilder {
-//    private var head: PacketHandler? = null
-//    private var tail: PacketHandler? = null
-//    private var treeTerminated = false
-//
-//    private fun addHandler(handler: PacketHandler) {
-//        if (treeTerminated) {
-//            throw Exception("Handler cannot be added after tree has been terminated")
-//        }
-//        if (head == null) {
-//            head = handler
-//        }
-//        tail?.attach(handler)
-//        tail = handler
-//    }
-//
-//    fun handler(block: () -> PacketHandler): PacketHandler {
-//        val createdHandler = block()
-//        addHandler(createdHandler)
-//        return createdHandler
-//    }
-//
-//    fun simpleHandler(name: String, block: SimplePacketHandler.(List<Packet>) -> Unit): PacketHandler {
-//        val simpleHandler = SimplePacketHandler(name, block)
-//        addHandler(simpleHandler)
-//        return simpleHandler
-//    }
-//
-//    fun handler(handler: PacketHandler) = addHandler(handler)
-//
-//    /**
-//     * After adding a demuxer, no more handlers can be added directly to this
-//     * tree.  A demuxer represents a subtree and all paths from here on
-//     * must stem from that subtree.
-//     */
-//    fun demux(block: DemuxerModule.() -> Unit): PacketHandler {
-//        val demuxerModule = DemuxerModule().apply(block)
-//        addHandler(demuxerModule)
-//        treeTerminated = true
-//
-//        return demuxerModule
-//    }
-//
-//    fun build(): PacketHandler = head!!
-//}
-//
-//fun packetTree(block: PacketTreeBuilder.() -> Unit): PacketHandler {
-//    val builder = PacketTreeBuilder().apply(block)
-//
-//    return builder.build()
-//}
-
-//fun onPackets(block: SimplePacketHandler.(List<Packet>) -> Unit): PacketHandler {
-//    return SimplePacketHandler(block)
-//}
-
