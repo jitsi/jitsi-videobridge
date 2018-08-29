@@ -47,9 +47,9 @@ abstract class Module(
     private var lastPacketTime: Long = -1
     private var numBytes: Long = 0
 
-    override fun attach(nextHandler: PacketHandler) {
-        this.nextHandler = nextHandler
-    }
+//    override fun attach(nextHandler: PacketHandler) {
+//        this.nextHandler = nextHandler
+//    }
 
     private fun getTime(): Long = System.nanoTime()
 
@@ -111,13 +111,13 @@ abstract class Module(
         nextHandler?.handleEvent(event)
     }
 
-    override fun getRecursiveStats(indent: Int): String {
-        return with (StringBuffer()) {
-            append(getStats(indent))
-            nextHandler?.let { append(it.getStats(indent))}
-            toString()
-        }
-    }
+//    override fun getRecursiveStats(indent: Int): String {
+//        return with (StringBuffer()) {
+//            append(getStats(indent))
+//            nextHandler?.let { append(it.getStats(indent))}
+//            toString()
+//        }
+//    }
 
     override fun getStats(indent: Int): String {
         return with (StringBuffer()) {

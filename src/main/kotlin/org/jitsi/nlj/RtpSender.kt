@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -30,13 +31,15 @@ abstract class RtpSender {
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
     var lastPacketSentTime: Long = -1
-    var packetSender: PacketHandler = SimplePacketHandler("RtpSender packetSender") {
-        if (firstPacketSentTime == -1L) {
-            firstPacketSentTime = System.currentTimeMillis()
+    var packetSender: PacketHandler = object : Node("RtpSender packet sender") {
+        override fun doProcessPackets(p: List<Packet>) {
+            if (firstPacketSentTime == -1L) {
+                firstPacketSentTime = System.currentTimeMillis()
+            }
+            numPacketsSent += p.size
+            p.forEach { pkt -> numBytesSent += pkt.size }
+            lastPacketSentTime = System.currentTimeMillis()
         }
-        numPacketsSent += it.size
-        it.forEach { pkt -> numBytesSent += pkt.size }
-        lastPacketSentTime = System.currentTimeMillis()
     }
     abstract fun sendPackets(pkts: List<Packet>)
     abstract fun sendRtcp(pkts: List<RtcpPacket>)

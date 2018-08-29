@@ -21,6 +21,9 @@ import io.pkts.protocol.Protocol
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.NodeStatsVisitor
+import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.service.neomedia.format.AbstractMediaFormat
 import java.lang.Thread.sleep
@@ -108,11 +111,13 @@ fun main(args: Array<String>) {
         val rtpReceiver = createRtpReceiver(executor)
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
-        rtpReceiver.attach(SimplePacketHandler("Packet receiver") { pkts ->
-            numReceivedPackets += pkts.size
-            if (numReceivedPackets == numExpectedPackets) {
-                println("ALL PACKETS FORWARDED")
-                doneFuture.complete(Unit)
+        rtpReceiver.attach(object : Node("Packet receiver") {
+            override fun doProcessPackets(p: List<Packet>) {
+                numReceivedPackets += p.size
+                if (numReceivedPackets == numExpectedPackets) {
+                    println("ALL PACKETS FORWARDED")
+                    doneFuture.complete(Unit)
+                }
             }
         })
         receivers.add(rtpReceiver)
@@ -145,7 +150,7 @@ fun main(args: Array<String>) {
     sleep(3000)
     val finishTime = System.nanoTime()
     val time = Duration.ofNanos(finishTime - startTime)
-    receivers.forEach { println(it.getRecursiveStats()) }
+    receivers.forEach { println(it.getStats()) }
 
     println("$numReceivers receiver pipelines processed $numExpectedPackets packets each in a total of ${time.toMillis()}ms")
 

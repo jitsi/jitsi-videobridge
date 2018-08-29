@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 
@@ -23,6 +24,7 @@ abstract class RtpReceiver :
     protected var running = true
 //    protected abstract val moduleChain: ModuleChain
 //    abstract fun getStats(): String
+    abstract fun attach(node: Node)
     abstract fun enqueuePacket(p: Packet)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
