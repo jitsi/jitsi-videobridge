@@ -19,9 +19,9 @@ import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.transform.module.incoming.DtlsReceiverModule
-import org.jitsi.nlj.transform.module.outgoing.DtlsSenderModule
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.incoming.DtlsReceiverNode
+import org.jitsi.nlj.transform.node.outgoing.DtlsSenderNode
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
@@ -49,8 +49,8 @@ class Transceiver(
     private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) {
     private val dtlsStack = DtlsClientStack()
-    private val dtlsReceiver = DtlsReceiverModule()
-    private val dtlsSender = DtlsSenderModule()
+    private val dtlsReceiver = DtlsReceiverNode()
+    private val dtlsSender = DtlsSenderNode()
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
 

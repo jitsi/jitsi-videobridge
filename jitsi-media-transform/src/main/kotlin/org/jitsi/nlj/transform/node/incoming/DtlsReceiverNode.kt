@@ -16,7 +16,6 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.bouncycastle.crypto.tls.DTLSTransport
-import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
@@ -25,10 +24,10 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 /**
- * [DtlsReceiverModule] bridges a chain of modules to a DTLS's transport
+ * [DtlsReceiverNode] bridges a chain of modules to a DTLS's transport
  * (used by the bouncycastle stack).
  */
-class DtlsReceiverModule : Node("DTLS Receiver") {
+class DtlsReceiverNode : Node("DTLS Receiver") {
     private val incomingQueue = LinkedBlockingQueue<Packet>()
     /**
      * The negotiated DTLS transport.  If this is set, this module will
