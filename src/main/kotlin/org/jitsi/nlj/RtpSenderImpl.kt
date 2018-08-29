@@ -15,10 +15,14 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
+import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.nlj.util.Util.Companion.getMbps
+import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Duration
@@ -29,8 +33,8 @@ class RtpSenderImpl(
     val id: Long,
     val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpSender() {
-    private val outgoingRtpChain: PacketHandler? = null
-    private val outgoingRtcpChain: PacketHandler? = null
+    private val outgoingRtpRoot: Node
+    private val outgoingRtcpRoot: Node
     val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var numIncomingBytes: Long = 0
     var firstPacketWrittenTime = -1L
@@ -44,82 +48,28 @@ class RtpSenderImpl(
 
     init {
         println("Sender ${this.hashCode()} using executor ${executor.hashCode()}")
-//        outgoingRtpChain = chain {
-//            name("Outgoing RTP chain")
-//            addModule(srtpEncryptWrapper)
-//        }
-//        outgoingRtcpChain = packetTree {
-//            simpleHandler("RTCP sender ssrc setter") { pkts ->
-//                tempSenderSsrc?.let { senderSsrc ->
-//                    pkts.forEachAs<RtcpPacket> {
-//                        it.header.senderSsrc = senderSsrc
-////                            println("Sending rtcp $it")
-//                    }
-//                    next?.processPackets(pkts)
-//                }
-//            }
-//            handler(srtcpEncryptWrapper)
-//            simpleHandler("RTCP sender") { pkts ->
-//                packetSender.processPackets(pkts)
-//            }
-//
-//        }
-
-//        outgoingRtcpChain = chain {
-//            name("Outgoing RTCP chain")
-//            addModule(object : Module("RTCP field setter") {
-//                override fun doProcessPackets(p: List<Packet>) {
-//                    //TODO: for now, hard code an ssrc we've sent out
-//                    // before as the senderSsrc in this packet
-//                    tempSenderSsrc?.let { senderSsrc ->
-//                        p.forEachAs<RtcpPacket> {
-//                            it.header.senderSsrc = senderSsrc
-////                            println("Sending rtcp $it")
-//                        }
-//                        next(p)
-//                    } ?: run {
-//                        println("RTCP chain no sender ssrc set")
-//                    }
-//                }
-//            })
-//            addModule(srtcpEncryptWrapper)
-//            addModule(object : Module("Packet sender") {
-//                override fun doProcessPackets(p: List<Packet>) {
-////                    p.forEachAs<SrtcpPacket> {
-////                        println("Rtcp chain sending rtcp packet: $it\n${it.getBuffer().toHex()}")
-////                    }
-//                    packetSender.processPackets(p)
-//                }
-//            })
-//        }
-//        outgoingRtpChain = packetTree {
-//            handler(srtpEncryptWrapper)
-//            handler {
-//                simpleHandler("Sender ssrc setter") { pkts ->
-//                    if (tempSenderSsrc == null) {
-//                        pkts.forEachIf<SrtpPacket> {
-//                            tempSenderSsrc = it.header.ssrc
-//                        }
-//                    }
-//                    packetSender.processPackets(pkts)
-//                }
-//            }
-//        }
-
-//        outgoingRtpChain = chain {
-//            //TODO: for now just hard-code the rtp path
-//            addModule(srtpEncryptWrapper)
-//            addModule(object : Module("Packet sender") {
-//                override fun doProcessPackets(p: List<Packet>) {
-//                    if (tempSenderSsrc == null) {
-//                        p.forEachIf<SrtpPacket> {
-//                            tempSenderSsrc = it.header.ssrc
-//                        }
-//                    }
-//                    packetSender.processPackets(p)
-//                }
-//            })
-//        }
+        outgoingRtpRoot = pipeline {
+            node(srtpEncryptWrapper)
+            simpleNode("RTP sender") { pkts ->
+                packetSender.processPackets(pkts)
+                emptyList()
+            }
+        }
+        outgoingRtcpRoot = pipeline {
+            simpleNode("RTCP sender ssrc setter") { pkts ->
+                tempSenderSsrc?.let { senderSsrc ->
+                    pkts.forEachAs<RtcpPacket> {
+                        it.header.senderSsrc = senderSsrc
+                    }
+                }
+                pkts
+            }
+            node(srtcpEncryptWrapper)
+            simpleNode("RTCP sender") { pkts ->
+                packetSender.processPackets(pkts)
+                emptyList()
+            }
+        }
         scheduleWork()
     }
 
@@ -138,7 +88,7 @@ class RtpSenderImpl(
 
     override fun sendRtcp(pkts: List<RtcpPacket>) {
 //        println("RtpSenderImpl#sendRtcp sending ${pkts.size} rtcp packets")
-        outgoingRtcpChain?.processPackets(pkts)
+        outgoingRtcpRoot.processPackets(pkts)
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
@@ -156,7 +106,7 @@ class RtpSenderImpl(
                 val packetsToProcess = mutableListOf<Packet>()
                 incomingPacketQueue.drainTo(packetsToProcess, 20)
 //                println("BRIAN: rtp sender job got ${packetsToProcess.size} packets to give to chain")
-                if (packetsToProcess.isNotEmpty()) outgoingRtpChain?.processPackets(packetsToProcess)
+                if (packetsToProcess.isNotEmpty()) outgoingRtpRoot.processPackets(packetsToProcess)
 
                 scheduleWork()
             }
@@ -171,7 +121,9 @@ class RtpSenderImpl(
             appendln("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             appendln("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
             appendln("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
-            append(outgoingRtpChain?.getStats())
+            val statsVisitor = NodeStatsVisitor(this)
+            outgoingRtpRoot.visit(statsVisitor)
+            outgoingRtcpRoot.visit(statsVisitor)
             toString()
         }
     }
