@@ -19,8 +19,8 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.StatsProducer
-import org.jitsi.nlj.transform.module.getMbps
 import org.jitsi.nlj.util.PacketPredicate
+import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import java.time.Duration
