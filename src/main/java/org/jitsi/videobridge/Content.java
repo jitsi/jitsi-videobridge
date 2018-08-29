@@ -25,9 +25,13 @@ import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.nlj.*;
+import org.jitsi.nlj.transform.node.*;
+import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -348,11 +352,19 @@ public class Content
             channels.entrySet().forEach(channelEntry -> {
                 if (channelEntry.getValue() != channel) {
                     RtpChannel otherChannel = (RtpChannel)channelEntry.getValue();
-                    channel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
-                        otherChannel.transceiver.sendPackets(pkts);
+                    channel.transceiver.getRtpReceiver().setRtpPacketHandler(new Node("RTP receiver chain handler") {
+                        @Override
+                        public void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                        {
+                            otherChannel.transceiver.sendPackets(pkts);
+                        }
                     });
-                    otherChannel.transceiver.getRtpReceiver().setRtpPacketHandler(pkts -> {
-                        channel.transceiver.sendPackets(pkts);
+                    otherChannel.transceiver.getRtpReceiver().setRtpPacketHandler(new Node("RTP receiver chain handler") {
+                        @Override
+                        public void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                        {
+                            channel.transceiver.sendPackets(pkts);
+                        }
                     });
                 }
             });

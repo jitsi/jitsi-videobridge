@@ -25,9 +25,10 @@ import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.dtls.*;
-import org.jitsi.nlj.transform.module.*;
-import org.jitsi.nlj.transform.module.incoming.*;
-import org.jitsi.nlj.transform.module.outgoing.*;
+import org.jitsi.nlj.transform.*;
+import org.jitsi.nlj.transform.node.*;
+import org.jitsi.nlj.transform.node.incoming.*;
+import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -50,9 +51,34 @@ public class IceDtlsTransportManager
             = Logger.getLogger(IceDtlsTransportManager.class);
     private static final String ICE_STREAM_NAME = "ice-stream-name";
     private DtlsStack dtlsStack = new DtlsClientStack();
-    private DtlsReceiverModule dtlsReceiver = new DtlsReceiverModule();
-    private DtlsSenderModule dtlsSender = new DtlsSenderModule();
-    private ModuleChain incomingModuleChain = createIncomingModuleChain();
+    private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
+    private DtlsSenderNode dtlsSender = new DtlsSenderNode();
+    class SocketSenderNode extends Node {
+        public MultiplexingDatagramSocket socket = null;
+        SocketSenderNode() {
+            super("Socket sender");
+        }
+        @Override
+        protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
+        {
+            if (socket != null) {
+                pkts.forEach(pkt -> {
+                    try
+                    {
+                        socket.send(new DatagramPacket(pkt.getBuffer().array(), 0, pkt.getBuffer().limit()));
+                    } catch (IOException e)
+                    {
+                        System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
+                    }
+                });
+            }
+
+        }
+    }
+    private SocketSenderNode packetSender = new SocketSenderNode();
+
+    private Node incomingPipelineRoot = createIncomingPipeline();
+    private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
 
     public IceDtlsTransportManager(Conference conference)
             throws IOException
@@ -178,19 +204,19 @@ public class IceDtlsTransportManager
         return IceUdpTransportPacketExtension.NAMESPACE;
     }
 
-    private ModuleChain createIncomingModuleChain() {
-        ModuleChain incomingModuleChain = new ModuleChain();
+    private Node createIncomingPipeline() {
+        PipelineBuilder builder = new PipelineBuilder();
 
-        DemuxerModule dtlsSrtpDemuxer = new DemuxerModule();
+        DemuxerNode dtlsSrtpDemuxer = new DemuxerNode();
         // DTLS path
         PacketPath dtlsPath = new PacketPath();
         dtlsPath.setPredicate((packet) -> {
             int b = packet.getBuffer().get(0) & 0xFF;
             return (b >= 20 && b <= 63);
         });
-        ModuleChain dtlsChain = new ModuleChain();
-        dtlsChain.addModule(dtlsReceiver);
-        dtlsPath.setPath(dtlsChain);
+        PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
+        dtlsPipelineBuilder.node(dtlsReceiver);
+        dtlsPath.setPath(dtlsPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
 
         // SRTP path
@@ -199,35 +225,29 @@ public class IceDtlsTransportManager
             int b = packet.getBuffer().get(0) & 0xFF;
             return (b < 20 || b > 63);
         });
-        ModuleChain srtpChain = new ModuleChain();
-        srtpChain.addModule(new Module("SRTP path", false) {
-            @Override
-            protected void doProcessPackets(@NotNull List<? extends Packet> packets)
-            {
-                // Every packet will go to every transceiver
-                getTransceivers().forEach(transceiver -> {
-                    packets.forEach(pkt -> {
-                        transceiver.getIncomingQueue().add(pkt);
-                    });
-                });
-            }
+        PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
+        srtpPipelineBuilder.simpleNode("SRTP path", pkts -> {
+            // Every srtp packet will go to every transceiver.  The transceivers are responsible
+            // for filtering out the payload types they don't want
+            getTransceivers().forEach(transceiver -> {
+               pkts.forEach(pkt -> {
+                   transceiver.getIncomingQueue().add(pkt);
+               });
+            });
+            return Collections.emptyList();
         });
-        srtpPath.setPath(srtpChain);
+        srtpPath.setPath(srtpPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(srtpPath);
 
-        incomingModuleChain.addModule(dtlsSrtpDemuxer);
-        return incomingModuleChain;
+        builder.node(dtlsSrtpDemuxer);
+        return builder.build();
     }
 
-    private ModuleChain createOutgoingModuleChain() {
-        ModuleChain outgoingModuleChain = new ModuleChain();
-
-        MuxerModule muxer = new MuxerModule();
-        outgoingModuleChain.addModule(muxer);
-
-        muxer.attachInput(new DtlsSenderModule());
-
-        return outgoingModuleChain;
+    private Node createOutgoingDtlsPipeline() {
+        PipelineBuilder builder = new PipelineBuilder();
+        builder.node(dtlsSender);
+        builder.node(packetSender);
+        return builder.build();
     }
 
     // Start a thread for each transceiver.  Each thread will read from the transceiver's outgoing queue
@@ -263,11 +283,7 @@ public class IceDtlsTransportManager
                     ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
                     packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
                     Packet pkt = new UnparsedPacket(packetBuf);
-                    incomingModuleChain.processPackets(Collections.singletonList(pkt));
-//                    getTransceivers().forEach(transceiver -> {
-//                        transceiver.getIncomingQueue().add(pkt);
-//                    });
-//                    transceiver.getIncomingQueue().add(pkt);
+                    incomingPipelineRoot.processPackets(Collections.singletonList(pkt));
                 } catch (IOException e)
                 {
                     e.printStackTrace();
@@ -307,19 +323,8 @@ public class IceDtlsTransportManager
             });
             return Unit.INSTANCE;
         });
-        dtlsSender.attach(pkts -> {
-            pkts.forEach(pkt -> {
-                try
-                {
-                    s.send(new DatagramPacket(pkt.getBuffer().array(), 0, pkt.getBuffer().limit()));
-                } catch (IOException e)
-                {
-                    System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
-                }
-            });
-        });
+        packetSender.socket = s;
         System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
-        //TODO: prevent starting dtls more than once
         dtlsStack.connect(new TlsClientImpl(), tlsTransport);
     }
 
