@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.PipelineManager
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
@@ -24,7 +23,7 @@ import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.packetPath
-import org.jitsi.nlj.transform.pipelineManager
+import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
@@ -51,14 +50,12 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpReceiver() {
     override var name: String = "RtpReceiverImpl"
-    private val rootPacketHandler: PacketHandler
+    private val inputTreeRoot: Node
     private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     private val srtpDecryptWrapper = SrtpTransformerDecryptNode()
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
-
-    protected val manager: PipelineManager
 
     /**
      * This [RtpReceiver] will invoke this method with RTP packets that have
@@ -76,7 +73,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     init {
         println("Receiver ${this.hashCode()} using executor ${executor.hashCode()}")
-        manager = pipelineManager {
+        inputTreeRoot = pipeline {
             simpleNode("SRTP protocol parser") { pkts ->
                 pkts.map(Packet::getBuffer).map(::SrtpProtocolPacket)
             }
@@ -84,8 +81,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 name = "SRTP/SRTCP demuxer"
                 packetPath {
                     predicate = { pkt -> RtpProtocol.isRtp(pkt.getBuffer()) }
-                    //TODO: have demuxer hold the 'pipeline' reference?  or keep it as just the node?
-                    path = pipelineManager(this@pipelineManager) {
+                    path = pipeline {
                         simpleNode("SRTP parser") { pkts ->
                             pkts.map(Packet::getBuffer).map(::SrtpPacket)
                         }
@@ -96,11 +92,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
                             rtpPacketHandler?.processPackets(it)
                             emptyList()
                         }
-                    }.getRootNode()
+                    }
                 }
                 packetPath {
                     predicate = { pkt -> RtpProtocol.isRtcp(pkt.getBuffer()) }
-                    path = pipelineManager {
+                    path = pipeline {
                         node(srtcpDecryptWrapper)
                         simpleNode("Compound RTCP splitter") { pkts ->
                             pkts
@@ -111,11 +107,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 .toList()
                         }
 
-                    }.getRootNode()
+                    }
                 }
             }
         }
-        rootPacketHandler = manager.getRootNode()
 
         scheduleWork()
     }
@@ -145,7 +140,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
     }
 
-    override fun processPackets(pkts: List<Packet>) = rootPacketHandler.processPackets(pkts)
+    override fun processPackets(pkts: List<Packet>) = inputTreeRoot.processPackets(pkts)
 
     override fun attach(node: Node) {
         rtpPacketHandler = node
@@ -160,7 +155,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     "${lastPacketWrittenTime - firstPacketWrittenTime}ms " +
                     "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             val statsVisitor = NodeStatsVisitor(this)
-            manager.getRootNode().visit(statsVisitor)
+            inputTreeRoot.visit(statsVisitor)
             toString()
         }
     }
@@ -187,6 +182,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun handleEvent(event: Event) {
-        manager.getRootNode().visit(NodeEventVisitor(event))
+        inputTreeRoot.visit(NodeEventVisitor(event))
     }
 }
