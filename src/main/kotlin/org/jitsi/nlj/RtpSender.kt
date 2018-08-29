@@ -30,7 +30,7 @@ abstract class RtpSender {
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
     var lastPacketSentTime: Long = -1
-    var packetSender: PacketHandler = PacketHandler.createSimple {
+    var packetSender: PacketHandler = SimplePacketHandler("RtpSender packetSender") {
         if (firstPacketSentTime == -1L) {
             firstPacketSentTime = System.currentTimeMillis()
         }

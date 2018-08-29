@@ -20,11 +20,8 @@ import org.jitsi.service.neomedia.format.MediaFormat
 
 interface Event
 
-interface RtpPayloadTypeEvent : Event
+class RtpPayloadTypeAddedEvent(val payloadType: Byte, val format: MediaFormat) : Event
+class RtpPayloadTypeClearEvent : Event
 
-class RtpPayloadTypeAddedEvent(val payloadType: Byte, val format: MediaFormat) : RtpPayloadTypeEvent
-class ClearRtpPayloadTypesEvent : RtpPayloadTypeEvent
-
-interface RtpExtensionEvent : Event
-class RtpExtensionAddedEvent(val extensionId: Byte, val rtpExtension: RTPExtension) : RtpExtensionEvent
-class ClearRtpExtensionsEvent : RtpExtensionEvent
+class RtpExtensionAddedEvent(val extensionId: Byte, val rtpExtension: RTPExtension) : Event
+class RtpExtensionClearEvent : Event

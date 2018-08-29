@@ -23,7 +23,6 @@ import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.Tcc
-import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
 class TccGeneratorModule(
@@ -52,19 +51,6 @@ class TccGeneratorModule(
         next(p)
     }
 
-    override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
-        if (RTPExtension.TRANSPORT_CC_URN.equals(rtpExtension.uri.toString())) {
-            tccExtensionId = extensionId.toUInt()
-            println("TCC generator setting extension id to $tccExtensionId")
-        }
-    }
-
-    override fun onRtpExtensionRemoved(extensionId: Byte) {
-        if (extensionId.toUInt() == tccExtensionId) {
-            tccExtensionId = null
-        }
-    }
-
     private fun addPacket(tccSeqNum: Int, timestamp: Long) {
         currTcc.addPacket(tccSeqNum, timestamp)
 
@@ -80,9 +66,9 @@ class TccGeneratorModule(
 
     private fun isTccReadyToSend(): Boolean = currTcc.packetInfo.size >= 20
 
-    override fun getStats(indent: Int): String {
+    override fun getStatsString(indent: Int): String {
         return with (StringBuffer()) {
-            append(super.getStats(indent))
+            append(super.getStatsString(indent))
             appendLnIndent(indent + 2, "num tcc packets sent: $numTccSent")
             toString()
         }
