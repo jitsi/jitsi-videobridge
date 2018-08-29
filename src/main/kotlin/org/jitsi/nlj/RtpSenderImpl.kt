@@ -30,7 +30,6 @@ class RtpSenderImpl(
     val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpSender() {
     private val outgoingRtpChain: PacketHandler? = null
-//    private val outgoingRtpChain: ModuleChain
     private val outgoingRtcpChain: PacketHandler? = null
     val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var numIncomingBytes: Long = 0

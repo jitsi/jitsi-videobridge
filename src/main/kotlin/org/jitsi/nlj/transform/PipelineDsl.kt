@@ -25,51 +25,21 @@ fun DemuxerNode.packetPath(b: PacketPath.() -> Unit) {
     this.addPacketPath(PacketPath().apply(b))
 }
 
-/**
- * A [PipelineManager] is used for:
- * 1) building a packet pipeline
- * 2) propagating events to all pipeline nodes
- */
-class PipelineManager(private val parentPipelineManager: PipelineManager? = null) {
+class PipelineBuilder {
     private var head: Node? = null
     private var tail: Node? = null
 
-    /**
-     * All nodes managed by this [PipelineManager].  Note that this
-     * list is NOT used for packet processing, this is merely for
-     * bookkeeping and the order of [Node]s in this list does not
-     * represent their order in the actual pipeline.
-     */
-    /*private*/ val nodes = mutableListOf<Node>()
-
-    fun getRootNode(): Node = head!!
-
-    /**
-     * Register this node in the top-level [PipelineManager]'s list
-     * so we can build a comprehensive list of all nodes in a pipeline
-     */
-    protected fun registerNode(node: Node) {
-        parentPipelineManager?.registerNode(node) ?: run {
-            nodes.add(node)
-        }
-    }
-
     private fun addNode(node: Node) {
-        // Notify the parent of this node if we have one
-        registerNode(node)
         if (head == null) {
             head = node
         }
         if (tail is DemuxerNode) {
+            // In the future we could separate 'input/output' nodes from purely
+            // input nodes and use that here?
             throw Exception("Cannot attach node to a DemuxerNode")
         }
         tail?.attach(node)
         tail = node
-    }
-
-    fun node(block: () -> Node) {
-        val createdNode = block()
-        addNode(createdNode)
     }
 
     fun node(node: Node) = addNode(node)
@@ -92,7 +62,8 @@ class PipelineManager(private val parentPipelineManager: PipelineManager? = null
         val demuxer = DemuxerNode().apply(block)
         addNode(demuxer)
     }
+
+    fun build(): Node = head!!
 }
 
-fun pipelineManager(block: PipelineManager.() -> Unit): PipelineManager = PipelineManager().apply(block)
-fun pipelineManager(parentPipelineManager: PipelineManager, block: PipelineManager.() -> Unit): PipelineManager = PipelineManager(parentPipelineManager).apply(block)
+fun pipeline(block: PipelineBuilder.() -> Unit): Node = PipelineBuilder().apply(block).build()
