@@ -40,7 +40,7 @@ fun main(args: Array<String>) {
         stream2.processPackets(listOf(it))
     }
 
-    println(stream2.getStatsString())
+    println(stream2.getStats())
 
 
 

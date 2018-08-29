@@ -80,9 +80,9 @@ class TimeTagExtensionReader(private val shouldStrip: Boolean = false) : Module(
 //        println("Average packet time to this point: ${durations.average()}")
     }
 
-    override fun getStatsString(indent: Int): String {
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
-            append(super.getStatsString(indent))
+            append(super.getStats(indent))
             appendLnIndent(indent + 2, "Average packet time to this point: ${durations.average()} ms")
             toString()
         }
@@ -105,9 +105,9 @@ class TimeTagReader : Module("TimeTag Reader") {
         next(p)
     }
 
-    override fun getStatsString(indent: Int): String {
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
-            append(super.getStatsString(indent))
+            append(super.getStats(indent))
             appendLnIndent(indent + 2, "Average packet times:")
             durations.forEach { context, durations ->
                 appendLnIndent(indent + 4, "Since $context: ${durations.average()} ${TimeTag.getUnit()}")

@@ -19,6 +19,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
+import org.jitsi.nlj.util.appendIndent
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 import java.math.BigDecimal
@@ -36,16 +37,6 @@ abstract class Module(
     override var name: String,
     protected val debug: Boolean = false
 ) : PacketHandler, StatsProducer {
-    /**
-     * The next handler in the chain, after this one.  This is held
-     * as a method, instead of an entire [Module], because a module
-     * only needs to have a method to call, it doesn't need to know
-     * anything else about the next handler in the chain.  By making it private
-     * we can enforce that module implementations will have to call the
-     * [next] method defined in [Module] to invoke the next handler
-     * in the chain, which means we can put common logic for statistics
-     * in this class.
-     */
     private var nextHandler: PacketHandler? = null
     // Stats stuff
     private var startTime: Long = 0
@@ -120,7 +111,15 @@ abstract class Module(
         nextHandler?.handleEvent(event)
     }
 
-    override fun getStatsString(indent: Int): String {
+    override fun getRecursiveStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(getStats(indent))
+            nextHandler?.let { append(it.getStats(indent))}
+            toString()
+        }
+    }
+
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, "$name stats:")
             appendLnIndent(indent + 2, "numInputPackets: $numInputPackets")
@@ -130,7 +129,6 @@ abstract class Module(
             appendLnIndent(indent + 2, "$numBytes bytes over ${lastPacketTime - firstPacketTime} ms")
             appendLnIndent(indent + 2, "throughput: ${getMbps(numBytes, Duration.ofMillis(lastPacketTime - firstPacketTime))} mbps")
             appendLnIndent(indent + 2, "individual module throughput: ${getMbps(numBytes, Duration.ofNanos(totalTime))} mbps")
-            nextHandler?.let { append(it.getStatsString(indent))}
             toString()
         }
     }

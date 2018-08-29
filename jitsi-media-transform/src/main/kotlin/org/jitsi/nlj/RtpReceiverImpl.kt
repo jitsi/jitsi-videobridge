@@ -79,7 +79,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
             demux {
                 name = "SRTP/SRTCP demuxer"
                 packetPath {
-                    name = "SRTP Path"
                     predicate = { pkt -> RtpProtocol.isRtp(pkt.getBuffer()) }
                     path = packetTree {
                         simpleHandler("SRTP parser") { pkts ->
@@ -92,7 +91,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     }
                 }
                 packetPath {
-                    name = "SRTCP path"
                     predicate = { pkt -> RtpProtocol.isRtcp(pkt.getBuffer()) }
                     path = packetTree {
                         simpleHandler("SRTCP parser") { pkts ->
@@ -146,14 +144,22 @@ class RtpReceiverImpl @JvmOverloads constructor(
         rtpPacketHandler = nextHandler
     }
 
-    override fun getStatsString(indent: Int): String {
+    override fun getRecursiveStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(getStats(indent))
+            append(rootPacketHandler.getRecursiveStats(indent + 2))
+            toString()
+        }
+
+    }
+
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, "RTP Receiver $id")
             appendLnIndent(indent, "queue size: ${incomingPacketQueue.size}")
             appendLnIndent(indent, "Received $packetsReceived packets ($bytesReceived bytes) in " +
                     "${lastPacketWrittenTime - firstPacketWrittenTime}ms " +
                     "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
-            append(rootPacketHandler.getStatsString(indent + 2))
             toString()
         }
     }
@@ -167,7 +173,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
         lastPacketWrittenTime = System.currentTimeMillis()
 //        if (packetsReceived % 200 == 0L) {
-//            println("BRIAN: module chain stats:\n${rootPacketHandler.getStatsString()}")
+//            println("BRIAN: module chain stats:\n${rootPacketHandler.getStats()}")
 //        }
     }
 

@@ -45,12 +45,19 @@ class DemuxerModule : Module("Demuxer") {
         }
     }
 
-    override fun getStatsString(indent: Int): String {
+    override fun getRecursiveStats(indent: Int): String {
         return with (StringBuffer()) {
-            append(super.getStatsString(indent))
-            transformPaths.values.forEach {
-                append(it.getStatsString(indent + 2))
-                appendLnIndent(indent, "==============")
+            append(getStats(indent))
+            toString()
+        }
+    }
+
+    override fun getStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(super.getStats(indent))
+            transformPaths.values.forEachIndexed { index, path ->
+                appendLnIndent(indent + 2, "Path $index stats")
+                append(path.getRecursiveStats(indent + 4))
             }
             toString()
         }

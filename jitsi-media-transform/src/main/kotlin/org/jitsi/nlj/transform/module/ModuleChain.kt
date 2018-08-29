@@ -67,13 +67,13 @@ import kotlin.system.measureTimeMillis
 //        modules[0].handleEvent(event)
 //    }
 //
-//    override fun getStatsString(indent: Int): String {
+//    override fun getStats(indent: Int): String {
 //        return with (StringBuffer()) {
 //            appendLnIndent(indent, name)
 //            appendLnIndent(indent, "Average time spent in this chain per packet: ${packetProcessingDurations.average()} ms")
 //            modules.forEach {
 //                if (it is StatsProducer) {
-//                    append(it.getStatsString(indent + 2))
+//                    append(it.getStats(indent + 2))
 //                }
 //            }
 //            toString()

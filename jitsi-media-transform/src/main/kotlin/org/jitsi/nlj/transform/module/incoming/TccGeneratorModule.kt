@@ -66,9 +66,9 @@ class TccGeneratorModule(
 
     private fun isTccReadyToSend(): Boolean = currTcc.packetInfo.size >= 20
 
-    override fun getStatsString(indent: Int): String {
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
-            append(super.getStatsString(indent))
+            append(super.getStats(indent))
             appendLnIndent(indent + 2, "num tcc packets sent: $numTccSent")
             toString()
         }

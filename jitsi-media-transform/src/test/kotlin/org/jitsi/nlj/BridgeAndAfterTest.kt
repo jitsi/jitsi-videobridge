@@ -92,7 +92,7 @@ import kotlin.system.measureTimeMillis
 //        println("=======")
 //
 //        senders.forEach { _, sender ->
-//            println(sender.getStatsString())
+//            println(sender.getStats())
 //        }
 //
 //    }

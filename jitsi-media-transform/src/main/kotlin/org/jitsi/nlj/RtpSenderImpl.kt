@@ -175,7 +175,7 @@ class RtpSenderImpl(
             appendln("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             appendln("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
             appendln("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
-            append(outgoingRtpChain.getStatsString())
+            append(outgoingRtpChain.getStats())
             toString()
         }
     }

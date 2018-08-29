@@ -142,10 +142,10 @@ fun main(args: Array<String>) {
     }
     println("loop done")
 //    receiverDoneFutures.map { it.join() }
-    sleep(5000)
+    sleep(3000)
     val finishTime = System.nanoTime()
     val time = Duration.ofNanos(finishTime - startTime)
-    receivers.forEach { println(it.getStatsString()) }
+    receivers.forEach { println(it.getRecursiveStats()) }
 
     println("$numReceivers receiver pipelines processed $numExpectedPackets packets each in a total of ${time.toMillis()}ms")
 

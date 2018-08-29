@@ -110,7 +110,7 @@ import kotlin.system.measureTimeMillis
 //        senders.forEach { _, sender -> sender.running = false }
 //
 //        receivers.forEach { _, receiver ->
-//            println(receiver.getStatsString())
+//            println(receiver.getStats())
 //        }
 //        println("=======")
 //        println("Bridge:")
@@ -128,7 +128,7 @@ import kotlin.system.measureTimeMillis
 //        println("=======")
 //
 //        senders.forEach { _, sender ->
-//            println(sender.getStatsString())
+//            println(sender.getStats())
 //        }
 //    }
 //

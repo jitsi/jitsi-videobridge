@@ -22,7 +22,7 @@ abstract class RtpReceiver :
     PacketHandler, EventHandler {
     protected var running = true
 //    protected abstract val moduleChain: ModuleChain
-//    abstract fun getStatsString(): String
+//    abstract fun getStats(): String
     abstract fun enqueuePacket(p: Packet)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
