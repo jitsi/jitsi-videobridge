@@ -15,15 +15,12 @@
  */
 package org.jitsi.nlj.transform.module
 
-import org.jitsi.nlj.RtpExtensionEventListener
-import org.jitsi.nlj.RtpPayloadTypeEventListener
+import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
-import org.jitsi.service.neomedia.RTPExtension
-import org.jitsi.service.neomedia.format.MediaFormat
 import java.math.BigDecimal
 import java.time.Duration
 import kotlin.properties.Delegates
@@ -36,9 +33,9 @@ fun getMbps(numBytes: Long, duration: Duration): String {
 
 
 abstract class Module(
-    var name: String,
+    override var name: String,
     protected val debug: Boolean = false
-) : RtpExtensionEventListener, RtpPayloadTypeEventListener, PacketHandler, StatsProducer {
+) : PacketHandler, StatsProducer {
     /**
      * The next handler in the chain, after this one.  This is held
      * as a method, instead of an entire [Module], because a module
@@ -119,23 +116,11 @@ abstract class Module(
         doProcessPackets(pkts)
     }
 
-    override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
-        //No-op by default
+    override fun handleEvent(event: Event) {
+        nextHandler?.handleEvent(event)
     }
 
-    override fun onRtpExtensionRemoved(extensionId: Byte) {
-        // No-op by default
-    }
-
-    override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
-        // No-op by default
-    }
-
-    override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
-        // No-op by default
-    }
-
-    override fun getStats(indent: Int): String {
+    override fun getStatsString(indent: Int): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, "$name stats:")
             appendLnIndent(indent + 2, "numInputPackets: $numInputPackets")
@@ -145,6 +130,7 @@ abstract class Module(
             appendLnIndent(indent + 2, "$numBytes bytes over ${lastPacketTime - firstPacketTime} ms")
             appendLnIndent(indent + 2, "throughput: ${getMbps(numBytes, Duration.ofMillis(lastPacketTime - firstPacketTime))} mbps")
             appendLnIndent(indent + 2, "individual module throughput: ${getMbps(numBytes, Duration.ofNanos(totalTime))} mbps")
+            nextHandler?.let { append(it.getStatsString(indent))}
             toString()
         }
     }

@@ -92,8 +92,8 @@ fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
     rtpReceiver.setSrtpTransformer(srtpTransformer)
     rtpReceiver.setSrtcpTransformer(srtcpTransformer)
 
-    rtpReceiver.onRtpPayloadTypeAdded(100, AbstractMediaFormat())
-    rtpReceiver.onRtpPayloadTypeAdded(111, AbstractMediaFormat())
+    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(100, AbstractMediaFormat()))
+    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(111, AbstractMediaFormat()))
 
     return rtpReceiver
 }
@@ -108,13 +108,13 @@ fun main(args: Array<String>) {
         val rtpReceiver = createRtpReceiver(executor)
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
-        rtpReceiver.rtpPacketHandler = PacketHandler.createSimple { pkts ->
+        rtpReceiver.attach(SimplePacketHandler("Packet receiver") { pkts ->
             numReceivedPackets += pkts.size
             if (numReceivedPackets == numExpectedPackets) {
                 println("ALL PACKETS FORWARDED")
                 doneFuture.complete(Unit)
             }
-        }
+        })
         receivers.add(rtpReceiver)
         receiverDoneFutures.add(doneFuture)
     }
@@ -145,7 +145,7 @@ fun main(args: Array<String>) {
     sleep(5000)
     val finishTime = System.nanoTime()
     val time = Duration.ofNanos(finishTime - startTime)
-    receivers.forEach { println(it.getStats()) }
+    receivers.forEach { println(it.getStatsString()) }
 
     println("$numReceivers receiver pipelines processed $numExpectedPackets packets each in a total of ${time.toMillis()}ms")
 

@@ -15,13 +15,11 @@
  */
 package org.jitsi.nlj.transform.module
 
+import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketHandler
-import org.jitsi.nlj.RtpExtensionAddedEvent
-import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
-import org.jitsi.service.neomedia.RTPExtension
-import org.jitsi.service.neomedia.format.MediaFormat
 
 class DemuxerModule : Module("Demuxer") {
     private var transformPaths: MutableMap<PacketPredicate, PacketHandler> = mutableMapOf()
@@ -30,8 +28,7 @@ class DemuxerModule : Module("Demuxer") {
         transformPaths[pp.predicate] = pp.path
     }
 
-    override fun attach(nextModule: PacketHandler) {//= throw Exception()
-    }
+    override fun attach(nextHandler: PacketHandler) = throw Exception()
 
     override fun doProcessPackets(p: List<Packet>) {
         // Is this scheme always better? Or only when the list of
@@ -41,42 +38,19 @@ class DemuxerModule : Module("Demuxer") {
             next(chain, pathPackets)
         }
     }
-    override fun onRtpExtensionAdded(extensionId: Byte, rtpExtension: RTPExtension) {
-        transformPaths.forEach { (_, handler) ->
-            handler.handleEvent(RtpExtensionAddedEvent(extensionId, rtpExtension))
-        }
-    }
-    override fun onRtpExtensionRemoved(extensionId: Byte) {
-        transformPaths.forEach { (_, handler) ->
-            if (handler is ModuleChain) {
-                handler.modules.forEach { it.onRtpExtensionRemoved(extensionId) }
-            }
+
+    override fun handleEvent(event: Event) {
+        transformPaths.forEach { _, handler ->
+            handler.handleEvent(event)
         }
     }
 
-    override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
-        transformPaths.forEach { (_, handler) ->
-            if (handler is ModuleChain) {
-                handler.modules.forEach { it.onRtpPayloadTypeAdded(payloadType, format) }
-            }
-        }
-    }
-
-    override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
-        transformPaths.forEach { (_, handler) ->
-            if (handler is ModuleChain) {
-                handler.modules.forEach { it.onRtpPayloadTypeRemoved(payloadType) }
-            }
-        }
-    }
-
-    override fun getStats(indent: Int): String {
+    override fun getStatsString(indent: Int): String {
         return with (StringBuffer()) {
-            append(super.getStats(indent))
+            append(super.getStatsString(indent))
             transformPaths.values.forEach {
-                if (it is StatsProducer) {
-                    append(it.getStats(indent + 2))
-                }
+                append(it.getStatsString(indent + 2))
+                appendLnIndent(indent, "==============")
             }
             toString()
         }

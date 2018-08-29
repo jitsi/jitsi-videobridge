@@ -16,5 +16,6 @@
 package org.jitsi.nlj.transform
 
 interface StatsProducer {
-    fun getStats(indent: Int = 0): String
+    fun getStatsString(indent: Int = 0): String
 }
+

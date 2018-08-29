@@ -15,9 +15,11 @@
  */
 package org.jitsi.nlj.transform.module
 
+import org.jitsi.nlj.Event
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
+import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtpPacket
-import org.jitsi.service.neomedia.format.MediaFormat
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
 
@@ -32,12 +34,14 @@ class PayloadTypeFilterModule : Module("RTP payload type filter") {
         next(filteredPackets)
     }
 
-    override fun onRtpPayloadTypeAdded(payloadType: Byte, format: MediaFormat) {
-        println("BRIAN: payload type filter ${hashCode()} now accepting PT ${payloadType.toUInt()}")
-        acceptedPayloadTypes.add(payloadType.toUInt())
-    }
-
-    override fun onRtpPayloadTypeRemoved(payloadType: Byte) {
-        acceptedPayloadTypes.clear()
+    override fun handleEvent(event: Event) {
+        when (event) {
+            is RtpPayloadTypeAddedEvent -> {
+                println("BRIAN: payload type filter ${hashCode()} now accepting PT ${event.payloadType.toUInt()}")
+                acceptedPayloadTypes.add(event.payloadType.toUInt())
+            }
+            is RtpPayloadTypeClearEvent -> acceptedPayloadTypes.clear()
+        }
+        super.handleEvent(event)
     }
 }

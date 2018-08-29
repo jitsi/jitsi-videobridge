@@ -29,7 +29,7 @@ class MuxerModule : Module("MuxerModule") {
         m.attach(this)
     }
 
-    fun attachInput(m: ModuleChain) {
-        m.attach(this)
-    }
+//    fun attachInput(m: ModuleChain) {
+//        m.attach(this)
+//    }
 }

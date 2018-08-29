@@ -161,9 +161,9 @@ fun main(args: Array<String>) {
 //        receiver2.running = false
 //
 //        println("Producer wrote ${p.packetsWritten} packets")
-//        println(receiver1.getStats())
-//        println(receiver2.getStats())
-////    println(stream3.getStats())
+//        println(receiver1.getStatsString())
+//        println(receiver2.getStatsString())
+////    println(stream3.getStatsString())
 //
 //        println("=======")
 //        println("Bridge:")
@@ -172,8 +172,8 @@ fun main(args: Array<String>) {
 //        println("  forwarded ${b.numForwardedPackets} packets")
 //        println("      per packet ssrc: ${b.processedPacketsPerSsrc}")
 //        println("      per destination ssrc: ${b.packetsPerDestination}")
-//        println(sender1.getStats())
-//        println(sender2.getStats())
+//        println(sender1.getStatsString())
+//        println(sender2.getStatsString())
 //
 //        val totalPacketsSent = listOf(sender1, sender2).map(RtpSender::numPacketsSent).sum()
 //        println("Transmitted $totalPacketsSent packets")

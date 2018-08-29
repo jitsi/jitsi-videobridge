@@ -19,23 +19,18 @@ import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
-import org.jitsi.nlj.transform.chain
-import org.jitsi.nlj.transform.module.Module
-import org.jitsi.nlj.transform.module.ModuleChain
 import org.jitsi.nlj.transform.module.incoming.DtlsReceiverModule
 import org.jitsi.nlj.transform.module.outgoing.DtlsSenderModule
-import org.jitsi.nlj.transform.packetPath
-import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
-import unsigned.toUInt
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
-import kotlin.experimental.and
 
+// This is an API class, so its usages will largely be outside of this library
+@Suppress("unused")
 /**
  * Handles all packets (incoming and outgoing) for a particular stream.
  * (TODO: 'stream' defined as what, exactly, here?)
@@ -69,7 +64,7 @@ class Transceiver(
 
     // The incoming chain in the Transceiver handles the DTLS
     // handshake and then defers to the RtpReceiver's input chain
-    private val incomingChain: ModuleChain
+    private val incomingChain: PacketHandler
 
     val incomingQueue = LinkedBlockingQueue<Packet>()
     val outgoingQueue = LinkedBlockingQueue<Packet>()
@@ -105,45 +100,47 @@ class Transceiver(
 //            rtpSender.setSrtcpTransformer(srtcpTransformer)
 //        }
 
-        incomingChain = chain {
-            name("Transceiver incoming chain")
-            demux {
-                packetPath {
-                    name = "DTLS protocol chain"
-                    predicate = { packet ->
-                        val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
-                        when (byte) {
-                            in 20..63 -> true
-                            else -> false
-                        }
-                    }
-                    path = chain {
-                        name ("DTLS chain")
-                        addModule(object : Module("DTLS parser") {
-                            override fun doProcessPackets(p: List<Packet>) {
-                                next(p.map(Packet::getBuffer).map(::DtlsProtocolPacket))
-                            }
-                        })
-                        addModule(dtlsReceiver)
-                    }
-                }
-                packetPath {
-                    name = "RTP protocol chain"
-                    predicate = { packet ->
-                        val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
-                        when (byte) {
-                            in 20..63 -> false
-                            else -> true
-                        }
-                    }
-                    path = rtpReceiver
-                }
-            }
-        }
+        incomingChain = rtpReceiver
+
+//        incomingChain = chain {
+//            name("Transceiver incoming chain")
+//            demux {
+//                packetPath {
+//                    name = "DTLS protocol chain"
+//                    predicate = { packet ->
+//                        val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
+//                        when (byte) {
+//                            in 20..63 -> true
+//                            else -> false
+//                        }
+//                    }
+//                    path = chain {
+//                        name ("DTLS chain")
+//                        addModule(object : Module("DTLS parser") {
+//                            override fun doProcessPackets(p: List<Packet>) {
+//                                next(p.map(Packet::getBuffer).map(::DtlsProtocolPacket))
+//                            }
+//                        })
+//                        addModule(dtlsReceiver)
+//                    }
+//                }
+//                packetPath {
+//                    name = "RTP protocol chain"
+//                    predicate = { packet ->
+//                        val byte = (packet.getBuffer().get(0) and 0xFF.toByte()).toUInt()
+//                        when (byte) {
+//                            in 20..63 -> false
+//                            else -> true
+//                        }
+//                    }
+//                    path = rtpReceiver
+//                }
+//            }
+//        }
 
 
         // rewire the sender's hacked packet handler
-        rtpSender.packetSender = PacketHandler.createSimple { pkts -> outgoingQueue.addAll(pkts) }
+        rtpSender.packetSender = SimplePacketHandler("RtpSender packet sender") { pkts -> outgoingQueue.addAll(pkts) }
         scheduleWork()
     }
 
@@ -191,14 +188,12 @@ class Transceiver(
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
         payloadTypes[rtpPayloadType] = format
         println("Payload type added: $rtpPayloadType -> $format")
-        rtpReceiver.onRtpPayloadTypeAdded(rtpPayloadType, format)
+        rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(rtpPayloadType, format))
     }
 
     fun clearDynamicRtpPayloadTypes() {
         println("All payload types being cleared")
-        payloadTypes.keys.forEach { pt ->
-            rtpReceiver.onRtpExtensionRemoved(pt)
-        }
+        rtpReceiver.handleEvent(RtpPayloadTypeClearEvent())
         payloadTypes.clear()
     }
 
@@ -210,12 +205,12 @@ class Transceiver(
     fun addRtpExtension(extensionId: Byte, rtpExtension: RTPExtension) {
         println("Adding RTP extension: $extensionId -> $rtpExtension")
         rtpExtensions[extensionId] = rtpExtension
-        rtpReceiver.onRtpExtensionAdded(extensionId, rtpExtension)
+        rtpReceiver.handleEvent(RtpExtensionAddedEvent(extensionId, rtpExtension))
     }
 
     fun clearRtpExtensions() {
         println("Clearing all RTP extensions")
-        rtpExtensions.keys.forEach(rtpReceiver::onRtpExtensionRemoved)
+        rtpReceiver.handleEvent(RtpExtensionClearEvent())
         rtpExtensions.clear()
     }
 
