@@ -26,6 +26,13 @@ interface PacketHandler : EventHandler, StatsProducer {
     fun processPackets(pkts: List<Packet>)
 }
 
+object EmptyPacketHandler : PacketHandler {
+    override var name: String = "Empty packet handler"
+    override fun processPackets(pkts: List<Packet>) {}
+    override fun getStats(indent: Int): String = ""
+    override fun handleEvent(event: Event) {}
+}
+
 /**
  * [SimplePacketHandler] will take care of holding the [next] member and
  * assigning it correctly, but the given [handler] is responsible for invoking it

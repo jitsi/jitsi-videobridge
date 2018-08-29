@@ -21,6 +21,7 @@ import org.jitsi.rtp.Packet
 
 abstract class RtpReceiver :
     PacketHandler, EventHandler {
+    abstract var rtpPacketHandler: PacketHandler?
     protected var running = true
 //    protected abstract val moduleChain: ModuleChain
 //    abstract fun getStats(): String
