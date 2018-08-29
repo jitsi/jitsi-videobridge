@@ -15,13 +15,12 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
-import org.jitsi.nlj.transform.module.Module
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
 import java.nio.ByteBuffer
 
-class DtlsSenderModule : Node("DTLS Sender") {
+class DtlsSenderNode : Node("DTLS Sender") {
     override fun doProcessPackets(p: List<Packet>) {
 //        println("BRIAN: dtls sender module invoking next")
         next(p)

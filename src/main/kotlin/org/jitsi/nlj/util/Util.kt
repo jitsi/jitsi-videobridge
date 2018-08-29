@@ -27,3 +27,18 @@ class Util {
         }
     }
 }
+
+/**
+ * This method should only be called when the caller is confident the
+ * contents of the iterable contain [Expected] types.  Because of this,
+ * throwing an exception if that isn't the case is desired.
+ */
+@Suppress("UNCHECKED_CAST")
+inline fun <Expected> Iterable<*>.forEachAs(action: (Expected) -> Unit) {
+    for (element in this) action(element as Expected)
+}
+inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit) {
+    for (element in this) {
+        if (element is Expected) action(element)
+    }
+}

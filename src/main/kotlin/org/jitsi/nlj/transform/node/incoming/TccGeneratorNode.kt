@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.transform.module.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket

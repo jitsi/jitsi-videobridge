@@ -22,7 +22,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtpPacket
 import java.nio.ByteBuffer
 
-class SrtpTransformerWrapperEncrypt : AbstractSrtpTransformerNode("SRTP Encrypt wrapper") {
+class SrtpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTP Encrypt wrapper") {
     override fun doTransform(pkts: List<Packet>, transformer: SinglePacketTransformer): List<Packet> {
         val encryptedPackets = mutableListOf<SrtpPacket>()
         pkts.forEach {

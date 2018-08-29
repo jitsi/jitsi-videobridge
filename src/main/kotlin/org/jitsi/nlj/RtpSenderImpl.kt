@@ -15,8 +15,8 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.module.outgoing.SrtcpTransformerWrapperEncrypt
-import org.jitsi.nlj.transform.module.outgoing.SrtpTransformerWrapperEncrypt
+import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
+import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform_og.SinglePacketTransformer
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.rtp.Packet
@@ -38,8 +38,8 @@ class RtpSenderImpl(
     var lastPacketWrittenTime = -1L
     var running = true
 
-    private val srtpEncryptWrapper = SrtpTransformerWrapperEncrypt()
-    private val srtcpEncryptWrapper = SrtcpTransformerWrapperEncrypt()
+    private val srtpEncryptWrapper = SrtpTransformerEncryptNode()
+    private val srtcpEncryptWrapper = SrtcpTransformerEncryptNode()
 
     private var tempSenderSsrc: Long? = null
 
