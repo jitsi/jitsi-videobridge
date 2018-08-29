@@ -19,6 +19,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
+import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendIndent
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
@@ -26,11 +27,6 @@ import java.math.BigDecimal
 import java.time.Duration
 import kotlin.properties.Delegates
 
-fun getMbps(numBytes: Long, duration: Duration): String {
-    val numBits = BigDecimal(numBytes * 8)
-    val megaBits = (numBits / BigDecimal(1000000.0)).toFloat()
-    return "%.2f".format((megaBits / duration.toMillis()) * Duration.ofSeconds(1).toMillis())
-}
 
 
 abstract class Module(
