@@ -16,7 +16,6 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.StatsProducer
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
 
 interface PacketHandler : EventHandler, StatsProducer {
@@ -25,22 +24,6 @@ interface PacketHandler : EventHandler, StatsProducer {
      * Process the given packets
      */
     fun processPackets(pkts: List<Packet>)
-    /**
-     * Attach a handler to come in the chain after this one
-     */
-    fun attach(nextHandler: PacketHandler)
-
-    fun getRecursiveStats(indent: Int = 0): String
-
-    companion object {
-//        fun createSimple(handler: (List<Packet>) -> Unit): PacketHandler {
-//            return object : PacketHandler {
-//                override fun processPackets(pkts: List<Packet>) {
-//                    handler(pkts)
-//                }
-//            }
-//        }
-    }
 }
 
 /**
@@ -48,30 +31,30 @@ interface PacketHandler : EventHandler, StatsProducer {
  * assigning it correctly, but the given [handler] is responsible for invoking it
  * once it's finished
  */
-class SimplePacketHandler(override var name: String, private val handler: SimplePacketHandler.(List<Packet>) -> Unit) : PacketHandler {
-    var next: PacketHandler? = null
-    override fun processPackets(pkts: List<Packet>) = handler(pkts)
-
-    override fun attach(nextHandler: PacketHandler) {
-        this.next = nextHandler
-    }
-
-    override fun handleEvent(event: Event) {
-        next?.handleEvent(event)
-    }
-
-    override fun getRecursiveStats(indent: Int): String {
-        return with (StringBuffer()) {
-            append(getStats(indent))
-            next?.let { append(it.getRecursiveStats(indent))}
-            toString()
-        }
-    }
-
-    override fun getStats(indent: Int): String {
-        return with (StringBuffer()) {
-            appendLnIndent(indent, "SimpleHandler $name")
-            toString()
-        }
-    }
-}
+//class SimplePacketHandler(override var name: String, private val handler: SimplePacketHandler.(List<Packet>) -> Unit) : PacketHandler {
+//    var next: PacketHandler? = null
+//    override fun processPackets(pkts: List<Packet>) = handler(pkts)
+//
+//    override fun attach(nextHandler: PacketHandler) {
+//        this.next = nextHandler
+//    }
+//
+//    override fun handleEvent(event: Event) {
+//        next?.handleEvent(event)
+//    }
+//
+//    override fun getRecursiveStats(indent: Int): String {
+//        return with (StringBuffer()) {
+//            append(getStats(indent))
+//            next?.let { append(it.getRecursiveStats(indent))}
+//            toString()
+//        }
+//    }
+//
+//    override fun getStats(indent: Int): String {
+//        return with (StringBuffer()) {
+//            appendLnIndent(indent, "SimpleHandler $name")
+//            toString()
+//        }
+//    }
+//}

@@ -21,6 +21,7 @@ import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.module.incoming.DtlsReceiverModule
 import org.jitsi.nlj.transform.module.outgoing.DtlsSenderModule
+import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
@@ -140,7 +141,11 @@ class Transceiver(
 
 
         // rewire the sender's hacked packet handler
-        rtpSender.packetSender = SimplePacketHandler("RtpSender packet sender") { pkts -> outgoingQueue.addAll(pkts) }
+//        rtpSender.packetSender = SimplePacketHandler("RtpSender packet sender") { pkts -> outgoingQueue.addAll(pkts) }
+        rtpSender.packetSender = object : Node("RTP packet sender") {
+            override fun doProcessPackets(p: List<Packet>) {
+                outgoingQueue.addAll(p) }
+            }
         scheduleWork()
     }
 
