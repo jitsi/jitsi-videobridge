@@ -30,6 +30,8 @@ interface PacketHandler : EventHandler, StatsProducer {
      */
     fun attach(nextHandler: PacketHandler)
 
+    fun getRecursiveStats(indent: Int = 0): String
+
     companion object {
 //        fun createSimple(handler: (List<Packet>) -> Unit): PacketHandler {
 //            return object : PacketHandler {
@@ -58,11 +60,17 @@ class SimplePacketHandler(override var name: String, private val handler: Simple
         next?.handleEvent(event)
     }
 
-    override fun getStatsString(indent: Int): String {
+    override fun getRecursiveStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(getStats(indent))
+            next?.let { append(it.getRecursiveStats(indent))}
+            toString()
+        }
+    }
+
+    override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, "SimpleHandler $name")
-            next?.let { append(it.getStatsString(indent))}
-
             toString()
         }
     }
