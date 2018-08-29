@@ -25,8 +25,10 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.AbstractMediaFormat
 import java.lang.Thread.sleep
+import java.net.URI
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
@@ -97,6 +99,7 @@ fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
 
     rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(100, AbstractMediaFormat()))
     rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(111, AbstractMediaFormat()))
+    rtpReceiver.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
 
     return rtpReceiver
 }

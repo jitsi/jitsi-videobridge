@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.transform
 
-import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.transform.node.DemuxerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketPath

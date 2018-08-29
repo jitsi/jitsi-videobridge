@@ -15,7 +15,11 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.nlj.Event
+import org.jitsi.nlj.RtpExtensionAddedEvent
+import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.NodeVisitor
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
@@ -23,6 +27,7 @@ import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.Tcc
+import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
 
 class TccGeneratorNode(
@@ -49,6 +54,18 @@ class TccGeneratorNode(
             }
         }
         next(p)
+    }
+
+    override fun handleEvent(event: Event) {
+        when (event) {
+            is RtpExtensionAddedEvent -> {
+                if (RTPExtension.TRANSPORT_CC_URN.equals(event.rtpExtension.uri.toString())) {
+                    tccExtensionId = event.extensionId.toUInt()
+                    println("TCC generator setting extension ID to $tccExtensionId")
+                }
+            }
+            is RtpExtensionClearEvent -> tccExtensionId = null
+        }
     }
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long) {

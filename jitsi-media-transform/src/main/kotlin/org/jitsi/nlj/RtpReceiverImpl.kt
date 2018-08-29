@@ -63,7 +63,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * variable to a function for handling fully-processed RTP packets from
      * this receiver.
      */
-    var rtpPacketHandler: PacketHandler? = null
+    override var rtpPacketHandler: PacketHandler? = null
 
     // Stat tracking values
     var firstPacketWrittenTime: Long = 0
