@@ -60,8 +60,6 @@ class Transceiver(
             },
             executor)
 
-    // The incoming chain in the Transceiver handles the DTLS
-    // handshake and then defers to the RtpReceiver's input chain
     private val incomingChain: PacketHandler
 
     val incomingQueue = LinkedBlockingQueue<Packet>()
