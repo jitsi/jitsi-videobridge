@@ -16,7 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform_og.SinglePacketTransformer
+import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
 

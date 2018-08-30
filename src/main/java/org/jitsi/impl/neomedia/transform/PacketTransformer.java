@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.srtp_og;
+package org.jitsi.impl.neomedia.transform;
 
 /**
  * @author bbaldino
@@ -34,6 +34,8 @@ package org.jitsi.nlj.srtp_og;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import org.jitsi.service.neomedia.*;
 
 /**
  * Encapsulate the concept of packet transformation. Given an array of packets,

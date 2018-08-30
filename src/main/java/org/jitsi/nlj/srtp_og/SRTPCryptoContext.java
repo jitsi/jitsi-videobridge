@@ -53,11 +53,11 @@ package org.jitsi.nlj.srtp_og;
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
  */
 
-import java.nio.*;
 import java.util.*;
 
 
 import org.bouncycastle.crypto.params.*;
+import org.jitsi.service.neomedia.*;
 import sun.reflect.generics.reflectiveObjects.*;
 
 /**

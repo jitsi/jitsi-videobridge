@@ -1,0 +1,64 @@
+/*
+ * Copyright @ 2018 Atlassian Pty Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jitsi.nlj.transform.node.incoming
+
+import org.jitsi_modified.impl.neomedia.transform.RetransmissionRequesterImpl
+import org.jitsi.nlj.Event
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
+import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.toRawPacket
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.service.neomedia.RawPacket
+import unsigned.toUInt
+import java.nio.ByteBuffer
+
+class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransmission requester") {
+    /**
+     * Wrap the given [rtcpSender] method with one that takes a RawPacket (which
+     * is what the retransmission requester will use).
+     */
+    private val rtcpSenderAdapter: (RawPacket) -> Unit = { rawPacket ->
+        val rtcpPacket = RtcpPacket.fromBuffer(ByteBuffer.wrap(
+            rawPacket.buffer,
+            rawPacket.offset,
+            rawPacket.length
+        ))
+        rtcpSender(rtcpPacket)
+    }
+
+    private val retransmissionRequester =
+        RetransmissionRequesterImpl(rtcpSenderAdapter)
+    override fun doProcessPackets(p: List<Packet>) {
+        p.forEach { pkt ->
+            val rp = pkt.toRawPacket()
+            retransmissionRequester.reverseTransform(rp)
+        }
+        next(p)
+    }
+
+    override fun handleEvent(event: Event) {
+        when (event) {
+            is RtpPayloadTypeAddedEvent -> {
+                println("BRIAN: payload type filter ${hashCode()} now accepting PT ${event.payloadType.toUInt()}")
+                retransmissionRequester.payloadTypeFormats[event.payloadType] = event.format
+            }
+            is RtpPayloadTypeClearEvent -> retransmissionRequester.payloadTypeFormats.clear()
+        }
+        super.handleEvent(event)
+    }
+}

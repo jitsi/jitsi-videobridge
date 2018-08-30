@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.srtp_og;
+package org.jitsi.service.neomedia;
 
 /**
  * @author bbaldino
@@ -34,6 +34,8 @@ package org.jitsi.nlj.srtp_og;
  * limitations under the License.
  */
 
+
+import org.jitsi.nlj.srtp_og.*;
 
 import java.util.*;
 

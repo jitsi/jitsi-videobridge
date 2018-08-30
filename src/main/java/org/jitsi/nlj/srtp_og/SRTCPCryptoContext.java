@@ -34,10 +34,10 @@ package org.jitsi.nlj.srtp_og;
  * limitations under the License.
  */
 
-import java.nio.*;
 import java.util.*;
 
 import org.bouncycastle.crypto.params.*;
+import org.jitsi.service.neomedia.*;
 import sun.reflect.generics.reflectiveObjects.*;
 
 /**

@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.node
 
-import org.jitsi.nlj.transform_og.SinglePacketTransformer
+import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 
 abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {

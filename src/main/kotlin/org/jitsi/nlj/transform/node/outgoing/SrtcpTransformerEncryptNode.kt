@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj.transform.node.outgoing
 
-import org.jitsi.nlj.srtp_og.RawPacket
+import org.jitsi.service.neomedia.RawPacket
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
-import org.jitsi.nlj.transform_og.SinglePacketTransformer
+import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import java.nio.ByteBuffer
