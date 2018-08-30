@@ -38,6 +38,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
+import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.rest.*;
 import org.osgi.framework.*;
 
@@ -1795,6 +1796,16 @@ public class IceUdpTransportManager
         getChannels().forEach(Channel::transportConnected);
     }
 
+    /**
+     * The name of the property which controls whether health checks failures
+     * should be permanent. If this is set to true and the bridge fails its
+     * health check once, it will not go back to the healthy state.
+     */
+    private static final String PERMANENT_FAILURE_PNAME
+        = Health.class.getName() + ".PERMANENT_FAILURE";
+
+    private static BundleContext bundleContext = null;
+    private static boolean permanentFailureMode = false;
     /**
      * @return the {@link Transport} (e.g. UDP or TCP) of the selected pair
      * of this {@link IceUdpTransportManager}. If the transport manager is
