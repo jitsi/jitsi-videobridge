@@ -89,6 +89,23 @@ public class Health
         = "org.jitsi.videobridge.health.TIMEOUT";
 
     /**
+     * The name of the property which makes any failures sticky (i.e. once the
+     * bridge becomes unhealthy it will never go back to a healthy state).
+     */
+    public static final String STICKY_FAILURES_PNAME
+        = "org.jitsi.videobridge.health.STICKY_FAILURES";
+
+    /**
+     * The default value for the {@code STICKY_FAILURES} property.
+     */
+    private static final boolean STICKY_FAILURES_DEFAULT = false;
+
+    /**
+     * Failures in the first 5 minutes are never sticky.
+     */
+    private static final long STICKY_FAILURES_GRACE_PERIOD = 300_000;
+
+    /**
      * Checks the health (status) of the {@link Videobridge} associated with a
      * specific {@link Conference}. The specified {@code conference} will be
      * used to perform the check i.e. for testing purposes.
@@ -417,6 +434,22 @@ public class Health
      */
     private final int timeout;
 
+    /**
+     * Whether failures are sticky, i.e. once the bridge becomes unhealthy it
+     * will never go back to a healthy state.
+     */
+    private final boolean stickyFailures;
+
+    /**
+     * The time when this instance was started.
+     */
+    private final long startMs;
+
+    /**
+     * Whether we've seen a health check failure.
+     */
+    private boolean hasFailed = false;
+
     public Health(Videobridge videobridge, ConfigurationService cfg)
     {
         super(videobridge, PERIOD_DEFAULT, true);
@@ -429,6 +462,13 @@ public class Health
         timeout =
             cfg == null ? TIMEOUT_DEFAULT
                 : cfg.getInt(TIMEOUT_PNAME, TIMEOUT_DEFAULT);
+
+        stickyFailures
+            = cfg == null ? STICKY_FAILURES_DEFAULT
+                : cfg.getBoolean(
+                    STICKY_FAILURES_PNAME, STICKY_FAILURES_DEFAULT);
+
+        startMs = System.currentTimeMillis();
 
         executor.registerRecurringRunnable(this);
     }
@@ -457,16 +497,32 @@ public class Health
         catch (Exception e)
         {
             exception = e;
+            if (System.currentTimeMillis() - this.startMs
+                > STICKY_FAILURES_GRACE_PERIOD)
+            {
+                hasFailed = true;
+            }
         }
 
         long duration = System.currentTimeMillis() - start;
-        lastResult = exception;
         lastResultMs = start + duration;
+
+        if (stickyFailures && hasFailed && exception == null)
+        {
+            // We didn't fail this last test, but we've failed before and
+            // sticky failures are enabled.
+            lastResult = new Exception("Sticky failure.");
+        }
+        else
+        {
+            lastResult = exception;
+        }
 
         if (exception == null)
         {
             logger.info(
-                "Performed a successful health check in " + duration + "ms.");
+                "Performed a successful health check in " + duration
+                    + "ms. Sticky failure: " + (stickyFailures && hasFailed));
         }
         else
         {
