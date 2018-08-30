@@ -19,13 +19,13 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
-import org.jitsi.nlj.transform.node.incoming.NackGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
-import org.jitsi.nlj.transform_og.SinglePacketTransformer
+import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
@@ -89,7 +89,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
+                        //TODO: how should retransmissions without rtx be handled with srtp?
 //                        node(NackGeneratorNode(rtcpSender))
+                        node(RetransmissionRequester(rtcpSender))
                         simpleNode("RTP packet handler") {
                             rtpPacketHandler?.processPackets(it)
                             emptyList()

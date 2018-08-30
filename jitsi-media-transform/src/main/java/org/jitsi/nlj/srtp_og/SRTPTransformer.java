@@ -50,7 +50,8 @@ package org.jitsi.nlj.srtp_og;
  */
 
 import org.bouncycastle.crypto.tls.*;
-import org.jitsi.nlj.transform_og.*;
+import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.service.neomedia.*;
 
 import java.util.*;
 

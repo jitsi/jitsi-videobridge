@@ -24,6 +24,7 @@ import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.AbstractMediaFormat
@@ -131,7 +132,9 @@ fun main(args: Array<String>) {
     val pcap = Pcap.openStream(pcapFile)
     val startTime = System.nanoTime()
     val buf2 = ByteBuffer.allocate(1500)
+    var numPackets = 0
     pcap.loop { pkt ->
+        numPackets++
         val buf: ByteBuffer = if (pkt.hasProtocol(Protocol.UDP)) {
             val udpPacket = pkt.getPacket(Protocol.UDP) as UDPPacket
             ByteBuffer.wrap(udpPacket.payload.array)
@@ -141,7 +144,12 @@ fun main(args: Array<String>) {
             // grab the buffer directly
             ByteBuffer.wrap(pkt.payload.array, 32, (pkt.payload.array.size - 32)).slice()
         }
+        if (numPackets % 100 == 0) {
+            println("BRIAN: dropping packet ${RtpPacket(buf).header.sequenceNumber}")
+            return@loop true
+        }
 //        println("got rtp buf:\n${buf.toHex()}")
+//        println("Sending packet #$numPackets to receivers")
         for (receiver in receivers) {
             val p = UnparsedPacket(buf.clone())
             receiver.enqueuePacket(p)

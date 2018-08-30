@@ -20,12 +20,11 @@ import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.pipeline
-import org.jitsi.nlj.transform_og.SinglePacketTransformer
+import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.RtpProtocolPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Duration
 import java.util.concurrent.ExecutorService

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform_og;
+package org.jitsi.impl.neomedia.transform;
 
 /**
  * @author bbaldino
@@ -35,6 +35,9 @@ package org.jitsi.nlj.transform_og;
  */
 
 import org.jitsi.nlj.srtp_og.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.util.function.*;
+import org.jitsi.util.function.Predicate;
 
 import java.util.concurrent.atomic.*;
 import java.util.function.*;
