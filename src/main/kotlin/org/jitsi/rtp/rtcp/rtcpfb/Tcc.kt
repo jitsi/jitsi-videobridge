@@ -21,7 +21,7 @@ import org.jitsi.rtp.extensions.getBits
 import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
-import toUInt
+import org.jitsi.rtp.extensions.toHex
 import unsigned.toUByte
 import unsigned.toUInt
 import unsigned.toUShort
@@ -34,7 +34,24 @@ import kotlin.experimental.and
  * Map the tcc sequence number to the timestamp at which that packet
  * was received
  */
-class PacketMap : TreeMap<Int, Long>()
+class PacketMap : TreeMap<Int, Long>() {
+    // Only does TwoBitPacketStatusSymbols since that's all we use
+    fun getStatusSymbol(tccSeqNum: Int): PacketStatusSymbol {
+        val deltaMs = getDeltaMs(tccSeqNum) ?: return TwoBitPacketStatusSymbol.NOT_RECEIVED
+        return TwoBitPacketStatusSymbol.fromDeltaMs(deltaMs)
+    }
+
+    fun getDeltaMs(tccSeqNum: Int): Double? {
+        val timestamp = getOrDefault(tccSeqNum, NOT_RECEIVED_TS)
+        if (timestamp == NOT_RECEIVED_TS) {
+            return null
+        }
+        // Get the timestamp for the packet just before this one.  If there isn't one, then
+        // this is the first packet so the delta is 0.0
+        val previousTimestamp = floorEntry(tccSeqNum)?.value ?: return 0.0
+        return (timestamp - previousTimestamp).toDouble()
+    }
+}
 const val NOT_RECEIVED_TS: Long = -1
 
 /**
@@ -73,33 +90,11 @@ class Tcc : FeedbackControlInformation {
     var referenceTime: Long
     override val size: Int
         get() {
-            var currReferenceTime = this.referenceTime
-            // We'll have a delta for all packet statuses except 'not received'
-            val deltaBlocksSize =
-                packetInfo.values
-                // Filter out not received packets
-                .filter { it != NOT_RECEIVED_TS }
-                // But the size of the block depends on the size of the delta,
-                // first calculate the delta size
-                .map {
-                    val delta = (it - currReferenceTime).toDouble()
-                    currReferenceTime = it
-                    delta
-                }
-                // Now map it to a status symbol.  We will always use 2 bit symbols
-                // when serializing
-                .map {
-                    val symbol = TwoBitPacketStatusSymbol.fromDeltaMs(it)
-                    if (symbol == UnknownSymbol) {
-                        println("BRIAN GOT UNKNOWN SYMBOL FROM DELTA $it")
-                    }
 
-                    symbol
-                }
-                // And now map it to the size of the delta block
-                .map { it.getDeltaSizeBytes() }
+            val deltaBlocksSize = packetInfo.keys
+                .map(packetInfo::getStatusSymbol)
+                .map(PacketStatusSymbol::getDeltaSizeBytes)
                 .sum()
-
 
             // We always write status as vector chunks with 2 bit symbols
             var dataSize = 8 + // header values
@@ -109,6 +104,8 @@ class Tcc : FeedbackControlInformation {
                 deltaBlocksSize
             // And now account for any padding
             //TODO: should we handle padding here? or later at the general rtcp level?
+            // --> handle it at the general rtcp level (only 'internal' padding should be
+            // worried about in the packets)
             while (dataSize % 4 != 0) {
                 dataSize++
             }
@@ -221,6 +218,7 @@ class Tcc : FeedbackControlInformation {
         fun setPacketInfo(buf: ByteBuffer, packetInfo: PacketMap) {
             setBaseSeqNum(buf, packetInfo.firstKey())
             setPacketStatusCount(buf, packetInfo.size)
+
             //TODO: keep this consistent with the stored reference time member?
             val referenceTimestamp = packetInfo.firstEntry().value
             val referenceTimeValue = ((referenceTimestamp / 64) and 0xFFFFFF).toInt()
@@ -229,27 +227,21 @@ class Tcc : FeedbackControlInformation {
             // Set the buffer's position to the start of the status chunks
             buf.position(8)
 
+            val seqNums = packetInfo.keys.toList()
             val vectorChunks = mutableListOf<StatusVectorChunk>()
             val receiveDeltas = mutableListOf<ReceiveDelta>()
-            val seqNums = packetInfo.keys.toList()
-            var currReferenceTime = referenceTimestamp
             // Each vector chunk will contain 7 packet status symbols
-            for (i in 0 until packetInfo.size step 7) {
+            for (vectorChunkStartIndex in 0 until packetInfo.size step 7) {
                 val packetStatuses = mutableListOf<PacketStatusSymbol>()
-                for (j in i until i + 7) {
-                    if (j >= packetInfo.size) {
+                for (statusSymbolIndex in vectorChunkStartIndex until vectorChunkStartIndex + 7) {
+                    if (statusSymbolIndex >= packetInfo.size) {
                         // The last block may not be full
                         break
                     }
-                    val seqNum = seqNums[i]
-                    val timestamp = packetInfo[seqNum]!!
-                    val deltaMs = (timestamp - currReferenceTime).toDouble()
-                    currReferenceTime = timestamp
-                    val symbol = when(timestamp) {
-                        NOT_RECEIVED_TS -> TwoBitPacketStatusSymbol.NOT_RECEIVED
-                        else -> TwoBitPacketStatusSymbol.fromDeltaMs(deltaMs)
-                    }
+                    val tccSeqNum = seqNums[statusSymbolIndex]
+                    val symbol = packetInfo.getStatusSymbol(tccSeqNum)
                     if (symbol.hasDelta()) {
+                        val deltaMs = packetInfo.getDeltaMs(tccSeqNum)!!
                         receiveDeltas.add(ReceiveDelta.create(deltaMs))
                     }
                     packetStatuses.add(symbol)
@@ -297,20 +289,27 @@ class Tcc : FeedbackControlInformation {
     }
 
     override fun getBuffer(): ByteBuffer {
-//        println("TCC original buffer: ${buf?.toHex()}")
-        if (this.buf == null || this.buf!!.capacity() < this.size) {
-            this.buf = ByteBuffer.allocate(this.size)
-        }
-        buf!!.rewind()
-//        println("TCC sync'ing to buffer, buffer size: ${buf!!.capacity()} needed size: ${this.size}")
-        setFeedbackPacketCount(buf!!, this.feedbackPacketCount)
         try {
-            setPacketInfo(buf!!, this.packetInfo)
+            //        println("TCC original buffer: ${buf?.toHex()}")
+            if (this.buf == null || this.buf!!.capacity() < this.size) {
+                this.buf = ByteBuffer.allocate(this.size)
+            }
+            buf!!.rewind()
+            //        println("TCC sync'ing to buffer, buffer size: ${buf!!.capacity()} needed size: ${this.size}")
+            setFeedbackPacketCount(buf!!, this.feedbackPacketCount)
+            try {
+                setPacketInfo(buf!!, this.packetInfo)
+            } catch (e: Exception) {
+                println("BRIAN exception setting packet info to buffer: $e, buffer size: ${buf!!.capacity()}, needed size: ${this.size}\n" +
+                        "the FCI was: $this")
+                throw e
+            }
+            return this.buf!!.rewind() as ByteBuffer
         } catch (e: Exception) {
-            println("BRIAN exception setting packet info to buffer: $e, buffer size: ${buf!!.capacity()}, needed size: ${this.size}")
+            println("Exception getting tcc buffer: $e\n" +
+                    "tcc detected size: ${this.size}, buffer capacity: ${this.buf!!.capacity()}")
             throw e
         }
-        return this.buf!!.rewind() as ByteBuffer
     }
 
     override fun toString(): String {
@@ -346,6 +345,9 @@ object UnknownSymbol : PacketStatusSymbol {
  * Chrome file:
  * https://codesearch.chromium.org/chromium/src/third_party/webrtc/modules/rtp_rtcp/source/rtcp_packet/transport_feedback.cc?l=185&rcl=efbcb31cb67e3090b82c09ed5aabc4bbc53f37be
  */
+//TODO: we will be unable to turn a received TCC packet with one bit symbols into one
+// with 2 bit symbols because two bit symbols don't support a status of 'received but
+// with no delta'
 enum class OneBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbol {
     RECEIVED(1),
     NOT_RECEIVED(0);
@@ -356,7 +358,7 @@ enum class OneBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbo
     }
 
     override fun hasDelta(): Boolean = false
-    override fun getDeltaSizeBytes(): Int = throw Exception()
+    override fun getDeltaSizeBytes(): Int = 0
 }
 
 enum class TwoBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbol {
@@ -387,7 +389,7 @@ enum class TwoBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbo
         return when (this) {
             RECEIVED_SMALL_DELTA -> 1
             RECEIVED_LARGE_OR_NEGATIVE_DELTA -> 2
-            else -> throw Exception()
+            else -> 0
         }
     }
 }

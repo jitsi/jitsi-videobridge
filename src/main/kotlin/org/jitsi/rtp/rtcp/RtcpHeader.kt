@@ -52,7 +52,6 @@ open class RtcpHeader {
         this.reportCount = RtcpHeader.getReportCount(buf)
         this.payloadType = RtcpHeader.getPayloadType(buf)
         this.length = RtcpHeader.getLength(buf)
-        println("RTCPHeader parsed length $length")
         this.senderSsrc = RtcpHeader.getSenderSsrc(buf)
     }
 
@@ -82,7 +81,6 @@ open class RtcpHeader {
         RtcpHeader.setPadding(buf!!, hasPadding)
         RtcpHeader.setReportCount(buf!!, reportCount)
         RtcpHeader.setPayloadType(buf!!, payloadType)
-        println("header writing length $length to buffer")
         RtcpHeader.setLength(buf!!, length)
         RtcpHeader.setSenderSsrc(buf!!, senderSsrc)
 

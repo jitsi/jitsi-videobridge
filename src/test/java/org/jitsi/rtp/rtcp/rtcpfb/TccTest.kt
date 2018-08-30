@@ -112,8 +112,8 @@ internal class TccTest : ShouldSpec() {
     ))
 
     init {
-        "f:TCC Packet" {
-            "!Parsing a TCC packet from a buffer" {
+        "TCC Packet" {
+            "Parsing a TCC packet from a buffer" {
                 val tcc = Tcc(fci)
                 should("parse the values correctly") {
                     // Based on the values in the packet above
@@ -125,7 +125,7 @@ internal class TccTest : ShouldSpec() {
                     tcc.packetInfo.filter { it.value != NOT_RECEIVED_TS }.size shouldBe 7
                 }
             }
-            "!Creating a TCC packet" {
+            "Creating a TCC packet" {
                 val tcc = Tcc(fciAll2BitVectorChunks)
                 val buf = tcc.getBuffer()
                 should("write the data to the buffer correctly") {
@@ -144,11 +144,18 @@ internal class TccTest : ShouldSpec() {
             "Creating a TCC packet from values" {
                 val tcc = Tcc(feedbackPacketCount = 10)
                 should("set the values correctly") {
-//                    tcc.referenceTime shouldBe 10
                     println(tcc)
                     tcc.addPacket(10, 20)
                     println(tcc)
                 }
+            }
+            "values 2" {
+                val packetMap = PacketMap()
+                mapOf<Int, Long>(
+                    1 to 3784062, 2 to 3784056, 3 to 3784056, 4 to 3784056, 5 to 3784056, 6 to 3784056, 7 to 3784056, 8 to 3784056, 9 to 3784056, 10 to 3784056, 11 to 3784056, 12 to 3784056, 13 to 3784056, 14 to 3784056, 15 to 3784056, 16 to 3784056, 17 to 3784056, 18 to 3784056, 19 to 3784056, 20 to 3784056, 21 to 3784056, 22 to 3784056, 23 to 3784056, 24 to 3784056, 25 to 3784056, 26 to 3784056, 27 to 3784056, 28 to 3784056, 29 to 3784056, 30 to 3784056, 31 to 3784056, 32 to 3784056, 33 to 3784056, 34 to 3784056, 35 to 3784056, 36 to 3784056, 37 to 3784056, 38 to 3784056, 39 to 3784056, 40 to 3784056, 41 to 3784056, 42 to 3784056, 43 to 3784056, 44 to 3784056, 45 to 3784056, 46 to 3784056, 47 to 3784056, 48 to 3784056, 49 to 3784056, 50 to 3784056, 51 to 3784056, 52 to 3784056, 53 to 3784056, 54 to 3784056, 55 to 3784056, 56 to 3784056, 57 to 3784056, 58 to 3784056, 59 to 3784056, 60 to 3784056, 61 to 3784056, 62 to 3784056, 63 to 3784056, 64 to 3784056, 65 to 3784056, 66 to 3784056, 67 to 3784056, 68 to 3784056, 69 to 3784056, 70 to 3784056, 71 to 3784056, 72 to 3784056, 73 to 3784056, 74 to -1, 75 to -1, 76 to -1, 77 to -1, 78 to -1, 79 to -1, 80 to -1, 81 to -1, 82 to -1, 83 to -1, 84 to -1, 85 to -1, 86 to -1, 87 to -1, 88 to -1, 89 to -1, 90 to -1, 91 to -1, 92 to -1, 93 to -1, 94 to -1, 95 to -1, 96 to -1, 97 to -1, 98 to -1, 99 to -1, 100 to -1, 101 to -1, 102 to -1, 103 to -1, 104 to -1, 105 to -1, 106 to -1, 107 to -1, 108 to -1, 109 to -1, 110 to -1, 111 to -1, 112 to -1
+                ).toMap(packetMap)
+                val tcc = Tcc(referenceTime = 3784056, packetInfo = packetMap)
+                tcc.getBuffer()
             }
         }
         "PacketStatusChunk" {
