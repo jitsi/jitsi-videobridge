@@ -19,6 +19,7 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
+import org.jitsi.nlj.transform.node.incoming.NackGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
@@ -88,6 +89,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
+//                        node(NackGeneratorNode(rtcpSender))
                         simpleNode("RTP packet handler") {
                             rtpPacketHandler?.processPackets(it)
                             emptyList()
