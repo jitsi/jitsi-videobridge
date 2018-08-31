@@ -55,6 +55,7 @@ open class RtcpHeader {
         this.senderSsrc = RtcpHeader.getSenderSsrc(buf)
     }
 
+    @JvmOverloads
     constructor(
         version: Int = 2,
         hasPadding: Boolean = false,
