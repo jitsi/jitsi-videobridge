@@ -58,7 +58,7 @@ abstract class FeedbackControlInformation {
 // the RC field).  Should the header parse that field, but hold it
 // generically?  Should it make it abstract?  Should it ignore it
 // altogether?
-class RtcpFbPacket : RtcpPacket {
+open class RtcpFbPacket : RtcpPacket {
     private var buf: ByteBuffer? = null
     override var header: RtcpHeader
     var mediaSourceSsrc: Long
@@ -70,11 +70,8 @@ class RtcpFbPacket : RtcpPacket {
         fun getMediaSourceSsrc(buf: ByteBuffer): Long = buf.getInt(8).toULong()
         fun setMediaSourceSsrc(buf: ByteBuffer, mediaSourceSsrc: Long) { buf.putInt(8, mediaSourceSsrc.toUInt()) }
 
-        /**
-         * Note that the buffer passed to these two methods, unlike in most other helpers, must already
-         * begin at the start of the FCI portion of the header.
-         */
-        fun getFeedbackControlInformation(fciBuf: ByteBuffer, payloadType: Int, fmt: Int): FeedbackControlInformation {
+        fun getFeedbackControlInformation(buf: ByteBuffer, payloadType: Int, fmt: Int): FeedbackControlInformation {
+            val fciBuf = buf.subBuffer(12)
             return when (payloadType) {
                 205 -> {
                     when (fmt) {
@@ -96,6 +93,11 @@ class RtcpFbPacket : RtcpPacket {
                 else -> throw Exception("Unrecognized RTCPFB pt: $payloadType")
             }
         }
+
+        fun setFeedbackControlInformation(buf: ByteBuffer, fci: FeedbackControlInformation) {
+            val fciBuf = buf.subBuffer(12)
+            fciBuf.put(fci.getBuffer())
+        }
     }
 
     constructor(buf: ByteBuffer) : super() {
@@ -104,12 +106,13 @@ class RtcpFbPacket : RtcpPacket {
         this.mediaSourceSsrc = getMediaSourceSsrc(buf)
         this.feedbackControlInformation =
                 getFeedbackControlInformation(
-                    buf.subBuffer(12),
+                    buf,
                     header.payloadType,
                     header.reportCount
                 )
     }
 
+    @JvmOverloads
     constructor(
         header: RtcpHeader = RtcpHeader(),
         mediaSourceSsrc: Long = 0,
@@ -136,10 +139,10 @@ class RtcpFbPacket : RtcpPacket {
         // fields which need it) and handle it here (add any padding, set the padding bit)
         //TODO: should have explicit setters for these instead of using relative positions
         this.buf!!.put(header.getBuffer())
-        this.buf!!.putInt(mediaSourceSsrc.toUInt())
+        setMediaSourceSsrc(this.buf!!, mediaSourceSsrc)
         val bufPositionBefore = buf!!.position()
         try {
-            this.buf!!.put(feedbackControlInformation.getBuffer())
+            setFeedbackControlInformation(buf!!, feedbackControlInformation)
         } catch (e: Exception) {
             println("exception serializing fci, buf position was $bufPositionBefore, " +
                     "capacity is ${buf!!.capacity()}, fci size is ${feedbackControlInformation.size} ")
