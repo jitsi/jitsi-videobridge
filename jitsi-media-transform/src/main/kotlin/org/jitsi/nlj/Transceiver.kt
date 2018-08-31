@@ -27,6 +27,7 @@ import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
 import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -50,6 +51,7 @@ class Transceiver(
 ) {
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
+    private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
 
     /*private*/ val rtpSender: RtpSender = RtpSenderImpl(123, executor)
     /*private*/ val rtpReceiver: RtpReceiver =
@@ -93,6 +95,18 @@ class Transceiver(
             }
         }
     }
+
+    fun addReceiveSsrc(ssrc: Long) {
+        receiveSsrcs.add(ssrc)
+        rtpReceiver.handleEvent(ReceiveSsrcAddedEvent(ssrc))
+    }
+
+    fun removeReceiveSsrc(ssrc: Long) {
+        receiveSsrcs.remove(ssrc)
+        rtpReceiver.handleEvent(ReceiveSsrcRemovedEvent(ssrc))
+    }
+
+    fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)
 
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
         payloadTypes[rtpPayloadType] = format
