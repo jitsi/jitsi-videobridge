@@ -399,7 +399,10 @@ public class SRTCPCryptoContext
                 nonEqual |= (tempStore[i] ^ tagStore[i]);
             }
             if (nonEqual != 0)
+            {
+                System.out.println("BRIAN: SRTCP auth failed");
                 return false;
+            }
         }
 
         if (decrypt)

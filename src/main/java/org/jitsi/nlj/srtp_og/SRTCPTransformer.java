@@ -20,6 +20,8 @@ import org.jitsi.service.neomedia.*;
 
 import java.util.*;
 
+import static org.jitsi.nlj.srtp_og.SRTCPCryptoContext.toHex;
+
 /*
  * Copyright @ 2015 Atlassian Pty Ltd
  *
@@ -191,12 +193,28 @@ public class SRTCPTransformer
     @Override
     public RawPacket reverseTransform(RawPacket pkt)
     {
+//        System.out.println("BRIAN: rtcp packet " + pkt.getRTCPSSRC() + " " +
+//                " (length: " + pkt.getLength() + ") before decrypt: " +
+//                toHex(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
         SRTCPCryptoContext context = getContext(pkt, reverseFactory);
 
-        return
+        RawPacket res =
                 ((context != null) && context.reverseTransformPacket(pkt))
                         ? pkt
                         : null;
+        if (res == null) {
+//            System.out.println("BRIAN: rtcp packet " + pkt.getRTCPSSRC() + " " +
+//                    " (length: " + pkt.getLength() + ") failed auth/decrypt");
+            // Intentionally cause an exception
+            System.out.println(res.getBuffer());
+
+        } else {
+//            System.out.println("BRIAN: rtcp packet " + res.getRTCPSSRC() + " " +
+//                    " (length: " + res.getLength() + ") after decrypt:  " +
+//                    toHex(res.getBuffer(), res.getOffset(), res.getLength()));
+        }
+
+        return res;
     }
 
     /**
