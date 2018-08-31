@@ -122,6 +122,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         }
                         node(RtcpTermination())
                         simpleNode("RTCP packet handler") {
+                            println("RTCP packet handler forwarding ${it.size} rtcp packets")
+//                            it.forEach { pkt ->
+//                                println("Forwarding rtcp packet ${pkt::class} with buffer\n${pkt.getBuffer().toHex()}")
+//                            }
                             rtcpPacketHandler?.processPackets(it)
                             emptyList()
                         }

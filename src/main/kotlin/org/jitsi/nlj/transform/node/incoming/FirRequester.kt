@@ -28,18 +28,18 @@ class FirRequester(private val rtcpSender: (RtcpPacket) -> Unit) : Node("FIR req
     var mediaSsrc: Long? = null
     // Every 300 packets, request an FIR
     override fun doProcessPackets(p: List<Packet>) {
-        if (mediaSsrc == null) {
-            mediaSsrc = (p.get(0) as RtpPacket).header.ssrc
-        }
-        numPacketSinceLastFir += p.size
-        if (numPacketSinceLastFir >= 300) {
-//            val firPacket = RtcpFbFirPacket(mediaSsrc!!, numFirsSent++)
-            println("BRIAN sending fir packet for stream $mediaSsrc")
-//            rtcpSender(firPacket)
-            val pliPacket = RtcpFbPliPacket(mediaSsrc!!)
-            rtcpSender(pliPacket)
-            numPacketSinceLastFir = 0
-        }
+//        if (mediaSsrc == null) {
+//            mediaSsrc = (p.get(0) as RtpPacket).header.ssrc
+//        }
+//        numPacketSinceLastFir += p.size
+//        if (numPacketSinceLastFir >= 300) {
+////            val firPacket = RtcpFbFirPacket(mediaSsrc!!, numFirsSent++)
+//            println("BRIAN sending fir packet for stream $mediaSsrc")
+////            rtcpSender(firPacket)
+//            val pliPacket = RtcpFbPliPacket(mediaSsrc!!)
+//            rtcpSender(pliPacket)
+//            numPacketSinceLastFir = 0
+//        }
 
         next(p)
     }

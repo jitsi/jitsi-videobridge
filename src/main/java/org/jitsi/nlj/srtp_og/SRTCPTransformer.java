@@ -230,7 +230,13 @@ public class SRTCPTransformer
 
         if(context != null)
         {
+//        System.out.println("BRIAN: rtcp packet " + pkt.getRTCPSSRC() + " " +
+//                " (length: " + pkt.getLength() + ") before encrypt: " +
+//                toHex(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
             context.transformPacket(pkt);
+//            System.out.println("BRIAN: rtcp packet " + pkt.getRTCPSSRC() + " " +
+//                    " (length: " + pkt.getLength() + ") after encrypt: " +
+//                    toHex(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
             return pkt;
         }
         else

@@ -71,8 +71,14 @@ class RtpSenderImpl(
             simpleNode("RTCP sender ssrc setter") { pkts ->
                 tempSenderSsrc?.let { senderSsrc ->
                     pkts.forEachAs<RtcpPacket> {
-                        it.header.senderSsrc = senderSsrc
-                        println("RtpSenderImpl ${hashCode()} sending rtcp packet:\n" + it.getBuffer().toHex())
+//                        println("RtpSenderImpl ${hashCode()} sending rtcp packet. " +
+//                                "(original sender ssrc ${it.header.senderSsrc} new sender $senderSsrc)" +
+//                                ":\n" + it.getBuffer().toHex())
+                        //TODO: get the sender ssrc working right, i think we may be getting the wrong
+                        // one somehow
+                        if (it.header.senderSsrc == 0L) {
+                            it.header.senderSsrc = senderSsrc
+                        }
                     }
                     return@simpleNode pkts
                 }
@@ -80,6 +86,9 @@ class RtpSenderImpl(
             }
             node(srtcpEncryptWrapper)
             simpleNode("RTCP sender") { pkts ->
+//                pkts.forEach { pkt ->
+//                    println("RtpSender sending encrypted rtcp packet:\n${pkt.getBuffer().toHex()}")
+//                }
                 packetSender.processPackets(pkts)
                 emptyList()
             }

@@ -97,11 +97,14 @@ class Transceiver(
     }
 
     fun addReceiveSsrc(ssrc: Long) {
+        println("Transceiver ${hashCode()} adding receive ssrc $ssrc")
         receiveSsrcs.add(ssrc)
         rtpReceiver.handleEvent(ReceiveSsrcAddedEvent(ssrc))
+        //TODO: fire events to rtp sender as well
     }
 
     fun removeReceiveSsrc(ssrc: Long) {
+        println("Transceiver ${hashCode()} removing receive ssrc $ssrc")
         receiveSsrcs.remove(ssrc)
         rtpReceiver.handleEvent(ReceiveSsrcRemovedEvent(ssrc))
     }

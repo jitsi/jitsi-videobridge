@@ -18,6 +18,7 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -33,13 +34,13 @@ class RtcpTermination : Node("RTCP termination") {
             when (it) {
                 is RtcpRrPacket, is RtcpSrPacket, is RtcpFbTccPacket -> {
                     // Process & terminate
-                    println("BRIAN: terminating ${it.javaClass} rtcp packet")
+//                    println("BRIAN: terminating ${it.javaClass} rtcp packet")
                 }
                 is RtcpFbNackPacket, is RtcpFbPliPacket, is RtcpFbFirPacket -> {
                     // Pass through
                     // (nacks we'll eventually do processing on and try to retransmit, the
                     // others will go all the way through)
-                    println("BRIAN: passing through ${it::class} rtcp packet")
+                    println("BRIAN: passing through ${it::class} rtcp packet: ${it.getBuffer().toHex()}")
                     outPackets.add(it)
                 }
             }
