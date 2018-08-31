@@ -419,6 +419,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         List<MediaStreamTrackDesc> allTracks = new LinkedList<>();
         channels.stream()
             .map(channel -> channel.getStream().getMediaStreamTrackReceiver())
+            .filter(Objects::nonNull)
             .forEach(
                 trackReceiver -> allTracks.addAll(
                     Arrays.asList(trackReceiver.getMediaStreamTracks())));
