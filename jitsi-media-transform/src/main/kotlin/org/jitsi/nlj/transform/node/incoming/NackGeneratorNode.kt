@@ -30,19 +30,19 @@ class NackGeneratorNode(
     // For now, just nack a chunk of 5 packets for every 100 we see
     var packetsSinceLastNack = 0
     override fun doProcessPackets(p: List<Packet>) {
-        packetsSinceLastNack += p.size
-        if (packetsSinceLastNack > 100) {
-            // Nack the 5 previous packets
-            val missingSeqNumBase = (p.get(0) as RtpPacket).header.sequenceNumber - 5
-
-            val nackFci = Nack(packetId = missingSeqNumBase, missingSeqNums = (missingSeqNumBase until missingSeqNumBase+5).toList())
-            val nackPacket = RtcpFbPacket(feedbackControlInformation = nackFci)
-            nackPacket.mediaSourceSsrc = (p.get(0) as RtpPacket).header.ssrc
-            onNackPacketReady(nackPacket)
-
-            nacksSent++
-            packetsSinceLastNack = 0
-        }
+//        packetsSinceLastNack += p.size
+//        if (packetsSinceLastNack > 100) {
+//            // Nack the 5 previous packets
+//            val missingSeqNumBase = (p.get(0) as RtpPacket).header.sequenceNumber - 5
+//
+//            val nackFci = Nack(packetId = missingSeqNumBase, missingSeqNums = (missingSeqNumBase until missingSeqNumBase+5).toList())
+//            val nackPacket = RtcpFbPacket(feedbackControlInformation = nackFci)
+//            nackPacket.mediaSourceSsrc = (p.get(0) as RtpPacket).header.ssrc
+//            onNackPacketReady(nackPacket)
+//
+//            nacksSent++
+//            packetsSinceLastNack = 0
+//        }
         next(p)
     }
 
