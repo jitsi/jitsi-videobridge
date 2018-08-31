@@ -25,6 +25,7 @@ import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -50,16 +51,17 @@ class RtpSenderImpl(
     init {
         println("Sender ${this.hashCode()} using executor ${executor.hashCode()}")
         outgoingRtpRoot = pipeline {
-            node(srtpEncryptWrapper)
             simpleNode("TEMP sender ssrc setter") { pkts ->
                 if (tempSenderSsrc == null && pkts.isNotEmpty()) {
-                    val pkt = pkts.get(0)
+                    val pkt = pkts[0]
                     if (pkt is RtpPacket) {
                         tempSenderSsrc = pkt.header.ssrc
+                        println("RtpSenderImpl ${hashCode()} setting sender ssrc to $tempSenderSsrc")
                     }
                 }
                 pkts
             }
+            node(srtpEncryptWrapper)
             simpleNode("RTP sender") { pkts ->
                 packetSender.processPackets(pkts)
                 emptyList()
@@ -70,9 +72,11 @@ class RtpSenderImpl(
                 tempSenderSsrc?.let { senderSsrc ->
                     pkts.forEachAs<RtcpPacket> {
                         it.header.senderSsrc = senderSsrc
+                        println("RtpSenderImpl ${hashCode()} sending rtcp packet:\n" + it.getBuffer().toHex())
                     }
+                    return@simpleNode pkts
                 }
-                pkts
+                emptyList()
             }
             node(srtcpEncryptWrapper)
             simpleNode("RTCP sender") { pkts ->
