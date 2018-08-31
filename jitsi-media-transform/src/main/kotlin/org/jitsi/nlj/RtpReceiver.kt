@@ -15,20 +15,45 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.node.Node
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 
 abstract class RtpReceiver :
     PacketHandler, EventHandler {
+    /**
+     * The handler which will be invoked for each RTP packet received
+     * by this receiver (after it has gone through the receiver's
+     * input chain).
+     */
     abstract var rtpPacketHandler: PacketHandler?
+    /**
+     * The handler which will be invoked for each RTCP packet received
+     * by this receiver (after it has gone through the receiver's
+     * input chain).  Most RTCP is terminated, however some messages
+     * (like PLI & FIR) will be forwarded through so they can be
+     * routed to their intended receipient.
+     */
+    abstract var rtcpPacketHandler: PacketHandler?
     protected var running = true
-//    protected abstract val moduleChain: ModuleChain
-//    abstract fun getStats(): String
-    abstract fun attach(node: Node)
+//    abstract fun attach(node: Node)
+    /**
+     * Enqueue an incoming packet to be processed
+     */
     abstract fun enqueuePacket(p: Packet)
+
+    /**
+     * Set the SRTP transformer to be used for RTP decryption
+     */
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
+
+    /**
+     * Set the SRTCP transformer to be used for RTCP decryption
+     */
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
+
+    /**
+     * Tell this receiver to stop processing incoming packets
+     */
     fun stop() {
         running = false
     }
