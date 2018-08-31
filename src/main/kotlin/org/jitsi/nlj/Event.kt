@@ -25,3 +25,6 @@ class RtpPayloadTypeClearEvent : Event
 
 class RtpExtensionAddedEvent(val extensionId: Byte, val rtpExtension: RTPExtension) : Event
 class RtpExtensionClearEvent : Event
+
+class ReceiveSsrcAddedEvent(val ssrc: Long) : Event
+class ReceiveSsrcRemovedEvent(val ssrc: Long) : Event
