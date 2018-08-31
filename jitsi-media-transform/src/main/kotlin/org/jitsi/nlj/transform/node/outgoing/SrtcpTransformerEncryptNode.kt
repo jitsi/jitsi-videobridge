@@ -20,6 +20,7 @@ import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
+import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 
 class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt wrapper") {
@@ -27,8 +28,23 @@ class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt w
         val encryptedPackets = mutableListOf<SrtcpPacket>()
         pkts.forEach {
             val packetBuf = it.getBuffer()
-            val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
+            //TODO: if this rtcp packet was from a compound rtcp packet, the array backing
+            // the packetBuf will have previous compound packets in it.  Although we pass
+            // the proper offset as packetBuf.arrayOffset, not all methods in the transformer
+            // properly take that offset into account.  for now, we'll make a new copy of the
+            // buffer.  in the future we should clean up the transformer methods to take
+            // the offset into account correctly
+            val bufCopy = ByteBuffer.allocate(packetBuf.limit())
+            bufCopy.put(packetBuf).flip()
+//            println("srtcp before encrypt nlj packet buf:\n${packetBuf.toHex()}")
+//            val rp = RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
+            val rp = RawPacket(bufCopy.array(), bufCopy.arrayOffset(), bufCopy.limit())
+//            println("Srtcp packet before encrypt:\n${ByteBuffer.wrap(rp.buffer).toHex()}")
             transformer.transform(rp)?.let { encryptedRawPacket ->
+//                println("Srtcp packet after encrypt:\n${ByteBuffer.wrap(
+//                    encryptedRawPacket.buffer,
+//                    encryptedRawPacket.offset,
+//                    encryptedRawPacket.length).toHex()}")
                 val srtcpPacket = SrtcpPacket(
                     ByteBuffer.wrap(
                         encryptedRawPacket.buffer,
