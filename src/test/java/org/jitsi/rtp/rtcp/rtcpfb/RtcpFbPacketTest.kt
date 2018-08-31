@@ -52,13 +52,13 @@ internal class RtcpFbPacketTest : ShouldSpec() {
 
     init {
         "Parsing a TCC packet" {
-            val pkt = RtcpFbPacket(tccPkt)
-            should ("parse the data correctly") {
-                println("=====GETTING BUFFER======")
-                println(pkt.getBuffer().toHex())
-//                println("=====GETTING BUFFER AGAIN======")
+//            val pkt = RtcpFbPacket(tccPkt)
+//            should ("parse the data correctly") {
+//                println("=====GETTING BUFFER======")
 //                println(pkt.getBuffer().toHex())
-            }
+////                println("=====GETTING BUFFER AGAIN======")
+////                println(pkt.getBuffer().toHex())
+//            }
 //            val pkt = RtcpPacket.fromBuffer(tccPkt)
 //            println(pkt)
 //            val newPktBuf = pkt.getBuffer()

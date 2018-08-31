@@ -28,7 +28,7 @@ abstract class RtcpPacket : Packet() {
             return when (payloadType) {
                 RtcpSrPacket.PT -> RtcpSrPacket(buf)
                 RtcpRrPacket.PT -> RtcpRrPacket(buf)
-                205, 206 -> RtcpFbPacket(buf)
+                205, 206 -> RtcpFbPacket.fromBuffer(buf)
                 else -> throw Exception("Unsupported RTCP type $payloadType")
             }
         }

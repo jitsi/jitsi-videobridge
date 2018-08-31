@@ -27,6 +27,7 @@ import java.util.*
 
 abstract class FeedbackControlInformation {
     abstract val size: Int
+    //TODO: get rid of this here.  it will be in the packet instead
     abstract val fmt: Int
     protected abstract var buf: ByteBuffer?
     abstract fun getBuffer(): ByteBuffer
@@ -58,41 +59,47 @@ abstract class FeedbackControlInformation {
 // the RC field).  Should the header parse that field, but hold it
 // generically?  Should it make it abstract?  Should it ignore it
 // altogether?
-open class RtcpFbPacket : RtcpPacket {
+abstract class RtcpFbPacket : RtcpPacket {
     private var buf: ByteBuffer? = null
     override var header: RtcpHeader
     var mediaSourceSsrc: Long
-    var feedbackControlInformation: FeedbackControlInformation
+    abstract var feedbackControlInformation: FeedbackControlInformation
     override val size: Int
         get() = RtcpHeader.SIZE_BYTES + 4 /* mediaSourceSsrc */ + feedbackControlInformation.size
 
     companion object {
-        fun getMediaSourceSsrc(buf: ByteBuffer): Long = buf.getInt(8).toULong()
-        fun setMediaSourceSsrc(buf: ByteBuffer, mediaSourceSsrc: Long) { buf.putInt(8, mediaSourceSsrc.toUInt()) }
-
-        fun getFeedbackControlInformation(buf: ByteBuffer, payloadType: Int, fmt: Int): FeedbackControlInformation {
-            val fciBuf = buf.subBuffer(12)
+        const val FCI_OFFSET = RtcpHeader.SIZE_BYTES + 4
+        /**
+         * Although this should only be called if the given buffer was determined to
+         * contain an RTCPFB packet already, the given buf should be at the start of
+         * the RTCP packet and we'll parse it here.
+         */
+        fun fromBuffer(buf: ByteBuffer): RtcpFbPacket {
+            val payloadType = RtcpHeader.getPayloadType(buf)
+            val fmt = RtcpHeader.getReportCount(buf)
             return when (payloadType) {
-                205 -> {
+                TransportLayerFbPacket.PT -> {
                     when (fmt) {
-                        Nack.FMT -> Nack(fciBuf)
-                        Tcc.FMT -> Tcc(fciBuf)
-                        else -> throw Exception("Unrecognized RTCPFB format: $fmt")
+                        RtcpFbNackPacket.FMT -> RtcpFbNackPacket(buf)
+                        RtcpFbTccPacket.FMT -> RtcpFbTccPacket(buf)
+                        else -> throw Exception("Unrecognized RTCPFB format: pt $payloadType, fmt $fmt")
                     }
                 }
-                206 -> {
+                PayloadSpecificFbPacket.PT -> {
                     when (fmt) {
-                        1 -> Pli()
+                        RtcpFbPliPacket.FMT -> RtcpFbPliPacket(buf)
+                        RtcpFbFirPacket.FMT -> RtcpFbFirPacket(buf)
                         2 -> TODO("sli")
                         3 -> TODO("rpsi")
-                        4 -> Fir(fciBuf)
                         15 -> TODO("afb")
-                        else -> throw Exception("Unrecognized RTCPFB format: pt 206, fmt $fmt")
+                        else -> throw Exception("Unrecognized RTCPFB format: pt $payloadType, fmt $fmt")
                     }
                 }
-                else -> throw Exception("Unrecognized RTCPFB pt: $payloadType")
+                else -> throw Exception("Unrecognized RTCPFB payload type: $payloadType")
             }
         }
+        fun getMediaSourceSsrc(buf: ByteBuffer): Long = buf.getInt(8).toULong()
+        fun setMediaSourceSsrc(buf: ByteBuffer, mediaSourceSsrc: Long) { buf.putInt(8, mediaSourceSsrc.toUInt()) }
 
         fun setFeedbackControlInformation(buf: ByteBuffer, fci: FeedbackControlInformation) {
             val fciBuf = buf.subBuffer(12)
@@ -104,25 +111,15 @@ open class RtcpFbPacket : RtcpPacket {
         this.buf = buf.slice()
         this.header = RtcpHeader(buf)
         this.mediaSourceSsrc = getMediaSourceSsrc(buf)
-        this.feedbackControlInformation =
-                getFeedbackControlInformation(
-                    buf,
-                    header.payloadType,
-                    header.reportCount
-                )
     }
 
     @JvmOverloads
     constructor(
         header: RtcpHeader = RtcpHeader(),
-        mediaSourceSsrc: Long = 0,
-        feedbackControlInformation: FeedbackControlInformation
+        mediaSourceSsrc: Long = 0
     ) : super() {
         this.header = header
-        // TODO: require this be passed in? or at least don't hard code it to 205
-        this.header.payloadType = 205
         this.mediaSourceSsrc = mediaSourceSsrc
-        this.feedbackControlInformation = feedbackControlInformation
     }
 
     override fun getBuffer(): ByteBuffer {

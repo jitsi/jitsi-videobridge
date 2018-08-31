@@ -15,11 +15,39 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
-class RtcpFbFirPacket(
-    mediaSourceSsrc: Long = 0,
-    seqNum: Int = 0
-) : RtcpFbPacket(feedbackControlInformation = Fir(mediaSourceSsrc, seqNum)) {
-    init {
-        super.header.payloadType = 206
+import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.rtcp.RtcpHeader
+import java.nio.ByteBuffer
+
+/**
+ * https://tools.ietf.org/html/rfc5104#section-4.3.1.1
+ *  0                   1                   2                   3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                              SSRC                             |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * | Seq nr.       |    Reserved                                   |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *
+ * The SSRC field in the FIR FCI block is used to set the media sender
+ * SSRC, the media source SSRC field in the RTCPFB header is unsed for FIR packets.
+ */
+class RtcpFbFirPacket : PayloadSpecificFbPacket {
+    override var feedbackControlInformation: FeedbackControlInformation
+
+    companion object {
+        const val FMT = 4
+    }
+
+    constructor(buf: ByteBuffer) : super(buf) {
+        feedbackControlInformation = Fir(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
+    }
+
+    constructor(
+        mediaSourceSsrc: Long = 0,
+        seqNum: Int = 0
+    // The media source ssrc in the feedback header for FIR is unused and should be 0
+    ) : super(mediaSourceSsrc = 0) {
+        feedbackControlInformation = Fir(mediaSourceSsrc, seqNum)
     }
 }

@@ -38,13 +38,19 @@ class RtcpIterator(buf: ByteBuffer) {
             throw Exception("No more items left on iterator")
         }
         val subBuf = buf.slice()
-        val packet = RtcpPacket.fromBuffer(subBuf)
-        // It's important we use the length from the header here instead of
-        // packet.size, because packet.size will give us the size the packet
-        // will be serialized to, not necessarily the size it was in the given
-        // buffer (tcc packets, for example)
-        buf.position(buf.position() + (packet.header.length + 1) * 4)
-        return packet
+        try {
+            val packet = RtcpPacket.fromBuffer(subBuf)
+            // It's important we use the length from the header here instead of
+            // packet.size, because packet.size will give us the size the packet
+            // will be serialized to, not necessarily the size it was in the given
+            // buffer (tcc packets, for example)
+            buf.position(buf.position() + (packet.header.length + 1) * 4)
+            return packet
+        } catch (e: Exception) {
+            println("Exception parsing packet in RTCPIterator: $e.  sub buf limit: ${subBuf.limit()}\n" +
+                    "Entire packet buffer (limit ${buf.limit()} is:\n" + buf.toHex())
+            throw e
+        }
     }
 
     fun getAll(): List<RtcpPacket> {

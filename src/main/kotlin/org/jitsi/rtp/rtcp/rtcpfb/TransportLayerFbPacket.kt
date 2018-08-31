@@ -15,21 +15,22 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import org.jitsi.rtp.rtcp.RtcpHeader
 import java.nio.ByteBuffer
 
-/**
- * https://tools.ietf.org/html/rfc4585#section-6.3.1
- * PLI does not require parameters.  Therefore, the length field MUST be
- *  2, and there MUST NOT be any Feedback Control Information.
- */
-class RtcpFbPliPacket : PayloadSpecificFbPacket {
-    override var feedbackControlInformation: FeedbackControlInformation = Pli()
-
+abstract class TransportLayerFbPacket : RtcpFbPacket {
     companion object {
-        const val FMT = 1
+        const val PT = 205
     }
 
-    constructor(buf: ByteBuffer) : super(buf)
+    constructor(buf: ByteBuffer) : super(buf) {
+        super.header.payloadType = PT
+    }
 
-    constructor(mediaSourceSsrc: Long = 0) : super(mediaSourceSsrc = mediaSourceSsrc)
+    constructor(
+        header: RtcpHeader = RtcpHeader(),
+        mediaSourceSsrc: Long = 0
+    ) : super(header, mediaSourceSsrc) {
+        super.header.payloadType = PT
+    }
 }
