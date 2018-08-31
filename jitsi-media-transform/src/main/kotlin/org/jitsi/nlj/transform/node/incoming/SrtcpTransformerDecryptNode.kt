@@ -19,6 +19,7 @@ import org.jitsi.service.neomedia.RawPacket
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.nio.ByteBuffer
 
@@ -29,11 +30,15 @@ class SrtcpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTCP decrypt")
             val packetBuf = it.getBuffer()
             val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
             transformer.reverseTransform(rp)?.let { decryptedRawPacket ->
+//                println("Creating RTCP packet from decrypted buffer:\n" +
+//                        ByteBuffer.wrap(decryptedRawPacket.buffer, decryptedRawPacket.offset, decryptedRawPacket.length).toHex())
                 val rtcpPacket = RtcpPacket.fromBuffer(
                     ByteBuffer.wrap(
-                    decryptedRawPacket.buffer,
-                    decryptedRawPacket.offset,
-                    decryptedRawPacket.length))
+                        decryptedRawPacket.buffer,
+                        decryptedRawPacket.offset,
+                        decryptedRawPacket.length
+                    )
+                )
                 decryptedRtcpPackets.add(rtcpPacket)
             }
         }
