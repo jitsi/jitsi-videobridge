@@ -115,7 +115,7 @@ fun main(args: Array<String>) {
         val rtpReceiver = createRtpReceiver(executor)
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
-        rtpReceiver.attach(object : Node("Packet receiver") {
+        rtpReceiver.rtpPacketHandler = (object : Node("Packet receiver") {
             override fun doProcessPackets(p: List<Packet>) {
                 numReceivedPackets += p.size
                 if (numReceivedPackets == numExpectedPackets) {

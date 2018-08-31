@@ -63,13 +63,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
 
-    /**
-     * This [RtpReceiver] will invoke this method with RTP packets that have
-     * made it through the entire receive pipeline.  A caller should set this
-     * variable to a function for handling fully-processed RTP packets from
-     * this receiver.
-     */
     override var rtpPacketHandler: PacketHandler? = null
+    override var rtcpPacketHandler: PacketHandler? = null
 
     // Stat tracking values
     var firstPacketWrittenTime: Long = 0
@@ -124,6 +119,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 emptyList()
                             }
                         }
+                        simpleNode("RTCP packet handler") {
+                            rtcpPacketHandler?.processPackets(it)
+                            emptyList()
+                        }
                     }
                 }
             }
@@ -159,9 +158,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun processPackets(pkts: List<Packet>) = inputTreeRoot.processPackets(pkts)
 
-    override fun attach(node: Node) {
-        rtpPacketHandler = node
-    }
+//    override fun attach(node: Node) {
+//        rtpPacketHandler = node
+//    }
 
     override fun getStats(indent: Int): String {
 
