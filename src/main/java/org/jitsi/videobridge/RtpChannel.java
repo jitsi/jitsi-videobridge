@@ -1903,19 +1903,29 @@ public class RtpChannel
 
             updatePacketsAndBytes(conferenceStatistics);
 
-            TrackStats streamStats
-                = stream.getMediaStreamStats().getSendStats();
-            logger.info(Logger.Category.STATISTICS,
-                        "expire_ch_stats," + getLoggingId() +
-                            " bRecv=" + statistics.bytesReceived +
-                            ",bSent=" + statistics.bytesSent +
-                            ",pRecv=" + statistics.packetsReceived +
-                            ",pSent=" + statistics.packetsSent +
-                            ",bRetr=" + streamStats.getBytesRetransmitted() +
-                            ",bNotRetr=" + streamStats.getBytesNotRetransmitted() +
-                            ",pRetr=" + streamStats.getPacketsRetransmitted() +
-                            ",pNotRetr=" + streamStats.getPacketsNotRetransmitted() +
-                            ",pMiss=" + streamStats.getPacketsMissingFromCache());
+            MediaStream stream = this.stream;
+            TrackStats streamStats;
+            if (stream != null &&
+                (streamStats = stream.getMediaStreamStats().getSendStats())
+                    != null)
+            {
+                logger.info(Logger.Category.STATISTICS,
+                            "expire_ch_stats," + getLoggingId() +
+                                " bRecv=" + statistics.bytesReceived +
+                                ",bSent=" + statistics.bytesSent +
+                                ",pRecv=" + statistics.packetsReceived +
+                                ",pSent=" + statistics.packetsSent +
+                                ",bRetr=" +
+                                streamStats.getBytesRetransmitted() +
+                                ",bNotRetr=" +
+                                streamStats.getBytesNotRetransmitted() +
+                                ",pRetr=" +
+                                streamStats.getPacketsRetransmitted() +
+                                ",pNotRetr=" +
+                                streamStats.getPacketsNotRetransmitted() +
+                                ",pMiss=" +
+                                streamStats.getPacketsMissingFromCache());
+            }
         }
     }
 
