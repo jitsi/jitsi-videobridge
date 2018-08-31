@@ -26,6 +26,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.Tcc
 import org.jitsi.service.neomedia.RTPExtension
 import unsigned.toUInt
@@ -72,8 +73,12 @@ class TccGeneratorNode(
         currTcc.addPacket(tccSeqNum, timestamp)
 
         if (isTccReadyToSend()) {
-            val pkt = RtcpFbPacket(feedbackControlInformation = currTcc)
-            pkt.mediaSourceSsrc = tempDetectedSsrc!!
+            val pkt = RtcpFbTccPacket(
+                mediaSourceSsrc = tempDetectedSsrc!!,
+                referenceTime = currTcc.referenceTime,
+                feedbackPacketCount = currTcc.feedbackPacketCount,
+                packetInfo = currTcc.packetInfo
+            )
             onTccPacketReady(pkt)
             numTccSent++
             // Create a new TCC instance for the next set of information

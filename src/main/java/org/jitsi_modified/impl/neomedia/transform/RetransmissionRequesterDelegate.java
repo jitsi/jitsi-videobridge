@@ -22,6 +22,7 @@ import java.util.function.*;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.srtp_og.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
@@ -181,7 +182,7 @@ public class RetransmissionRequesterDelegate
         if (!dueRequesters.isEmpty())
         {
             System.out.println("Have due requesters");
-            List<NACKPacket> nackPackets = createNackPackets(now, dueRequesters);
+            List<RtcpFbNackPacket> nackPackets = createNackPackets(now, dueRequesters);
 //            if (logger.isTraceEnabled())
 //            {
 //                logger.trace(hashCode() + " injecting " + nackPackets.size() + " nack packets");
@@ -267,16 +268,16 @@ public class RetransmissionRequesterDelegate
      * Inject the given nack packets into the outgoing stream
      * @param nackPackets the nack packets to inject
      */
-    private void injectNackPackets(List<NACKPacket> nackPackets)
+    private void injectNackPackets(List<RtcpFbNackPacket> nackPackets)
     {
-        for (NACKPacket nackPacket : nackPackets)
+        for (RtcpFbNackPacket nackPacket : nackPackets)
         {
 //            try
 //            {
                 RawPacket packet;
 //                try
 //                {
-                    packet = nackPacket.toRawPacket();
+                    packet = PacketExtensionsKt.toRawPacket(nackPacket);
 //                }
 //                catch (IOException ioe)
 //                {
@@ -300,28 +301,13 @@ public class RetransmissionRequesterDelegate
         }
     }
 
-    class NACKPacket extends RtcpFbPacket {
-        NACKPacket(long senderSsrc, long sourceSsrc, Set<Integer> missingPackets) {
-            super(
-                    new RtcpHeader(),
-                    sourceSsrc,
-                    new Nack(missingPackets.iterator().next(), new ArrayList<>(missingPackets))
-            );
-        }
-
-        RawPacket toRawPacket() {
-            ByteBuffer buf = this.getBuffer();
-            return new RawPacket(buf.array(), buf.arrayOffset(), buf.limit());
-        }
-    }
-
     /**
      * Gather the packets currently marked as missing and create
      * NACKs for them
      * @param dueRequesters the requesters which are due to have nack packets
      * generated
      */
-    protected List<NACKPacket> createNackPackets(long now, List<Requester> dueRequesters)
+    protected List<RtcpFbNackPacket> createNackPackets(long now, List<Requester> dueRequesters)
     {
         Map<Long, Set<Integer>> packetsToRequest = new HashMap<>();
 
@@ -346,13 +332,13 @@ public class RetransmissionRequesterDelegate
             }
         }
 
-        List<NACKPacket> nackPackets = new ArrayList<>();
+        List<RtcpFbNackPacket> nackPackets = new ArrayList<>();
         for (Map.Entry<Long, Set<Integer>> entry : packetsToRequest.entrySet())
         {
             long sourceSsrc = entry.getKey();
             Set<Integer> missingPackets = entry.getValue();
-            NACKPacket nack
-                    = new NACKPacket(senderSsrc, sourceSsrc, missingPackets);
+            RtcpFbNackPacket nack
+                    = new RtcpFbNackPacket(sourceSsrc, missingPackets.iterator().next(), new ArrayList<>(missingPackets));
             nackPackets.add(nack);
         }
         return nackPackets;

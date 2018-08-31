@@ -27,6 +27,7 @@ import org.jitsi.nlj.transform.pipeline
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.transform.node.incoming.FirRequester
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
+import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.forEachAs
@@ -119,6 +120,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 emptyList()
                             }
                         }
+                        node(RtcpTermination())
                         simpleNode("RTCP packet handler") {
                             rtcpPacketHandler?.processPackets(it)
                             emptyList()

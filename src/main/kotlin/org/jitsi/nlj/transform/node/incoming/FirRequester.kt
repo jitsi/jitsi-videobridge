@@ -20,6 +20,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
+import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
 
 class FirRequester(private val rtcpSender: (RtcpPacket) -> Unit) : Node("FIR requester") {
     var numPacketSinceLastFir = 0
@@ -32,9 +33,11 @@ class FirRequester(private val rtcpSender: (RtcpPacket) -> Unit) : Node("FIR req
         }
         numPacketSinceLastFir += p.size
         if (numPacketSinceLastFir >= 300) {
-            val firPacket = RtcpFbFirPacket(mediaSsrc!!, numFirsSent++)
+//            val firPacket = RtcpFbFirPacket(mediaSsrc!!, numFirsSent++)
             println("BRIAN sending fir packet for stream $mediaSsrc")
-            rtcpSender(firPacket)
+//            rtcpSender(firPacket)
+            val pliPacket = RtcpFbPliPacket(mediaSsrc!!)
+            rtcpSender(pliPacket)
             numPacketSinceLastFir = 0
         }
 
