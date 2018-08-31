@@ -119,21 +119,20 @@ open class RtcpFbPacket : RtcpPacket {
         feedbackControlInformation: FeedbackControlInformation
     ) : super() {
         this.header = header
-        // TODO: hard code this here? or elsewhere?
+        // TODO: require this be passed in? or at least don't hard code it to 205
         this.header.payloadType = 205
         this.mediaSourceSsrc = mediaSourceSsrc
         this.feedbackControlInformation = feedbackControlInformation
     }
 
     override fun getBuffer(): ByteBuffer {
-        val neededSize = header.size + 4 + feedbackControlInformation.size
-        if (this.buf == null || this.buf!!.capacity() < neededSize) {
-            this.buf = ByteBuffer.allocate(neededSize)
+        if (this.buf == null || this.buf!!.capacity() < size) {
+            this.buf = ByteBuffer.allocate(size)
         }
         buf!!.rewind()
         // We need to update the length in the header to match the current content
         // of the packet (which may have changed)
-        header.length = ((neededSize + 3) / 4 - 1)
+        header.length = ((size + 3) / 4 - 1)
         header.reportCount = feedbackControlInformation.fmt
         //TODO: we should also not do padding anywhere else (except for in 'internal'
         // fields which need it) and handle it here (add any padding, set the padding bit)

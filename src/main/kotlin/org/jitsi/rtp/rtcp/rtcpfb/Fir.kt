@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import toUInt
 import unsigned.toUInt
 import java.nio.ByteBuffer
 
@@ -28,30 +29,38 @@ import java.nio.ByteBuffer
  * | Seq nr.       |    Reserved                                   |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *
- * TODO: although the media ssrc is depicted in the FCI above, I believe
- * this is actually the media ssrc from the common RTCPFB header, so
- * the FCI for FIR contains just the sequence number
+ * The SSRC field in the FIR FCI block is used to set the media sender
+ * SSRC, the media source SSRC field in the RTCPFB header is unsed for FIR packets.
  */
 class Fir : FeedbackControlInformation {
     var seqNum: Int
-    override val size: Int = 4
+    var ssrc: Long
+    override val size: Int = SIZE_BYTES
     override var buf: ByteBuffer? = null
     override val fmt: Int = 4
 
     companion object {
-        const val SIZE_BYTES = 4
-        fun getSeqNum(buf: ByteBuffer) = buf.get(0).toUInt()
+        const val SIZE_BYTES = 8
+        fun getSsrc(buf: ByteBuffer): Long = buf.getInt(0).toLong()
+        fun setSsrc(buf: ByteBuffer, ssrc: Long) = buf.putInt(0, ssrc.toUInt())
+
+        fun getSeqNum(buf: ByteBuffer) = buf.get(4).toUInt()
         fun setSeqNum(buf: ByteBuffer, seqNum: Int) {
-            buf.put(0, seqNum.toByte())
+            buf.put(4, seqNum.toByte())
         }
     }
 
     constructor(buf: ByteBuffer) {
         this.buf = buf.slice()
-        this.seqNum = getSeqNum(buf)
+        this.ssrc = getSsrc(this.buf!!)
+        this.seqNum = getSeqNum(this.buf!!)
     }
 
-    constructor(seqNum: Int = 0) {
+    constructor(
+        ssrc: Long = 0,
+        seqNum: Int = 0
+    ) {
+        this.ssrc = ssrc
         this.seqNum = seqNum
     }
 
@@ -59,6 +68,7 @@ class Fir : FeedbackControlInformation {
         if (this.buf == null) {
             this.buf = ByteBuffer.allocate(Fir.SIZE_BYTES)
         }
+        setSsrc(buf!!, this.ssrc)
         setSeqNum(buf!!, seqNum)
 
         return this.buf!!
