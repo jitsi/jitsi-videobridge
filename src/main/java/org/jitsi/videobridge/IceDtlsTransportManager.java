@@ -25,6 +25,7 @@ import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.dtls.*;
+import org.jitsi.nlj.srtp_og.*;
 import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
@@ -231,7 +232,20 @@ public class IceDtlsTransportManager
             // for filtering out the payload types they don't want
             getTransceivers().forEach(transceiver -> {
                pkts.forEach(pkt -> {
-                   transceiver.getIncomingQueue().add(pkt);
+                   // TODO(brian): we need to copy the packet for each transceiver for now, because
+                   //  although each transceiver filters out the rtp they don't care about (audio
+                   //  vs video), rtcp will be handled by both.  In the future, a single transceiver
+                   //  should be shared by the channels and we can filter ALL rtcp out in
+                   //  a single path in the transceiver itself and let the receiver just worry about
+                   //  rtp
+                   ByteBuffer packetBuffer = pkt.getBuffer();
+                   ByteBuffer bufferCopy = ByteBuffer.allocate(packetBuffer.capacity());
+                   packetBuffer.rewind();
+                   bufferCopy.put(packetBuffer);
+                   bufferCopy.flip();
+
+                   Packet pktCopy = new UnparsedPacket(bufferCopy);
+                   transceiver.getIncomingQueue().add(pktCopy);
                });
             });
             return Collections.emptyList();
