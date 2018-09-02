@@ -25,6 +25,7 @@ import org.jitsi.nlj.transform.node.outgoing.DtlsSenderNode
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
+import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.service.neomedia.format.MediaFormat
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
@@ -138,6 +139,11 @@ class Transceiver(
         println("Clearing all RTP extensions")
         rtpReceiver.handleEvent(RtpExtensionClearEvent())
         rtpExtensions.clear()
+    }
+
+    fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
+        println("BRIAN: transceiver setting csrc audio level listener on receiver")
+        rtpReceiver.setCsrcAudioLevelListener(csrcAudioLevelListener)
     }
 
     fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsContext: TlsContext) {

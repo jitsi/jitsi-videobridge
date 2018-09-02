@@ -25,6 +25,7 @@ import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.FirRequester
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
@@ -40,6 +41,7 @@ import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
+import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -63,6 +65,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
+    private val audioLevelListener = AudioLevelReader()
 
     override var rtpPacketHandler: PacketHandler? = null
     override var rtcpPacketHandler: PacketHandler? = null
@@ -94,6 +97,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         //TODO: how should retransmissions without rtx be handled with srtp?
 //                        node(NackGeneratorNode(rtcpSender))
                         node(RetransmissionRequester(rtcpSender))
+                        node(audioLevelListener)
                         simpleNode("RTP packet handler") {
                             rtpPacketHandler?.processPackets(it)
                             emptyList()
@@ -205,5 +209,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun handleEvent(event: Event) {
         inputTreeRoot.visit(NodeEventVisitor(event))
+    }
+
+    override fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
+        println("BRIAN: rtpreceiverimpl setting csrc audio level listener")
+        audioLevelListener.csrcAudioLevelListener = csrcAudioLevelListener
     }
 }
