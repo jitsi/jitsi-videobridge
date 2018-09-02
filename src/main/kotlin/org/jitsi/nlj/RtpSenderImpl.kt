@@ -67,6 +67,7 @@ class RtpSenderImpl(
                 emptyList()
             }
         }
+        //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
         outgoingRtcpRoot = pipeline {
             simpleNode("RTCP sender ssrc setter") { pkts ->
                 tempSenderSsrc?.let { senderSsrc ->
