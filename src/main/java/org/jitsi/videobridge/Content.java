@@ -32,6 +32,8 @@ import org.jitsi.impl.neomedia.rtp.translator.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -364,6 +366,30 @@ public class Content
                         public void doProcessPackets(@NotNull List<? extends Packet> pkts)
                         {
                             channel.transceiver.sendPackets(pkts);
+                        }
+                    });
+                    channel.transceiver.getRtpReceiver().setRtcpPacketHandler(new Node("RTCP receiver chain handler") {
+                        @Override
+                        protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                        {
+                            pkts.forEach(pkt -> {
+                                RtcpFbPacket rtcpPacket = (RtcpFbPacket)pkt;
+                                System.out.println("Received RTCP packet " + pkt.getClass() + " intended for stream " +
+                                        rtcpPacket.getMediaSourceSsrc());
+                                otherChannel.transceiver.getRtpSender().sendRtcp(Collections.singletonList(rtcpPacket));
+                            });
+                        }
+                    });
+                    otherChannel.transceiver.getRtpReceiver().setRtcpPacketHandler(new Node("RTCP receiver chain handler") {
+                        @Override
+                        protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                        {
+                            pkts.forEach(pkt -> {
+                                RtcpFbPacket rtcpPacket = (RtcpFbPacket)pkt;
+                                System.out.println("Received RTCP packet " + pkt.getClass() + " intended for stream " +
+                                        rtcpPacket.getMediaSourceSsrc());
+                                channel.transceiver.getRtpSender().sendRtcp(Collections.singletonList(rtcpPacket));
+                            });
                         }
                     });
                 }

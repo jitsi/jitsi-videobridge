@@ -655,6 +655,7 @@ public class RtpChannel
         newReceiveSSRCs[length] = 0xFFFFFFFFL & receiveSSRC;
         newReceiveSSRCs[length + 1] = now;
         receiveSSRCs = newReceiveSSRCs;
+        transceiver.addReceiveSsrc(receiveSSRC);
 
         return true;
 
@@ -1261,6 +1262,7 @@ public class RtpChannel
      */
     private boolean removeReceiveSSRC(int receiveSSRC)
     {
+        transceiver.removeReceiveSsrc(receiveSSRC);
         boolean removed = false;
 
         synchronized (receiveSSRCsSyncRoot)
