@@ -15,6 +15,7 @@
  */
 package org.jitsi.videobridge;
 
+import java.io.*;
 import java.util.*;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -58,6 +59,22 @@ public class AudioChannel
                         Boolean initiator)
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
+    }
+
+    @Override
+    public void initialize()
+            throws IOException
+    {
+        super.initialize();
+        transceiver.setCsrcAudioLevelListener(new AudioChannelAudioLevelListener(this));
+    }
+
+    @Override
+    void initialize(RTPLevelRelayType rtpLevelRelayType)
+        throws IOException
+    {
+        super.initialize(rtpLevelRelayType);
+        transceiver.setCsrcAudioLevelListener(new AudioChannelAudioLevelListener(this));
     }
 
     /**
