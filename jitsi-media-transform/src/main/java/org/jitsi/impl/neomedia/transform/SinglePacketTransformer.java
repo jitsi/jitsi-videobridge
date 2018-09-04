@@ -34,9 +34,7 @@ package org.jitsi.impl.neomedia.transform;
  * limitations under the License.
  */
 
-import org.jitsi.nlj.srtp_og.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.util.function.*;
 import org.jitsi.util.function.Predicate;
 
 import java.util.concurrent.atomic.*;

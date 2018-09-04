@@ -34,6 +34,8 @@ package org.jitsi.nlj.srtp_og;
  * limitations under the License.
  */
 
+import org.jitsi.service.neomedia.*;
+
 import java.util.*;
 
 /**
