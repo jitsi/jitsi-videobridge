@@ -169,8 +169,14 @@ public class OctoTransportManager
 
         synchronized (socketsSyncRoot)
         {
-            rtpSocket.close();
-            rtcpSocket.close();
+            if (rtpSocket != null)
+            {
+                rtpSocket.close();
+            }
+            if (rtcpSocket != null)
+            {
+                rtcpSocket.close();
+            }
         }
     }
 

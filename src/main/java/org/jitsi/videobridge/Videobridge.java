@@ -219,6 +219,12 @@ public class Videobridge
     private VideobridgeExpireThread videobridgeExpireThread;
 
     /**
+     * The {@link Health} instance responsible for periodically performing
+     * health checks on this videobridge.
+     */
+    private Health health;
+
+    /**
      * Initializes a new <tt>Videobridge</tt> instance.
      */
     public Videobridge()
@@ -1210,17 +1216,39 @@ public class Videobridge
 
         try
         {
-            Health.check(this);
+            healthCheck();
 
             return IQ.createResultIQ(healthCheckIQ);
         }
         catch (Exception e)
         {
+            e.printStackTrace();
             return
                 IQUtils.createError(
                         healthCheckIQ,
                         XMPPError.Condition.internal_server_error,
                         e.getMessage());
+        }
+    }
+
+    /**
+     * Checks the health of this {@link Videobridge}. If it is healthy it just
+     * returns silently, otherwise it throws an exception. Note that this
+     * method does not perform any tests, but only checks the cached value
+     * provided by the bridge's {@link Health} instance.
+     *
+     * @throws Exception if the videobridge is not healthy.
+     */
+    public void healthCheck()
+        throws Exception
+    {
+        if (health == null)
+        {
+            throw new Exception("No health checks running");
+        }
+        else
+        {
+            health.check();
         }
     }
 
@@ -1309,7 +1337,9 @@ public class Videobridge
             = ServiceUtils.getService(
                 getBundleContext(), ConfigurationService.class);
 
-        return config.getBoolean(Videobridge.XMPP_API_PNAME, false);
+        // The XMPP API is disabled by default.
+        return config != null &&
+            config.getBoolean(Videobridge.XMPP_API_PNAME, false);
     }
 
     /**
@@ -1382,7 +1412,11 @@ public class Videobridge
                     ConfigurationService.class);
 
         videobridgeExpireThread.start(bundleContext);
-        Health.start(this);
+        if (health != null)
+        {
+            health.stop();
+        }
+        health = new Health(this, cfg);
 
         defaultProcessingOptions
             = (cfg == null)
@@ -1611,9 +1645,14 @@ public class Videobridge
     void stop(BundleContext bundleContext)
         throws Exception
     {
-        Health.stop(this);
         try
         {
+            if (health != null)
+            {
+                health.stop();
+                health = null;
+            }
+
             ConfigurationService cfg
                 = ServiceUtils2.getService(
                     bundleContext,
