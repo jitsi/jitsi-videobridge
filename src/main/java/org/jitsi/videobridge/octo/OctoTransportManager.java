@@ -52,6 +52,11 @@ public class OctoTransportManager
     public static final String NAMESPACE = "http://jitsi.org/octo";
 
     /**
+     * The timeout to set on the sockets that we create.
+     */
+    private static final int SO_TIMEOUT = 1000;
+
+    /**
      * Converts a "relay ID" to a socket address. The current implementation
      * assumes that the ID has the form of "address:port".
      * @param relayId the relay ID to convert
@@ -274,10 +279,10 @@ public class OctoTransportManager
         // are handled by the Multiplexing instance. Since it is persistent, it
         // will not get closed when this socket instance is closed, and will
         // therefore not throw a SocketClosedException. This means that we can
-        // not relay on this exception to stop the receive thread
+        // not rely on this exception to stop the receive thread
         // (RTPConnectorInputStream#receiveThread), and therefore we need a
         // finite timeout.
-        s.setSoTimeout(1000);
+        s.setSoTimeout(SO_TIMEOUT);
 
         return s;
     }
