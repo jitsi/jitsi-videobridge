@@ -15,7 +15,6 @@
  */
 package org.jitsi.nlj.rtcp_og;
 
-import org.jitsi.nlj.srtp_og.*;
 import org.jitsi.service.neomedia.*;
 
 import java.util.*;

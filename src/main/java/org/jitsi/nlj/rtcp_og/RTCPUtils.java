@@ -32,6 +32,7 @@ package org.jitsi.nlj.rtcp_og;
  */
 
 import org.jitsi.nlj.srtp_og.*;
+import org.jitsi.service.neomedia.*;
 
 /**
  * Utility class that contains static methods for RTCP header manipulation.

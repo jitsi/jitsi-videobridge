@@ -15,7 +15,6 @@
  */
 package org.jitsi.impl.neomedia.transform;
 
-import org.jitsi.nlj.srtp_og.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.function.*;
 
