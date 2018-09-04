@@ -1525,10 +1525,27 @@ public class SimulcastController
             private RawPacket handleVp8PictureIdRewriting(RawPacket pktOut)
             {
                 MediaStreamTrackDesc source = weakSource.get();
-                assert source != null;
+                if (source == null)
+                {
+                    logger.error("Source is null, dropping packet.");
+                    return null;
+                }
 
-                REDBlock redBlock = source.getMediaStreamTrackReceiver()
-                    .getStream().getPrimaryREDBlock(pktOut);
+                MediaStreamTrackReceiver trackReceiver
+                    = source.getMediaStreamTrackReceiver();
+                if (trackReceiver == null)
+                {
+                    logger.error("Track receiver is null, dropping packet.");
+                    return null;
+                }
+
+                MediaStream stream = trackReceiver.getStream();
+                if (stream == null)
+                {
+                    logger.error("Stream is null, dropping packet.");
+                    return null;
+                }
+                REDBlock redBlock = stream.getPrimaryREDBlock(pktOut);
 
                 if (!DePacketizer
                     .VP8PayloadDescriptor.hasExtendedPictureId(
