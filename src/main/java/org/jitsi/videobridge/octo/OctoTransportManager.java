@@ -233,7 +233,7 @@ public class OctoTransportManager
     private DatagramSocket createOctoSocket(DatagramSocket socket)
         throws SocketException
     {
-        return new DelegatingDatagramSocket(socket)
+        DatagramSocket s = new DelegatingDatagramSocket(socket)
         {
             @Override
             public void receive(DatagramPacket p)
@@ -268,6 +268,18 @@ public class OctoTransportManager
                 doSend(p, true);
             }
         };
+
+        // With the hierarchy of sockets that we use for Octo (Delegating ->
+        // Multiplexed -> Multiplexing -> DatagramSocket) the calls receive()
+        // are handled by the Multiplexing instance. Since it is persistent, it
+        // will not get closed when this socket instance is closed, and will
+        // therefore not throw a SocketClosedException. This means that we can
+        // not relay on this exception to stop the receive thread
+        // (RTPConnectorInputStream#receiveThread), and therefore we need a
+        // finite timeout.
+        s.setSoTimeout(1000);
+
+        return s;
     }
 
     /**
