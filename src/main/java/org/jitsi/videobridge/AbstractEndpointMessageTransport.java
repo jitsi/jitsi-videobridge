@@ -38,7 +38,7 @@ public abstract class AbstractEndpointMessageTransport
      * information.
      */
     private static final Logger classLogger
-        = Logger.getLogger(EndpointMessageTransport.class);
+        = Logger.getLogger(AbstractEndpointMessageTransport.class);
 
     /**
      * The {@link Endpoint} associated with this
