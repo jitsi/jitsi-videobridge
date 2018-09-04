@@ -491,8 +491,10 @@ public class Conference
     {
         synchronized (transportManagers)
         {
-            transportManagers.forEach((id, tm) -> closeTransportManager(tm));
-            transportManagers.clear();
+            Collection<TransportManager> transportManagers
+                = new LinkedList<>(this.transportManagers.values());
+            transportManagers.forEach(this::closeTransportManager);
+            this.transportManagers.clear();
         }
     }
 
