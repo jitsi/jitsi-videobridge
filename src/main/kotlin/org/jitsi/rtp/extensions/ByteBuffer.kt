@@ -19,6 +19,25 @@ import unsigned.toUInt
 import java.nio.ByteBuffer
 
 /**
+ * Return a (deep) copy of this ByteBuffer.
+ * The position and mark from the original will NOT
+ * be carried over (no mark will be set on the copy
+ * and its position will be 0).  The mark of the original
+ * will not be touched; the position of the original will
+ * end up what it was before this call was made, BUT, it's value
+ * will be modified during [clone].
+ */
+fun ByteBuffer.clone(): ByteBuffer {
+    val startPosition = this.position()
+    val clone = ByteBuffer.allocate(this.capacity())
+    this.rewind()
+    clone.put(this)
+    this.position(startPosition)
+    clone.flip()
+    return clone
+}
+
+/**
  * Move this [ByteBuffer]'s position back one Byte
  */
 fun ByteBuffer.rewindOneByte() {
