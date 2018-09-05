@@ -56,14 +56,14 @@ class VideoParser : Node("Video parser") {
                 if (format.encoding == Constants.VP8) {
 //                    videoRtpPacket.isKeyFrame = VP8Utils.isKeyFrame(videoRtpPacket.payload)
                     if (VP8Utils.isKeyFrame(videoRtpPacket.payload)) {
-                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is part of a key frame")
+//                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is part of a key frame")
                         frameDesc.independent = true
                     }
                     if (VP8Utils.isStartOfFrame(videoRtpPacket.payload)) {
                         frameDesc.start = videoRtpPacket.header.sequenceNumber
-                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the start of a frame")
+//                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the start of a frame")
                     } else if (videoRtpPacket.header.marker) {
-                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the end of a frame")
+//                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the end of a frame")
                         frameDesc.end = videoRtpPacket.header.sequenceNumber
                     }
                 }
