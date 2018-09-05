@@ -22,10 +22,9 @@ import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.UnparsedPacket
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.AbstractMediaFormat
 import org.jitsi.service.neomedia.format.Vp8MediaFormat
@@ -37,15 +36,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-
-fun ByteBuffer.clone(): ByteBuffer {
-    val clone = ByteBuffer.allocate(capacity())
-    rewind()//copy from the beginning
-    clone.put(this)
-    rewind()
-    clone.flip()
-    return clone
-}
 
 // All of this information is specific to the pcap file
 const val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1.pcap"
