@@ -914,14 +914,12 @@ public class RtpChannel
                 {
                     return;
                 }
-                ByteBuffer packetBuffer = pkt.getBuffer();
-                ByteBuffer bufferCopy = ByteBuffer.allocate(packetBuffer.capacity());
-                packetBuffer.rewind();
-                bufferCopy.put(packetBuffer);
-                bufferCopy.flip();
-                Packet pktCopy = new RtpPacket(bufferCopy);
+                Packet pktCopy = pkt.clone();
                 RtpChannel rtpChannel = (RtpChannel)channel;
-                rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktCopy));
+                if (rtpChannel.rtpTranslatorWillWrite(pktCopy))
+                {
+                    rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktCopy));
+                }
             });
         });
     }
@@ -1442,6 +1440,11 @@ public class RtpChannel
         boolean data,
         RawPacket pkt,
         RtpChannel source)
+    {
+        return true;
+    }
+
+    boolean rtpTranslatorWillWrite(Packet pkt)
     {
         return true;
     }
@@ -2136,10 +2139,23 @@ public class RtpChannel
 
         if (changed)
         {
-            getContent().getChannels().stream()
-                .filter(c -> c != this && c instanceof RtpChannel)
+            List<Channel> filteredChannels = getContent().getChannels().stream()
+                    .filter(c -> c != this && c instanceof RtpChannel).collect(Collectors.toList());
+            System.out.println("Changes in channel " + hashCode() + " updating " + filteredChannels.size() + " other channels");
+//            getContent().getChannels().stream()
+//                .filter(c -> c != this && c instanceof RtpChannel)
+            filteredChannels
                 .forEach(
-                    c -> ((RtpChannel) c).updateBitrateController());
+                    c -> {
+                        System.out.println("Updating channel " + c.hashCode() + "'s bitrate controller");
+                        ((RtpChannel) c).updateBitrateController();
+                    });
+
+            //HACK: the new endpoint isn't getting notified of the existing ones (the new one 'changes' and notifies
+            // the others of itself, but it isn't getting notified of others) -- not sure where that normally
+            // happens (probably something i don't have connected), but for now just hack it to update
+            // the bitrate controller for this one as well.
+            updateBitrateController();
         }
 
         return changed;

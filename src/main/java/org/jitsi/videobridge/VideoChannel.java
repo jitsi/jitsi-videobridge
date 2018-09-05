@@ -25,6 +25,9 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.nlj.rtp.*;
+import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
@@ -226,6 +229,7 @@ public class VideoChannel
                  Boolean initiator)
     {
         super(content, id, channelBundleId, transportNamespace, initiator);
+        System.out.println("BRIAN: created video channel " + hashCode());
 
         logger
             = Logger.getLogger(
@@ -355,6 +359,7 @@ public class VideoChannel
             || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
             || Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
+            System.out.println("BRIAN: property change, updating bitrate controller for channel " + hashCode());
             bitrateController.update();
         }
     }
@@ -374,6 +379,21 @@ public class VideoChannel
         }
 
         return bitrateController.accept(pkt);
+    }
+
+    @Override
+    boolean rtpTranslatorWillWrite(Packet pkt)
+    {
+        if (pkt instanceof RtcpPacket)
+        {
+            return true;
+        }
+        boolean accept = bitrateController.accept((VideoRtpPacket)pkt);
+        if (!accept) {
+            System.out.println("Bitrate controller not accepting video packet");
+        }
+
+        return accept;
     }
 
     /**
