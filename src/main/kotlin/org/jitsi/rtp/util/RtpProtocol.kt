@@ -15,8 +15,6 @@
  */
 package org.jitsi.rtp.util
 
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpProtocolPacket
 import unsigned.toUInt
 import java.nio.ByteBuffer
 

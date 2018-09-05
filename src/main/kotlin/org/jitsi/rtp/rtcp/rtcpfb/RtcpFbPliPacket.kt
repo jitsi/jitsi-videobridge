@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.clone
 import java.nio.ByteBuffer
 
 /**
@@ -32,4 +34,8 @@ class RtcpFbPliPacket : PayloadSpecificFbPacket {
     constructor(buf: ByteBuffer) : super(buf)
 
     constructor(mediaSourceSsrc: Long = 0) : super(mediaSourceSsrc = mediaSourceSsrc)
+
+    override fun clone(): Packet {
+        return RtcpFbPliPacket(getBuffer().clone())
+    }
 }

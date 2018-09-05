@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
 import java.nio.ByteBuffer
@@ -49,5 +51,9 @@ class RtcpFbFirPacket : PayloadSpecificFbPacket {
     // The media source ssrc in the feedback header for FIR is unused and should be 0
     ) : super(mediaSourceSsrc = 0) {
         feedbackControlInformation = Fir(mediaSourceSsrc, seqNum)
+    }
+
+    override fun clone(): Packet {
+        return RtcpFbFirPacket(getBuffer().clone())
     }
 }

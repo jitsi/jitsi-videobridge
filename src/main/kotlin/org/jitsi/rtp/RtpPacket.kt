@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.util.BufferView
 import java.nio.ByteBuffer
 
@@ -65,6 +66,10 @@ open class RtpPacket : Packet {
 
         this.buf!!.rewind()
         return this.buf!!
+    }
+
+    override fun clone(): Packet {
+        return RtpPacket(getBuffer().clone())
     }
 
     override fun toString(): String {

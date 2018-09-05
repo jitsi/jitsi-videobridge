@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.BufferView
@@ -26,6 +27,12 @@ import java.nio.ByteBuffer
 abstract class Packet {
     abstract fun getBuffer(): ByteBuffer
     abstract val size: Int
+    //TODO: could we do this here via reflection?  -> may not be possible since we
+    // don't use a primary constructor (could change that?).  also it may be slow
+    // and this will be a very critical path (used when fanning out packets)
+    abstract fun clone(): Packet
+
+    //deprecated
     val tags = mutableMapOf<String, Any>()
 }
 
@@ -38,6 +45,9 @@ abstract class Packet {
 class UnparsedPacket(private val buf: ByteBuffer) : Packet() {
     override val size: Int = buf.limit()
     override fun getBuffer(): ByteBuffer = buf
+    override fun clone(): Packet {
+        return UnparsedPacket(buf.clone())
+    }
 }
 
 open class SrtpProtocolPacket(protected val buf: ByteBuffer) : Packet() {
@@ -45,6 +55,9 @@ open class SrtpProtocolPacket(protected val buf: ByteBuffer) : Packet() {
         get() = buf.limit()
 
     override fun getBuffer(): ByteBuffer = buf
+    override fun clone(): Packet {
+        return SrtpProtocolPacket(buf.clone())
+    }
 }
 
 // https://tools.ietf.org/html/rfc3711#section-3.1
@@ -91,16 +104,10 @@ class SrtcpPacket(buf: ByteBuffer) : SrtpProtocolPacket(buf) {
 
 }
 
-//TODO: rtppacket/rtcppacket derive from this
-class RtpProtocolPacket(protected var buf: ByteBuffer) : Packet() {
-    val isRtp: Boolean = RtpProtocol.isRtp(buf)
-    override fun getBuffer(): ByteBuffer = buf
-    override val size: Int = TODO()
-    var ssrc: Int
-}
-
 class DtlsProtocolPacket(protected var buf: ByteBuffer) : Packet() {
     override val size: Int = buf.limit()
     override fun getBuffer(): ByteBuffer = buf
-
+    override fun clone(): Packet {
+        return DtlsProtocolPacket(buf.clone())
+    }
 }

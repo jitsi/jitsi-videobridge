@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
@@ -91,6 +93,10 @@ class RtcpRrPacket : RtcpPacket {
 
         this.buf!!.rewind()
         return this.buf!!
+    }
+
+    override fun clone(): Packet {
+        return RtcpRrPacket(getBuffer().clone())
     }
 
     override fun toString(): String {

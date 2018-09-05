@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
@@ -35,5 +37,9 @@ class RtcpFbNackPacket : TransportLayerFbPacket {
         missingSeqNums: List<Int> = listOf()
     ) : super(mediaSourceSsrc = mediaSourceSsrc) {
         feedbackControlInformation = Nack(packetId, missingSeqNums)
+    }
+
+    override fun clone(): Packet {
+        return RtcpFbNackPacket(getBuffer().clone())
     }
 }

@@ -15,6 +15,8 @@
  */
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
@@ -36,5 +38,9 @@ class RtcpFbTccPacket : TransportLayerFbPacket {
         packetInfo: PacketMap = PacketMap()
     ) : super(mediaSourceSsrc = mediaSourceSsrc) {
         feedbackControlInformation = Tcc(referenceTime, feedbackPacketCount, packetInfo)
+    }
+
+    override fun clone(): Packet {
+        return RtcpFbTccPacket(getBuffer().clone())
     }
 }
