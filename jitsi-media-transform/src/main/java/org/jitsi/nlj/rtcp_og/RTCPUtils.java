@@ -31,8 +31,8 @@ package org.jitsi.nlj.rtcp_og;
  * limitations under the License.
  */
 
-import org.jitsi.nlj.srtp_og.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 
 /**
  * Utility class that contains static methods for RTCP header manipulation.
