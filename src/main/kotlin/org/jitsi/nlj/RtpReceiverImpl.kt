@@ -25,10 +25,12 @@ import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.transform.node.PcapWriter
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
 import org.jitsi.nlj.transform.node.incoming.FirRequester
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
+import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.forEachAs
@@ -93,6 +95,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
+//                        node(PcapWriter())
+                        node(VideoParser())
                         node(FirRequester(rtcpSender))
                         //TODO: how should retransmissions without rtx be handled with srtp?
 //                        node(NackGeneratorNode(rtcpSender))
