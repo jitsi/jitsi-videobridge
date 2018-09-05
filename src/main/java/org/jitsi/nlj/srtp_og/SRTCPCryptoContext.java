@@ -268,6 +268,8 @@ public class SRTCPCryptoContext
         int payloadLength = pkt.getLength() - payloadOffset;
 //        System.out.println("BRIAN: decrypting srtcp buffer with offset " + (pkt.getOffset() + payloadOffset) +
 //                " and size " + payloadLength + " which is buffer: " + toHex(pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength));
+//        System.out.println("BRIAN: decrypting srtcp pkt offset " + pkt.getOffset() + " pkt length " + pkt.getLength() +
+//                        " pkt buffer: " + toHex(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
 
         cipherCtr.process(
                 pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength,
@@ -276,6 +278,8 @@ public class SRTCPCryptoContext
 //                toHex(pkt.getBuffer(), pkt.getOffset() + payloadOffset, payloadLength));
 //        System.out.println("BRIAN: srtcp buffer after decrypt (entire buf): " +
 //                toHex(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
+//        System.out.println("BRIAN: srtcp after decrypt pkt offset " + pkt.getOffset() + " pkt length " + pkt.getLength() +
+//                        " pkt buffer: " + toHex(pkt.getBuffer(), pkt.getOffset(), pkt.getLength()));
     }
     private static final char[] HEX_ENCODE_TABLE
             = {

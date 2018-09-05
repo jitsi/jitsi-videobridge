@@ -187,6 +187,9 @@ public class SRTPTransformer
                     System.out.println("BRIAN: deriving new context from factory " +
                             engine.hashCode() + " with ssrc " + ssrc + " and index " +
                             deriveSrtpKeysIndex);
+                    for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+                        System.out.println(ste);
+                    }
                     context = context.deriveContext(ssrc, 0, 0);
                     context.deriveSrtpKeys(deriveSrtpKeysIndex);
                     contexts.put(ssrc, context);
@@ -232,6 +235,9 @@ public class SRTPTransformer
         if (res == null) {
             System.out.println("BRIAN: decryption of packet " + pkt.getSSRCAsLong() + " " + pkt.getSequenceNumber() +
                     " failed");
+            for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+                System.out.println(ste);
+            }
         }
 //        System.out.println("BRIAN: packet " + pkt.getSSRCAsLong() + " " +
 //                pkt.getSequenceNumber() + " (length: " + pkt.getLength() + " after decrypt: " +
