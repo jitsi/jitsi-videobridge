@@ -36,7 +36,9 @@ class RtcpTermination : Node("RTCP termination") {
                     // Process & terminate
 //                    println("BRIAN: terminating ${it.javaClass} rtcp packet")
                 }
-                is RtcpFbNackPacket, is RtcpFbPliPacket, is RtcpFbFirPacket -> {
+                //TODO: not dealing with nacks for now, as they cause decrypt issues (i think because the packets
+                // are being retransmitted and causing replay issues)
+                /*is RtcpFbNackPacket,*/ is RtcpFbPliPacket, is RtcpFbFirPacket -> {
                     // Pass through
                     // (nacks we'll eventually do processing on and try to retransmit, the
                     // others will go all the way through)
