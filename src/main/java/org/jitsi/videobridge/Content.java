@@ -87,6 +87,8 @@ public class Content
      */
     private final Map<String,Channel> channels = new HashMap<>();
 
+    private List<Channel> channelsFast = new ArrayList<>();
+
     /**
      * The <tt>Conference</tt> which has initialized this <tt>Content</tt>.
      */
@@ -341,60 +343,12 @@ public class Content
                 }
             }
 
+            channel.initialize(rtpLevelRelayType);
             channels.put(id, channel);
+            channelsFast = new LinkedList<>(channels.values());
         }
 
         // Initialize channel
-        channel.initialize(rtpLevelRelayType);
-
-        if (channel instanceof RtpChannel) {
-            // BRIAN: hard-wire this channel to the other one
-            // in this content, if it exists yet
-            System.out.println("BRIAN: hard-wiring channels of type " + getMediaType());
-            channels.entrySet().forEach(channelEntry -> {
-                if (channelEntry.getValue() != channel) {
-                    RtpChannel otherChannel = (RtpChannel)channelEntry.getValue();
-                    channel.transceiver.getRtpReceiver().setRtpPacketHandler(new Node("RTP receiver chain handler") {
-                        @Override
-                        public void doProcessPackets(@NotNull List<? extends Packet> pkts)
-                        {
-                            otherChannel.transceiver.sendPackets(pkts);
-                        }
-                    });
-                    otherChannel.transceiver.getRtpReceiver().setRtpPacketHandler(new Node("RTP receiver chain handler") {
-                        @Override
-                        public void doProcessPackets(@NotNull List<? extends Packet> pkts)
-                        {
-                            channel.transceiver.sendPackets(pkts);
-                        }
-                    });
-                    channel.transceiver.getRtpReceiver().setRtcpPacketHandler(new Node("RTCP receiver chain handler") {
-                        @Override
-                        protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
-                        {
-                            pkts.forEach(pkt -> {
-                                RtcpFbPacket rtcpPacket = (RtcpFbPacket)pkt;
-                                System.out.println("Received RTCP packet " + pkt.getClass() + " intended for stream " +
-                                        rtcpPacket.getMediaSourceSsrc());
-                                otherChannel.transceiver.getRtpSender().sendRtcp(Collections.singletonList(rtcpPacket));
-                            });
-                        }
-                    });
-                    otherChannel.transceiver.getRtpReceiver().setRtcpPacketHandler(new Node("RTCP receiver chain handler") {
-                        @Override
-                        protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
-                        {
-                            pkts.forEach(pkt -> {
-                                RtcpFbPacket rtcpPacket = (RtcpFbPacket)pkt;
-                                System.out.println("Received RTCP packet " + pkt.getClass() + " intended for stream " +
-                                        rtcpPacket.getMediaSourceSsrc());
-                                channel.transceiver.getRtpSender().sendRtcp(Collections.singletonList(rtcpPacket));
-                            });
-                        }
-                    });
-                }
-            });
-        }
 
         if (logger.isInfoEnabled())
         {
@@ -570,6 +524,7 @@ public class Content
             if (channel.equals(channels.get(id)))
             {
                 channels.remove(id);
+                channelsFast = new LinkedList<>(channels.values());
                 expireChannel = true;
             }
             else
@@ -747,6 +702,12 @@ public class Content
         {
             return new LinkedList<>(channels.values());
         }
+    }
+
+    public List<Channel> getChannelsFast()
+    {
+        return channelsFast;
+
     }
 
     /**

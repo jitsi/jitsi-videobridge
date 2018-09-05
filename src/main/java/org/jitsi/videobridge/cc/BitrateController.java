@@ -387,6 +387,7 @@ public class BitrateController
         long ssrc = pkt.getSSRCAsLong();
         if (ssrc < 0)
         {
+            System.out.println("bitrate controller not accepting packet: bad ssrc");
             return false;
         }
 
@@ -398,6 +399,7 @@ public class BitrateController
             logger.warn(
                 "Dropping an RTP packet, because the SSRC has not " +
                     "been signaled:" + ssrc);
+            System.out.println("bitrate controller dropping packet: ssrc was not signaled");
             return false;
         }
 

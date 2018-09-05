@@ -22,6 +22,7 @@ import net.java.sip.communicator.util.*;
 import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 import org.ice4j.socket.*;
+import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
@@ -29,6 +30,11 @@ import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.impl.neomedia.transform.zrtp.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.transform.node.*;
+import org.jitsi.nlj.util.*;
+import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
+import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
@@ -47,8 +53,10 @@ import javax.media.rtp.*;
 import java.beans.*;
 import java.io.*;
 import java.net.*;
+import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.*;
 
 /**
  * Represents channel in the terms of Jitsi Videobridge.
@@ -655,7 +663,7 @@ public class RtpChannel
         newReceiveSSRCs[length] = 0xFFFFFFFFL & receiveSSRC;
         newReceiveSSRCs[length + 1] = now;
         receiveSSRCs = newReceiveSSRCs;
-        transceiver.addReceiveSsrc(receiveSSRC);
+        transceiver.addReceiveSsrc(0xFFFFFFFFL & receiveSSRC);
 
         return true;
 
@@ -897,6 +905,44 @@ public class RtpChannel
         initialize(null);
     }
 
+    protected void handleIncomingRtp(List<? extends Packet> packets)
+    {
+        // For now, just write every packet to every channel other than ourselves
+        packets.forEach(pkt -> {
+            getContent().getChannelsFast().forEach(channel -> {
+                if (channel == this)
+                {
+                    return;
+                }
+                ByteBuffer packetBuffer = pkt.getBuffer();
+                ByteBuffer bufferCopy = ByteBuffer.allocate(packetBuffer.capacity());
+                packetBuffer.rewind();
+                bufferCopy.put(packetBuffer);
+                bufferCopy.flip();
+                Packet pktCopy = new RtpPacket(bufferCopy);
+                RtpChannel rtpChannel = (RtpChannel)channel;
+                rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktCopy));
+            });
+        });
+    }
+    protected void handleIncomingRtcp(List<? extends Packet> packets)
+    {
+        // We don't need to copy RTCP packets for each dest like we do with RTP because each one
+        // will only have a single destination
+        getContent().getChannelsFast().forEach(channel -> {
+            if (channel instanceof RtpChannel)
+            {
+                RtpChannel rtpChannel = (RtpChannel) channel;
+                packets.forEach(pkt -> {
+                    RtcpFbPacket rtcpPacket = (RtcpFbPacket) pkt;
+                    if (rtpChannel.transceiver.receivesSsrc(rtcpPacket.getMediaSourceSsrc())) {
+                        rtpChannel.transceiver.getRtpSender().sendRtcp(Collections.singletonList(rtcpPacket));
+                    }
+                });
+            }
+        });
+    }
+
     private static ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
     void initialize(RTPLevelRelayType rtpLevelRelayType)
         throws IOException
@@ -917,6 +963,20 @@ public class RtpChannel
                         mediaType,
                         getSrtpControl());
             transceiver = new Transceiver(mediaType.toString(), transceiverExecutor);
+            transceiver.getRtpReceiver().setRtpPacketHandler(new Node("RTP receiver chain handler") {
+                @Override
+                public void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                {
+                    handleIncomingRtp(pkts);
+                }
+            });
+            transceiver.getRtpReceiver().setRtcpPacketHandler(new Node("RTCP receiver chain handler") {
+                @Override
+                public void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                {
+                    handleIncomingRtcp(pkts);
+                }
+            });
 
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes
@@ -938,6 +998,16 @@ public class RtpChannel
             if (transformEngine != null)
             {
                 stream.setExternalTransformer(transformEngine);
+                new Node("External transform wrapper") {
+                    @Override
+                    protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                    {
+                        //TODO: still need to wrap bitratecontroller specifically to incorporate the
+                        // willWrite logic
+                        RawPacket[] rawPackets = pkts.stream().map(PacketExtensionsKt::toRawPacket).toArray(RawPacket[]::new);
+                        RawPacket[] outPackets = transformEngine.getRTPTransformer().transform(rawPackets);
+                    }
+                };
             }
             if (transportCCEngine != null)
             {
