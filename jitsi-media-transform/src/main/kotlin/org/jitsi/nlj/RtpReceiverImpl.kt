@@ -111,10 +111,22 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 packetPath {
                     predicate = { pkt -> RtpProtocol.isRtcp(pkt.getBuffer()) }
                     path = pipeline {
+                        var prevRtcpPackets = mutableListOf<Packet>()
                         simpleNode("SRTCP parser ${hashCode()}") { pkts ->
                             pkts.map(Packet::getBuffer).map(::SrtcpPacket)
                         }
                         node(srtcpDecryptWrapper)
+                        simpleNode("RTCP pre-parse cache ${hashCode()}") { pkts ->
+                            prevRtcpPackets.clear()
+                            pkts.forEach {
+                                prevRtcpPackets.add(it.clone())
+                            }
+                            pkts
+                        }
+
+                        simpleNode("RTCP parser ${hashCode()}") { pkts ->
+                            pkts.map(Packet::getBuffer).map { RtcpPacket.fromBuffer(it) }
+                        }
                         simpleNode("Compound RTCP splitter") { pkts ->
                             try {
                                 pkts
@@ -124,7 +136,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     .flatten()
                                     .toList()
                             } catch (e: Exception) {
-                                println("Exception extracting rtcp")
+                                println("Exception extracting rtcp.  The original, decrypted packet buffer is one of " +
+                                        "these:\n")
+                                prevRtcpPackets.forEach { println(it.getBuffer().toHex())}
                                 emptyList()
                             }
                         }
