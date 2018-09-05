@@ -28,6 +28,7 @@ import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.AbstractMediaFormat
+import org.jitsi.service.neomedia.format.Vp8MediaFormat
 import java.lang.Thread.sleep
 import java.net.URI
 import java.nio.ByteBuffer
@@ -98,7 +99,7 @@ fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
     rtpReceiver.setSrtpTransformer(srtpTransformer)
     rtpReceiver.setSrtcpTransformer(srtcpTransformer)
 
-    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(100, AbstractMediaFormat()))
+    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(100, Vp8MediaFormat()))
     rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(111, AbstractMediaFormat()))
     rtpReceiver.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
 
@@ -144,10 +145,10 @@ fun main(args: Array<String>) {
             // grab the buffer directly
             ByteBuffer.wrap(pkt.payload.array, 32, (pkt.payload.array.size - 32)).slice()
         }
-        if (numPackets % 100 == 0) {
-            println("BRIAN: dropping packet ${RtpPacket(buf).header.sequenceNumber}")
-            return@loop true
-        }
+//        if (numPackets % 100 == 0) {
+//            println("BRIAN: dropping packet ${RtpPacket(buf).header.sequenceNumber}")
+//            return@loop true
+//        }
 //        println("got rtp buf:\n${buf.toHex()}")
 //        println("Sending packet #$numPackets to receivers")
         for (receiver in receivers) {
