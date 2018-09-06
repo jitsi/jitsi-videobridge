@@ -16,7 +16,9 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.extensions.clone
+import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.util.BufferView
+import unsigned.toUInt
 import java.nio.ByteBuffer
 
 // would https://github.com/kotlin-graphics/kotlin-unsigned be useful?
@@ -45,7 +47,7 @@ open class RtpPacket : Packet {
     constructor(buf: ByteBuffer) {
         this.buf = buf
         this.header = RtpHeader(buf)
-        this.payload = (buf.position(header.size) as ByteBuffer).slice().duplicate()
+        this.payload = buf.subBuffer(header.size)
     }
 
     constructor(
@@ -54,6 +56,18 @@ open class RtpPacket : Packet {
     ) {
         this.header = header
         this.payload = payload
+    }
+
+    fun getPaddingSize(): Int {
+        return if (!this.header.hasPadding) {
+            0
+        } else {
+            // The last octet of the padding contains a count of how many
+            // padding octets should be ignored, including itself.
+
+            // It's an 8-bit unsigned number.
+            payload.get(payload.limit() - 1).toUInt()
+        }
     }
 
     override fun getBuffer(): ByteBuffer {
