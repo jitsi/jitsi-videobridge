@@ -51,9 +51,9 @@ class RtxHandler : Node("RTX handler") {
         p.forEachAs<RtpPacket> { pkt ->
             if (associatedPayloadTypes.containsKey(pkt.header.payloadType)) {
                 val rtxPacket = RtxPacket(pkt.getBuffer())
-                println("Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
-                        "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
-                        "buffer:\n${rtxPacket.getBuffer().toHex()}")
+//                println("Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
+//                        "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
+//                        "buffer:\n${rtxPacket.getBuffer().toHex()}")
                 if (rtxPacket.payload.limit() - rtxPacket.getPaddingSize() < 2) {
                     println("RTX packet is padding, ignore")
                     numPaddingPacketsReceived++
