@@ -15,30 +15,29 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
+import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
+import org.jitsi.nlj.transform.node.incoming.FirRequester
+import org.jitsi.nlj.transform.node.incoming.PaddingTermination
+import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
+import org.jitsi.nlj.transform.node.incoming.RtcpTermination
+import org.jitsi.nlj.transform.node.incoming.RtxHandler
 import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
+import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
-import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
-import org.jitsi.nlj.transform.node.PcapWriter
-import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
-import org.jitsi.nlj.transform.node.incoming.FirRequester
-import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
-import org.jitsi.nlj.transform.node.incoming.RtcpTermination
-import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
-import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.SrtpProtocolPacket
-import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -96,6 +95,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
 //                        node(PcapWriter())
+                        node(RtxHandler())
+                        node(PaddingTermination())
                         node(VideoParser())
                         node(FirRequester(rtcpSender))
                         //TODO: how should retransmissions without rtx be handled with srtp?

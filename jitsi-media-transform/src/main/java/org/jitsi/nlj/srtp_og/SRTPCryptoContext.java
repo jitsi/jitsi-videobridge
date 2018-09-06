@@ -315,12 +315,12 @@ public class SRTPCryptoContext
         {
             if (sender)
             {
-//                logger.error(
-//                        "Discarding RTP packet with sequence number " + seqNo
-//                                + ", SSRC " + Long.toString(0xFFFFFFFFL & ssrc)
-//                                + " because it is outside the replay window! (roc "
-//                                + roc + ", s_l " + s_l + ", guessedROC "
-//                                + guessedROC);
+                System.out.println(
+                        "Discarding RTP packet with sequence number " + seqNo
+                                + ", SSRC " + Long.toString(0xFFFFFFFFL & ssrc)
+                                + " because it is outside the replay window! (roc "
+                                + roc + ", s_l " + s_l + ", guessedROC "
+                                + guessedROC);
             }
             return false; // Packet too old.
         }
@@ -328,12 +328,12 @@ public class SRTPCryptoContext
         {
             if (sender)
             {
-//                logger.error(
-//                        "Discarding RTP packet with sequence number " + seqNo
-//                                + ", SSRC " + Long.toString(0xFFFFFFFFL & ssrc)
-//                                + " because it has been received already! (roc "
-//                                + roc + ", s_l " + s_l + ", guessedROC "
-//                                + guessedROC);
+                System.out.println(
+                        "Discarding RTP packet with sequence number " + seqNo
+                                + ", SSRC " + Long.toString(0xFFFFFFFFL & ssrc)
+                                + " because it has been received already! (roc "
+                                + roc + ", s_l " + s_l + ", guessedROC "
+                                + guessedROC);
             }
             return false; // Packet received already!
         }

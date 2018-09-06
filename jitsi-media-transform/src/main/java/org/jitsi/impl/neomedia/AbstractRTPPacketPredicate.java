@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.rtcp_og;
+package org.jitsi.impl.neomedia;
 
 /*
  * Copyright @ 2015 Atlassian Pty Ltd
@@ -31,9 +31,10 @@ package org.jitsi.nlj.rtcp_og;
  * limitations under the License.
  */
 
+import org.jitsi.nlj.rtcp_og.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.function.*;
 
-import java.util.function.*;
 
 /**
  * @author George Politis
