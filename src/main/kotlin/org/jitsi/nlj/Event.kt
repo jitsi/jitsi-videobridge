@@ -28,3 +28,9 @@ class RtpExtensionClearEvent : Event
 
 class ReceiveSsrcAddedEvent(val ssrc: Long) : Event
 class ReceiveSsrcRemovedEvent(val ssrc: Long) : Event
+
+class SsrcAssociationEvent(
+    val primarySsrc: Long,
+    val secondarySsrc: Long,
+    val type: String
+) : Event

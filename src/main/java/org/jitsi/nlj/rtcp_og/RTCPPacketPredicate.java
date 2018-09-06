@@ -31,6 +31,8 @@ package org.jitsi.nlj.rtcp_og;
  * limitations under the License.
  */
 
+import org.jitsi.impl.neomedia.*;
+
 /**
  * Represents a predicate (boolean-valued function) of a <tt>RawPacket</tt>.
  *

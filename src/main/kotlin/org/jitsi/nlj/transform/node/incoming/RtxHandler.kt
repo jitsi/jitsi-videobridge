@@ -1,0 +1,106 @@
+/*
+ * Copyright @ 2018 Atlassian Pty Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.jitsi.nlj.transform.node.incoming
+
+import org.jitsi.nlj.Event
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
+import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.SsrcAssociationEvent
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.forEachAs
+import org.jitsi.rtp.Packet
+import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.RtxPacket
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.service.neomedia.codec.Constants
+import unsigned.toUInt
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Handle incoming RTX packets to strip the RTX information and make them
+ * look like their original packets.
+ * https://tools.ietf.org/html/rfc4588
+ */
+class RtxHandler : Node("RTX handler") {
+    var numPaddingPacketsReceived = 0
+    var numRtxPacketsReceived = 0
+    /**
+     * Maps the RTX payload types to their associated video payload types
+     */
+    private val associatedPayloadTypes: ConcurrentHashMap<Int, Int> = ConcurrentHashMap()
+    /**
+     * Map the RTX stream ssrcs to their corresponding media ssrcs
+     */
+    private val associatedSsrcs: ConcurrentHashMap<Long, Long> = ConcurrentHashMap()
+
+    override fun doProcessPackets(p: List<Packet>) {
+        val outPackets = mutableListOf<RtpPacket>()
+        p.forEachAs<RtpPacket> { pkt ->
+            if (associatedPayloadTypes.containsKey(pkt.header.payloadType)) {
+                val rtxPacket = RtxPacket(pkt.getBuffer())
+                println("Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
+                        "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
+                        "buffer:\n${rtxPacket.getBuffer().toHex()}")
+                if (rtxPacket.payload.limit() - rtxPacket.getPaddingSize() < 2) {
+                    println("RTX packet is padding, ignore")
+                    numPaddingPacketsReceived++
+                    return@forEachAs
+                }
+                val originalSeqNum = rtxPacket.originalSequenceNmber
+                val originalPt = associatedPayloadTypes[pkt.header.payloadType]!!
+                val originalSsrc = associatedSsrcs[pkt.header.ssrc]!!
+
+                val originalPacket = rtxPacket.toRtpPacket()
+                originalPacket.header.sequenceNumber = originalSeqNum
+                originalPacket.header.payloadType = originalPt
+                originalPacket.header.ssrc = originalSsrc
+                println("Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum")
+                numRtxPacketsReceived++
+                outPackets.add(originalPacket)
+            } else {
+                outPackets.add(pkt)
+            }
+        }
+        next(outPackets)
+    }
+
+    override fun handleEvent(event: Event) {
+        when (event) {
+            is RtpPayloadTypeAddedEvent -> {
+                if (Constants.RTX.equals(event.format.encoding, true)) {
+                    val rtxPt = event.payloadType.toUInt()
+                    event.format.formatParameters["apt"]?.toByte()?.toUInt()?.let {
+                        val associatedPt = it
+                        println("Associating RTX payload type $rtxPt with primary $associatedPt")
+                        associatedPayloadTypes[rtxPt] = associatedPt
+                    } ?: run {
+                        println("Unable to parse RTX associated payload type from event: $event")
+                    }
+                }
+            }
+            is RtpPayloadTypeClearEvent -> {
+                associatedPayloadTypes.clear()
+            }
+            is SsrcAssociationEvent -> {
+                if (event.type.equals(Constants.RTX)) {
+                    println("Associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}")
+                    associatedSsrcs[event.secondarySsrc] = event.primarySsrc
+                }
+            }
+        }
+        super.handleEvent(event)
+    }
+}

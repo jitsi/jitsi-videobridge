@@ -16,17 +16,15 @@
 package org.jitsi.nlj
 
 import org.bouncycastle.crypto.tls.TlsContext
-import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.incoming.DtlsReceiverNode
-import org.jitsi.nlj.transform.node.outgoing.DtlsSenderNode
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.service.neomedia.format.MediaFormat
+import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -144,6 +142,10 @@ class Transceiver(
     fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
         println("BRIAN: transceiver setting csrc audio level listener on receiver")
         rtpReceiver.setCsrcAudioLevelListener(csrcAudioLevelListener)
+    }
+
+    fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: String) {
+        rtpReceiver.handleEvent(SsrcAssociationEvent(primarySsrc, secondarySsrc, type))
     }
 
     fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsContext: TlsContext) {
