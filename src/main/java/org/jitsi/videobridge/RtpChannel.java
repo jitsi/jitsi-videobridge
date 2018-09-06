@@ -37,6 +37,7 @@ import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.Constants;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -916,6 +917,8 @@ public class RtpChannel
                 }
                 Packet pktCopy = pkt.clone();
                 RtpChannel rtpChannel = (RtpChannel)channel;
+                // If we can *know* that the rtpTranslatorWillWrite chain will not modify the packet (and perhaps we
+                // can enforce this?) then we can wait to make the copy
                 if (rtpChannel.rtpTranslatorWillWrite(pktCopy))
                 {
                     rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktCopy));
@@ -2135,6 +2138,24 @@ public class RtpChannel
 
             changed
                 = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
+
+
+            System.out.println("BRIAN: iterating through " + sourceGroups.size() + " source groups");
+            sourceGroups.forEach(sourceGroup -> {
+                if (!sourceGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
+                {
+                    long primarySsrc = sourceGroup.getSources().get(0).getSSRC();
+                    long secondarySsrc = sourceGroup.getSources().get(1).getSSRC();
+                    String semantics = sourceGroup.getSemantics();
+                    if (semantics.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FID)) {
+                        // Translate FID -> RTX
+                        semantics = Constants.RTX;
+                    }
+                    System.out.println("BRIAN: notifying transceiver of ssrc association: " +
+                            secondarySsrc + " -> " + primarySsrc + " (" + semantics + ")");
+                    transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
+                }
+            });
         }
 
         if (changed)
