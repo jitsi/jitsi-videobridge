@@ -17,8 +17,13 @@ package org.jitsi.nlj.util
 
 import org.jitsi.rtp.Packet
 import org.jitsi.service.neomedia.RawPacket
+import java.nio.ByteBuffer
 
 fun Packet.toRawPacket(): RawPacket {
     val packetBuf = getBuffer()
     return RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
+}
+
+fun RawPacket.getByteBuffer(): ByteBuffer {
+    return ByteBuffer.wrap(buffer, offset, length)
 }
