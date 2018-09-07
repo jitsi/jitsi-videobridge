@@ -21,6 +21,7 @@ import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PacketCache
 import org.jitsi.nlj.transform.node.PacketLoss
+import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
@@ -49,6 +50,7 @@ class RtpSenderImpl(
     private val srtpEncryptWrapper = SrtpTransformerEncryptNode()
     private val srtcpEncryptWrapper = SrtcpTransformerEncryptNode()
     private val outgoingPacketCache = PacketCache()
+    private val absSendTime = AbsSendTime()
 
     private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
         override fun doProcessPackets(p: List<PacketInfo>) {
@@ -72,16 +74,16 @@ class RtpSenderImpl(
                 pktInfos
             }
             node(outgoingPacketCache)
+            node(absSendTime)
             node(srtpEncryptWrapper)
             node(PacketLoss(.01))
             node(outputPipelineTerminationNode)
         }
 
-        // The outgoing rtx pipeline has a retransmission sender and then ties into
-        // the RTP chain at the srtp encrypt node
         outgoingRtxRoot = pipeline {
             node(RetransmissionSender())
-            node(srtpEncryptWrapper)
+            // We want RTX packets to hook into the main RTP pipeline starting at AbsSendTime
+            node(absSendTime)
         }
 
         //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline

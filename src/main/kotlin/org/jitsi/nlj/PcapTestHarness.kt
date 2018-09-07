@@ -102,6 +102,9 @@ fun main(args: Array<String>) {
     val receivers = mutableListOf<RtpReceiver>()
     val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()
 
+    val sender = RtpSenderImpl(456L, executor)
+    sender.handleEvent(RtpExtensionAddedEvent(11, RTPExtension(URI(RTPExtension.ABS_SEND_TIME_URN))))
+
     for (i in 1..numReceivers) {
         val rtpReceiver = createRtpReceiver(executor)
         var numReceivedPackets = 0
@@ -113,6 +116,7 @@ fun main(args: Array<String>) {
                     println("ALL PACKETS FORWARDED")
                     doneFuture.complete(Unit)
                 }
+                sender.incomingPacketQueue.addAll(p.map(PacketInfo::packet))
             }
         })
         receivers.add(rtpReceiver)
@@ -158,7 +162,6 @@ fun main(args: Array<String>) {
 
     receivers.forEach(RtpReceiver::stop)
 
-    val sender = RtpSenderImpl(456L, executor)
     println("sender stats:\n${sender.getStats()}")
 
 
