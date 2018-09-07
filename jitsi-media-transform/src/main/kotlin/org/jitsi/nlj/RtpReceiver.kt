@@ -40,7 +40,7 @@ abstract class RtpReceiver :
     /**
      * Enqueue an incoming packet to be processed
      */
-    abstract fun enqueuePacket(p: Packet)
+    abstract fun enqueuePacket(p: PacketInfo)
 
     /**
      * Set the SRTP transformer to be used for RTP decryption

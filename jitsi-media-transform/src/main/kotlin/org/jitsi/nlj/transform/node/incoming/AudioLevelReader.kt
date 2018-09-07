@@ -16,11 +16,11 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.forEachAs
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
@@ -30,9 +30,9 @@ import kotlin.experimental.and
 class AudioLevelReader : Node("Audio level reader") {
     private var audioLevelExtId: Int? = null
     var csrcAudioLevelListener: CsrcAudioLevelListener? = null
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
         audioLevelExtId?.let { audioLevelId ->
-            p.forEachAs<RtpPacket> currPkt@ { pkt ->
+            p.forEachAs<RtpPacket> currPkt@ { _, pkt ->
                 val levelExt = pkt.header.getExtension(audioLevelId) ?: return@currPkt
                 val level = (levelExt.data.get() and 0x7F).toLong()
                 csrcAudioLevelListener?.audioLevelsReceived(longArrayOf(pkt.header.ssrc, level))

@@ -16,12 +16,12 @@
 package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.forEachAs
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.RtxPacket
 import org.jitsi.service.neomedia.codec.Constants
@@ -43,28 +43,29 @@ class RetransmissionSender : Node("Retransmission sender") {
      */
     private val rtxStreamSeqNums: MutableMap<Long, Int> = mutableMapOf()
 
-    override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<Packet>()
-        p.forEachAs<RtpPacket> {
-            println("Retransmission sender ${hashCode()} retransmitting packet with original ssrc ${it.header.ssrc} and original" +
-                    " payload type: ${it.header.payloadType}")
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        val outPackets = mutableListOf<PacketInfo>()
+        p.forEachAs<RtpPacket> { packetInfo, pkt ->
+            println("Retransmission sender ${hashCode()} retransmitting packet with original ssrc ${pkt.header.ssrc} and original" +
+                    " payload type: ${pkt.header.payloadType}")
             println("associatedSsrcs: $associatedSsrcs")
-            val rtxSsrc = associatedSsrcs[it.header.ssrc] ?: return@forEachAs
-            println("Found rtx ssrc $rtxSsrc for primary ${it.header.ssrc}")
+            val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: return@forEachAs
+            println("Found rtx ssrc $rtxSsrc for primary ${pkt.header.ssrc}")
             println("associatedPts: $associatedPayloadTypes")
-            val rtxPt = associatedPayloadTypes[it.header.payloadType] ?: return@forEachAs
-            println("Found rtx pt $rtxPt for primary ${it.header.payloadType}")
+            val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: return@forEachAs
+            println("Found rtx pt $rtxPt for primary ${pkt.header.payloadType}")
             // Get a default value of 1 to start if it isn't present in the map.  If it is present
             // in the map, get the value and increment it by 1
             val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
 
-            val rtxPacket = RtxPacket(it)
+            val rtxPacket = RtxPacket(pkt)
             rtxPacket.header.ssrc = rtxSsrc
             rtxPacket.header.payloadType = rtxPt
             rtxPacket.header.sequenceNumber = rtxSeqNum
             println("Sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum")
+            packetInfo.packet = rtxPacket
 
-            outPackets.add(rtxPacket)
+            outPackets.add(packetInfo)
         }
 
         next(outPackets)
@@ -89,7 +90,7 @@ class RetransmissionSender : Node("Retransmission sender") {
                 associatedPayloadTypes.clear()
             }
             is SsrcAssociationEvent -> {
-                if (event.type.equals(Constants.RTX)) {
+                if (event.type == Constants.RTX) {
                     println("Retransmission sender ${hashCode()} associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}")
                     associatedSsrcs[event.primarySsrc] = event.secondarySsrc
                 }

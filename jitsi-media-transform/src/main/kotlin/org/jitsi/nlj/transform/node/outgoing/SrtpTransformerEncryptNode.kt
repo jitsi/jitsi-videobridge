@@ -18,15 +18,15 @@ package org.jitsi.nlj.transform.node.outgoing
 import org.jitsi.service.neomedia.RawPacket
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtpPacket
 import java.nio.ByteBuffer
 
 class SrtpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTP Encrypt wrapper") {
-    override fun doTransform(pkts: List<Packet>, transformer: SinglePacketTransformer): List<Packet> {
-        val encryptedPackets = mutableListOf<SrtpPacket>()
+    override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         pkts.forEach {
-            val packetBuf = it.getBuffer()
+            val packetBuf = it.packet.getBuffer()
             //TODO change these to use packet.toRawPacket()
             val rp = RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
             transformer.transform(rp)?.let { encryptedRawPacket ->
@@ -35,9 +35,10 @@ class SrtpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTP Encrypt wra
                         encryptedRawPacket.buffer,
                         encryptedRawPacket.offset,
                         encryptedRawPacket.length))
-                encryptedPackets.add(srtpPacket)
+                // Change the PacketInfo to contain the new packet
+                it.packet = srtpPacket
             }
         }
-        return encryptedPackets
+        return pkts
     }
 }

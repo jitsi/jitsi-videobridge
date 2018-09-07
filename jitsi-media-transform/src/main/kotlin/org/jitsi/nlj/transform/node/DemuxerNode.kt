@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node
 
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.Packet
 
@@ -32,11 +33,11 @@ class DemuxerNode : Node("Demuxer") {
 
     override fun attach(node: Node) = throw Exception()
 
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
         // Is this scheme always better? Or only when the list of
         // packets is above a certain size?
         transformPaths.forEach { predicate, chain ->
-            val pathPackets = p.filter(predicate)
+            val pathPackets = p.filter { predicate.invoke(it.packet) }
             next(chain, pathPackets)
         }
     }

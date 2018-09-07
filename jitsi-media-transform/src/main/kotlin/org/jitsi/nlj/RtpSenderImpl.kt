@@ -15,21 +15,19 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.NodeStatsVisitor
-import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
-import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
-import org.jitsi.nlj.transform.pipeline
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
+import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PacketCache
 import org.jitsi.nlj.transform.node.PacketLoss
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
+import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
+import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
+import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
-import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -53,7 +51,7 @@ class RtpSenderImpl(
     private val outgoingPacketCache = PacketCache()
 
     private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
-        override fun doProcessPackets(p: List<Packet>) {
+        override fun doProcessPackets(p: List<PacketInfo>) {
             this@RtpSenderImpl.packetSender.processPackets(p)
         }
     }
@@ -63,15 +61,15 @@ class RtpSenderImpl(
     init {
         println("Sender ${this.hashCode()} using executor ${executor.hashCode()}")
         outgoingRtpRoot = pipeline {
-            simpleNode("TEMP sender ssrc setter") { pkts ->
-                if (tempSenderSsrc == null && pkts.isNotEmpty()) {
-                    val pkt = pkts[0]
-                    if (pkt is RtpPacket) {
-                        tempSenderSsrc = pkt.header.ssrc
+            simpleNode("TEMP sender ssrc setter") { pktInfos ->
+                if (tempSenderSsrc == null && pktInfos.isNotEmpty()) {
+                    val pktInfo = pktInfos[0]
+                    if (pktInfo.packet is RtpPacket) {
+                        tempSenderSsrc = (pktInfo.packet as? RtpPacket)?.header?.ssrc
                         println("RtpSenderImpl ${hashCode()} setting sender ssrc to $tempSenderSsrc")
                     }
                 }
-                pkts
+                pktInfos
             }
             node(outgoingPacketCache)
             node(srtpEncryptWrapper)
@@ -88,19 +86,19 @@ class RtpSenderImpl(
 
         //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
         outgoingRtcpRoot = pipeline {
-            simpleNode("RTCP sender ssrc setter") { pkts ->
+            simpleNode("RTCP sender ssrc setter") { pktInfos ->
                 tempSenderSsrc?.let { senderSsrc ->
-                    pkts.forEachAs<RtcpPacket> {
+                    pktInfos.forEachAs<RtcpPacket> { pktInfo, pkt ->
 //                        println("RtpSenderImpl ${hashCode()} sending rtcp packet. " +
 //                                "(original sender ssrc ${it.header.senderSsrc} new sender $senderSsrc)" +
 //                                ":\n" + it.getBuffer().toHex())
                         //TODO: get the sender ssrc working right, i think we may be getting the wrong
                         // one somehow
-                        if (it.header.senderSsrc == 0L) {
-                            it.header.senderSsrc = senderSsrc
+                        if (pkt.header.senderSsrc == 0L) {
+                            pkt.header.senderSsrc = senderSsrc
                         }
                     }
-                    return@simpleNode pkts
+                    return@simpleNode pktInfos
                 }
                 emptyList()
             }
@@ -130,7 +128,8 @@ class RtpSenderImpl(
 
     override fun sendRtcp(pkts: List<RtcpPacket>) {
 //        println("RtpSenderImpl#sendRtcp sending ${pkts.size} rtcp packets")
-        outgoingRtcpRoot.processPackets(pkts)
+        //TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
+        outgoingRtcpRoot.processPackets(pkts.map { PacketInfo(it) })
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
@@ -148,7 +147,7 @@ class RtpSenderImpl(
                 val packetsToProcess = mutableListOf<Packet>()
                 incomingPacketQueue.drainTo(packetsToProcess, 20)
 //                println("BRIAN: rtp sender job got ${packetsToProcess.size} packets to give to chain")
-                if (packetsToProcess.isNotEmpty()) outgoingRtpRoot.processPackets(packetsToProcess)
+                if (packetsToProcess.isNotEmpty()) outgoingRtpRoot.processPackets(packetsToProcess.map { PacketInfo(it) })
 
                 scheduleWork()
             }

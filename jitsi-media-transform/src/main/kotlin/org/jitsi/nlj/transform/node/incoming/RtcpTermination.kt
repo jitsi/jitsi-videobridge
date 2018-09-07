@@ -16,9 +16,9 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.NackHandler
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.forEachAs
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
@@ -30,23 +30,24 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 
 class RtcpTermination : Node("RTCP termination") {
     var nackHandler: NackHandler? = null
-    override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<RtcpPacket>()
-        p.forEachAs<RtcpPacket> {
-            when (it) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        val outPackets = mutableListOf<PacketInfo>()
+        //TODO: we don't need to use forEachAs here i don't think
+        p.forEachAs<RtcpPacket> { packetInfo, pkt ->
+            when (pkt) {
                 is RtcpRrPacket, is RtcpSrPacket, is RtcpFbTccPacket -> {
                     // Process & terminate
 //                    println("BRIAN: terminating ${it.javaClass} rtcp packet")
                 }
                 is RtcpFbNackPacket -> {
-                    println("BRIAN: received nack for packets: ${it.missingSeqNums}")
-                    nackHandler?.onNackPacket(it)
+                    println("BRIAN: received nack for packets: ${pkt.missingSeqNums}")
+                    nackHandler?.onNackPacket(pkt)
                 }
                 is RtcpFbPliPacket, is RtcpFbFirPacket -> {
                     // We'll let these pass through and be forwarded to the sender who will be
                     // responsible for translating/aggregating them
-                    println("BRIAN: passing through ${it::class} rtcp packet: ${it.getBuffer().toHex()}")
-                    outPackets.add(it)
+                    println("BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}")
+                    outPackets.add(packetInfo)
                 }
             }
         }

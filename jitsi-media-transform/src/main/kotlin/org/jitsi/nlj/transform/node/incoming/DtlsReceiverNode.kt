@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.bouncycastle.crypto.tls.DTLSTransport
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit
  * (used by the bouncycastle stack).
  */
 class DtlsReceiverNode : Node("DTLS Receiver") {
-    private val incomingQueue = LinkedBlockingQueue<Packet>()
+    private val incomingQueue = LinkedBlockingQueue<PacketInfo>()
     /**
      * The negotiated DTLS transport.  If this is set, this module will
      * attempt to read from it every time DTLS packets are received, so
@@ -48,7 +49,7 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
      * which is how the DTLS packets will get into the stack.  The stack will
      * expose the DTLS transport for sending and receiving application data.
      */
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
 //        println("BRIAN: dtls receiver module received packets")
         incomingQueue.addAll(p)
         // If dtlsTransport is not null, then that means that the DTLS handshake has
@@ -58,11 +59,11 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
         // the same context to pull any application data packets through and then
         // pass them to the next module in the chain.
         var bytesReceived = 0
-        val outPackets = mutableListOf<Packet>()
+        val outPackets = mutableListOf<PacketInfo>()
         do {
             bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 1) ?: 0
             if (bytesReceived > 0) {
-                outPackets.add(DtlsProtocolPacket(dtlsAppDataBuf.duplicate()))
+                outPackets.add(PacketInfo(DtlsProtocolPacket(dtlsAppDataBuf.duplicate())))
             }
         } while (bytesReceived > 0)
         if (outPackets.isNotEmpty()) {
@@ -87,7 +88,8 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
      * allowing us to bridge this module into the DTLS stack.
      */
     fun receive(buf: ByteArray, off: Int, length: Int, timeoutMs: Int): Int {
-        val packet = incomingQueue.poll(timeoutMs.toLong(), TimeUnit.MILLISECONDS) ?: return 0
+        val packetInfo = incomingQueue.poll(timeoutMs.toLong(), TimeUnit.MILLISECONDS) ?: return 0
+        val packet = packetInfo.packet
         System.arraycopy(packet.getBuffer().array(), 0, buf, off, Math.min(length, packet.size))
 
         return packet.size

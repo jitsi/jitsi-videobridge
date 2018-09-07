@@ -18,11 +18,11 @@ package org.jitsi.nlj.transform.node
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
-import org.jitsi.rtp.Packet
 import java.time.Duration
 import kotlin.properties.Delegates
 
@@ -96,7 +96,7 @@ abstract class Node(
      * guarantee all packets pass through this base for stat-tracking
      * purposes.
      */
-    protected abstract fun doProcessPackets(p: List<Packet>)
+    protected abstract fun doProcessPackets(p: List<PacketInfo>)
 
     /**
      * Marking this as open since Demuxer wants to throw an exception
@@ -109,7 +109,7 @@ abstract class Node(
         node.inputNodes.add(this)
     }
 
-    override fun processPackets(pkts: List<Packet>) {
+    override fun processPackets(pkts: List<PacketInfo>) {
         onEntry(pkts)
         doProcessPackets(pkts)
     }
@@ -138,7 +138,7 @@ abstract class Node(
         }
     }
 
-    protected fun next(outPackets: List<Packet>) {
+    protected fun next(outPackets: List<PacketInfo>) {
         onExit()
         numOutputPackets += outPackets.size
         if (outPackets.isNotEmpty()) {
@@ -148,22 +148,22 @@ abstract class Node(
 
     /**
      * Allow the implementing class to specify the next handler to invoke with the
-     * given packets.  This is necessary for things like [DemuxerModule] which have
+     * given packets.  This is necessary for things like [DemuxerNode] which have
      * multiple subsequent paths packets can flow down, so they don't use the singular
      * [nextNode].
      */
-    protected fun next(nextNode: Node, outPackets: List<Packet>) {
+    protected fun next(nextNode: Node, outPackets: List<PacketInfo>) {
         onExit()
         numOutputPackets += outPackets.size
         nextNode.processPackets(outPackets)
     }
 
-    private fun onEntry(incomingPackets: List<Packet>) {
+    private fun onEntry(incomingPackets: List<PacketInfo>) {
         startTime = System.nanoTime()
         if (firstPacketTime == -1L) {
             firstPacketTime = startTime
         }
-        incomingPackets.forEach { numBytes += it.size }
+        incomingPackets.forEach { numBytes += it.packet.size }
         lastPacketTime = System.nanoTime()
         numInputPackets += incomingPackets.size
     }

@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.impl.neomedia.transform.PaddingTermination
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.Packet
@@ -24,13 +25,13 @@ import org.jitsi.rtp.RtpPacket
 class PaddingTermination : Node("Padding termination") {
     val paddingTermination = PaddingTermination()
 
-    override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<Packet>()
-        p.forEach { pkt ->
-            paddingTermination.reverseTransform(pkt.toRawPacket())?.let {
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        val outPackets = mutableListOf<PacketInfo>()
+        p.forEach { packetInfo ->
+            paddingTermination.reverseTransform(packetInfo.packet.toRawPacket())?.let {
                 // If paddingTermination didn't return null, that means this is a packet
                 // that should be forwarded.
-                outPackets.add(pkt)
+                outPackets.add(packetInfo)
             }
         }
         next(outPackets)

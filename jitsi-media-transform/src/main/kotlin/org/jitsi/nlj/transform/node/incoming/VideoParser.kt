@@ -18,11 +18,12 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.impl.neomedia.codec.video.vp8.VP8Utils
 import org.jitsi_modified.impl.neomedia.rtp.FrameDesc
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.service.neomedia.MediaType
@@ -43,9 +44,9 @@ class VideoParser : Node("Video parser") {
     // does this packet belong to a keyframe?
     // does this packet represent the start of a frame?
     // does this packet represent the end of a frame?
-    override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<RtpPacket>()
-        p.forEachAs<RtpPacket> { pkt ->
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        val outPackets = mutableListOf<PacketInfo>()
+        p.forEachAs<RtpPacket> { packetInfo, pkt ->
             val pt = pkt.header.payloadType.toUByte()
             payloadFormats[pt]?.let { format ->
                 val videoRtpPacket = VideoRtpPacket(pkt.getBuffer())
@@ -67,9 +68,10 @@ class VideoParser : Node("Video parser") {
                         frameDesc.end = videoRtpPacket.header.sequenceNumber
                     }
                 }
-                outPackets.add(videoRtpPacket)
+                packetInfo.packet = videoRtpPacket
+                outPackets.add(packetInfo)
             } ?: run {
-                outPackets.add(pkt)
+                outPackets.add(packetInfo)
             }
         }
         next(outPackets)

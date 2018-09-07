@@ -44,7 +44,7 @@ class NackHandler(
         }
         if (nackedPackets.isNotEmpty()) {
             println("NackHandler found ${nackedPackets.size} that can be retransmitted")
-            onNackedPacketsReady.processPackets(nackedPackets)
+            onNackedPacketsReady.processPackets(nackedPackets.map { PacketInfo(it) })
         }
     }
 }
