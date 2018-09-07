@@ -84,7 +84,7 @@ class RtxHandler : Node("RTX handler") {
                     val rtxPt = event.payloadType.toUInt()
                     event.format.formatParameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
-                        println("Associating RTX payload type $rtxPt with primary $associatedPt")
+                        println("RtxHandler associating RTX payload type $rtxPt with primary $associatedPt")
                         associatedPayloadTypes[rtxPt] = associatedPt
                     } ?: run {
                         println("Unable to parse RTX associated payload type from event: $event")
@@ -96,7 +96,7 @@ class RtxHandler : Node("RTX handler") {
             }
             is SsrcAssociationEvent -> {
                 if (event.type.equals(Constants.RTX)) {
-                    println("Associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}")
+                    println("RtxHandler associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}")
                     associatedSsrcs[event.secondarySsrc] = event.primarySsrc
                 }
             }
