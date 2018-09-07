@@ -1965,6 +1965,7 @@ public class RtpChannel
             }
         }
         logger.info(transceiver.getRtpReceiver().getStats(0));
+        logger.info(transceiver.getRtpSender().getStats());
 
         return true;
     }
@@ -2147,14 +2148,20 @@ public class RtpChannel
                 {
                     long primarySsrc = sourceGroup.getSources().get(0).getSSRC();
                     long secondarySsrc = sourceGroup.getSources().get(1).getSSRC();
-                    String semantics = sourceGroup.getSemantics();
-                    if (semantics.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FID)) {
-                        // Translate FID -> RTX
-                        semantics = Constants.RTX;
-                    }
-                    System.out.println("BRIAN: notifying transceiver of ssrc association: " +
+                    // Translate FID -> RTX (Do it this way so it's effectively final and can be used in the lambda
+                    // below)
+                    String semantics = sourceGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FID) ? Constants.RTX : sourceGroup.getSemantics();
+                    System.out.println("BRIAN: notifying transceivers of ssrc association: " +
                             secondarySsrc + " -> " + primarySsrc + " (" + semantics + ")");
-                    transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
+                    // All channels need to be aware of the ssrc associations so that they can retransmit packet
+                    // from any sender using the proper rtx ssrc
+                    getContent().getChannels().forEach(channel -> {
+                        if (channel instanceof RtpChannel)
+                        {
+                            RtpChannel rtpChannel = (RtpChannel)channel;
+                            rtpChannel.transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
+                        }
+                    });
                 }
             });
         }
