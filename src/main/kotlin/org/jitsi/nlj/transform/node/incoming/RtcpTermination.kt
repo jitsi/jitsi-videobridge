@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.nlj.NackHandler
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
@@ -28,6 +29,7 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 
 class RtcpTermination : Node("RTCP termination") {
+    var nackHandler: NackHandler? = null
     override fun doProcessPackets(p: List<Packet>) {
         val outPackets = mutableListOf<RtcpPacket>()
         p.forEachAs<RtcpPacket> {
@@ -38,11 +40,11 @@ class RtcpTermination : Node("RTCP termination") {
                 }
                 is RtcpFbNackPacket -> {
                     println("BRIAN: received nack for packets: ${it.missingSeqNums}")
+                    nackHandler?.onNackPacket(it)
                 }
                 is RtcpFbPliPacket, is RtcpFbFirPacket -> {
-                    // Pass through
-                    // (nacks we'll eventually do processing on and try to retransmit, the
-                    // others will go all the way through)
+                    // We'll let these pass through and be forwarded to the sender who will be
+                    // responsible for translating/aggregating them
                     println("BRIAN: passing through ${it::class} rtcp packet: ${it.getBuffer().toHex()}")
                     outPackets.add(it)
                 }

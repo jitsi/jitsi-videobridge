@@ -54,6 +54,8 @@ abstract class RtpReceiver :
 
     abstract fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener)
 
+    abstract fun setNackHandler(nackHandler: NackHandler)
+
     /**
      * Tell this receiver to stop processing incoming packets
      */

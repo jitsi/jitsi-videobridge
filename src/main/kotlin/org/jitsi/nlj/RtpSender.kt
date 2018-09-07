@@ -26,12 +26,12 @@ import org.jitsi.rtp.rtcp.RtcpPacket
  * RTCP) but in the sense of a webrtc 'RTCRTPSender' which handles
  * all RTP and RTP control packets.
  */
-abstract class RtpSender {
+abstract class RtpSender : EventHandler {
     var numPacketsSent = 0
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
     var lastPacketSentTime: Long = -1
-    var packetSender: PacketHandler = object : Node("RtpSender packet sender") {
+    var packetSender: Node = object : Node("RtpSender packet sender") {
         override fun doProcessPackets(p: List<Packet>) {
             if (firstPacketSentTime == -1L) {
                 firstPacketSentTime = System.currentTimeMillis()
@@ -41,6 +41,7 @@ abstract class RtpSender {
             lastPacketSentTime = System.currentTimeMillis()
         }
     }
+    abstract fun getNackHandler(): NackHandler
     abstract fun sendPackets(pkts: List<Packet>)
     abstract fun sendRtcp(pkts: List<RtcpPacket>)
     abstract fun getStats(): String
