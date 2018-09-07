@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.node
 
-import org.jitsi.rtp.Packet
+import org.jitsi.nlj.PacketInfo
 import java.util.*
 
 /**
@@ -23,7 +23,7 @@ import java.util.*
  */
 class PacketLoss(private val lossRate: Double) : Node("Packet loss") {
     private val random = Random()
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
         next(p.filter { random.nextDouble() > lossRate })
     }
 }

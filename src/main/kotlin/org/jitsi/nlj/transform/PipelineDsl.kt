@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform
 
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.DemuxerNode
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.PacketPath
@@ -48,9 +49,9 @@ class PipelineBuilder {
      * [Packet]s and returns a list of output [Packet]s to be forwarded to the next
      * [Node]
      */
-    fun simpleNode(name: String, packetHandler: (List<Packet>) -> List<Packet>) {
+    fun simpleNode(name: String, packetHandler: (List<PacketInfo>) -> List<PacketInfo>) {
         val node = object : Node(name) {
-            override fun doProcessPackets(p: List<Packet>) {
+            override fun doProcessPackets(p: List<PacketInfo>) {
                 next(packetHandler.invoke(p))
             }
         }

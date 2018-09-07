@@ -18,16 +18,17 @@ package org.jitsi.nlj.transform.node.outgoing
 import org.jitsi.service.neomedia.RawPacket
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 
 class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt wrapper") {
-    override fun doTransform(pkts: List<Packet>, transformer: SinglePacketTransformer): List<Packet> {
-        val encryptedPackets = mutableListOf<SrtcpPacket>()
+    override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
+        val encryptedPackets = mutableListOf<PacketInfo>()
         pkts.forEach {
-            val packetBuf = it.getBuffer()
+            val packetBuf = it.packet.getBuffer()
             //TODO: if this rtcp packet was from a compound rtcp packet, the array backing
             // the packetBuf will have previous compound packets in it.  Although we pass
             // the proper offset as packetBuf.arrayOffset, not all methods in the transformer
@@ -50,7 +51,8 @@ class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt w
                         encryptedRawPacket.buffer,
                         encryptedRawPacket.offset,
                         encryptedRawPacket.length))
-                encryptedPackets.add(srtcpPacket)
+                it.packet = srtcpPacket
+                encryptedPackets.add(it)
             }
         }
         return encryptedPackets

@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.Packet
@@ -29,7 +30,7 @@ class NackGeneratorNode(
     private var nacksSent = 0
     // For now, just nack a chunk of 5 packets for every 100 we see
     var packetsSinceLastNack = 0
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
 //        packetsSinceLastNack += p.size
 //        if (packetsSinceLastNack > 100) {
 //            // Nack the 5 previous packets

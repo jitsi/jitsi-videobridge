@@ -73,8 +73,9 @@ class Transceiver(
 
         // rewire the sender's hacked packet handler
         rtpSender.packetSender = object : Node("RTP packet sender") {
-            override fun doProcessPackets(p: List<Packet>) {
-                outgoingQueue.addAll(p) }
+            override fun doProcessPackets(p: List<PacketInfo>) {
+                // Map the PacketInfo types to their contained Packet and add to the outgoing queue
+                outgoingQueue.addAll(p.map { it.packet }) }
             }
         rtpReceiver.setNackHandler(rtpSender.getNackHandler())
 
@@ -89,7 +90,7 @@ class Transceiver(
         executor.execute {
             val packets = mutableListOf<Packet>()
             incomingQueue.drainTo(packets, 5)
-            if (packets.isNotEmpty()) incomingChain.processPackets(packets)
+            if (packets.isNotEmpty()) incomingChain.processPackets(packets.map { PacketInfo(it) })
             if (running) {
                 scheduleWork()
             }

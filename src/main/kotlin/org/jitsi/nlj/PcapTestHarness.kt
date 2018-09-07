@@ -107,7 +107,7 @@ fun main(args: Array<String>) {
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
         rtpReceiver.rtpPacketHandler = (object : Node("Packet receiver") {
-            override fun doProcessPackets(p: List<Packet>) {
+            override fun doProcessPackets(p: List<PacketInfo>) {
                 numReceivedPackets += p.size
                 if (numReceivedPackets == numExpectedPackets) {
                     println("ALL PACKETS FORWARDED")
@@ -143,7 +143,7 @@ fun main(args: Array<String>) {
 //        println("Sending packet #$numPackets to receivers")
         for (receiver in receivers) {
             val p = UnparsedPacket(buf.clone())
-            receiver.enqueuePacket(p)
+            receiver.enqueuePacket(PacketInfo(p))
         }
         true
     }

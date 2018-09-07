@@ -16,12 +16,12 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.StatsProducer
-import org.jitsi.rtp.Packet
 
 interface PacketHandler : EventHandler, StatsProducer {
     var name: String
     /**
      * Process the given packets
      */
-    fun processPackets(pkts: List<Packet>)
+    fun processPackets(pkts: List<PacketInfo>)
 }
+

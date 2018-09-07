@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.Packet
 
 abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
@@ -34,16 +35,16 @@ abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
      * gets set so that we don't lose any packets at the beginning
      * (likely a keyframe)
      */
-    private var cachedPackets = mutableListOf<Packet>()
+    private var cachedPackets = mutableListOf<PacketInfo>()
 
     /**
      * The function which subclasses should implement to do the actual srtp/srtcp encryption/decryption
      */
-    abstract fun doTransform(pkts: List<Packet>, transformer: SinglePacketTransformer): List<Packet>
+    abstract fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo>
 
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
         transformer?.let {
-            val outPackets = mutableListOf<Packet>()
+            val outPackets = mutableListOf<PacketInfo>()
             outPackets.addAll(doTransform(cachedPackets, it))
             cachedPackets.clear()
             outPackets.addAll(doTransform(p, it))

@@ -42,3 +42,4 @@ inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit) 
         if (element is Expected) action(element)
     }
 }
+

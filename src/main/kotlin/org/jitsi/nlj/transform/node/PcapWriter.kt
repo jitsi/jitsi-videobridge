@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node
 
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.pcap4j.core.Pcaps
@@ -38,10 +39,10 @@ import java.nio.ByteBuffer
 class PcapWriter : Node("PCAP writer") {
     val handle = Pcaps.openDead(DataLinkType.EN10MB, 65536);
     val writer = handle.dumpOpen("/tmp/${hashCode()}.pcap")
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEach {
             val udpPayload = UnknownPacket.Builder()
-            udpPayload.rawData(it.getBuffer().array())
+            udpPayload.rawData(it.packet.getBuffer().array())
             val udp = UdpPacket.Builder()
                 .srcPort(UdpPort(123, "blah"))
                 .dstPort(UdpPort(456, "blah"))

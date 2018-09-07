@@ -16,11 +16,12 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.RtxPacket
@@ -46,9 +47,9 @@ class RtxHandler : Node("RTX handler") {
      */
     private val associatedSsrcs: ConcurrentHashMap<Long, Long> = ConcurrentHashMap()
 
-    override fun doProcessPackets(p: List<Packet>) {
-        val outPackets = mutableListOf<RtpPacket>()
-        p.forEachAs<RtpPacket> { pkt ->
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        val outPackets = mutableListOf<PacketInfo>()
+        p.forEachAs<RtpPacket> { packetInfo, pkt ->
             if (associatedPayloadTypes.containsKey(pkt.header.payloadType)) {
                 val rtxPacket = RtxPacket(pkt.getBuffer())
 //                println("Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
@@ -69,9 +70,10 @@ class RtxHandler : Node("RTX handler") {
                 originalPacket.header.ssrc = originalSsrc
                 println("Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum")
                 numRtxPacketsReceived++
-                outPackets.add(originalPacket)
+                packetInfo.packet = originalPacket
+                outPackets.add(packetInfo)
             } else {
-                outPackets.add(pkt)
+                outPackets.add(packetInfo)
             }
         }
         next(outPackets)

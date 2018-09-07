@@ -13,23 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform.node.outgoing
+package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.transform.node.Node
-import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
-import java.nio.ByteBuffer
 
-class DtlsSenderNode : Node("DTLS Sender") {
+class PacketParser(name: String, private val action: (Packet) -> Packet) : Node(name) {
     override fun doProcessPackets(p: List<PacketInfo>) {
-//        println("BRIAN: dtls sender module invoking next")
+        p.forEach {
+            it.packet = action(it.packet)
+        }
         next(p)
-    }
-
-    //TODO: change thread contexts here?
-    fun send(buf: ByteArray, off: Int, length: Int) {
-//        println("BRIAN: dtls sender module sending packets")
-        processPackets(listOf(PacketInfo(DtlsProtocolPacket(ByteBuffer.wrap(buf, off, length)))))
     }
 }

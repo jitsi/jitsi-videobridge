@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.rtp.Packet
@@ -26,11 +27,9 @@ import java.util.concurrent.ConcurrentHashMap
 class PayloadTypeFilterNode : Node("RTP payload type filter") {
     private val acceptedPayloadTypes: MutableSet<Int> = ConcurrentHashMap.newKeySet()
 
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
         val filteredPackets = p
-            .map { it as SrtpPacket }
-            .filter { acceptedPayloadTypes.contains(it.header.payloadType) }
-            .toList()
+            .filter { acceptedPayloadTypes.contains(it.packetAs<SrtpPacket>().header.payloadType) }
         next(filteredPackets)
     }
 

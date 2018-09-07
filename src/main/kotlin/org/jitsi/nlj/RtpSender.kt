@@ -32,12 +32,12 @@ abstract class RtpSender : EventHandler {
     var firstPacketSentTime: Long = -1
     var lastPacketSentTime: Long = -1
     var packetSender: Node = object : Node("RtpSender packet sender") {
-        override fun doProcessPackets(p: List<Packet>) {
+        override fun doProcessPackets(p: List<PacketInfo>) {
             if (firstPacketSentTime == -1L) {
                 firstPacketSentTime = System.currentTimeMillis()
             }
             numPacketsSent += p.size
-            p.forEach { pkt -> numBytesSent += pkt.size }
+            p.forEach { pktInfo -> numBytesSent += pktInfo.packet.size }
             lastPacketSentTime = System.currentTimeMillis()
         }
     }

@@ -19,9 +19,9 @@ import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
+import org.jitsi.nlj.transform.node.PacketParser
 import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
 import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
-import org.jitsi.nlj.transform.node.incoming.FirRequester
 import org.jitsi.nlj.transform.node.incoming.PaddingTermination
 import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
 import org.jitsi.nlj.transform.node.incoming.RtcpTermination
@@ -61,7 +61,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 ) : RtpReceiver() {
     override var name: String = "RtpReceiverImpl"
     private val inputTreeRoot: Node
-    private val incomingPacketQueue = LinkedBlockingQueue<Packet>()
+    private val incomingPacketQueue = LinkedBlockingQueue<PacketInfo>()
     private val srtpDecryptWrapper = SrtpTransformerDecryptNode()
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender)
@@ -82,17 +82,20 @@ class RtpReceiverImpl @JvmOverloads constructor(
     init {
         println("Receiver ${this.hashCode()} using executor ${executor.hashCode()}")
         inputTreeRoot = pipeline {
-            simpleNode("SRTP protocol parser") { pkts ->
-                pkts.map(Packet::getBuffer).map(::SrtpProtocolPacket)
-            }
+//            simpleNode("SRTP protocol parser") { pktInfos ->
+//                pktInfos.map { it.packet = SrtpProtocolPacket(it.packet.getBuffer()); it }
+////                pkts.map(Packet::getBuffer).map(::SrtpProtocolPacket)
+//            }
+            node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
             demux {
                 name = "SRTP/SRTCP demuxer"
                 packetPath {
                     predicate = { pkt -> RtpProtocol.isRtp(pkt.getBuffer()) }
                     path = pipeline {
-                        simpleNode("SRTP parser") { pkts ->
-                            pkts.map(Packet::getBuffer).map(::SrtpPacket)
-                        }
+//                        simpleNode("SRTP parser") { pkts ->
+//                            pkts.map(Packet::getBuffer).map(::SrtpPacket)
+//                        }
+                        node(PacketParser("SRTP Parser") { SrtpPacket(it.getBuffer()) })
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
@@ -100,7 +103,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(RtxHandler())
                         node(PaddingTermination())
                         node(VideoParser())
-                        node(FirRequester(rtcpSender))
                         //TODO: how should retransmissions without rtx be handled with srtp?
 //                        node(NackGeneratorNode(rtcpSender))
                         node(RetransmissionRequester(rtcpSender))
@@ -115,29 +117,36 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     predicate = { pkt -> RtpProtocol.isRtcp(pkt.getBuffer()) }
                     path = pipeline {
                         var prevRtcpPackets = mutableListOf<Packet>()
-                        simpleNode("SRTCP parser ${hashCode()}") { pkts ->
-                            pkts.map(Packet::getBuffer).map(::SrtcpPacket)
-                        }
+                        node(PacketParser("SRTCP parser") { SrtcpPacket(it.getBuffer())} )
+//                        simpleNode("SRTCP parser ${hashCode()}") { pkts ->
+//                            pkts.map(Packet::getBuffer).map(::SrtcpPacket)
+//                        }
                         node(srtcpDecryptWrapper)
                         simpleNode("RTCP pre-parse cache ${hashCode()}") { pkts ->
                             prevRtcpPackets.clear()
                             pkts.forEach {
-                                prevRtcpPackets.add(it.clone())
+                                prevRtcpPackets.add(it.packet.clone())
                             }
                             pkts
                         }
 
-                        simpleNode("RTCP parser ${hashCode()}") { pkts ->
-                            pkts.map(Packet::getBuffer).map { RtcpPacket.fromBuffer(it) }
-                        }
-                        simpleNode("Compound RTCP splitter") { pkts ->
+//                        simpleNode("RTCP parser ${hashCode()}") { pkts ->
+//                            pkts.map(Packet::getBuffer).map { RtcpPacket.fromBuffer(it) }
+//                        }
+                        node(PacketParser("RTCP parser") { RtcpPacket.fromBuffer(it.getBuffer()) })
+                        //TODO: probably just make a class for this, but for now we're using the cache above to debug
+                        simpleNode("Compound RTCP splitter") { pktInfos ->
                             try {
-                                pkts
-                                    .map(Packet::getBuffer)
-                                    .map(::RtcpIterator)
-                                    .map(RtcpIterator::getAll)
-                                    .flatten()
-                                    .toList()
+                                val outPackets = mutableListOf<PacketInfo>()
+                                pktInfos.forEach { pktInfo ->
+                                    val compoundRtcpPackets = RtcpIterator(pktInfo.packet.getBuffer()).getAll()
+                                    compoundRtcpPackets.forEach {
+                                        // For each compound RTCP packet, create a new PacketInfo with the packet and a copy
+                                        // of any metadata in the original PacketInfo
+                                        outPackets.add(PacketInfo(it, pktInfo.metaData.toMutableMap()))
+                                    }
+                                }
+                                outPackets
                             } catch (e: Exception) {
                                 println("Exception extracting rtcp.  The original, decrypted packet buffer is one of " +
                                         "these:\n")
@@ -173,7 +182,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         // avoid the busy-loop style polling for a new packet though
         //TODO: use drainTo (?)
         executor.execute {
-            val packets = mutableListOf<Packet>()
+            val packets = mutableListOf<PacketInfo>()
             while (packets.size < 5) {
                 val packet = incomingPacketQueue.poll() ?: break
                 packets += packet
@@ -187,7 +196,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
     }
 
-    override fun processPackets(pkts: List<Packet>) = inputTreeRoot.processPackets(pkts)
+    override fun processPackets(pkts: List<PacketInfo>) = inputTreeRoot.processPackets(pkts)
 
 //    override fun attach(node: Node) {
 //        rtpPacketHandler = node
@@ -211,9 +220,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
         rtcpTermination.nackHandler = nackHandler
     }
 
-    override fun enqueuePacket(p: Packet) {
+    override fun enqueuePacket(p: PacketInfo) {
         incomingPacketQueue.add(p)
-        bytesReceived += p.size
+        bytesReceived += p.packet.size
         packetsReceived++
         if (firstPacketWrittenTime == 0L) {
             firstPacketWrittenTime = System.currentTimeMillis()

@@ -16,8 +16,8 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.impl.neomedia.rtp.RawPacketCache
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.toRawPacket
-import org.jitsi.rtp.Packet
 import org.jitsi_modified.impl.neomedia.transform.CachingTransformer
 
 class PacketCache : Node("Packet cache") {
@@ -35,9 +35,9 @@ class PacketCache : Node("Packet cache") {
         cachingTransformer.setEnabled(true)
     }
 
-    override fun doProcessPackets(p: List<Packet>) {
-        p.forEach { pkt ->
-            cachingTransformer.transform(pkt.toRawPacket())
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        p.forEach { packetInfo ->
+            cachingTransformer.transform(packetInfo.packet.toRawPacket())
         }
         next(p)
     }

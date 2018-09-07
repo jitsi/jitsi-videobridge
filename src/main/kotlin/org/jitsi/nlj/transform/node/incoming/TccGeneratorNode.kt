@@ -16,16 +16,14 @@
 package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.NodeVisitor
 import org.jitsi.nlj.util.appendLnIndent
-import org.jitsi.nlj.util.forEachAs
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
-import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi.rtp.rtcp.rtcpfb.Tcc
 import org.jitsi.service.neomedia.RTPExtension
@@ -40,17 +38,17 @@ class TccGeneratorNode(
     private var tempDetectedSsrc: Long? = null
     private var numTccSent: Int = 0
 
-    override fun doProcessPackets(p: List<Packet>) {
+    override fun doProcessPackets(p: List<PacketInfo>) {
         val now = System.currentTimeMillis()
         tccExtensionId?.let { tccExtId ->
-            p.forEachAs<SrtpPacket> {
-                it.header.getExtension(tccExtId).let currPkt@ { tccExt ->
+            p.forEachAs<SrtpPacket> { packetInfo, pkt ->
+                pkt.header.getExtension(tccExtId).let currPkt@ { tccExt ->
                     //TODO: check if it's a one byte or two byte ext?
                     val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@currPkt
                     addPacket(tccSeqNum, now)
                 }
                 if (tempDetectedSsrc == null) {
-                    tempDetectedSsrc = it.header.ssrc
+                    tempDetectedSsrc = pkt.header.ssrc
                 }
             }
         }

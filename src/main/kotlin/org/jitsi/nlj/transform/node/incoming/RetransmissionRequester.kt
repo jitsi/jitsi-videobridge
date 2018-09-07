@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi_modified.impl.neomedia.transform.RetransmissionRequesterImpl
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.transform.node.Node
@@ -27,6 +28,7 @@ import org.jitsi.service.neomedia.RawPacket
 import unsigned.toUInt
 import java.nio.ByteBuffer
 
+//TODO: i think this is deprecated now
 class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransmission requester") {
     /**
      * Wrap the given [rtcpSender] method with one that takes a RawPacket (which
@@ -43,9 +45,10 @@ class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransm
 
     private val retransmissionRequester =
         RetransmissionRequesterImpl(rtcpSenderAdapter)
-    override fun doProcessPackets(p: List<Packet>) {
-        p.forEach { pkt ->
-            val rp = pkt.toRawPacket()
+
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        p.forEach { packetInfo ->
+            val rp = packetInfo.packet.toRawPacket()
             retransmissionRequester.reverseTransform(rp)
         }
         next(p)
