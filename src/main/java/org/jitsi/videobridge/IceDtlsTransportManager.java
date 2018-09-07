@@ -60,13 +60,13 @@ public class IceDtlsTransportManager
             super("Socket sender");
         }
         @Override
-        protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
+        protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
         {
             if (socket != null) {
-                pkts.forEach(pkt -> {
+                pkts.forEach(pktInfo -> {
                     try
                     {
-                        socket.send(new DatagramPacket(pkt.getBuffer().array(), 0, pkt.getBuffer().limit()));
+                        socket.send(new DatagramPacket(pktInfo.getPacket().getBuffer().array(), 0, pktInfo.getPacket().getBuffer().limit()));
                     } catch (IOException e)
                     {
                         System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
@@ -227,18 +227,19 @@ public class IceDtlsTransportManager
             return (b < 20 || b > 63);
         });
         PipelineBuilder srtpPipelineBuilder = new PipelineBuilder();
-        srtpPipelineBuilder.simpleNode("SRTP path", pkts -> {
+        srtpPipelineBuilder.simpleNode("SRTP path", packetInfos -> {
             // Every srtp packet will go to every transceiver.  The transceivers are responsible
             // for filtering out the payload types they don't want
             getTransceivers().forEach(transceiver -> {
-               pkts.forEach(pkt -> {
+               packetInfos.forEach( pktInfo -> {
                    // TODO(brian): we need to copy the packet for each transceiver for now, because
                    //  although each transceiver filters out the rtp they don't care about (audio
                    //  vs video), rtcp will be handled by both.  In the future, a single transceiver
                    //  should be shared by the channels and we can filter ALL rtcp out in
                    //  a single path in the transceiver itself and let the receiver just worry about
                    //  rtp
-                   ByteBuffer packetBuffer = pkt.getBuffer();
+                   //TODO: leverage Packet#clone here
+                   ByteBuffer packetBuffer = pktInfo.getPacket().getBuffer();
                    ByteBuffer bufferCopy = ByteBuffer.allocate(packetBuffer.capacity());
                    packetBuffer.rewind();
                    bufferCopy.put(packetBuffer);
@@ -297,7 +298,8 @@ public class IceDtlsTransportManager
                     ByteBuffer packetBuf = ByteBuffer.allocate(p.getLength());
                     packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
                     Packet pkt = new UnparsedPacket(packetBuf);
-                    incomingPipelineRoot.processPackets(Collections.singletonList(pkt));
+                    PacketInfo pktInfo = new PacketInfo(pkt);
+                    incomingPipelineRoot.processPackets(Collections.singletonList(pktInfo));
                 } catch (IOException e)
                 {
                     e.printStackTrace();

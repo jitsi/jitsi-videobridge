@@ -906,27 +906,27 @@ public class RtpChannel
         initialize(null);
     }
 
-    protected void handleIncomingRtp(List<? extends Packet> packets)
+    protected void handleIncomingRtp(List<PacketInfo> packetInfos)
     {
         // For now, just write every packet to every channel other than ourselves
-        packets.forEach(pkt -> {
+        packetInfos.forEach(pktInfo -> {
             getContent().getChannelsFast().forEach(channel -> {
                 if (channel == this)
                 {
                     return;
                 }
-                Packet pktCopy = pkt.clone();
+                PacketInfo pktInfoCopy = pktInfo.clone();
                 RtpChannel rtpChannel = (RtpChannel)channel;
                 // If we can *know* that the rtpTranslatorWillWrite chain will not modify the packet (and perhaps we
                 // can enforce this?) then we can wait to make the copy
-                if (rtpChannel.rtpTranslatorWillWrite(pktCopy))
+                if (rtpChannel.rtpTranslatorWillWrite(pktInfoCopy.getPacket()))
                 {
-                    rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktCopy));
+                    rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktInfoCopy.getPacket()));
                 }
             });
         });
     }
-    protected void handleIncomingRtcp(List<? extends Packet> packets)
+    protected void handleIncomingRtcp(List<PacketInfo> packetInfos)
     {
         // We don't need to copy RTCP packets for each dest like we do with RTP because each one
         // will only have a single destination
@@ -934,8 +934,8 @@ public class RtpChannel
             if (channel instanceof RtpChannel)
             {
                 RtpChannel rtpChannel = (RtpChannel) channel;
-                packets.forEach(pkt -> {
-                    RtcpFbPacket rtcpPacket = (RtcpFbPacket) pkt;
+                packetInfos.forEach(packetInfo -> {
+                    RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
                     if (rtpChannel.transceiver.receivesSsrc(rtcpPacket.getMediaSourceSsrc())) {
                         rtpChannel.transceiver.getRtpSender().sendRtcp(Collections.singletonList(rtcpPacket));
                     }
@@ -966,14 +966,14 @@ public class RtpChannel
             transceiver = new Transceiver(mediaType.toString(), transceiverExecutor);
             transceiver.getRtpReceiver().setRtpPacketHandler(new Node("RTP receiver chain handler") {
                 @Override
-                public void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                public void doProcessPackets(@NotNull List<PacketInfo> pkts)
                 {
                     handleIncomingRtp(pkts);
                 }
             });
             transceiver.getRtpReceiver().setRtcpPacketHandler(new Node("RTCP receiver chain handler") {
                 @Override
-                public void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                public void doProcessPackets(@NotNull List<PacketInfo> pkts)
                 {
                     handleIncomingRtcp(pkts);
                 }
@@ -999,13 +999,14 @@ public class RtpChannel
             if (transformEngine != null)
             {
                 stream.setExternalTransformer(transformEngine);
+                //TODO(BRIAN): Need to look into what exactly is being done in here.  Is there duplicated effort?
                 new Node("External transform wrapper") {
                     @Override
-                    protected void doProcessPackets(@NotNull List<? extends Packet> pkts)
+                    protected void doProcessPackets(@NotNull List<PacketInfo> packetInfos)
                     {
                         //TODO: still need to wrap bitratecontroller specifically to incorporate the
                         // willWrite logic
-                        RawPacket[] rawPackets = pkts.stream().map(PacketExtensionsKt::toRawPacket).toArray(RawPacket[]::new);
+                        RawPacket[] rawPackets = packetInfos.stream().map(PacketInfo::getPacket).map(PacketExtensionsKt::toRawPacket).toArray(RawPacket[]::new);
                         RawPacket[] outPackets = transformEngine.getRTPTransformer().transform(rawPackets);
                     }
                 };
