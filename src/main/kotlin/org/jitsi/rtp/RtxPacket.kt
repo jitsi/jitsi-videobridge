@@ -18,6 +18,7 @@ package org.jitsi.rtp
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
 import unsigned.toUInt
+import unsigned.toUShort
 import java.nio.ByteBuffer
 
 /**
@@ -36,7 +37,7 @@ import java.nio.ByteBuffer
 class RtxPacket : RtpPacket {
     override val size: Int
         get() = getBuffer().limit()
-    val originalSequenceNmber: Int
+    var originalSequenceNmber: Int = 0
 
     companion object {
         /**
@@ -47,13 +48,34 @@ class RtxPacket : RtpPacket {
         fun getOriginalSequenceNumber(buf: ByteBuffer): Int {
             return buf.getShort(0).toUInt()
         }
+        /**
+        * The given buffer should start at the beginning of what is
+        * detected as the RTP payload (from RTPPacket's point of view)
+        * since this is where the OSN is stored.  The payload data should
+        * have already been shifted to make room for the OSN.
+        */
+        fun setOriginalSequenceNumber(buf: ByteBuffer, originalSeqNum: Int) {
+            buf.putShort(0, originalSeqNum.toUShort())
+        }
     }
 
     constructor(buf: ByteBuffer) : super(buf) {
         originalSequenceNmber = getOriginalSequenceNumber(payload)
     }
 
-    //TODO: add field-based ctor
+    constructor(rtpPacket: RtpPacket) : super(rtpPacket.header, rtpPacket.payload) {
+        // Create a new payload buffer with room for the original sequence number
+        val newPayloadBuf = ByteBuffer.allocate(payload.limit() + 2)
+        (newPayloadBuf.position(2) as ByteBuffer).put(payload)
+        newPayloadBuf.rewind()
+        this.payload = newPayloadBuf
+        this.originalSequenceNmber = rtpPacket.header.sequenceNumber
+    }
+
+    override fun getBuffer(): ByteBuffer {
+        setOriginalSequenceNumber(payload, originalSequenceNmber)
+        return super.getBuffer()
+    }
 
     override fun clone(): Packet {
         return RtxPacket(getBuffer())

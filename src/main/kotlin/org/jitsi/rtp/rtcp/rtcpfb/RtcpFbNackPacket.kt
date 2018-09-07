@@ -22,6 +22,8 @@ import java.nio.ByteBuffer
 
 class RtcpFbNackPacket : TransportLayerFbPacket {
     override var feedbackControlInformation: FeedbackControlInformation
+    val missingSeqNums
+        get() = (feedbackControlInformation as Nack).missingSeqNums
 
     companion object {
         const val FMT = 1
