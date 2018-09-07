@@ -24,6 +24,11 @@ fun Packet.toRawPacket(): RawPacket {
     return RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
 }
 
+/**
+ * Wrap this [RawPacket]'s buffer in a ByteBuffer such that:
+ * 1) The ByteBuffer's position 0 will be at the offset position from RawPacket
+ * 2) The ByteBuffer's limit will be the RawPacket's length
+ */
 fun RawPacket.getByteBuffer(): ByteBuffer {
-    return ByteBuffer.wrap(buffer, offset, length)
+    return ByteBuffer.wrap(buffer, offset, length).slice()
 }
