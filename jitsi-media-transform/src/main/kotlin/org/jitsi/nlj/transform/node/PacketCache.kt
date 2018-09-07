@@ -15,9 +15,10 @@
  */
 package org.jitsi.nlj.transform.node
 
-import org.jitsi_modified.impl.neomedia.transform.CachingTransformer
+import org.jitsi.impl.neomedia.rtp.RawPacketCache
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.Packet
+import org.jitsi_modified.impl.neomedia.transform.CachingTransformer
 
 class PacketCache : Node("Packet cache") {
     /**
@@ -30,10 +31,16 @@ class PacketCache : Node("Packet cache") {
      */
     private val cachingTransformer = CachingTransformer(hashCode())
 
+    init {
+        cachingTransformer.setEnabled(true)
+    }
+
     override fun doProcessPackets(p: List<Packet>) {
         p.forEach { pkt ->
             cachingTransformer.transform(pkt.toRawPacket())
         }
         next(p)
     }
+
+    fun getPacketCache(): RawPacketCache = cachingTransformer.outgoingRawPacketCache
 }

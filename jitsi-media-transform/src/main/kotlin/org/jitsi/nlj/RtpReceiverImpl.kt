@@ -71,6 +71,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override var rtpPacketHandler: PacketHandler? = null
     override var rtcpPacketHandler: PacketHandler? = null
 
+    private val rtcpTermination = RtcpTermination()
+
     // Stat tracking values
     var firstPacketWrittenTime: Long = 0
     var lastPacketWrittenTime: Long = 0
@@ -143,7 +145,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 emptyList()
                             }
                         }
-                        node(RtcpTermination())
+                        node(rtcpTermination)
                         simpleNode("RTCP packet handler") {
                             println("RTCP packet handler forwarding ${it.size} rtcp packets")
 //                            it.forEach { pkt ->
@@ -203,6 +205,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
             inputTreeRoot.visit(statsVisitor)
             toString()
         }
+    }
+
+    override fun setNackHandler(nackHandler: NackHandler) {
+        rtcpTermination.nackHandler = nackHandler
     }
 
     override fun enqueuePacket(p: Packet) {

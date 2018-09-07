@@ -24,7 +24,6 @@ import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.service.neomedia.format.MediaFormat
-import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -77,6 +76,8 @@ class Transceiver(
             override fun doProcessPackets(p: List<Packet>) {
                 outgoingQueue.addAll(p) }
             }
+        rtpReceiver.setNackHandler(rtpSender.getNackHandler())
+
         scheduleWork()
     }
 
@@ -113,12 +114,16 @@ class Transceiver(
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
         payloadTypes[rtpPayloadType] = format
         println("Payload type added: $rtpPayloadType -> $format")
-        rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(rtpPayloadType, format))
+        val rtpPayloadTypeAddedEvent = RtpPayloadTypeAddedEvent(rtpPayloadType, format)
+        rtpReceiver.handleEvent(rtpPayloadTypeAddedEvent)
+        rtpSender.handleEvent(rtpPayloadTypeAddedEvent)
     }
 
     fun clearDynamicRtpPayloadTypes() {
         println("All payload types being cleared")
-        rtpReceiver.handleEvent(RtpPayloadTypeClearEvent())
+        val rtpPayloadTypeClearEvent = RtpPayloadTypeClearEvent()
+        rtpReceiver.handleEvent(rtpPayloadTypeClearEvent)
+        rtpSender.handleEvent(rtpPayloadTypeClearEvent)
         payloadTypes.clear()
     }
 
@@ -130,12 +135,16 @@ class Transceiver(
     fun addRtpExtension(extensionId: Byte, rtpExtension: RTPExtension) {
         println("Adding RTP extension: $extensionId -> $rtpExtension")
         rtpExtensions[extensionId] = rtpExtension
-        rtpReceiver.handleEvent(RtpExtensionAddedEvent(extensionId, rtpExtension))
+        val rtpExtensionAddedEvent = RtpExtensionAddedEvent(extensionId, rtpExtension)
+        rtpReceiver.handleEvent(rtpExtensionAddedEvent)
+        rtpSender.handleEvent(rtpExtensionAddedEvent)
     }
 
     fun clearRtpExtensions() {
         println("Clearing all RTP extensions")
-        rtpReceiver.handleEvent(RtpExtensionClearEvent())
+        val rtpExtensionClearEvent = RtpExtensionClearEvent()
+        rtpReceiver.handleEvent(rtpExtensionClearEvent)
+        rtpSender.handleEvent(rtpExtensionClearEvent)
         rtpExtensions.clear()
     }
 
@@ -145,7 +154,9 @@ class Transceiver(
     }
 
     fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: String) {
-        rtpReceiver.handleEvent(SsrcAssociationEvent(primarySsrc, secondarySsrc, type))
+        val ssrcAssociationEvent = SsrcAssociationEvent(primarySsrc, secondarySsrc, type)
+        rtpReceiver.handleEvent(ssrcAssociationEvent)
+        rtpSender.handleEvent(ssrcAssociationEvent)
     }
 
     fun setSrtpInformation(chosenSrtpProtectionProfile: Int, tlsContext: TlsContext) {

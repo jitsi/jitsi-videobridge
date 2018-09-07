@@ -21,6 +21,10 @@ import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.transform.node.NodeEventVisitor
+import org.jitsi.nlj.transform.node.PacketCache
+import org.jitsi.nlj.transform.node.PacketLoss
+import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.forEachAs
 import org.jitsi.rtp.Packet
@@ -36,6 +40,7 @@ class RtpSenderImpl(
     val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpSender() {
     private val outgoingRtpRoot: Node
+    private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
     val incomingPacketQueue = LinkedBlockingQueue<Packet>()
     var numIncomingBytes: Long = 0
@@ -45,6 +50,13 @@ class RtpSenderImpl(
 
     private val srtpEncryptWrapper = SrtpTransformerEncryptNode()
     private val srtcpEncryptWrapper = SrtcpTransformerEncryptNode()
+    private val outgoingPacketCache = PacketCache()
+
+    private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
+        override fun doProcessPackets(p: List<Packet>) {
+            this@RtpSenderImpl.packetSender.processPackets(p)
+        }
+    }
 
     private var tempSenderSsrc: Long? = null
 
@@ -61,12 +73,19 @@ class RtpSenderImpl(
                 }
                 pkts
             }
+            node(outgoingPacketCache)
             node(srtpEncryptWrapper)
-            simpleNode("RTP sender") { pkts ->
-                packetSender.processPackets(pkts)
-                emptyList()
-            }
+            node(PacketLoss(.01))
+            node(outputPipelineTerminationNode)
         }
+
+        // The outgoing rtx pipeline has a retransmission sender and then ties into
+        // the RTP chain at the srtp encrypt node
+        outgoingRtxRoot = pipeline {
+            node(RetransmissionSender())
+            node(srtpEncryptWrapper)
+        }
+
         //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
         outgoingRtcpRoot = pipeline {
             simpleNode("RTCP sender ssrc setter") { pkts ->
@@ -86,15 +105,14 @@ class RtpSenderImpl(
                 emptyList()
             }
             node(srtcpEncryptWrapper)
-            simpleNode("RTCP sender") { pkts ->
-//                pkts.forEach { pkt ->
-//                    println("RtpSender sending encrypted rtcp packet:\n${pkt.getBuffer().toHex()}")
-//                }
-                packetSender.processPackets(pkts)
-                emptyList()
-            }
+            node(outputPipelineTerminationNode)
         }
         scheduleWork()
+    }
+
+    override fun getNackHandler(): NackHandler {
+        //TODO: don't return a new one every time
+        return NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
     }
 
     override fun sendPackets(pkts: List<Packet>) {
@@ -137,6 +155,10 @@ class RtpSenderImpl(
         }
     }
 
+    override fun handleEvent(event: Event) {
+        outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
+    }
+
     override fun getStats(): String {
         val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
         return with (StringBuffer()) {
@@ -146,8 +168,10 @@ class RtpSenderImpl(
             appendln("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
             appendln("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
             val statsVisitor = NodeStatsVisitor(this)
-            outgoingRtpRoot.visit(statsVisitor)
-            outgoingRtcpRoot.visit(statsVisitor)
+//            outgoingRtpRoot.visit(statsVisitor)
+//            outgoingRtcpRoot.visit(statsVisitor)
+            outputPipelineTerminationNode.reverseVisit(statsVisitor)
+
             toString()
         }
     }

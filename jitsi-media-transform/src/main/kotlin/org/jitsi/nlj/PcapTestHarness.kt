@@ -157,6 +157,12 @@ fun main(args: Array<String>) {
     println("$numReceivers receiver pipelines processed $numExpectedPackets packets each in a total of ${time.toMillis()}ms")
 
     receivers.forEach(RtpReceiver::stop)
+
+    val sender = RtpSenderImpl(456L, executor)
+    println("sender stats:\n${sender.getStats()}")
+
+
     executor.shutdownNow()
     executor.awaitTermination(5, TimeUnit.SECONDS)
+
 }
