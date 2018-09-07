@@ -23,6 +23,11 @@ class DemuxerNode : Node("Demuxer") {
 
     fun addPacketPath(pp: PacketPath) {
         transformPaths[pp.predicate] = pp.path
+        // DemuxerNode never uses the plain 'next' call since it doesn't have a single 'next'
+        // node (it has multiple downstream paths), but we want to make sure the paths correctly
+        // see this Demuxer in their 'inputNodes' so that we can traverse the reverse tree
+        // correctly, so we call attach here to get the inputNodes wired correctly.
+        super.attach(pp.path)
     }
 
     override fun attach(node: Node) = throw Exception()
