@@ -48,13 +48,4 @@ class DemuxerNode : Node("Demuxer") {
             path.visit(visitor)
         }
     }
-
-    // Will we do this here?  or will we rely on iterating over the bookkeeping
-    // structure?
-//    override fun handleEvent(event: Event) {
-//        transformPaths.forEach { _, handler ->
-//            handler.handleEvent(event)
-//        }
-//    }
-
 }
