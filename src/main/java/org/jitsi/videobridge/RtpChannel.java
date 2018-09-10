@@ -1107,114 +1107,114 @@ public class RtpChannel
         return transformEngine;
     }
 
-    /**
-     * Configures the given {@link MediaStream} according to the needs of this
-     * {@link RtpChannel}.
-     * @param stream the stream to configure.
-     */
-    protected void configureStream(MediaStream stream)
-    {
-        RetransmissionRequester retransmissionRequester
-            = stream.getRetransmissionRequester();
-        if (retransmissionRequester != null)
-        {
-            retransmissionRequester
-                .setSenderSsrc(getContent().getInitialLocalSSRC());
-        }
-    }
+//    /**
+//     * Configures the given {@link MediaStream} according to the needs of this
+//     * {@link RtpChannel}.
+//     * @param stream the stream to configure.
+//     */
+//    protected void configureStream(MediaStream stream)
+//    {
+//        RetransmissionRequester retransmissionRequester
+//            = stream.getRetransmissionRequester();
+//        if (retransmissionRequester != null)
+//        {
+//            retransmissionRequester
+//                .setSenderSsrc(getContent().getInitialLocalSSRC());
+//        }
+//    }
 
-    /**
-     * Starts {@link #stream} if it has not been started yet and if the state of
-     * this <tt>Channel</tt> meets the prerequisites to invoke
-     * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
-     * started only after a <tt>StreamConnector</tt> has been set on it and this
-     * <tt>Channel</tt> may be able to provide a <tt>StreamConnector</tt> only
-     * after the transport manager has completed the connectivity establishment.
-     *
-     * @throws IOException if anything goes wrong while starting <tt>stream</tt>
-     */
+//    /**
+//     * Starts {@link #stream} if it has not been started yet and if the state of
+//     * this <tt>Channel</tt> meets the prerequisites to invoke
+//     * {@link MediaStream#start()}. For example, <tt>MediaStream</tt> may be
+//     * started only after a <tt>StreamConnector</tt> has been set on it and this
+//     * <tt>Channel</tt> may be able to provide a <tt>StreamConnector</tt> only
+//     * after the transport manager has completed the connectivity establishment.
+//     *
+//     * @throws IOException if anything goes wrong while starting <tt>stream</tt>
+//     */
     @Override
     protected void maybeStartStream()
         throws IOException
     {
         // The stream hasn't been initialized yet.
-        synchronized (streamSyncRoot)
-        {
-            if (stream == null)
-            {
-                return;
-            }
-        }
-
-        configureStream(stream);
-
-        MediaStreamTarget streamTarget = createStreamTarget();
-        StreamConnector connector = getStreamConnector();
-        if (connector == null)
-        {
-            logger.info("Not starting stream, connector is null");
-            return;
-        }
-
-        if (streamTarget != null)
-        {
-            InetSocketAddress dataAddr = streamTarget.getDataAddress();
-            if (dataAddr == null)
-            {
-                logger.info(
-                        "Not starting stream, the target's data address is null");
-                return;
-            }
-
-            this.streamTarget.setDataHostAddress(dataAddr.getAddress());
-            this.streamTarget.setDataPort(dataAddr.getPort());
-
-            InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
-            if (ctrlAddr != null)
-            {
-                this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
-                this.streamTarget.setControlPort(ctrlAddr.getPort());
-            }
-
-            stream.setTarget(streamTarget);
-        }
-        stream.setConnector(connector);
-
-        Content content = getContent();
-        Conference conference = content.getConference();
-
-        if (!stream.isStarted())
-        {
-            /*
-             * We've postponed the invocation of the method
-             * getRTPLevelRelayType() in order to make sure that the conference
-             * focus has had a chance to set the RTP-level relay type. We have
-             * to invoke the method MediaStream#setSSRCFactory(SSRCFactory)
-             * before starting the stream.
-             */
-            if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
-            {
-                stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
-            }
-
-            synchronized (streamSyncRoot) // Otherwise, races with stream.setDirection().
-            {
-                stream.start();
-            }
-
-            EventAdmin eventAdmin = conference.getEventAdmin();
-            if (eventAdmin != null)
-            {
-                eventAdmin.sendEvent(EventFactory.streamStarted(this));
-            }
-        }
-
-        if (logger.isTraceEnabled())
-        {
-            logger.debug(Logger.Category.STATISTICS,
-                       "ch_direction," + getLoggingId()
-                        + " direction=" + stream.getDirection());
-        }
+//        synchronized (streamSyncRoot)
+//        {
+//            if (stream == null)
+//            {
+//                return;
+//            }
+//        }
+//
+//        configureStream(stream);
+//
+//        MediaStreamTarget streamTarget = createStreamTarget();
+//        StreamConnector connector = getStreamConnector();
+//        if (connector == null)
+//        {
+//            logger.info("Not starting stream, connector is null");
+//            return;
+//        }
+//
+//        if (streamTarget != null)
+//        {
+//            InetSocketAddress dataAddr = streamTarget.getDataAddress();
+//            if (dataAddr == null)
+//            {
+//                logger.info(
+//                        "Not starting stream, the target's data address is null");
+//                return;
+//            }
+//
+//            this.streamTarget.setDataHostAddress(dataAddr.getAddress());
+//            this.streamTarget.setDataPort(dataAddr.getPort());
+//
+//            InetSocketAddress ctrlAddr = streamTarget.getControlAddress();
+//            if (ctrlAddr != null)
+//            {
+//                this.streamTarget.setControlHostAddress(ctrlAddr.getAddress());
+//                this.streamTarget.setControlPort(ctrlAddr.getPort());
+//            }
+//
+//            stream.setTarget(streamTarget);
+//        }
+//        stream.setConnector(connector);
+//
+//        Content content = getContent();
+//        Conference conference = content.getConference();
+//
+//        if (!stream.isStarted())
+//        {
+//            /*
+//             * We've postponed the invocation of the method
+//             * getRTPLevelRelayType() in order to make sure that the conference
+//             * focus has had a chance to set the RTP-level relay type. We have
+//             * to invoke the method MediaStream#setSSRCFactory(SSRCFactory)
+//             * before starting the stream.
+//             */
+//            if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
+//            {
+//                stream.setSSRCFactory(new SSRCFactoryImpl(initialLocalSSRC));
+//            }
+//
+//            synchronized (streamSyncRoot) // Otherwise, races with stream.setDirection().
+//            {
+//                stream.start();
+//            }
+//
+//            EventAdmin eventAdmin = conference.getEventAdmin();
+//            if (eventAdmin != null)
+//            {
+//                eventAdmin.sendEvent(EventFactory.streamStarted(this));
+//            }
+//        }
+//
+//        if (logger.isTraceEnabled())
+//        {
+//            logger.debug(Logger.Category.STATISTICS,
+//                       "ch_direction," + getLoggingId()
+//                        + " direction=" + stream.getDirection());
+//        }
     }
 
     /**

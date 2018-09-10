@@ -139,20 +139,20 @@ public class AudioChannel
         }
     }
 
-    /**
-     * {@inheritDoc}
-     * </p>
-     * Registers this channel's {@link AudioChannelAudioLevelListener} with
-     * the media stream.
-     */
-    @Override
-    protected void configureStream(MediaStream stream)
-    {
-        if (stream instanceof AudioMediaStream)
-        {
-            ((AudioMediaStream) stream)
-                .setCsrcAudioLevelListener(
-                    new AudioChannelAudioLevelListener(this));
-        }
-    }
+//     /**
+//      * {@inheritDoc}
+//      * </p>
+//      * Registers this channel's {@link AudioChannelAudioLevelListener} with
+//      * the media stream.
+//      */
+//     @Override
+//     protected void configureStream(MediaStream stream)
+//     {
+//         if (stream instanceof AudioMediaStream)
+//         {
+//             ((AudioMediaStream) stream)
+//                 .setCsrcAudioLevelListener(
+//                     new AudioChannelAudioLevelListener(this));
+//         }
+//     }
 }

@@ -265,7 +265,7 @@ public class VideoChannel
         MediaStream stream = getStream();
         boolean previouslyStarted = stream != null && stream.isStarted();
 
-        super.maybeStartStream();
+//        super.maybeStartStream();
 
         // If a recvonly channel is created, existing streams won't be
         // forwarded to it until the next keyframe comes in.

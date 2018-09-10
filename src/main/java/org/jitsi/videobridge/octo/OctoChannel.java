@@ -220,22 +220,22 @@ public class OctoChannel
     }
 
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void configureStream(MediaStream stream)
-    {
-        // Intentionally do not call super#configureStream in order to prevent
-        // things like retransmission requests to be enabled.
-
-        if (stream != null && stream instanceof AudioMediaStream)
-        {
-            ((AudioMediaStream) stream)
-                .setCsrcAudioLevelListener(
-                    new AudioChannelAudioLevelListener(this));
-        }
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    protected void configureStream(MediaStream stream)
+//    {
+//        // Intentionally do not call super#configureStream in order to prevent
+//        // things like retransmission requests to be enabled.
+//
+//        if (stream != null && stream instanceof AudioMediaStream)
+//        {
+//            ((AudioMediaStream) stream)
+//                .setCsrcAudioLevelListener(
+//                    new AudioChannelAudioLevelListener(this));
+//        }
+//    }
 
     /**
      * {@inheritDoc}
