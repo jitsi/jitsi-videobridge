@@ -90,7 +90,6 @@ class Tcc : FeedbackControlInformation {
     var referenceTime: Long
     override val size: Int
         get() {
-
             val deltaBlocksSize = packetInfo.keys
                 .map(packetInfo::getStatusSymbol)
                 .map(PacketStatusSymbol::getDeltaSizeBytes)
@@ -304,6 +303,9 @@ class Tcc : FeedbackControlInformation {
                         "the FCI was: $this")
                 throw e
             }
+            // It's possible we didn't need to use the entire buffer we already had, so make sure
+            // to set the limit where the data for this FCI actually ends
+            this.buf!!.limit(size)
             return this.buf!!.rewind() as ByteBuffer
         } catch (e: Exception) {
             println("Exception getting tcc buffer: $e\n" +

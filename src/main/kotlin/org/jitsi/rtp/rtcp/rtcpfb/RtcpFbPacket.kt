@@ -133,7 +133,6 @@ abstract class RtcpFbPacket : RtcpPacket {
         header.reportCount = feedbackControlInformation.fmt
         //TODO: we should also not do padding anywhere else (except for in 'internal'
         // fields which need it) and handle it here (add any padding, set the padding bit)
-        //TODO: should have explicit setters for these instead of using relative positions
         this.buf!!.put(header.getBuffer())
         setMediaSourceSsrc(this.buf!!, mediaSourceSsrc)
         val bufPositionBefore = buf!!.position()
@@ -141,9 +140,13 @@ abstract class RtcpFbPacket : RtcpPacket {
             setFeedbackControlInformation(buf!!, feedbackControlInformation)
         } catch (e: Exception) {
             println("exception serializing fci, buf position was $bufPositionBefore, " +
-                    "capacity is ${buf!!.capacity()}, fci size is ${feedbackControlInformation.size} ")
+                    "capacity is ${buf!!.capacity()}, limit is ${buf!!.limit()} fci size is ${feedbackControlInformation.size} ")
             throw e
         }
+
+        // It's possible we didn't use the entire buffer, so make sure to set the limit to match what
+        // we've used
+        this.buf!!.limit((header.length + 1) * 4)
 
         this.buf!!.rewind()
 

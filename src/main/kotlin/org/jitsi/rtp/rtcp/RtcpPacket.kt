@@ -39,7 +39,6 @@ abstract class RtcpPacket : Packet() {
          */
         protected fun setHeader(buf: ByteBuffer, header: RtcpHeader) {
             buf.put(buf)
-
         }
     }
 
