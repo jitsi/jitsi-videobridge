@@ -20,11 +20,11 @@ import org.bouncycastle.crypto.tls.SRTPProtectionProfile
 import org.bouncycastle.crypto.tls.TlsClientContext
 import org.bouncycastle.crypto.tls.TlsContext
 import org.bouncycastle.crypto.tls.TlsServerContext
-import org.jitsi.nlj.srtp_og.SRTCPTransformer
-import org.jitsi.nlj.srtp_og.SRTPContextFactory
-import org.jitsi.nlj.srtp_og.SRTPPolicy
-import org.jitsi.nlj.srtp_og.SRTPTransformer
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.impl.neomedia.transform.srtp.SRTCPTransformer
+import org.jitsi.impl.neomedia.transform.srtp.SRTPContextFactory
+import org.jitsi.impl.neomedia.transform.srtp.SRTPPolicy
+import org.jitsi.impl.neomedia.transform.srtp.SRTPTransformer
 
 enum class TlsRole {
     CLIENT,

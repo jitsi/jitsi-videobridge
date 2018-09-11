@@ -24,7 +24,6 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.service.neomedia.MediaType
 import org.jitsi.service.neomedia.codec.Constants

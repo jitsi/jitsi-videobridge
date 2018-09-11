@@ -22,7 +22,6 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.toRawPacket
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RawPacket
 import unsigned.toUInt
