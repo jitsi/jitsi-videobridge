@@ -22,6 +22,7 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.RtxPacket
 import org.jitsi.service.neomedia.codec.Constants
@@ -43,17 +44,19 @@ class RetransmissionSender : Node("Retransmission sender") {
      */
     private val rtxStreamSeqNums: MutableMap<Long, Int> = mutableMapOf()
 
+    private var numRetransmittedPackets = 0
+
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
-            println("Retransmission sender ${hashCode()} retransmitting packet with original ssrc ${pkt.header.ssrc} and original" +
-                    " payload type: ${pkt.header.payloadType}")
-            println("associatedSsrcs: $associatedSsrcs")
+//            println("Retransmission sender ${hashCode()} retransmitting packet with original ssrc ${pkt.header.ssrc} and original" +
+//                    " payload type: ${pkt.header.payloadType}")
+//            println("associatedSsrcs: $associatedSsrcs")
             val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: return@forEachAs
-            println("Found rtx ssrc $rtxSsrc for primary ${pkt.header.ssrc}")
-            println("associatedPts: $associatedPayloadTypes")
+//            println("Found rtx ssrc $rtxSsrc for primary ${pkt.header.ssrc}")
+//            println("associatedPts: $associatedPayloadTypes")
             val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: return@forEachAs
-            println("Found rtx pt $rtxPt for primary ${pkt.header.payloadType}")
+//            println("Found rtx pt $rtxPt for primary ${pkt.header.payloadType}")
             // Get a default value of 1 to start if it isn't present in the map.  If it is present
             // in the map, get the value and increment it by 1
             val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
@@ -62,7 +65,7 @@ class RetransmissionSender : Node("Retransmission sender") {
             rtxPacket.header.ssrc = rtxSsrc
             rtxPacket.header.payloadType = rtxPt
             rtxPacket.header.sequenceNumber = rtxSeqNum
-            println("Sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum")
+//            println("Sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum")
             packetInfo.packet = rtxPacket
 
             outPackets.add(packetInfo)
@@ -97,5 +100,15 @@ class RetransmissionSender : Node("Retransmission sender") {
             }
         }
         super.handleEvent(event)
+    }
+
+    override fun getStats(indent: Int): String {
+        return with(StringBuffer()) {
+            append(super.getStats(indent))
+            appendLnIndent(indent, "RetransmissionSender")
+            appendLnIndent(indent + 2, "num retransmitted packets: $numRetransmittedPackets")
+
+            toString()
+        }
     }
 }
