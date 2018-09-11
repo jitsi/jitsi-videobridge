@@ -16,6 +16,8 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.rtp.RawPacketCache
+import org.jitsi.nlj.transform.StatsProducer
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
@@ -28,23 +30,39 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
 class NackHandler(
     private val packetCache: RawPacketCache,
     private val onNackedPacketsReady: PacketHandler
-) {
+) : StatsProducer {
+    private var numNacksReceived = 0
+    private var numNackedPackets = 0
+    private var numRetransmittedPackets = 0
 
     fun onNackPacket(nackPacket: RtcpFbNackPacket) {
-        println("Nack handler processing nack")
+        numNacksReceived++
+//        println("Nack handler processing nack")
         val nackedPackets = mutableListOf<Packet>()
         val ssrc = nackPacket.mediaSourceSsrc
+        numNackedPackets += nackPacket.missingSeqNums.size
         nackPacket.missingSeqNums.forEach { missingSeqNum ->
-            println("Nack handler checking cache " + packetCache.hashCode() +
-                    " for packet $ssrc $missingSeqNum in cache")
+//            println("Nack handler checking cache " + packetCache.hashCode() +
+//                    " for packet $ssrc $missingSeqNum in cache")
             val packet = packetCache.get(ssrc, missingSeqNum)
             if (packet != null) {
                 nackedPackets.add(RtpPacket(packet.getByteBuffer()))
+                numRetransmittedPackets++
             }
         }
         if (nackedPackets.isNotEmpty()) {
-            println("NackHandler found ${nackedPackets.size} that can be retransmitted")
+//            println("NackHandler found ${nackedPackets.size} that can be retransmitted")
             onNackedPacketsReady.processPackets(nackedPackets.map { PacketInfo(it) })
+        }
+    }
+
+    override fun getStats(indent: Int): String {
+        return with (StringBuffer()) {
+            appendLnIndent(indent, "Nack handler")
+            appendLnIndent(indent + 2, "num nack packets received: $numNackedPackets")
+            appendLnIndent(indent + 2, "num nacked packets: $numNackedPackets")
+            appendLnIndent(indent + 2, "num retransmitted packets: $numRetransmittedPackets")
+            toString()
         }
     }
 }

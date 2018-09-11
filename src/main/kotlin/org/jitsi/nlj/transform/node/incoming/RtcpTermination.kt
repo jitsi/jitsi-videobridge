@@ -33,14 +33,15 @@ class RtcpTermination : Node("RTCP termination") {
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
         //TODO: we don't need to use forEachAs here i don't think
-        p.forEachAs<RtcpPacket> { packetInfo, pkt ->
+        p.forEach { packetInfo ->
+            val pkt = packetInfo.packet
             when (pkt) {
                 is RtcpRrPacket, is RtcpSrPacket, is RtcpFbTccPacket -> {
                     // Process & terminate
 //                    println("BRIAN: terminating ${it.javaClass} rtcp packet")
                 }
                 is RtcpFbNackPacket -> {
-                    println("BRIAN: received nack for packets: ${pkt.missingSeqNums}")
+//                    println("BRIAN: received nack for packets: ${pkt.missingSeqNums}")
                     nackHandler?.onNackPacket(pkt)
                 }
                 is RtcpFbPliPacket, is RtcpFbFirPacket -> {
