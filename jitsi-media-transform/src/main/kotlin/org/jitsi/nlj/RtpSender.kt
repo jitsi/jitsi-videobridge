@@ -42,7 +42,7 @@ abstract class RtpSender : EventHandler {
         }
     }
     abstract fun getNackHandler(): NackHandler
-    abstract fun sendPackets(pkts: List<Packet>)
+    abstract fun sendPackets(pkts: List<PacketInfo>)
     abstract fun sendRtcp(pkts: List<RtcpPacket>)
     abstract fun getStats(): String
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)

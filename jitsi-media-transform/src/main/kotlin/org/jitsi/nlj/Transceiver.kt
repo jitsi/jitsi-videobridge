@@ -82,7 +82,7 @@ class Transceiver(
         scheduleWork()
     }
 
-    fun sendPackets(p: List<Packet>) {
+    fun sendPackets(p: List<PacketInfo>) {
         rtpSender.sendPackets(p)
     }
 
