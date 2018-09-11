@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2018 Atlassian Pty Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,36 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.util;
+package org.jitsi_modified.service.neomedia.format;
 
-import java.util.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.*;
 
 /**
- * @author George Politis
+ * @author bb
  */
-public class LRUCache<K, V> extends LinkedHashMap<K, V>
+public class Vp8MediaFormat extends AbstractMediaFormat
 {
-    /**
-     *
-     */
-    private int cacheSize;
-
-    /**
-     * Ctor.
-     *
-     * @param cacheSize
-     */
-    public LRUCache(int cacheSize)
+    @Override
+    public MediaType getMediaType()
     {
-        this.cacheSize = cacheSize;
+        return MediaType.VIDEO;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    protected boolean removeEldestEntry(Map.Entry<K, V> eldest)
+    public String getEncoding()
     {
-        return size() > cacheSize;
+        return Constants.VP8;
     }
 }
