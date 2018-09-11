@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.impl.neomedia.codec.video.vp8.VP8Utils
+import org.jitsi_modified.impl.neomedia.codec.video.vp8.VP8Utils
 import org.jitsi_modified.impl.neomedia.rtp.FrameDesc
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo

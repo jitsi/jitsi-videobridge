@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.impl.neomedia.codec.video.vp8;
+package org.jitsi_modified.impl.neomedia.codec.video.vp8;
+
+import org.jitsi.impl.neomedia.codec.video.vp8.*;
 
 import java.nio.*;
 
