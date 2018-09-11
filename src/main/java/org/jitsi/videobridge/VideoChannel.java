@@ -25,7 +25,9 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.nlj.*;
 import org.jitsi.nlj.rtp.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.configuration.*;
@@ -368,7 +370,7 @@ public class VideoChannel
      * {@inheritDoc}
      */
     @Override
-    boolean rtpTranslatorWillWrite(
+    boolean wants(
         boolean data,
         RawPacket pkt,
         RtpChannel source)
@@ -382,7 +384,7 @@ public class VideoChannel
     }
 
     @Override
-    boolean rtpTranslatorWillWrite(Packet pkt)
+    boolean wants(Packet pkt)
     {
         if (pkt instanceof RtcpPacket)
         {
@@ -394,6 +396,27 @@ public class VideoChannel
         }
 
         return accept;
+    }
+
+    @Override
+    public void sendRtp(List<PacketInfo> packets)
+    {
+        // TODO(brian) we lose the enclosing packetInfo here because we convert the packets and pass them
+        // down in bulk.
+        RawPacket[] rawPackets = new RawPacket[packets.size()];
+        for (int i = 0; i < packets.size(); ++i) {
+            rawPackets[i] = PacketExtensionsKt.toRawPacket(packets.get(i).getPacket());
+        }
+        RawPacket[] res = bitrateController.getRTPTransformer().transform(rawPackets);
+        List<PacketInfo> newPackets = new ArrayList<>();
+        for (RawPacket re : res)
+        {
+            if (re != null) {
+                RtpPacket rtpPacket = new RtpPacket(PacketExtensionsKt.getByteBuffer(re));
+                newPackets.add(new PacketInfo(rtpPacket));
+            }
+        }
+        transceiver.sendPackets(newPackets);
     }
 
     /**

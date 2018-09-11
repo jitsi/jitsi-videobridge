@@ -77,35 +77,35 @@ public class AudioChannel
         transceiver.setCsrcAudioLevelListener(new AudioChannelAudioLevelListener(this));
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void removeStreamListeners()
-    {
-        super.removeStreamListeners();
-
-        try
-        {
-            MediaStream stream = getStream();
-
-            if (stream instanceof AudioMediaStream)
-            {
-                ((AudioMediaStream) stream).setCsrcAudioLevelListener(null);
-            }
-        }
-        catch (Throwable t)
-        {
-            if (t instanceof InterruptedException)
-            {
-                Thread.currentThread().interrupt();
-            }
-            else if (t instanceof ThreadDeath)
-            {
-                throw (ThreadDeath) t;
-            }
-        }
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    protected void removeStreamListeners()
+//    {
+//        super.removeStreamListeners();
+//
+//        try
+//        {
+//            MediaStream stream = getStream();
+//
+//            if (stream instanceof AudioMediaStream)
+//            {
+//                ((AudioMediaStream) stream).setCsrcAudioLevelListener(null);
+//            }
+//        }
+//        catch (Throwable t)
+//        {
+//            if (t instanceof InterruptedException)
+//            {
+//                Thread.currentThread().interrupt();
+//            }
+//            else if (t instanceof ThreadDeath)
+//            {
+//                throw (ThreadDeath) t;
+//            }
+//        }
+//    }
 
     /**
      * {@inheritDoc}
@@ -139,20 +139,57 @@ public class AudioChannel
         }
     }
 
-//     /**
-//      * {@inheritDoc}
-//      * </p>
-//      * Registers this channel's {@link AudioChannelAudioLevelListener} with
-//      * the media stream.
-//      */
-//     @Override
-//     protected void configureStream(MediaStream stream)
-//     {
-//         if (stream instanceof AudioMediaStream)
-//         {
-//             ((AudioMediaStream) stream)
-//                 .setCsrcAudioLevelListener(
-//                     new AudioChannelAudioLevelListener(this));
-//         }
-//     }
+//    /**
+//     * {@inheritDoc}
+//     * </p>
+//     * Registers this channel's {@link AudioChannelAudioLevelListener} with
+//     * the media stream.
+//     */
+//    @Override
+//    protected void configureStream(MediaStream stream)
+//    {
+//        if (stream != null && stream instanceof AudioMediaStream)
+//        {
+//            ((AudioMediaStream) stream)
+//                .setCsrcAudioLevelListener(
+//                    new AudioChannelAudioLevelListener(this));
+//        }
+//    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    boolean wants(
+        boolean data,
+        RawPacket pkt,
+        RtpChannel source)
+    {
+        if (!data)
+        {
+            return true;
+        }
+
+        if (!fetchedLipSyncHack)
+        {
+            fetchedLipSyncHack = true;
+
+            List<RtpChannel> channels = getEndpoint()
+                .getChannels(MediaType.VIDEO);
+
+            if (channels != null && !channels.isEmpty())
+            {
+                associatedLipSyncHack
+                    = ((VideoChannel)channels.get(0)).getLipSyncHack();
+            }
+        }
+
+        if (associatedLipSyncHack != null)
+        {
+            associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
+                pkt, source);
+        }
+
+        return true;
+    }
 }

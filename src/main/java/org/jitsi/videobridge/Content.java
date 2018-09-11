@@ -21,19 +21,12 @@ import java.lang.Deprecated;
 import java.lang.ref.*;
 import java.util.*;
 
-import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
-import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.device.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
-import org.jitsi.nlj.*;
-import org.jitsi.nlj.transform.node.*;
-import org.jitsi.rtp.*;
-import org.jitsi.rtp.rtcp.*;
-import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.device.*;
 import org.jitsi.service.neomedia.recording.*;
@@ -238,7 +231,7 @@ public class Content
                     = (source == null) ? null : RtpChannel.getChannel(source);
 
                 accept
-                    = dst.rtpTranslatorWillWrite(
+                    = dst.wants(
                             data,
                             pkt,
                             src);

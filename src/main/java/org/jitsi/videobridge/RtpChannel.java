@@ -23,7 +23,6 @@ import net.sf.fmj.media.rtp.*;
 import net.sf.fmj.media.rtp.RTPHeader;
 import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
-import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
@@ -33,7 +32,6 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
-import org.jitsi.rtp.rtcp.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
@@ -54,7 +52,6 @@ import javax.media.rtp.*;
 import java.beans.*;
 import java.io.*;
 import java.net.*;
-import java.nio.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.*;
@@ -917,11 +914,12 @@ public class RtpChannel
                 }
                 PacketInfo pktInfoCopy = pktInfo.clone();
                 RtpChannel rtpChannel = (RtpChannel)channel;
-                // If we can *know* that the rtpTranslatorWillWrite chain will not modify the packet (and perhaps we
+                // If we can *know* that the wants chain will not modify the packet (and perhaps we
                 // can enforce this?) then we can wait to make the copy
-                if (rtpChannel.rtpTranslatorWillWrite(pktInfoCopy.getPacket()))
+                if (rtpChannel.wants(pktInfoCopy.getPacket()))
                 {
-                    rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktInfoCopy.getPacket()));
+//                    rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktInfoCopy.getPacket()));
+                    rtpChannel.sendRtp(Collections.singletonList(pktInfoCopy));
                 }
             });
         });
@@ -1440,7 +1438,7 @@ public class RtpChannel
      * specified packet/<tt>buffer</tt> into this <tt>Channel</tt>; otherwise,
      * <tt>false</tt>
      */
-    boolean rtpTranslatorWillWrite(
+    boolean wants(
         boolean data,
         RawPacket pkt,
         RtpChannel source)
@@ -1448,7 +1446,7 @@ public class RtpChannel
         return true;
     }
 
-    boolean rtpTranslatorWillWrite(Packet pkt)
+    boolean wants(Packet pkt)
     {
         return true;
     }
@@ -1627,12 +1625,12 @@ public class RtpChannel
         }
 
         // It is safe to just add it, MediaStream will take care of duplicates.
-        MediaStream stream = getStream();
-        if (stream != null)
-        {
-            stream.addRTPExtension(id, new RTPExtension(uri));
-            transceiver.addRtpExtension(id, new RTPExtension(uri));
-        }
+//        MediaStream stream = getStream();
+//        if (stream != null)
+//        {
+//            stream.addRTPExtension(id, new RTPExtension(uri));
+//        }
+        transceiver.addRtpExtension(id, new RTPExtension(uri));
     }
 
     /**
@@ -2081,6 +2079,12 @@ public class RtpChannel
         return engine.setPacketDelay(packetDelay);
     }
 
+    public void sendRtp(List<PacketInfo> packets)
+    {
+        // By default just add it to the sender's queue
+        transceiver.sendPackets(packets);
+    }
+
     /**
      * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
      *
@@ -2142,6 +2146,12 @@ public class RtpChannel
             changed
                 = mediaStreamTrackReceiver.setMediaStreamTracks(newTracks);
 
+            for (MediaStreamTrackDesc mediaStreamTrackDesc : newTracks)
+            {
+                RTPEncodingDesc[] encodings = mediaStreamTrackDesc.getRTPEncodings();
+                System.out.println("Setting " + encodings.length + " encodings on transceiver " + transceiver.hashCode());
+                transceiver.setRtpEncodings(encodings);
+            }
 
             System.out.println("BRIAN: iterating through " + sourceGroups.size() + " source groups");
             sourceGroups.forEach(sourceGroup -> {
