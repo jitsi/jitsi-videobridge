@@ -15,8 +15,6 @@
  */
 package org.jitsi.impl.neomedia.codec.video.vp8;
 
-import org.jitsi.rtp.*;
-
 import java.nio.*;
 
 /**
@@ -28,24 +26,24 @@ public class VP8Utils
     {
         // Check if this is the start of a VP8 partition in the payload
         // descriptor.
-        if (!VP8PayloadDescriptor.isValid(buf.array(), buf.arrayOffset(), buf.limit()))
+        if (!DePacketizer.VP8PayloadDescriptor.isValid(buf.array(), buf.arrayOffset(), buf.limit()))
         {
             return false;
         }
 
-        if (!VP8PayloadDescriptor.isStartOfFrame(buf.array(), buf.arrayOffset()))
+        if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buf.array(), buf.arrayOffset()))
         {
             return false;
         }
 
-        int szVP8PayloadDescriptor = VP8PayloadDescriptor.getSize(buf.array(), buf.arrayOffset(), buf.limit());
+        int szVP8PayloadDescriptor = DePacketizer.VP8PayloadDescriptor.getSize(buf.array(), buf.arrayOffset(), buf.limit());
 
-        return VP8PayloadHeader.isKeyFrame(
+        return DePacketizer.VP8PayloadHeader.isKeyFrame(
                 buf.array(), buf.arrayOffset() + szVP8PayloadDescriptor);
     }
 
     public static boolean isStartOfFrame(ByteBuffer buf)
     {
-        return VP8PayloadDescriptor.isStartOfFrame(buf.array(), buf.arrayOffset());
+        return DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buf.array(), buf.arrayOffset());
     }
 }
