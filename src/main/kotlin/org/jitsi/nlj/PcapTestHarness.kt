@@ -25,8 +25,8 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.service.neomedia.RTPExtension
-import org.jitsi.service.neomedia.format.DummyAudioMediaFormat
-import org.jitsi.service.neomedia.format.Vp8MediaFormat
+import org.jitsi_modified.service.neomedia.format.DummyAudioMediaFormat
+import org.jitsi_modified.service.neomedia.format.Vp8MediaFormat
 import java.lang.Thread.sleep
 import java.net.URI
 import java.nio.ByteBuffer
@@ -89,7 +89,9 @@ fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
     rtpReceiver.setSrtcpTransformer(srtcpTransformer)
 
     rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(100, Vp8MediaFormat()))
-    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(111, DummyAudioMediaFormat()))
+    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(111,
+        DummyAudioMediaFormat()
+    ))
     rtpReceiver.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
 
     return rtpReceiver

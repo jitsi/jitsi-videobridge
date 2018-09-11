@@ -1,5 +1,5 @@
 /*
- * Copyright @ 2015 Atlassian Pty Ltd
+ * Copyright @ 2018 Atlassian Pty Ltd
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.util.function;
+package org.jitsi_modified.service.neomedia.format;
+
+import org.jitsi.service.neomedia.*;
 
 /**
- * Represents a predicate of one argument. This is a poor man's backport of the
- * <tt>Predicate</tt> interface found in Java 1.8.
- *
- * @author George Politis
- * @deprecated Use {@link java.util.function.Predicate}
+ * @author bbaldino
  */
-
-@Deprecated
-public interface Predicate<T>
+public class DummyAudioMediaFormat extends AbstractMediaFormat
 {
-    boolean test(T t);
+    @Override
+    public MediaType getMediaType()
+    {
+        return MediaType.AUDIO;
+    }
 }
