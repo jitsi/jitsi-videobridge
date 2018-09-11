@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
 
@@ -34,3 +35,5 @@ class SsrcAssociationEvent(
     val secondarySsrc: Long,
     val type: String
 ) : Event
+
+class RtpEncodingsEvent(val rtpEncodings: List<RTPEncodingDesc>) : Event
