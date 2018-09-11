@@ -41,7 +41,7 @@ class RtpSenderImpl(
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
-    val incomingPacketQueue = LinkedBlockingQueue<Packet>()
+    val incomingPacketQueue = LinkedBlockingQueue<PacketInfo>()
     var numIncomingBytes: Long = 0
     var firstPacketWrittenTime = -1L
     var lastPacketWrittenTime = -1L
@@ -115,13 +115,13 @@ class RtpSenderImpl(
         return NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
     }
 
-    override fun sendPackets(pkts: List<Packet>) {
+    override fun sendPackets(pkts: List<PacketInfo>) {
 //        println("BRIAN: sender got ${pkts.size} packets to send")
 //        pkts.forEachAs<RtpPacket> {
 //            println("BRIAN: sender sendign packet ${it.header} with buf ${it.getBuffer().toHex()}")
 //        }
         incomingPacketQueue.addAll(pkts)
-        pkts.forEach { numIncomingBytes += it.size }
+        pkts.forEach { numIncomingBytes += it.packet.size }
         if (firstPacketWrittenTime == -1L) {
             firstPacketWrittenTime = System.currentTimeMillis()
         }
@@ -146,10 +146,10 @@ class RtpSenderImpl(
         executor.execute {
             if (running) {
 //                println("BRIAN: rtp sender job running")
-                val packetsToProcess = mutableListOf<Packet>()
+                val packetsToProcess = mutableListOf<PacketInfo>()
                 incomingPacketQueue.drainTo(packetsToProcess, 20)
 //                println("BRIAN: rtp sender job got ${packetsToProcess.size} packets to give to chain")
-                if (packetsToProcess.isNotEmpty()) outgoingRtpRoot.processPackets(packetsToProcess.map { PacketInfo(it) })
+                if (packetsToProcess.isNotEmpty()) outgoingRtpRoot.processPackets(packetsToProcess)
 
                 scheduleWork()
             }

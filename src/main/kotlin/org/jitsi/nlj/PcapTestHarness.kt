@@ -115,7 +115,7 @@ fun main(args: Array<String>) {
                     println("ALL PACKETS FORWARDED")
                     doneFuture.complete(Unit)
                 }
-                sender.incomingPacketQueue.addAll(p.map(PacketInfo::packet))
+                sender.incomingPacketQueue.addAll(p)
             }
         })
         receivers.add(rtpReceiver)
