@@ -21,6 +21,11 @@ import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
 import java.nio.ByteBuffer
 
+/**
+ * A Node to handle the output of the sctp stack to bridge it back
+ * into a pipeline.  This acts as the send half of the 'DatagramTransport'
+ * (so it handles already encrypted DTLS packets).
+ */
 class DtlsSenderNode : Node("DTLS Sender") {
     override fun doProcessPackets(p: List<PacketInfo>) {
 //        println("BRIAN: dtls sender module invoking next")
@@ -29,7 +34,7 @@ class DtlsSenderNode : Node("DTLS Sender") {
 
     //TODO: change thread contexts here?
     fun send(buf: ByteArray, off: Int, length: Int) {
-//        println("BRIAN: dtls sender module sending packets")
+        println("BRIAN: dtls sender module sending packets")
         processPackets(listOf(PacketInfo(DtlsProtocolPacket(ByteBuffer.wrap(buf, off, length)))))
     }
 }
