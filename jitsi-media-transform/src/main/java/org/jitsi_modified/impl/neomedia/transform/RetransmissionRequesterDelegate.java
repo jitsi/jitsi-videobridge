@@ -333,8 +333,9 @@ public class RetransmissionRequesterDelegate
         {
             long sourceSsrc = entry.getKey();
             Set<Integer> missingPackets = entry.getValue();
+            Integer packetId = Collections.min(missingPackets);
             RtcpFbNackPacket nack
-                    = new RtcpFbNackPacket(sourceSsrc, missingPackets.iterator().next(), new ArrayList<>(missingPackets));
+                    = new RtcpFbNackPacket(sourceSsrc, packetId, new ArrayList<>(missingPackets));
             nackPackets.add(nack);
         }
         return nackPackets;
