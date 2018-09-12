@@ -25,7 +25,6 @@ import org.ice4j.socket.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.dtls.*;
-import org.jitsi.nlj.srtp_og.*;
 import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
@@ -51,8 +50,12 @@ public class IceDtlsTransportManager
     private static final Logger logger
             = Logger.getLogger(IceDtlsTransportManager.class);
     private static final String ICE_STREAM_NAME = "ice-stream-name";
-    private DtlsStack dtlsStack = new DtlsClientStack();
+    //TODO: made public so we can grab it in sctp connection, fix that.
+    /*private*/ DtlsStack dtlsStack = new DtlsClientStack();
     private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
+    //TODO: temp store dtls transport
+    DTLSTransport dtlsTransport;
+    LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
     private DtlsSenderNode dtlsSender = new DtlsSenderNode();
     class SocketSenderNode extends Node {
         public MultiplexingDatagramSocket socket = null;
@@ -217,6 +220,11 @@ public class IceDtlsTransportManager
         });
         PipelineBuilder dtlsPipelineBuilder = new PipelineBuilder();
         dtlsPipelineBuilder.node(dtlsReceiver);
+        dtlsPipelineBuilder.simpleNode("sctp app packet handler", packets -> {
+            sctpAppPackets.addAll(packets);
+
+            return Collections.emptyList();
+        });
         dtlsPath.setPath(dtlsPipelineBuilder.build());
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
 
@@ -313,10 +321,12 @@ public class IceDtlsTransportManager
     private boolean iceConnectedProcessed = false;
 
     private void onIceConnected() {
+        iceConnected = true;
         if (iceConnectedProcessed) {
             System.out.println("Already processed ice connected, ignoring new event");
             return;
         }
+        getChannels().forEach(Channel::transportConnected);
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
@@ -334,6 +344,8 @@ public class IceDtlsTransportManager
         );
         dtlsStack.onHandshakeComplete((dtlsTransport, tlsContext) -> {
             System.out.println("BRIAN: dtls handshake complete, got srtp profile: " + dtlsStack.getChosenSrtpProtectionProfile());
+            dtlsReceiver.setDtlsTransport(dtlsTransport);
+            this.dtlsTransport = dtlsTransport;
             getTransceivers().forEach(transceiver -> {
                 transceiver.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
             });

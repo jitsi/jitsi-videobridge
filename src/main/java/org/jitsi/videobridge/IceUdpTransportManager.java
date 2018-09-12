@@ -413,7 +413,7 @@ public class IceUdpTransportManager
     /**
      * Whether ICE connectivity has been established.
      */
-    private boolean iceConnected = false;
+    protected boolean iceConnected = false;
 
     /**
      * The <tt>IceMediaStream</tt> of {@link #iceAgent} associated with the

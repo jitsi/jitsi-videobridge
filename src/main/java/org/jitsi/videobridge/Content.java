@@ -407,7 +407,7 @@ public class Content
             String id = generateChannelID();
 
             sctpConnection
-                = new SctpConnection(id, this, endpoint, sctpPort,
+                = new NewSctpConnection(id, this, endpoint, sctpPort,
                                      channelBundleId, initiator);
             channels.put(sctpConnection.getID(), sctpConnection);
         }
