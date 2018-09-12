@@ -20,6 +20,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
+import org.jitsi.rtp.extensions.clone
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -61,9 +62,11 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
         var bytesReceived = 0
         val outPackets = mutableListOf<PacketInfo>()
         do {
-            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 1) ?: 0
+            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 10) ?: -1
             if (bytesReceived > 0) {
-                outPackets.add(PacketInfo(DtlsProtocolPacket(dtlsAppDataBuf.duplicate())))
+                val bufCopy = dtlsAppDataBuf.clone();
+                bufCopy.limit(bytesReceived)
+                outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy)))
             }
         } while (bytesReceived > 0)
         if (outPackets.isNotEmpty()) {
@@ -88,7 +91,7 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
      * allowing us to bridge this module into the DTLS stack.
      */
     fun receive(buf: ByteArray, off: Int, length: Int, timeoutMs: Int): Int {
-        val packetInfo = incomingQueue.poll(timeoutMs.toLong(), TimeUnit.MILLISECONDS) ?: return 0
+        val packetInfo = incomingQueue.poll(timeoutMs.toLong(), TimeUnit.MILLISECONDS) ?: return -1
         val packet = packetInfo.packet
         System.arraycopy(packet.getBuffer().array(), 0, buf, off, Math.min(length, packet.size))
 

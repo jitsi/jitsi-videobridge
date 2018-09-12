@@ -35,6 +35,7 @@ class QueueDatagramTransport(
     }
 
     override fun send(buf: ByteArray, off: Int, length: Int) {
+        println("QueueDatagramTransport sending dtls")
         sendOutput(buf, off, length)
     }
 
