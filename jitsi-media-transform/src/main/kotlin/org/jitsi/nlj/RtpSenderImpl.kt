@@ -162,8 +162,6 @@ class RtpSenderImpl(
             appendln("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
             appendln("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
             val statsVisitor = NodeStatsVisitor(this)
-//            outgoingRtpRoot.visit(statsVisitor)
-//            outgoingRtcpRoot.visit(statsVisitor)
             outputPipelineTerminationNode.reverseVisit(statsVisitor)
 
             toString()

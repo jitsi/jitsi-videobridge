@@ -130,7 +130,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
-//                        node(PcapWriter())
                         node(RtxHandler())
                         node(PaddingTermination())
                         node(VideoParser())

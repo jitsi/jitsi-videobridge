@@ -24,6 +24,7 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.service.neomedia.format.MediaFormat
@@ -40,7 +41,7 @@ import java.util.concurrent.LinkedBlockingQueue
  * (TODO: 'stream' defined as what, exactly, here?)
  * Handles the DTLS negotiation
  *
- * Incoming packets should be written to [incomingQueue].  Outgoing
+ * Incoming packets should be written via [handleIncomingPacket].  Outgoing
  * packets are put in [outgoingQueue] (and should be read by something)
  * TODO: maybe we want to have this 'push' the outgoing packets somewhere
  * else instead (then we could have all senders push to a single queue and
@@ -51,55 +52,63 @@ class Transceiver(
     private val id: String,
     private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) {
-    protected val logger = getLogger(this.javaClass)
+    private val logger = getLogger(this.javaClass)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
 
-    /*private*/ val rtpSender: RtpSender = RtpSenderImpl(123, executor)
-    /*private*/ val rtpReceiver: RtpReceiver =
+    private val rtpSender: RtpSender = RtpSenderImpl(123, executor)
+    private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(
             123,
             { rtcpPacket ->
                 rtpSender.sendRtcp(listOf(rtcpPacket))
             },
             executor)
-
-    private val incomingChain: PacketHandler
-
-    val incomingQueue = LinkedBlockingQueue<Packet>()
     val outgoingQueue = LinkedBlockingQueue<Packet>()
 
     var running = true
 
     init {
         logger.cinfo { "Transceiver ${this.hashCode()} using executor ${executor.hashCode()}" }
-        incomingChain = rtpReceiver
 
-        // rewire the sender's hacked packet handler
+        // Replace the sender's default packet handler with one that will add packets to outgoingQueue
         rtpSender.packetSender = object : Node("RTP packet sender") {
             override fun doProcessPackets(p: List<PacketInfo>) {
                 // Map the PacketInfo types to their contained Packet and add to the outgoing queue
                 outgoingQueue.addAll(p.map { it.packet }) }
             }
         rtpReceiver.setNackHandler(rtpSender.getNackHandler())
-
-        scheduleWork()
     }
 
-    fun sendPackets(p: List<PacketInfo>) {
-        rtpSender.sendPackets(p)
+    /**
+     * Handle an incoming [PacketInfo] (that is, a packet received by the endpoint
+     * this transceiver is associated with) to be processed by the receiver pipeline.
+     */
+    fun handleIncomingPacket(p: PacketInfo) = rtpReceiver.enqueuePacket(p)
+
+    /**
+     * Send packets to the endpoint this transceiver is associated with by
+     * passing them out the sender's outgoing pipeline
+     */
+    fun sendRtp(rtpPackets: List<PacketInfo>) = rtpSender.sendPackets(rtpPackets)
+
+    fun sendRtcp(rtcpPackets: List<RtcpPacket>) = rtpSender.sendRtcp(rtcpPackets)
+
+    /**
+     * Set a handler to be invoked when incoming RTP packets have finished
+     * being processed.
+     */
+    fun setIncomingRtpHandler(rtpHandler: PacketHandler) {
+        rtpReceiver.rtpPacketHandler = rtpHandler
     }
 
-    private fun scheduleWork() {
-        executor.execute {
-            val packets = mutableListOf<Packet>()
-            incomingQueue.drainTo(packets, 5)
-            if (packets.isNotEmpty()) incomingChain.processPackets(packets.map { PacketInfo(it) })
-            if (running) {
-                scheduleWork()
-            }
-        }
+    /**
+     * Set a handler to be invoked when incoming RTCP packets (which have not
+     * bee terminated) have finished being processed.
+     */
+    fun setIncomingRtcpHandler(rtcpHandler: PacketHandler) {
+        rtpReceiver.rtcpPacketHandler = rtcpHandler
     }
 
     fun addReceiveSsrc(ssrc: Long) {
@@ -196,5 +205,14 @@ class Transceiver(
         rtpReceiver.setSrtcpTransformer(srtcpTransformer)
         rtpSender.setSrtpTransformer(srtpTransformer)
         rtpSender.setSrtcpTransformer(srtcpTransformer)
+    }
+
+    fun getStats(): String {
+        return with(StringBuffer()) {
+            append(rtpReceiver.getStats())
+            append(rtpSender.getStats())
+
+            toString()
+        }
     }
 }
