@@ -22,29 +22,24 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RawPacket
 import unsigned.toUInt
 import java.nio.ByteBuffer
 
-//TODO: i think this is deprecated now
 class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransmission requester") {
     /**
      * Wrap the given [rtcpSender] method with one that takes a RawPacket (which
      * is what the retransmission requester will use).
      */
     private val rtcpSenderAdapter: (RawPacket) -> Unit = { rawPacket ->
-        val rtcpPacket = RtcpPacket.fromBuffer(ByteBuffer.wrap(
-            rawPacket.buffer,
-            rawPacket.offset,
-            rawPacket.length
-        ))
+        val rtcpPacket = RtcpPacket.fromBuffer(rawPacket.getByteBuffer())
         rtcpSender(rtcpPacket)
     }
 
-    private val retransmissionRequester =
-        RetransmissionRequesterImpl(rtcpSenderAdapter)
+    private val retransmissionRequester = RetransmissionRequesterImpl(rtcpSenderAdapter)
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEach { packetInfo ->
@@ -57,7 +52,7 @@ class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransm
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
-                logger.cinfo { "BRIAN: payload type filter ${hashCode()} now accepting " +
+                logger.cinfo { "RetransmissionRequester ${hashCode()} now accepting " +
                         "PT ${event.payloadType.toUInt()}" }
                 retransmissionRequester.payloadTypeFormats[event.payloadType] = event.format
             }

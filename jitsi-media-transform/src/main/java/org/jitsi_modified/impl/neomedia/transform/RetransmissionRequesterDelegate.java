@@ -67,8 +67,8 @@ public class RetransmissionRequesterDelegate
      * The <tt>Logger</tt> used by the <tt>RetransmissionRequesterDelegate</tt> class
      * and its instances to print debug information.
      */
-//    private static final Logger logger
-//            = Logger.getLogger(RetransmissionRequesterDelegate.class);
+    private static final Logger logger
+            = Logger.getLogger(RetransmissionRequesterDelegate.class);
 
     /**
      * Maps an SSRC to the <tt>Requester</tt> instance corresponding to it.
@@ -245,14 +245,14 @@ public class RetransmissionRequesterDelegate
             {
                 if (requester.isDue(currentTime))
                 {
-//                    if (logger.isTraceEnabled())
-//                    {
-//                        logger.trace(hashCode() + " requester for ssrc " +
-//                                requester.ssrc + " has work due at " +
-//                                requester.nextRequestAt +
-//                                " (now = " + currentTime + ") and is missing packets: " +
-//                                requester.getMissingSeqNums());
-//                    }
+                    if (logger.isTraceEnabled())
+                    {
+                        logger.trace(hashCode() + " requester for ssrc " +
+                                requester.ssrc + " has work due at " +
+                                requester.nextRequestAt +
+                                " (now = " + currentTime + ") and is missing packets: " +
+                                requester.getMissingSeqNums());
+                    }
                     dueRequesters.add(requester);
                 }
             }
@@ -314,14 +314,14 @@ public class RetransmissionRequesterDelegate
                 Set<Integer> missingPackets = dueRequester.getMissingSeqNums();
                 if (!missingPackets.isEmpty())
                 {
-//                    if (logger.isTraceEnabled())
-//                    {
-//                        logger.trace(
-//                                hashCode() + " Sending nack with packets "
-//                                        + missingPackets
-//                                        + " for ssrc " + dueRequester.ssrc);
-//
-//                    }
+                    if (logger.isTraceEnabled())
+                    {
+                        logger.trace(
+                                hashCode() + " Sending nack with packets "
+                                        + missingPackets
+                                        + " for ssrc " + dueRequester.ssrc);
+
+                    }
                     packetsToRequest.put(dueRequester.ssrc, missingPackets);
                     dueRequester.notifyNackCreated(now, missingPackets);
                 }
@@ -461,15 +461,15 @@ public class RetransmissionRequesterDelegate
             {
                 // Too many packets missing. Reset.
                 lastReceivedSeq = seq;
-//                if (logger.isDebugEnabled())
-//                {
-//                    logger.debug("Resetting retransmission requester state. "
-//                            + "SSRC: " + ssrc
-//                            + ", last received: " + lastReceivedSeq
-//                            + ", current: " + seq
-//                            + ". Removing " + requests.size()
-//                            + " unsatisfied requests.");
-//                }
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Resetting retransmission requester state. "
+                            + "SSRC: " + ssrc
+                            + ", last received: " + lastReceivedSeq
+                            + ", current: " + seq
+                            + ". Removing " + requests.size()
+                            + " unsatisfied requests.");
+                }
                 requests.clear();
                 nextRequestAt = -1;
             }
@@ -503,14 +503,14 @@ public class RetransmissionRequesterDelegate
                 request.timesRequested++;
                 if (request.timesRequested == MAX_REQUESTS)
                 {
-//                    if (logger.isDebugEnabled())
-//                    {
-//                        logger.debug(
-//                                "Generated the last NACK for SSRC=" + ssrc + " seq="
-//                                        + request.seq + ". "
-//                                        + "Time since the first request: "
-//                                        + (time - request.firstRequestSentAt));
-//                    }
+                    if (logger.isDebugEnabled())
+                    {
+                        logger.debug(
+                                "Generated the last NACK for SSRC=" + ssrc + " seq="
+                                        + request.seq + ". "
+                                        + "Time since the first request: "
+                                        + (time - request.firstRequestSentAt));
+                    }
                     requests.remove(seqNum);
                     continue;
                 }

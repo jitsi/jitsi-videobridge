@@ -113,7 +113,9 @@ public class RetransmissionRequesterImpl
             }
 //            else if (Constants.RTX.equalsIgnoreCase(format.getEncoding()))
 //            {
-//                //TODO: BRIAN re-add this once we get RTX
+//                //TODO: BRIAN re-add this once we get RTX.
+                    // --> Actually we shouldn't need this block anymore since we strip
+                    // RTX before this
 //                MediaStreamTrackReceiver receiver
 //                        = stream.getMediaStreamTrackReceiver();
 //
