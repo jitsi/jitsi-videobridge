@@ -23,6 +23,8 @@ import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.getLogger
+import org.jitsi.util.Logger
 import java.time.Duration
 import kotlin.properties.Delegates
 
@@ -60,6 +62,8 @@ abstract class Node(
 ) : PacketHandler, EventHandler, StatsProducer {
     private var nextNode: Node? = null
     private val inputNodes: MutableList<Node> = mutableListOf()
+
+    protected val logger = getLogger(this.javaClass)
 
     // Stats stuff
     private var startTime: Long = 0

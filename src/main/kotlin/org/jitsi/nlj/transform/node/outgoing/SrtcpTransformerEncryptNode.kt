@@ -35,15 +35,8 @@ class SrtcpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTCP Encrypt w
             // the offset into account correctly
             val bufCopy = ByteBuffer.allocate(packetBuf.limit())
             bufCopy.put(packetBuf).flip()
-//            println("srtcp before encrypt nlj packet buf:\n${packetBuf.toHex()}")
-//            val rp = RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
             val rp = RawPacket(bufCopy.array(), bufCopy.arrayOffset(), bufCopy.limit())
-//            println("Srtcp packet before encrypt:\n${ByteBuffer.wrap(rp.buffer).toHex()}")
             transformer.transform(rp)?.let { encryptedRawPacket ->
-//                println("Srtcp packet after encrypt:\n${ByteBuffer.wrap(
-//                    encryptedRawPacket.buffer,
-//                    encryptedRawPacket.offset,
-//                    encryptedRawPacket.length).toHex()}")
                 val srtcpPacket = SrtcpPacket(
                     ByteBuffer.wrap(
                         encryptedRawPacket.buffer,

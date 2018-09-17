@@ -18,6 +18,7 @@ package org.jitsi.nlj.transform.node.incoming
 import org.bouncycastle.crypto.tls.DTLSTransport
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.DtlsProtocolPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.clone
@@ -51,7 +52,6 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
      * expose the DTLS transport for sending and receiving application data.
      */
     override fun doProcessPackets(p: List<PacketInfo>) {
-//        println("BRIAN: dtls receiver module received packets")
         incomingQueue.addAll(p)
         // If dtlsTransport is not null, then that means that the DTLS handshake has
         // completed.  If it has completed, then the thread doing the connect is no
@@ -62,7 +62,7 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
         var bytesReceived = 0
         val outPackets = mutableListOf<PacketInfo>()
         do {
-            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 10) ?: -1
+            bytesReceived = dtlsTransport?.receive(dtlsAppDataBuf.array(), 0, 1500, 1) ?: -1
             if (bytesReceived > 0) {
                 val bufCopy = dtlsAppDataBuf.clone();
                 bufCopy.limit(bytesReceived)
@@ -70,7 +70,7 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
             }
         } while (bytesReceived > 0)
         if (outPackets.isNotEmpty()) {
-            println("BRIAN: received dtls application data!")
+            logger.cdebug { "BRIAN: received dtls application data!" }
             next(outPackets)
         }
         // During the handshake phase, the thread which called 'connect' will
