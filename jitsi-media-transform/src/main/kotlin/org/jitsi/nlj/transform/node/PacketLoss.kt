@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.util.appendLnIndent
 import java.util.*
 
 /**
@@ -23,7 +24,21 @@ import java.util.*
  */
 class PacketLoss(private val lossRate: Double) : Node("Packet loss") {
     private val random = Random()
+    private var packetsSeen = 0
+    private var packetsDropped = 0
     override fun doProcessPackets(p: List<PacketInfo>) {
-        next(p.filter { random.nextDouble() > lossRate })
+        packetsSeen += p.size
+        val forwardedPackets = p.filter { random.nextDouble() > lossRate }
+        packetsDropped += (p.size - forwardedPackets.size)
+        next(forwardedPackets)
+    }
+
+    override fun getStats(indent: Int): String {
+        return with (StringBuffer()) {
+            append(super.getStats(indent))
+            appendLnIndent(indent + 2, "configured drop rate: $lossRate, actual drop " +
+                    "rate: ${packetsDropped / packetsSeen.toDouble()}")
+            toString()
+        }
     }
 }
