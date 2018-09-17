@@ -15,20 +15,20 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.impl.neomedia.rtp.RawPacketCache
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
+import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
 
 /**
  * When a nack packet is received, the [NackHandler] will try to retrieve the
  * nacked packets from the cache and then send them to the RTX output pipeline.
  */
 class NackHandler(
-    private val packetCache: RawPacketCache,
+    private val packetCache: NewRawPacketCache,
     private val onNackedPacketsReady: PacketHandler
 ) : StatsProducer {
     private var numNacksReceived = 0
