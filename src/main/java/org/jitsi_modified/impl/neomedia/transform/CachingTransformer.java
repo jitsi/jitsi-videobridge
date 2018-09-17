@@ -20,6 +20,7 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.concurrent.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 /**
  * Implements a cache of outgoing RTP packets.
@@ -48,12 +49,12 @@ public class CachingTransformer
     /**
      * The outgoing packet cache.
      */
-    private final RawPacketCache outgoingRawPacketCache;
+    private final NewRawPacketCache outgoingRawPacketCache;
 
     /**
      * The incoming packet cache.
      */
-    private final RawPacketCache incomingRawPacketCache;
+    private final NewRawPacketCache incomingRawPacketCache;
 
     /**
      * Whether or not this <tt>TransformEngine</tt> has been closed.
@@ -78,8 +79,8 @@ public class CachingTransformer
     public CachingTransformer(/*MediaStreamImpl stream*/int id)
     {
         super(RTPPacketPredicate.INSTANCE);
-        this.outgoingRawPacketCache = new RawPacketCache(id);
-        this.incomingRawPacketCache = new RawPacketCache(-1);
+        this.outgoingRawPacketCache = new NewRawPacketCache(id);
+        this.incomingRawPacketCache = new NewRawPacketCache(-1);
     }
 
     /**
@@ -200,7 +201,7 @@ public class CachingTransformer
      *
      * @return the outgoing {@link RawPacketCache}.
      */
-    public RawPacketCache getOutgoingRawPacketCache()
+    public NewRawPacketCache getOutgoingRawPacketCache()
     {
         return outgoingRawPacketCache;
     }
@@ -210,7 +211,7 @@ public class CachingTransformer
      *
      * @return the incoming {@link RawPacketCache}.
      */
-    public RawPacketCache getIncomingRawPacketCache()
+    public NewRawPacketCache getIncomingRawPacketCache()
     {
         return incomingRawPacketCache;
     }
