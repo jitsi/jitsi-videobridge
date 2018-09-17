@@ -34,6 +34,8 @@ import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.cerror
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
@@ -43,6 +45,7 @@ import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
+import org.jitsi.util.Logger
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -68,6 +71,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val payloadTypeFilter = PayloadTypeFilterNode()
     private val audioLevelListener = AudioLevelReader()
     private val rtcpTermination = RtcpTermination()
+
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
 
     /**
      * [rtpPacketHandler] will be invoked with RTP packets that have made
@@ -111,7 +118,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     var packetsReceived: Long = 0
 
     init {
-        println("Receiver ${this.hashCode()} using executor ${executor.hashCode()}")
+        logger.cinfo { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
         inputTreeRoot = pipeline {
             node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
             demux {
@@ -127,8 +134,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(RtxHandler())
                         node(PaddingTermination())
                         node(VideoParser())
-                        //TODO: how should retransmissions without rtx be handled with srtp?
-//                        node(NackGeneratorNode(rtcpSender))
                         node(RetransmissionRequester(rtcpSender))
                         node(audioLevelListener)
                         simpleNode("RTP packet handler") {
@@ -165,9 +170,18 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 }
                                 outPackets
                             } catch (e: Exception) {
-                                println("Exception extracting rtcp.  The original, decrypted packet buffer is one of " +
-                                        "these:\n")
-                                prevRtcpPackets.forEach { println(it.getBuffer().toHex())}
+                                logger.cerror {
+                                    with (StringBuffer()) {
+                                        appendln("Exception extracting RTCP.  The origina, decrypted packet buffer is " +
+                                                "one of these:")
+                                        prevRtcpPackets.forEach {
+                                            appendln(it.getBuffer().toHex())
+                                        }
+
+                                        toString()
+                                    }
+
+                                }
                                 emptyList()
                             }
                         }
@@ -209,7 +223,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun processPackets(pkts: List<PacketInfo>) = inputTreeRoot.processPackets(pkts)
 
     override fun getStats(indent: Int): String {
-
         return with (StringBuffer()) {
             appendLnIndent(indent, "RTP Receiver $id")
             appendLnIndent(indent, "queue size: ${incomingPacketQueue.size}")
@@ -234,9 +247,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
             firstPacketWrittenTime = System.currentTimeMillis()
         }
         lastPacketWrittenTime = System.currentTimeMillis()
-//        if (packetsReceived % 200 == 0L) {
-//            println("BRIAN: module chain stats:\n${rootPacketHandler.getStats()}")
-//        }
     }
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
@@ -252,7 +262,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
-        println("BRIAN: rtpreceiverimpl setting csrc audio level listener")
         audioLevelListener.csrcAudioLevelListener = csrcAudioLevelListener
     }
 }

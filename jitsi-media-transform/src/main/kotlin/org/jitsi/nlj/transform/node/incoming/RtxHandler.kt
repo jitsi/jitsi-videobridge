@@ -22,11 +22,15 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.cerror
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.RtxPacket
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.codec.Constants
+import org.jitsi.util.Logger
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
 
@@ -47,16 +51,20 @@ class RtxHandler : Node("RTX handler") {
      */
     private val associatedSsrcs: ConcurrentHashMap<Long, Long> = ConcurrentHashMap()
 
+    companion object {
+        val logger: Logger = Logger.getLogger(this::class.java)
+    }
+
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
             if (associatedPayloadTypes.containsKey(pkt.header.payloadType)) {
                 val rtxPacket = RtxPacket(pkt.getBuffer())
-//                println("Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
+//                logger.cdebug { "Received RTX packet: ssrc ${rtxPacket.header.ssrc}, seq num: ${rtxPacket.header.sequenceNumber} " +
 //                        "rtx payload size: ${rtxPacket.payload.limit()}, padding size: ${rtxPacket.getPaddingSize()} " +
-//                        "buffer:\n${rtxPacket.getBuffer().toHex()}")
+//                        "buffer:\n${rtxPacket.getBuffer().toHex()}" }
                 if (rtxPacket.payload.limit() - rtxPacket.getPaddingSize() < 2) {
-                    println("RTX packet is padding, ignore")
+                    logger.cdebug { "RTX packet is padding, ignore" }
                     numPaddingPacketsReceived++
                     return@forEachAs
                 }
@@ -68,7 +76,7 @@ class RtxHandler : Node("RTX handler") {
                 originalPacket.header.sequenceNumber = originalSeqNum
                 originalPacket.header.payloadType = originalPt
                 originalPacket.header.ssrc = originalSsrc
-                println("Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum")
+                logger.cdebug { "Recovered RTX packet.  Original packet: $originalSsrc $originalSeqNum" }
                 numRtxPacketsReceived++
                 packetInfo.packet = originalPacket
                 outPackets.add(packetInfo)
@@ -86,10 +94,10 @@ class RtxHandler : Node("RTX handler") {
                     val rtxPt = event.payloadType.toUInt()
                     event.format.formatParameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
-                        println("RtxHandler associating RTX payload type $rtxPt with primary $associatedPt")
+                        logger.cinfo { "RtxHandler associating RTX payload type $rtxPt with primary $associatedPt" }
                         associatedPayloadTypes[rtxPt] = associatedPt
                     } ?: run {
-                        println("Unable to parse RTX associated payload type from event: $event")
+                        logger.cerror { "Unable to parse RTX associated payload type from event: $event" }
                     }
                 }
             }
@@ -98,7 +106,7 @@ class RtxHandler : Node("RTX handler") {
             }
             is SsrcAssociationEvent -> {
                 if (event.type.equals(Constants.RTX)) {
-                    println("RtxHandler associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}")
+                    logger.cinfo { "RtxHandler associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}" }
                     associatedSsrcs[event.secondarySsrc] = event.primarySsrc
                 }
             }

@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.RtpPacket
@@ -49,7 +50,7 @@ class AbsSendTime : Node("Absolute send time") {
                 if (RTPExtension.ABS_SEND_TIME_URN.equals(event.rtpExtension.uri.toString())) {
                     val absSendTimeExtId = event.extensionId.toUInt()
                     absSendTimeEngine.setExtensionID(absSendTimeExtId)
-                    println("AbsSendTime setting extension ID to $absSendTimeExtId")
+                    logger.cinfo { "AbsSendTime setting extension ID to $absSendTimeExtId" }
                 }
             }
             is RtpExtensionClearEvent -> absSendTimeEngine.setExtensionID(-1)

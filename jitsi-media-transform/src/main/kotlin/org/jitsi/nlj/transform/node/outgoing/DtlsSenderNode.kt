@@ -28,13 +28,11 @@ import java.nio.ByteBuffer
  */
 class DtlsSenderNode : Node("DTLS Sender") {
     override fun doProcessPackets(p: List<PacketInfo>) {
-//        println("BRIAN: dtls sender module invoking next")
         next(p)
     }
 
     //TODO: change thread contexts here?
     fun send(buf: ByteArray, off: Int, length: Int) {
-        println("BRIAN: dtls sender module sending packets")
         processPackets(listOf(PacketInfo(DtlsProtocolPacket(ByteBuffer.wrap(buf, off, length)))))
     }
 }

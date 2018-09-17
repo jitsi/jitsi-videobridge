@@ -24,21 +24,11 @@ import java.nio.ByteBuffer
 
 class SrtcpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTCP decrypt") {
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
-//        val decryptedRtcpPackets = mutableListOf<RtcpPacket>()
         val outPackets = mutableListOf<PacketInfo>()
         pkts.forEach {
             val packetBuf = it.packet.getBuffer()
             val rp = RawPacket(packetBuf.array(), 0, packetBuf.limit())
             transformer.reverseTransform(rp)?.let { decryptedRawPacket ->
-//                println("Creating RTCP packet from decrypted buffer:\n" +
-//                        ByteBuffer.wrap(decryptedRawPacket.buffer, decryptedRawPacket.offset, decryptedRawPacket.length).toHex())
-//                val rtcpPacket = RtcpPacket.fromBuffer(
-//                    ByteBuffer.wrap(
-//                        decryptedRawPacket.buffer,
-//                        decryptedRawPacket.offset,
-//                        decryptedRawPacket.length
-//                    )
-//                )
                 val packet = UnparsedPacket(
                     ByteBuffer.wrap(
                         decryptedRawPacket.buffer,
@@ -46,12 +36,10 @@ class SrtcpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTCP decrypt")
                         decryptedRawPacket.length
                     )
                 )
-//                decryptedRtcpPackets.add(rtcpPacket)
                 it.packet = packet
                 outPackets.add(it)
             }
         }
-//        return decryptedRtcpPackets
         return outPackets
     }
 }

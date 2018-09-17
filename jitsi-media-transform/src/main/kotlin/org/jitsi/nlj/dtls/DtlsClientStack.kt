@@ -20,6 +20,9 @@ import org.bouncycastle.crypto.tls.DTLSTransport
 import org.bouncycastle.crypto.tls.DatagramTransport
 import org.bouncycastle.crypto.tls.TlsClient
 import org.bouncycastle.crypto.tls.TlsContext
+import org.jitsi.nlj.util.cerror
+import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.getLogger
 import java.security.SecureRandom
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -31,6 +34,7 @@ class DtlsClientStack @JvmOverloads constructor(
     private var tlsClient: TlsClient? = null
     private var datagramTransport: DatagramTransport? = null
     private var subscribers = mutableListOf<(DTLSTransport, TlsContext) -> Unit>()
+    protected val logger = getLogger(this.javaClass)
 
     override fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport) {
         this.tlsClient = tlsClient
@@ -38,10 +42,10 @@ class DtlsClientStack @JvmOverloads constructor(
         executor.submit {
             try {
                 val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.datagramTransport)
-                println("BRIAN: dtls handshake finished")
+                logger.cinfo { "BRIAN: dtls handshake finished" }
                 subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
             } catch (e: Exception) {
-                println("BRIAN: error during dtls connection: $e")
+                logger.cerror{ "BRIAN: error during dtls connection: $e" }
             }
         }
     }

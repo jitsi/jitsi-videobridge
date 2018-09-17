@@ -37,13 +37,10 @@ class NackHandler(
 
     fun onNackPacket(nackPacket: RtcpFbNackPacket) {
         numNacksReceived++
-//        println("Nack handler processing nack")
         val nackedPackets = mutableListOf<Packet>()
         val ssrc = nackPacket.mediaSourceSsrc
         numNackedPackets += nackPacket.missingSeqNums.size
         nackPacket.missingSeqNums.forEach { missingSeqNum ->
-//            println("Nack handler checking cache " + packetCache.hashCode() +
-//                    " for packet $ssrc $missingSeqNum in cache")
             val packet = packetCache.get(ssrc, missingSeqNum)
             if (packet != null) {
                 nackedPackets.add(RtpPacket(packet.getByteBuffer()))
@@ -51,7 +48,6 @@ class NackHandler(
             }
         }
         if (nackedPackets.isNotEmpty()) {
-//            println("NackHandler found ${nackedPackets.size} that can be retransmitted")
             onNackedPacketsReady.processPackets(nackedPackets.map { PacketInfo(it) })
         }
     }

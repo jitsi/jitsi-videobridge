@@ -19,7 +19,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
-import org.jitsi.rtp.Packet
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.SrtpPacket
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
@@ -36,7 +36,7 @@ class PayloadTypeFilterNode : Node("RTP payload type filter") {
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
-                println("BRIAN: payload type filter ${hashCode()} now accepting PT ${event.payloadType.toUInt()}")
+                logger.cinfo { "Payload type filter ${hashCode()} now accepting PT ${event.payloadType.toUInt()}" }
                 acceptedPayloadTypes.add(event.payloadType.toUInt())
             }
             is RtpPayloadTypeClearEvent -> acceptedPayloadTypes.clear()

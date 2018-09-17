@@ -26,6 +26,8 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
@@ -56,8 +58,11 @@ class VideoParser : Node("Video parser") {
             val pt = pkt.header.payloadType.toUByte()
             payloadFormats[pt]?.let { format ->
                 val videoRtpPacket = VideoRtpPacket(pkt.getBuffer())
-                val rtpEncodingDesc = getEncoding(videoRtpPacket) ?: run { println("Couldn't find rtpencoding desc " +
-                        "for video packet ${videoRtpPacket.header.ssrc} ${videoRtpPacket.header.sequenceNumber}")
+                val rtpEncodingDesc = getEncoding(videoRtpPacket) ?: run {
+                    logger.cdebug {
+                        "Couldn't find rtpencoding desc " +
+                                "for video packet ${videoRtpPacket.header.ssrc} ${videoRtpPacket.header.sequenceNumber}"
+                    }
                     return@forEachAs
                 }
 //                val frameDesc = frames.computeIfAbsent(videoRtpPacket.header.timestamp) { FrameDesc(videoRtpPacket.header.timestamp, System.currentTimeMillis()) }
@@ -71,14 +76,14 @@ class VideoParser : Node("Video parser") {
 //                if (format.encoding == Constants.VP8) {
 ////                    videoRtpPacket.isKeyFrame = VP8Utils.isKeyFrame(videoRtpPacket.payload)
 //                    if (VP8Utils.isKeyFrame(videoRtpPacket.payload)) {
-////                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is part of a key frame")
+////                        logger.cdebug { "BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is part of a key frame" }
 //                        frameDesc.independent = true
 //                    }
 //                    if (VP8Utils.isStartOfFrame(videoRtpPacket.payload)) {
 //                        frameDesc.start = videoRtpPacket.header.sequenceNumber
-////                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the start of a frame")
+////                        logger.cdebug { "BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the start of a frame" }
 //                    } else if (videoRtpPacket.header.marker) {
-////                        println("BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the end of a frame")
+////                        logger.cdebug { "BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the end of a frame" }
 //                        frameDesc.end = videoRtpPacket.header.sequenceNumber
 //                    }
 //                }
@@ -109,7 +114,7 @@ class VideoParser : Node("Video parser") {
             }
             is RtpPayloadTypeClearEvent -> payloadFormats.clear()
             is RtpEncodingsEvent -> {
-                println("VideoParser got rtp encodings: $event")
+                logger.cinfo { "VideoParser got rtp encodings: ${event.rtpEncodings}" }
                 rtpEncodings = event.rtpEncodings
             }
         }

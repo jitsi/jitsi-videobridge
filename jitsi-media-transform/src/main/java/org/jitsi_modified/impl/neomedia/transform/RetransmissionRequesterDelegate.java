@@ -120,7 +120,7 @@ public class RetransmissionRequesterDelegate
         // is ready to be done now, fire the work ready callback
         if (requester.received(seqNum))
         {
-            System.out.println("BRIAN: work to be done, invoking work ready callback");
+//            System.out.println("BRIAN: work to be done, invoking work ready callback");
             if (workReadyCallback != null)
             {
                 workReadyCallback.run();
@@ -164,7 +164,7 @@ public class RetransmissionRequesterDelegate
     @Override
     public void run()
     {
-        System.out.println("BRIAN: retransmissing requester run loop executing");
+//        System.out.println("BRIAN: retransmission requester run loop executing");
         long now = timeProvider.currentTimeMillis();
 //        if (logger.isTraceEnabled())
 //        {
@@ -177,7 +177,7 @@ public class RetransmissionRequesterDelegate
 //        }
         if (!dueRequesters.isEmpty())
         {
-            System.out.println("Have due requesters");
+//            System.out.println("Have due requesters");
             List<RtcpFbNackPacket> nackPackets = createNackPackets(now, dueRequesters);
 //            if (logger.isTraceEnabled())
 //            {
@@ -185,7 +185,7 @@ public class RetransmissionRequesterDelegate
 //            }
             if (!nackPackets.isEmpty())
             {
-                System.out.println("Created nack packets");
+//                System.out.println("Created nack packets");
                 injectNackPackets(nackPackets);
             }
         }
@@ -442,7 +442,8 @@ public class RetransmissionRequesterDelegate
             }
             else if (diff <= MAX_MISSING)
             {
-                System.out.println("BRIAN: missing packet detected!");
+                System.out.println("BRIAN: missing packet detected! ssrc " + ssrc + " just received " + seq +
+                        ", last received was: " + lastReceivedSeq);
                 for (int missing = (lastReceivedSeq + 1) % (1<<16);
                      missing != seq;
                      missing = (missing + 1) % (1<<16))

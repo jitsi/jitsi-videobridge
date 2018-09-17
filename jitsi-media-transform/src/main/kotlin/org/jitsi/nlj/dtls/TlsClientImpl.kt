@@ -129,10 +129,8 @@ class TlsClientImpl : DefaultTlsClient() {
             }
             toString()
         }
-//        println("BRIAN: dtls client raised alert: ${AlertDescription.getText(alertDescription)} $message $cause \n $stack")
     }
 
     override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) {
-//        println("BRIAN: dtls received alert: ${AlertDescription.getText(alertDescription)}")
     }
 }

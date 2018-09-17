@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RawPacket
@@ -56,7 +57,8 @@ class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransm
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
-                println("BRIAN: payload type filter ${hashCode()} now accepting PT ${event.payloadType.toUInt()}")
+                logger.cinfo { "BRIAN: payload type filter ${hashCode()} now accepting " +
+                        "PT ${event.payloadType.toUInt()}" }
                 retransmissionRequester.payloadTypeFormats[event.payloadType] = event.format
             }
             is RtpPayloadTypeClearEvent -> retransmissionRequester.payloadTypeFormats.clear()

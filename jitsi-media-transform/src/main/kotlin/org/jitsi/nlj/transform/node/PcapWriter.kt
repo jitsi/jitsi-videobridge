@@ -69,9 +69,6 @@ class PcapWriter : Node("PCAP writer") {
                 .payloadBuilder(ipPacket)
                 .build()
 
-//            println("Writing to pcap file: ${ByteBuffer.wrap(eth.rawData).toHex()}")
-
-
             writer.dump(eth)
         }
 

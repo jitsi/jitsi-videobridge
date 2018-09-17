@@ -19,6 +19,7 @@ import org.jitsi.nlj.NackHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
@@ -38,16 +39,14 @@ class RtcpTermination : Node("RTCP termination") {
             when (pkt) {
                 is RtcpRrPacket, is RtcpSrPacket, is RtcpFbTccPacket -> {
                     // Process & terminate
-//                    println("BRIAN: terminating ${it.javaClass} rtcp packet")
                 }
                 is RtcpFbNackPacket -> {
-//                    println("BRIAN: received nack for packets: ${pkt.missingSeqNums}")
                     nackHandler?.onNackPacket(pkt)
                 }
                 is RtcpFbPliPacket, is RtcpFbFirPacket -> {
                     // We'll let these pass through and be forwarded to the sender who will be
                     // responsible for translating/aggregating them
-                    println("BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}")
+                    logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}" }
                     outPackets.add(packetInfo)
                 }
             }

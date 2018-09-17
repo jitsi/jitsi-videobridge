@@ -27,6 +27,8 @@ import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
+import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -38,6 +40,7 @@ class RtpSenderImpl(
     val id: Long,
     val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpSender() {
+    protected val logger = getLogger(this.javaClass)
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
@@ -61,14 +64,14 @@ class RtpSenderImpl(
     private var tempSenderSsrc: Long? = null
 
     init {
-        println("Sender ${this.hashCode()} using executor ${executor.hashCode()}")
+        logger.cinfo { "Sender ${this.hashCode()} using executor ${executor.hashCode()}" }
         outgoingRtpRoot = pipeline {
             simpleNode("TEMP sender ssrc setter") { pktInfos ->
                 if (tempSenderSsrc == null && pktInfos.isNotEmpty()) {
                     val pktInfo = pktInfos[0]
                     if (pktInfo.packet is RtpPacket) {
                         tempSenderSsrc = (pktInfo.packet as? RtpPacket)?.header?.ssrc
-                        println("RtpSenderImpl ${hashCode()} setting sender ssrc to $tempSenderSsrc")
+                        logger.cinfo { "RtpSenderImpl ${hashCode()} setting sender ssrc to $tempSenderSsrc" }
                     }
                 }
                 pktInfos
@@ -76,7 +79,7 @@ class RtpSenderImpl(
             node(outgoingPacketCache)
             node(absSendTime)
             node(srtpEncryptWrapper)
-            node(PacketLoss(.01))
+//            node(PacketLoss(.01))
             node(outputPipelineTerminationNode)
         }
 
@@ -91,9 +94,6 @@ class RtpSenderImpl(
             simpleNode("RTCP sender ssrc setter") { pktInfos ->
                 tempSenderSsrc?.let { senderSsrc ->
                     pktInfos.forEachAs<RtcpPacket> { pktInfo, pkt ->
-//                        println("RtpSenderImpl ${hashCode()} sending rtcp packet. " +
-//                                "(original sender ssrc ${it.header.senderSsrc} new sender $senderSsrc)" +
-//                                ":\n" + it.getBuffer().toHex())
                         //TODO: get the sender ssrc working right, i think we may be getting the wrong
                         // one somehow
                         if (pkt.header.senderSsrc == 0L) {
@@ -116,10 +116,6 @@ class RtpSenderImpl(
     }
 
     override fun sendPackets(pkts: List<PacketInfo>) {
-//        println("BRIAN: sender got ${pkts.size} packets to send")
-//        pkts.forEachAs<RtpPacket> {
-//            println("BRIAN: sender sendign packet ${it.header} with buf ${it.getBuffer().toHex()}")
-//        }
         incomingPacketQueue.addAll(pkts)
         pkts.forEach { numIncomingBytes += it.packet.size }
         if (firstPacketWrittenTime == -1L) {
@@ -129,7 +125,6 @@ class RtpSenderImpl(
     }
 
     override fun sendRtcp(pkts: List<RtcpPacket>) {
-//        println("RtpSenderImpl#sendRtcp sending ${pkts.size} rtcp packets")
         //TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
         outgoingRtcpRoot.processPackets(pkts.map { PacketInfo(it) })
     }
@@ -145,10 +140,8 @@ class RtpSenderImpl(
     private fun scheduleWork() {
         executor.execute {
             if (running) {
-//                println("BRIAN: rtp sender job running")
                 val packetsToProcess = mutableListOf<PacketInfo>()
                 incomingPacketQueue.drainTo(packetsToProcess, 20)
-//                println("BRIAN: rtp sender job got ${packetsToProcess.size} packets to give to chain")
                 if (packetsToProcess.isNotEmpty()) outgoingRtpRoot.processPackets(packetsToProcess)
 
                 scheduleWork()

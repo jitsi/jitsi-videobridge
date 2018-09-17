@@ -22,6 +22,7 @@ import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
@@ -60,7 +61,7 @@ class TccGeneratorNode(
             is RtpExtensionAddedEvent -> {
                 if (RTPExtension.TRANSPORT_CC_URN.equals(event.rtpExtension.uri.toString())) {
                     tccExtensionId = event.extensionId.toUInt()
-                    println("TCC generator setting extension ID to $tccExtensionId")
+                    logger.cinfo { "TCC generator setting extension ID to $tccExtensionId" }
                 }
             }
             is RtpExtensionClearEvent -> tccExtensionId = null

@@ -20,6 +20,8 @@ import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.RTPExtension
@@ -49,6 +51,7 @@ class Transceiver(
     private val id: String,
     private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) {
+    protected val logger = getLogger(this.javaClass)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
@@ -70,7 +73,7 @@ class Transceiver(
     var running = true
 
     init {
-        println("Transceiver ${this.hashCode()} using executor ${executor.hashCode()}")
+        logger.cinfo { "Transceiver ${this.hashCode()} using executor ${executor.hashCode()}" }
         incomingChain = rtpReceiver
 
         // rewire the sender's hacked packet handler
@@ -100,14 +103,14 @@ class Transceiver(
     }
 
     fun addReceiveSsrc(ssrc: Long) {
-        println("Transceiver ${hashCode()} adding receive ssrc $ssrc")
+        logger.cinfo { "Transceiver ${hashCode()} adding receive ssrc $ssrc" }
         receiveSsrcs.add(ssrc)
         rtpReceiver.handleEvent(ReceiveSsrcAddedEvent(ssrc))
         //TODO: fire events to rtp sender as well
     }
 
     fun removeReceiveSsrc(ssrc: Long) {
-        println("Transceiver ${hashCode()} removing receive ssrc $ssrc")
+        logger.cinfo { "Transceiver ${hashCode()} removing receive ssrc $ssrc" }
         receiveSsrcs.remove(ssrc)
         rtpReceiver.handleEvent(ReceiveSsrcRemovedEvent(ssrc))
     }
@@ -122,14 +125,14 @@ class Transceiver(
 
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
         payloadTypes[rtpPayloadType] = format
-        println("Payload type added: $rtpPayloadType -> $format")
+        logger.cinfo { "Payload type added: $rtpPayloadType -> $format" }
         val rtpPayloadTypeAddedEvent = RtpPayloadTypeAddedEvent(rtpPayloadType, format)
         rtpReceiver.handleEvent(rtpPayloadTypeAddedEvent)
         rtpSender.handleEvent(rtpPayloadTypeAddedEvent)
     }
 
     fun clearDynamicRtpPayloadTypes() {
-        println("All payload types being cleared")
+        logger.cinfo { "All payload types being cleared" }
         val rtpPayloadTypeClearEvent = RtpPayloadTypeClearEvent()
         rtpReceiver.handleEvent(rtpPayloadTypeClearEvent)
         rtpSender.handleEvent(rtpPayloadTypeClearEvent)
@@ -138,11 +141,11 @@ class Transceiver(
 
     fun addDynamicRtpPayloadTypeOverride(originalPt: Byte, overloadPt: Byte) {
         //TODO
-        println("Overriding payload type $originalPt to $overloadPt")
+        logger.cinfo { "Overriding payload type $originalPt to $overloadPt" }
     }
 
     fun addRtpExtension(extensionId: Byte, rtpExtension: RTPExtension) {
-        println("Adding RTP extension: $extensionId -> $rtpExtension")
+        logger.cinfo { "Adding RTP extension: $extensionId -> $rtpExtension" }
         rtpExtensions[extensionId] = rtpExtension
         val rtpExtensionAddedEvent = RtpExtensionAddedEvent(extensionId, rtpExtension)
         rtpReceiver.handleEvent(rtpExtensionAddedEvent)
@@ -150,7 +153,7 @@ class Transceiver(
     }
 
     fun clearRtpExtensions() {
-        println("Clearing all RTP extensions")
+        logger.cinfo { "Clearing all RTP extensions" }
         val rtpExtensionClearEvent = RtpExtensionClearEvent()
         rtpReceiver.handleEvent(rtpExtensionClearEvent)
         rtpSender.handleEvent(rtpExtensionClearEvent)
@@ -158,7 +161,7 @@ class Transceiver(
     }
 
     fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
-        println("BRIAN: transceiver setting csrc audio level listener on receiver")
+        logger.cinfo { "BRIAN: transceiver setting csrc audio level listener on receiver" }
         rtpReceiver.setCsrcAudioLevelListener(csrcAudioLevelListener)
     }
 
@@ -172,10 +175,10 @@ class Transceiver(
         val srtpProfileInfo =
             SrtpUtil.getSrtpProfileInformationFromSrtpProtectionProfile(chosenSrtpProtectionProfile)
         val keyingMaterial = SrtpUtil.getKeyingMaterial(tlsContext, srtpProfileInfo)
-        println("Transceiver $id creating transformers with:\n" +
+        logger.cinfo { "Transceiver $id creating transformers with:\n" +
                 "profile info:\n$srtpProfileInfo\n" +
                 "keyingMaterial:\n${ByteBuffer.wrap(keyingMaterial).toHex()}\n" +
-                "tls role: ${TlsRole.fromTlsContext(tlsContext)}")
+                "tls role: ${TlsRole.fromTlsContext(tlsContext)}" }
         val srtpTransformer = SrtpUtil.initializeTransformer(
             srtpProfileInfo,
             keyingMaterial,

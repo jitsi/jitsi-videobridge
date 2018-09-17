@@ -23,6 +23,9 @@ import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.cerror
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.RtxPacket
 import org.jitsi.service.neomedia.codec.Constants
@@ -49,14 +52,10 @@ class RetransmissionSender : Node("Retransmission sender") {
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
-//            println("Retransmission sender ${hashCode()} retransmitting packet with original ssrc ${pkt.header.ssrc} and original" +
-//                    " payload type: ${pkt.header.payloadType}")
-//            println("associatedSsrcs: $associatedSsrcs")
+            logger.cdebug { "Retransmission sender ${hashCode()} retransmitting packet with original ssrc " +
+                    "${pkt.header.ssrc} and original payload type: ${pkt.header.payloadType}" }
             val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: return@forEachAs
-//            println("Found rtx ssrc $rtxSsrc for primary ${pkt.header.ssrc}")
-//            println("associatedPts: $associatedPayloadTypes")
             val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: return@forEachAs
-//            println("Found rtx pt $rtxPt for primary ${pkt.header.payloadType}")
             // Get a default value of 1 to start if it isn't present in the map.  If it is present
             // in the map, get the value and increment it by 1
             val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
@@ -65,7 +64,7 @@ class RetransmissionSender : Node("Retransmission sender") {
             rtxPacket.header.ssrc = rtxSsrc
             rtxPacket.header.payloadType = rtxPt
             rtxPacket.header.sequenceNumber = rtxSeqNum
-//            println("Sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum")
+            logger.cdebug { "Sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
             packetInfo.packet = rtxPacket
 
             outPackets.add(packetInfo)
@@ -75,17 +74,17 @@ class RetransmissionSender : Node("Retransmission sender") {
     }
 
     override fun handleEvent(event: Event) {
-        println("Retransmission sender ${hashCode()} got event $event")
         when(event) {
             is RtpPayloadTypeAddedEvent -> {
                 if (Constants.RTX.equals(event.format.encoding, true)) {
                     val rtxPt = event.payloadType.toUInt()
                     event.format.formatParameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
-                        println("Retransmission sender ${hashCode()} associating RTX payload type $rtxPt with primary $associatedPt")
+                        logger.cinfo { "Retransmission sender ${hashCode()} associating RTX payload type " +
+                                "$rtxPt with primary $associatedPt" }
                         associatedPayloadTypes[associatedPt] = rtxPt
                     } ?: run {
-                        println("Unable to parse RTX associated payload type from event: $event")
+                        logger.cerror { "Unable to parse RTX associated payload type from event: $event" }
                     }
                 }
             }
@@ -94,7 +93,8 @@ class RetransmissionSender : Node("Retransmission sender") {
             }
             is SsrcAssociationEvent -> {
                 if (event.type == Constants.RTX) {
-                    println("Retransmission sender ${hashCode()} associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}")
+                    logger.cinfo { "Retransmission sender ${hashCode()} associating RTX ssrc " +
+                            "${event.secondarySsrc} with primary ${event.primarySsrc}" }
                     associatedSsrcs[event.primarySsrc] = event.secondarySsrc
                 }
             }
