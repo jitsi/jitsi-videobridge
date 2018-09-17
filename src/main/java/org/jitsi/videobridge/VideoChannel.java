@@ -402,7 +402,10 @@ public class VideoChannel
     public void sendRtp(List<PacketInfo> packets)
     {
         // TODO(brian) we lose the enclosing packetInfo here because we convert the packets and pass them
-        // down in bulk.
+        // down in bulk. The bitrate controller transform serves as the 'external transformer' (that is, the
+        // bridge's side of the outgoing transform chain) and it may drop certain packets, so we can't
+        // just pass the original list to the transceiver after we pass the converted ones to the bitrate
+        // controller.  Maybe the bitrate controller path will look different soon.
         RawPacket[] rawPackets = new RawPacket[packets.size()];
         for (int i = 0; i < packets.size(); ++i) {
             rawPackets[i] = PacketExtensionsKt.toRawPacket(packets.get(i).getPacket());
@@ -416,7 +419,7 @@ public class VideoChannel
                 newPackets.add(new PacketInfo(rtpPacket));
             }
         }
-        transceiver.sendPackets(newPackets);
+        transceiver.sendRtp(newPackets);
     }
 
     /**

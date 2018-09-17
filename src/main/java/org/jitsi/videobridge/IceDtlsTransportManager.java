@@ -246,15 +246,8 @@ public class IceDtlsTransportManager
                    //  should be shared by the channels and we can filter ALL rtcp out in
                    //  a single path in the transceiver itself and let the receiver just worry about
                    //  rtp
-                   //TODO: leverage Packet#clone here
-                   ByteBuffer packetBuffer = pktInfo.getPacket().getBuffer();
-                   ByteBuffer bufferCopy = ByteBuffer.allocate(packetBuffer.capacity());
-                   packetBuffer.rewind();
-                   bufferCopy.put(packetBuffer);
-                   bufferCopy.flip();
-
-                   Packet pktCopy = new UnparsedPacket(bufferCopy);
-                   transceiver.getIncomingQueue().add(pktCopy);
+                   PacketInfo copy = pktInfo.clone();
+                   transceiver.handleIncomingPacket(copy);
                });
             });
             return Collections.emptyList();

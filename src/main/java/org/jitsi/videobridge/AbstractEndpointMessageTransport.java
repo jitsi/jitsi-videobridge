@@ -102,6 +102,7 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         String colibriClass)
     {
+        System.out.println("Received EndpointMessage: " + jsonObject.toJSONString());
         switch (colibriClass)
         {
         case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:

@@ -935,7 +935,7 @@ public class RtpChannel
                 packetInfos.forEach(packetInfo -> {
                     RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
                     if (rtpChannel.transceiver.receivesSsrc(rtcpPacket.getMediaSourceSsrc())) {
-                        rtpChannel.transceiver.getRtpSender().sendRtcp(Collections.singletonList(rtcpPacket));
+                        rtpChannel.transceiver.sendRtcp(Collections.singletonList(rtcpPacket));
                     }
                 });
             }
@@ -962,14 +962,14 @@ public class RtpChannel
                         mediaType,
                         getSrtpControl());
             transceiver = new Transceiver(mediaType.toString(), transceiverExecutor);
-            transceiver.getRtpReceiver().setRtpPacketHandler(new Node("RTP receiver chain handler") {
+            transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler") {
                 @Override
                 public void doProcessPackets(@NotNull List<PacketInfo> pkts)
                 {
                     handleIncomingRtp(pkts);
                 }
             });
-            transceiver.getRtpReceiver().setRtcpPacketHandler(new Node("RTCP receiver chain handler") {
+            transceiver.setIncomingRtcpHandler(new Node("RTCP receiver chain handler") {
                 @Override
                 public void doProcessPackets(@NotNull List<PacketInfo> pkts)
                 {
@@ -1963,8 +1963,7 @@ public class RtpChannel
                 t.close();
             }
         }
-        logger.info(transceiver.getRtpReceiver().getStats(0));
-        logger.info(transceiver.getRtpSender().getStats());
+        logger.info(transceiver.getStats());
 
         return true;
     }
@@ -2082,7 +2081,7 @@ public class RtpChannel
     public void sendRtp(List<PacketInfo> packets)
     {
         // By default just add it to the sender's queue
-        transceiver.sendPackets(packets);
+        transceiver.sendRtp(packets);
     }
 
     /**
