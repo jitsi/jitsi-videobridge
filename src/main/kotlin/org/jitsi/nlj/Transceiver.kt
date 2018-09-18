@@ -65,7 +65,7 @@ class Transceiver(
                 rtpSender.sendRtcp(listOf(rtcpPacket))
             },
             executor)
-    val outgoingQueue = LinkedBlockingQueue<Packet>()
+    val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
 
     var running = true
 
@@ -75,9 +75,9 @@ class Transceiver(
         // Replace the sender's default packet handler with one that will add packets to outgoingQueue
         rtpSender.packetSender = object : Node("RTP packet sender") {
             override fun doProcessPackets(p: List<PacketInfo>) {
-                // Map the PacketInfo types to their contained Packet and add to the outgoing queue
-                outgoingQueue.addAll(p.map { it.packet }) }
+                outgoingQueue.addAll(p)
             }
+        }
         rtpReceiver.setNackHandler(rtpSender.getNackHandler())
     }
 
@@ -142,10 +142,11 @@ class Transceiver(
 
     fun clearDynamicRtpPayloadTypes() {
         logger.cinfo { "All payload types being cleared" }
-        val rtpPayloadTypeClearEvent = RtpPayloadTypeClearEvent()
-        rtpReceiver.handleEvent(rtpPayloadTypeClearEvent)
-        rtpSender.handleEvent(rtpPayloadTypeClearEvent)
-        payloadTypes.clear()
+        //TODO: ignoring this for now, since we'll have conflicts from each channel calling it
+//        val rtpPayloadTypeClearEvent = RtpPayloadTypeClearEvent()
+//        rtpReceiver.handleEvent(rtpPayloadTypeClearEvent)
+//        rtpSender.handleEvent(rtpPayloadTypeClearEvent)
+//        payloadTypes.clear()
     }
 
     fun addDynamicRtpPayloadTypeOverride(originalPt: Byte, overloadPt: Byte) {
@@ -163,10 +164,11 @@ class Transceiver(
 
     fun clearRtpExtensions() {
         logger.cinfo { "Clearing all RTP extensions" }
-        val rtpExtensionClearEvent = RtpExtensionClearEvent()
-        rtpReceiver.handleEvent(rtpExtensionClearEvent)
-        rtpSender.handleEvent(rtpExtensionClearEvent)
-        rtpExtensions.clear()
+        //TODO: ignoring this for now, since we'll have conflicts from each channel calling it
+//        val rtpExtensionClearEvent = RtpExtensionClearEvent()
+//        rtpReceiver.handleEvent(rtpExtensionClearEvent)
+//        rtpSender.handleEvent(rtpExtensionClearEvent)
+//        rtpExtensions.clear()
     }
 
     fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
@@ -209,8 +211,9 @@ class Transceiver(
 
     fun getStats(): String {
         return with(StringBuffer()) {
-            append(rtpReceiver.getStats())
-            append(rtpSender.getStats())
+            appendln("Transceiver $id stats")
+            append(rtpReceiver.getStats(2))
+            append(rtpSender.getStats(2))
 
             toString()
         }

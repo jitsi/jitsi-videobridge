@@ -27,6 +27,7 @@ import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
@@ -79,7 +80,6 @@ class RtpSenderImpl(
             node(outgoingPacketCache)
             node(absSendTime)
             node(srtpEncryptWrapper)
-//            node(PacketLoss(.01))
             node(outputPipelineTerminationNode)
         }
 
@@ -153,14 +153,14 @@ class RtpSenderImpl(
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
     }
 
-    override fun getStats(): String {
+    override fun getStats(indent: Int): String {
         val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
         return with (StringBuffer()) {
-            appendln("RTP Sender $id")
-            appendln("queue size: ${incomingPacketQueue.size}")
-            appendln("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
-            appendln("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
-            appendln("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
+            appendLnIndent(indent, "RTP Sender $id")
+            appendLnIndent(indent + 2, "queue size: ${incomingPacketQueue.size}")
+            appendLnIndent(indent + 2, "$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
+            appendLnIndent(indent + 2, "Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
+            appendLnIndent(indent + 2, "Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
             val statsVisitor = NodeStatsVisitor(this)
             outputPipelineTerminationNode.reverseVisit(statsVisitor)
 

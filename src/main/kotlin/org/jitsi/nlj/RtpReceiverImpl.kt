@@ -16,6 +16,9 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.rtp.AudioRtpPacket
+import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.transform.node.MediaTypeParser
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
@@ -130,14 +133,32 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(payloadTypeFilter)
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
-                        node(RtxHandler())
-                        node(PaddingTermination())
-                        node(VideoParser())
-                        node(RetransmissionRequester(rtcpSender))
-                        node(audioLevelListener)
-                        simpleNode("RTP packet handler") {
-                            rtpPacketHandler?.processPackets(it)
-                            emptyList()
+                        node(MediaTypeParser())
+                        demux {
+                            name = "Media type demuxer"
+                            packetPath {
+                                predicate = { pkt -> pkt is AudioRtpPacket }
+                                path = pipeline {
+                                    node(audioLevelListener)
+                                    simpleNode("RTP packet handler") {
+                                        rtpPacketHandler?.processPackets(it)
+                                        emptyList()
+                                    }
+                                }
+                            }
+                            packetPath {
+                                predicate = { pkt -> pkt is VideoRtpPacket }
+                                path = pipeline {
+                                    node(RtxHandler())
+                                    node(PaddingTermination())
+                                    node(VideoParser())
+                                    node(RetransmissionRequester(rtcpSender))
+                                    simpleNode("RTP packet handler") {
+                                        rtpPacketHandler?.processPackets(it)
+                                        emptyList()
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -224,8 +245,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
             appendLnIndent(indent, "RTP Receiver $id")
-            appendLnIndent(indent, "queue size: ${incomingPacketQueue.size}")
-            appendLnIndent(indent, "Received $packetsReceived packets ($bytesReceived bytes) in " +
+            appendLnIndent(indent + 2, "queue size: ${incomingPacketQueue.size}")
+            appendLnIndent(indent + 2, "Received $packetsReceived packets ($bytesReceived bytes) in " +
                     "${lastPacketWrittenTime - firstPacketWrittenTime}ms " +
                     "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             val statsVisitor = NodeStatsVisitor(this)
