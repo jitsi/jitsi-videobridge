@@ -20,6 +20,7 @@ import org.bouncycastle.crypto.tls.DTLSTransport
 import org.bouncycastle.crypto.tls.DatagramTransport
 import org.bouncycastle.crypto.tls.TlsClient
 import org.bouncycastle.crypto.tls.TlsContext
+import org.jitsi.nlj.util.NameableThreadFactory
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
@@ -29,12 +30,13 @@ import java.util.concurrent.Executors
 
 class DtlsClientStack @JvmOverloads constructor(
     private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol(SecureRandom()),
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val executor: ExecutorService =
+        Executors.newSingleThreadExecutor(NameableThreadFactory("DtlsClientStack"))
 ) : DtlsStack() {
     private var tlsClient: TlsClient? = null
     private var datagramTransport: DatagramTransport? = null
     private var subscribers = mutableListOf<(DTLSTransport, TlsContext) -> Unit>()
-    protected val logger = getLogger(this.javaClass)
+    private val logger = getLogger(this.javaClass)
 
     override fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport) {
         this.tlsClient = tlsClient
