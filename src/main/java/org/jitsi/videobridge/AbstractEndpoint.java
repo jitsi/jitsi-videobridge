@@ -15,13 +15,18 @@
  */
 package org.jitsi.videobridge;
 
+import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.nlj.*;
+import org.jitsi.nlj.transform.node.Node;
+import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
 
 import java.io.*;
 import java.lang.ref.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.*;
 
 /**
@@ -72,6 +77,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private boolean expired = false;
 
+    //Public for now since the channel needs to reach in and grab it
+    public Transceiver transceiver;
+    private static ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
+
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
@@ -83,6 +92,80 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.conference = Objects.requireNonNull(conference, "conference");
         this.id = Objects.requireNonNull(id, "id");
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
+        transceiver = new Transceiver(getID(), transceiverExecutor);
+        transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
+        {
+            @Override
+            protected void doProcessPackets(@NotNull List<PacketInfo> pkts)
+            {
+                handleIncomingRtp(pkts);
+            }
+        });
+        transceiver.setIncomingRtcpHandler(new Node("RTCP receiver chain handler") {
+            @Override
+            public void doProcessPackets(@NotNull List<PacketInfo> pkts)
+            {
+                handleIncomingRtcp(pkts);
+            }
+        });
+    }
+
+    protected void handleIncomingRtp(List<PacketInfo> packetInfos)
+    {
+        // For now, just write every packet to every channel other than ourselves
+        packetInfos.forEach(pktInfo -> {
+//            pktInfo.getMetaData().forEach((name, value) -> {
+//                if (name instanceof String && ((String) name).contains("TimeTag"))
+//                {
+//                    Long timestamp = (Long)value;
+//                    RtpPacket packet = (RtpPacket)pktInfo.getPacket();
+//                    logger.info("Packet " + packet.getHeader().getSsrc() + " " +
+//                            packet.getHeader().getSequenceNumber() + " took " +
+//                            (System.currentTimeMillis() - timestamp) + " ms to get through the" +
+//                            " receive pipeline");
+//                }
+//
+//            });
+            getConference().getEndpoints().forEach(endpoint -> {
+                if (endpoint == this)
+                {
+                    return;
+                }
+                PacketInfo pktInfoCopy = pktInfo.clone();
+                //TODO: add 'wants' check and we'll need to go through the videochannel(?)
+                endpoint.transceiver.sendRtp(Collections.singletonList(pktInfoCopy));
+
+            });
+        });
+    }
+
+    public void sendRtp(List<PacketInfo> packets)
+    {
+        // By default just add it to the sender's queue
+        transceiver.sendRtp(packets);
+    }
+
+    protected void handleIncomingRtcp(List<PacketInfo> packetInfos)
+    {
+        // We don't need to copy RTCP packets for each dest like we do with RTP because each one
+        // will only have a single destination
+        getConference().getEndpoints().forEach(endpoint -> {
+            packetInfos.forEach(packetInfo -> {
+                RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
+                if (endpoint.receivesSsrc(rtcpPacket.getMediaSourceSsrc())) {
+                    endpoint.transceiver.sendRtcp(Collections.singletonList(rtcpPacket));
+                }
+            });
+        });
+    }
+
+    public boolean receivesSsrc(long ssrc) {
+        return transceiver.receivesSsrc(ssrc);
+    }
+
+    public void addSsrcAssociation(long primarySsrc, long secondarySsrc, String semantics)
+    {
+        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
     }
 
     /**

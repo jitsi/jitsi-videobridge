@@ -66,7 +66,6 @@ public class AudioChannel
             throws IOException
     {
         super.initialize();
-        transceiver.setCsrcAudioLevelListener(new AudioChannelAudioLevelListener(this));
     }
 
     @Override
@@ -74,10 +73,16 @@ public class AudioChannel
         throws IOException
     {
         super.initialize(rtpLevelRelayType);
-        transceiver.setCsrcAudioLevelListener(new AudioChannelAudioLevelListener(this));
     }
 
-//    /**
+    @Override
+    public void setEndpoint(AbstractEndpoint endpoint)
+    {
+        super.setEndpoint(endpoint);
+        getTransceiver().setCsrcAudioLevelListener(new AudioChannelAudioLevelListener(this));
+    }
+
+    //    /**
 //     * {@inheritDoc}
 //     */
 //    @Override

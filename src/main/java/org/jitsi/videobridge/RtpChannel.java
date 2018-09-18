@@ -181,12 +181,6 @@ public class RtpChannel
      */
     private MediaStream stream;
 
-    Transceiver transceiver;
-
-//    private RtpReceiver rtpReceiver = new RtpReceiverImpl(123, Executors.newSingleThreadExecutor(), packets -> {
-//        System.out.println("BRIAN: PACKETS WENT THROUGH RTP RECEIVER PIPELINE");
-//        return null;
-//    });
     private Thread receiverReadThread;
     private DtlsControlImpl dtlsControl;
     private DtlsTransformEngine dtlsTransformEngine;
@@ -661,7 +655,7 @@ public class RtpChannel
         newReceiveSSRCs[length] = 0xFFFFFFFFL & receiveSSRC;
         newReceiveSSRCs[length + 1] = now;
         receiveSSRCs = newReceiveSSRCs;
-        transceiver.addReceiveSsrc(0xFFFFFFFFL & receiveSSRC);
+        getEndpoint().transceiver.addReceiveSsrc(0xFFFFFFFFL & receiveSSRC);
 
         return true;
 
@@ -903,57 +897,6 @@ public class RtpChannel
         initialize(null);
     }
 
-    protected void handleIncomingRtp(List<PacketInfo> packetInfos)
-    {
-        // For now, just write every packet to every channel other than ourselves
-        packetInfos.forEach(pktInfo -> {
-//            pktInfo.getMetaData().forEach((name, value) -> {
-//                if (name instanceof String && ((String) name).contains("TimeTag"))
-//                {
-//                    Long timestamp = (Long)value;
-//                    RtpPacket packet = (RtpPacket)pktInfo.getPacket();
-//                    logger.info("Packet " + packet.getHeader().getSsrc() + " " +
-//                            packet.getHeader().getSequenceNumber() + " took " +
-//                            (System.currentTimeMillis() - timestamp) + " ms to get through the" +
-//                            " receive pipeline");
-//                }
-//
-//            });
-            getContent().getChannelsFast().forEach(channel -> {
-                if (channel == this)
-                {
-                    return;
-                }
-                PacketInfo pktInfoCopy = pktInfo.clone();
-                RtpChannel rtpChannel = (RtpChannel)channel;
-                // If we can *know* that the wants chain will not modify the packet (and perhaps we
-                // can enforce this?) then we can wait to make the copy
-                if (rtpChannel.wants(pktInfoCopy.getPacket()))
-                {
-                    rtpChannel.sendRtp(Collections.singletonList(pktInfoCopy));
-                }
-            });
-        });
-    }
-    protected void handleIncomingRtcp(List<PacketInfo> packetInfos)
-    {
-        // We don't need to copy RTCP packets for each dest like we do with RTP because each one
-        // will only have a single destination
-        getContent().getChannelsFast().forEach(channel -> {
-            if (channel instanceof RtpChannel)
-            {
-                RtpChannel rtpChannel = (RtpChannel) channel;
-                packetInfos.forEach(packetInfo -> {
-                    RtcpFbPacket rtcpPacket = (RtcpFbPacket) packetInfo.getPacket();
-                    if (rtpChannel.transceiver.receivesSsrc(rtcpPacket.getMediaSourceSsrc())) {
-                        rtpChannel.transceiver.sendRtcp(Collections.singletonList(rtcpPacket));
-                    }
-                });
-            }
-        });
-    }
-
-    private static ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
     void initialize(RTPLevelRelayType rtpLevelRelayType)
         throws IOException
     {
@@ -972,21 +915,6 @@ public class RtpChannel
                         null,
                         mediaType,
                         getSrtpControl());
-            transceiver = new Transceiver(mediaType.toString(), transceiverExecutor);
-            transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler") {
-                @Override
-                public void doProcessPackets(@NotNull List<PacketInfo> pkts)
-                {
-                    handleIncomingRtp(pkts);
-                }
-            });
-            transceiver.setIncomingRtcpHandler(new Node("RTCP receiver chain handler") {
-                @Override
-                public void doProcessPackets(@NotNull List<PacketInfo> pkts)
-                {
-                    handleIncomingRtcp(pkts);
-                }
-            });
 
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes
@@ -1343,7 +1271,7 @@ public class RtpChannel
      */
     private boolean removeReceiveSSRC(int receiveSSRC)
     {
-        transceiver.removeReceiveSsrc(receiveSSRC);
+        getEndpoint().transceiver.removeReceiveSsrc(receiveSSRC);
         boolean removed = false;
 
         synchronized (receiveSSRCsSyncRoot)
@@ -1532,7 +1460,7 @@ public class RtpChannel
 
                 receivePTs = new int[payloadTypeCount];
                 stream.clearDynamicRTPPayloadTypes();
-                transceiver.clearDynamicRtpPayloadTypes();
+                getEndpoint().transceiver.clearDynamicRtpPayloadTypes();
                 for (int i = 0; i < payloadTypeCount; i++)
                 {
                     PayloadTypePacketExtension payloadType
@@ -1551,7 +1479,7 @@ public class RtpChannel
                         stream.addDynamicRTPPayloadType(
                                 (byte) payloadType.getID(),
                                 mediaFormat);
-                        transceiver.addDynamicRtpPayloadType((byte)payloadType.getID(), mediaFormat);
+                        getEndpoint().transceiver.addDynamicRtpPayloadType((byte)payloadType.getID(), mediaFormat);
                     }
                 }
 
@@ -1580,7 +1508,7 @@ public class RtpChannel
         if ((rtpHeaderExtensions != null) && (rtpHeaderExtensions.size() > 0))
         {
             stream.clearRTPExtensions();
-            transceiver.clearRtpExtensions();
+            getEndpoint().transceiver.clearRtpExtensions();
 
             for (RTPHdrExtPacketExtension rtpHdrExtPacketExtension
                     : rtpHeaderExtensions)
@@ -1641,7 +1569,7 @@ public class RtpChannel
 //        {
 //            stream.addRTPExtension(id, new RTPExtension(uri));
 //        }
-        transceiver.addRtpExtension(id, new RTPExtension(uri));
+        getEndpoint().transceiver.addRtpExtension(id, new RTPExtension(uri));
     }
 
     /**
@@ -1974,7 +1902,7 @@ public class RtpChannel
                 t.close();
             }
         }
-        logger.info(transceiver.getStats());
+        logger.info(getTransceiver().getStats());
 
         return true;
     }
@@ -2091,8 +2019,7 @@ public class RtpChannel
 
     public void sendRtp(List<PacketInfo> packets)
     {
-        // By default just add it to the sender's queue
-        transceiver.sendRtp(packets);
+        getTransceiver().sendRtp(packets);
     }
 
     /**
@@ -2159,8 +2086,8 @@ public class RtpChannel
             for (MediaStreamTrackDesc mediaStreamTrackDesc : newTracks)
             {
                 RTPEncodingDesc[] encodings = mediaStreamTrackDesc.getRTPEncodings();
-                System.out.println("Setting " + encodings.length + " encodings on transceiver " + transceiver.hashCode());
-                transceiver.setRtpEncodings(encodings);
+                System.out.println("Setting " + encodings.length + " encodings on transceiver " + getTransceiver().hashCode());
+                getTransceiver().setRtpEncodings(encodings);
             }
 
             System.out.println("BRIAN: iterating through " + sourceGroups.size() + " source groups");
@@ -2176,12 +2103,9 @@ public class RtpChannel
                             secondarySsrc + " -> " + primarySsrc + " (" + semantics + ")");
                     // All channels need to be aware of the ssrc associations so that they can retransmit packet
                     // from any sender using the proper rtx ssrc
-                    getContent().getChannels().forEach(channel -> {
-                        if (channel instanceof RtpChannel)
-                        {
-                            RtpChannel rtpChannel = (RtpChannel)channel;
-                            rtpChannel.transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
-                        }
+                    getContent().getConference().getEndpoints().forEach(endpoint -> {
+                        endpoint.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
+
                     });
                 }
             });

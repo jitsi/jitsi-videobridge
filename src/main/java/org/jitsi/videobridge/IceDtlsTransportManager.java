@@ -138,7 +138,7 @@ public class IceDtlsTransportManager
             if (channel instanceof RtpChannel)
             {
                 RtpChannel rtpChannel = (RtpChannel) channel;
-                transceivers.add(rtpChannel.transceiver);
+                transceivers.add(rtpChannel.getEndpoint().transceiver);
             }
         });
         return transceivers;

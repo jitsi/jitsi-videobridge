@@ -19,6 +19,7 @@ import java.io.*;
 import java.util.*;
 
 import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
@@ -554,6 +555,11 @@ public abstract class Channel
     public AbstractEndpoint getEndpoint()
     {
         return endpoint;
+    }
+
+    public Transceiver getTransceiver()
+    {
+        return endpoint.transceiver;
     }
 
     /**

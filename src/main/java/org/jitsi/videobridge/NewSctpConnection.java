@@ -305,7 +305,7 @@ public class NewSctpConnection
                 if (packetInfo == null) {
                     continue;
                 }
-                System.out.println("BRIAN: NEWSCTPCONNECTION GOT INCOMING SCTP PACKET");
+//                System.out.println("BRIAN: NEWSCTPCONNECTION GOT INCOMING SCTP PACKET");
 
                 RawPacket[] send
                     = {
@@ -375,7 +375,7 @@ public class NewSctpConnection
 
             try
             {
-                System.out.println("NewSctpConnection sending sctp packet");
+//                System.out.println("NewSctpConnection sending sctp packet");
                 dtlsTransport.send(
                         pkt.getBuffer(), pkt.getOffset(), pkt.getLength());
             } catch (IOException e)
