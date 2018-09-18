@@ -907,6 +907,18 @@ public class RtpChannel
     {
         // For now, just write every packet to every channel other than ourselves
         packetInfos.forEach(pktInfo -> {
+//            pktInfo.getMetaData().forEach((name, value) -> {
+//                if (name instanceof String && ((String) name).contains("TimeTag"))
+//                {
+//                    Long timestamp = (Long)value;
+//                    RtpPacket packet = (RtpPacket)pktInfo.getPacket();
+//                    logger.info("Packet " + packet.getHeader().getSsrc() + " " +
+//                            packet.getHeader().getSequenceNumber() + " took " +
+//                            (System.currentTimeMillis() - timestamp) + " ms to get through the" +
+//                            " receive pipeline");
+//                }
+//
+//            });
             getContent().getChannelsFast().forEach(channel -> {
                 if (channel == this)
                 {
@@ -918,7 +930,6 @@ public class RtpChannel
                 // can enforce this?) then we can wait to make the copy
                 if (rtpChannel.wants(pktInfoCopy.getPacket()))
                 {
-//                    rtpChannel.transceiver.getRtpSender().sendPackets(Collections.singletonList(pktInfoCopy.getPacket()));
                     rtpChannel.sendRtp(Collections.singletonList(pktInfoCopy));
                 }
             });

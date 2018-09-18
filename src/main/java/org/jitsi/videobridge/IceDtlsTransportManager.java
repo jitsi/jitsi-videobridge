@@ -274,9 +274,24 @@ public class IceDtlsTransportManager
                 while (true) {
                     try
                     {
-                        Packet p = transceiver.getOutgoingQueue().take();
+                        PacketInfo pktInfo = transceiver.getOutgoingQueue().take();
+                        Packet pkt = pktInfo.getPacket();
+//                        logger.info("outgoing writer, packet has " + pktInfo.getMetaData().size() + " metadata: ");
+//                        pktInfo.getMetaData().forEach((name, value) -> {
+//                            logger.info(name + " -> " + value);
+//                        });
+                        pktInfo.getMetaData().forEach((name, value) -> {
+                            if (name instanceof String && ((String) name).contains("TimeTag"))
+                            {
+                                Long timestamp = (Long)value;
+                                SrtpPacket packet = (SrtpPacket)pktInfo.getPacket();
+//                                logger.info("Packet " + packet.getHeader().getSsrc() + " " +
+//                                        packet.getHeader().getSequenceNumber() + " took " +
+//                                        (System.currentTimeMillis() - timestamp) + "ms from received to sent");
+                            }
+                        });
 //                    System.out.println("BRIAN: transceiver writer thread sending packet " + p.toString());
-                        s.send(new DatagramPacket(p.getBuffer().array(), 0, p.getBuffer().limit()));
+                        s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
                     } catch (InterruptedException | IOException e)
                     {
                         e.printStackTrace();
@@ -300,6 +315,7 @@ public class IceDtlsTransportManager
                     packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
                     Packet pkt = new UnparsedPacket(packetBuf);
                     PacketInfo pktInfo = new PacketInfo(pkt);
+                    pktInfo.getMetaData().put("TimeTag-IceDtlsTransportManagerReceive", System.currentTimeMillis());
                     incomingPipelineRoot.processPackets(Collections.singletonList(pktInfo));
                 } catch (IOException e)
                 {
