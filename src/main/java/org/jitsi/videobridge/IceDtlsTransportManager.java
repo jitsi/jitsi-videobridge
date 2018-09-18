@@ -53,7 +53,7 @@ public class IceDtlsTransportManager
     //TODO: made public so we can grab it in sctp connection, fix that.
     /*private*/ DtlsStack dtlsStack = new DtlsClientStack();
     private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
-    //TODO: temp store dtls transport
+    //TODO: temp store dtls transport because newsctpconnection grabs it
     DTLSTransport dtlsTransport;
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
     private DtlsSenderNode dtlsSender = new DtlsSenderNode();
@@ -283,7 +283,7 @@ public class IceDtlsTransportManager
                         break;
                     }
                 }
-            }).start();
+            }, "Outgoing write thread").start();
         });
     }
 
