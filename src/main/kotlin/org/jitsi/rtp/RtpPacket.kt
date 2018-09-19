@@ -58,6 +58,7 @@ open class RtpPacket : Packet {
         this.payload = payload
     }
 
+    //TODO: need to include this
     fun getPaddingSize(): Int {
         return if (!this.header.hasPadding) {
             0
@@ -71,9 +72,17 @@ open class RtpPacket : Packet {
     }
 
     override fun getBuffer(): ByteBuffer {
-        if (this.buf == null) {
-            this.buf = ByteBuffer.allocate(header.size + payload.limit())
+        // TODO: i think this could be improved, as it gets a bit tricky
+        // in the 'rtp header got bigger between parse and getBuffer'
+        // scenario.  we use 'limit' being less than size to suggest to us
+        // that things need to be moved and therefore we need to allocate
+        // but we can probably do better (like RawPacket does when it checks
+        // for available chunks in the backing array that can be used).  We
+        // need to take into account the header and payload sizes/growths separately.
+        if (this.buf == null || this.buf!!.limit() < this.size) {
+            this.buf = ByteBuffer.allocate(this.size)
         }
+        this.buf!!.limit(this.size)
         this.buf!!.rewind()
         this.buf!!.put(header.getBuffer())
         this.buf!!.put(payload)

@@ -15,8 +15,14 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.extensions.getBits
+import org.jitsi.rtp.extensions.put
+import org.jitsi.rtp.extensions.putBits
+import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.util.BitBuffer
+import unsigned.toUByte
+import unsigned.toUInt
 import java.nio.ByteBuffer
 
 // https://tools.ietf.org/html/rfc5285#section-4.1
@@ -37,36 +43,95 @@ import java.nio.ByteBuffer
  * [buf]'s position should be at the start of the ID field for this
  * extension
  */
-class RtpOneByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
-    private val bitBuffer = BitBuffer(buf)
-    override val id = bitBuffer.getBits(4).toInt()
-    override val lengthBytes = bitBuffer.getBits(4).toInt() + 1
-    override val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
-    override val size: Int = RtpOneByteHeaderExtension.HEADER_SIZE + lengthBytes
+open class RtpOneByteHeaderExtension : RtpHeaderExtension {
+    override val id: Int
+    override val lengthBytes: Int
+    override val data: ByteBuffer
+    override val size: Int
+        get() = RtpOneByteHeaderExtension.HEADER_SIZE + lengthBytes
 
     companion object {
         const val HEADER_SIZE = 1
         const val COOKIE: Short = 0xBEDE.toShort()
-    }
 
-    init {
-        // We created a buffer view for the data, but now need to advance the buffer's
-        // position by that amount
-        buf.position(buf.position() + lengthBytes)
-        // Consume any trailing padding
-        consumePadding(buf)
-    }
-
-    override fun serializeToBuffer(buf: ByteBuffer) {
-        with(BitBuffer(buf)) {
-            putBits(id.toByte(), 4)
-            putBits((lengthBytes - 1).toByte(), 4)
-            // Make a new view of the buffer and rewind it so we don't
-            // affect any operation currently operating on data
-            val rewoundData = data.duplicate()
-            rewoundData.rewind()
-            buf.put(rewoundData)
+        fun getId(buf: ByteBuffer): Int = buf.get(0).getBits(0, 4).toUInt()
+        fun setId(id: Int, buf: ByteBuffer) {
+            buf.putBits(0, 0, id.toUByte(), 4)
         }
+
+        /**
+         * Gets the length of the data chunk of this extension, in bytes.  Note that this
+         * does not return the literal value in the buffer, but the logical length of
+         * the data chunk (which is the literal value + 1)
+         */
+        fun getLength(buf: ByteBuffer): Int = buf.get(0).getBits(4, 4).toUInt() + 1
+
+        /**
+         * Sets the length of the data chunk of this extension, in bytes.  The length given
+         * should be the logical length; this method will translate it into the proper value
+         * (logical length - 1)
+         */
+        fun setLength(length: Int, buf: ByteBuffer) {
+            val lengthValue = length - 1
+            buf.putBits(0, 4, lengthValue.toUByte(), 4)
+        }
+
+        /**
+         * Return the data chunk wrapped in a new ByteBuffer (where position 0 will be
+         * the start of the data chunk).  [buf] position 0 should be the start of the
+         * entire extension chunk.
+         */
+        fun getData(buf: ByteBuffer, lengthBytes: Int): ByteBuffer = buf.subBuffer(1, lengthBytes)
+
+        /**
+         * Put the entirety of [dataBuf] into the data chunk position in [buf]
+         */
+        fun setData(dataBuf: ByteBuffer, buf: ByteBuffer) {
+            buf.put(1, dataBuf)
+        }
+    }
+
+    /**
+     * Parse a one byte header extension starting at position 0
+     * in [buf].  When finished, [buf]'s position will be advanced
+     * past the parsed extension and any padding.
+     */
+    constructor(buf: ByteBuffer) : super() {
+        id = getId(buf)
+        lengthBytes = getLength(buf)
+        data = getData(buf, lengthBytes)
+    }
+
+    /**
+     * [lengthBytes] is the logical length of the data chunk (it will be
+     * converted to the proper value to write in the extension itself.  See
+     * [setLength])
+     */
+    constructor(
+        id: Int,
+        lengthBytes: Int,
+        data: ByteBuffer
+    ) {
+        this.id = id
+        this.lengthBytes = lengthBytes
+        this.data = data
+    }
+
+    private fun getBuffer(): ByteBuffer {
+        val buf = ByteBuffer.allocate(size)
+        setId(id, buf)
+        setLength(lengthBytes, buf)
+        data.rewind()
+        setData(data, buf)
+
+        buf.rewind()
+        return buf
+    }
+
+    //TODO: header extension classes should probably be made consistent with
+    // the other types which all use a 'getBuffer' method
+    override fun serializeToBuffer(buf: ByteBuffer) {
+        buf.put(getBuffer())
     }
 
     override fun toString(): String {

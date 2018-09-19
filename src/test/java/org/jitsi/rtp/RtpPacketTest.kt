@@ -1,5 +1,7 @@
 package org.jitsi.rtp
 
+import io.kotlintest.matchers.haveSize
+import io.kotlintest.should
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.toHex
@@ -15,7 +17,6 @@ internal class RtpPacketTest : ShouldSpec() {
         val rtpHeader = RtpHeader(
             version = 1,
             hasPadding = false,
-            hasExtension = false,
             csrcCount = 0,
             marker = false,
             payloadType = 96,
@@ -44,10 +45,37 @@ internal class RtpPacketTest : ShouldSpec() {
                 rtpPacket.payload shouldBe ByteBuffer.wrap(payload)
             }
 
-            val b = rtpPacket.getBuffer()
+            "and then adding a header extension" {
+                val ext = TccHeaderExtension(5, 10)
+                rtpPacket.header.addExtension(5, ext)
+                // Get the buffer of the packet we added the extension to and parse it into
+                // a new packet (since that's the easiest way to verify it and parsing a buffer
+                // into an RtpPacket is tested elsewhere)
+                val newPacket = RtpPacket(rtpPacket.getBuffer())
+
+                should("add the extension correctly") {
+                    newPacket.header.hasExtension shouldBe true
+                    newPacket.header.extensions.size shouldBe 1
+                    val newExt = newPacket.header.extensions.iterator().next()
+                    newExt.key shouldBe 5
+                    newExt.value.id shouldBe ext.id
+                    newExt.value.lengthBytes shouldBe ext.lengthBytes
+                    for (i in 0 until ext.lengthBytes) {
+                        newExt.value.data.get(i) shouldBe ext.data.get(i)
+                    }
+                }
+                should("not modify the payload") {
+                    val newPayload = newPacket.payload
+                    for (i in 0 until payload.size) {
+                        newPayload.get(i) shouldBe payload.get(i)
+                    }
+
+                }
+            }
+
         }
 
-        "f:from another buf" {
+        "from another buf" {
             // sender ssrc should be 2656546059
             val packetBuf = byteArrayOf(
                 0x80.toByte(), 0xC8.toByte(), 0x00.toByte(), 0x06.toByte(),
@@ -71,8 +99,6 @@ internal class RtpPacketTest : ShouldSpec() {
             )
 
             val p = SrtcpPacket(ByteBuffer.wrap(packetBuf))
-
-            println(p.header.senderSsrc)
         }
     }
 }

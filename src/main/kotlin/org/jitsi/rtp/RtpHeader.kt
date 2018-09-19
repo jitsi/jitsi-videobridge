@@ -20,7 +20,6 @@ import org.jitsi.rtp.extensions.getBits
 import org.jitsi.rtp.extensions.putBitAsBoolean
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.extensions.toHex
 import toUInt
 import unsigned.toUInt
 import unsigned.toULong
@@ -57,11 +56,12 @@ open class RtpHeader {
     val size: Int
         get() {
             var size = RtpHeader.FIXED_SIZE_BYTES + (csrcCount * RtpHeader.CSRC_SIZE_BYTES)
-            if (hasExtension) {
+            if (extensions.isNotEmpty()) {
                 size += RtpHeaderExtensions.GENERIC_HEADER_SIZE_BYTES
                 size += extensions.values.map(RtpHeaderExtension::size).sum()
                 // The extensions must be word-aligned, account for any padding
                 // here
+                //TODO: while(size % 4 != 0) size++
                 if (size % 4 != 0) {
                     size += (4 - (size % 4))
                 }
@@ -89,7 +89,7 @@ open class RtpHeader {
         fun hasPadding(buf: ByteBuffer): Boolean = buf.get(0).getBitAsBool(2)
         fun setPadding(buf: ByteBuffer, hasPadding: Boolean) = buf.putBitAsBoolean(0, 3, hasPadding)
 
-        fun hasExtension(buf: ByteBuffer): Boolean = buf.get(0).getBitAsBool(3)
+        fun getExtension(buf: ByteBuffer): Boolean = buf.get(0).getBitAsBool(3)
         fun setExtension(buf: ByteBuffer, hasExtension: Boolean) = buf.putBitAsBoolean(0, 3, hasExtension)
 
         fun getCsrcCount(buf: ByteBuffer): Int = buf.get(0).getBits(4, 4).toUInt()
@@ -138,7 +138,7 @@ open class RtpHeader {
          * begin at the start of the extensions portion of the header.  This method also
          * assumes that the caller has already verified that there *are* extensions present
          * (i.e. the extension bit is set) in the case of 'getExtensions' or that there is space
-         * for the extensions in the passed buffer (in the case of 'setExtensions')
+         * for the extensions in the passed buffer (in the case of 'setExtensionsAndPadding')
          */
         /**
          * The buffer passed here should point to the start of the generic extension header
@@ -148,17 +148,18 @@ open class RtpHeader {
         /**
          * The buffer passed here should point to the start of the extensions (PAST the generic extension header)
          */
-        fun setExtensions(extensionsBuf: ByteBuffer, extensions: Map<Int, RtpHeaderExtension>) {
-            // All extensions should have the same type (one-byte or two-byte), so check the type
-            // of the first one and then write the header
+        fun setExtensionsAndPadding(extensionsBuf: ByteBuffer, extensions: Map<Int, RtpHeaderExtension>) {
             extensions.values.forEach { it.serializeToBuffer(extensionsBuf) }
+            while (extensionsBuf.position() % 4 != 0) {
+                extensionsBuf.put(0x00)
+            }
         }
     }
 
     constructor(buf: ByteBuffer) {
         this.version = RtpHeader.getVersion(buf)
         this.hasPadding = RtpHeader.hasPadding(buf)
-        this.hasExtension = RtpHeader.hasExtension(buf)
+        this.hasExtension = RtpHeader.getExtension(buf)
         this.csrcCount = RtpHeader.getCsrcCount(buf)
         this.marker = RtpHeader.getMarker(buf)
         this.payloadType = RtpHeader.getPayloadType(buf)
@@ -174,7 +175,6 @@ open class RtpHeader {
     constructor(
         version: Int = 2,
         hasPadding: Boolean = false,
-        hasExtension: Boolean = false,
         csrcCount: Int = 0,
         marker: Boolean = false,
         payloadType: Int = 0,
@@ -186,7 +186,7 @@ open class RtpHeader {
     ) {
         this.version = version
         this.hasPadding = hasPadding
-        this.hasExtension = hasExtension
+        this.hasExtension = extensions.isNotEmpty()
         this.csrcCount = csrcCount
         this.marker = marker
         this.payloadType = payloadType
@@ -199,12 +199,23 @@ open class RtpHeader {
 
     fun getExtension(id: Int): RtpHeaderExtension? = extensions.getOrDefault(id, null)
 
+    fun addExtension(id: Int, ext: RtpHeaderExtension) = extensions.put(id, ext)
+
     fun getBuffer(): ByteBuffer {
-        if (this.buf == null) {
+        //TODO: although using 'capacity' here to check for available space
+        // may sometimes work/be appropriate, we don't know for sure.  in
+        // RtpHeader, for example, there is almost certainly an RTP payload
+        // after the header data, so although the capacity may suggest we
+        // have available room, we'd be stomping all over the payload.  For
+        // this reason we must use 'limit' since that represents the available
+        // size in the buffer we have be assigned.
+        if (this.buf == null || this.buf!!.limit() < this.size) {
             this.buf = ByteBuffer.allocate(this.size)
         }
+        buf!!.limit(this.size)
         RtpHeader.setVersion(buf!!, version)
         RtpHeader.setPadding(buf!!, hasPadding)
+        hasExtension = extensions.isNotEmpty()
         RtpHeader.setExtension(buf!!, hasExtension)
         RtpHeader.setCsrcCount(buf!!, csrcCount)
         RtpHeader.setMarker(buf!!, marker)
@@ -214,13 +225,8 @@ open class RtpHeader {
         RtpHeader.setSsrc(buf!!, ssrc)
         RtpHeader.setCsrcs(buf!!, csrcs)
         if (hasExtension) {
-            RtpHeader.setExtensions(buf!!.position(getExtensionsOffset()) as ByteBuffer, extensions)
-            // Determine the size of the extensions, including any
-//            var size = RtpHeader.FIXED_SIZE_BYTES + (csrcCount * RtpHeader.CSRC_SIZE_BYTES)
-//            size += RtpHeaderExtensions.GENERIC_HEADER_SIZE_BYTES
-            val extensionsSizeBytes = extensions.values.map(RtpHeaderExtension::size).sum()
 
-            // Now write the generic extension header
+            // Write the generic extension header (the cookie and the length)
             buf!!.position(getExtensionsHeaderOffset())
             when (extensions.values.iterator().next()) {
                 is RtpOneByteHeaderExtension -> {
@@ -230,19 +236,10 @@ open class RtpHeader {
                     buf!!.putShort((RtpTwoByteHeaderExtension.COOKIE))
                 }
             }
+            val extensionsSizeBytes = extensions.values.map(RtpHeaderExtension::size).sum()
             buf!!.putShort(((extensionsSizeBytes + 3) / 4).toUShort())
-
-            // Now move the buffer's position to the end of the extensions
-            buf!!.position(
-                RtpHeader.FIXED_SIZE_BYTES +
-                        (csrcCount * RtpHeader.CSRC_SIZE_BYTES) +
-                        RtpHeaderExtensions.GENERIC_HEADER_SIZE_BYTES +
-                        extensionsSizeBytes
-            )
-            // Add padding if we're not word-aligned due to the extensions
-            while (buf!!.position() % 4 != 0) {
-                buf!!.put(0x00)
-            }
+            // Now write the extensions
+            RtpHeader.setExtensionsAndPadding(buf!!.position(getExtensionsOffset()) as ByteBuffer, extensions)
         }
         return buf!!.rewind() as ByteBuffer
     }

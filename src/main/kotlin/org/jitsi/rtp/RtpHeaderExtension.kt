@@ -31,7 +31,6 @@ abstract class RtpHeaderExtension {
      * The data for this extension
      */
     abstract val data: ByteBuffer
-
     /**
      * The size of the extension, in bytes.  This includes the ID, length
      * and data fields

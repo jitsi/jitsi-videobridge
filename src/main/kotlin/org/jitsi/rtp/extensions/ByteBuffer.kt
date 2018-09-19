@@ -146,3 +146,14 @@ fun ByteBuffer.subBuffer(startPosition: Int, size: Int): ByteBuffer {
 fun ByteBuffer.subBuffer(startPosition: Int): ByteBuffer {
     return (duplicate().position(startPosition) as ByteBuffer).slice()
 }
+
+/**
+ * Put [buf] into this buffer starting at [index]
+ */
+fun ByteBuffer.put(index: Int, buf: ByteBuffer): ByteBuffer {
+    val currentPosition = position()
+    position(index)
+    put(buf)
+    position(currentPosition)
+    return this
+}

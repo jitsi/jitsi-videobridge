@@ -30,13 +30,13 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
                     idLengthByte(1, 0), 0x42
                 ))
                 val ext = RtpOneByteHeaderExtension(length0Extension)
-                should("have the correct id, length and data") {
+                should("have the correct id, size and data") {
                     ext.id shouldBe 1
                     ext.data.limit() shouldBe 1
                     ext.data.get() shouldBe 0x42.toByte()
                 }
-                should("parse to the end of the extension") {
-                    length0Extension.remaining() shouldBe 0
+                should("have the correct size") {
+                    ext.size shouldBe 2
                 }
                 "and then serializing it" {
                     val buf = ByteBuffer.allocate(48)
@@ -69,9 +69,7 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
                     repeat(ext.data.limit()) {
                         ext.data.get() shouldBe 0x42.toByte()
                     }
-                }
-                should("parse to the end of the extensions") {
-                    extensionWithPadding.remaining() shouldBe 0
+                    ext.size shouldBe 5
                 }
                 "and then serializing it" {
                     val buf = ByteBuffer.allocate(48)
