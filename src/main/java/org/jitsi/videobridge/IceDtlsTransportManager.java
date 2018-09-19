@@ -88,7 +88,6 @@ public class IceDtlsTransportManager
             throws IOException
     {
         super(conference, true, 1, ICE_STREAM_NAME, null);
-        iceAgent = createIceAgent(true);
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
         logger.info("BRIAN: finished IceDtlsTransportManager ctor");
     }
