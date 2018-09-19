@@ -90,7 +90,7 @@ class TccGeneratorNode(
                 feedbackPacketCount = currTcc.feedbackPacketCount,
                 packetInfo = currTcc.packetInfo
             )
-            logger.cdebug { "Sending TCC packet $pkt" }
+//            logger.cdebug { "Sending TCC packet $pkt" }
             onTccPacketReady(pkt)
             numTccSent++
             // Create a new TCC instance for the next set of information

@@ -22,6 +22,7 @@ import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.service.neomedia.RTPExtension
@@ -67,19 +68,20 @@ val keyingMaterial = byteArrayOf(
 )
 val tlsRole = TlsRole.CLIENT
 
+val srtpTransformer = SrtpUtil.initializeTransformer(
+    srtpProfileInformation,
+    keyingMaterial,
+    tlsRole,
+    false
+)
+val srtcpTransformer = SrtpUtil.initializeTransformer(
+    srtpProfileInformation,
+    keyingMaterial,
+    tlsRole,
+    true
+)
+
 fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
-    val srtpTransformer = SrtpUtil.initializeTransformer(
-        srtpProfileInformation,
-        keyingMaterial,
-        tlsRole,
-        false
-    )
-    val srtcpTransformer = SrtpUtil.initializeTransformer(
-        srtpProfileInformation,
-        keyingMaterial,
-        tlsRole,
-        true
-    )
     val rtpReceiver = RtpReceiverImpl(
         1,
         { rtcpPacket -> Unit },
@@ -104,7 +106,15 @@ fun main(args: Array<String>) {
     val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()
 
     val sender = RtpSenderImpl(456L, executor)
+    sender.setSrtpTransformer(srtpTransformer)
+    sender.setSrtcpTransformer(srtcpTransformer)
+
     sender.handleEvent(RtpExtensionAddedEvent(11, RTPExtension(URI(RTPExtension.ABS_SEND_TIME_URN))))
+    sender.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
+    sender.packetSender = object : Node("Packet sender") {
+        override fun doProcessPackets(p: List<PacketInfo>) {
+        }
+    }
 
     for (i in 1..numReceivers) {
         val rtpReceiver = createRtpReceiver(executor)

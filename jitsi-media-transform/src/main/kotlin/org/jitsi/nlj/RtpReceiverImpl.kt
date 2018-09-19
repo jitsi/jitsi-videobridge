@@ -225,15 +225,24 @@ class RtpReceiverImpl @JvmOverloads constructor(
         // compromise between the two.  It would be nice to be able to
         // avoid the busy-loop style polling for a new packet though
         //TODO: use drainTo (?)
+//        logger.cinfo { "Receiver ${hashCode()} scheduling work" }
         executor.execute {
-            val packets = mutableListOf<PacketInfo>()
-            while (packets.size < 5) {
-                val packet = incomingPacketQueue.poll() ?: break
-                packets += packet
+            try {
+                val packets = mutableListOf<PacketInfo>()
+                while (packets.size < 5) {
+                    val packet = incomingPacketQueue.poll() ?: break
+                    packets += packet
+                }
+                if (packets.isNotEmpty()) {
+//                    logger.cinfo { "Receiver ${hashCode()} got data" }
+                    processPackets(packets)
+                }
+            } catch (e: Exception) {
+                logger.cerror { "Exception while processing packets: $e" }
+            } catch (t: Throwable) {
+                logger.cerror { "Exception while processing packets: $t" }
             }
-            if (packets.isNotEmpty()) {
-                processPackets(packets)
-            }
+
             if (running) {
                 scheduleWork()
             }
@@ -260,6 +269,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     }
 
     override fun enqueuePacket(p: PacketInfo) {
+//        logger.cinfo { "Receiver ${hashCode()} enqueing data" }
         incomingPacketQueue.add(p)
         bytesReceived += p.packet.size
         packetsReceived++
