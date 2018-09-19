@@ -50,7 +50,11 @@ class UnparsedPacket(private val buf: ByteBuffer) : Packet() {
     }
 }
 
-open class SrtpProtocolPacket(protected val buf: ByteBuffer) : Packet() {
+/**
+ * SrtpProtocolPacket is either an SRTP packet or SRTCP packet (but we don't know which)
+ * so it basically just distinguishes a packet as encrypted and stores the buffer
+ */
+open class SrtpProtocolPacket(protected var buf: ByteBuffer) : Packet() {
     override val size: Int
         get() = buf.limit()
 
