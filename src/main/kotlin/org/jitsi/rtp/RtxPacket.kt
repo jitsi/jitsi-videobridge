@@ -35,8 +35,6 @@ import java.nio.ByteBuffer
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 class RtxPacket : RtpPacket {
-    override val size: Int
-        get() = getBuffer().limit()
     var originalSequenceNmber: Int = 0
 
     companion object {
@@ -83,7 +81,7 @@ class RtxPacket : RtpPacket {
 
     /**
      * Return an [RtpPacket] based on this one but with
-     * the RTX header removed
+     * the RTX original sequence number removed
      */
     fun toRtpPacket(): RtpPacket {
         val buf = ByteBuffer.allocate(getBuffer().limit() - 2)
