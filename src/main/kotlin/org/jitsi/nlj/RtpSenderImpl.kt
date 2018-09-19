@@ -25,6 +25,7 @@ import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
+import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
@@ -32,6 +33,7 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -79,6 +81,7 @@ class RtpSenderImpl(
             }
             node(outgoingPacketCache)
             node(absSendTime)
+            node(TccSeqNumTagger())
             node(srtpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
@@ -142,7 +145,9 @@ class RtpSenderImpl(
             if (running) {
                 val packetsToProcess = mutableListOf<PacketInfo>()
                 incomingPacketQueue.drainTo(packetsToProcess, 20)
-                if (packetsToProcess.isNotEmpty()) outgoingRtpRoot.processPackets(packetsToProcess)
+                if (packetsToProcess.isNotEmpty()) {
+                    outgoingRtpRoot.processPackets(packetsToProcess)
+                }
 
                 scheduleWork()
             }

@@ -20,6 +20,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
@@ -39,6 +40,9 @@ class RtcpTermination : Node("RTCP termination") {
             when (pkt) {
                 is RtcpRrPacket, is RtcpSrPacket, is RtcpFbTccPacket -> {
                     // Process & terminate
+                    if (pkt is RtcpFbTccPacket) {
+                        logger.cinfo { "Received TCC packet" }
+                    }
                 }
                 is RtcpFbNackPacket -> {
                     nackHandler?.onNackPacket(pkt)
