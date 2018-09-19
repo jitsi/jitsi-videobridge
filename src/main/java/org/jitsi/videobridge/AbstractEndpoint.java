@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.Node;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
@@ -79,7 +80,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     //Public for now since the channel needs to reach in and grab it
     public Transceiver transceiver;
-    private static ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
+    private static ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Transceiver executor thread"));
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
