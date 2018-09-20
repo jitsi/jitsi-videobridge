@@ -28,15 +28,23 @@ import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import unsigned.toUInt
 import kotlin.experimental.and
 
+/**
+ * https://tools.ietf.org/html/rfc6464#section-3
+ */
 class AudioLevelReader : Node("Audio level reader") {
     private var audioLevelExtId: Int? = null
     var csrcAudioLevelListener: CsrcAudioLevelListener? = null
+    companion object {
+        const val MUTED_LEVEL = 127L
+    }
     override fun doProcessPackets(p: List<PacketInfo>) {
         audioLevelExtId?.let { audioLevelId ->
             p.forEachAs<RtpPacket> currPkt@ { _, pkt ->
                 val levelExt = pkt.header.getExtension(audioLevelId) ?: return@currPkt
                 val level = (levelExt.data.get() and 0x7F).toLong()
-                csrcAudioLevelListener?.audioLevelsReceived(longArrayOf(pkt.header.ssrc, level))
+                if (level != MUTED_LEVEL) {
+                    csrcAudioLevelListener?.audioLevelsReceived(longArrayOf(pkt.header.ssrc, 127 - level))
+                }
             }
         }
         next(p)
