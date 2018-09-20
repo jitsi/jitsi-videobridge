@@ -227,20 +227,14 @@ class RtpReceiverImpl @JvmOverloads constructor(
         //TODO: use drainTo (?)
 //        logger.cinfo { "Receiver ${hashCode()} scheduling work" }
         executor.execute {
-            try {
-                val packets = mutableListOf<PacketInfo>()
-                while (packets.size < 5) {
-                    val packet = incomingPacketQueue.poll() ?: break
-                    packets += packet
-                }
-                if (packets.isNotEmpty()) {
+            val packets = mutableListOf<PacketInfo>()
+            while (packets.size < 5) {
+                val packet = incomingPacketQueue.poll() ?: break
+                packets += packet
+            }
+            if (packets.isNotEmpty()) {
 //                    logger.cinfo { "Receiver ${hashCode()} got data" }
-                    processPackets(packets)
-                }
-            } catch (e: Exception) {
-                logger.cerror { "Exception while processing packets: $e" }
-            } catch (t: Throwable) {
-                logger.cerror { "Exception while processing packets: $t" }
+                processPackets(packets)
             }
 
             if (running) {
