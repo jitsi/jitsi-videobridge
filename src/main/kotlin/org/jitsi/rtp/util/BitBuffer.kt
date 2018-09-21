@@ -13,7 +13,7 @@ import java.nio.ByteBuffer
  * read and write operations are done at the Byte (or greater)
  * level, and each read or write increments the ByteBuffer's
  * position by one Byte.  Some operations require reading and
- * reading at the bit level (like parsing packet header fields),
+ * writing at the bit level (like parsing packet header fields),
  * so ByteBuffer's byte-level API is awkward to work with.
  * [BitBuffer] wraps a [ByteBuffer] and allows reading at a bit level
  * instead of a byte level.  This means that

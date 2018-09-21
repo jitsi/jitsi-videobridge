@@ -16,14 +16,12 @@
 package org.jitsi.rtp.rtcp.rtcpfb
 
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import toUInt
 import unsigned.toUInt
 import unsigned.toULong
 import java.nio.ByteBuffer
-import java.util.*
 
 abstract class FeedbackControlInformation {
     abstract val size: Int
@@ -75,14 +73,14 @@ abstract class RtcpFbPacket : RtcpPacket {
          * the RTCP packet and we'll parse it here.
          */
         fun fromBuffer(buf: ByteBuffer): RtcpFbPacket {
-            val payloadType = RtcpHeader.getPayloadType(buf)
+            val packetType = RtcpHeader.getPacketType(buf)
             val fmt = RtcpHeader.getReportCount(buf)
-            return when (payloadType) {
+            return when (packetType) {
                 TransportLayerFbPacket.PT -> {
                     when (fmt) {
                         RtcpFbNackPacket.FMT -> RtcpFbNackPacket(buf)
                         RtcpFbTccPacket.FMT -> RtcpFbTccPacket(buf)
-                        else -> throw Exception("Unrecognized RTCPFB format: pt $payloadType, fmt $fmt")
+                        else -> throw Exception("Unrecognized RTCPFB format: pt $packetType, fmt $fmt")
                     }
                 }
                 PayloadSpecificFbPacket.PT -> {
@@ -92,10 +90,10 @@ abstract class RtcpFbPacket : RtcpPacket {
                         2 -> TODO("sli")
                         3 -> TODO("rpsi")
                         15 -> TODO("afb")
-                        else -> throw Exception("Unrecognized RTCPFB format: pt $payloadType, fmt $fmt")
+                        else -> throw Exception("Unrecognized RTCPFB format: pt $packetType, fmt $fmt")
                     }
                 }
-                else -> throw Exception("Unrecognized RTCPFB payload type: $payloadType")
+                else -> throw Exception("Unrecognized RTCPFB payload type: $packetType")
             }
         }
         fun getMediaSourceSsrc(buf: ByteBuffer): Long = buf.getInt(8).toULong()

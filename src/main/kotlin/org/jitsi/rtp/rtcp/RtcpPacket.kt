@@ -24,13 +24,13 @@ abstract class RtcpPacket : Packet() {
 
     companion object {
         fun fromBuffer(buf: ByteBuffer): RtcpPacket {
-            val payloadType = RtcpHeader.getPayloadType(buf)
-            return when (payloadType) {
+            val packetType = RtcpHeader.getPacketType(buf)
+            return when (packetType) {
                 //TODO: 202 = SDES
                 RtcpSrPacket.PT -> RtcpSrPacket(buf)
                 RtcpRrPacket.PT -> RtcpRrPacket(buf)
                 205, 206 -> RtcpFbPacket.fromBuffer(buf)
-                else -> throw Exception("Unsupported RTCP payload type $payloadType")
+                else -> throw Exception("Unsupported RTCP packet type $packetType")
             }
         }
 

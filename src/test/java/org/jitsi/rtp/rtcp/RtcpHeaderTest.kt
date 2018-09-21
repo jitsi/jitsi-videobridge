@@ -13,7 +13,7 @@ internal class RtcpHeaderTest : ShouldSpec() {
         bitBuffer.putBits(2.toByte(), 2) // version
         bitBuffer.putBoolean(false) // padding
         bitBuffer.putBits(1.toByte(), 5) // report count
-        put(200.toByte()) // payload type
+        put(200.toByte()) // packet type
         putShort(0xFFFF.toShort()) // length
         putInt(0xFFFFFFFF.toInt()) // sender ssrc
         this.rewind() as ByteBuffer
@@ -27,7 +27,7 @@ internal class RtcpHeaderTest : ShouldSpec() {
                     header.version shouldBe 2
                     header.hasPadding shouldBe false
                     header.reportCount shouldBe 1
-                    header.payloadType shouldBe 200
+                    header.packetType shouldBe 200
                     header.length shouldBe 0xFFFF
                     header.senderSsrc shouldBe 0xFFFFFFFF
                 }
@@ -37,7 +37,7 @@ internal class RtcpHeaderTest : ShouldSpec() {
                     version = 2,
                     hasPadding = false,
                     reportCount = 1,
-                    payloadType = 200,
+                    packetType = 200,
                     length = 0xFFFF,
                     senderSsrc = 0xFFFFFFFF
                 )
@@ -45,7 +45,7 @@ internal class RtcpHeaderTest : ShouldSpec() {
                     header.version shouldBe 2
                     header.hasPadding shouldBe false
                     header.reportCount shouldBe 1
-                    header.payloadType shouldBe 200
+                    header.packetType shouldBe 200
                     header.length shouldBe 0xFFFF
                     header.senderSsrc shouldBe 0xFFFFFFFF
                 }

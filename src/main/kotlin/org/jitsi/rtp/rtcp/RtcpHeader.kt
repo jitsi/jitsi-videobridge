@@ -41,7 +41,7 @@ open class RtcpHeader {
     var version: Int
     var hasPadding: Boolean
     var reportCount: Int
-    var payloadType: Int
+    var packetType: Int
     var length: Int
     var senderSsrc: Long
 
@@ -50,7 +50,7 @@ open class RtcpHeader {
         this.version = RtcpHeader.getVersion(buf)
         this.hasPadding = RtcpHeader.hasPadding(buf)
         this.reportCount = RtcpHeader.getReportCount(buf)
-        this.payloadType = RtcpHeader.getPayloadType(buf)
+        this.packetType = RtcpHeader.getPacketType(buf)
         this.length = RtcpHeader.getLength(buf)
         this.senderSsrc = RtcpHeader.getSenderSsrc(buf)
     }
@@ -60,14 +60,14 @@ open class RtcpHeader {
         version: Int = 2,
         hasPadding: Boolean = false,
         reportCount: Int = 0,
-        payloadType: Int = 0,
+        packetType: Int = 0,
         length: Int = 0,
         senderSsrc: Long = 0
     ) : super() {
         this.version = version
         this.hasPadding = hasPadding
         this.reportCount = reportCount
-        this.payloadType = payloadType
+        this.packetType = packetType
         this.length = length
         this.senderSsrc = senderSsrc
     }
@@ -81,7 +81,7 @@ open class RtcpHeader {
         RtcpHeader.setVersion(buf!!, version)
         RtcpHeader.setPadding(buf!!, hasPadding)
         RtcpHeader.setReportCount(buf!!, reportCount)
-        RtcpHeader.setPayloadType(buf!!, payloadType)
+        RtcpHeader.setPacketType(buf!!, packetType)
         RtcpHeader.setLength(buf!!, length)
         RtcpHeader.setSenderSsrc(buf!!, senderSsrc)
 
@@ -96,14 +96,14 @@ open class RtcpHeader {
         fun setVersion(buf: ByteBuffer, version: Int) = buf.putBits(0, 0, version.toByte(), 2)
 
         fun hasPadding(buf: ByteBuffer): Boolean = buf.get(0).getBitAsBool(2)
-        fun setPadding(buf: ByteBuffer, hasPadding: Boolean) = buf.putBitAsBoolean(0, 3, hasPadding)
+        fun setPadding(buf: ByteBuffer, hasPadding: Boolean) = buf.putBitAsBoolean(0, 2, hasPadding)
 
         fun getReportCount(buf: ByteBuffer): Int = buf.get(0).getBits(3, 5).toUInt()
         fun setReportCount(buf: ByteBuffer, reportCount: Int) = buf.putBits(0, 3, reportCount.toByte(), 5)
 
-        fun getPayloadType(buf: ByteBuffer): Int = buf.get(1).toUInt()
-        fun setPayloadType(buf: ByteBuffer, payloadType: Int) {
-            buf.put(1, payloadType.toByte())
+        fun getPacketType(buf: ByteBuffer): Int = buf.get(1).toUInt()
+        fun setPacketType(buf: ByteBuffer, packetType: Int) {
+            buf.put(1, packetType.toByte())
         }
 
         fun getLength(buf: ByteBuffer): Int = buf.getShort(2).toUInt()
@@ -122,7 +122,7 @@ open class RtcpHeader {
             appendln("version: $version")
             appendln("hasPadding: $hasPadding")
             appendln("reportCount: $reportCount")
-            appendln("payloadType: $payloadType")
+            appendln("packetType: $packetType")
             appendln("length: ${this@RtcpHeader.length}")
             appendln("senderSsrc: $senderSsrc")
             this.toString()

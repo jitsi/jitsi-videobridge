@@ -35,7 +35,7 @@ import java.nio.ByteBuffer
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 class RtxPacket : RtpPacket {
-    var originalSequenceNmber: Int = 0
+    var originalSequenceNumber: Int = 0
 
     companion object {
         /**
@@ -58,7 +58,7 @@ class RtxPacket : RtpPacket {
     }
 
     constructor(buf: ByteBuffer) : super(buf) {
-        originalSequenceNmber = getOriginalSequenceNumber(payload)
+        originalSequenceNumber = getOriginalSequenceNumber(payload)
     }
 
     constructor(rtpPacket: RtpPacket) : super(rtpPacket.header, rtpPacket.payload) {
@@ -67,11 +67,11 @@ class RtxPacket : RtpPacket {
         (newPayloadBuf.position(2) as ByteBuffer).put(payload)
         newPayloadBuf.rewind()
         this.payload = newPayloadBuf
-        this.originalSequenceNmber = rtpPacket.header.sequenceNumber
+        this.originalSequenceNumber = rtpPacket.header.sequenceNumber
     }
 
     override fun getBuffer(): ByteBuffer {
-        setOriginalSequenceNumber(payload, originalSequenceNmber)
+        setOriginalSequenceNumber(payload, originalSequenceNumber)
         return super.getBuffer()
     }
 

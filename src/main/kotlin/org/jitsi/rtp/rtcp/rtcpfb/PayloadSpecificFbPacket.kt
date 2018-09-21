@@ -23,13 +23,13 @@ abstract class PayloadSpecificFbPacket : RtcpFbPacket {
         const val PT = 206
     }
     constructor(buf: ByteBuffer) : super(buf) {
-        super.header.payloadType = PT
+        super.header.packetType = PT
     }
 
     constructor(
         header: RtcpHeader = RtcpHeader(),
         mediaSourceSsrc: Long = 0
     ) : super(header, mediaSourceSsrc) {
-        super.header.payloadType = PT
+        super.header.packetType = PT
     }
 }

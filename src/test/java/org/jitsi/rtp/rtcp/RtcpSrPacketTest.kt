@@ -16,7 +16,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
         version = 2,
         hasPadding = false,
         reportCount = 2,
-        payloadType = 200,
+        packetType = 200,
         length = 42, // TODO make this accurate?
         senderSsrc = 12345
     )
