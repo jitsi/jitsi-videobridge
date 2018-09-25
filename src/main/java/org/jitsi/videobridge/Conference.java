@@ -152,11 +152,6 @@ public class Conference
     private Localpart name;
 
     /**
-     * The conference creation time in millis since epoch.
-     */
-    private final long creationTimeMs;
-
-    /**
      * The time in milliseconds of the last activity related to this
      * <tt>Conference</tt>. In the time interval between the last activity and
      * now, this <tt>Conference</tt> is considered inactive.
@@ -272,7 +267,6 @@ public class Conference
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
-        this.creationTimeMs = System.currentTimeMillis();
         this.loggingId = "conf_id=" + id;
         this.focus = focus;
         this.eventAdmin = enableLogging ? videobridge.getEventAdmin() : null;
@@ -318,7 +312,7 @@ public class Conference
             diagnosticContext.put("conf_name", name.toString());
         }
 
-        diagnosticContext.put("conf_creation_time_ms", creationTimeMs);
+        diagnosticContext.put("conf_creation_time_ms", creationTime);
     }
 
     /**
