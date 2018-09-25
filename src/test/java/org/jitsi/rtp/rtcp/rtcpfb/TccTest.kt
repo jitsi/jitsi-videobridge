@@ -137,10 +137,36 @@ internal class TccTest : ShouldSpec() {
                 }
             }
             "Creating a TCC packet from values" {
-                val tcc = Tcc(feedbackPacketCount = 10)
-                should("set the values correctly") {
-                    //TODO
-                    tcc.addPacket(10, 20)
+                "which include a delta value on the border of the symbol size (64ms)" {
+                    val packetInfo = PacketMap()
+                    packetInfo[2585] = 1537916094447
+                    packetInfo[2586] = 1537916094452
+                    packetInfo[2587] = 1537916094475
+                    packetInfo[2588] = 1537916094475
+                    packetInfo[2589] = 1537916094481
+                    packetInfo[2590] = 1537916094481
+                    packetInfo[2591] = 1537916094486
+                    packetInfo[2592] = 1537916094504
+                    packetInfo[2593] = 1537916094504
+                    packetInfo[2594] = 1537916094509
+                    packetInfo[2595] = 1537916094509
+                    packetInfo[2596] = 1537916094515
+                    packetInfo[2597] = 1537916094536
+                    packetInfo[2598] = 1537916094536
+                    packetInfo[2599] = 1537916094542
+                    packetInfo[2600] = 1537916094543
+                    packetInfo[2601] = 1537916094607
+                    packetInfo[2602] = 1537916094607
+                    packetInfo[2603] = 1537916094613
+                    packetInfo[2604] = 1537916094614
+                    val tcc = Tcc(
+                        referenceTime = 1537916094447,
+                        feedbackPacketCount = 136,
+                        packetInfo = packetInfo
+                    )
+                    should("serialize correctly") {
+                        tcc.getBuffer()
+                    }
                 }
             }
             "values 2" {

@@ -164,12 +164,13 @@ abstract class RtcpFbPacket : RtcpPacket {
         setMediaSourceSsrc(this.buf!!, mediaSourceSsrc)
         setFeedbackControlInformation(buf!!, getFci())
         // Add any padding
+        buf!!.position(dataSizeBytes)
         repeat(paddingSizeBytes) {
             this.buf!!.put(0x00)
         }
 
-        // Set the current position as the limit and reset the current position to the start
-        this.buf!!.flip()
+        this.buf!!.limit(size)
+        this.buf!!.rewind()
 
         return this.buf!!
     }

@@ -70,11 +70,6 @@ internal class RtcpFbPacketTest : ShouldSpec() {
 //            println(nextPkt)
 
         }
-//        println("original buffer limit: ${tccPkt.limit()}")
-//        val iter = RtcpIterator(tccPkt)
-//        var rtcpPacket = iter.next()
-//        println("got packet: $rtcpPacket")
-//        println("has next? ${iter.hasNext()}")
     }
 
 }

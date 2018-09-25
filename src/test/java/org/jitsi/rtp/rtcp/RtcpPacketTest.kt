@@ -8,17 +8,17 @@ import java.nio.ByteBuffer
 internal class RtcpPacketTest : ShouldSpec() {
     init {
         "blah" {
+            // Data from a real call, shouldn't throw any exceptions
+            //TODO: turn this into more of a real test
             val buf = ByteBuffer.wrap(byteArrayOf(
-                0x8F.toByte(), 0xCD.toByte(), 0x00.toByte(), 0x08.toByte(),
-                0xBF.toByte(), 0x5D.toByte(), 0x09.toByte(), 0x07.toByte(),
-                0x1F.toByte(), 0xD6.toByte(), 0x1B.toByte(), 0x0F.toByte(),
-                0x00.toByte(), 0x01.toByte(), 0x00.toByte(), 0x13.toByte(),
-                0x74.toByte(), 0x61.toByte(), 0xCF.toByte(), 0x00.toByte(),
-
-                0xBF.toByte(), 0xF0.toByte(), 0xC0.toByte(), 0x50.toByte(),
-                0xC8.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x04.toByte(), 0x00.toByte()
+                0x8F.toByte(), 0xCD.toByte(), 0x00.toByte(), 0x07.toByte(),
+                0xC5.toByte(), 0xD3.toByte(), 0x3B.toByte(), 0x0D.toByte(),
+                0x48.toByte(), 0xCA.toByte(), 0xF9.toByte(), 0xD1.toByte(),
+                0x02.toByte(), 0x86.toByte(), 0x00.toByte(), 0x0B.toByte(),
+                0x12.toByte(), 0x5A.toByte(), 0x3F.toByte(), 0x35.toByte(),
+                0x8E.toByte(), 0xD8.toByte(), 0xDC.toByte(), 0x00.toByte(),
+                0x14.toByte(), 0x5C.toByte(), 0x00.toByte(), 0x14.toByte(),
+                0x18.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()
             ))
 
             val packet = RtcpPacket.fromBuffer(buf)

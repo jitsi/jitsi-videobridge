@@ -115,23 +115,11 @@ class Tcc : FeedbackControlInformation {
                 .sum()
 
             // We always write status as vector chunks with 2 bit symbols
-            var dataSize = 8 + // header values
+            return 8 + // header values
                 // We can encode 7 statuses per packet chunk.  The '+ 6' is to
                 // account for integer division.
                 ((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES +
                 deltaBlocksSize
-//             And now account for any padding
-//            //TODO: should we handle padding here? or later at the general rtcp level?
-//            // --> handle it at the general rtcp level (only 'internal' padding should be
-//            // worried about in the packets)
-//            while (dataSize % 4 != 0) {
-//                dataSize++
-//            }
-//            println("Calculating size of tcc packet with reference time $referenceTimeMs:\n" +
-//                    "there are ${packetInfo.size} packet statuses, which means ${((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES} bytes of status blocks\n" +
-//                    "and we calculated needing $deltaBlocksSize bytes for delta blocks\n" +
-//                    "adding in the size of the fci header (8) and padding, we get: $dataSize bytes for the fci block")
-            return dataSize
         }
 
     companion object {
@@ -316,7 +304,7 @@ class Tcc : FeedbackControlInformation {
 
     override fun getBuffer(): ByteBuffer {
         try {
-            if (this.buf == null || this.buf!!.capacity() < this.size) {
+            if (this.buf == null || this.buf!!.limit() < this.size) {
                 this.buf = ByteBuffer.allocate(this.size)
             }
             buf!!.rewind()
@@ -324,7 +312,7 @@ class Tcc : FeedbackControlInformation {
             try {
                 setPacketInfo(buf!!, this.packetInfo, referenceTimeMs)
             } catch (e: Exception) {
-                println("BRIAN exception setting packet info to buffer: $e, buffer size: ${buf!!.capacity()}, needed size: ${this.size}\n" +
+                println("BRIAN exception setting packet info to buffer: $e, buffer size: ${buf!!.limit()}, needed size: ${this.size}\n" +
                         "the FCI was: $this")
                 throw e
             }
@@ -396,16 +384,13 @@ enum class TwoBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbo
 
     companion object {
         private val map = TwoBitPacketStatusSymbol.values().associateBy(TwoBitPacketStatusSymbol::value)
-//        fun fromInt(type: Int): PacketStatusSymbol = map.getOrDefault(type, UnknownSymbol)
-        fun fromInt(type: Int): PacketStatusSymbol {
-            return map.getOrDefault(type, UnknownSymbol)
-        }
+        fun fromInt(type: Int): PacketStatusSymbol = map.getOrDefault(type, UnknownSymbol)
         // This method assumes only supports cases where the given delta falls into
         // one of the two delta ranges
         fun fromDeltaMs(deltaMs: Double): PacketStatusSymbol {
             return when (deltaMs) {
-                in 0..64 /* 63.75 */ -> TwoBitPacketStatusSymbol.RECEIVED_SMALL_DELTA
-                in -8192..8192 /* 8191.75 */ -> TwoBitPacketStatusSymbol.RECEIVED_LARGE_OR_NEGATIVE_DELTA
+                in 0.0..63.75 -> TwoBitPacketStatusSymbol.RECEIVED_SMALL_DELTA
+                in -8192.0..8191.75 -> TwoBitPacketStatusSymbol.RECEIVED_LARGE_OR_NEGATIVE_DELTA
                 else -> UnknownSymbol
             }
         }
