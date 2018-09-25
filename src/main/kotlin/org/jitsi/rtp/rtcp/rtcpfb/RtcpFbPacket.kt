@@ -61,9 +61,40 @@ abstract class RtcpFbPacket : RtcpPacket {
     private var buf: ByteBuffer? = null
     override var header: RtcpHeader
     var mediaSourceSsrc: Long
-    abstract var feedbackControlInformation: FeedbackControlInformation
+    /**
+     * The size of this packet, in bytes (including any padding)
+     */
     override val size: Int
-        get() = RtcpHeader.SIZE_BYTES + 4 /* mediaSourceSsrc */ + feedbackControlInformation.size
+        get() = dataSizeBytes + paddingSizeBytes
+
+    /**
+     * The size of the data in this packet in bytes (not including padding)
+     */
+    private val dataSizeBytes: Int
+        get() = RtcpHeader.SIZE_BYTES + 4 /* mediaSourceSsrc */ + getFci().size
+
+    /**
+     * The amount of padding bytes needed, based on word-alignment and [dataSizeBytes]
+     */
+    private val paddingSizeBytes: Int
+        get() {
+            var paddingSize = 0
+            while ((dataSizeBytes + paddingSize) % 4 != 0) {
+                paddingSize++
+            }
+            return paddingSize
+        }
+    /**
+     * The size of this packet as it is represented by the RTCPFB length field
+     * in the header:
+     * "The length of this packet in 32-bit words minus one, including the
+     * header and any padding.  This is in line with the definition of
+     * the length field used in RTCP sender and receiver reports"
+     */
+    private val lengthValue: Int
+        get() = ((size + 3) / 4 - 1)
+
+    abstract fun getFci(): FeedbackControlInformation
 
     companion object {
         const val FCI_OFFSET = RtcpHeader.SIZE_BYTES + 4
@@ -127,26 +158,18 @@ abstract class RtcpFbPacket : RtcpPacket {
         buf!!.rewind()
         // We need to update the length in the header to match the current content
         // of the packet (which may have changed)
-        header.length = ((size + 3) / 4 - 1)
-        header.reportCount = feedbackControlInformation.fmt
-        //TODO: we should also not do padding anywhere else (except for in 'internal'
-        // fields which need it) and handle it here (add any padding, set the padding bit)
+        header.length = lengthValue
+        header.reportCount = getFci().fmt
         this.buf!!.put(header.getBuffer())
         setMediaSourceSsrc(this.buf!!, mediaSourceSsrc)
-        val bufPositionBefore = buf!!.position()
-        try {
-            setFeedbackControlInformation(buf!!, feedbackControlInformation)
-        } catch (e: Exception) {
-            println("exception serializing fci, buf position was $bufPositionBefore, " +
-                    "capacity is ${buf!!.capacity()}, limit is ${buf!!.limit()} fci size is ${feedbackControlInformation.size} ")
-            throw e
+        setFeedbackControlInformation(buf!!, getFci())
+        // Add any padding
+        repeat(paddingSizeBytes) {
+            this.buf!!.put(0x00)
         }
 
-        // It's possible we didn't use the entire buffer, so make sure to set the limit to match what
-        // we've used
-        this.buf!!.limit((header.length + 1) * 4)
-
-        this.buf!!.rewind()
+        // Set the current position as the limit and reset the current position to the start
+        this.buf!!.flip()
 
         return this.buf!!
     }
@@ -157,7 +180,7 @@ abstract class RtcpFbPacket : RtcpPacket {
             // TODO: the header may not have been "sync'd" at this point (e.g. length, fmt not set)
             append(header.toString())
             appendln("media source ssrc: $mediaSourceSsrc")
-            appendln(feedbackControlInformation.toString())
+            appendln(getFci().toString())
             toString()
         }
     }

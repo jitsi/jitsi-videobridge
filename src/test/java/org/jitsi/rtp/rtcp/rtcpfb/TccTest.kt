@@ -60,19 +60,23 @@ internal class TccTest : ShouldSpec() {
         0xe4.toByte(), 0x00.toByte(),
 
         // Deltas
-        // large
-        0xff.toByte(), 0x64.toByte(),
+        // 4: large (8000 ms)
+        0x7d.toByte(), 0x00.toByte(),
         // 6x small
+        // 5: 1, 6: 1, 7: 0, 8: 0, 9: 1, 10: 0
         0x04.toByte(), 0x04.toByte(), 0x00.toByte(), 0x00.toByte(), 0x04.toByte(), 0x00.toByte(),
 
-        // large
-        0xff.toByte(), 0x65.toByte(),
+        // 11: large (8000 ms)
+        0x7d.toByte(), 0x00.toByte(),
         // 6x small
+        // 12: 1, 13: 1, 14: 0, 15: 0, 16: 1, 17: 0
         0x04.toByte(), 0x04.toByte(), 0x00.toByte(), 0x00.toByte(), 0x04.toByte(), 0x00.toByte(),
-        // large
-        0xff.toByte(), 0x65.toByte(),
-        // 6x small
-        0x04.toByte(), 0x04.toByte(), 0x00.toByte(), 0x00.toByte(), 0x04.toByte(), 0x00.toByte()
+        // 18-31 not received
+        // 32: large (8000 ms)
+        0x7d.toByte(), 0x00.toByte(),
+        // 1x small
+        // 33: 1
+        0x04.toByte()
     ))
 
     private val pktFromCall = ByteBuffer.wrap(byteArrayOf(
@@ -129,24 +133,14 @@ internal class TccTest : ShouldSpec() {
                 val tcc = Tcc(fciAll2BitVectorChunks)
                 val buf = tcc.getBuffer()
                 should("write the data to the buffer correctly") {
-                    println("new buf:\n${buf.toHex()}")
-                    println("original buf:\n${fciAll2BitVectorChunks.toHex()}")
                     buf.compareTo(fciAll2BitVectorChunks) shouldBe 0
                 }
-//                val baseSeqNum = 0
-//                val packetStatusList = mutableListOf<Pair<Int, PacketStatusSymbol>>()
-//                val packetDeltas = mutableListOf<ReceiveDelta>()
-//                for (i in 0..100) {
-//                    packetStatusList.add(Pair(i, PacketStatusSymbol.RECEIVED_SMALL_DELTA))
-//                    packetDeltas.add(ReceiveDelta.create(20.0))
-//                }
             }
             "Creating a TCC packet from values" {
                 val tcc = Tcc(feedbackPacketCount = 10)
                 should("set the values correctly") {
-                    println(tcc)
+                    //TODO
                     tcc.addPacket(10, 20)
-                    println(tcc)
                 }
             }
             "values 2" {

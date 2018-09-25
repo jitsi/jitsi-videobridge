@@ -21,35 +21,54 @@ import org.jitsi.rtp.extensions.getBits
 import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.util.RtpUtils
+import toUInt
 import unsigned.toUByte
 import unsigned.toUInt
+import unsigned.toULong
 import unsigned.toUShort
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.experimental.and
 
-//TODO: pass a comparator here which can handle sequence number rollover
 /**
  * Map the tcc sequence number to the timestamp at which that packet
  * was received
  */
-class PacketMap : TreeMap<Int, Long>() {
+class PacketMap : TreeMap<Int, Long>(RtpUtils.rtpSeqNumComparator) {
     // Only does TwoBitPacketStatusSymbols since that's all we use
-    fun getStatusSymbol(tccSeqNum: Int): PacketStatusSymbol {
-        val deltaMs = getDeltaMs(tccSeqNum) ?: return TwoBitPacketStatusSymbol.NOT_RECEIVED
+    fun getStatusSymbol(tccSeqNum: Int, referenceTime: Long): PacketStatusSymbol {
+        val deltaMs = getDeltaMs(tccSeqNum, referenceTime) ?: return TwoBitPacketStatusSymbol.NOT_RECEIVED
         return TwoBitPacketStatusSymbol.fromDeltaMs(deltaMs)
     }
 
-    fun getDeltaMs(tccSeqNum: Int): Double? {
+    fun getDeltaMs(tccSeqNum: Int, referenceTime: Long): Double? {
         val timestamp = getOrDefault(tccSeqNum, NOT_RECEIVED_TS)
         if (timestamp == NOT_RECEIVED_TS) {
             return null
         }
         // Get the timestamp for the packet just before this one.  If there isn't one, then
         // this is the first packet so the delta is 0.0
-        val previousTimestamp = floorEntry(tccSeqNum)?.value ?: return 0.0
-        return (timestamp - previousTimestamp).toDouble()
+        val previousTimestamp = getPreviousReceivedTimestamp(tccSeqNum)
+        val deltaMs = when (previousTimestamp) {
+            -1L -> timestamp - referenceTime
+            else -> timestamp - previousTimestamp
+        }
+        return deltaMs.toDouble()
+    }
+
+    /**
+     * Get the timestamp of the packet before this one that was actually received (i.e. ignore
+     * sequence numbers that weren't received)
+     */
+    private fun getPreviousReceivedTimestamp(tccSeqNum: Int): Long {
+        var prevSeqNum = tccSeqNum - 1
+        var previousTimestamp = NOT_RECEIVED_TS
+        while (previousTimestamp == NOT_RECEIVED_TS && containsKey(prevSeqNum)) {
+            previousTimestamp = floorEntry(prevSeqNum--)?.value ?: NOT_RECEIVED_TS
+        }
+
+        return previousTimestamp
     }
 }
 const val NOT_RECEIVED_TS: Long = -1
@@ -87,11 +106,11 @@ class Tcc : FeedbackControlInformation {
     override val fmt: Int = Tcc.FMT
     var feedbackPacketCount: Int
     var packetInfo: PacketMap
-    var referenceTime: Long
+    var referenceTimeMs: Long
     override val size: Int
         get() {
             val deltaBlocksSize = packetInfo.keys
-                .map(packetInfo::getStatusSymbol)
+                .map { tccSeqNum -> packetInfo.getStatusSymbol(tccSeqNum, referenceTimeMs) }
                 .map(PacketStatusSymbol::getDeltaSizeBytes)
                 .sum()
 
@@ -101,14 +120,14 @@ class Tcc : FeedbackControlInformation {
                 // account for integer division.
                 ((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES +
                 deltaBlocksSize
-            // And now account for any padding
-            //TODO: should we handle padding here? or later at the general rtcp level?
-            // --> handle it at the general rtcp level (only 'internal' padding should be
-            // worried about in the packets)
-            while (dataSize % 4 != 0) {
-                dataSize++
-            }
-//            println("Calculating size of tcc packet with reference time $referenceTime:\n" +
+//             And now account for any padding
+//            //TODO: should we handle padding here? or later at the general rtcp level?
+//            // --> handle it at the general rtcp level (only 'internal' padding should be
+//            // worried about in the packets)
+//            while (dataSize % 4 != 0) {
+//                dataSize++
+//            }
+//            println("Calculating size of tcc packet with reference time $referenceTimeMs:\n" +
 //                    "there are ${packetInfo.size} packet statuses, which means ${((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES} bytes of status blocks\n" +
 //                    "and we calculated needing $deltaBlocksSize bytes for delta blocks\n" +
 //                    "adding in the size of the fci header (8) and padding, we get: $dataSize bytes for the fci block")
@@ -132,9 +151,19 @@ class Tcc : FeedbackControlInformation {
             buf.putShort(2, packetStatusCount.toUShort())
         }
 
-        fun getReferenceTime(buf: ByteBuffer): Int = buf.get3Bytes(4)
-        fun setReferenceTime(buf: ByteBuffer, referenceTime: Int) {
-            buf.put3Bytes(4, referenceTime)
+        /**
+         * The reference time field is stored as a time for some arbitrary clock and
+         * as a multiple of 64ms.  The time returned here is the translated time
+         * (i.e. not a multiple of 64ms but a timestamp in milliseconds directly)
+         */
+        fun getReferenceTimeMs(buf: ByteBuffer): Long = (buf.get3Bytes(4) shl 6).toULong()
+
+        /**
+         * [referenceTime] should be a standard timestamp in milliseconds, this method
+         * will convert the value to the packet format (a value which is a multiple of 64ms)
+         */
+        fun setReferenceTimeMs(buf: ByteBuffer, referenceTime: Long) {
+            buf.put3Bytes(4, (referenceTime.toUInt() shr 6) and 0xFFFFFF)
         }
 
         fun getFeedbackPacketCount(buf: ByteBuffer): Int = buf.get(7).toUInt()
@@ -182,46 +211,47 @@ class Tcc : FeedbackControlInformation {
         }
 
         /**
-         * Given [packetStatusBuf], which is a buffer that starts at the beginning of the TCC FCI payload,
+         * Given [buf], which is a buffer that starts at the beginning of the TCC FCI payload,
          * return a [PacketMap] containing the tcc sequence numbers and their received timestamps for
          * all packets described in this TCC packet
          */
         fun getPacketInfo(buf: ByteBuffer): PacketMap {
             val baseSeqNum = getBaseSeqNum(buf)
             val packetStatusCount = getPacketStatusCount(buf)
-            val referenceTime = getReferenceTime(buf)
+            val referenceTimeMs = getReferenceTimeMs(buf)
 
             val (packetStatuses, packetDeltas) =
                     getPacketChunksAndDeltas(buf.subBuffer(8), packetStatusCount)
 
             val packetInfo = PacketMap()
             val deltaIter = packetDeltas.iterator()
+            var previousTimestamp = referenceTimeMs
             packetStatuses.forEachIndexed { index, packetStatus ->
                 val seqNum = baseSeqNum + index
-                val deltaMs: Long = if (packetStatus.hasDelta()) {
-                    deltaIter.next().deltaMs.toLong()
+                val timestamp: Long = if (packetStatus.hasDelta()) {
+                    val deltaMs = deltaIter.next().deltaMs.toLong()
+                    val ts = previousTimestamp + deltaMs
+                    previousTimestamp = ts
+                    ts
                 } else {
                     NOT_RECEIVED_TS
                 }
-                val timestamp = if (deltaMs == NOT_RECEIVED_TS) NOT_RECEIVED_TS else referenceTime + deltaMs
                 packetInfo[seqNum] = timestamp
             }
             return packetInfo
         }
 
         /**
-         * Given [packetStatusBuf], which is a buffer that starts at the first packet status chunk, write all the
+         * Given [buf], which is a buffer that starts at the first packet status chunk, write all the
          * TCC packet information contained in [packetInfo] to the buffer.
          * For now we will always write status vector chunks with 2-bit symbols.
          */
-        fun setPacketInfo(buf: ByteBuffer, packetInfo: PacketMap) {
+        fun setPacketInfo(buf: ByteBuffer, packetInfo: PacketMap, referenceTimestamp: Long) {
             setBaseSeqNum(buf, packetInfo.firstKey())
             setPacketStatusCount(buf, packetInfo.size)
 
             //TODO: keep this consistent with the stored reference time member?
-            val referenceTimestamp = packetInfo.firstEntry().value
-            val referenceTimeValue = ((referenceTimestamp / 64) and 0xFFFFFF).toInt()
-            setReferenceTime(buf, referenceTimeValue)
+            setReferenceTimeMs(buf, referenceTimestamp)
 
             // Set the buffer's position to the start of the status chunks
             buf.position(8)
@@ -238,9 +268,9 @@ class Tcc : FeedbackControlInformation {
                         break
                     }
                     val tccSeqNum = seqNums[statusSymbolIndex]
-                    val symbol = packetInfo.getStatusSymbol(tccSeqNum)
+                    val symbol = packetInfo.getStatusSymbol(tccSeqNum, referenceTimestamp)
                     if (symbol.hasDelta()) {
-                        val deltaMs = packetInfo.getDeltaMs(tccSeqNum)!!
+                        val deltaMs = packetInfo.getDeltaMs(tccSeqNum, referenceTimestamp)!!
                         receiveDeltas.add(ReceiveDelta.create(deltaMs))
                     }
                     packetStatuses.add(symbol)
@@ -253,9 +283,6 @@ class Tcc : FeedbackControlInformation {
             receiveDeltas.forEach {
                 buf.put(it.getBuffer())
             }
-            while (buf.position() % 4 != 0) {
-                buf.put(0x00)
-            }
         }
     }
 
@@ -265,7 +292,7 @@ class Tcc : FeedbackControlInformation {
      */
     constructor(buf: ByteBuffer) : super() {
         this.buf = buf.slice()
-        this.referenceTime = getReferenceTime(buf).toLong()
+        this.referenceTimeMs = getReferenceTimeMs(buf)
         this.feedbackPacketCount = getFeedbackPacketCount(buf)
         this.packetInfo = getPacketInfo(buf)
     }
@@ -275,29 +302,27 @@ class Tcc : FeedbackControlInformation {
         feedbackPacketCount: Int = -1,
         packetInfo: PacketMap = PacketMap()
     ) {
-        this.referenceTime = referenceTime
+        this.referenceTimeMs = referenceTime
         this.feedbackPacketCount = feedbackPacketCount
         this.packetInfo = packetInfo
     }
 
     fun addPacket(seqNum: Int, timestamp: Long) {
-        if (this.referenceTime == -1L) {
-            this.referenceTime = timestamp
+        if (this.referenceTimeMs == -1L) {
+            this.referenceTimeMs = timestamp
         }
         packetInfo[seqNum] = timestamp
     }
 
     override fun getBuffer(): ByteBuffer {
         try {
-            //        println("TCC original buffer: ${buf?.toHex()}")
             if (this.buf == null || this.buf!!.capacity() < this.size) {
                 this.buf = ByteBuffer.allocate(this.size)
             }
             buf!!.rewind()
-            //        println("TCC sync'ing to buffer, buffer size: ${buf!!.capacity()} needed size: ${this.size}")
             setFeedbackPacketCount(buf!!, this.feedbackPacketCount)
             try {
-                setPacketInfo(buf!!, this.packetInfo)
+                setPacketInfo(buf!!, this.packetInfo, referenceTimeMs)
             } catch (e: Exception) {
                 println("BRIAN exception setting packet info to buffer: $e, buffer size: ${buf!!.capacity()}, needed size: ${this.size}\n" +
                         "the FCI was: $this")
@@ -305,11 +330,12 @@ class Tcc : FeedbackControlInformation {
             }
             // It's possible we didn't need to use the entire buffer we already had, so make sure
             // to set the limit where the data for this FCI actually ends
+            // TODO: i think we can just use 'flip' here?
             this.buf!!.limit(size)
             return this.buf!!.rewind() as ByteBuffer
         } catch (e: Exception) {
-            println("Exception getting tcc buffer: $e\n" +
-                    "tcc detected size: ${this.size}, buffer capacity: ${this.buf!!.capacity()}")
+            println("Exception getting tcc buffer: $e")
+            println("tcc detected size: ${this.size}, buffer capacity: ${this.buf!!.capacity()}")
             throw e
         }
     }
@@ -318,7 +344,7 @@ class Tcc : FeedbackControlInformation {
         return with (StringBuffer()) {
             appendln("TCC FCI")
             appendln("tcc seq num: $feedbackPacketCount")
-            appendln("reference time: $referenceTime")
+            appendln("reference time: $referenceTimeMs")
             appendln(packetInfo.toString())
             toString()
         }
@@ -369,15 +395,18 @@ enum class TwoBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbo
     RECEIVED_LARGE_OR_NEGATIVE_DELTA(2);
 
     companion object {
-        private val map = TwoBitPacketStatusSymbol.values().associateBy(TwoBitPacketStatusSymbol::value);
-        fun fromInt(type: Int): PacketStatusSymbol = map.getOrDefault(type, UnknownSymbol)
+        private val map = TwoBitPacketStatusSymbol.values().associateBy(TwoBitPacketStatusSymbol::value)
+//        fun fromInt(type: Int): PacketStatusSymbol = map.getOrDefault(type, UnknownSymbol)
+        fun fromInt(type: Int): PacketStatusSymbol {
+            return map.getOrDefault(type, UnknownSymbol)
+        }
         // This method assumes only supports cases where the given delta falls into
         // one of the two delta ranges
         fun fromDeltaMs(deltaMs: Double): PacketStatusSymbol {
             return when (deltaMs) {
                 in 0..64 /* 63.75 */ -> TwoBitPacketStatusSymbol.RECEIVED_SMALL_DELTA
                 in -8192..8192 /* 8191.75 */ -> TwoBitPacketStatusSymbol.RECEIVED_LARGE_OR_NEGATIVE_DELTA
-                else -> UnknownSymbol //TwoBitPacketStatusSymbol.UNKNOWN
+                else -> UnknownSymbol
             }
         }
     }
@@ -673,7 +702,7 @@ class EightBitReceiveDelta : ReceiveDelta {
          */
         fun getDeltaMs(buf: ByteBuffer): Double {
             val uSecMultiple = buf.get().toUInt()
-            val uSecs = uSecMultiple * 25.0
+            val uSecs = uSecMultiple * 250.0
             return uSecs / 1000.0
         }
         fun setDeltaMs(buf: ByteBuffer, deltaMs: Double) {
@@ -722,7 +751,7 @@ class SixteenBitReceiveDelta : ReceiveDelta {
          */
         fun getDeltaMs(buf: ByteBuffer): Double {
             val uSecMultiple = buf.getShort().toUInt()
-            val uSecs = uSecMultiple * 25.0
+            val uSecs = uSecMultiple * 250.0
             return uSecs / 1000.0
         }
         fun setDeltaMs(buf: ByteBuffer, deltaMs: Double) {

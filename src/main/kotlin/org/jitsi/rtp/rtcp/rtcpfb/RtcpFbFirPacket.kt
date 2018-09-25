@@ -18,7 +18,6 @@ package org.jitsi.rtp.rtcp.rtcpfb
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.rtcp.RtcpHeader
 import java.nio.ByteBuffer
 
 /**
@@ -35,14 +34,15 @@ import java.nio.ByteBuffer
  * SSRC, the media source SSRC field in the RTCPFB header is unsed for FIR packets.
  */
 class RtcpFbFirPacket : PayloadSpecificFbPacket {
-    override var feedbackControlInformation: FeedbackControlInformation
+    private var fci: Fir
+    override fun getFci(): Fir = fci
 
     companion object {
         const val FMT = 4
     }
 
     constructor(buf: ByteBuffer) : super(buf) {
-        feedbackControlInformation = Fir(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
+        fci = Fir(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
     }
 
     constructor(
@@ -50,7 +50,7 @@ class RtcpFbFirPacket : PayloadSpecificFbPacket {
         seqNum: Int = 0
     // The media source ssrc in the feedback header for FIR is unused and should be 0
     ) : super(mediaSourceSsrc = 0) {
-        feedbackControlInformation = Fir(mediaSourceSsrc, seqNum)
+        fci = Fir(mediaSourceSsrc, seqNum)
     }
 
     override fun clone(): Packet {

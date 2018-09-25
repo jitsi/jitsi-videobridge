@@ -20,15 +20,19 @@ import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
+/**
+ * https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1
+ */
 class RtcpFbTccPacket : TransportLayerFbPacket {
-    override var feedbackControlInformation: FeedbackControlInformation
+    private var fci: Tcc
+    override fun getFci(): Tcc = fci
 
     companion object {
         const val FMT = 15
     }
 
     constructor(buf: ByteBuffer) : super(buf) {
-        feedbackControlInformation = Tcc(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
+        fci = Tcc(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
     }
 
     constructor(
@@ -37,7 +41,7 @@ class RtcpFbTccPacket : TransportLayerFbPacket {
         feedbackPacketCount: Int = -1,
         packetInfo: PacketMap = PacketMap()
     ) : super(mediaSourceSsrc = mediaSourceSsrc) {
-        feedbackControlInformation = Tcc(referenceTime, feedbackPacketCount, packetInfo)
+        fci = Tcc(referenceTime, feedbackPacketCount, packetInfo)
     }
 
     override fun clone(): Packet {

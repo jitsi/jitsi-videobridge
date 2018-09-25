@@ -25,7 +25,8 @@ import java.nio.ByteBuffer
  *  2, and there MUST NOT be any Feedback Control Information.
  */
 class RtcpFbPliPacket : PayloadSpecificFbPacket {
-    override var feedbackControlInformation: FeedbackControlInformation = Pli()
+    private var fci: Pli = Pli()
+    override fun getFci(): Pli = fci
 
     companion object {
         const val FMT = 1
