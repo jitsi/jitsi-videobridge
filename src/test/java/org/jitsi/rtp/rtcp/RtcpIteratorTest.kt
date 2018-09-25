@@ -1,9 +1,11 @@
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.matchers.beInstanceOf
 import io.kotlintest.matchers.beOfType
 import io.kotlintest.matchers.haveSize
 import io.kotlintest.should
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import java.nio.ByteBuffer
@@ -11,22 +13,22 @@ import java.nio.ByteBuffer
 internal class RtcpIteratorTest : ShouldSpec() {
     override fun isInstancePerTest(): Boolean = true
     private val compoundPacketBuf = ByteBuffer.wrap(byteArrayOf(
-        0x81.toByte(), 0xC9.toByte(), 0x00.toByte(), 0x4F.toByte(),
-        0x66.toByte(), 0xAE.toByte(), 0xAB.toByte(), 0xAB.toByte(),
-        0xB2.toByte(), 0xFE.toByte(), 0x30.toByte(), 0x5A.toByte(),
+        0x81.toByte(), 0xC9.toByte(), 0x00.toByte(), 0x07.toByte(),
+        0x50.toByte(), 0x63.toByte(), 0x13.toByte(), 0xDE.toByte(),
+        0x48.toByte(), 0xCA.toByte(), 0xF9.toByte(), 0xD1.toByte(),
         0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-        0x00.toByte(), 0x00.toByte(), 0x4C.toByte(), 0x8C.toByte(),
-        0x00.toByte(), 0x00.toByte(), 0x0B.toByte(), 0x0D.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x10.toByte(), 0x8C.toByte(),
+        0x00.toByte(), 0x00.toByte(), 0x04.toByte(), 0x68.toByte(),
         0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
         0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
         0x81.toByte(), 0xCD.toByte(), 0x00.toByte(), 0x03.toByte(),
-        0x4F.toByte(), 0x66.toByte(), 0xAE.toByte(), 0xAB.toByte(),
-        0xB2.toByte(), 0xFE.toByte(), 0x30.toByte(), 0x5A.toByte(),
-        0x4C.toByte(), 0x8D.toByte(), 0x00.toByte(), 0x7F.toByte()
+        0x50.toByte(), 0x63.toByte(), 0x13.toByte(), 0xDE.toByte(),
+        0x48.toByte(), 0xCA.toByte(), 0xF9.toByte(), 0xD1.toByte(),
+        0x10.toByte(), 0x8D.toByte(), 0x00.toByte(), 0x00.toByte()
     ))
 
     private val singlePacketBuf = ByteBuffer.wrap(byteArrayOf(
-        0x80.toByte(), 0xC8.toByte(), 0x00.toByte(), 0xE4.toByte(),
+        0x80.toByte(), 0xC8.toByte(), 0x00.toByte(), 0x06.toByte(),
         0x36.toByte(), 0x13.toByte(), 0xF6.toByte(), 0xF6.toByte(),
         0xDF.toByte(), 0x21.toByte(), 0x7D.toByte(), 0xF0.toByte(),
         0x7F.toByte(), 0x5E.toByte(), 0x41.toByte(), 0xD5.toByte(),
@@ -77,8 +79,11 @@ internal class RtcpIteratorTest : ShouldSpec() {
             val iter = RtcpIterator(compoundPacketBuf)
             "next" {
                 should("get the next packet") {
-                    iter.next() should beOfType<RtcpRrPacket>()
-                    iter.next() should beOfType<RtcpFbPacket>()
+                    iter.next() should beInstanceOf<RtcpRrPacket>()
+                    iter.next() should beInstanceOf<RtcpFbPacket>()
+                    shouldThrow<Exception> {
+                        iter.next()
+                    }
                 }
             }
             "hasNext" {
@@ -105,68 +110,5 @@ internal class RtcpIteratorTest : ShouldSpec() {
             pkt should beOfType<RtcpSrPacket>()
             iter.hasNext() shouldBe false
         }
-        "blah" {
-            val pkt = RtcpPacket.fromBuffer(blah)
-            val newBuf = pkt.getBuffer()
-            val iter = RtcpIterator(newBuf)
-
-            val pkts = iter.getAll()
-        }
-        "blah2" {
-            val buf = ByteBuffer.wrap(byteArrayOf(
-                0x8F.toByte(), 0xCD.toByte(), 0x00.toByte(), 0x1E.toByte(),
-                0x58.toByte(), 0x62.toByte(), 0xFC.toByte(), 0x61.toByte(),
-                0x00.toByte(), 0x01.toByte(), 0x00.toByte(), 0x50.toByte(),
-                0x00.toByte(), 0xFE.toByte(), 0xA5.toByte(), 0x00.toByte(),
-                0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
-                0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
-                0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
-                0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
-                0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x55.toByte(),
-                0xD5.toByte(), 0x55.toByte(), 0xD5.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()
-            ))
-            val iter = RtcpIterator(buf)
-            iter.getAll()
-        }
-        "f:blah3" {
-            val buf = ByteBuffer.wrap(byteArrayOf(
-                0x8F.toByte(), 0xCD.toByte(), 0x00.toByte(), 0x0A.toByte(),
-                0x00.toByte(), 0x37.toByte(), 0x46.toByte(), 0xAC.toByte(),
-                0x93.toByte(), 0x69.toByte(), 0xCE.toByte(), 0x68.toByte(),
-                0x00.toByte(), 0x01.toByte(), 0x00.toByte(), 0x14.toByte(),
-                0x42.toByte(), 0x42.toByte(), 0x12.toByte(), 0x00.toByte(),
-                0x20.toByte(), 0x14.toByte(), 0x04.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x04.toByte(), 0x00.toByte(),
-                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()
-            ))
-            val pkt = RtcpPacket.fromBuffer(buf)
-            val iter = RtcpIterator(pkt.getBuffer())
-            iter.getAll()
-        }
     }
-
 }
