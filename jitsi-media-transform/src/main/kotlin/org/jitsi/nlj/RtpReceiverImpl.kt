@@ -140,10 +140,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 predicate = { pkt -> pkt is AudioRtpPacket }
                                 path = pipeline {
                                     node(audioLevelListener)
-                                    simpleNode("RTP packet handler") {
-                                        rtpPacketHandler?.processPackets(it)
-                                        emptyList()
-                                    }
+                                    node(rtpPacketHandlerWrapper)
                                 }
                             }
                             packetPath {
@@ -153,10 +150,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(PaddingTermination())
                                     node(VideoParser())
                                     node(RetransmissionRequester(rtcpSender))
-                                    simpleNode("RTP packet handler") {
-                                        rtpPacketHandler?.processPackets(it)
-                                        emptyList()
-                                    }
+                                    node(rtpPacketHandlerWrapper)
                                 }
                             }
                         }
