@@ -68,7 +68,7 @@ class RtxHandler : Node("RTX handler") {
                     numPaddingPacketsReceived++
                     return@forEachAs
                 }
-                val originalSeqNum = rtxPacket.originalSequenceNmber
+                val originalSeqNum = rtxPacket.originalSequenceNumber
                 val originalPt = associatedPayloadTypes[pkt.header.payloadType]!!
                 val originalSsrc = associatedSsrcs[pkt.header.ssrc]!!
 
