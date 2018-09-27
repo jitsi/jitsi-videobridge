@@ -49,6 +49,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.util.Logger
+import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -60,6 +61,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * participant it's receiving data from (NACK packets, for example)
      */
     private val rtcpSender: (RtcpPacket) -> Unit = {},
+    transportCcEngine: TransportCCEngine? = null,
     /**
      * The executor this class will use for its work
      */
@@ -73,7 +75,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
     private val audioLevelListener = AudioLevelReader()
-    private val rtcpTermination = RtcpTermination()
+    private val rtcpTermination = RtcpTermination(transportCcEngine = transportCcEngine)
 
     companion object {
         val logger: Logger = Logger.getLogger(this::class.java)

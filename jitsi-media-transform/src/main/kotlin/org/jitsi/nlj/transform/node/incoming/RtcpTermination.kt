@@ -29,8 +29,11 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
+import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 
-class RtcpTermination : Node("RTCP termination") {
+class RtcpTermination(
+    private val transportCcEngine: TransportCCEngine? = null
+) : Node("RTCP termination") {
     var nackHandler: NackHandler? = null
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
@@ -38,11 +41,9 @@ class RtcpTermination : Node("RTCP termination") {
         p.forEach { packetInfo ->
             val pkt = packetInfo.packet
             when (pkt) {
-                is RtcpRrPacket, is RtcpSrPacket, is RtcpFbTccPacket -> {
+                is RtcpFbTccPacket -> handleTccPacket(pkt)
+                is RtcpRrPacket, is RtcpSrPacket -> {
                     // Process & terminate
-                    if (pkt is RtcpFbTccPacket) {
-                        logger.cinfo { "Received TCC packet" }
-                    }
                 }
                 is RtcpFbNackPacket -> {
                     nackHandler?.onNackPacket(pkt)
@@ -56,5 +57,9 @@ class RtcpTermination : Node("RTCP termination") {
             }
         }
         next(outPackets)
+    }
+
+    private fun handleTccPacket(tccPacket: RtcpFbTccPacket) {
+        transportCcEngine?.tccReceived(tccPacket)
     }
 }

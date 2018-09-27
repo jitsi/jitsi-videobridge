@@ -16,6 +16,7 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.pcap4j.core.Pcaps

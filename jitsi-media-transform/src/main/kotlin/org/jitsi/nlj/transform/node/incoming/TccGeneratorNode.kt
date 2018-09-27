@@ -81,12 +81,18 @@ class TccGeneratorNode(
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long) {
         currTcc.addPacket(tccSeqNum, timestamp)
+        // TEMP: For now, add all packets with a 0 delta
+//        if (currTcc.referenceTimeMs != -1L) {
+//            currTcc.addPacket(tccSeqNum, currTcc.referenceTimeMs)
+//        } else {
+//            currTcc.addPacket(tccSeqNum, timestamp)
+//        }
 
         if (isTccReadyToSend()) {
             val mediaSsrc = if (mediaSsrcs.isNotEmpty()) mediaSsrcs.iterator().next() else -1L
             val pkt = RtcpFbTccPacket(
                 mediaSourceSsrc = mediaSsrc,
-                referenceTime = currTcc.referenceTime,
+                referenceTime = currTcc.referenceTimeMs,
                 feedbackPacketCount = currTcc.feedbackPacketCount,
                 packetInfo = currTcc.packetInfo
             )

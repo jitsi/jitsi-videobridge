@@ -21,6 +21,7 @@ import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PacketCache
 import org.jitsi.nlj.transform.node.PacketLoss
+import org.jitsi.nlj.transform.node.PcapWriter
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
@@ -34,13 +35,16 @@ import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtpPacket
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 
 class RtpSenderImpl(
     val id: Long,
+    transportCcEngine: TransportCCEngine? = null,
     val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpSender() {
     protected val logger = getLogger(this.javaClass)
@@ -81,7 +85,7 @@ class RtpSenderImpl(
             }
             node(outgoingPacketCache)
             node(absSendTime)
-            node(TccSeqNumTagger())
+            node(TccSeqNumTagger(transportCcEngine))
             node(srtpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
@@ -96,17 +100,20 @@ class RtpSenderImpl(
         outgoingRtcpRoot = pipeline {
             simpleNode("RTCP sender ssrc setter") { pktInfos ->
                 tempSenderSsrc?.let { senderSsrc ->
-                    pktInfos.forEachAs<RtcpPacket> { pktInfo, pkt ->
+                    pktInfos.forEachAs<RtcpPacket> { _, pkt ->
                         //TODO: get the sender ssrc working right, i think we may be getting the wrong
                         // one somehow
                         if (pkt.header.senderSsrc == 0L) {
                             pkt.header.senderSsrc = senderSsrc
                         }
+                        pkt.getBuffer()
+//                        logger.cinfo { "Sending RTCP\n$pkt\n\n${pkt.getBuffer().toHex()}" }
                     }
                     return@simpleNode pktInfos
                 }
                 emptyList()
             }
+            node(PcapWriter())
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
