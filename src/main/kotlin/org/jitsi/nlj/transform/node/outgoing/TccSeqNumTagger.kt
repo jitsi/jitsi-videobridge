@@ -22,12 +22,16 @@ import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.TccHeaderExtension
 import org.jitsi.service.neomedia.RTPExtension
+import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import unsigned.toUInt
 
-class TccSeqNumTagger : Node("TCC sequence number tagger") {
+class TccSeqNumTagger(
+    private val transportCcEngine: TransportCCEngine? = null
+) : Node("TCC sequence number tagger") {
     private var currTccSeqNum: Int = 1
     private var tccExtensionId: Int? = null
 
@@ -38,6 +42,7 @@ class TccSeqNumTagger : Node("TCC sequence number tagger") {
                 pkt.header.addExtension(tccExtId, ext)
             }
         }
+        transportCcEngine?.egressEngine?.rtpTransformer?.transform(p.map { it.packet.toRawPacket() }.toTypedArray())
         next(p)
     }
 

@@ -28,6 +28,8 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.service.neomedia.format.MediaFormat
+import org.jitsi.util.DiagnosticContext
+import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -57,13 +59,16 @@ class Transceiver(
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
 
-    private val rtpSender: RtpSender = RtpSenderImpl(123, executor)
+    private val transportCcEngine = TransportCCEngine(DiagnosticContext())
+
+    private val rtpSender: RtpSender = RtpSenderImpl(123, transportCcEngine, executor)
     private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(
             123,
             { rtcpPacket ->
                 rtpSender.sendRtcp(listOf(rtcpPacket))
             },
+            transportCcEngine,
             executor)
     val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
 

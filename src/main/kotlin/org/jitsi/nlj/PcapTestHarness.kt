@@ -85,7 +85,7 @@ fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
     val rtpReceiver = RtpReceiverImpl(
         1,
         { rtcpPacket -> Unit },
-        executor
+        executor = executor
     )
     rtpReceiver.setSrtpTransformer(srtpTransformer)
     rtpReceiver.setSrtcpTransformer(srtcpTransformer)
@@ -105,7 +105,7 @@ fun main(args: Array<String>) {
     val receivers = mutableListOf<RtpReceiver>()
     val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()
 
-    val sender = RtpSenderImpl(456L, executor)
+    val sender = RtpSenderImpl(456L, executor = executor)
     sender.setSrtpTransformer(srtpTransformer)
     sender.setSrtcpTransformer(srtcpTransformer)
 
