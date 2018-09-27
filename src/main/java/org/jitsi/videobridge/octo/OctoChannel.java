@@ -437,4 +437,19 @@ public class OctoChannel
                 .addAndGet(statistics.packetsSent);
         }
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean expire()
+    {
+        if (super.expire())
+        {
+            octoEndpoints.setChannel(getMediaType(), null);
+            return true;
+        }
+
+        return false;
+    }
 }
