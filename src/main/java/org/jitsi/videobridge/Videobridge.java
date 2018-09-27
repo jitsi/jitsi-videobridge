@@ -40,6 +40,7 @@ import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
@@ -1406,6 +1407,8 @@ public class Videobridge
     void start(final BundleContext bundleContext)
         throws Exception
     {
+        UlimitCheck.printUlimits();
+
         ConfigurationService cfg
             = ServiceUtils2.getService(
                     bundleContext,
