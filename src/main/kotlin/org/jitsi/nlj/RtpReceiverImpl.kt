@@ -224,6 +224,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             val packets = mutableListOf<PacketInfo>()
             while (packets.size < 5) {
                 val packet = incomingPacketQueue.poll() ?: break
+                packet.addEvent("Exited RTP receiver incoming queue")
                 packets += packet
             }
             if (packets.isNotEmpty()) {
