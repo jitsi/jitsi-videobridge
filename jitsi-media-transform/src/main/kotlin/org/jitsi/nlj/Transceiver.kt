@@ -85,7 +85,10 @@ class Transceiver(
      * Handle an incoming [PacketInfo] (that is, a packet received by the endpoint
      * this transceiver is associated with) to be processed by the receiver pipeline.
      */
-    fun handleIncomingPacket(p: PacketInfo) = rtpReceiver.enqueuePacket(p)
+    fun handleIncomingPacket(p: PacketInfo) {
+        p.addEvent("Entered RTP receiver incoming queue")
+        rtpReceiver.enqueuePacket(p)
+    }
 
     /**
      * Send packets to the endpoint this transceiver is associated with by

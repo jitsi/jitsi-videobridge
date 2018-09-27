@@ -143,7 +143,7 @@ abstract class Node(
     }
 
     protected fun next(outPackets: List<PacketInfo>) {
-        onExit()
+        onExit(outPackets)
         numOutputPackets += outPackets.size
         if (outPackets.isNotEmpty()) {
             nextNode?.processPackets(outPackets)
@@ -157,7 +157,7 @@ abstract class Node(
      * [nextNode].
      */
     protected fun next(nextNode: Node, outPackets: List<PacketInfo>) {
-        onExit()
+        onExit(outPackets)
         numOutputPackets += outPackets.size
         nextNode.processPackets(outPackets)
     }
@@ -167,14 +167,20 @@ abstract class Node(
         if (firstPacketTime == -1L) {
             firstPacketTime = startTime
         }
-        incomingPackets.forEach { numBytes += it.packet.size }
+        incomingPackets.forEach {
+            numBytes += it.packet.size
+            it.addEvent("Entered node $name")
+        }
         lastPacketTime = System.nanoTime()
         numInputPackets += incomingPackets.size
     }
 
-    private fun onExit() {
+    private fun onExit(outPackets: List<PacketInfo>) {
         val processingDuration = System.nanoTime() - startTime
         totalProcessingDuration += processingDuration
+        outPackets.forEach {
+            it.addEvent("Exited node $name")
+        }
     }
 }
 
