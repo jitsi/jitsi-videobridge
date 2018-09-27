@@ -136,7 +136,10 @@ public class OctoEndpoints
                     octoEndpoints.forEach(e -> e.removeChannel(videoChannel));
                 }
                 videoChannel = channel;
-                octoEndpoints.forEach(e -> e.addChannel(videoChannel));
+                if (channel != null)
+                {
+                    octoEndpoints.forEach(e -> e.addChannel(videoChannel));
+                }
             }
             else if (MediaType.AUDIO.equals(mediaType))
             {
@@ -147,7 +150,10 @@ public class OctoEndpoints
                     octoEndpoints.forEach(e -> e.removeChannel(audioChannel));
                 }
                 audioChannel = channel;
-                octoEndpoints.forEach(e -> e.addChannel(audioChannel));
+                if (channel != null)
+                {
+                    octoEndpoints.forEach(e -> e.addChannel(audioChannel));
+                }
             }
             else
             {
