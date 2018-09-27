@@ -76,7 +76,9 @@ internal class TccTest : ShouldSpec() {
         0x7d.toByte(), 0x00.toByte(),
         // 1x small
         // 33: 1
-        0x04.toByte()
+        0x04.toByte(),
+        // Padding
+        0x00.toByte(), 0x00.toByte(), 0x00.toByte()
     ))
 
     private val pktFromCall = ByteBuffer.wrap(byteArrayOf(
@@ -125,8 +127,75 @@ internal class TccTest : ShouldSpec() {
                     tcc.packetInfo.firstKey() shouldBe 4
                     // 5929 total packet statuses
                     tcc.packetInfo.size shouldBe 5929
-                    // We should have 7 deltas
-                    tcc.packetInfo.filter { it.value != NOT_RECEIVED_TS }.size shouldBe 7
+                    // We should have 14 deltas
+                    tcc.packetInfo.filter { it.value != NOT_RECEIVED_TS }.size shouldBe 14
+                }
+                "buf 2" { // with one bit and two bit symbols
+                    val b = ByteBuffer.wrap(byteArrayOf(
+                        0x15.toByte(), 0x60.toByte(), 0x00.toByte(), 0x0F.toByte(),
+                        0x14.toByte(), 0x36.toByte(), 0xBD.toByte(), 0x2B.toByte(),
+                        0x8A.toByte(), 0x50.toByte(), 0x40.toByte(), 0x01.toByte(),
+                        0xFC.toByte(), 0x74.toByte(), 0x84.toByte(), 0x74.toByte(),
+                        0x01.toByte(), 0x30.toByte(), 0x00.toByte(), 0x00.toByte()
+                    ))
+                    val t = Tcc(b)
+//                    println(t)
+                    t.getBuffer()
+                }
+                "buf 3" { // has a negative delta
+                    val b = ByteBuffer.wrap(byteArrayOf(
+                        0x00.toByte(), 0x0C.toByte(), 0x00.toByte(), 0xEC.toByte(),
+                        0x15.toByte(), 0xF8.toByte(), 0xF7.toByte(), 0x00.toByte(),
+                        0xBF.toByte(), 0xFE.toByte(), 0xA5.toByte(), 0x29.toByte(),
+                        0x92.toByte(), 0x4A.toByte(), 0x94.toByte(), 0xF5.toByte(),
+                        0xAC.toByte(), 0xCE.toByte(), 0xB3.toByte(), 0x33.toByte(),
+                        0xAC.toByte(), 0xDA.toByte(), 0xB6.toByte(), 0x9B.toByte(),
+                        0xAD.toByte(), 0x73.toByte(), 0xA7.toByte(), 0x66.toByte(),
+                        0xB5.toByte(), 0xCE.toByte(), 0x9D.toByte(), 0xCE.toByte(),
+                        0xB6.toByte(), 0xED.toByte(), 0x8D.toByte(), 0xCF.toByte(),
+                        0x9C.toByte(), 0xED.toByte(), 0xAE.toByte(), 0x73.toByte(),
+                        0xD1.toByte(), 0x19.toByte(), 0xD4.toByte(), 0x50.toByte(),
+                        0xCC.toByte(), 0x00.toByte(), 0x00.toByte(), 0x04.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x04.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x04.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x04.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x04.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+                        0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x04.toByte(),
+                        0xFF.toByte(), 0xFC.toByte(), 0x2C.toByte(), 0x04.toByte(),
+                        0x00.toByte(), 0x18.toByte(), 0x00.toByte(), 0x00.toByte()
+                    ))
+                    val t = Tcc(b)
+//                    println(t)
+                    t.getBuffer()
                 }
             }
             "Creating a TCC packet" {

@@ -21,6 +21,7 @@ import org.jitsi.rtp.extensions.getBits
 import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.util.RtpUtils
 import toUInt
 import unsigned.toUByte
@@ -39,7 +40,13 @@ class PacketMap : TreeMap<Int, Long>(RtpUtils.rtpSeqNumComparator) {
     // Only does TwoBitPacketStatusSymbols since that's all we use
     fun getStatusSymbol(tccSeqNum: Int, referenceTime: Long): PacketStatusSymbol {
         val deltaMs = getDeltaMs(tccSeqNum, referenceTime) ?: return TwoBitPacketStatusSymbol.NOT_RECEIVED
-        return TwoBitPacketStatusSymbol.fromDeltaMs(deltaMs)
+        try {
+            return TwoBitPacketStatusSymbol.fromDeltaMs(deltaMs)
+        } catch (e: Exception) {
+            println("Error getting status symbol: $e, current packet map: $this")
+            throw e
+        }
+
     }
 
     fun getDeltaMs(tccSeqNum: Int, referenceTime: Long): Double? {
@@ -54,6 +61,7 @@ class PacketMap : TreeMap<Int, Long>(RtpUtils.rtpSeqNumComparator) {
             -1L -> timestamp - referenceTime
             else -> timestamp - previousTimestamp
         }
+//        println("packet $tccSeqNum has delta $deltaMs (ts $timestamp, prev ts $previousTimestamp)")
         return deltaMs.toDouble()
     }
 
@@ -109,17 +117,27 @@ class Tcc : FeedbackControlInformation {
     var referenceTimeMs: Long
     override val size: Int
         get() {
-            val deltaBlocksSize = packetInfo.keys
-                .map { tccSeqNum -> packetInfo.getStatusSymbol(tccSeqNum, referenceTimeMs) }
-                .map(PacketStatusSymbol::getDeltaSizeBytes)
-                .sum()
+            try {
+                val deltaBlocksSize = packetInfo.keys
+                    .map { tccSeqNum -> packetInfo.getStatusSymbol(tccSeqNum, referenceTimeMs) }
+                    .map(PacketStatusSymbol::getDeltaSizeBytes)
+                    .sum()
 
-            // We always write status as vector chunks with 2 bit symbols
-            return 8 + // header values
-                // We can encode 7 statuses per packet chunk.  The '+ 6' is to
-                // account for integer division.
-                ((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES +
-                deltaBlocksSize
+                // We always write status as vector chunks with 2 bit symbols
+                val dataSize = 8 + // header values
+                        // We can encode 7 statuses per packet chunk.  The '+ 6' is to
+                        // account for integer division.
+                        ((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES +
+                        deltaBlocksSize
+                var paddingSize = 0
+                while ((dataSize + paddingSize) % 4 != 0) {
+                    paddingSize++
+                }
+                return dataSize + paddingSize
+            } catch (e: Exception) {
+                println("Error getting size of TCC fci: $e, buffer:\n${buf?.toHex()}")
+                throw e
+            }
         }
 
     companion object {
@@ -148,7 +166,8 @@ class Tcc : FeedbackControlInformation {
 
         /**
          * [referenceTime] should be a standard timestamp in milliseconds, this method
-         * will convert the value to the packet format (a value which is a multiple of 64ms)
+         * will convert the value to the packet format (a value which is a multiple of 64ms).
+         * [buf] should start at the beginning of the TCC FCI buffer
          */
         fun setReferenceTimeMs(buf: ByteBuffer, referenceTime: Long) {
             buf.put3Bytes(4, (referenceTime.toUInt() shr 6) and 0xFFFFFF)
@@ -237,8 +256,6 @@ class Tcc : FeedbackControlInformation {
         fun setPacketInfo(buf: ByteBuffer, packetInfo: PacketMap, referenceTimestamp: Long) {
             setBaseSeqNum(buf, packetInfo.firstKey())
             setPacketStatusCount(buf, packetInfo.size)
-
-            //TODO: keep this consistent with the stored reference time member?
             setReferenceTimeMs(buf, referenceTimestamp)
 
             // Set the buffer's position to the start of the status chunks
@@ -316,9 +333,13 @@ class Tcc : FeedbackControlInformation {
                         "the FCI was: $this")
                 throw e
             }
+            // TCC packets (from what I can tell) define their own padding, so we'll add that here
+            //TODO: sync this with the padding size calculation used in size?
+            while (buf!!.position() % 4 != 0) {
+                buf!!.put(0x00)
+            }
             // It's possible we didn't need to use the entire buffer we already had, so make sure
             // to set the limit where the data for this FCI actually ends
-            // TODO: i think we can just use 'flip' here?
             this.buf!!.limit(size)
             return this.buf!!.rewind() as ByteBuffer
         } catch (e: Exception) {
@@ -332,6 +353,8 @@ class Tcc : FeedbackControlInformation {
         return with (StringBuffer()) {
             appendln("TCC FCI")
             appendln("tcc seq num: $feedbackPacketCount")
+            appendln("base sequence number: ${packetInfo.firstKey()}")
+            appendln("packet status count: ${packetInfo.size}")
             appendln("reference time: $referenceTimeMs")
             appendln(packetInfo.toString())
             toString()
@@ -352,6 +375,8 @@ object UnknownSymbol : PacketStatusSymbol {
     override fun getDeltaSizeBytes(): Int = throw Exception()
 }
 
+class InvalidDeltaException(deltaMs: Double) : Exception("Invalid delta found: $deltaMs")
+
 /**
  * Note that although the spec says:
  * "packet received" (0) and "packet not received" (1)
@@ -364,6 +389,8 @@ object UnknownSymbol : PacketStatusSymbol {
 //TODO: we will be unable to turn a received TCC packet with one bit symbols into one
 // with 2 bit symbols because two bit symbols don't support a status of 'received but
 // with no delta'
+//NOTE: the old code interprets 'RECEIVED' for one bit symbols as having a small delta.  I haven't
+// seen a part in the spec that defines this, but chrome appears to treat it this way
 enum class OneBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbol {
     RECEIVED(1),
     NOT_RECEIVED(0);
@@ -373,8 +400,8 @@ enum class OneBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbo
         fun fromInt(type: Int): PacketStatusSymbol = map.getOrDefault(type, UnknownSymbol)
     }
 
-    override fun hasDelta(): Boolean = false
-    override fun getDeltaSizeBytes(): Int = 0
+    override fun hasDelta(): Boolean = this == RECEIVED
+    override fun getDeltaSizeBytes(): Int = 1
 }
 
 enum class TwoBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbol {
@@ -391,7 +418,7 @@ enum class TwoBitPacketStatusSymbol(override val value: Int) : PacketStatusSymbo
             return when (deltaMs) {
                 in 0.0..63.75 -> TwoBitPacketStatusSymbol.RECEIVED_SMALL_DELTA
                 in -8192.0..8191.75 -> TwoBitPacketStatusSymbol.RECEIVED_LARGE_OR_NEGATIVE_DELTA
-                else -> UnknownSymbol
+                else -> throw InvalidDeltaException(deltaMs)
             }
         }
     }
@@ -735,7 +762,7 @@ class SixteenBitReceiveDelta : ReceiveDelta {
          * The value written in the field is represented as multiples of 250us
          */
         fun getDeltaMs(buf: ByteBuffer): Double {
-            val uSecMultiple = buf.getShort().toUInt()
+            val uSecMultiple = buf.getShort().toInt()
             val uSecs = uSecMultiple * 250.0
             return uSecs / 1000.0
         }

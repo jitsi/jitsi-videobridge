@@ -156,6 +156,7 @@ abstract class RtcpFbPacket : RtcpPacket {
             this.buf = ByteBuffer.allocate(size)
         }
         buf!!.rewind()
+        header.hasPadding = paddingSizeBytes > 0
         // We need to update the length in the header to match the current content
         // of the packet (which may have changed)
         header.length = lengthValue
@@ -165,6 +166,7 @@ abstract class RtcpFbPacket : RtcpPacket {
         setFeedbackControlInformation(buf!!, getFci())
         // Add any padding
         buf!!.position(dataSizeBytes)
+        //TODO: write the padding length in the last byte
         repeat(paddingSizeBytes) {
             this.buf!!.put(0x00)
         }

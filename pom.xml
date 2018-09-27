@@ -10,7 +10,7 @@
 
     <properties>
         <kotlin.version>1.2.51</kotlin.version>
-        <kotlintest.version>3.1.8</kotlintest.version>
+        <kotlintest.version>3.1.10</kotlintest.version>
         <junit.version>5.2.0</junit.version>
     </properties>
 
