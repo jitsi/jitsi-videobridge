@@ -24,7 +24,6 @@ import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
-import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -43,6 +42,7 @@ class TccGeneratorNode(
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
     private var currTcc: Tcc = Tcc(feedbackPacketCount = currTccSeqNum++)
+    private var lastTccSentTime: Long = 0
     /**
      * Ssrc's we've been told this endpoint will transmit on.  We'll use an
      * ssrc from this list for the RTCPFB mediaSourceSsrc field in the
@@ -52,13 +52,13 @@ class TccGeneratorNode(
     private var numTccSent: Int = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
-        val now = System.currentTimeMillis()
         tccExtensionId?.let { tccExtId ->
-            p.forEachAs<SrtpPacket> { _, pkt ->
+            p.forEachAs<SrtpPacket> { pktInfo, pkt ->
                 pkt.header.getExtension(tccExtId).let currPkt@ { tccExt ->
                     //TODO: check if it's a one byte or two byte ext?
+                    // TODO: add a tcc ext type that handles the seq num parsing?
                     val tccSeqNum = tccExt?.data?.getShort(0)?.toUInt() ?: return@currPkt
-                    addPacket(tccSeqNum, now)
+                    addPacket(tccSeqNum, pktInfo.receivedTime)
                 }
             }
         }
@@ -81,12 +81,6 @@ class TccGeneratorNode(
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long) {
         currTcc.addPacket(tccSeqNum, timestamp)
-        // TEMP: For now, add all packets with a 0 delta
-//        if (currTcc.referenceTimeMs != -1L) {
-//            currTcc.addPacket(tccSeqNum, currTcc.referenceTimeMs)
-//        } else {
-//            currTcc.addPacket(tccSeqNum, timestamp)
-//        }
 
         if (isTccReadyToSend()) {
             val mediaSsrc = if (mediaSsrcs.isNotEmpty()) mediaSsrcs.iterator().next() else -1L
@@ -104,7 +98,10 @@ class TccGeneratorNode(
         }
     }
 
-    private fun isTccReadyToSend(): Boolean = currTcc.packetInfo.size >= 20
+    private fun isTccReadyToSend(): Boolean {
+        return (System.currentTimeMillis() - lastTccSentTime >= 70) ||
+            currTcc.packetInfo.size >= 20
+    }
 
     override fun getStats(indent: Int): String {
         return with (StringBuffer()) {
