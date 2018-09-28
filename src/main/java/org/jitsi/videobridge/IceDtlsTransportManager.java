@@ -314,7 +314,7 @@ public class IceDtlsTransportManager
                     packetBuf.put(ByteBuffer.wrap(buf, 0, p.getLength())).flip();
                     Packet pkt = new UnparsedPacket(packetBuf);
                     PacketInfo pktInfo = new PacketInfo(pkt);
-                    pktInfo.getMetaData().put("TimeTag-IceDtlsTransportManagerReceive", System.currentTimeMillis());
+                    pktInfo.setReceivedTime(System.currentTimeMillis());
                     incomingPipelineRoot.processPackets(Collections.singletonList(pktInfo));
                 } catch (IOException e)
                 {
