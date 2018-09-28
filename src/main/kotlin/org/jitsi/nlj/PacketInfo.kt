@@ -33,19 +33,24 @@ class EventTimeline(
     private var referenceTime: Long? = null
 
     fun addEvent(desc: String) {
-        val now = System.nanoTime()
+        val now = System.currentTimeMillis()
         if (referenceTime == null) {
             referenceTime = now
         }
-        timeline.add(desc to (Duration.ofNanos(now - referenceTime!!).toMicros()))
+        timeline.add(desc to (now - referenceTime!!))
     }
 
-    fun clone(): EventTimeline = EventTimeline(timeline.toMutableList())
+    fun clone(): EventTimeline {
+        val clone = EventTimeline(timeline.toMutableList())
+        clone.referenceTime = referenceTime
+        return clone
+    }
 
     override fun iterator(): Iterator<Pair<String, Long>> = timeline.iterator()
 
     override fun toString(): String {
         return with (StringBuffer()) {
+            appendln("Reference time: ${referenceTime}ms")
             timeline.forEach {
                 appendln(it.toString())
             }
@@ -66,6 +71,11 @@ class PacketInfo @JvmOverloads constructor(
     val timeline: EventTimeline = EventTimeline()
     ) {
     /**
+     * An explicit tag for when this packet was originally received (assuming it
+     * was an incoming packet and not one created by jvb itself).
+     */
+    var receivedTime: Long = -1L
+    /**
      * Get the contained packet cast to [ExpectedPacketType]
      */
     @Suppress("UNCHECKED_CAST")
@@ -77,7 +87,11 @@ class PacketInfo @JvmOverloads constructor(
      * Create a deep clone of this PacketInfo (both the contained packet and the metadata map
      * will be copied for the cloned PacketInfo).
      */
-    fun clone(): PacketInfo = PacketInfo(packet.clone(), metaData.toMutableMap(), timeline.clone())
+    fun clone(): PacketInfo {
+        val clone = PacketInfo(packet.clone(), metaData.toMutableMap(), timeline.clone())
+        clone.receivedTime = receivedTime
+        return clone
+    }
 
     fun addEvent(desc: String) = timeline.addEvent(desc)
 }
