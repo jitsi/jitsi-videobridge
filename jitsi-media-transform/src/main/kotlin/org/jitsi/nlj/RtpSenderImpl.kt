@@ -20,8 +20,6 @@ import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PacketCache
-import org.jitsi.nlj.transform.node.PacketLoss
-import org.jitsi.nlj.transform.node.PcapWriter
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
@@ -32,10 +30,7 @@ import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
-import org.jitsi.rtp.SrtpPacket
-import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
@@ -113,7 +108,6 @@ class RtpSenderImpl(
                 }
                 emptyList()
             }
-            node(PcapWriter())
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
