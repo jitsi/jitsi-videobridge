@@ -22,10 +22,11 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
-import org.jitsi.rtp.util.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.*;
+import org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator.*;
+import org.jitsi_modified.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateEstimatorAbsSendTime;
 
 import java.io.*;
 import java.util.*;
@@ -40,6 +41,10 @@ import java.util.concurrent.atomic.*;
  * @author Boris Grozev
  * @author Julian Chukwu
  * @author George Politis
+ *
+ * NOTE(brian): this class needs a run through: it doesn't do as much as it used to, be was ported mostly as-is
+ * for now to reduce the amount of work to get the bridge working again.  Once the dust has settled we should
+ * revisit this and clean it up.
  */
 public class TransportCCEngine
     extends RTCPPacketListenerAdapter
@@ -281,6 +286,7 @@ public class TransportCCEngine
      * @param marked whether the last received RTP packet had the "marked" bit
      * set.
      * @param now the current time.
+     * DEPRECATED this class is no longer responsible for sending tcc rtcp packets
      */
     private void maybeSendRtcp(boolean marked, long now)
     {
@@ -437,11 +443,7 @@ public class TransportCCEngine
             }
             if (remoteReferenceTimeMs == -1)
             {
-                // reference time. The 24 bit field uses increments of 2^6ms, and we
-                // shift by 8 to change the resolution to 250µs.
-                // FIXME this is supposed to be a signed int.
-                //TODO: this is now different again, as the reference time is already translated into ms
-                remoteReferenceTimeMs = tccPacket.getFci().getReferenceTimeMs() << 8;
+                remoteReferenceTimeMs = tccPacket.getFci().getReferenceTimeMs();
                 localReferenceTimeMs = System.currentTimeMillis();
             }
 
@@ -455,21 +457,22 @@ public class TransportCCEngine
             {
                 return;
             }
-//            logger.info("Got tcc for packet " + tccSeqNum + ", it was sent at " + packetDetail.packetSendTimeMs +
-//                    ", it was received at " + recvTimestamp);
-            long arrivalTimeMs = recvTimestamp / 4
-                    - remoteReferenceTimeMs + localReferenceTimeMs;
-//            logger.info("Arrival time ")
+            long delta = recvTimestamp - tccPacket.getFci().getReferenceTimeMs();
+//            logger.info("Got tcc for packet " + tccSeqNum + ", the reference time is " + tccPacket.getFci().getReferenceTimeMs() +
+//                    " and it was received by the far side at " + recvTimestamp + ", meaning it has a delta of " +
+//                            delta + ".  it was originally sent at " +
+//                            packetDetail.packetSendTimeMs + " meaning in that clock it arrived at " +
+//                            (packetDetail.packetSendTimeMs + delta));
+            long arrivalTimeMs = packetDetail.packetSendTimeMs + delta;
 
-            long sendTime24bits = RemoteBitrateEstimatorAbsSendTime
-                    .convertMsTo24Bits(packetDetail.packetSendTimeMs);
 //            logger.info("Notifying bitrate estimator of incoming packet info: " +
 //                    "arrival time: " + arrivalTimeMs + ", sendTime24Bits: " + sendTime24bits +
 //                    " packet length: " + packetDetail.packetLength + ", ssrc: " +
 //                    tccPacket.getMediaSourceSsrc());
             bitrateEstimatorAbsSendTime.incomingPacketInfo(
                     arrivalTimeMs,
-                    sendTime24bits,
+//                    sendTime24bits,
+                    packetDetail.packetSendTimeMs,
                     packetDetail.packetLength,
                     tccPacket.getMediaSourceSsrc()
             );
