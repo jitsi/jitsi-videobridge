@@ -35,6 +35,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledExecutorService
 
 // This is an API class, so its usages will largely be outside of this library
 @Suppress("unused")
@@ -52,7 +53,7 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 class Transceiver(
     private val id: String,
-    private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
+    private val executor: ScheduledExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) {
     private val logger = getLogger(this.javaClass)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()

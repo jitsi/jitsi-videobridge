@@ -35,6 +35,7 @@ import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 // All of this information is specific to the pcap file
@@ -81,7 +82,7 @@ val srtcpTransformer = SrtpUtil.initializeTransformer(
     true
 )
 
-fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
+fun createRtpReceiver(executor: ScheduledExecutorService): RtpReceiver {
     val rtpReceiver = RtpReceiverImpl(
         1,
         { rtcpPacket -> Unit },
@@ -100,7 +101,7 @@ fun createRtpReceiver(executor: ExecutorService): RtpReceiver {
 }
 
 fun main(args: Array<String>) {
-    val executor = Executors.newSingleThreadExecutor()
+    val executor = Executors.newSingleThreadScheduledExecutor()
     val numReceivers = 1
     val receivers = mutableListOf<RtpReceiver>()
     val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()

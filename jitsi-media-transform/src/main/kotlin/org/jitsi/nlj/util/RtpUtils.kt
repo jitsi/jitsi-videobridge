@@ -22,7 +22,7 @@ import org.jitsi.util.RTPUtils
 /**
  * Returns true if getting to [otherSeqNum] from the current sequence number involves wrapping around
  */
-infix fun Int.wrapsTo(otherSeqNum: Int): Boolean {
+infix fun Int.rolledOverTo(otherSeqNum: Int): Boolean {
     /**
      * If, according to [RTPUtils.isOlderSequenceNumberThan], [this] is older than [otherSeqNum] and
      * yet [otherSeqNum] is less than [this], then we wrapped around to get from [this] to
@@ -31,3 +31,20 @@ infix fun Int.wrapsTo(otherSeqNum: Int): Boolean {
     return RTPUtils.isOlderSequenceNumberThan(this, otherSeqNum) && otherSeqNum < this
 }
 
+/**
+ * Returns true if [this] is sequentially after [otherSeqNum], according to the rules of RTP sequence
+ * numbers
+ */
+infix fun Int.isNextAfter(otherSeqNum: Int): Boolean = RTPUtils.getSequenceNumberDelta(this, otherSeqNum) == -1
+
+/**
+ * Returns true if the RTP sequence number represented by [this] represents a more recent RTP packet than the one
+ * represented by [otherSeqNum]
+ */
+infix fun Int.isNewerThan(otherSeqNum: Int): Boolean = RTPUtils.isOlderSequenceNumberThan(otherSeqNum, this)
+
+/**
+ * Return the amount of packets between the RTP sequence number represented by [this] and the [otherSeqNum].  NOTE:
+ * [this] must represent an older RTP sequence number than [otherSeqNum] (TODO: validate/enforce that)
+ */
+infix fun Int.numPacketsTo(otherSeqNum: Int): Int = -RTPUtils.getSequenceNumberDelta(this, otherSeqNum) - 1
