@@ -84,15 +84,6 @@ abstract class RtcpFbPacket : RtcpPacket {
             }
             return paddingSize
         }
-    /**
-     * The size of this packet as it is represented by the RTCPFB length field
-     * in the header:
-     * "The length of this packet in 32-bit words minus one, including the
-     * header and any padding.  This is in line with the definition of
-     * the length field used in RTCP sender and receiver reports"
-     */
-    private val lengthValue: Int
-        get() = ((size + 3) / 4 - 1)
 
     abstract fun getFci(): FeedbackControlInformation
 

@@ -82,10 +82,11 @@ class RtcpRrPacket : RtcpPacket {
     }
 
     override fun getBuffer(): ByteBuffer {
-        if (this.buf == null) {
-            this.buf = ByteBuffer.allocate(this.size)
+        if (this.buf == null || this.buf!!.limit() < size) {
+            this.buf = ByteBuffer.allocate(size)
         }
         this.buf!!.rewind()
+        header.length = lengthValue
         this.buf!!.put(header.getBuffer())
         reportBlocks.forEach {
             this.buf!!.put(it.getBuffer())

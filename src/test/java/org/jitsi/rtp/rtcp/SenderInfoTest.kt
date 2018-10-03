@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
 internal class SenderInfoTest : ShouldSpec() {
     override fun isInstancePerTest(): Boolean = true
 
-    private val expectedNtpTimestamp: Long = 0x7FFFFFFFFFFFFFFF
+    private val expectedNtpTimestamp: Long = 0x0123456789abcdef
     private val expectedRtpTimestamp: Long = 0xFFFFFFFF
     private val expectedSendersPacketCount: Long = 0xFFFFFFFF
     private val expectedSendersOctetCount: Long = 0xFFFFFFFF
@@ -41,6 +41,7 @@ internal class SenderInfoTest : ShouldSpec() {
                 )
                 should("save all values correctly") {
                     senderInfo.ntpTimestamp shouldBe expectedNtpTimestamp
+                    senderInfo.compactedNtpTimestamp shouldBe 0x456789ab
                     senderInfo.rtpTimestamp shouldBe expectedRtpTimestamp
                     senderInfo.sendersPacketCount shouldBe expectedSendersPacketCount
                     senderInfo.sendersOctetCount shouldBe expectedSendersOctetCount

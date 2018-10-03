@@ -65,6 +65,25 @@ class SenderInfo {
     var ntpTimestamp: Long
 
     /**
+     * https://tools.ietf.org/html/rfc3550#section-4
+     * In some fields where a more compact representation is
+     * appropriate, only the middle 32 bits are used; that is, the low 16
+     * bits of the integer part and the high 16 bits of the fractional part.
+     * The high 16 bits of the integer part must be determined
+     * independently.
+     */
+    val compactedNtpTimestamp: Int
+        get() {
+            //TODO: not ideal to allocate 2 buffers for this every time
+            val ntpTimestampBuf = ByteBuffer.allocate(8 /* sizeof Long */)
+            ntpTimestampBuf.putLong(ntpTimestamp)
+            val compactedBuf = ByteBuffer.allocate(4 /* sizeof Int */)
+            compactedBuf.put(ntpTimestampBuf.array(), 2, 4)
+            compactedBuf.flip()
+            return compactedBuf.getInt()
+        }
+
+    /**
      * RTP timestamp: 32 bits
      *     Corresponds to the same time as the NTP timestamp (above), but in
      *     the same units and with the same random offset as the RTP

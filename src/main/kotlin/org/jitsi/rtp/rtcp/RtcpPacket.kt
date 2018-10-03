@@ -21,6 +21,15 @@ import java.nio.ByteBuffer
 
 abstract class RtcpPacket : Packet() {
     abstract var header: RtcpHeader
+    /**
+     * The size of this packet as it is represented by the RTCPFB length field
+     * in the header:
+     * "The length of this packet in 32-bit words minus one, including the
+     * header and any padding.  This is in line with the definition of
+     * the length field used in RTCP sender and receiver reports"
+     */
+    protected val lengthValue: Int
+        get() = ((size + 3) / 4 - 1)
 
     companion object {
         fun fromBuffer(buf: ByteBuffer): RtcpPacket {

@@ -276,9 +276,13 @@ class RtcpReportBlock {
         return with (StringBuffer()) {
             appendln("Report block")
             appendln("  source ssrc: $ssrc")
+            appendln("  seq num cycles: $seqNumCycles")
+            appendln("  max seq num: $seqNum")
             appendln("  fraction lost: $fractionLost")
             appendln("  cumulative lost: $cumulativePacketsLost")
             appendln("  interarrival jitter: $interarrivalJitter")
+            appendln("  last sr timestamp: $lastSrTimestamp")
+            appendln("  delay since last sr: $delaySinceLastSr")
 
             toString()
         }
