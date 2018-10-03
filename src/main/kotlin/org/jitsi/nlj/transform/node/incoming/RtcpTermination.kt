@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.NackHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtcpRrGenerator
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
@@ -32,18 +33,22 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 
 class RtcpTermination(
-    private val transportCcEngine: TransportCCEngine? = null
+    private val transportCcEngine: TransportCCEngine? = null,
+    private val TEMPrrGenerator: RtcpRrGenerator
 ) : Node("RTCP termination") {
     var nackHandler: NackHandler? = null
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
-        //TODO: we don't need to use forEachAs here i don't think
         p.forEach { packetInfo ->
             val pkt = packetInfo.packet
             when (pkt) {
                 is RtcpFbTccPacket -> handleTccPacket(pkt)
-                is RtcpRrPacket, is RtcpSrPacket -> {
+                is RtcpSrPacket -> {
                     // Process & terminate
+                    TEMPrrGenerator.onRtcpPacket(packetInfo)
+                }
+                is RtcpRrPacket -> {
+                    //TODO
                 }
                 is RtcpFbNackPacket -> {
                     nackHandler?.onNackPacket(pkt)

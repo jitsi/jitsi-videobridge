@@ -19,33 +19,48 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.wrapsTo
+import org.jitsi.nlj.util.isNewerThan
+import org.jitsi.nlj.util.isNextAfter
+import org.jitsi.nlj.util.numPacketsTo
+import org.jitsi.nlj.util.rolledOverTo
+import org.jitsi.rtp.RtpPacket
 import org.jitsi.service.neomedia.format.MediaFormat
-import org.jitsi.util.RTPUtils
+import toUInt
+import unsigned.toUShort
 import java.util.concurrent.ConcurrentHashMap
+
+//TODO: put this somewhere?
+private fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Double): Int {
+    return ((rtpTimestamp / ticksPerSecond) * 1000).toInt()
+}
 
 /**
  * Track various statistics about received RTP streams
  */
 class StatisticsTracker : Node("Incoming statistics tracker") {
-    val streamStats = mutableMapOf<Long, StreamStatistics>()
+    private val streamStats = mutableMapOf<Long, StreamStatistics>()
+    private val payloadFormats: MutableMap<Byte, MediaFormat> = ConcurrentHashMap()
     override fun doProcessPackets(p: List<PacketInfo>) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        p.forEachAs<RtpPacket> { packetInfo, rtpPacket ->
+            val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
+                StreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
+            }
+            payloadFormats.get(rtpPacket.header.payloadType.toByte())?.let {
+                val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
+                stats.packetReceived(rtpPacket.header.sequenceNumber, packetSentTimestamp, packetInfo.receivedTime.toUInt())
+            }
+        }
+        next(p)
     }
+
+    fun getCurrentStats(): Map<Long, StreamStatistics> = streamStats.toMap()
 
     override fun handleEvent(event: Event) {
         when (event) {
-            is RtpPayloadTypeAddedEvent -> {
-                streamStats.values.forEach {
-                    it.payloadFormats[event.payloadType] = event.format
-                }
-            }
-            is RtpPayloadTypeClearEvent -> {
-                streamStats.values.forEach {
-                    it.payloadFormats.clear()
-                }
-            }
+            is RtpPayloadTypeAddedEvent -> payloadFormats[event.payloadType] = event.format
+            is RtpPayloadTypeClearEvent -> payloadFormats.clear()
         }
         super.handleEvent(event)
     }
@@ -53,21 +68,53 @@ class StatisticsTracker : Node("Incoming statistics tracker") {
 
 
 /**
- * Tracks various statistics for the stream using ssrc [ssrc]
- * TODO: handle PT changes
+ * A class to export a consistent snapshot of the data held inside [StreamStatistics]
+ */
+data class StreamStatisticsSnapshot(
+    val maxSeqNum: Int = 0,
+    val seqNumCycles: Int = 0,
+    val numExpectedPackets: Int = 0,
+    val cumulativePacketsLost: Int = 0,
+    val jitter: Double = 0.0
+) {
+    fun getDelta(previousSnapshot: StreamStatisticsSnapshot): StreamStatisticsSnapshot {
+        return StreamStatisticsSnapshot(
+            maxSeqNum, seqNumCycles,
+            numExpectedPackets - previousSnapshot.numExpectedPackets,
+            cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,
+            jitter
+        )
+    }
+}
+/**
+ * Tracks various statistics for the stream using ssrc [ssrc].  Some statistics are tracked only
+ * over a specific interval (in between calls to [reset]) and others persist across calls to [reset].  This
+ * is tuned for use in generating an RR packet.
+ * TODO: max dropout/max misorder/probation handling according to appendix A.1
  */
 class StreamStatistics(
-    private val ssrc: Long
+    private val ssrc: Long,
+    private var baseSeqNum: Int
 ) {
-    /*private*/ val payloadFormats: MutableMap<Byte, MediaFormat> = ConcurrentHashMap()
+    //TODO: for now we'll synchronize access to all the stats so we can create a consistent snapshot when it's
+    // requested from another context.  it'd be great to be able to avoid this (coroutines make it easy to switch
+    // contexts and could be a nice option here in the future).  another option would be doing the RR generation
+    // in the same context as where we receive packets: this would work fine as long as that sort of interval is
+    // acceptable for RRs?
+    private var statsLock = Any()
+    // Start variables protected by statsLock
     /**
      * This will be initialized to the first sequence number we process
      */
-    private var baseSeqNum: Int = -1
     private var maxSeqNum: Int = 0
     private var seqNumCycles: Int = 0
+    private val numExpectedPackets: Int
+        get()  = calculateExpectedPacketCount(0, baseSeqNum, seqNumCycles, maxSeqNum)
     private var cumulativePacketsLost: Int = 0
     private var outOfOrderPacketCount: Int = 0
+    private var jitter: Double = 0.0
+    // End variables protected by statsLock
+
     /**
      * The timestamp of the previously received packet, converted to a millisecond timestamp based on the received
      * RTP timestamp and the clock rate for that stream.
@@ -77,7 +124,6 @@ class StreamStatistics(
     private var previousPacketSentTimestamp: Int = -1
     private var previousPacketReceivedTimestamp: Int = -1
     private var probation: Int = INITIAL_MIN_SEQUENTIAL
-    private var jitter: Double = 0.0
 
     companion object {
         /**
@@ -94,7 +140,24 @@ class StreamStatistics(
          */
         const val INITIAL_MIN_SEQUENTIAL = 2
 
-        const val MAX_MISSING = 3000
+        const val MAX_DROPOUT = 3000
+
+        /**
+         * Find how many packets we would expected to have received in the range [[baseSeqNum], [currSeqNum]], taking
+         * into account the amount of cycles present when we received [baseSeqNum] ([baseSeqNumCycles]) and the
+         * amount of cycles when we received [currSeqNum] ([currCycles])
+         */
+        fun calculateExpectedPacketCount(
+            baseSeqNumCycles: Int,
+            baseSeqNum: Int,
+            currCycles: Int,
+            currSeqNum: Int
+        ): Int {
+            val baseExtended = (baseSeqNumCycles shl 16) + baseSeqNum
+            val maxExtended = (currCycles shl 16) + currSeqNum
+
+            return maxExtended - baseExtended + 1
+        }
 
         fun calculateJitter(
             currentJitter: Double,
@@ -110,6 +173,14 @@ class StreamStatistics(
              *
              * D(i,j) = (Rj - Ri) - (Sj - Si) = (Rj - Sj) - (Ri - Si)
              */
+            println("Calculating jitter:\n" +
+                    "current jitter: $currentJitter\n" +
+                    "previousPacketReceivedTimestamp: $previousPacketReceivedTimestamp\n" +
+                    "previousPacketSentTimestamp: $previousPacketSentTimestamp\n" +
+                    "(delta ${previousPacketReceivedTimestamp - previousPacketSentTimestamp})\n" +
+                    "currentPacketReceivedTimestamp: $currentPacketReceivedTimestamp\n" +
+                    "currentPacketSentTimestamp: $currentPacketSentTimestamp\n" +
+                    "(delta ${currentPacketReceivedTimestamp - currentPacketSentTimestamp})")
             val delta = (previousPacketReceivedTimestamp - previousPacketSentTimestamp) -
                     (currentPacketReceivedTimestamp - currentPacketSentTimestamp)
 
@@ -128,67 +199,211 @@ class StreamStatistics(
         }
     }
 
+    fun getSnapshot(): StreamStatisticsSnapshot {
+        synchronized(statsLock) {
+            return StreamStatisticsSnapshot(maxSeqNum, seqNumCycles, numExpectedPackets, cumulativePacketsLost, jitter)
+        }
+    }
+
+    /**
+     * Resets this [StreamStatistics]'s tracking variables such that:
+     * 1) A new base sequence number (the given [newBaseSeqNum]) will be used to start new loss calculations.
+     * 2) Any lost packet counters will be reset
+     * 3) Jitter calculations will NOT be reset
+     */
+//    fun reset(newBaseSeqNum: Int) {
+//        baseSeqNum = newBaseSeqNum
+//        maxSeqNum = baseSeqNum - 1
+//        cumulativePacketsLost = 0
+//    }
+
+    /**
+     * Notify this [StreamStatistics] instance that an RTP packet for the stream it is tracking has been received and
+     * that it:
+     * 1) Has RTP sequence number [packetSequenceNumber]
+     * 2) Was sent at [packetSentTimestampMs] (note this is NOT the raw RTP timestamp, but the 'translated' timestamp
+     * which is a function of the RTP timestamp and the clockrate
+     * and
+     * 3) Was received at [packetReceivedTimeMs]
+     */
     fun packetReceived(
         packetSequenceNumber: Int,
-        packetRtpTimestamp: Int,
-        packetReceivedTimeMs: Int,
-        //TODO: could we not pass in PT and pass in the translated timestamp instead? then we would have to manage
-        // PT type changes elsewhere (maybe that's better?)
-        packetPayloadType: Byte
+        packetSentTimestampMs: Int,
+        packetReceivedTimeMs: Int
     ) {
-        if (baseSeqNum == -1) {
-            baseSeqNum = packetSequenceNumber
-        }
-        val seqNumDelta = RTPUtils.getSequenceNumberDelta(maxSeqNum, packetSequenceNumber)
-        when {
-            seqNumDelta == -1 -> { // packet's sequence number = maxSeqNum + 1, i.e. this is the next expected packet
-                if (probation > 0) {
-                    probation--
+        synchronized(statsLock) {
+            if (packetSequenceNumber isNewerThan maxSeqNum) {
+                if (packetSequenceNumber isNextAfter maxSeqNum) {
+                    if (probation > 0) {
+                        probation--
+                        //TODO: do we want to 'reset' the sequence after the probation period is finished?
+                    }
+                } else if (maxSeqNum numPacketsTo packetSequenceNumber in 0..MAX_DROPOUT) {
+                    // In order with a gap, but gap is within acceptable range
+                    cumulativePacketsLost += maxSeqNum numPacketsTo packetSequenceNumber
+                    maybeResetProbation()
+                } else {
+                    // Very large jump
+                    //TODO
                 }
-            }
-            seqNumDelta < -1 -> { // maxSeqNum < packet's sequence number by more than 1, i.e. missing packets
-                cumulativePacketsLost += (-seqNumDelta - 1)
-                resetProbation()
-                if (maxSeqNum wrapsTo packetSequenceNumber) {
+                maxSeqNum = packetSequenceNumber
+                if (maxSeqNum rolledOverTo packetSequenceNumber) {
                     seqNumCycles++
                 }
-            }
-            seqNumDelta > 0 -> { // maxSeqNum > packet's sequence number, i.e. this is an 'old' packet
-                if (seqNumDelta < MAX_OOO_AMOUNT) {
+            } else {
+                // Older packet
+                if (packetSequenceNumber numPacketsTo maxSeqNum in 0..MAX_OOO_AMOUNT) {
                     // This packet would've already been counted as lost, so subtract from the loss count
                     // NOTE: this is susceptible to inaccuracy in the case of duplicate, out-of-order packets
                     // but for now we'll assume those are rare enough not to cause issues.
                     cumulativePacketsLost--
+                } else {
+                    // Older packet which is too old to be counted as out-of-order
+                    //TODO
                 }
                 outOfOrderPacketCount++
-                resetProbation()
+                maybeResetProbation()
             }
+
+            jitter = calculateJitter(
+                jitter,
+                previousPacketSentTimestamp,
+                previousPacketReceivedTimestamp,
+                packetSentTimestampMs,
+                packetReceivedTimeMs
+            )
+            previousPacketSentTimestamp = packetSentTimestampMs
+            previousPacketReceivedTimestamp = packetReceivedTimeMs
         }
-        val currentPacketSentTimestamp = convertRtpTimestampToMs(
-            packetRtpTimestamp,
-            payloadFormats[packetPayloadType]!!.clockRate
-        )
-
-        jitter = calculateJitter(
-            jitter,
-            previousPacketSentTimestamp,
-            previousPacketReceivedTimestamp,
-            currentPacketSentTimestamp,
-            packetReceivedTimeMs
-        )
-
-
     }
 
-    private fun resetProbation() {
-        // When we reset, we subtract 1 since we've already started receiving packets so we already have
-        // a 'starting point' for our sequential check (unlike when this instance is initialized, when we
-        // haven't processing any incoming packets yet)
-        probation = INITIAL_MIN_SEQUENTIAL - 1
+    /**
+     * Reset the probation period if it's currently active
+     */
+    private fun maybeResetProbation() {
+        if (probation > 0) {
+            // When we reset, we subtract 1 since we've already started receiving packets so we already have
+            // a 'starting point' for our sequential check (unlike when this instance is initialized, when we
+            // haven't processing any incoming packets yet)
+            probation = INITIAL_MIN_SEQUENTIAL - 1
+        }
     }
 
-    private fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Double): Int {
-        return ((rtpTimestamp / ticksPerSecond) * 1000).toInt()
+
+}
+
+/*
+ * Per-source state information
+ *
+ * typedef struct {
+ *     u_int16 max_seq;        /* highest seq. number seen */
+ *     u_int32 cycles;         /* shifted count of seq. number cycles */
+ *     u_int32 base_seq;       /* base seq number */
+ *     u_int32 bad_seq;        /* last 'bad' seq number + 1 */
+ *     u_int32 probation;      /* sequ. packets till source is valid */
+ *     u_int32 received;       /* packets received */
+ *     u_int32 expected_prior; /* packet expected at last interval */
+ *     u_int32 received_prior; /* packet received at last interval */
+ *     u_int32 transit;        /* relative trans time for prev pkt */
+ *     u_int32 jitter;         /* estimated jitter */
+ *     /* ... */
+ * } source;
+ */
+class Source {
+    var max_seq: Short = 0
+    var cycles: Int = 0
+    var base_seq: Int = 0
+    var bad_seq: Int = StreamStatistics2.RTP_SEQ_MOD + 1
+    var probation: Int = 0
+    var received: Int = 0
+    var expected_prior: Int = 0
+    var received_prior: Int = 0
+    var transit: Int = 0
+    var jitter: Int = 0
+}
+
+class StreamStatistics2 {
+    companion object {
+        const val RTP_SEQ_MOD = 1 shl 16
+        const val MIN_SEQUENTIAL = 2
+        const val MAX_DROPOUT = 3000
+        const val MAX_MISORDER = 100
+
+        fun init_seq(s: Source, seq: Short) {
+            s.base_seq = seq.toInt()
+            s.max_seq = seq
+            s.bad_seq = RTP_SEQ_MOD + 1
+            s.cycles = 0
+            s.received = 0
+            s.received_prior = 0
+            s.expected_prior = 0
+        }
+
+        fun update_seq(s: Source, seq: Short): Int {
+            val delta = (seq - s.max_seq).toUShort()
+            if (s.probation > 0) {
+                if (seq == (s.max_seq + 1).toShort()) {
+                    /* packet is in sequence */
+                    s.probation--
+                    s.max_seq = seq
+                    if (s.probation == 0) {
+                        init_seq(s, seq)
+                        s.received++
+                        return 1
+                    }
+
+                } else {
+                    s.probation = MIN_SEQUENTIAL - 1
+                    s.max_seq = seq
+                }
+                return 0
+            } else if (delta < MAX_DROPOUT) {
+                /* in order, with permissible gap */
+                if (seq < s.max_seq) {
+                    /*
+                     * Sequence number wrapped - count another 64K cycle.
+                     */
+                    s.cycles += RTP_SEQ_MOD
+                }
+                s.max_seq = seq
+            } else if (delta <= RTP_SEQ_MOD - MAX_MISORDER) {
+                /* the sequence number made a very large jump */
+                if (seq == s.bad_seq.toShort()) {
+                    /*
+                     * Two sequential packets -- assume that the other side
+                     * restarted without telling us so just re-sync
+                     * (i.e., pretend this was the first packet).
+                     */
+                    init_seq(s, seq)
+                } else {
+                    s.bad_seq = (seq + 1) and (RTP_SEQ_MOD - 1)
+                    return 0
+                }
+            } else {
+                /* duplicate or reordered packet */
+            }
+            s.received++
+            return 1
+        }
     }
+}
+
+class Receiver : Node("RTP receiver"){
+    val sources = mutableMapOf<Long, Source>()
+
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        p.forEachAs<RtpPacket> { packetInfo, rtpPacket ->
+            val source = sources.computeIfAbsent(rtpPacket.header.ssrc) {
+                val newSource = Source()
+                StreamStatistics2.init_seq(newSource, rtpPacket.header.sequenceNumber.toShort())
+                newSource.max_seq = (rtpPacket.header.sequenceNumber - 1).toShort()
+                newSource.probation = StreamStatistics2.MIN_SEQUENTIAL
+
+                newSource
+            }
+            StreamStatistics2.update_seq(source, rtpPacket.header.sequenceNumber.toShort())
+        }
+    }
+
 
 }

@@ -31,6 +31,7 @@ import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
 import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
+import org.jitsi.nlj.transform.node.incoming.StatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.packetPath
@@ -53,6 +54,7 @@ import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledExecutorService
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
@@ -65,7 +67,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     /**
      * The executor this class will use for its work
      */
-    private val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
+    private val executor: ScheduledExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpReceiver() {
     override var name: String = "RtpReceiverImpl"
     private val inputTreeRoot: Node
@@ -75,7 +77,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
     private val audioLevelListener = AudioLevelReader()
-    private val rtcpTermination = RtcpTermination(transportCcEngine = transportCcEngine)
+    private val statTracker = StatisticsTracker()
+    private val rtcpRrGenerator = RtcpRrGenerator(executor, rtcpSender, statTracker)
+    private val rtcpTermination = RtcpTermination(transportCcEngine = transportCcEngine, TEMPrrGenerator = rtcpRrGenerator)
 
     companion object {
         val logger: Logger = Logger.getLogger(this::class.java)
@@ -136,6 +140,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(tccGenerator)
                         node(srtpDecryptWrapper)
                         node(MediaTypeParser())
+                        node(statTracker)
                         demux {
                             name = "Media type demuxer"
                             packetPath {
