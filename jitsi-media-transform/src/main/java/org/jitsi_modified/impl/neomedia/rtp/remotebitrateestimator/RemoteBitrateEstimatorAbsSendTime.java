@@ -473,8 +473,8 @@ public class RemoteBitrateEstimatorAbsSendTime
         // Convert the expanded AST (32 bits, 6.26 fixed point) to millis.
 //        long sendTimeMs = (long) (timestamp * kTimestampToMs);
 
-        logger.info("Packet from " + ssrc + " sent at " + sendTimeMs + ", arrived at " + arrivalTimeMs +
-                " (took " + (arrivalTimeMs - sendTimeMs) + ")");
+//        logger.info("Packet from " + ssrc + " sent at " + sendTimeMs + ", arrived at " + arrivalTimeMs +
+//                " (took " + (arrivalTimeMs - sendTimeMs) + ")");
 
         // XXX The arrival time should be the earliest we've seen this packet,
         // not now. In our code however, we don't have access to the arrival
