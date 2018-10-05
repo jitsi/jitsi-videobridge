@@ -52,11 +52,9 @@ import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 
-//TODO: need to add a 'stop/shutdown'
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
     /**
@@ -71,6 +69,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val executor: ScheduledExecutorService /*= Executors.newSingleThreadExecutor()*/
 ) : RtpReceiver() {
     override var name: String = "RtpReceiverImpl"
+    private var running: Boolean = true
     private val inputTreeRoot: Node
     private val incomingPacketQueue = LinkedBlockingQueue<PacketInfo>()
     private val srtpDecryptWrapper = SrtpTransformerDecryptNode()
@@ -292,5 +291,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
         audioLevelListener.csrcAudioLevelListener = csrcAudioLevelListener
+    }
+
+    override fun stop() {
+        running = false
+        rtcpRrGenerator.running = false
     }
 }
