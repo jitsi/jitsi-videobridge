@@ -31,12 +31,29 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
+import java.util.concurrent.ConcurrentHashMap
+
+interface RtcpListener {
+    fun onRtcpPacket(packetInfo: PacketInfo)
+}
 
 class RtcpTermination(
-    private val transportCcEngine: TransportCCEngine? = null,
-    private val TEMPrrGenerator: RtcpRrGenerator
+    private val transportCcEngine: TransportCCEngine? = null
 ) : Node("RTCP termination") {
+    //TODO: change this to use rtcpListeners
     var nackHandler: NackHandler? = null
+    /**
+     * Set of entities interested in being notified of received RTCP packets
+     */
+    private val rtcpListeners: MutableSet<RtcpListener> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * [RtcpTermination] is responsible for all of the primary RTCP handling and termination.  There are, however,
+     * other entities which may be interested in RTCP packets for other reasons, so we allow other entities to
+     * be notified when RTCP packets are received.
+     */
+    fun subscribeToRtcp(rtcpListener: RtcpListener) = rtcpListeners.add(rtcpListener)
+
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEach { packetInfo ->
@@ -44,8 +61,6 @@ class RtcpTermination(
             when (pkt) {
                 is RtcpFbTccPacket -> handleTccPacket(pkt)
                 is RtcpSrPacket -> {
-                    // Process & terminate
-                    TEMPrrGenerator.onRtcpPacket(packetInfo)
                 }
                 is RtcpRrPacket -> {
                     //TODO
@@ -60,6 +75,8 @@ class RtcpTermination(
                     outPackets.add(packetInfo)
                 }
             }
+            //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
+            rtcpListeners.forEach { it.onRtcpPacket(packetInfo) }
         }
         next(outPackets)
     }

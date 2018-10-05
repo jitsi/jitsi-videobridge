@@ -56,6 +56,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 
+//TODO: need to add a 'stop/shutdown'
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: Long,
     /**
@@ -79,7 +80,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val audioLevelListener = AudioLevelReader()
     private val statTracker = StatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(executor, rtcpSender, statTracker)
-    private val rtcpTermination = RtcpTermination(transportCcEngine = transportCcEngine, TEMPrrGenerator = rtcpRrGenerator)
+    private val rtcpTermination = RtcpTermination(transportCcEngine)
 
     companion object {
         val logger: Logger = Logger.getLogger(this::class.java)
@@ -128,6 +129,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     init {
         logger.cinfo { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
+        rtcpTermination.subscribeToRtcp(rtcpRrGenerator)
+
         inputTreeRoot = pipeline {
             node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
             demux {

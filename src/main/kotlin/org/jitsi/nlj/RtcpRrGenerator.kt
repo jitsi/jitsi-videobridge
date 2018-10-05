@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.transform.node.incoming.RtcpListener
 import org.jitsi.nlj.transform.node.incoming.StatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.StreamStatisticsSnapshot
 import org.jitsi.rtp.rtcp.RtcpHeader
@@ -39,12 +40,8 @@ class RtcpRrGenerator(
     private val executor: ScheduledExecutorService,
     private val rtcpSender: (RtcpPacket) -> Unit = {},
     private val statisticsTracker: StatisticsTracker
-) {
+) : RtcpListener {
     var running: Boolean = true
-    /**
-     * Map of SSRC to the most recent SR packet sent from that SSRC
-     */
-//    private val mostRecentSrs: MutableMap<Long, PacketInfo> = ConcurrentHashMap()
 
     private val senderInfos: MutableMap<Long, SenderInfo> = ConcurrentHashMap()
 
@@ -52,7 +49,7 @@ class RtcpRrGenerator(
         doWork()
     }
 
-    fun onRtcpPacket(packetInfo: PacketInfo) {
+    override fun onRtcpPacket(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
         when (packet) {
             is RtcpSrPacket -> {
@@ -67,7 +64,6 @@ class RtcpRrGenerator(
     }
 
     private fun doWork() {
-        println("rr generator doing work")
         if (running) {
             val streamStats = statisticsTracker.getCurrentStats()
             val now = System.currentTimeMillis()
