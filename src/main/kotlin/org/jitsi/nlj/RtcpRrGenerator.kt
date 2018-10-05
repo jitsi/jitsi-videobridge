@@ -27,6 +27,9 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
+/**
+ * Information about a sender that is used in the generation of RTCP report blocks
+ */
 private data class SenderInfo(
     var lastSrCompactedTimestamp: Int = 0,
     var lastSrReceivedTime: Long = 0,
@@ -34,7 +37,8 @@ private data class SenderInfo(
 )
 
 /**
- * Retrieves statistics about incoming streams and creates RTCP RR packets
+ * Retrieves statistics about incoming streams and creates RTCP RR packets.  Since RR packets are created based on
+ * time (and not on a number of incoming packets received, etc.) it does not live within the packet pipelines.
  */
 class RtcpRrGenerator(
     private val executor: ScheduledExecutorService,
@@ -53,12 +57,11 @@ class RtcpRrGenerator(
         val packet = packetInfo.packet
         when (packet) {
             is RtcpSrPacket -> {
-                senderInfos.computeIfAbsent(packet.header.senderSsrc) {
-                    SenderInfo(
-                        lastSrCompactedTimestamp = packet.senderInfo.compactedNtpTimestamp,
-                        lastSrReceivedTime = packetInfo.receivedTime
-                    )
-                }
+                //TODO: we have a concurrency issue here: we could be halfway through updating the senderinfo when
+                // the doWork context thread runs
+                val senderInfo = senderInfos.computeIfAbsent(packet.header.senderSsrc) { SenderInfo() }
+                senderInfo.lastSrCompactedTimestamp = packet.senderInfo.compactedNtpTimestamp
+                senderInfo.lastSrReceivedTime = packetInfo.receivedTime
             }
         }
     }

@@ -107,7 +107,7 @@ abstract class Node(
      * if attach is called.
      */
     open fun attach(node: Node) {
-        // Remove ourselves as an input from the node we're currently connectd to
+        // Remove ourselves as an input from the node we're currently connected to
         nextNode?.inputNodes?.remove(this)
         nextNode = node
         node.inputNodes.add(this)

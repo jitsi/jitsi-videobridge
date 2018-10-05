@@ -35,8 +35,6 @@ abstract class RtpReceiver :
      * routed to their intended receipient.
      */
     abstract var rtcpPacketHandler: PacketHandler?
-    protected var running = true
-//    abstract fun attach(node: Node)
     /**
      * Enqueue an incoming packet to be processed
      */
@@ -59,7 +57,5 @@ abstract class RtpReceiver :
     /**
      * Tell this receiver to stop processing incoming packets
      */
-    fun stop() {
-        running = false
-    }
+    abstract fun stop()
 }
