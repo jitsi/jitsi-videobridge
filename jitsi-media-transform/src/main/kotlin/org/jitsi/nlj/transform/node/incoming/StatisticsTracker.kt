@@ -21,11 +21,13 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.isNewerThan
 import org.jitsi.nlj.util.isNextAfter
 import org.jitsi.nlj.util.numPacketsTo
 import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.RtpPacket
+import org.jitsi.service.neomedia.codec.Constants
 import org.jitsi.service.neomedia.format.MediaFormat
 import toUInt
 import unsigned.toUShort
@@ -37,7 +39,7 @@ private fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Double): 
 }
 
 /**
- * Track various statistics about received RTP streams
+ * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
 class StatisticsTracker : Node("Incoming statistics tracker") {
     private val streamStats = mutableMapOf<Long, StreamStatistics>()
@@ -55,11 +57,19 @@ class StatisticsTracker : Node("Incoming statistics tracker") {
         next(p)
     }
 
+    //TODO: i think this can still throw concurrent modification exception
     fun getCurrentStats(): Map<Long, StreamStatistics> = streamStats.toMap()
 
     override fun handleEvent(event: Event) {
         when (event) {
-            is RtpPayloadTypeAddedEvent -> payloadFormats[event.payloadType] = event.format
+            is RtpPayloadTypeAddedEvent -> {
+                // We don't want to track jitter, etc. for RTX streams
+                if (Constants.RTX.equals(event.format.encoding, true)) {
+                    logger.cinfo { "Statistics tracker ignoring format: ${event.format}" }
+                } else {
+                    payloadFormats[event.payloadType] = event.format
+                }
+            }
             is RtpPayloadTypeClearEvent -> payloadFormats.clear()
         }
         super.handleEvent(event)
@@ -173,14 +183,6 @@ class StreamStatistics(
              *
              * D(i,j) = (Rj - Ri) - (Sj - Si) = (Rj - Sj) - (Ri - Si)
              */
-            println("Calculating jitter:\n" +
-                    "current jitter: $currentJitter\n" +
-                    "previousPacketReceivedTimestamp: $previousPacketReceivedTimestamp\n" +
-                    "previousPacketSentTimestamp: $previousPacketSentTimestamp\n" +
-                    "(delta ${previousPacketReceivedTimestamp - previousPacketSentTimestamp})\n" +
-                    "currentPacketReceivedTimestamp: $currentPacketReceivedTimestamp\n" +
-                    "currentPacketSentTimestamp: $currentPacketSentTimestamp\n" +
-                    "(delta ${currentPacketReceivedTimestamp - currentPacketSentTimestamp})")
             val delta = (previousPacketReceivedTimestamp - previousPacketSentTimestamp) -
                     (currentPacketReceivedTimestamp - currentPacketSentTimestamp)
 
