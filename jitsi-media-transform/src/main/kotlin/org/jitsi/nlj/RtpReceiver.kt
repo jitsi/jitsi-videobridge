@@ -20,7 +20,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 
 abstract class RtpReceiver :
-    PacketHandler, EventHandler {
+    PacketHandler, EventHandler, Stoppable {
     /**
      * The handler which will be invoked for each RTP packet received
      * by this receiver (after it has gone through the receiver's
@@ -53,9 +53,4 @@ abstract class RtpReceiver :
     abstract fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener)
 
     abstract fun setNackHandler(nackHandler: NackHandler)
-
-    /**
-     * Tell this receiver to stop processing incoming packets
-     */
-    abstract fun stop()
 }

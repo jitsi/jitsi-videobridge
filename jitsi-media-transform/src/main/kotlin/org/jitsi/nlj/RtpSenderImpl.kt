@@ -35,7 +35,6 @@ import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 
@@ -177,5 +176,10 @@ class RtpSenderImpl(
 
             toString()
         }
+    }
+
+    override fun stop() {
+        running = false
+        rtcpSrGenerator.running = false
     }
 }
