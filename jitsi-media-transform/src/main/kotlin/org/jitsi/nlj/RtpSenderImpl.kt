@@ -21,6 +21,7 @@ import org.jitsi.nlj.transform.node.NodeEventVisitor
 import org.jitsi.nlj.transform.node.NodeStatsVisitor
 import org.jitsi.nlj.transform.node.PacketCache
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
+import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
@@ -36,11 +37,12 @@ import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledExecutorService
 
 class RtpSenderImpl(
     val id: Long,
     transportCcEngine: TransportCCEngine? = null,
-    val executor: ExecutorService /*= Executors.newSingleThreadExecutor()*/
+    val executor: ScheduledExecutorService
 ) : RtpSender() {
     protected val logger = getLogger(this.javaClass)
     private val outgoingRtpRoot: Node
@@ -56,6 +58,8 @@ class RtpSenderImpl(
     private val srtcpEncryptWrapper = SrtcpTransformerEncryptNode()
     private val outgoingPacketCache = PacketCache()
     private val absSendTime = AbsSendTime()
+    private val statTracker = OutgoingStatisticsTracker()
+    private val rtcpSrGenerator = RtcpSrGenerator(executor, { rtcpPacket -> sendRtcp(listOf(rtcpPacket)) } , statTracker)
 
     private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
         override fun doProcessPackets(p: List<PacketInfo>) {
@@ -80,6 +84,7 @@ class RtpSenderImpl(
             }
             node(outgoingPacketCache)
             node(absSendTime)
+            node(statTracker)
             node(TccSeqNumTagger(transportCcEngine))
             node(srtpEncryptWrapper)
             node(outputPipelineTerminationNode)

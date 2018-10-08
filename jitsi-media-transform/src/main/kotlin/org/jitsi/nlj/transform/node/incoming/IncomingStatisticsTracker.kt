@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.isNewerThan
 import org.jitsi.nlj.util.isNextAfter
@@ -33,21 +34,16 @@ import toUInt
 import unsigned.toUShort
 import java.util.concurrent.ConcurrentHashMap
 
-//TODO: put this somewhere?
-private fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Double): Int {
-    return ((rtpTimestamp / ticksPerSecond) * 1000).toInt()
-}
-
 /**
  * Track various statistics about received RTP streams to be used in SR/RR report blocks
  */
-class StatisticsTracker : Node("Incoming statistics tracker") {
-    private val streamStats = mutableMapOf<Long, StreamStatistics>()
+class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
+    private val streamStats: MutableMap<Long, IncomingStreamStatistics> = ConcurrentHashMap()
     private val payloadFormats: MutableMap<Byte, MediaFormat> = ConcurrentHashMap()
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEachAs<RtpPacket> { packetInfo, rtpPacket ->
             val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
-                StreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
+                IncomingStreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
             }
             payloadFormats.get(rtpPacket.header.payloadType.toByte())?.let {
                 val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
@@ -57,8 +53,7 @@ class StatisticsTracker : Node("Incoming statistics tracker") {
         next(p)
     }
 
-    //TODO: i think this can still throw concurrent modification exception
-    fun getCurrentStats(): Map<Long, StreamStatistics> = streamStats.toMap()
+    fun getCurrentStats(): Map<Long, IncomingStreamStatistics> = streamStats.toMap()
 
     override fun handleEvent(event: Event) {
         when (event) {
@@ -78,31 +73,12 @@ class StatisticsTracker : Node("Incoming statistics tracker") {
 
 
 /**
- * A class to export a consistent snapshot of the data held inside [StreamStatistics]
- */
-data class StreamStatisticsSnapshot(
-    val maxSeqNum: Int = 0,
-    val seqNumCycles: Int = 0,
-    val numExpectedPackets: Int = 0,
-    val cumulativePacketsLost: Int = 0,
-    val jitter: Double = 0.0
-) {
-    fun getDelta(previousSnapshot: StreamStatisticsSnapshot): StreamStatisticsSnapshot {
-        return StreamStatisticsSnapshot(
-            maxSeqNum, seqNumCycles,
-            numExpectedPackets - previousSnapshot.numExpectedPackets,
-            cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,
-            jitter
-        )
-    }
-}
-/**
  * Tracks various statistics for the stream using ssrc [ssrc].  Some statistics are tracked only
  * over a specific interval (in between calls to [reset]) and others persist across calls to [reset].  This
  * is tuned for use in generating an RR packet.
  * TODO: max dropout/max misorder/probation handling according to appendix A.1
  */
-class StreamStatistics(
+class IncomingStreamStatistics(
     private val ssrc: Long,
     private var baseSeqNum: Int
 ) {
@@ -201,14 +177,14 @@ class StreamStatistics(
         }
     }
 
-    fun getSnapshot(): StreamStatisticsSnapshot {
-        synchronized(statsLock) {
-            return StreamStatisticsSnapshot(maxSeqNum, seqNumCycles, numExpectedPackets, cumulativePacketsLost, jitter)
+    fun getSnapshot(): StatisticsSnapshot {
+        synchronized (statsLock) {
+            return StatisticsSnapshot(maxSeqNum, seqNumCycles, numExpectedPackets, cumulativePacketsLost, jitter)
         }
     }
 
     /**
-     * Resets this [StreamStatistics]'s tracking variables such that:
+     * Resets this [IncomingStreamStatistics]'s tracking variables such that:
      * 1) A new base sequence number (the given [newBaseSeqNum]) will be used to start new loss calculations.
      * 2) Any lost packet counters will be reset
      * 3) Jitter calculations will NOT be reset
@@ -220,7 +196,7 @@ class StreamStatistics(
 //    }
 
     /**
-     * Notify this [StreamStatistics] instance that an RTP packet for the stream it is tracking has been received and
+     * Notify this [IncomingStreamStatistics] instance that an RTP packet for the stream it is tracking has been received and
      * that it:
      * 1) Has RTP sequence number [packetSequenceNumber]
      * 2) Was sent at [packetSentTimestampMs] (note this is NOT the raw RTP timestamp, but the 'translated' timestamp
@@ -291,6 +267,25 @@ class StreamStatistics(
         }
     }
 
+    /**
+     * A class to export a consistent snapshot of the data held inside [IncomingStreamStatistics]
+     */
+    data class StatisticsSnapshot(
+        val maxSeqNum: Int = 0,
+        val seqNumCycles: Int = 0,
+        val numExpectedPackets: Int = 0,
+        val cumulativePacketsLost: Int = 0,
+        val jitter: Double = 0.0
+    ) {
+        fun getDelta(previousSnapshot: StatisticsSnapshot): StatisticsSnapshot {
+            return StatisticsSnapshot(
+                maxSeqNum, seqNumCycles,
+                numExpectedPackets - previousSnapshot.numExpectedPackets,
+                cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,
+                jitter
+            )
+        }
+    }
 
 }
 

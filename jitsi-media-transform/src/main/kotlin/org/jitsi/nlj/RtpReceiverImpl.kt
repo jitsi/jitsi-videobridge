@@ -31,7 +31,7 @@ import org.jitsi.nlj.transform.node.incoming.RtcpTermination
 import org.jitsi.nlj.transform.node.incoming.RtxHandler
 import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
 import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
-import org.jitsi.nlj.transform.node.incoming.StatisticsTracker
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
 import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.packetPath
@@ -77,7 +77,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
     private val audioLevelListener = AudioLevelReader()
-    private val statTracker = StatisticsTracker()
+    private val statTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(executor, rtcpSender, statTracker)
     private val rtcpTermination = RtcpTermination(transportCcEngine)
 

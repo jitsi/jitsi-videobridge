@@ -33,7 +33,7 @@ val JitterPacketInfos = listOf(
     JitterPacketInfo(PacketInfo(13, 260, 271), 1.3477)
 )
 
-internal class StreamStatisticsTest : ShouldSpec() {
+internal class IncomingStreamStatisticsTest : ShouldSpec() {
     override fun isInstancePerTest(): Boolean = true
 
     init {
@@ -44,7 +44,7 @@ internal class StreamStatisticsTest : ShouldSpec() {
                 var jitter = 0.0
                 var previousJitterPacketInfo = initialJitterPacketInfo
                 JitterPacketInfos.forEach {
-                    jitter = StreamStatistics.calculateJitter(
+                    jitter = IncomingStreamStatistics.calculateJitter(
                         jitter,
                         previousJitterPacketInfo.packetInfo.sentTime,
                         previousJitterPacketInfo.packetInfo.receivedTime,
@@ -58,7 +58,7 @@ internal class StreamStatisticsTest : ShouldSpec() {
         }
         "Expected packet count" {
             should("Handle cases with no rollover") {
-                StreamStatistics.calculateExpectedPacketCount(
+                IncomingStreamStatistics.calculateExpectedPacketCount(
                     0,
                     1,
                     0,
@@ -66,7 +66,7 @@ internal class StreamStatisticsTest : ShouldSpec() {
                 ) shouldBe 10
             }
             should("handle cases with 1 rollover") {
-                StreamStatistics.calculateExpectedPacketCount(
+                IncomingStreamStatistics.calculateExpectedPacketCount(
                     0,
                     65530,
                     1,
@@ -75,7 +75,7 @@ internal class StreamStatisticsTest : ShouldSpec() {
             }
             should("handle cases with > 1 rollover") {
                 // Same as the scenario above but with another rollover
-                StreamStatistics.calculateExpectedPacketCount(
+                IncomingStreamStatistics.calculateExpectedPacketCount(
                     0,
                     65530,
                     2,
@@ -98,7 +98,7 @@ internal class StreamStatisticsTest : ShouldSpec() {
                 PacketInfo(13, 0, 0),
                 PacketInfo(16, 0, 0)
             )
-            val streamStatistics = StreamStatistics(123L, packetSequence.first().seqNum)
+            val streamStatistics = IncomingStreamStatistics(123L, packetSequence.first().seqNum)
             packetSequence.forEach {
                 streamStatistics.packetReceived(
                     it.seqNum,
