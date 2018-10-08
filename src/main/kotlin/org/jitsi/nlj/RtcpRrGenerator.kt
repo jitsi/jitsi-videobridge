@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
 import org.jitsi.nlj.transform.node.incoming.RtcpListener
-import org.jitsi.nlj.transform.node.incoming.StatisticsTracker
-import org.jitsi.nlj.transform.node.incoming.StreamStatisticsSnapshot
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -28,12 +28,14 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 /**
- * Information about a sender that is used in the generation of RTCP report blocks
+ * Information about a sender that is used in the generation of RTCP report blocks.  NOTE that this does NOT correspond
+ * to the Sender Info block of an SR
+ * TODO: rename to not be confused with Sender Info in SR?
  */
 private data class SenderInfo(
     var lastSrCompactedTimestamp: Int = 0,
     var lastSrReceivedTime: Long = 0,
-    var statsSnapshot: StreamStatisticsSnapshot = StreamStatisticsSnapshot()
+    var statsSnapshot: IncomingStreamStatistics.StatisticsSnapshot = IncomingStreamStatistics.StatisticsSnapshot()
 )
 
 /**
@@ -43,7 +45,7 @@ private data class SenderInfo(
 class RtcpRrGenerator(
     private val executor: ScheduledExecutorService,
     private val rtcpSender: (RtcpPacket) -> Unit = {},
-    private val statisticsTracker: StatisticsTracker
+    private val incomingStatisticsTracker: IncomingStatisticsTracker
 ) : RtcpListener {
     var running: Boolean = true
 
@@ -68,7 +70,7 @@ class RtcpRrGenerator(
 
     private fun doWork() {
         if (running) {
-            val streamStats = statisticsTracker.getCurrentStats()
+            val streamStats = incomingStatisticsTracker.getCurrentStats()
             val now = System.currentTimeMillis()
             val reportBlocks = mutableListOf<RtcpReportBlock>()
             streamStats.forEach { ssrc, stats ->
@@ -96,7 +98,6 @@ class RtcpRrGenerator(
                     ),
                     reportBlocks = reportBlocks
                 )
-                println("Generated RR: $rrPacket")
                 rtcpSender(rrPacket)
             }
             executor.schedule(this::doWork, 1, TimeUnit.SECONDS)

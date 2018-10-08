@@ -15,8 +15,11 @@
  */
 package org.jitsi.nlj.util
 
-import org.jitsi.rtp.util.RtpUtils
 import org.jitsi.util.RTPUtils
+import toUInt
+import unsigned.toUint
+import java.nio.ByteBuffer
+import java.time.Duration
 
 
 /**
@@ -48,3 +51,37 @@ infix fun Int.isNewerThan(otherSeqNum: Int): Boolean = RTPUtils.isOlderSequenceN
  * [this] must represent an older RTP sequence number than [otherSeqNum] (TODO: validate/enforce that)
  */
 infix fun Int.numPacketsTo(otherSeqNum: Int): Int = -RTPUtils.getSequenceNumberDelta(this, otherSeqNum) - 1
+
+class RtpUtils {
+    companion object {
+        /**
+         * Given [timestampMs] (a timestamp in milliseconds), convert it to an NTP timestamp represented
+         * as a pair of ints: the first one being the most significant word and the second being the least
+         * significant word
+         * http://lists.ntp.org/pipermail/questions/2006-July/010866.html
+         * TODO: have i implemented this right?
+         */
+        private fun millisToNtpTimestampMswLsw(timestampMs: Long): Pair<Int, Int> {
+            val seconds = Duration.ofMillis(timestampMs).seconds + 2208988800
+            val remainingMillis = timestampMs - Duration.ofSeconds(seconds).toMillis()
+
+            val msw = seconds.toUInt()
+            val lsw = (remainingMillis / 1000 * 4294967296).toUInt()
+            return Pair(msw, lsw)
+        }
+
+        fun millisToNtpTimestamp(timestampMs: Long): Long {
+            val (msw, lsw) = millisToNtpTimestampMswLsw(timestampMs)
+            val buf = ByteBuffer.allocate(8)
+            buf.putInt(msw)
+            buf.putInt(lsw)
+            buf.flip()
+
+            return buf.getLong()
+        }
+
+        fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Double): Int {
+            return ((rtpTimestamp / ticksPerSecond) * 1000).toInt()
+        }
+    }
+}
