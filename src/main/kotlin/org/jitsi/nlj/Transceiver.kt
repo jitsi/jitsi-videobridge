@@ -53,8 +53,8 @@ import java.util.concurrent.ScheduledExecutorService
  */
 class Transceiver(
     private val id: String,
-    private val executor: ScheduledExecutorService /*= Executors.newSingleThreadExecutor()*/
-) {
+    private val executor: ScheduledExecutorService
+) : Stoppable {
     private val logger = getLogger(this.javaClass)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
@@ -72,8 +72,6 @@ class Transceiver(
             transportCcEngine,
             executor)
     val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
-
-    var running = true
 
     init {
         logger.cinfo { "Transceiver ${this.hashCode()} using executor ${executor.hashCode()}" }
@@ -226,5 +224,10 @@ class Transceiver(
 
             toString()
         }
+    }
+
+    override fun stop() {
+        rtpReceiver.stop()
+        rtpSender.stop()
     }
 }

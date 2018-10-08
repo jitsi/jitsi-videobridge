@@ -26,7 +26,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
  * RTCP) but in the sense of a webrtc 'RTCRTPSender' which handles
  * all RTP and RTP control packets.
  */
-abstract class RtpSender : EventHandler {
+abstract class RtpSender : EventHandler, Stoppable {
     var numPacketsSent = 0
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
