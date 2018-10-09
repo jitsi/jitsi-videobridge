@@ -29,6 +29,7 @@ import org.jitsi.nlj.transform.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
@@ -46,10 +47,11 @@ import java.util.concurrent.*;
 public class IceDtlsTransportManager
     extends IceUdpTransportManager
 {
-    private static final ExecutorService transceiverExecutor = Executors.newSingleThreadExecutor();
     private static final Logger logger
             = Logger.getLogger(IceDtlsTransportManager.class);
     private static final String ICE_STREAM_NAME = "ice-stream-name";
+    //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
+    private ExecutorService executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool"));
     //TODO: made public so we can grab it in sctp connection, fix that.
     /*private*/ DtlsStack dtlsStack = new DtlsClientStack();
     private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
@@ -73,6 +75,7 @@ public class IceDtlsTransportManager
                     } catch (IOException e)
                     {
                         System.out.println("BRIAN: error sending outgoing dtls packet: " + e.toString());
+                        throw new RuntimeException(e);
                     }
                 });
             }
@@ -361,7 +364,9 @@ public class IceDtlsTransportManager
         });
         packetSender.socket = s;
         System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
-        dtlsStack.connect(new TlsClientImpl(), tlsTransport);
+        executor.submit(() -> {
+            dtlsStack.connect(new TlsClientImpl(), tlsTransport);
+        });
     }
 
     private void iceAgentStateChange(PropertyChangeEvent ev)
@@ -465,5 +470,22 @@ public class IceDtlsTransportManager
         candidateID.append(Long.toHexString(candidate.hashCode()));
 
         return candidateID.toString();
+    }
+
+    @Override
+    public synchronized void close()
+    {
+        super.close();
+        executor.shutdown();
+        while (!executor.isTerminated()) {
+            try
+            {
+                logger.info("Still waiting for " + getClass() + " to shutdown");
+                executor.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e)
+            {
+            }
+        }
+
     }
 }
