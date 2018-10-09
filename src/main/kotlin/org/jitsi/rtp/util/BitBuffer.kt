@@ -1,6 +1,5 @@
 package org.jitsi.rtp.util
 
-import com.sun.javaws.exceptions.InvalidArgumentException
 import org.jitsi.rtp.extensions.getBit
 import org.jitsi.rtp.extensions.getBitAsBool
 import org.jitsi.rtp.extensions.getBits
@@ -68,7 +67,7 @@ class BitBuffer(private val buf: ByteBuffer) {
      */
     private fun validateOffset(numDesiredBits: Int) {
         if (currBitPos + numDesiredBits > 8) {
-            throw InvalidArgumentException(arrayOf("$currBitPos", "$numDesiredBits"))
+            throw IllegalArgumentException("$currBitPos + $numDesiredBits > 8")
         }
     }
 

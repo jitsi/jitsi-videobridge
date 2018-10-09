@@ -28,7 +28,7 @@ internal class BitBufferTest : ShouldSpec() {
                 bitBuffer.getBits(1).toInt() shouldBe 0
             }
             should("throw when trying to cross a byte boundary") {
-                shouldThrow<InvalidArgumentException> {
+                shouldThrow<IllegalArgumentException> {
                     bitBuffer.getBits(10)
                 }
             }
@@ -75,7 +75,7 @@ internal class BitBufferTest : ShouldSpec() {
             "across byte boundaries" {
                 should("throw an exception") {
                     bitBuffer.putBits(0b1111, 4)
-                    shouldThrow<InvalidArgumentException> {
+                    shouldThrow<IllegalArgumentException> {
                         bitBuffer.putBits(0b11111, 5)
                     }
                 }
