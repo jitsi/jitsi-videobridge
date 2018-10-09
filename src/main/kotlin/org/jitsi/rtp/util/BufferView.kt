@@ -29,6 +29,7 @@ private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
  */
 //TODO: make these private and only accessible via getters?  (to enforce
 // calls to 'shrink'? is that even necessary?
+//TODO: i think we can get rid of this and just use ByteBuffer#subBuffer
 data class BufferView(val array: ByteArray, val offset: Int, var length: Int) {
     override fun equals(other: Any?): Boolean {
         if (this === other) {

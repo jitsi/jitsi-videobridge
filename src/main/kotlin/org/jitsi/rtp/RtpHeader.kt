@@ -20,6 +20,7 @@ import org.jitsi.rtp.extensions.getBits
 import org.jitsi.rtp.extensions.putBitAsBoolean
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.util.ByteBufferUtils
 import toUInt
 import unsigned.toUInt
 import unsigned.toULong
@@ -27,20 +28,23 @@ import unsigned.toUShort
 import java.nio.ByteBuffer
 
 
-// https://tools.ietf.org/html/rfc3550#section-5.1
-//  0                   1                   2                   3
-//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |V=2|P|X|  CC   |M|     PT      |       sequence number         |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                           timestamp                           |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |           synchronization source (SSRC) identifier            |
-// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// |            contributing source (CSRC) identifiers             |
-// |                             ....                              |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-open class RtpHeader {
+/**
+ *
+ * https://tools.ietf.org/html/rfc3550#section-5.1
+ *  0                   1                   2                   3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                           timestamp                           |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           synchronization source (SSRC) identifier            |
+ * +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ * |            contributing source (CSRC) identifiers             |
+ * |                             ....                              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+open class RtpHeader : Serializable {
     private var buf: ByteBuffer? = null
     var version: Int
     var hasPadding: Boolean
@@ -201,47 +205,42 @@ open class RtpHeader {
 
     fun addExtension(id: Int, ext: RtpHeaderExtension) = extensions.put(id, ext)
 
-    fun getBuffer(): ByteBuffer {
-        //TODO: although using 'capacity' here to check for available space
-        // may sometimes work/be appropriate, we don't know for sure.  in
-        // RtpHeader, for example, there is almost certainly an RTP payload
-        // after the header data, so although the capacity may suggest we
-        // have available room, we'd be stomping all over the payload.  For
-        // this reason we must use 'limit' since that represents the available
-        // size in the buffer we have be assigned.
-        if (this.buf == null || this.buf!!.limit() < this.size) {
-            this.buf = ByteBuffer.allocate(this.size)
-        }
-        buf!!.limit(this.size)
-        RtpHeader.setVersion(buf!!, version)
-        RtpHeader.setPadding(buf!!, hasPadding)
+    override fun getBuffer(): ByteBuffer {
+        val b = ByteBufferUtils.ensureCapacity(buf, size)
+        b.rewind()
+        b.limit(size)
+
+        RtpHeader.setVersion(b, version)
+        RtpHeader.setPadding(b, hasPadding)
         hasExtension = extensions.isNotEmpty()
-        RtpHeader.setExtension(buf!!, hasExtension)
-        RtpHeader.setCsrcCount(buf!!, csrcCount)
-        RtpHeader.setMarker(buf!!, marker)
-        RtpHeader.setPayloadType(buf!!, payloadType)
-        RtpHeader.setSequenceNumber(buf!!, sequenceNumber)
-        RtpHeader.setTimestamp(buf!!, timestamp)
-        RtpHeader.setSsrc(buf!!, ssrc)
-        RtpHeader.setCsrcs(buf!!, csrcs)
+        RtpHeader.setExtension(b, hasExtension)
+        RtpHeader.setCsrcCount(b, csrcCount)
+        RtpHeader.setMarker(b, marker)
+        RtpHeader.setPayloadType(b, payloadType)
+        RtpHeader.setSequenceNumber(b, sequenceNumber)
+        RtpHeader.setTimestamp(b, timestamp)
+        RtpHeader.setSsrc(b, ssrc)
+        RtpHeader.setCsrcs(b, csrcs)
         if (hasExtension) {
 
             // Write the generic extension header (the cookie and the length)
-            buf!!.position(getExtensionsHeaderOffset())
+            b.position(getExtensionsHeaderOffset())
             when (extensions.values.iterator().next()) {
                 is RtpOneByteHeaderExtension -> {
-                    buf!!.putShort(RtpOneByteHeaderExtension.COOKIE)
+                    b.putShort(RtpOneByteHeaderExtension.COOKIE)
                 }
                 is RtpTwoByteHeaderExtension -> {
-                    buf!!.putShort((RtpTwoByteHeaderExtension.COOKIE))
+                    b.putShort((RtpTwoByteHeaderExtension.COOKIE))
                 }
             }
             val extensionsSizeBytes = extensions.values.map(RtpHeaderExtension::size).sum()
-            buf!!.putShort(((extensionsSizeBytes + 3) / 4).toUShort())
+            b.putShort(((extensionsSizeBytes + 3) / 4).toUShort())
             // Now write the extensions
-            RtpHeader.setExtensionsAndPadding(buf!!.position(getExtensionsOffset()) as ByteBuffer, extensions)
+            RtpHeader.setExtensionsAndPadding(b.position(getExtensionsOffset()) as ByteBuffer, extensions)
         }
-        return buf!!.rewind() as ByteBuffer
+        b.rewind()
+        buf = b
+        return b
     }
 
     override fun toString(): String {

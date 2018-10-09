@@ -15,27 +15,30 @@
  */
 package org.jitsi.rtp.rtcp
 
+import org.jitsi.rtp.Serializable
 import org.jitsi.rtp.extensions.getBitAsBool
 import org.jitsi.rtp.extensions.getBits
 import org.jitsi.rtp.extensions.putBitAsBoolean
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.util.ByteBufferUtils
 import toUInt
 import unsigned.toUInt
 import unsigned.toULong
 import unsigned.toUShort
 import java.nio.ByteBuffer
 
-// https://tools.ietf.org/html/rfc3550#section-6.1
-//  0                   1                   2                   3
-//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |V=2|P|    RC   |   PT=SR=200   |             length            |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                         SSRC of sender                        |
-// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-
-open class RtcpHeader {
+/**
+ * Models the RTCP header as defined in https://tools.ietf.org/html/rfc3550#section-6.1
+ *  0                   1                   2                   3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |V=2|P|    RC   |   PT=SR=200   |             length            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                         SSRC of sender                        |
+ * +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ */
+open class RtcpHeader : Serializable {
     private var buf: ByteBuffer? = null
     val size: Int = RtcpHeader.SIZE_BYTES
     var version: Int
@@ -46,7 +49,7 @@ open class RtcpHeader {
     var senderSsrc: Long
 
     constructor(buf: ByteBuffer) : super() {
-        this.buf = buf.subBuffer(0, RtcpHeader.SIZE_BYTES)
+        this.buf = buf.subBuffer(0, size)
         this.version = RtcpHeader.getVersion(buf)
         this.hasPadding = RtcpHeader.hasPadding(buf)
         this.reportCount = RtcpHeader.getReportCount(buf)
@@ -72,22 +75,21 @@ open class RtcpHeader {
         this.senderSsrc = senderSsrc
     }
 
-    fun getBuffer(): ByteBuffer {
-        if (this.buf == null) {
-            this.buf = ByteBuffer.allocate(RtcpHeader.SIZE_BYTES)
-        }
-        //TODO: in the future we can use a dirty flag to check
-        // if/which we need to sync
-        RtcpHeader.setVersion(buf!!, version)
-        RtcpHeader.setPadding(buf!!, hasPadding)
-        RtcpHeader.setReportCount(buf!!, reportCount)
-        RtcpHeader.setPacketType(buf!!, packetType)
-        RtcpHeader.setLength(buf!!, length)
-        RtcpHeader.setSenderSsrc(buf!!, senderSsrc)
+    override fun getBuffer(): ByteBuffer {
+        val b = ByteBufferUtils.ensureCapacity(buf, size)
+        b.rewind()
+        b.limit(size)
 
-        this.buf!!.rewind()
-        //TODO: return as readonly?
-        return this.buf!!
+        RtcpHeader.setVersion(b, version)
+        RtcpHeader.setPadding(b, hasPadding)
+        RtcpHeader.setReportCount(b, reportCount)
+        RtcpHeader.setPacketType(b, packetType)
+        RtcpHeader.setLength(b, length)
+        RtcpHeader.setSenderSsrc(b, senderSsrc)
+
+        b.rewind()
+        buf = b
+        return b
     }
 
     companion object {

@@ -17,26 +17,26 @@ package org.jitsi.rtp
 
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.util.BufferView
+import org.jitsi.rtp.util.ByteBufferUtils
 import unsigned.toUInt
 import java.nio.ByteBuffer
 
-// would https://github.com/kotlin-graphics/kotlin-unsigned be useful?
 
-// https://tools.ietf.org/html/rfc3550#section-5.1
-// 0                   1                   2                   3
-// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |V=2|P|X|  CC   |M|     PT      |       sequence number         |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                           timestamp                           |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |           synchronization source (SSRC) identifier            |
-// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// |            contributing source (CSRC) identifiers             |
-// |                             ....                              |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
+/**
+ * https://tools.ietf.org/html/rfc3550#section-5.1
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                           timestamp                           |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           synchronization source (SSRC) identifier            |
+ * +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+ * |            contributing source (CSRC) identifiers             |
+ * |                             ....                              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
 open class RtpPacket : Packet {
     private var buf: ByteBuffer? = null
     var header: RtpHeader
@@ -72,23 +72,25 @@ open class RtpPacket : Packet {
     }
 
     override fun getBuffer(): ByteBuffer {
-        // TODO: i think this could be improved, as it gets a bit tricky
+        // TODO: this could be improved, as it gets a bit tricky
         // in the 'rtp header got bigger between parse and getBuffer'
         // scenario.  we use 'limit' being less than size to suggest to us
         // that things need to be moved and therefore we need to allocate
         // but we can probably do better (like RawPacket does when it checks
         // for available chunks in the backing array that can be used).  We
         // need to take into account the header and payload sizes/growths separately.
-        if (this.buf == null || this.buf!!.limit() < this.size) {
-            this.buf = ByteBuffer.allocate(this.size)
-        }
-        this.buf!!.limit(this.size)
-        this.buf!!.rewind()
-        this.buf!!.put(header.getBuffer())
-        this.buf!!.put(payload)
+        val b = ByteBufferUtils.ensureCapacity(buf, size)
+        b.rewind()
+        b.limit(size)
 
-        this.buf!!.rewind()
-        return this.buf!!
+        b.put(header.getBuffer())
+
+        payload.rewind()
+        b.put(payload)
+
+        b.rewind()
+        buf = b
+        return b
     }
 
     override fun clone(): Packet {

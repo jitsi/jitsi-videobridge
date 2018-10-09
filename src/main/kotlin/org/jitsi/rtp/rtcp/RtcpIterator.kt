@@ -15,7 +15,6 @@
  */
 package org.jitsi.rtp.rtcp
 
-import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 

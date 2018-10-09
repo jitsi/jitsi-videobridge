@@ -28,6 +28,8 @@ abstract class RtcpPacket : Packet() {
      * header and any padding.  This is in line with the definition of
      * the length field used in RTCP sender and receiver reports"
      */
+    //TODO: it would be nice to put this in RtpProtocolPacket and have RtpPacket and
+    // RtcpPacket inherit it?  or at least put it somewhere common for rtp
     protected val lengthValue: Int
         get() = ((size + 3) / 4 - 1)
 

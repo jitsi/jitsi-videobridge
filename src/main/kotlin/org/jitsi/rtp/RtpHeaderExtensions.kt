@@ -16,7 +16,6 @@
 package org.jitsi.rtp
 
 import org.jitsi.rtp.extensions.rewindOneByte
-import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
 
@@ -28,6 +27,8 @@ import java.nio.ByteBuffer
 //   extension elements present prior to the element with ID 15
 //   considered.
 
+//TODO: have this also function as the collection of all extensions and handle the generic header
+// and any padding necessary
 class RtpHeaderExtensions {
     companion object {
         const val GENERIC_HEADER_SIZE_BYTES = 4
