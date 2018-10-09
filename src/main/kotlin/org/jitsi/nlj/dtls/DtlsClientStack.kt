@@ -29,9 +29,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class DtlsClientStack @JvmOverloads constructor(
-    private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol(SecureRandom()),
-    private val executor: ExecutorService =
-        Executors.newSingleThreadExecutor(NameableThreadFactory("DtlsClientStack"))
+    private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol(SecureRandom())
 ) : DtlsStack() {
     private var tlsClient: TlsClient? = null
     private var datagramTransport: DatagramTransport? = null
@@ -41,14 +39,12 @@ class DtlsClientStack @JvmOverloads constructor(
     override fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport) {
         this.tlsClient = tlsClient
         this.datagramTransport = datagramTransport
-        executor.submit {
-            try {
-                val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.datagramTransport)
-                logger.cinfo { "BRIAN: dtls handshake finished" }
-                subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
-            } catch (e: Exception) {
-                logger.cerror{ "BRIAN: error during dtls connection: $e" }
-            }
+        try {
+            val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.datagramTransport)
+            logger.cinfo { "BRIAN: dtls handshake finished" }
+            subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
+        } catch (e: Exception) {
+            logger.cerror{ "BRIAN: error during dtls connection: $e" }
         }
     }
 
