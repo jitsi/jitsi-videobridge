@@ -1902,7 +1902,10 @@ public class RtpChannel
                 t.close();
             }
         }
-        logger.info(getTransceiver().getStats());
+        Transceiver transceiver = getTransceiver();
+        if (transceiver != null) {
+            logger.info(getTransceiver().getStats());
+        }
 
         return true;
     }

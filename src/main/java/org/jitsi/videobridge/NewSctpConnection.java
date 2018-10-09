@@ -15,20 +15,16 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.bouncycastle.crypto.tls.*;
 import org.ice4j.socket.*;
 import org.ice4j.util.*;
-import org.jitsi.impl.neomedia.transform.dtls.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.dtls.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.sctp4j.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.packetlogging.*;
-import org.jitsi.util.*;
 import org.jitsi.util.Logger;
+import org.jitsi.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -148,6 +144,29 @@ public class NewSctpConnection
                 false,
                 getClass().getSimpleName() + "-" + endpoint.getID(),
                 newHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Creates a <tt>TransportManager</tt> instance suitable for an
+     * <tt>SctpConnection</tt> (e.g. with 1 component only).
+     */
+    @Override
+    protected TransportManager createTransportManager(String xmlNamespace)
+            throws IOException
+    {
+        if (IceUdpTransportPacketExtension.NAMESPACE.equals(xmlNamespace))
+        {
+            Content content = getContent();
+
+            return new IceDtlsTransportManager(content.getConference());
+        }
+        else
+        {
+            throw new IllegalArgumentException(
+                    "Unsupported Jingle transport " + xmlNamespace);
+        }
     }
 
     @Override

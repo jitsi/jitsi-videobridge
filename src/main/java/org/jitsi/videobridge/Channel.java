@@ -559,7 +559,10 @@ public abstract class Channel
 
     public Transceiver getTransceiver()
     {
-        return endpoint.transceiver;
+        if (endpoint != null) {
+            return endpoint.transceiver;
+        }
+        return null;
     }
 
     /**
