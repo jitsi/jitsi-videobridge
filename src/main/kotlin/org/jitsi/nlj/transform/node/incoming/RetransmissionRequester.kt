@@ -60,4 +60,9 @@ class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransm
         }
         super.handleEvent(event)
     }
+
+    override fun stop() {
+        super.stop()
+        retransmissionRequester.close()
+    }
 }

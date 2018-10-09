@@ -19,6 +19,7 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.Stoppable
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
@@ -59,7 +60,7 @@ class NodeEventVisitor(val event: Event) : NodeVisitor {
  */
 abstract class Node(
     override var name: String
-) : PacketHandler, EventHandler, StatsProducer {
+) : PacketHandler, EventHandler, StatsProducer, Stoppable {
     private var nextNode: Node? = null
     private val inputNodes: MutableList<Node> = mutableListOf()
 
@@ -119,6 +120,10 @@ abstract class Node(
     }
 
     override fun handleEvent(event: Event) {
+        // No-op by default
+    }
+
+    override fun stop() {
         // No-op by default
     }
 
