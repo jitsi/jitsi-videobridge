@@ -20,7 +20,6 @@ import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
-import org.jitsi.rtp.util.BitBuffer
 import unsigned.toUByte
 import unsigned.toUInt
 import java.nio.ByteBuffer
@@ -28,29 +27,27 @@ import java.nio.ByteBuffer
 fun Short.isOneByteHeaderType(): Boolean
         = this.compareTo(RtpOneByteHeaderExtension.COOKIE) == 0
 
-// https://tools.ietf.org/html/rfc5285#section-4.1
-//  0                   1                   2                   3
-//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |       0xBE    |    0xDE       |           length=3            |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |  ID   | L=0   |     data      |  ID   |  L=1  |   data...     |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// ...data   |    0 (pad)    |    0 (pad)    |  ID   | L=3   |     |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                          data                                 |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 /**
- * Represents a single one-byte header extension (it's ID, length, and
+ * Represents a single one-byte header extension (its ID, length, and
  * data).
- * [buf]'s position should be at the start of the ID field for this
- * extension
+ * https://tools.ietf.org/html/rfc5285#section-4.1
+ *  0                   1                   2                   3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       0xBE    |    0xDE       |           length=3            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |  ID   | L=0   |     data      |  ID   |  L=1  |   data...     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * ...data   |    0 (pad)    |    0 (pad)    |  ID   | L=3   |     |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                          data                                 |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 open class RtpOneByteHeaderExtension : RtpHeaderExtension {
-    override val id: Int
-    override val lengthBytes: Int
-    override val data: ByteBuffer
-    override val size: Int
+    final override val id: Int
+    final override val lengthBytes: Int
+    final override val data: ByteBuffer
+    final override val size: Int
         get() = RtpOneByteHeaderExtension.HEADER_SIZE + lengthBytes
 
     companion object {
