@@ -23,23 +23,24 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
 import java.nio.ByteBuffer
 
+//TODO: turn this into more of a real test?  or just have available as a 'tool' somewhere?
 internal class PcapParsingTest : ShouldSpec() {
     init {
-        val pcap = Pcap.openStream("/Users/bbaldino/Downloads/chrome_flexfec_and_video_capture.pcap")
-
-        pcap.loop { pkt ->
-            if (pkt.hasProtocol(Protocol.UDP)) {
-                val udpPacket = pkt.getPacket(Protocol.UDP) as UDPPacket
-                val buf = ByteBuffer.wrap(udpPacket.payload.array)
-                var p: Packet? = null
-                if (RtpProtocol.isRtp(buf)) {
-                    p = RtpPacket(buf)
-                } else if (RtpProtocol.isRtcp(buf)) {
-                    p = RtcpPacket.fromBuffer(buf)
-                }
-                println(p)
-            }
-            true
-        }
+//        val pcap = Pcap.openStream("/Users/bbaldino/Downloads/chrome_flexfec_and_video_capture.pcap")
+//
+//        pcap.loop { pkt ->
+//            if (pkt.hasProtocol(Protocol.UDP)) {
+//                val udpPacket = pkt.getPacket(Protocol.UDP) as UDPPacket
+//                val buf = ByteBuffer.wrap(udpPacket.payload.array)
+//                var p: Packet? = null
+//                if (RtpProtocol.isRtp(buf)) {
+//                    p = RtpPacket(buf)
+//                } else if (RtpProtocol.isRtcp(buf)) {
+//                    p = RtcpPacket.fromBuffer(buf)
+//                }
+//                println(p)
+//            }
+//            true
+//        }
     }
 }
