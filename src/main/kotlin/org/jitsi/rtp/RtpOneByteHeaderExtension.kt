@@ -25,8 +25,14 @@ import unsigned.toUByte
 import unsigned.toUInt
 import java.nio.ByteBuffer
 
-fun Short.isOneByteHeaderType(): Boolean
-        = this.compareTo(RtpOneByteHeaderExtension.COOKIE) == 0
+//TODO: handle one-byte header type 15:
+//The local identifier value 15 is reserved for future extension and
+//   MUST NOT be used as an identifier.  If the ID value 15 is
+//   encountered, its length field should be ignored, processing of the
+//   entire extension should terminate at that point, and only the
+//   extension elements present prior to the element with ID 15
+//   considered.
+
 
 /**
  * Represents a single one-byte header extension (its ID, length, and
@@ -94,16 +100,14 @@ open class RtpOneByteHeaderExtension : RtpHeaderExtension {
     /**
      * Parse a one byte header extension starting at position 0
      * in [buf].  When finished, [buf]'s position will be advanced
-     * past the parsed extension and any padding.
+     * past the parsed extension, but not past any padding
      */
     constructor(buf: ByteBuffer) {
         id = getId(buf)
         lengthBytes = getLength(buf)
         data = getData(buf, lengthBytes)
-        // Advance the buffer's position to the end of the data for this extension...
+        // Advance the buffer's position to the end of the data for this extension
         buf.position(buf.position() + size)
-        // ...and then consume any trailing padding
-        consumePadding(buf)
     }
 
     /**

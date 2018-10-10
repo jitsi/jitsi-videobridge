@@ -85,16 +85,21 @@ internal class RtpHeaderTest : ShouldSpec() {
             }
             "a header with one byte extensions" {
                 val header = RtpHeader(headerWithOneByteExtensions)
-                header.extensions.size shouldBe 3
-                header.extensions.values.forEach {
-                    it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                should("parse correctly") {
+                    header.extensions.extensionMap.size shouldBe 3
+                    header.extensions.extensionMap.values.forEach {
+                        it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                    }
+
                 }
             }
             "a header with two byte extensions" {
                 val header = RtpHeader(headerWithTwoByteExtensions)
-                header.extensions.size shouldBe 3
-                header.extensions.values.forEach {
-                    it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
+                should("parse correctly") {
+                    header.extensions.extensionMap.size shouldBe 3
+                    header.extensions.extensionMap.values.forEach {
+                        it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
+                    }
                 }
             }
         }

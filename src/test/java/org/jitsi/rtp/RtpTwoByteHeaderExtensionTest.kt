@@ -61,7 +61,7 @@ internal class RtpTwoByteHeaderExtensionTest : ShouldSpec() {
                     }
                 }
                 should("parse to the end of the extension") {
-                    extensionWithPadding.remaining() shouldBe 0
+                    extensionWithPadding.position() shouldBe 5
                 }
                 "and then serializing it" {
                     val buf = ext.getBuffer()

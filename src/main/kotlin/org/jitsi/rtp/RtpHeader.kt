@@ -56,22 +56,11 @@ open class RtpHeader : Serializable {
     var timestamp: Long
     var ssrc: Long
     var csrcs: MutableList<Long>
-    var extensions: MutableMap<Int, RtpHeaderExtension>
+    var extensions: RtpHeaderExtensions
     val size: Int
-        get() {
-            var size = RtpHeader.FIXED_SIZE_BYTES + (csrcCount * RtpHeader.CSRC_SIZE_BYTES)
-            if (extensions.isNotEmpty()) {
-                size += RtpHeaderExtensions.GENERIC_HEADER_SIZE_BYTES
-                size += extensions.values.map(RtpHeaderExtension::size).sum()
-                // The extensions must be word-aligned, account for any padding
-                // here
-                //TODO: while(size % 4 != 0) size++
-                if (size % 4 != 0) {
-                    size += (4 - (size % 4))
-                }
-            }
-            return size
-        }
+        get() = RtpHeader.FIXED_SIZE_BYTES +
+                (csrcCount * RtpHeader.CSRC_SIZE_BYTES) +
+                extensions.size
 
     /**
      * The offset at which the generic extension header should be placed
@@ -81,7 +70,7 @@ open class RtpHeader : Serializable {
      * Gives the offset into the buffer the extensions themselves should appear at.  NOTE that this is AFTER
      * the extension header
      */
-    private fun getExtensionsOffset(): Int = getExtensionsHeaderOffset() + RtpHeaderExtensions.GENERIC_HEADER_SIZE_BYTES
+    private fun getExtensionsOffset(): Int = getExtensionsHeaderOffset() + RtpHeaderExtensions.EXTENSIONS_HEADER_SIZE
 
     companion object {
         const val FIXED_SIZE_BYTES = 12
@@ -147,18 +136,13 @@ open class RtpHeader : Serializable {
         /**
          * The buffer passed here should point to the start of the generic extension header
          */
-        fun getExtensions(extensionsBuf: ByteBuffer): MutableMap<Int, RtpHeaderExtension> = RtpHeaderExtensions.parse(extensionsBuf)
+        fun getExtensions(extensionsBuf: ByteBuffer): RtpHeaderExtensions = RtpHeaderExtensions(extensionsBuf)
 
         /**
-         * The buffer passed here should point to the start of the extensions (PAST the generic extension header)
+         * [buf] should point to the start of the generic extension header
          */
-        fun setExtensionsAndPadding(extensionsBuf: ByteBuffer, extensions: Map<Int, RtpHeaderExtension>) {
-            extensions.values.forEach {
-                extensionsBuf.put(it.getBuffer())
-            }
-            while (extensionsBuf.position() % 4 != 0) {
-                extensionsBuf.put(0x00)
-            }
+        fun setExtensions(buf: ByteBuffer, extensions: RtpHeaderExtensions) {
+            buf.put(extensions.getBuffer())
         }
     }
 
@@ -174,7 +158,7 @@ open class RtpHeader : Serializable {
         this.ssrc = RtpHeader.getSsrc(buf)
         this.csrcs = RtpHeader.getCsrcs(buf, this.csrcCount)
 
-        extensions = if (hasExtension) RtpHeader.getExtensions(buf.subBuffer(getExtensionsHeaderOffset())) else mutableMapOf()
+        extensions = if (hasExtension) RtpHeader.getExtensions(buf.subBuffer(getExtensionsHeaderOffset())) else RtpHeaderExtensions.NO_EXTENSIONS
         this.buf = buf.subBuffer(0, this.size)
     }
 
@@ -188,11 +172,11 @@ open class RtpHeader : Serializable {
         timestamp: Long = 0,
         ssrc: Long = 0,
         csrcs: MutableList<Long> = mutableListOf(),
-        extensions: MutableMap<Int, RtpHeaderExtension> = mutableMapOf()
+        extensions: RtpHeaderExtensions = RtpHeaderExtensions.NO_EXTENSIONS
     ) {
         this.version = version
         this.hasPadding = hasPadding
-        this.hasExtension = extensions.isNotEmpty()
+        this.hasExtension = extensions.extensionMap.isNotEmpty()
         this.csrcCount = csrcCount
         this.marker = marker
         this.payloadType = payloadType
@@ -203,9 +187,9 @@ open class RtpHeader : Serializable {
         this.extensions = extensions
     }
 
-    fun getExtension(id: Int): RtpHeaderExtension? = extensions.getOrDefault(id, null)
+    fun getExtension(id: Int): RtpHeaderExtension? = extensions.extensionMap.getOrDefault(id, null)
 
-    fun addExtension(id: Int, ext: RtpHeaderExtension) = extensions.put(id, ext)
+    fun addExtension(id: Int, ext: RtpHeaderExtension) = extensions.extensionMap.put(id, ext)
 
     override fun getBuffer(): ByteBuffer {
         val b = ByteBufferUtils.ensureCapacity(buf, size)
@@ -214,7 +198,7 @@ open class RtpHeader : Serializable {
 
         RtpHeader.setVersion(b, version)
         RtpHeader.setPadding(b, hasPadding)
-        hasExtension = extensions.isNotEmpty()
+        hasExtension = extensions.extensionMap.isNotEmpty()
         RtpHeader.setExtension(b, hasExtension)
         RtpHeader.setCsrcCount(b, csrcCount)
         RtpHeader.setMarker(b, marker)
@@ -224,21 +208,9 @@ open class RtpHeader : Serializable {
         RtpHeader.setSsrc(b, ssrc)
         RtpHeader.setCsrcs(b, csrcs)
         if (hasExtension) {
-
             // Write the generic extension header (the cookie and the length)
             b.position(getExtensionsHeaderOffset())
-            when (extensions.values.iterator().next()) {
-                is RtpOneByteHeaderExtension -> {
-                    b.putShort(RtpOneByteHeaderExtension.COOKIE)
-                }
-                is RtpTwoByteHeaderExtension -> {
-                    b.putShort((RtpTwoByteHeaderExtension.COOKIE))
-                }
-            }
-            val extensionsSizeBytes = extensions.values.map(RtpHeaderExtension::size).sum()
-            b.putShort(((extensionsSizeBytes + 3) / 4).toUShort())
-            // Now write the extensions
-            RtpHeader.setExtensionsAndPadding(b.position(getExtensionsOffset()) as ByteBuffer, extensions)
+            setExtensions(b, extensions)
         }
         b.rewind()
         buf = b

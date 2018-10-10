@@ -55,8 +55,8 @@ internal class RtpPacketTest : ShouldSpec() {
 
                 should("add the extension correctly") {
                     newPacket.header.hasExtension shouldBe true
-                    newPacket.header.extensions.size shouldBe 1
-                    val newExt = newPacket.header.extensions.iterator().next()
+                    newPacket.header.extensions.extensionMap.size shouldBe 1
+                    val newExt = newPacket.header.extensions.extensionMap.iterator().next()
                     newExt.key shouldBe 5
                     newExt.value.id shouldBe ext.id
                     newExt.value.lengthBytes shouldBe ext.lengthBytes

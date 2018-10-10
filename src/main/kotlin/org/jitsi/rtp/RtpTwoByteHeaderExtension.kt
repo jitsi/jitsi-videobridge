@@ -24,13 +24,6 @@ import unsigned.toUInt
 import java.nio.ByteBuffer
 
 /**
- *  Checks if this [Short] matches the IDs used by [RtpTwoByteHeaderExtension].
- *  See https://tools.ietf.org/html/rfc5285#section-4.3
- */
-fun Short.isTwoByteHeaderType(): Boolean
-        = RtpTwoByteHeaderExtension.COOKIE.compareTo(this.toInt() and 0xfff0) == 0
-
-/**
  * Represents a single two-byte header extension (its ID, length and data)
  * https://tools.ietf.org/html/rfc5285#section-4.1
  * 0                   1                   2                   3
@@ -74,16 +67,14 @@ class RtpTwoByteHeaderExtension : RtpHeaderExtension {
 
     /**
      * When parsing a buffer, after the constructor is finished the buffer's
-     * position will be past this extension (and any padding)
+     * position will be past this extension, but not past any padding
      */
     constructor(buf: ByteBuffer) {
         id = getId(buf)
         lengthBytes = getLength(buf)
         data = getData(buf, lengthBytes)
-        // Advance the buffer's position to the end of the data for this extension...
+        // Advance the buffer's position to the end of the data for this extension
         buf.position(buf.position() + size)
-        // ...and then consume any trailing padding
-        consumePadding(buf)
     }
 
     constructor(

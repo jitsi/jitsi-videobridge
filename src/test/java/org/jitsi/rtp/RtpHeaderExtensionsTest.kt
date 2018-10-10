@@ -31,19 +31,18 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
         ))
         "parsing" {
             "a one byte header extension block" {
-                val extMap = RtpHeaderExtensions.parse(oneByteHeaderExtBlock)
+                val extensions = RtpHeaderExtensions(oneByteHeaderExtBlock)
                 should("parse all the extensions") {
-                    extMap.size shouldBe 3
-                    extMap.shouldContainKeys(1, 2, 3)
-                    extMap.values.forEach {
+                    extensions.extensionMap.size shouldBe 3
+                    extensions.extensionMap.shouldContainKeys(1, 2, 3)
+                    extensions.extensionMap.values.forEach {
                         it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
                     }
                 }
                 "and then serializing it" {
-                    val buf = ByteBuffer.allocate(24)
-                    RtpHeaderExtensions.serialize(extMap, buf)
+                    val buf = extensions.getBuffer()
                     should("have made sure it was word aligned") {
-                        buf.position() % 4 shouldBe 0
+                        buf.limit() % 4 shouldBe 0
                     }
                     should("write it correctly") {
                         buf.rewind()
@@ -55,22 +54,20 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
                 }
             }
             "a two byte header extension block" {
-                val extMap = RtpHeaderExtensions.parse(twoByteHeaderExtBlock)
+                val extensions = RtpHeaderExtensions(twoByteHeaderExtBlock)
                 should("parse all the extensions") {
-                    extMap.size shouldBe 3
-                    extMap.shouldContainKeys(1, 2, 3)
-                    extMap.values.forEach {
+                    extensions.extensionMap.size shouldBe 3
+                    extensions.extensionMap.shouldContainKeys(1, 2, 3)
+                    extensions.extensionMap.values.forEach {
                         it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
                     }
                 }
                 "and then serializing it" {
-                    val buf = ByteBuffer.allocate(24)
-                    RtpHeaderExtensions.serialize(extMap, buf)
+                    val buf = extensions.getBuffer()
                     should("have made sure it was word aligned") {
-                        buf.position() % 4 shouldBe 0
+                        buf.limit() % 4 shouldBe 0
                     }
                     should("write it correctly") {
-                        buf.rewind()
                         // Cookie
                         buf.getShort() shouldBe RtpTwoByteHeaderExtension.COOKIE
                         // Length

@@ -67,6 +67,9 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
                     0x42, 0x00, 0x00
                 ))
                 val ext = RtpOneByteHeaderExtension(extensionWithPadding)
+                should("parse to the end of the data") {
+                    extensionWithPadding.position() shouldBe 5
+                }
                 should("have the right id, size, and data") {
                     ext.id shouldBe 1
                     ext.data.limit() shouldBe 4

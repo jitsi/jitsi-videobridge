@@ -19,6 +19,7 @@ import java.nio.ByteBuffer
 
 class ByteBufferUtils {
     companion object {
+        val EMPTY_BUFFER = ByteBuffer.allocate(0)
         /**
          * Returns [buf] if it is non-null and its limit is large enough to hold
          * [capacity] bytes.  If not, allocate and return a new ByteBuffer of
