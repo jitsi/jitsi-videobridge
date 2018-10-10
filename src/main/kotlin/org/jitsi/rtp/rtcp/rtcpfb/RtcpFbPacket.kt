@@ -18,6 +18,7 @@ package org.jitsi.rtp.rtcp.rtcpfb
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.rtp.util.ByteBufferUtils
 import toUInt
 import unsigned.toUInt
 import unsigned.toULong
@@ -89,6 +90,7 @@ abstract class RtcpFbPacket : RtcpPacket {
 
     companion object {
         const val FCI_OFFSET = RtcpHeader.SIZE_BYTES + 4
+        val PACKET_TYPES = listOf(205, 206)
         /**
          * Although this should only be called if the given buffer was determined to
          * contain an RTCPFB packet already, the given buf should be at the start of
@@ -143,29 +145,29 @@ abstract class RtcpFbPacket : RtcpPacket {
     }
 
     override fun getBuffer(): ByteBuffer {
-        if (this.buf == null || this.buf!!.capacity() < size) {
-            this.buf = ByteBuffer.allocate(size)
-        }
-        buf!!.rewind()
+        val b = ByteBufferUtils.ensureCapacity(buf, size)
+        b.rewind()
+        b.limit(size)
+
         header.hasPadding = paddingSizeBytes > 0
         // We need to update the length in the header to match the current content
         // of the packet (which may have changed)
         header.length = lengthValue
         header.reportCount = getFci().fmt
-        this.buf!!.put(header.getBuffer())
-        setMediaSourceSsrc(this.buf!!, mediaSourceSsrc)
-        setFeedbackControlInformation(buf!!, getFci())
+        RtcpPacket.setHeader(b, header)
+        RtcpFbPacket.setMediaSourceSsrc(b, mediaSourceSsrc)
+        RtcpFbPacket.setFeedbackControlInformation(b, getFci())
         // Add any padding
-        buf!!.position(dataSizeBytes)
+        b.position(dataSizeBytes)
         //TODO: write the padding length in the last byte
         repeat(paddingSizeBytes) {
-            this.buf!!.put(0x00)
+            b.put(0x00)
         }
 
-        this.buf!!.limit(size)
-        this.buf!!.rewind()
+        b.rewind()
+        buf = b
 
-        return this.buf!!
+        return b
     }
 
     override fun toString(): String {

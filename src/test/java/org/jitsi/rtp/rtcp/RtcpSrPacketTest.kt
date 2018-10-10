@@ -50,8 +50,8 @@ internal class RtcpSrPacketTest : ShouldSpec() {
     )
 
     init {
-        "f:creation" {
-            "!from a buffer" {
+        "creation" {
+            "from a buffer" {
                 val buf = ByteBuffer.allocate(1024)
                 buf.put(expectedHeader.getBuffer())
                 buf.put(expectedSenderInfo.getBuffer())
@@ -65,6 +65,8 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                     srPacket.senderInfo.sendersPacketCount shouldBe expectedSenderInfo.sendersPacketCount
                     srPacket.senderInfo.sendersOctetCount shouldBe expectedSenderInfo.sendersOctetCount
                     srPacket.reportBlocks should haveSize(2)
+                    srPacket.reportBlocks[0] shouldBe reportBlock1
+                    srPacket.reportBlocks[1] shouldBe reportBlock2
                 }
             }
             "blah" {
@@ -88,7 +90,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                 val newBuf = sr.getBuffer()
                 val newBuf2 = sr.getBuffer()
             }
-            "!from values" {
+            "from values" {
                 val srPacket = RtcpSrPacket(
                     header = expectedHeader,
                     senderInfo = expectedSenderInfo,

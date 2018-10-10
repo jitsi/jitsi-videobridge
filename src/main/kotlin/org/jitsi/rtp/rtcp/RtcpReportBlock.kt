@@ -18,6 +18,7 @@ package org.jitsi.rtp.rtcp
 import org.jitsi.rtp.extensions.get3Bytes
 import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.subBuffer
+import org.jitsi.rtp.util.ByteBufferUtils
 import toUInt
 import unsigned.toUBigInt
 import unsigned.toUByte
@@ -257,19 +258,23 @@ class RtcpReportBlock {
     }
 
     fun getBuffer(): ByteBuffer {
-        if (this.buf == null) {
-            this.buf = ByteBuffer.allocate(RtcpReportBlock.SIZE_BYTES)
-        }
-        RtcpReportBlock.setSsrc(buf!!, this.ssrc)
-        RtcpReportBlock.setFractionLost(buf!!, this.fractionLost)
-        RtcpReportBlock.setCumulativeLost(buf!!, this.cumulativePacketsLost)
-        RtcpReportBlock.setSeqNumCycles(buf!!, this.seqNumCycles)
-        RtcpReportBlock.setSeqNum(buf!!, this.seqNum)
-        RtcpReportBlock.setInterarrivalJitter(buf!!, this.interarrivalJitter)
-        RtcpReportBlock.setLastSrTimestamp(buf!!, this.lastSrTimestamp)
-        RtcpReportBlock.setDelaySinceLastSr(buf!!, this.delaySinceLastSr)
+        val b = ByteBufferUtils.ensureCapacity(buf, RtcpReportBlock.SIZE_BYTES)
+        b.rewind()
+        b.limit(RtcpReportBlock.SIZE_BYTES)
 
-        return this.buf!!
+        RtcpReportBlock.setSsrc(b, this.ssrc)
+        RtcpReportBlock.setFractionLost(b, this.fractionLost)
+        RtcpReportBlock.setCumulativeLost(b, this.cumulativePacketsLost)
+        RtcpReportBlock.setSeqNumCycles(b, this.seqNumCycles)
+        RtcpReportBlock.setSeqNum(b, this.seqNum)
+        RtcpReportBlock.setInterarrivalJitter(b, this.interarrivalJitter)
+        RtcpReportBlock.setLastSrTimestamp(b, this.lastSrTimestamp)
+        RtcpReportBlock.setDelaySinceLastSr(b, this.delaySinceLastSr)
+
+        b.rewind()
+        buf = b
+
+        return b
     }
 
     override fun toString(): String {
@@ -286,5 +291,29 @@ class RtcpReportBlock {
 
             toString()
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other?.javaClass != javaClass) {
+            return false
+        }
+        other as RtcpReportBlock
+        return (ssrc == other.ssrc &&
+                fractionLost == other.fractionLost &&
+                cumulativePacketsLost == other.cumulativePacketsLost &&
+                seqNumCycles == other.seqNumCycles &&
+                seqNum == other.seqNum &&
+                interarrivalJitter == other.interarrivalJitter &&
+                lastSrTimestamp == other.lastSrTimestamp &&
+                delaySinceLastSr == other.delaySinceLastSr)
+    }
+
+    override fun hashCode(): Int {
+        return ssrc.hashCode() + fractionLost.hashCode() + cumulativePacketsLost.hashCode() +
+                seqNumCycles.hashCode() + seqNum.hashCode() + interarrivalJitter.hashCode() +
+                lastSrTimestamp.hashCode() + delaySinceLastSr.hashCode()
     }
 }

@@ -40,7 +40,7 @@ abstract class RtcpPacket : Packet() {
                 //TODO: 202 = SDES
                 RtcpSrPacket.PT -> RtcpSrPacket(buf)
                 RtcpRrPacket.PT -> RtcpRrPacket(buf)
-                205, 206 -> RtcpFbPacket.fromBuffer(buf)
+                in RtcpFbPacket.PACKET_TYPES -> RtcpFbPacket.fromBuffer(buf)
                 else -> throw Exception("Unsupported RTCP packet type $packetType")
             }
         }
@@ -49,8 +49,8 @@ abstract class RtcpPacket : Packet() {
          * [buf] should be a buffer whose start represents the start of the
          * RTCP packet (i.e. the start of the RTCP header)
          */
-        protected fun setHeader(buf: ByteBuffer, header: RtcpHeader) {
-            buf.put(buf)
+        fun setHeader(buf: ByteBuffer, header: RtcpHeader) {
+            buf.put(header.getBuffer())
         }
     }
 

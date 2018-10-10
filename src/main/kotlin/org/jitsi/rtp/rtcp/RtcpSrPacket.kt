@@ -19,6 +19,7 @@ import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.util.ByteBufferUtils
 import toUInt
 import unsigned.toULong
 import java.nio.ByteBuffer
@@ -217,6 +218,9 @@ class SenderInfo {
  * https://tools.ietf.org/html/rfc3550#section-6.4.1
  */
 class RtcpSrPacket : RtcpPacket {
+    //TODO: i think maybe it's better to make buf a non-null lazy variable (for all these types), rather than nullable
+    // as we'll always fill it out at some point?  this will avoid some awkwardness about having
+    // to use !! everywhere with it
     private var buf: ByteBuffer? = null
     override var header: RtcpHeader
     var senderInfo: SenderInfo
@@ -226,20 +230,53 @@ class RtcpSrPacket : RtcpPacket {
 
     companion object {
         const val PT: Int = 200
+
+        /**
+         * [buf] should point to the start of the SR packet (i.e. the start of the header)
+         */
+        fun getSenderInfo(buf: ByteBuffer): SenderInfo {
+            return SenderInfo(buf.subBuffer(RtcpHeader.SIZE_BYTES, SenderInfo.SIZE_BYTES))
+        }
+
+        /**
+         * [buf] should point to the start of the SR packet (i.e. the start of the header)
+         */
+        fun setSenderInfo(buf: ByteBuffer, senderInfo: SenderInfo) {
+            val senderInfoBuf = buf.subBuffer(RtcpHeader.SIZE_BYTES)
+            senderInfoBuf.put(senderInfo.getBuffer())
+        }
+
+        /**
+         * [buf] should point to the start of the SR packet (i.e. the start of the header)
+         */
+        fun getReportBlocks(buf: ByteBuffer, numReportBlocks: Int): MutableList<RtcpReportBlock> {
+            val reportBlocks = mutableListOf<RtcpReportBlock>()
+            val reportBlockStartPos = RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES
+            repeat (numReportBlocks) { reportBlockIndex ->
+                val currReportBlockBuf =
+                    buf.subBuffer(reportBlockStartPos + (reportBlockIndex * RtcpReportBlock.SIZE_BYTES))
+                val reportBlock = RtcpReportBlock(currReportBlockBuf)
+                reportBlocks.add(reportBlock)
+            }
+            return reportBlocks
+        }
+
+        /**
+         * [buf] should point to the start of the SR packet (i.e. the start of the header)
+         */
+        fun setReportBlocks(buf: ByteBuffer, reportBlocks: List<RtcpReportBlock>) {
+            val reportBlockStartPos = RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES
+            val reportBlockBuf = buf.subBuffer(reportBlockStartPos)
+            reportBlocks.forEach { reportBlock ->
+                reportBlockBuf.put(reportBlock.getBuffer())
+            }
+        }
     }
 
     constructor(buf: ByteBuffer) {
         this.header = RtcpHeader(buf)
-        this.senderInfo = SenderInfo(buf.subBuffer(RtcpHeader.SIZE_BYTES, SenderInfo.SIZE_BYTES))
-        val reportBlockStartPos = RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES
-        repeat (header.reportCount) {
-            val reportBlock =
-                RtcpReportBlock(
-                    buf.duplicate()
-                        .position(reportBlockStartPos + (it * RtcpReportBlock.SIZE_BYTES))
-                            as ByteBuffer)
-            reportBlocks.add(reportBlock)
-        }
+        this.senderInfo = RtcpSrPacket.getSenderInfo(buf)
+        reportBlocks = RtcpSrPacket.getReportBlocks(buf, header.reportCount)
         // Do this last so we know the size
         this.buf = buf.subBuffer(0, this.size)
     }
@@ -255,18 +292,18 @@ class RtcpSrPacket : RtcpPacket {
     }
 
     override fun getBuffer(): ByteBuffer {
-        if (this.buf == null || this.buf!!.capacity() < this.size) {
-            this.buf = ByteBuffer.allocate(this.size)
-        }
-        this.buf!!.rewind()
-        this.buf!!.put(header.getBuffer())
-        this.buf!!.put(senderInfo.getBuffer())
-        reportBlocks.forEach {
-            this.buf!!.put(it.getBuffer())
-        }
-        this.buf!!.rewind()
+        val b = ByteBufferUtils.ensureCapacity(buf, size)
+        b.rewind()
+        b.limit(size)
 
-        return this.buf!!
+        RtcpPacket.setHeader(b, header)
+        RtcpSrPacket.setSenderInfo(b, senderInfo)
+        RtcpSrPacket.setReportBlocks(b, reportBlocks)
+
+        b.rewind()
+        buf = b
+
+        return b
     }
 
     override fun clone(): Packet {
