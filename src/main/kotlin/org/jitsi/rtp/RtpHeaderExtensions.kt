@@ -36,7 +36,7 @@ class RtpHeaderExtensions {
         // there are extensions present (i.e. the X bit was set)
         fun parse(buf: ByteBuffer): MutableMap<Int, RtpHeaderExtension> {
             val headerExtensionType = buf.getShort()
-            val headerExtensionParser = when {
+            val headerExtensionParser: (ByteBuffer) -> RtpHeaderExtension = when {
                 headerExtensionType.isOneByteHeaderType() -> ::RtpOneByteHeaderExtension
                 headerExtensionType.isTwoByteHeaderType() -> ::RtpTwoByteHeaderExtension
                 else -> throw Exception("unrecognized extension type: ${headerExtensionType.toString(16)}")
@@ -76,7 +76,7 @@ class RtpHeaderExtensions {
             // 4 bytes), so mark the start after them
             val startPosition = buf.position()
             extMap.values.forEach {
-                it.serializeToBuffer(buf)
+                buf.put(it.getBuffer())
             }
             while (buf.position() % 4 != 0) {
                 // Add padding

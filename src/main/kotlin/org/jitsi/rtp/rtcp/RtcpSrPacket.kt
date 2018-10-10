@@ -18,7 +18,6 @@ package org.jitsi.rtp.rtcp
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
-import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.util.ByteBufferUtils
 import toUInt
 import unsigned.toULong

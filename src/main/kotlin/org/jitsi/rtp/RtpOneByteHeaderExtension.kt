@@ -20,6 +20,7 @@ import org.jitsi.rtp.extensions.put
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.util.ByteBufferUtils
 import unsigned.toUByte
 import unsigned.toUInt
 import java.nio.ByteBuffer
@@ -29,7 +30,7 @@ fun Short.isOneByteHeaderType(): Boolean
 
 /**
  * Represents a single one-byte header extension (its ID, length, and
- * data).
+ * data)
  * https://tools.ietf.org/html/rfc5285#section-4.1
  *  0                   1                   2                   3
  *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -43,6 +44,7 @@ fun Short.isOneByteHeaderType(): Boolean
  * |                          data                                 |
  * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
+//TODO: hold on to backing buffer (when passed) like others
 open class RtpOneByteHeaderExtension : RtpHeaderExtension {
     final override val id: Int
     final override val lengthBytes: Int
@@ -55,9 +57,7 @@ open class RtpOneByteHeaderExtension : RtpHeaderExtension {
         const val COOKIE: Short = 0xBEDE.toShort()
 
         fun getId(buf: ByteBuffer): Int = buf.get(0).getBits(0, 4).toUInt()
-        fun setId(id: Int, buf: ByteBuffer) {
-            buf.putBits(0, 0, id.toUByte(), 4)
-        }
+        fun setId(buf: ByteBuffer, id: Int): Unit = buf.putBits(0, 0, id.toUByte(), 4)
 
         /**
          * Gets the length of the data chunk of this extension, in bytes.  Note that this
@@ -71,7 +71,7 @@ open class RtpOneByteHeaderExtension : RtpHeaderExtension {
          * should be the logical length; this method will translate it into the proper value
          * (logical length - 1)
          */
-        fun setLength(length: Int, buf: ByteBuffer) {
+        fun setLength(buf: ByteBuffer, length: Int) {
             val lengthValue = length - 1
             buf.putBits(0, 4, lengthValue.toUByte(), 4)
         }
@@ -86,7 +86,7 @@ open class RtpOneByteHeaderExtension : RtpHeaderExtension {
         /**
          * Put the entirety of [dataBuf] into the data chunk position in [buf]
          */
-        fun setData(dataBuf: ByteBuffer, buf: ByteBuffer) {
+        fun setData(buf: ByteBuffer, dataBuf: ByteBuffer) {
             buf.put(1, dataBuf)
         }
     }
@@ -96,10 +96,14 @@ open class RtpOneByteHeaderExtension : RtpHeaderExtension {
      * in [buf].  When finished, [buf]'s position will be advanced
      * past the parsed extension and any padding.
      */
-    constructor(buf: ByteBuffer) : super() {
+    constructor(buf: ByteBuffer) {
         id = getId(buf)
         lengthBytes = getLength(buf)
         data = getData(buf, lengthBytes)
+        // Advance the buffer's position to the end of the data for this extension...
+        buf.position(buf.position() + size)
+        // ...and then consume any trailing padding
+        consumePadding(buf)
     }
 
     /**
@@ -117,21 +121,18 @@ open class RtpOneByteHeaderExtension : RtpHeaderExtension {
         this.data = data
     }
 
-    private fun getBuffer(): ByteBuffer {
-        val buf = ByteBuffer.allocate(size)
-        setId(id, buf)
-        setLength(lengthBytes, buf)
+    override fun getBuffer(): ByteBuffer {
+        val buf = ByteBufferUtils.ensureCapacity(null, size)
+        buf.rewind()
+        buf.limit(size)
+
+        setId(buf, id)
+        setLength(buf, lengthBytes)
         data.rewind()
-        setData(data, buf)
+        setData(buf, data)
 
         buf.rewind()
         return buf
-    }
-
-    //TODO: header extension classes should probably be made consistent with
-    // the other types which all use a 'getBuffer' method
-    override fun serializeToBuffer(buf: ByteBuffer) {
-        buf.put(getBuffer())
     }
 
     override fun toString(): String {

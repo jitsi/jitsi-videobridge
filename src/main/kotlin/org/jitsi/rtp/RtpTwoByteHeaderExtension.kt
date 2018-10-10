@@ -15,7 +15,12 @@
  */
 package org.jitsi.rtp
 
+import org.jitsi.rtp.extensions.put
+import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.util.ByteBufferUtils
+import unsigned.toUByte
+import unsigned.toUInt
 import java.nio.ByteBuffer
 
 /**
@@ -25,23 +30,25 @@ import java.nio.ByteBuffer
 fun Short.isTwoByteHeaderType(): Boolean
         = RtpTwoByteHeaderExtension.COOKIE.compareTo(this.toInt() and 0xfff0) == 0
 
-// https://tools.ietf.org/html/rfc5285#section-4.1
-// 0                   1                   2                   3
-// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |       0x10    |    0x00       |           length=3            |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |      ID       |     L=0       |     ID        |     L=1       |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |       data    |    0 (pad)    |       ID      |      L=4      |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                          data                                 |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// buf should point to the start of the ID field of this extension
-class RtpTwoByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
-    override val id = buf.get().toInt()
-    override val lengthBytes = buf.get().toInt()
-    override val data: ByteBuffer = buf.slice().limit(lengthBytes) as ByteBuffer
+/**
+ * Represents a single two-byte header extension (its ID, length and data)
+ * https://tools.ietf.org/html/rfc5285#section-4.1
+ * 0                   1                   2                   3
+ * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       0x10    |    0x00       |           length=3            |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |      ID       |     L=0       |     ID        |     L=1       |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |       data    |    0 (pad)    |       ID      |      L=4      |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                          data                                 |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ */
+class RtpTwoByteHeaderExtension : RtpHeaderExtension {
+    override val id: Int
+    override val lengthBytes: Int
+    override val data: ByteBuffer
     override val size: Int
         get() = RtpTwoByteHeaderExtension.HEADER_SIZE + lengthBytes
 
@@ -49,24 +56,59 @@ class RtpTwoByteHeaderExtension(val buf: ByteBuffer) : RtpHeaderExtension() {
         const val HEADER_SIZE = 2
         const val COOKIE: Short = 0x1000
 
+        fun getId(buf: ByteBuffer): Int = buf.get(0).toUInt()
+        fun setId(buf: ByteBuffer, id: Int) {
+            buf.put(0, id.toUByte())
+        }
+
+        fun getLength(buf: ByteBuffer): Int = buf.get(1).toUInt()
+        fun setLength(buf: ByteBuffer, length: Int) {
+            buf.put(1, length.toUByte())
+        }
+
+        fun getData(buf: ByteBuffer, lengthBytes: Int) = buf.subBuffer(2, lengthBytes)
+        fun setData(buf: ByteBuffer, dataBuf: ByteBuffer) {
+            buf.put(2, dataBuf)
+        }
     }
 
-    init {
-        // We created a buffer view for the data, but now need to advance the buffer's
-        // position by that amount
-        buf.position(buf.position() + lengthBytes)
-        // Consume any trailing padding
+    /**
+     * When parsing a buffer, after the constructor is finished the buffer's
+     * position will be past this extension (and any padding)
+     */
+    constructor(buf: ByteBuffer) {
+        id = getId(buf)
+        lengthBytes = getLength(buf)
+        data = getData(buf, lengthBytes)
+        // Advance the buffer's position to the end of the data for this extension...
+        buf.position(buf.position() + size)
+        // ...and then consume any trailing padding
         consumePadding(buf)
     }
 
-    override fun serializeToBuffer(buf: ByteBuffer) {
-        buf.put(id.toByte())
-        buf.put(lengthBytes.toByte())
-        // Make a new view of the buffer and rewind it so we don't
-        // affect any operation currently operating on data
-        val rewoundData = data.duplicate()
-        rewoundData.rewind()
-        buf.put(rewoundData)
+    constructor(
+        id: Int,
+        lengthBytes: Int,
+        data: ByteBuffer
+    ) {
+        this.id = id
+        this.lengthBytes = lengthBytes
+        this.data = data
+    }
+
+    override fun getBuffer(): ByteBuffer {
+        val buf = ByteBufferUtils.ensureCapacity(null, size)
+        buf.rewind()
+        buf.limit(size)
+
+        setId(buf, id)
+        setLength(buf, lengthBytes)
+        data.rewind()
+        setData(buf, data)
+
+        buf.rewind()
+        return buf
+
     }
 
     override fun toString(): String {

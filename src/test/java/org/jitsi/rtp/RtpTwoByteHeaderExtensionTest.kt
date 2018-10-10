@@ -34,10 +34,9 @@ internal class RtpTwoByteHeaderExtensionTest : ShouldSpec() {
                     length0Extension.remaining() shouldBe 0
                 }
                 "and then serializing it" {
-                    val buf = ByteBuffer.allocate(24)
-                    ext.serializeToBuffer(buf)
+                    val buf = ext.getBuffer()
                     should("have written the correct amount of data") {
-                        buf.position() shouldBe 2
+                        buf.limit() shouldBe 2
                     }
                     should("have written the right id, size, and data") {
                         buf.rewind()
@@ -61,14 +60,13 @@ internal class RtpTwoByteHeaderExtensionTest : ShouldSpec() {
                         ext.data.get() shouldBe 0x42.toByte()
                     }
                 }
-                should("parse to the end of the extensions") {
+                should("parse to the end of the extension") {
                     extensionWithPadding.remaining() shouldBe 0
                 }
                 "and then serializing it" {
-                    val buf = ByteBuffer.allocate(24)
-                    ext.serializeToBuffer(buf)
+                    val buf = ext.getBuffer()
                     should("have written the correct amount of data") {
-                        buf.position() shouldBe 5
+                        buf.limit() shouldBe 5
                     }
                     should("have written the right id, size, and data") {
                         buf.rewind()

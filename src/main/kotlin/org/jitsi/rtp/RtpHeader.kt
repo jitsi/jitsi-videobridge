@@ -153,7 +153,9 @@ open class RtpHeader : Serializable {
          * The buffer passed here should point to the start of the extensions (PAST the generic extension header)
          */
         fun setExtensionsAndPadding(extensionsBuf: ByteBuffer, extensions: Map<Int, RtpHeaderExtension>) {
-            extensions.values.forEach { it.serializeToBuffer(extensionsBuf) }
+            extensions.values.forEach {
+                extensionsBuf.put(it.getBuffer())
+            }
             while (extensionsBuf.position() % 4 != 0) {
                 extensionsBuf.put(0x00)
             }

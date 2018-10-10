@@ -35,17 +35,21 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
                     ext.data.limit() shouldBe 1
                     ext.data.get() shouldBe 0x42.toByte()
                 }
+                should("put the buffer's position in the correct place") {
+                    length0Extension.position() shouldBe 2
+                }
                 should("have the correct size") {
                     ext.size shouldBe 2
                 }
                 "and then serializing it" {
-                    val buf = ByteBuffer.allocate(48)
-                    ext.serializeToBuffer(buf)
+                    val buf = ext.getBuffer()
+                    should("start at the beginning of the buffer") {
+                        buf.position() shouldBe 0
+                    }
                     should("have written the correct amount of data") {
-                        buf.position() shouldBe 2
+                        buf.limit() shouldBe 2
                     }
                     should("have written the right id, size, and data") {
-                        buf.rewind()
                         with(BitBuffer(buf)) {
                             // Id
                             getBits(4).toInt() shouldBe 1
@@ -72,13 +76,11 @@ internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
                     ext.size shouldBe 5
                 }
                 "and then serializing it" {
-                    val buf = ByteBuffer.allocate(48)
-                    ext.serializeToBuffer(buf)
+                    val buf = ext.getBuffer()
                     should("have written the correct amount of data") {
-                        buf.position() shouldBe 5
+                        buf.limit() shouldBe 5
                     }
                     should("have written the right id, size, and data") {
-                        buf.rewind()
                         with(BitBuffer(buf)) {
                             // Id
                             getBits(4).toInt() shouldBe 1

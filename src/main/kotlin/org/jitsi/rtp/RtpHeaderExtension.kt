@@ -18,7 +18,7 @@ package org.jitsi.rtp
 import org.jitsi.rtp.extensions.rewindOneByte
 import java.nio.ByteBuffer
 
-abstract class RtpHeaderExtension {
+abstract class RtpHeaderExtension : Serializable {
     /**
      * This extension's ID
      */
@@ -61,6 +61,4 @@ abstract class RtpHeaderExtension {
             buf.rewindOneByte()
         }
     }
-
-    abstract fun serializeToBuffer(buf: ByteBuffer)
 }
