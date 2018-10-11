@@ -37,9 +37,9 @@ abstract class RtcpPacket : Packet() {
         fun fromBuffer(buf: ByteBuffer): RtcpPacket {
             val packetType = RtcpHeader.getPacketType(buf)
             return when (packetType) {
-                //TODO: 202 = SDES
                 RtcpSrPacket.PT -> RtcpSrPacket(buf)
                 RtcpRrPacket.PT -> RtcpRrPacket(buf)
+                RtcpSdesPacket.PT -> RtcpSdesPacket(buf)
                 in RtcpFbPacket.PACKET_TYPES -> RtcpFbPacket.fromBuffer(buf)
                 else -> throw Exception("Unsupported RTCP packet type $packetType")
             }

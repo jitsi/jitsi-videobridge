@@ -157,3 +157,12 @@ fun ByteBuffer.put(index: Int, buf: ByteBuffer): ByteBuffer {
     position(currentPosition)
     return this
 }
+
+/**
+ * Compare the contents of two ByteBuffers, each starting from their position 0
+ */
+fun ByteBuffer.compareToFromBeginning(other: ByteBuffer): Int {
+    val thisRewound = this.duplicate().rewind() as ByteBuffer
+    val otherRewound = other.duplicate().rewind() as ByteBuffer
+    return thisRewound.compareTo(otherRewound)
+}

@@ -34,3 +34,5 @@ class ByteBufferUtils {
         }
     }
 }
+
+fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayOf(*elements))
