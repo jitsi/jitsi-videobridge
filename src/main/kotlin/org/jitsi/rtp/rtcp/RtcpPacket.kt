@@ -40,6 +40,7 @@ abstract class RtcpPacket : Packet() {
                 RtcpSrPacket.PT -> RtcpSrPacket(buf)
                 RtcpRrPacket.PT -> RtcpRrPacket(buf)
                 RtcpSdesPacket.PT -> RtcpSdesPacket(buf)
+                RtcpByePacket.PT -> RtcpByePacket(buf)
                 in RtcpFbPacket.PACKET_TYPES -> RtcpFbPacket.fromBuffer(buf)
                 else -> throw Exception("Unsupported RTCP packet type $packetType")
             }
