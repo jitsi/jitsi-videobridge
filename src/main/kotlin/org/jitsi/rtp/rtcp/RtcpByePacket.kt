@@ -174,5 +174,16 @@ class RtcpByePacket : RtcpPacket {
         return b
     }
 
+    override fun toString(): String {
+        return with (StringBuffer()) {
+            appendln("RTCP BYE")
+            appendln(header.toString())
+            appendln(ssrcs.toString())
+            appendln("reason: '$reason'")
+
+            toString()
+        }
+    }
+
     override fun clone(): Packet = RtcpByePacket(getBuffer().clone())
 }
