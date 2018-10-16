@@ -64,7 +64,6 @@ class Vp8PayloadDescriptor(bv: BufferView) {
                 } else {
                     buf.get().toUInt()
                 }
-
             }
             if (tl0PicIdxPresent!!) {
                 tl0PicIdx = buf.get().toUInt()
@@ -103,4 +102,3 @@ class Vp8PayloadDescriptor(bv: BufferView) {
         }
     }
 }
-
