@@ -64,8 +64,6 @@ public class PublicRESTBundleActivator
     public static final String JETTY_CORS_ALLOWED_ORIGINS
         = ".jetty.cors.allowedOrigins";
 
-    public static final String JETTY_TLS_PORT_PNAME = ".jetty.tls.port";
-
     /**
      * Prefix that can configure multiple location aliases.
      * rest.api.jetty.ResourceHandler.alias./config.js=/etc/jitsi/my-config.js
@@ -404,7 +402,8 @@ public class PublicRESTBundleActivator
         {
             privatePort
                 = cfg.getInt(
-                    RESTBundleActivator.JETTY_PROPERTY_PREFIX + ".jetty.port",
+                    RESTBundleActivator.JETTY_PROPERTY_PREFIX
+                        + JETTY_PORT_PNAME,
                     8080);
         }
         else

@@ -69,7 +69,7 @@ public class PublicClearPortRedirectBundleActivator
         // we do not want to start this jetty instance
         if(cfg.getProperty(
             PublicRESTBundleActivator.JETTY_PROPERTY_PREFIX
-                    + PublicRESTBundleActivator.JETTY_TLS_PORT_PNAME) == null)
+                    + JETTY_TLS_PORT_PNAME) == null)
         {
             return false;
         }
@@ -108,7 +108,7 @@ public class PublicClearPortRedirectBundleActivator
             new RedirectHandler(
                 cfg.getInt(
                     PublicRESTBundleActivator.JETTY_PROPERTY_PREFIX
-                        + PublicRESTBundleActivator.JETTY_TLS_PORT_PNAME,
+                        + JETTY_TLS_PORT_PNAME,
                     443)));
 
         return initializeHandlerList(handlers);
