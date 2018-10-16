@@ -80,9 +80,6 @@ public class JvbBundleConfig
             "org/jitsi/videobridge/eventadmin/callstats/Activator"
         },
         {
-            "org/jitsi/videobridge/VideobridgeBundleActivator"
-        },
-        {
             "org/jitsi/videobridge/version/VersionActivator"
         },
         {
@@ -101,6 +98,9 @@ public class JvbBundleConfig
             // of the Videobridge and (2) it pulls, does not push.
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
             "org/jitsi/videobridge/EndpointConnectionStatus"
+        },
+        {
+            "org/jitsi/videobridge/VideobridgeBundleActivator"
         },
         {
             "org/jitsi/videobridge/xmpp/ClientConnectionImpl"
