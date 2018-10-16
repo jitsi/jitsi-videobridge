@@ -15,12 +15,12 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.util.ByteBufferUtils
 import org.jitsi.service.neomedia.RawPacket
-import java.nio.ByteBuffer
 
 class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wrapper") {
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
@@ -30,10 +30,12 @@ class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wra
             val rp = RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
             transformer.reverseTransform(rp)?.let { decryptedRawPacket ->
                 val rtpPacket = RtpPacket(
-                    ByteBuffer.wrap(
-                    decryptedRawPacket.buffer,
-                    decryptedRawPacket.offset,
-                    decryptedRawPacket.length))
+                    ByteBufferUtils.wrapSubArray(
+                        decryptedRawPacket.buffer,
+                        decryptedRawPacket.offset,
+                        decryptedRawPacket.length
+                    )
+                )
                 it.packet = rtpPacket
                 decryptedPackets.add(it)
             }
