@@ -15,6 +15,7 @@
  */
 package org.jitsi.rtp.util
 
+import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
 class ByteBufferUtils {
@@ -32,6 +33,14 @@ class ByteBufferUtils {
                 buf
             }
         }
+
+        /**
+         * [ByteBuffer.wrap] will set the buffer's current position to the offset, what this
+         * method does is create a sub buffer (via [ByteBuffer.subBuffer]) where the sub buffer's
+         * position 0 is the offset.
+         */
+        fun wrapSubArray(byteArray: ByteArray, offset: Int, length: Int) =
+            ByteBuffer.wrap(byteArray).subBuffer(offset, length)
     }
 }
 
