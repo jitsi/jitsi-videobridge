@@ -13,13 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj
+package org.jitsi.nlj.module_tests
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
-import org.jitsi.impl.neomedia.transform.srtp.SRTPTransformer
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpExtensionAddedEvent
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
+import org.jitsi.nlj.RtpSender
+import org.jitsi.nlj.RtpSenderImpl
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.rtp.util.RtpProtocol
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi_modified.service.neomedia.format.DummyAudioMediaFormat
 import org.jitsi_modified.service.neomedia.format.Vp8MediaFormat
@@ -30,15 +35,17 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 
-val srtpInformation = SrtpInformation(
+//TODO: the below information is hard-coded to the hard-coded pcap we're using.  put this in a file associated
+// with the pcap file so it can be loaded programmatically
+private val srtpInformation = SrtpInformation(
     srtpProfileInformation = SrtpProfileInformation(
-        cipherKeyLength=16,
-        cipherSaltLength=14,
-        cipherName=1,
-        authFunctionName=1,
-        authKeyLength=20,
-        rtcpAuthTagLength=10,
-        rtpAuthTagLength=10
+        cipherKeyLength = 16,
+        cipherSaltLength = 14,
+        cipherName = 1,
+        authFunctionName = 1,
+        authKeyLength = 20,
+        rtcpAuthTagLength = 10,
+        rtpAuthTagLength = 10
     ),
     keyingMaterial = byteArrayOf(
         0x2D.toByte(), 0x6C.toByte(), 0x37.toByte(), 0xC7.toByte(),
@@ -57,69 +64,82 @@ val srtpInformation = SrtpInformation(
         0x62.toByte(), 0x26.toByte(), 0x39.toByte(), 0x05.toByte(),
         0x7D.toByte(), 0x5A.toByte(), 0xF9.toByte(), 0xC7.toByte()
     ),
-    tlsRole =  TlsRole.CLIENT
+    tlsRole = TlsRole.CLIENT
 )
 
-fun createSrtpTransformer(): SinglePacketTransformer {
+private fun createSrtpTransformer(): SinglePacketTransformer {
     return SrtpUtil.initializeTransformer(
-        srtpProfileInformation,
-        keyingMaterial,
-        tlsRole,
+        srtpInformation.srtpProfileInformation,
+        srtpInformation.keyingMaterial,
+        srtpInformation.tlsRole,
         false
     )
 }
 
-fun createSrtcpTransformer(): SinglePacketTransformer {
+private fun createSrtcpTransformer(): SinglePacketTransformer {
     return SrtpUtil.initializeTransformer(
-        srtpProfileInformation,
-        keyingMaterial,
-        tlsRole,
+        srtpInformation.srtpProfileInformation,
+        srtpInformation.keyingMaterial,
+        srtpInformation.tlsRole,
         true
     )
 }
 
-fun createReceiver(executor: ScheduledExecutorService): RtpReceiver {
-    val receiver = RtpReceiverImpl(
+private fun createSender(executor: ScheduledExecutorService): RtpSender {
+    val sender = RtpSenderImpl(
         Random().nextLong(),
-        {},
         null,
         executor
     )
-    receiver.setSrtpTransformer(createSrtpTransformer())
-    receiver.setSrtcpTransformer(createSrtcpTransformer())
+    sender.setSrtpTransformer(createSrtpTransformer())
+    sender.setSrtcpTransformer(createSrtcpTransformer())
 
-    return receiver
+    return sender
 }
 
 fun main(args: Array<String>) {
-    val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1_rtp_and_rtcp.pcap"
+    val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1_rtp_and_rtcp_decrypted_2.pcap"
 
-    val producer = PcapPacketProducer(PcapFileInformation(pcapFile, srtpInformation))
+    val producer = PcapPacketProducer(
+        PcapFileInformation(
+            pcapFile,
+            srtpInformation
+        )
+    )
 
-    val receiverExecutor = Executors.newSingleThreadScheduledExecutor()
-    val numReceivers = 150
-    val receivers = mutableListOf<RtpReceiver>()
-    repeat(numReceivers) {
-        val receiver = createReceiver(receiverExecutor)
-        receiver.handleEvent(RtpPayloadTypeAddedEvent(100, Vp8MediaFormat()))
-        receiver.handleEvent(RtpPayloadTypeAddedEvent(111,
-            DummyAudioMediaFormat()
-        ))
-        receiver.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
-        receivers.add(receiver)
+    val senderExecutor = Executors.newSingleThreadScheduledExecutor()
+    val numSenders = 100
+    val senders = mutableListOf<RtpSender>()
+    repeat(numSenders) {
+        val sender = createSender(senderExecutor)
+        sender.handleEvent(RtpPayloadTypeAddedEvent(100, Vp8MediaFormat()))
+        sender.handleEvent(
+            RtpPayloadTypeAddedEvent(
+                111,
+                DummyAudioMediaFormat()
+            )
+        )
+        sender.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
+        senders.add(sender)
     }
 
     producer.subscribe { pkt ->
-        receivers.forEach { it.enqueuePacket(PacketInfo(pkt.clone())) }
+        senders.forEach {
+            if (RtpProtocol.isRtp(pkt.getBuffer())) {
+                it.sendPackets(listOf(PacketInfo(pkt.clone())))
+            } else {
+                it.sendRtcp(listOf(org.jitsi.rtp.rtcp.RtcpPacket.fromBuffer(pkt.clone().getBuffer())))
+            }
+        }
     }
 
     val time = measureTimeMillis {
         producer.run()
     }
     println("took $time ms")
-    receivers.forEach(RtpReceiver::stop)
-    receiverExecutor.shutdown()
-    receiverExecutor.awaitTermination(10, TimeUnit.SECONDS)
+    senders.forEach(RtpSender::stop)
+    senderExecutor.shutdown()
+    senderExecutor.awaitTermination(10, TimeUnit.SECONDS)
 
-    receivers.forEach { println(it.getStats()) }
+    senders.forEach { println(it.getStats()) }
 }

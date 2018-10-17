@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj
+package org.jitsi.nlj.module_tests
 
 import io.pkts.Pcap
 import io.pkts.packet.Packet
@@ -22,10 +22,9 @@ import io.pkts.protocol.Protocol
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.rtp.UnparsedPacket
-import java.lang.Thread.sleep
+import org.jitsi.rtp.util.ByteBufferUtils
 import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
-import kotlin.math.exp
 
 
 abstract class AbstractPacketProducer : PacketProducer {
@@ -51,10 +50,14 @@ data class PcapFileInformation(
     val srtpInformation: SrtpInformation
 )
 
+/**
+ * Read data from a PCAP file and play it out at a rate consistent with the packet arrival times.  I.e. if the PCAP
+ * file captured data flowing at 2mbps, this producer will play it out at 2mbps
+ */
 class PcapPacketProducer(
     pcapFileInformation: PcapFileInformation
 ) : AbstractPacketProducer() {
-    private val pcap = Pcap.openStream(pcapFile)
+    private val pcap = Pcap.openStream(pcapFileInformation.filePath)
     var running: Boolean = true
 
     companion object {
@@ -66,61 +69,13 @@ class PcapPacketProducer(
                 // When capturing on the loopback interface, the packets have a null ethernet
                 // frame which messes up the pkts libary's parsing, so instead use a hack to
                 // grab the buffer directly
-                ByteBuffer.wrap(pktsPacket.payload.array, 32, (pktsPacket.payload.array.size - 32)).slice()
+                ByteBufferUtils.wrapSubArray(pktsPacket.payload.rawArray, 32, pktsPacket.payload.rawArray.size - 32)
             }
             return UnparsedPacket(buf)
         }
 
-        private fun now(): Long = System.nanoTime()
-
         private fun nowMicros(): Long = System.nanoTime() / 1000
-
-        private fun getMillisNanos(micros: Long): Pair<Long, Int> {
-            val millis = micros / 1000
-            val nanos = (micros - (millis * 1000)) * 1000
-
-            return Pair(millis, nanos.toInt())
-        }
-
-        private fun microSleep(micros: Long) {
-            val (millis, nanos) = getMillisNanos(micros)
-            sleep(millis, nanos)
-        }
     }
-
-//    fun run(loop: Boolean = false) {
-//        var prevPacketArrivalTime: Long = -1
-//        var prevPacketSentTime: Long = -1
-//        var totalSize = 0
-//        while (running) {
-//            pcap.loop { pkt ->
-//                totalSize += pkt.payload.readableBytes
-//                val currPacketArrivalTime = pkt.arrivalTime
-//                println("packet arrival time $currPacketArrivalTime")
-//                if (prevPacketArrivalTime == -1L) {
-//                    prevPacketArrivalTime = currPacketArrivalTime
-//                }
-//                if (prevPacketSentTime != -1L) {
-//                    // Sleep so we get the correct pacing
-//                    val interPacketDelta = currPacketArrivalTime - prevPacketArrivalTime
-//                    val currDelta = nowMicros() - prevPacketSentTime
-//                    if (interPacketDelta > currDelta) {
-//                        microSleep(interPacketDelta - currDelta)
-//                    }
-//                }
-//                val packet = translateToUnparsedPacket(pkt)
-//                prevPacketSentTime = nowMicros()
-//                onPacket(packet)
-//
-//                prevPacketArrivalTime = currPacketArrivalTime
-//                true
-//            }
-//            if (!loop) {
-//                running = false
-//            }
-//        }
-//        println("total bytes: ${totalSize}")
-//    }
 
     fun run() {
         var firstPacketArrivalTime = -1L
@@ -133,17 +88,8 @@ class PcapPacketProducer(
                 val expectedSendTime = pkt.arrivalTime - firstPacketArrivalTime
                 val nowClockTime = nowMicros() - startTime
                 if (expectedSendTime > nowClockTime) {
-//                    println("Want to send at $expectedSendTime, current time is $nowClockTime, sleeping for ${expectedSendTime - nowClockTime}")
                     TimeUnit.MICROSECONDS.sleep(expectedSendTime - nowClockTime)
                 }
-                val sendTime = nowMicros() - startTime
-//                println("woke up at $sendTime wanted to wake up at $expectedSendTime")
-                val delta = sendTime - expectedSendTime
-//                if (delta < -1000) {
-//                    println("packet is $delta micros behind schedule")
-//                } else if (delta > 1000) {
-//                    println("packet is $delta micros ahead of schedule")
-//                }
 
                 val packet = translateToUnparsedPacket(pkt)
                 onPacket(packet)

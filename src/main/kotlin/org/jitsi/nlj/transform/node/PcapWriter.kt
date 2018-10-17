@@ -17,11 +17,9 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.pcap4j.core.Pcaps
 import org.pcap4j.packet.EthernetPacket
-import org.pcap4j.packet.IpPacket
 import org.pcap4j.packet.IpV4Packet
 import org.pcap4j.packet.IpV4Rfc1349Tos
 import org.pcap4j.packet.UdpPacket
@@ -33,17 +31,34 @@ import org.pcap4j.packet.namednumber.IpVersion
 import org.pcap4j.packet.namednumber.UdpPort
 import org.pcap4j.util.MacAddress
 import java.net.Inet4Address
-import java.net.InetAddress
 import java.nio.ByteBuffer
+import java.util.Arrays
+import java.util.Random
 
 
-class PcapWriter : Node("PCAP writer") {
+class PcapWriter(
+    filePath: String = "/tmp/${Random().nextLong()}.pcap}"
+) : Node("PCAP writer") {
     val handle = Pcaps.openDead(DataLinkType.EN10MB, 65536);
-    val writer = handle.dumpOpen("/tmp/${hashCode()}.pcap")
+    val writer = handle.dumpOpen(filePath)
+
+    init {
+        logger.cinfo { "Pcap writer writing to file $filePath" }
+    }
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEach {
             val udpPayload = UnknownPacket.Builder()
-            udpPayload.rawData(it.packet.getBuffer().array())
+            val pktBuf = it.packet.getBuffer()
+            // We can't pass offset/limit values to udpPayload.rawData, so we need to create an array that contains
+            // only exactly what we want to write
+            val subBuf = ByteBuffer.wrap(
+                Arrays.copyOfRange(
+                    pktBuf.array(),
+                    pktBuf.arrayOffset(),
+                    pktBuf.arrayOffset() + pktBuf.limit()
+                )
+            )
+            udpPayload.rawData(subBuf.array())
             val udp = UdpPacket.Builder()
                 .srcPort(UdpPort(123, "blah"))
                 .dstPort(UdpPort(456, "blah"))
