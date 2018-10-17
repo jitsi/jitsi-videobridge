@@ -98,7 +98,7 @@ fun ByteBuffer.putBitAsBoolean(byteIndex: Int, destBitPos: Int, isSet: Boolean) 
 private val HEX_CHARS = "0123456789ABCDEF".toCharArray()
 
 /**
- * Print the contents of the [ByteBuffer] as hex
+ * Print the entire contents of the [ByteBuffer] as hex
  * digits
  * TODO: should the spacing here (every 4 chunks) be right-justified?
  * (meaning, if you have a buffer with a size that isn't a multiple
@@ -112,7 +112,7 @@ fun ByteBuffer.toHex() : String {
     val result = StringBuffer()
 
     val prevPosition = position()
-    for (i in arrayOffset() until limit()) {
+    for (i in 0 until limit()) {
         val octet = get(i).toInt()
         val firstIndex = (octet and 0xF0).ushr(4)
         val secondIndex = octet and 0x0F
