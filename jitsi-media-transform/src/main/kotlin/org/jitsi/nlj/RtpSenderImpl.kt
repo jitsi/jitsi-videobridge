@@ -124,8 +124,8 @@ class RtpSenderImpl(
     }
 
     override fun sendPackets(pkts: List<PacketInfo>) {
-        incomingPacketQueue.addAll(pkts)
         pkts.forEach { numIncomingBytes += it.packet.size }
+        incomingPacketQueue.addAll(pkts)
         if (firstPacketWrittenTime == -1L) {
             firstPacketWrittenTime = System.currentTimeMillis()
         }

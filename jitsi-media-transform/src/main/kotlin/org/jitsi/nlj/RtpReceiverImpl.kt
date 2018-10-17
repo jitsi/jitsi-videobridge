@@ -268,8 +268,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun enqueuePacket(p: PacketInfo) {
 //        logger.cinfo { "Receiver ${hashCode()} enqueing data" }
-        incomingPacketQueue.add(p)
         bytesReceived += p.packet.size
+        incomingPacketQueue.add(p)
         packetsReceived++
         if (firstPacketWrittenTime == 0L) {
             firstPacketWrittenTime = System.currentTimeMillis()
