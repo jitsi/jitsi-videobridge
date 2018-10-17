@@ -88,6 +88,7 @@ public class JvbBundleConfig
             // TCP harvester (started as part of Videobridge) does.
             "org/jitsi/videobridge/rest/RESTBundleActivator",
             "org/jitsi/videobridge/rest/PublicRESTBundleActivator",
+            "org/jitsi/videobridge/rest/PublicClearPortRedirectBundleActivator",
             "org/jitsi/videobridge/stats/StatsManagerBundleActivator",
             "org/jitsi/videobridge/EndpointConnectionStatus"
         },

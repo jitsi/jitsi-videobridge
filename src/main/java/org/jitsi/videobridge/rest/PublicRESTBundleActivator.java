@@ -402,14 +402,16 @@ public class PublicRESTBundleActivator
         {
             privatePort
                 = cfg.getInt(
-                    RESTBundleActivator.JETTY_PROPERTY_PREFIX + ".jetty.port",
+                    RESTBundleActivator.JETTY_PROPERTY_PREFIX
+                        + JETTY_PORT_PNAME,
                     8080);
         }
         else
         {
             privatePort
                 = cfg.getInt(
-                    RESTBundleActivator.JETTY_PROPERTY_PREFIX + ".jetty.tls.port",
+                    RESTBundleActivator.JETTY_PROPERTY_PREFIX
+                        + JETTY_TLS_PORT_PNAME,
                     8443);
         }
 
