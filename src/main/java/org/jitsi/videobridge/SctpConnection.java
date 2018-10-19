@@ -436,7 +436,6 @@ public class SctpConnection
      */
     @Override
     protected void maybeStartStream()
-        throws IOException
     {
         // connector
         final StreamConnector connector = getStreamConnector();
@@ -450,36 +449,29 @@ public class SctpConnection
                 return;
 
             threadPool.execute(
-                    new Runnable()
+                () -> {
+                    try
                     {
-                        @Override
-                        public void run()
+                        Sctp.init();
+
+                        runOnDtlsTransport(connector);
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error(e, e);
+                    }
+                    finally
+                    {
+                        try
                         {
-                            try
-                            {
-                                Sctp.init();
-        
-                                runOnDtlsTransport(connector);
-                            }
-                            catch (IOException e)
-                            {
-                                logger.error(e, e);
-                            }
-                            finally
-                            {
-                                try
-                                {
-                                    Sctp.finish();
-                                }
-                                catch (IOException e)
-                                {
-                                    logger.error(
-                                            "Failed to shutdown SCTP stack",
-                                            e);
-                                }
-                            }
+                            Sctp.finish();
                         }
-                    });
+                        catch (IOException e)
+                        {
+                            logger.error("Failed to shutdown SCTP stack", e);
+                        }
+                    }
+                });
 
             started = true;
         }
