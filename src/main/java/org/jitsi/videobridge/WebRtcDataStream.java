@@ -136,7 +136,19 @@ public class WebRtcDataStream
     public void onStringMsg(String stringMsg)
     {
         if(dataCallback != null)
+        {
             dataCallback.onStringData(this, stringMsg);
+        }
+        else
+        {
+            // NOTE consider adding analytics for the missed out data to detect
+            // bugs ?
+            logger.error(
+                String.format(
+                    "Unprocessed data on %s (SID=%d) - no callback registered",
+                    sctpConnection.getLoggingId(),
+                    sid));
+        }
     }
 
     /**
@@ -177,7 +189,19 @@ public class WebRtcDataStream
     public void onBinaryMsg(byte[] binMsg)
     {
         if(dataCallback != null)
+        {
             dataCallback.onBinaryData(this, binMsg);
+        }
+        else
+        {
+            // NOTE consider adding analytics for the missed out data to detect
+            // bugs ?
+            logger.error(
+                String.format(
+                    "Unprocessed data on %s (SID=%d) - no callback registered",
+                    sctpConnection.getLoggingId(),
+                    sid));
+        }
     }
 
     /**
