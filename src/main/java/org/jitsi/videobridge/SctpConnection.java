@@ -776,61 +776,7 @@ public class SctpConnection
             byte[] data, int sid, int ssn, int tsn, long ppid, int context,
             int flags)
     {
-        if (ppid == WEB_RTC_PPID_CTRL)
-        {
-            // Channel control PPID
-            try
-            {
-                onCtrlPacket(data, sid);
-            }
-            catch (IOException e)
-            {
-                logger.error("IOException when processing ctrl packet", e);
-            }
-        }
-        else if (ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
-        {
-            WebRtcDataStream channel;
-
-            synchronized (syncRoot)
-            {
-                channel = channels.get(sid);
-            }
-
-            if (channel == null)
-            {
-                logger.error("No channel found for sid: " + sid);
-                return;
-            }
-            if (ppid == WEB_RTC_PPID_STRING)
-            {
-                // WebRTC String
-                String str;
-                String charsetName = "UTF-8";
-
-                try
-                {
-                    str = new String(data, charsetName);
-                }
-                catch (UnsupportedEncodingException uee)
-                {
-                    logger.error(
-                            "Unsupported charset encoding/name " + charsetName,
-                            uee);
-                    str = null;
-                }
-                channel.onStringMsg(str);
-            }
-            else
-            {
-                // WebRTC Binary
-                channel.onBinaryMsg(data);
-            }
-        }
-        else
-        {
-            logger.warn("Got message on unsupported PPID: " + ppid);
-        }
+        processSctpPacket(data, sid, ssn, tsn, ppid, context, flags);
     }
 
     /**
@@ -945,6 +891,73 @@ public class SctpConnection
         channels.put(sid, channel);
 
         return channel;
+    }
+
+    /**
+     * Method called from
+     * {@link #onSctpPacket(byte[], int, int, int, long, int, int)} which
+     * processes incoming SCTP packets.
+     *
+     * @see {@link SctpDataCallback#onSctpPacket(byte[], int, int, int, long, int, int)}
+     * for arguments description.
+     */
+    private void processSctpPacket(
+            byte[] data,
+            int sid, int ssn, int tsn, long ppid, int context, int flags)
+    {
+        if (ppid == WEB_RTC_PPID_CTRL)
+        {
+            // Channel control PPID
+            try
+            {
+                onCtrlPacket(data, sid);
+            }
+            catch (IOException e)
+            {
+                logger.error("IOException when processing ctrl packet", e);
+            }
+        }
+        else if (ppid == WEB_RTC_PPID_STRING || ppid == WEB_RTC_PPID_BIN)
+        {
+            WebRtcDataStream channel;
+
+            synchronized (syncRoot)
+            {
+                channel = channels.get(sid);
+            }
+
+            if (channel == null)
+            {
+                logger.error("No channel found for sid: " + sid);
+                return;
+            }
+            if (ppid == WEB_RTC_PPID_STRING)
+            {
+                // WebRTC String
+                String charsetName = "UTF-8";
+
+                try
+                {
+                    final String str = new String(data, charsetName);
+                    channel.onStringMsg(str);
+                }
+                catch (UnsupportedEncodingException uee)
+                {
+                    logger.error(
+                        "Unsupported charset encoding/name " + charsetName,
+                        uee);
+                }
+            }
+            else
+            {
+                // WebRTC Binary
+                channel.onBinaryMsg(data);
+            }
+        }
+        else
+        {
+            logger.warn("Got message on unsupported PPID: " + ppid);
+        }
     }
 
     /**
