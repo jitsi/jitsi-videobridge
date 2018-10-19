@@ -662,7 +662,12 @@ public class SctpConnection
             WebRtcDataStream.DataCallback oldCallback = null;
             if (channels.containsKey(sid))
             {
-                logger.log(Level.WARNING, Logger.Category.STATISTICS,
+                // FIXME According to the RFC the DTLS initiator should be using
+                // even and the responder odd SID numbers, so such conflict
+                // should never happen. If it happens then the JVB should
+                // shutdown (reset) the SCTP stream identified by
+                // the conflicting SID.
+                logger.log(Level.SEVERE, Logger.Category.STATISTICS,
                            "sctp_channel_exists," + getLoggingId()
                            + " sid=" + sid);
                 oldCallback = channels.get(sid).getDataCallback();
