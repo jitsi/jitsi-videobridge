@@ -736,7 +736,7 @@ public class BitrateController
                 maxBandwidth -= trackBitrateAllocation.getTargetBitrate();
 
                 newRatedTargetIndicies[i]
-                    = trackBitrateAllocation.getTargetIndex();
+                    = trackBitrateAllocation.ratedTargetIdx;
                 if (trackBitrateAllocation.getTargetIndex() > -1)
                 {
                     newStateLen++;
