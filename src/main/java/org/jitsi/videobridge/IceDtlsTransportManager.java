@@ -95,10 +95,12 @@ public class IceDtlsTransportManager
         logger.info("BRIAN: finished IceDtlsTransportManager ctor");
     }
 
+    //TODO: need to take another look and make sure we're properly replicating all the behavior of this
+    // method in IceUdpTransportManager
     @Override
     public void startConnectivityEstablishment(IceUdpTransportPacketExtension transport)
     {
-        logger.info("BRIAN: starting connectivity establishment with extension: " + transport);
+        logger.info("BRIAN: starting connectivity establishment with extension: " + transport.toXML());
         // Get the remote fingerprints and set them in the DTLS stack so we
         // have them to do the DTLS handshake later
         List<DtlsFingerprintPacketExtension> dfpes
@@ -106,15 +108,19 @@ public class IceDtlsTransportManager
                 DtlsFingerprintPacketExtension.class);
         logger.info("BRIAN: have " + dfpes.size() + " remote fingerprints");
 
-            Map<String, String> remoteFingerprints = new HashMap<>();
-            dfpes.forEach(dfpe -> {
+        Map<String, String> remoteFingerprints = new HashMap<>();
+        dfpes.forEach(dfpe -> {
+            if (dfpe.getHash() != null && dfpe.getFingerprint() != null) {
                 logger.info("Adding fingerprint " + dfpe.getHash() + " -> " + dfpe.getFingerprint());
                 remoteFingerprints.put(dfpe.getHash(), dfpe.getFingerprint());
-            });
-//            getTransceivers().forEach(transceiver -> {
-//                transceiver.setRemoteFingerprints(remoteFingerprints);
-//            });
-//            transceiver.setRemoteFingerprints(remoteFingerprints);
+            } else {
+                logger.info("Ignoring empty transport extension");
+            }
+        });
+        if (remoteFingerprints.isEmpty()) {
+            logger.info("Empty transport extension, not starting connectivity yet");
+            return;
+        }
 
         // Set the remote ufrag/password
         if (transport.getUfrag() != null) {
