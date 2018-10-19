@@ -90,7 +90,7 @@ public class SimulcastController
      * rewriting.
      */
     private static final boolean ENABLE_VP8_PICID_REWRITING =
-        cfg != null && cfg.getBoolean(ENABLE_VP8_PICID_REWRITING_PNAME, false);
+        cfg != null && cfg.getBoolean(ENABLE_VP8_PICID_REWRITING_PNAME, true);
 
     /**
      * Index used to represent that forwarding is suspended.
@@ -533,13 +533,13 @@ public class SimulcastController
     }
 
     /**
-     * Update the optimal subjective quality index for this instance.
+     * Update the ideal subjective quality index for this instance.
      *
-     * @param optimalIndex new optimal subjective quality index.
+     * @param idealIndex new ideal subjective quality index.
      */
-    protected void setOptimalIndex(int optimalIndex)
+    protected void setIdealIndex(int idealIndex)
     {
-        bitstreamController.setOptimalIndex(optimalIndex);
+        bitstreamController.setIdealIndex(idealIndex);
     }
 
     /**
@@ -638,11 +638,11 @@ public class SimulcastController
     }
 
     /**
-     * Gets the optimal subjective quality index for this instance.
+     * Gets the ideal subjective quality index for this instance.
      */
-    protected int getOptimalIndex()
+    protected int getIdealIndex()
     {
-        return bitstreamController.getOptimalIndex();
+        return bitstreamController.getIdealIndex();
     }
 
     /**
@@ -744,9 +744,9 @@ public class SimulcastController
         private int targetIdx = SUSPENDED_INDEX;
 
         /**
-         * The optimal subjective quality index for this instance.
+         * The ideal subjective quality index for this instance.
          */
-        private int optimalIdx = SUSPENDED_INDEX;
+        private int idealIdx = SUSPENDED_INDEX;
 
         /**
          * The current subjective quality index for this instance. If this is
@@ -1209,11 +1209,11 @@ public class SimulcastController
         }
 
         /**
-         * Gets the optimal subjective quality index for this instance.
+         * Gets the ideal subjective quality index for this instance.
          */
-        int getOptimalIndex()
+        int getIdealIndex()
         {
-            return optimalIdx;
+            return idealIdx;
         }
 
         /**
@@ -1244,14 +1244,14 @@ public class SimulcastController
         }
 
         /**
-         * Sets the optimal subjective quality index for this instance.
+         * Sets the ideal subjective quality index for this instance.
          *
-         * @param newOptimalIdx the new optimal subjective quality index for
+         * @param newIdealIdx the new ideal subjective quality index for
          * this instance.
          */
-        void setOptimalIndex(int newOptimalIdx)
+        void setIdealIndex(int newIdealIdx)
         {
-            this.optimalIdx = newOptimalIdx;
+            this.idealIdx = newIdealIdx;
         }
 
         /**
