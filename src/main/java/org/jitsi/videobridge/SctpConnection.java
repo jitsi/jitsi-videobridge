@@ -677,7 +677,7 @@ public class SctpConnection
             }
 
             WebRtcDataStream newChannel
-                = new WebRtcDataStream(sctpSocket, sid, label, true);
+                = new WebRtcDataStream(this, sctpSocket, sid, label, true);
             channels.put(sid, newChannel);
 
             if (oldCallback != null)
@@ -886,7 +886,7 @@ public class SctpConnection
             throw new IOException("Failed to open new chanel on sid: " + sid);
 
         WebRtcDataStream channel
-            = new WebRtcDataStream(sctpSocket, sid, label, false);
+            = new WebRtcDataStream(this, sctpSocket, sid, label, false);
 
         channels.put(sid, channel);
 
