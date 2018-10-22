@@ -7,7 +7,15 @@ libjitsiVersion = $(shell dpkg -s libjitsi | grep Version: | awk '{print $$2}')
 jitsi-commonVersion = $(shell dpkg -s jitsi-common | grep Version: | awk '{print $$2}')
 
 %:
-	dh $@
+	dh $@ --with systemd
+
+override_dh_installinit:
+	dh_installinit --noscripts
+
+override_dh_auto_install:
+	dh_auto_install
+	dh_systemd_enable || true
+	dh_systemd_start || true
 
 override_dh_gencontrol:
 	dh_gencontrol -- -Vlibjitsi:version="$(libjitsiVersion)" \

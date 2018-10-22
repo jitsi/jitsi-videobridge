@@ -44,8 +44,13 @@ done
 shift "$((OPTIND-1))"
 
 # Try the pid file, if no pid was provided as an argument.
+# for systemd we use different pid file in a subfolder
 if [ "$pid" = "" ] ;then
-    pid=`cat /var/run/jitsi-videobridge.pid`
+    if [ -f /var/run/jitsi-videobridge.pid ]; then
+        pid=`cat /var/run/jitsi-videobridge.pid`
+    else
+        pid=`cat /var/run/jitsi-videobridge/jitsi-videobridge.pid`
+    fi
 fi
 
 #Check if PID is a number
@@ -117,6 +122,7 @@ then
 		fi
 	fi
     rm -f /var/run/jitsi-videobridge.pid
+    rm -f /var/run/jitsi-videobridge/jitsi-videobridge.pid
 	printInfo "Bridge shutdown OK"
 	exit 0
 else

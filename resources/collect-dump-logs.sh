@@ -11,6 +11,11 @@ JVB_UID=`id -u jvb`
 RUNNING=""
 unset PID
 
+# for systemd we use different pid file
+if [ ! -f $PID_PATH ]; then
+    PID_PATH="/var/run/jitsi-videobridge/jitsi-videobridge.pid"
+fi
+
 [ -e $PID_PATH ] && PID=$(cat $PID_PATH)
 if [ ! -z $PID ]; then
    ps -p $PID | grep -q java
