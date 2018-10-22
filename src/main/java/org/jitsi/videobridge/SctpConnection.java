@@ -439,7 +439,7 @@ public class SctpConnection
                             s -> isInitiator()
                                 ? s.getSid() % 2 == 1
                                 : s.getSid() % 2 == 0)
-                        .reduce((s1, s2) -> s1.getSid() > s2.getSid() ? s1 : s2)
+                        .max(Comparator.comparingInt(WebRtcDataStream::getSid))
                         .orElse(null);
 
                 if (highestClientSid != null)
@@ -450,7 +450,7 @@ public class SctpConnection
                 // Return the highest SID (probably will be the JVB's one)
                 return channels.values()
                     .stream()
-                    .reduce((s1, s2) -> s1.getSid() > s2.getSid() ? s1 : s2)
+                    .max(Comparator.comparingInt(WebRtcDataStream::getSid))
                     .orElse(null);
             }
 
