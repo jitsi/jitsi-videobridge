@@ -80,7 +80,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     //Public for now since the channel needs to reach in and grab it
     public Transceiver transceiver;
-    private static ScheduledExecutorService transceiverExecutor = Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Transceiver executor thread"));
+//    private static ScheduledExecutorService transceiverExecutor = Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Transceiver executor thread"));
+    private static ScheduledExecutorService transceiverExecutor = Executors.newScheduledThreadPool(10, new NameableThreadFactory("Transceiver executor thread"));
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.

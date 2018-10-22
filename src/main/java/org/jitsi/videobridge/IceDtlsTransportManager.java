@@ -140,16 +140,18 @@ public class IceDtlsTransportManager
         logger.info("BRIAN: call to startConnectivityEstablishment returned");
     }
 
-    private List<Transceiver> getTransceivers() {
-        List<Transceiver> transceivers = new ArrayList<>();
-        getChannels().forEach(channel -> {
+    private Transceiver getTransceiver() {
+        List<Channel> channels = getChannels();
+        for (Channel channel : channels) {
             if (channel instanceof RtpChannel)
             {
                 RtpChannel rtpChannel = (RtpChannel) channel;
-                transceivers.add(rtpChannel.getEndpoint().transceiver);
+                if (rtpChannel.getEndpoint() != null && rtpChannel.getEndpoint().transceiver != null) {
+                    return rtpChannel.getEndpoint().transceiver;
+                }
             }
-        });
-        return transceivers;
+        }
+        return null;
     }
 
     @Override
@@ -246,17 +248,8 @@ public class IceDtlsTransportManager
         srtpPipelineBuilder.simpleNode("SRTP path", packetInfos -> {
             // Every srtp packet will go to every transceiver.  The transceivers are responsible
             // for filtering out the payload types they don't want
-            getTransceivers().forEach(transceiver -> {
-               packetInfos.forEach( pktInfo -> {
-                   // TODO(brian): we need to copy the packet for each transceiver for now, because
-                   //  although each transceiver filters out the rtp they don't care about (audio
-                   //  vs video), rtcp will be handled by both.  In the future, a single transceiver
-                   //  should be shared by the channels and we can filter ALL rtcp out in
-                   //  a single path in the transceiver itself and let the receiver just worry about
-                   //  rtp
-                   PacketInfo copy = pktInfo.clone();
-                   transceiver.handleIncomingPacket(copy);
-               });
+            packetInfos.forEach( pktInfo -> {
+                getTransceiver().handleIncomingPacket(pktInfo);
             });
             return Collections.emptyList();
         });
@@ -277,37 +270,36 @@ public class IceDtlsTransportManager
     // Start a thread for each transceiver.  Each thread will read from the transceiver's outgoing queue
     // and send that data on the shared socket
     private void installTransceiverOutgoingPacketSenders(MultiplexingDatagramSocket s) {
-        getTransceivers().forEach(transceiver -> {
-            new Thread(() -> {
-                while (true) {
-                    try
-                    {
-                        PacketInfo pktInfo = transceiver.getOutgoingQueue().take();
-                        Packet pkt = pktInfo.getPacket();
+        new Thread(() -> {
+            Transceiver transceiver = getTransceiver();
+            while (true) {
+                try
+                {
+                    PacketInfo pktInfo = transceiver.getOutgoingQueue().take();
+                    Packet pkt = pktInfo.getPacket();
 //                        logger.info("outgoing writer, packet has " + pktInfo.getMetaData().size() + " metadata: ");
 //                        pktInfo.getMetaData().forEach((name, value) -> {
 //                            logger.info(name + " -> " + value);
 //                        });
-                        pktInfo.getMetaData().forEach((name, value) -> {
-                            if (name instanceof String && ((String) name).contains("TimeTag"))
-                            {
-                                Long timestamp = (Long)value;
-                                SrtpPacket packet = (SrtpPacket)pktInfo.getPacket();
+                    pktInfo.getMetaData().forEach((name, value) -> {
+                        if (name instanceof String && ((String) name).contains("TimeTag"))
+                        {
+                            Long timestamp = (Long)value;
+                            SrtpPacket packet = (SrtpPacket)pktInfo.getPacket();
 //                                logger.info("Packet " + packet.getHeader().getSsrc() + " " +
 //                                        packet.getHeader().getSequenceNumber() + " took " +
 //                                        (System.currentTimeMillis() - timestamp) + "ms from received to sent");
-                            }
-                        });
+                        }
+                    });
 //                    System.out.println("BRIAN: transceiver writer thread sending packet " + p.toString());
-                        s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
-                    } catch (InterruptedException | IOException e)
-                    {
-                        e.printStackTrace();
-                        break;
-                    }
+                    s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
+                } catch (InterruptedException | IOException e)
+                {
+                    e.printStackTrace();
+                    break;
                 }
-            }, "Outgoing write thread").start();
-        });
+            }
+        }, "Outgoing write thread").start();
     }
 
     // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver
@@ -363,9 +355,12 @@ public class IceDtlsTransportManager
             System.out.println("BRIAN: dtls handshake complete, got srtp profile: " + dtlsStack.getChosenSrtpProtectionProfile());
             dtlsReceiver.setDtlsTransport(dtlsTransport);
             this.dtlsTransport = dtlsTransport;
-            getTransceivers().forEach(transceiver -> {
+            Transceiver transceiver = getTransceiver();
+            if (transceiver != null) {
                 transceiver.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
-            });
+            } else {
+                logger.error("Couldn't get transceiver to set srtp information");
+            }
             return Unit.INSTANCE;
         });
         packetSender.socket = s;
@@ -492,6 +487,5 @@ public class IceDtlsTransportManager
             {
             }
         }
-
     }
 }
