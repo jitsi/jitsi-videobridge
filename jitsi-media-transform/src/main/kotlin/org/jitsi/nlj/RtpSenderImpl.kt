@@ -59,6 +59,7 @@ class RtpSenderImpl(
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
     private val rtcpSrGenerator = RtcpSrGenerator(executor, { rtcpPacket -> sendRtcp(listOf(rtcpPacket)) } , statTracker)
+    private val nackHandler: NackHandler
 
     private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
         override fun doProcessPackets(p: List<PacketInfo>) {
@@ -95,6 +96,8 @@ class RtpSenderImpl(
             node(absSendTime)
         }
 
+        nackHandler = NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
+
         //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
         outgoingRtcpRoot = pipeline {
             simpleNode("RTCP sender ssrc setter") { pktInfos ->
@@ -118,10 +121,7 @@ class RtpSenderImpl(
         scheduleWork()
     }
 
-    override fun getNackHandler(): NackHandler {
-        //TODO: don't return a new one every time
-        return NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
-    }
+    override fun getNackHandler(): NackHandler = nackHandler
 
     override fun sendPackets(pkts: List<PacketInfo>) {
         pkts.forEach { numIncomingBytes += it.packet.size }
@@ -171,6 +171,7 @@ class RtpSenderImpl(
             appendLnIndent(indent + 2, "$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             appendLnIndent(indent + 2, "Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
             appendLnIndent(indent + 2, "Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
+            appendLnIndent(indent + 2, "nack handler stats: ${nackHandler.getStats(indent + 2)}")
             val statsVisitor = NodeStatsVisitor(this)
             outputPipelineTerminationNode.reverseVisit(statsVisitor)
 

@@ -105,7 +105,6 @@ class RetransmissionSender : Node("Retransmission sender") {
     override fun getStats(indent: Int): String {
         return with(StringBuffer()) {
             append(super.getStats(indent))
-            appendLnIndent(indent, "RetransmissionSender")
             appendLnIndent(indent + 2, "num retransmitted packets: $numRetransmittedPackets")
 
             toString()
