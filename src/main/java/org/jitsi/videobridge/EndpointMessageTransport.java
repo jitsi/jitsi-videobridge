@@ -82,6 +82,12 @@ class EndpointMessageTransport
         = new WeakReference<>(null);
 
     /**
+     * The {@link WebRtcDataStream} currently used by this
+     * {@link EndpointMessageTransport} instance for writing.
+     */
+    private WebRtcDataStream webrtcDataStream;
+
+    /**
      * The listener which will be added to {@link SctpConnection}s associated
      * with this endpoint, which will be notified when {@link SctpConnection}s
      * become ready.
@@ -95,26 +101,14 @@ class EndpointMessageTransport
         = new WebRtcDataStreamListener()
     {
         @Override
-        public void onSctpConnectionReady(
-            SctpConnection source)
+        public void onChannelOpened(
+                SctpConnection source, WebRtcDataStream channel)
         {
-            if (source != null)
+            SctpConnection currentConnection = getSctpConnection();
+
+            if (source.equals(currentConnection))
             {
-                if (source.equals(getSctpConnection()))
-                {
-                    try
-                    {
-                        WebRtcDataStream dataStream
-                            = source.getDefaultDataStream();
-                        dataStream.setDataCallback(EndpointMessageTransport.this);
-                        notifyTransportChannelConnected();
-                    }
-                    catch (IOException e)
-                    {
-                        logger.error("Could not get the default data stream.", e);
-                    }
-                }
-                source.removeChannelListener(this);
+                hookUpDefaultWebRtcDataChannel(currentConnection);
             }
         }
     };
@@ -130,6 +124,41 @@ class EndpointMessageTransport
         this.logger
             = Logger.getLogger(
                     classLogger, endpoint.getConference().getLogger());
+    }
+
+    /**
+     * At the time when new data chanel is opened or {@link SctpConnection}
+     * instance is replaced, this method will reelect the default WebRTC data
+     * channel (the one that's used for writing).
+     *
+     * @param connection - The currently used {@link SctpConnection} instance
+     * from which the default data channel will be obtained.
+     */
+    private void hookUpDefaultWebRtcDataChannel(SctpConnection connection)
+    {
+        // FIXME make "data stream" vs "data channel" naming consistent in both
+        // code and comments
+        WebRtcDataStream _defaultStream
+            = connection != null ? connection.getDefaultDataStream() : null;
+
+        if (_defaultStream != null)
+        {
+            WebRtcDataStream oldDataStream = this.webrtcDataStream;
+
+            this.webrtcDataStream = _defaultStream;
+
+            _defaultStream.setDataCallback(EndpointMessageTransport.this);
+
+            if (oldDataStream == null)
+            {
+                logger.info(
+                    String.format(
+                        "WebRTC data channel established for %s",
+                        connection.getLoggingId()));
+
+                notifyTransportChannelConnected();
+            }
+        }
     }
 
     /**
@@ -389,7 +418,6 @@ class EndpointMessageTransport
      * will be returned.
      */
     private Object getActiveTransportChannel()
-        throws IOException
     {
         SctpConnection sctpConnection = getSctpConnection();
         ColibriWebSocket webSocket = this.webSocket;
@@ -407,7 +435,7 @@ class EndpointMessageTransport
         {
             if (sctpConnection != null && sctpConnection.isReady())
             {
-                dst = sctpConnection.getDefaultDataStream();
+                dst = webrtcDataStream;
 
                 if (dst == null)
                 {
@@ -557,18 +585,32 @@ class EndpointMessageTransport
 
             if (sctpConnection != null)
             {
-                if (sctpConnection.isReady())
-                {
-                    notifyTransportChannelConnected();
-                }
-                else
-                {
-                    sctpConnection.addChannelListener(webRtcDataStreamListener);
-                }
+                hookUpDefaultWebRtcDataChannel(sctpConnection);
+
+                sctpConnection.addChannelListener(webRtcDataStreamListener);
             }
 
             if (oldValue != null)
             {
+                // Unregister data callback from all data channels associated
+                // with the old connection
+                oldValue.forEachDataStream((stream -> {
+                    if (stream.getDataCallback() == this)
+                    {
+                        stream.setDataCallback(null);
+                    }
+                }));
+
+                // It's the case when there's no default data channel available
+                // in the new SCTP connection (because the call to
+                // hookUpDefaultWebRtcDataChannel didn't select any) and where
+                // the current one belongs to the old SCTP connection.
+                if (webrtcDataStream != null
+                    && webrtcDataStream.getSctpConnection() == oldValue)
+                {
+                    webrtcDataStream = null;
+                }
+
                 oldValue.removeChannelListener(webRtcDataStreamListener);
             }
         }
