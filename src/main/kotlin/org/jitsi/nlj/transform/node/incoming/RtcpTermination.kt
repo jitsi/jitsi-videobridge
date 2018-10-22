@@ -20,11 +20,14 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtcpRrGenerator
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.rtcp.RtcpByePacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
+import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
@@ -42,6 +45,7 @@ class RtcpTermination(
 ) : Node("RTCP termination") {
     //TODO: change this to use rtcpListeners
     var nackHandler: NackHandler? = null
+    private var numNacksReceived = 0
     /**
      * Set of entities interested in being notified of received RTCP packets
      */
@@ -60,19 +64,31 @@ class RtcpTermination(
             val pkt = packetInfo.packet
             when (pkt) {
                 is RtcpFbTccPacket -> handleTccPacket(pkt)
+                is RtcpFbNackPacket -> {
+                    numNacksReceived++
+                    nackHandler?.onNackPacket(pkt)
+                }
                 is RtcpSrPacket -> {
+                    //TODO
                 }
                 is RtcpRrPacket -> {
                     //TODO
                 }
-                is RtcpFbNackPacket -> {
-                    nackHandler?.onNackPacket(pkt)
+                is RtcpByePacket -> {
+                    logger.cinfo { "BRIAN: got BYE packet:\n ${pkt.getBuffer().toHex()}"}
+                    //TODO
+                }
+                is RtcpSdesPacket -> {
+                    //TODO
                 }
                 is RtcpFbPliPacket, is RtcpFbFirPacket -> {
                     // We'll let these pass through and be forwarded to the sender who will be
                     // responsible for translating/aggregating them
                     logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}" }
                     outPackets.add(packetInfo)
+                }
+                else -> {
+                    logger.cinfo { "TODO: not yet handling RTCP packet of type ${pkt.javaClass}"}
                 }
             }
             //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
@@ -83,5 +99,14 @@ class RtcpTermination(
 
     private fun handleTccPacket(tccPacket: RtcpFbTccPacket) {
         transportCcEngine?.tccReceived(tccPacket)
+    }
+
+    override fun getStats(indent: Int): String {
+        return with(StringBuffer()) {
+            append(super.getStats(indent))
+            appendLnIndent(indent + 2, "num nack packets rx: $numNacksReceived")
+
+            toString()
+        }
     }
 }

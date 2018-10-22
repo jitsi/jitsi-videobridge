@@ -39,7 +39,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 // All of this information is specific to the pcap file
-const val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1.pcap"
+const val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1_rtp_and_rtcp.pcap"
 const val numExpectedPackets = 24501
 val srtpProfileInformation = SrtpProfileInformation(
     cipherKeyLength=16,

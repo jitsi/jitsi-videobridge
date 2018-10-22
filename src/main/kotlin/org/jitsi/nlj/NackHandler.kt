@@ -17,7 +17,9 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getByteBuffer
+import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
@@ -34,6 +36,8 @@ class NackHandler(
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0
+    private var numCacheMisses = 0
+    private val logger = getLogger(this.javaClass)
 
     fun onNackPacket(nackPacket: RtcpFbNackPacket) {
         numNacksReceived++
@@ -45,6 +49,9 @@ class NackHandler(
             if (packet != null) {
                 nackedPackets.add(RtpPacket(packet.getByteBuffer()))
                 numRetransmittedPackets++
+            } else {
+                logger.cdebug { "Nack'd packet $ssrc $missingSeqNum wasn't in cache, unable to retransmit" }
+                numCacheMisses++
             }
         }
         if (nackedPackets.isNotEmpty()) {
@@ -58,6 +65,7 @@ class NackHandler(
             appendLnIndent(indent + 2, "num nack packets received: $numNackedPackets")
             appendLnIndent(indent + 2, "num nacked packets: $numNackedPackets")
             appendLnIndent(indent + 2, "num retransmitted packets: $numRetransmittedPackets")
+            appendLnIndent(indent + 2, "num cache misses: $numCacheMisses")
             toString()
         }
     }
