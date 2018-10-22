@@ -17,7 +17,7 @@ package org.jitsi.videobridge;
 
 /**
  * Interface used to notify about WebRTC data channels opened by
- * remote peer.
+ * {@link SctpConnection}.
  *
  * @author Pawel Domas
  * @author Lyubomir Marinov
@@ -27,6 +27,8 @@ public interface WebRtcDataStreamListener
     /**
      * Fired when new WebRTC data channel is opened.
      *
+     * NOTE It's important that the listener will not do any blocking operations
+     *
      * @param source the <tt>SctpConnection</tt> which is the source of the
      * event
      * @param channel the <tt>WebRtcDataStream</tt> that represents opened
@@ -35,18 +37,6 @@ public interface WebRtcDataStreamListener
     default void onChannelOpened(
             SctpConnection source,
             WebRtcDataStream channel)
-    {
-    }
-
-    /**
-     * Indicates that a <tt>SctpConnection</tt> has established SCTP connection.
-     * After that it can be used to either open WebRTC data channel or listen
-     * for channels opened by remote peer.
-     *
-     * @param source the <tt>SctpConnection</tt> which is the source of the
-     * event i.e. which has established an SCTP connection
-     */
-    default void onSctpConnectionReady(SctpConnection source)
     {
     }
 }
