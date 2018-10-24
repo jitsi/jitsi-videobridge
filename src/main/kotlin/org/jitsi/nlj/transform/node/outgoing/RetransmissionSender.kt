@@ -53,7 +53,8 @@ class RetransmissionSender : Node("Retransmission sender") {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
             logger.cdebug { "Retransmission sender ${hashCode()} retransmitting packet with original ssrc " +
-                    "${pkt.header.ssrc} and original payload type: ${pkt.header.payloadType}" }
+                    "${pkt.header.ssrc}, original sequence number ${pkt.header.sequenceNumber} and original " +
+                    "payload type: ${pkt.header.payloadType}" }
             val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: return@forEachAs
             val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: return@forEachAs
             // Get a default value of 1 to start if it isn't present in the map.  If it is present
@@ -66,6 +67,7 @@ class RetransmissionSender : Node("Retransmission sender") {
             rtxPacket.header.sequenceNumber = rtxSeqNum
             logger.cdebug { "Sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
             packetInfo.packet = rtxPacket
+            numRetransmittedPackets++
 
             outPackets.add(packetInfo)
         }
