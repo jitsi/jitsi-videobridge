@@ -48,6 +48,16 @@ class EventTimeline(
 
     override fun iterator(): Iterator<Pair<String, Long>> = timeline.iterator()
 
+    /**
+     * Return the total time between this packet's first event and last event
+     */
+    fun totalDelay(): Duration {
+        return referenceTime?.let {
+            return Duration.ofMillis(timeline.last().second - it)
+
+        } ?: Duration.ofMillis(0)
+    }
+
     override fun toString(): String {
         return with (StringBuffer()) {
             appendln("Reference time: ${referenceTime}ms")
