@@ -49,6 +49,9 @@ class RetransmissionSender : Node("Retransmission sender") {
 
     private var numRetransmittedPackets = 0
 
+    /**
+     * Creates RTX packets from the given RTP packets and passes them down the pipeline
+     */
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
@@ -65,7 +68,8 @@ class RetransmissionSender : Node("Retransmission sender") {
             rtxPacket.header.ssrc = rtxSsrc
             rtxPacket.header.payloadType = rtxPt
             rtxPacket.header.sequenceNumber = rtxSeqNum
-            logger.cdebug { "Sending RTX packet with ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
+            logger.cdebug { "Retransmission sender ${hashCode()} sending RTX packet with " +
+                    "ssrc $rtxSsrc with pt $rtxPt and seqNum $rtxSeqNum" }
             packetInfo.packet = rtxPacket
             numRetransmittedPackets++
 
