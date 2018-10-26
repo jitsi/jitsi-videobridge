@@ -20,27 +20,29 @@ import org.jitsi.rtp.extensions.clone
 import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
+/**
+ * https://tools.ietf.org/html/rfc4585#section-6.2.1
+ */
 class RtcpFbNackPacket : TransportLayerFbPacket {
-    private var fci: Nack
+    private var fci: NackFci
     val missingSeqNums
         get() = fci.missingSeqNums
 
-    override fun getFci(): Nack = fci
+    override fun getFci(): NackFci = fci
 
     companion object {
         const val FMT = 1
     }
 
     constructor(buf: ByteBuffer) : super(buf) {
-        fci = Nack(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
+        fci = NackFci(buf.subBuffer(RtcpFbPacket.FCI_OFFSET))
     }
 
     constructor(
         mediaSourceSsrc: Long = 0,
-        packetId: Int = 0,
         missingSeqNums: List<Int> = listOf()
     ) : super(mediaSourceSsrc = mediaSourceSsrc) {
-        fci = Nack(packetId, missingSeqNums)
+        fci = NackFci(missingSeqNums)
     }
 
     override fun clone(): Packet {

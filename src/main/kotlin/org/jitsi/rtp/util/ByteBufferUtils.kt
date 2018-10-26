@@ -45,3 +45,10 @@ class ByteBufferUtils {
 }
 
 fun byteBufferOf(vararg elements: Byte): ByteBuffer = ByteBuffer.wrap(byteArrayOf(*elements))
+
+//TODO: maybe this is a good way to avoid having to do the annoying '.toByte()' conversions?  verify it works
+// correctly
+//fun byteBufferOf(vararg elements: Any): ByteBuffer {
+//    val bytes = elements.map { (it as Number).toByte() }.toByteArray()
+//    return ByteBuffer.wrap(bytes)
+//}

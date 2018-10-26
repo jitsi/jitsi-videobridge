@@ -3,10 +3,12 @@ package org.jitsi.rtp
 import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.should
 import io.kotlintest.shouldBe
+import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.util.byteBufferOf
 import java.nio.ByteBuffer
 
 internal class RtxPacketTest : ShouldSpec() {
-    private val osn = 0x179d;
+    private val osn = 0x179d
 
     val pkt = ByteBuffer.wrap(byteArrayOf(
         // RTP Header
@@ -63,10 +65,40 @@ internal class RtxPacketTest : ShouldSpec() {
     ))
 
     init {
-        "parsing an rtx packet" {
+        "Parsing an rtx packet" {
             val rtxPacket = RtxPacket(pkt)
             should("parse OSN correctly") {
                 rtxPacket.originalSequenceNumber shouldBe osn
+            }
+        }
+        "f:Creating an RTX packet" {
+            "from an RTP packet" {
+                val originalSequenceNumber = 1234
+                val rtpPacket = RtpPacket(
+                    header = RtpHeader(
+                        payloadType = 100,
+                        sequenceNumber = originalSequenceNumber,
+                        timestamp = 12345L,
+                        ssrc = 45678L
+                    ),
+                    payload = byteBufferOf(
+                        0x42, 0x42, 0x42, 0x42,
+                        0x43, 0x43, 0x43, 0x43,
+                        0x44, 0x44, 0x44, 0x44,
+                        0x45, 0x45, 0x45, 0x45,
+                        0x46, 0x46, 0x46, 0x46
+                    )
+                )
+                val rtxPacket = RtxPacket(rtpPacket)
+                should("set the original sequence number correctly") {
+                    rtxPacket.originalSequenceNumber shouldBe originalSequenceNumber
+                }
+                "and then serializing it" {
+                    should("write the original sequence number correctly") {
+                        val newRtxPacket = RtxPacket(rtxPacket.getBuffer())
+                        newRtxPacket.originalSequenceNumber shouldBe originalSequenceNumber
+                    }
+                }
             }
         }
     }
