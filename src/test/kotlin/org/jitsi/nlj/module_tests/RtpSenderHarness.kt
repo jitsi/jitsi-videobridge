@@ -24,6 +24,7 @@ import org.jitsi.nlj.RtpSenderImpl
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpProtocol
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi_modified.service.neomedia.format.DummyAudioMediaFormat
@@ -108,7 +109,7 @@ fun main(args: Array<String>) {
     )
 
     val senderExecutor = Executors.newSingleThreadScheduledExecutor()
-    val numSenders = 100
+    val numSenders = 1
     val senders = mutableListOf<RtpSender>()
     repeat(numSenders) {
         val sender = createSender(senderExecutor)
@@ -126,7 +127,8 @@ fun main(args: Array<String>) {
     producer.subscribe { pkt ->
         senders.forEach {
             if (RtpProtocol.isRtp(pkt.getBuffer())) {
-                it.sendPackets(listOf(PacketInfo(pkt.clone())))
+                val rtpPacket = RtpPacket(pkt.getBuffer())
+                it.sendPackets(listOf(PacketInfo(rtpPacket.clone())))
             } else {
                 it.sendRtcp(listOf(org.jitsi.rtp.rtcp.RtcpPacket.fromBuffer(pkt.clone().getBuffer())))
             }
