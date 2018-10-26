@@ -783,6 +783,7 @@ public abstract class Channel
                 = getContent().getConference()
                         .getOrCreateEndpoint(newEndpointId);
             setEndpoint(newValue);
+            ((IceDtlsTransportManager)getTransportManager()).setTransceiver(newValue.transceiver);
         }
         finally
         {

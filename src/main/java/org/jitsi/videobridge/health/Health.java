@@ -119,6 +119,11 @@ public class Health
     private static void check(Conference conference)
         throws Exception
     {
+        //TODO(BRIAN): disable health checks for now.  they're using (deprecated) channels and stuff
+        // anyway, and the socket errors cloud up the logs
+        if (true) {
+            return;
+        }
         // Initialize the Endpoints, Contents, RtpChannels, SctpConnections.
 
         // Endpoint

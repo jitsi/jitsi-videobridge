@@ -58,6 +58,7 @@ public class IceDtlsTransportManager
     //TODO: temp store dtls transport because newsctpconnection grabs it
     DTLSTransport dtlsTransport;
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
+    private Transceiver transceiver = null;
     private DtlsSenderNode dtlsSender = new DtlsSenderNode();
     class SocketSenderNode extends Node {
         public MultiplexingDatagramSocket socket = null;
@@ -141,17 +142,22 @@ public class IceDtlsTransportManager
     }
 
     private Transceiver getTransceiver() {
-        List<Channel> channels = getChannels();
-        for (Channel channel : channels) {
-            if (channel instanceof RtpChannel)
-            {
-                RtpChannel rtpChannel = (RtpChannel) channel;
-                if (rtpChannel.getEndpoint() != null && rtpChannel.getEndpoint().transceiver != null) {
-                    return rtpChannel.getEndpoint().transceiver;
-                }
-            }
-        }
-        return null;
+        return this.transceiver;
+//        List<Channel> channels = getChannels();
+//        for (Channel channel : channels) {
+//            if (channel instanceof RtpChannel)
+//            {
+//                RtpChannel rtpChannel = (RtpChannel) channel;
+//                if (rtpChannel.getEndpoint() != null && rtpChannel.getEndpoint().transceiver != null) {
+//                    return rtpChannel.getEndpoint().transceiver;
+//                }
+//            }
+//        }
+//        return null;
+    }
+
+    public void setTransceiver(Transceiver transceiver) {
+        this.transceiver = transceiver;
     }
 
     @Override
@@ -249,7 +255,12 @@ public class IceDtlsTransportManager
             // Every srtp packet will go to every transceiver.  The transceivers are responsible
             // for filtering out the payload types they don't want
             packetInfos.forEach( pktInfo -> {
-                getTransceiver().handleIncomingPacket(pktInfo);
+                Transceiver transceiver = getTransceiver();
+                if (transceiver == null) {
+                    logger.error("Null transceiver in SRTP path for transport manager " + hashCode());
+                } else {
+                    transceiver.handleIncomingPacket(pktInfo);
+                }
             });
             return Collections.emptyList();
         });
@@ -275,6 +286,9 @@ public class IceDtlsTransportManager
             while (true) {
                 try
                 {
+                    while (transceiver == null) {
+                        transceiver = getTransceiver();
+                    }
                     PacketInfo pktInfo = transceiver.getOutgoingQueue().take();
                     Packet pkt = pktInfo.getPacket();
 //                        logger.info("outgoing writer, packet has " + pktInfo.getMetaData().size() + " metadata: ");
@@ -335,7 +349,7 @@ public class IceDtlsTransportManager
             System.out.println("Already processed ice connected, ignoring new event");
             return;
         }
-        getChannels().forEach(Channel::transportConnected);
+//        getChannels().forEach(Channel::transportConnected);
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
@@ -383,29 +397,6 @@ public class IceDtlsTransportManager
             logger.info("BRIAN: ICE connected, need to start dtls");
             onIceConnected();
         }
-    }
-
-    private Agent createIceAgent(boolean isControlling)
-            throws IOException
-    {
-        Agent iceAgent = new Agent();
-
-        //add videobridge specific harvesters such as a mapping and an Amazon
-        //AWS EC2 harvester
-//        configureHarvesters(iceAgent, rtcpmux);
-        iceAgent.setControlling(isControlling);
-        iceAgent.setPerformConsentFreshness(true);
-
-        int portBase = portTracker.getPort();
-
-        IceMediaStream iceStream = iceAgent.createMediaStream(ICE_STREAM_NAME);
-
-        iceAgent.createComponent(
-                iceStream, Transport.UDP,
-                portBase, portBase, portBase + 100,
-                KeepAliveStrategy.SELECTED_ONLY);
-
-        return iceAgent;
     }
 
     private void describe(
