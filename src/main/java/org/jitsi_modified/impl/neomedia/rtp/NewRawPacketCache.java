@@ -66,9 +66,9 @@ public class NewRawPacketCache
     private static Configuration defaultConfiguration = new Configuration();
 
     static {
-        int DEFAULT_SIZE_MILLIS = 500;
+        int DEFAULT_SIZE_MILLIS = 1000;
         int DEFAULT_MAX_SSRC_COUNT = 50;
-        int DEFAULT_NACK_CACHE_SIZE_PACKETS = 200;
+        int DEFAULT_NACK_CACHE_SIZE_PACKETS = 500;
         defaultConfiguration.put(NACK_CACHE_SIZE_MILLIS, DEFAULT_SIZE_MILLIS);
         defaultConfiguration.put(NACK_CACHE_SIZE_STREAMS, DEFAULT_MAX_SSRC_COUNT);
         defaultConfiguration.put(NACK_CACHE_SIZE_PACKETS, DEFAULT_NACK_CACHE_SIZE_PACKETS);
