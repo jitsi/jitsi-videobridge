@@ -29,6 +29,7 @@ import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.RtpPacket
@@ -63,6 +64,11 @@ class RtpSenderImpl(
 
     private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
         override fun doProcessPackets(p: List<PacketInfo>) {
+            p.forEach {
+                if (it.timeline.totalDelay() > Duration.ofMillis(100)) {
+                    logger.cerror { "Packet took >100ms to get through bridge:\n${it.timeline}"}
+                }
+            }
             this@RtpSenderImpl.packetSender.processPackets(p)
         }
     }
