@@ -42,3 +42,34 @@ class PacketLoss(private val lossRate: Double) : Node("Packet loss") {
         }
     }
 }
+
+class BurstPacketLoss(
+    private val burstSize: Int = 30,
+    private val burstInterval: Int = 3000
+) : Node("Burst packet loss") {
+    private var packetsSeen = 0
+    private var totalPacketsDropped = 0
+    private var inBurst = false
+    private var currentBurstPacketsDropped = 0
+
+
+    override fun doProcessPackets(p: List<PacketInfo>) {
+        val outPackets = mutableListOf<PacketInfo>()
+        p.forEach {
+            packetsSeen++
+            if (packetsSeen % burstInterval == 0) {
+                inBurst = true
+            }
+            if (inBurst) {
+                currentBurstPacketsDropped++
+                if (currentBurstPacketsDropped == burstSize) {
+                    inBurst = false
+                }
+            } else {
+                outPackets.add(it)
+            }
+        }
+        next(outPackets)
+    }
+
+}
