@@ -121,6 +121,12 @@ public class BitrateController
         = "org.jitsi.videobridge.ENABLE_ONSTAGE_VIDEO_SUSPEND";
 
     /**
+     * The name of the property used to trust bandwidth estimations.
+     */
+    public static final String TRUST_BWE_PNAME
+        = "org.jitsi.videobridge.TRUST_BWE";
+
+    /**
      * An reusable empty array of {@link RateSnapshot} to reduce allocations.
      */
     private static final RateSnapshot[] EMPTY_RATE_SNAPSHOT_ARRAY
@@ -214,16 +220,10 @@ public class BitrateController
         = TimeSeriesLogger.getTimeSeriesLogger(BitrateController.class);
 
     /**
-     * The name of the property used to trust bandwidth estimations.
-     */
-    public static final String TRUST_BWE_PNAME
-        = "org.jitsi.videobridge.TRUST_BWE";
-
-    /**
      * An empty set of {@link String}s instance.
      */
     private static final Set<String> INITIAL_EMPTY_SET
-        = Collections.unmodifiableSet(new HashSet<String>(0));
+        = Collections.unmodifiableSet(new HashSet<>(0));
 
     /**
      * The {@link VideoChannel} which owns this {@link BitrateController} and
@@ -309,7 +309,7 @@ public class BitrateController
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
-        trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, false);
+        trustBwe = cfg != null && cfg.getBoolean(TRUST_BWE_PNAME, true);
         enableVideoQualityTracing = timeSeriesLogger.isTraceEnabled();
     }
 
@@ -340,7 +340,7 @@ public class BitrateController
      * {@link BitrateController} and is the destination of the packets that this
      * instance accepts.
      */
-    VideoChannel getVideoChannel()
+    public VideoChannel getVideoChannel()
     {
         return dest;
     }
@@ -485,6 +485,7 @@ public class BitrateController
         BandwidthEstimator bwe = destStream == null ? null
             : destStream.getOrCreateBandwidthEstimator();
 
+        long nowMs = System.currentTimeMillis();
         boolean trustBwe = this.trustBwe;
         if (trustBwe)
         {
@@ -492,8 +493,7 @@ public class BitrateController
             // the REMBs don't ramp up fast enough. This needs to go but it's
             // related to our GCC implementation that needs to be brought up to
             // speed.
-            if (firstMediaMs == -1
-                || System.currentTimeMillis() - firstMediaMs < 10000)
+            if (firstMediaMs == -1 || nowMs - firstMediaMs < 10000)
             {
                 trustBwe = false;
             }
@@ -524,10 +524,9 @@ public class BitrateController
         Set<String> conferenceEndpointIds = new HashSet<>();
 
         // Accumulators used for tracing purposes.
-        long optimalBps = 0, targetBps = 0, currentBps = 0;
-        int optimalIdx = 0, targetIdx = 0, currentIdx = 0;
+        long totalIdealBps = 0, totalTargetBps = 0, totalCurrentBps = 0;
+        int totalIdealIdx = 0, totalTargetIdx = 0, totalCurrentIdx = 0;
 
-        long nowMs = System.currentTimeMillis();
         List<SimulcastController> simulcastControllers = new ArrayList<>();
         if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
         {
@@ -538,7 +537,7 @@ public class BitrateController
 
                 int ssrc = trackBitrateAllocation.targetSSRC,
                     trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
-                    trackOptimalIdx = trackBitrateAllocation.getOptimalIndex();
+                    trackIdealIdx = trackBitrateAllocation.getIdealIndex();
 
                 // Review this.
                 SimulcastController ctrl;
@@ -577,10 +576,9 @@ public class BitrateController
                 {
                     simulcastControllers.add(ctrl);
                     ctrl.setTargetIndex(trackTargetIdx);
-                    ctrl.setOptimalIndex(trackOptimalIdx);
+                    ctrl.setIdealIndex(trackIdealIdx);
 
-                    MediaStreamTrackDesc sourceTrack = ctrl.getSource();
-                    if (sourceTrack != null
+                    if (trackBitrateAllocation.track != null
                             && enableVideoQualityTracing)
                     {
                         DiagnosticContext diagnosticContext
@@ -588,35 +586,35 @@ public class BitrateController
                         int trackCurrentIdx = ctrl.getCurrentIndex();
                         long trackTargetBps
                             = trackBitrateAllocation.getTargetBitrate();
-                        long trackOptimalBps
-                            = trackBitrateAllocation.getOptimalBitrate();
-                        long trackCurrentBps
-                            = sourceTrack.getBps(trackCurrentIdx);
-                        targetBps += trackTargetBps;
-                        optimalBps += trackOptimalBps;
-                        currentBps += trackCurrentBps;
-                        targetIdx += trackTargetIdx;
-                        optimalIdx += trackOptimalIdx;
-                        currentIdx += trackCurrentIdx;
+                        long trackIdealBps
+                            = trackBitrateAllocation.getIdealBitrate();
+                        long trackCurrentBps = trackBitrateAllocation
+                            .track.getBps(trackCurrentIdx);
+                        totalTargetBps += trackTargetBps;
+                        totalIdealBps += trackIdealBps;
+                        totalCurrentBps += trackCurrentBps;
+                        totalTargetIdx += trackTargetIdx;
+                        totalIdealIdx += trackIdealIdx;
+                        totalCurrentIdx += trackCurrentIdx;
                         // time series that tracks how a media stream track
                         // gets forwarded to a specific receiver.
                         timeSeriesLogger.trace(diagnosticContext
-                                .makeTimeSeriesPoint("track_quality", nowMs)
-                                .addField("track_id", sourceTrack.hashCode())
-                                .addField("current_idx", trackCurrentIdx)
-                                .addField("target_idx", trackTargetIdx)
-                                .addField("optimal_idx", trackOptimalIdx)
-                                .addField("current_bps", trackCurrentBps)
-                                .addField("target_bps", trackTargetBps)
-                                .addField("selected",
-                                    trackBitrateAllocation.selected)
-                                .addField("oversending",
-                                    trackBitrateAllocation.oversending)
-                                .addField("preferred_idx",
-                                    trackBitrateAllocation.preferredIdx)
-                                .addField("endpoint_id",
-                                    trackBitrateAllocation.endpointID)
-                                .addField("optimal_bps", trackOptimalBps));
+                            .makeTimeSeriesPoint("track_quality", nowMs)
+                            .addField("track_id",
+                                trackBitrateAllocation.track.hashCode())
+                            .addField("current_idx", trackCurrentIdx)
+                            .addField("target_idx", trackTargetIdx)
+                            .addField("ideal_idx", trackIdealIdx)
+                            .addField("target_bps", trackTargetBps)
+                            .addField("selected",
+                                trackBitrateAllocation.selected)
+                            .addField("oversending",
+                                trackBitrateAllocation.oversending)
+                            .addField("preferred_idx",
+                                trackBitrateAllocation.ratedPreferredIdx)
+                            .addField("endpoint_id",
+                                trackBitrateAllocation.endpointID)
+                            .addField("ideal_bps", trackIdealBps));
                     }
                 }
 
@@ -640,12 +638,14 @@ public class BitrateController
             {
                 if (enableVideoQualityTracing)
                 {
-                    currentIdx--;
-                    optimalIdx--;
-                    targetIdx--;
+                    totalCurrentIdx--;
+                    totalIdealIdx--;
+                    totalTargetIdx--;
                 }
-                simulcastController.setTargetIndex(-1);
-                simulcastController.setOptimalIndex(-1);
+                simulcastController
+                    .setTargetIndex(RTPEncodingDesc.SUSPENDED_INDEX);
+                simulcastController
+                    .setIdealIndex(RTPEncodingDesc.SUSPENDED_INDEX);
             }
         }
 
@@ -655,13 +655,13 @@ public class BitrateController
                 = destStream.getDiagnosticContext();
             timeSeriesLogger.trace(diagnosticContext
                     .makeTimeSeriesPoint("video_quality", nowMs)
-                    .addField("current_idx", currentIdx)
-                    .addField("target_idx", targetIdx)
-                    .addField("optimal_idx", optimalIdx)
+                    .addField("total_current_idx", totalCurrentIdx)
+                    .addField("total_target_idx", totalTargetIdx)
+                    .addField("total_ideal_idx", totalIdealIdx)
                     .addField("available_bps", bweBps)
-                    .addField("current_bps", currentBps)
-                    .addField("target_bps", targetBps)
-                    .addField("optimal_bps", optimalBps));
+                    .addField("total_current_bps", totalCurrentBps)
+                    .addField("total_target_bps", totalTargetBps)
+                    .addField("total_ideal_bps", totalIdealBps));
         }
 
         // The BandwidthProber will pick this up.
@@ -679,7 +679,7 @@ public class BitrateController
     }
 
     /**
-     * Computes the optimal and the target bitrate, limiting the target to be
+     * Computes the ideal and the target bitrate, limiting the target to be
      * less than bandwidth estimation specified as an argument.
      *
      * @param maxBandwidth the max bandwidth estimation that the target bitrate
@@ -706,14 +706,15 @@ public class BitrateController
         long oldMaxBandwidth = 0;
 
         int oldStateLen = 0;
-        int[] oldState = new int[trackBitrateAllocations.length];
-        int[] newState = new int[trackBitrateAllocations.length];
-        Arrays.fill(newState, -1);
+        int[] oldRatedTargetIndices = new int[trackBitrateAllocations.length];
+        int[] newRatedTargetIndicies = new int[trackBitrateAllocations.length];
+        Arrays.fill(newRatedTargetIndicies, -1);
 
         while (oldMaxBandwidth != maxBandwidth)
         {
             oldMaxBandwidth = maxBandwidth;
-            System.arraycopy(newState, 0, oldState, 0, oldState.length);
+            System.arraycopy(newRatedTargetIndicies, 0,
+                oldRatedTargetIndices, 0, oldRatedTargetIndices.length);
 
             int newStateLen = 0;
             for (int i = 0; i < trackBitrateAllocations.length; i++)
@@ -734,14 +735,15 @@ public class BitrateController
                 trackBitrateAllocation.improve(maxBandwidth);
                 maxBandwidth -= trackBitrateAllocation.getTargetBitrate();
 
-                newState[i] = trackBitrateAllocation.getTargetIndex();
+                newRatedTargetIndicies[i]
+                    = trackBitrateAllocation.ratedTargetIdx;
                 if (trackBitrateAllocation.getTargetIndex() > -1)
                 {
                     newStateLen++;
                 }
 
-                if (trackBitrateAllocation.ratesIdx
-                    < trackBitrateAllocation.preferredIdx)
+                if (trackBitrateAllocation.ratedTargetIdx
+                    < trackBitrateAllocation.ratedPreferredIdx)
                 {
                     break;
                 }
@@ -753,7 +755,8 @@ public class BitrateController
                 // participants.
                 for (int i = 0; i < trackBitrateAllocations.length; i++)
                 {
-                    trackBitrateAllocations[i].ratesIdx = oldState[i];
+                    trackBitrateAllocations[i].ratedTargetIdx
+                        = oldRatedTargetIndices[i];
                 }
 
                 break;
@@ -1014,20 +1017,26 @@ public class BitrateController
          *
          * {@link RTPEncodingDesc} of {@link #track}.
          */
-        private final RateSnapshot[] rates;
+        private final RateSnapshot[] ratedIndices;
 
         /**
-         * The index in the {@link #rates} array that needs to be achieved
-         * before allocating bandwidth for any of the other tracks after this
-         * track.
+         * The rated quality that needs to be achieved before allocating
+         * bandwidth for any of the other subsequent tracks in this allocation
+         * decision. The rated quality is not necessarily equal to the encoding
+         * quality. For example, for the on-stage participant we consider 5
+         * rated qualities:
+         *
+         * 0 -> 180p7.5, 1 -> 180p15, 2 -> 180p30, 3 -> 360p30, 4 -> 720p30.
+         *
+         * The encoding quality of the 4th rated quality is 8.
          */
-        private final int preferredIdx;
+        private final int ratedPreferredIdx;
 
         /**
-         * The index in the {@link #rates} array that is the currently selected
-         * target for this track.
+         * The current rated quality target for this track. It can potentially
+         * be improved in the improve step, provided there is enough bandwidth.
          */
-        private int ratesIdx = -1;
+        private int ratedTargetIdx = -1;
 
         /**
          * A boolean that indicates whether or not we're force pushing through
@@ -1079,8 +1088,8 @@ public class BitrateController
 
             if (targetSSRC == -1 || !fitsInLastN)
             {
-                preferredIdx = -1;
-                rates = EMPTY_RATE_SNAPSHOT_ARRAY;
+                ratedPreferredIdx = -1;
+                ratedIndices = EMPTY_RATE_SNAPSHOT_ARRAY;
                 return;
             }
 
@@ -1090,7 +1099,7 @@ public class BitrateController
             // consider 720p@30fps, 360p@30fps, 180p@30fps, 180p@15fps,
             // 180p@7.5fps while for the thumbnails we consider 180p@30fps,
             // 180p@15fps and 180p@7.5fps
-            int preferredIdx = 0;
+            int ratedPreferredIdx = 0;
             for (RTPEncodingDesc encoding : encodings)
             {
                 if (encoding.getHeight() > this.maxFrameHeight)
@@ -1110,7 +1119,7 @@ public class BitrateController
 
                     if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
                     {
-                        preferredIdx = ratesList.size() - 1;
+                        ratedPreferredIdx = ratesList.size() - 1;
                     }
                 }
                 else if (encoding.getHeight() <= THUMBNAIL_MAX_HEIGHT)
@@ -1122,18 +1131,18 @@ public class BitrateController
                 }
             }
 
-            this.preferredIdx = preferredIdx;
-            rates = ratesList.toArray(new RateSnapshot[ratesList.size()]);
-            // TODO Determining the optimal index needs some work. The optimal
-            // index is constrained by the viewport of the endpoint. For
-            // example, on a mobile device we should probably not send
-            // anything above 360p (not even the on-stage participant). On a
-            // laptop computer 720p seems reasonable and on a big screen 1080p
+            this.ratedPreferredIdx = ratedPreferredIdx;
+            ratedIndices = ratesList.toArray(new RateSnapshot[ratesList.size()]);
+            // TODO Determining the rated ideal index needs some work.
+            // The ideal rated quality is constrained by the viewport of the
+            // endpoint. For example, on a mobile device we should probably not
+            // send anything above 360p (not even the on-stage participant). On
+            // a laptop computer 720p seems reasonable and on a big screen 1080p
             // or above.
         }
 
         /**
-         * Computes the optimal and the target bitrate, limiting the target to
+         * Computes the ideal and the target bitrate, limiting the target to
          * be less than bandwidth estimation specified as an argument.
          *
          * @param maxBps the maximum bitrate (in bps) that the target subjective
@@ -1141,38 +1150,37 @@ public class BitrateController
          */
         void improve(long maxBps)
         {
-            if (rates.length == 0)
+            if (ratedIndices.length == 0)
             {
                 return;
             }
 
-            if (ratesIdx == -1 && selected)
+            if (ratedTargetIdx == -1 && selected)
             {
                 if (!ENABLE_ONSTAGE_VIDEO_SUSPEND)
                 {
-                    ratesIdx = 0;
-                    oversending = rates[0].bps > maxBps;
+                    ratedTargetIdx = 0;
+                    oversending = ratedIndices[0].bps > maxBps;
                 }
 
                 // Boost on stage participant to 360p.
-                for (int i = ratesIdx + 1; i < rates.length; i++)
+                for (int i = ratedTargetIdx + 1; i < ratedIndices.length; i++)
                 {
-                    if (i > preferredIdx
-                        || maxBps < rates[i].bps)
+                    if (i > ratedPreferredIdx || maxBps < ratedIndices[i].bps)
                     {
                         break;
                     }
 
-                    ratesIdx = i;
+                    ratedTargetIdx = i;
                 }
             }
             else
             {
-                // Try the next element in the rates array.
-                if (ratesIdx + 1 < rates.length
-                    && rates[ratesIdx + 1].bps < maxBps)
+                // Try the next element in the ratedIndices array.
+                if (ratedTargetIdx + 1 < ratedIndices.length
+                    && ratedIndices[ratedTargetIdx + 1].bps < maxBps)
                 {
-                    ratesIdx++;
+                    ratedTargetIdx++;
                 }
             }
         }
@@ -1184,38 +1192,44 @@ public class BitrateController
          */
         long getTargetBitrate()
         {
-            return ratesIdx != -1 ? rates[ratesIdx].bps : 0;
+            return ratedTargetIdx != -1 ? ratedIndices[ratedTargetIdx].bps : 0;
         }
 
         /**
-         * Gets the optimal bitrate (in bps) for this endpoint allocation.
+         * Gets the ideal bitrate (in bps) for this endpoint allocation.
          *
-         * @return the optimal bitrate (in bps) for this endpoint allocation.
+         * @return the ideal bitrate (in bps) for this endpoint allocation.
          */
-        long getOptimalBitrate()
+        long getIdealBitrate()
         {
-            return rates.length != 0 ? rates[rates.length - 1].bps : 0L;
+            return ratedIndices.length != 0
+                ? ratedIndices[ratedIndices.length - 1].bps : 0L;
         }
 
         /**
-         * Gets the target subjective quality index for this track.
+         * Gets the target quality for this track.
          *
-         * @return the target subjective quality index for this track.
+         * @return the target quality for this track.
          */
         int getTargetIndex()
         {
-            return ratesIdx != -1 ? rates[ratesIdx].encoding.getIndex() : -1;
+            // figures out the quality of the encoding of the target rated
+            // quality.
+            return ratedTargetIdx != -1
+                ? ratedIndices[ratedTargetIdx].encoding.getIndex() : -1;
         }
 
         /**
-         * Gets the optimal subjective quality index for this track.
+         * Gets the ideal quality for this track.
          *
-         * @return the optimal subjective quality index for this track.
+         * @return the ideal quality for this track.
          */
-        int getOptimalIndex()
+        int getIdealIndex()
         {
-            return rates.length != 0
-                ? rates[rates.length - 1].encoding.getIndex() : -1;
+            // figures out the quality of the encoding of the ideal rated
+            // quality.
+            return ratedIndices.length != 0
+                ? ratedIndices[ratedIndices.length - 1].encoding.getIndex() : -1;
         }
     }
 
@@ -1289,7 +1303,7 @@ public class BitrateController
                 // FIXME properly support unannounced SSRCs.
                 RawPacket[] ret
                     = simulcastController == null
-                            ? null : simulcastController.rtpTransform(pkts[i]);
+                    ? null : simulcastController.rtpTransform(pkts[i]);
 
                 if (ArrayUtils.isNullOrEmpty(ret))
                 {

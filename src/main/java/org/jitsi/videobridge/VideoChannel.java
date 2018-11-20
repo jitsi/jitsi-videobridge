@@ -105,19 +105,6 @@ public class VideoChannel
             ? new int[0] : new int[] { 1, 2 };
 
     /**
-     * The default value that indicates whether or not to enable the lipsync
-     * hack.
-     */
-    private static final boolean ENABLE_LIPSYNC_HACK_DEFAULT = false;
-
-    /**
-     * The value that indicates whether or not to enable the lipsync hack.
-     */
-    private static final boolean ENABLE_LIPSYNC_HACK
-        = cfg != null && cfg.getBoolean(
-            ENABLE_LIPSYNC_HACK_PNAME, ENABLE_LIPSYNC_HACK_DEFAULT);
-
-    /**
      * The default maximum frame height (in pixels) that can be forwarded to
      * this participant
      */
@@ -147,11 +134,6 @@ public class VideoChannel
      * receives.
      */
     private final boolean disableLastNNotifications;
-
-    /**
-     * The object that implements a hack for LS for this {@link Endpoint}.
-     */
-    private final LipSyncHack lipSyncHack;
 
     /**
      * Maximum frame height, in pixels, for any video stream forwarded to this receiver
@@ -250,8 +232,6 @@ public class VideoChannel
                     classLogger,
                     content.getConference().getLogger());
 
-        this.lipSyncHack = ENABLE_LIPSYNC_HACK ? new LipSyncHack(this) : null;
-
         disableLastNNotifications = cfg != null
             && cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, false);
 
@@ -338,18 +318,6 @@ public class VideoChannel
     }
 
     /**
-     * Gets the object that implements a hack for LS for this
-     * {@link VideoChannel}.
-     *
-     * @return the object that implements a hack for LS for this
-     * {@link VideoChannel}.
-     */
-    public LipSyncHack getLipSyncHack()
-    {
-        return lipSyncHack;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -405,15 +373,7 @@ public class VideoChannel
             return true;
         }
 
-        boolean accept = bitrateController.accept(pkt);
-
-        if (accept && lipSyncHack != null)
-        {
-            lipSyncHack
-                .onRTPTranslatorWillWriteVideo(pkt, source);
-        }
-
-        return accept;
+        return bitrateController.accept(pkt);
     }
 
     /**

@@ -117,12 +117,6 @@ public class RtpChannelTransformEngine
                 transformerList.add(bitrateController);
             }
 
-            LipSyncHack lipSyncHack = videoChannel.getLipSyncHack();
-            if (lipSyncHack != null)
-            {
-                transformerList.add(lipSyncHack);
-            }
-
             redFilter = new REDFilterTransformEngine(RED_PAYLOAD_TYPE);
             transformerList.add(redFilter);
         }

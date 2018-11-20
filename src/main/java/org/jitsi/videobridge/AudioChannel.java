@@ -33,17 +33,6 @@ public class AudioChannel
     extends RtpChannel
 {
     /**
-     * The {@link LipSyncHack} from the {@link VideoChannel}.
-     */
-    private LipSyncHack associatedLipSyncHack;
-
-    /**
-     * A boolean that indicates whether or not we've fetched the
-     * {@link LipSyncHack} from the {@link VideoChannel}.
-     */
-    private boolean fetchedLipSyncHack = false;
-
-    /**
      * Initializes a new <tt>AudioChannel</tt> instance which is to have a
      * specific ID. The initialization is to be considered requested by a
      * specific <tt>Content</tt>.
@@ -142,48 +131,11 @@ public class AudioChannel
     @Override
     protected void configureStream(MediaStream stream)
     {
-        if (stream != null && stream instanceof AudioMediaStream)
+        if (stream instanceof AudioMediaStream)
         {
             ((AudioMediaStream) stream)
                 .setCsrcAudioLevelListener(
                     new AudioChannelAudioLevelListener(this));
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    boolean rtpTranslatorWillWrite(
-        boolean data,
-        RawPacket pkt,
-        RtpChannel source)
-    {
-        if (!data)
-        {
-            return true;
-        }
-
-        if (!fetchedLipSyncHack)
-        {
-            fetchedLipSyncHack = true;
-
-            List<RtpChannel> channels = getEndpoint()
-                .getChannels(MediaType.VIDEO);
-
-            if (channels != null && !channels.isEmpty())
-            {
-                associatedLipSyncHack
-                    = ((VideoChannel)channels.get(0)).getLipSyncHack();
-            }
-        }
-
-        if (associatedLipSyncHack != null)
-        {
-            associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
-                pkt, source);
-        }
-
-        return true;
     }
 }

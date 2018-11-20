@@ -27,7 +27,6 @@ import org.jitsi.meet.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.packetlogging.*;
 import org.jitsi.stats.media.*;
-import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.xmpp.*;
 
 /**
@@ -168,15 +167,6 @@ public class JvbBundleConfig
 
         // Configure the starting send bitrate to be 2.5Mbps.
         defaults.put(BandwidthEstimatorImpl.START_BITRATE_BPS_PNAME, "2500000");
-
-        // Enable picture ID rewriting by default, as jumping picture IDs cause
-        // recent versions of Chrome to crash.
-        defaults.put(
-            SimulcastController.ENABLE_VP8_PICID_REWRITING_PNAME, true_);
-
-        // Trust the send side bandwidth estimations (which enables adaptivity)
-        // by default.
-        defaults.put(BitrateController.TRUST_BWE_PNAME, true_);
 
         // Enable VP8 temporal scalability filtering by default.
         defaults.put(MediaStreamTrackFactory.ENABLE_SVC_PNAME, true_);

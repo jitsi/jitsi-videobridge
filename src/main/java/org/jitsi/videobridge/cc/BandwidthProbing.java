@@ -144,10 +144,10 @@ public class BandwidthProbing
         }
 
         // We calculate how much to probe for based on the total target bps
-        // (what we're able to reach), the total optimal bps (what we want to
+        // (what we're able to reach), the total ideal bps (what we want to
         // be able to reach) and the total current bps (what we currently send).
 
-        long totalCurrentBps = 0, totalTargetBps = 0, totalOptimalBps = 0;
+        long totalCurrentBps = 0, totalTargetBps = 0, totalIdealBps = 0;
 
         List<Long> ssrcsToProtect = new ArrayList<>();
         for (SimulcastController simulcastController : simulcastControllerList)
@@ -174,13 +174,13 @@ public class BandwidthProbing
 
             totalTargetBps += sourceTrack.getBps(
                     simulcastController.getTargetIndex());
-            totalOptimalBps += sourceTrack.getBps(
-                    simulcastController.getOptimalIndex());
+            totalIdealBps += sourceTrack.getBps(
+                    simulcastController.getIdealIndex());
         }
 
         // How much padding do we need?
         long totalNeededBps
-            = totalOptimalBps - Math.max(totalTargetBps, totalCurrentBps);
+            = totalIdealBps - Math.max(totalTargetBps, totalCurrentBps);
         if (totalNeededBps < 1)
         {
             // Not much.
@@ -190,9 +190,9 @@ public class BandwidthProbing
         long bweBps = videoStreamImpl
             .getOrCreateBandwidthEstimator().getLatestEstimate();
 
-        if (totalOptimalBps <= bweBps)
+        if (totalIdealBps <= bweBps)
         {
-            // it seems like the optimal bps fits in the bandwidth estimation,
+            // it seems like the ideal bps fits in the bandwidth estimation,
             // let's update the bitrate controller.
             dest.getBitrateController().update(bweBps);
             return;
@@ -209,9 +209,9 @@ public class BandwidthProbing
             timeSeriesLogger.trace(diagnosticContext
                     .makeTimeSeriesPoint("out_padding")
                     .addField("padding_bps", paddingBps)
-                    .addField("optimal_bps", totalOptimalBps)
-                    .addField("current_bps", totalCurrentBps)
-                    .addField("target_bps", totalTargetBps)
+                    .addField("total_ideal_bps", totalIdealBps)
+                    .addField("total_current_bps", totalCurrentBps)
+                    .addField("total_target_bps", totalTargetBps)
                     .addField("needed_bps", totalNeededBps)
                     .addField("max_padding_bps", maxPaddingBps)
                     .addField("bwe_bps", bweBps));
