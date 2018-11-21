@@ -52,8 +52,7 @@ public class IceDtlsTransportManager
     private static final String ICE_STREAM_NAME = "ice-stream-name";
     //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
     private ExecutorService executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool"));
-    //TODO: made public so we can grab it in sctp connection, fix that.
-    /*private*/ DtlsStack dtlsStack = new DtlsClientStack();
+    private DtlsStack dtlsStack = new DtlsClientStack();
     private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
     //TODO: temp store dtls transport because newsctpconnection grabs it
     DTLSTransport dtlsTransport;
@@ -101,6 +100,11 @@ public class IceDtlsTransportManager
     @Override
     public void startConnectivityEstablishment(IceUdpTransportPacketExtension transport)
     {
+        if (iceAgent.getState().isEstablished()) {
+            logger.info("BRIAN: local ufrag " + iceAgent.getLocalUfrag() +
+                    " is already established, not restarting");
+            return;
+        }
         logger.info("BRIAN: starting connectivity establishment with extension: " + transport.toXML());
         // Get the remote fingerprints and set them in the DTLS stack so we
         // have them to do the DTLS handshake later
@@ -131,14 +135,63 @@ public class IceDtlsTransportManager
             iceAgent.getStream(ICE_STREAM_NAME).setRemotePassword(transport.getPassword());
         }
 
+        // If ICE is running already, we try to update the checklists with the
+        // candidates. Note that this is a best effort.
+        boolean iceAgentStateIsRunning
+                = IceProcessingState.RUNNING.equals(iceAgent.getState());
+
         List<CandidatePacketExtension> candidates
                 = transport.getChildExtensionsOfType(
                 CandidatePacketExtension.class);
-        logger.info("BRIAN: got candidates " + candidates);
+        logger.info("BRIAN: got " + candidates.size() + " candidates " + candidates);
+        if (iceAgentStateIsRunning && candidates.isEmpty()) {
+            logger.info("ICE agent is already running and this extension contained no candidates, returning");
+            return;
+        }
 
-        logger.info("BRIAN: starting connectivity establishment");
-        iceAgent.startConnectivityEstablishment();
-        logger.info("BRIAN: call to startConnectivityEstablishment returned");
+        int remoteCandidateCount = addRemoteCandidates(candidates, iceAgentStateIsRunning);
+
+        if (iceAgentStateIsRunning) {
+            if (remoteCandidateCount == 0) {
+                // XXX Effectively, the check above but realizing that all
+                // candidates were ignored:
+                // iceAgentStateIsRunning && candidates.isEmpty().
+            } else {
+                // update all components of all streams
+                iceAgent.getStreams()
+                        .forEach(stream -> stream.getComponents()
+                                .forEach(Component::updateRemoteCandidates));
+            }
+        }
+        else if (remoteCandidateCount != 0)
+        {
+            // Once again, because the ICE Agent does not support adding
+            // candidates after the connectivity establishment has been started
+            // and because multiple transport-info JingleIQs may be used to send
+            // the whole set of transport candidates from the remote peer to the
+            // local peer, do not really start the connectivity establishment
+            // until we have at least one remote candidate per ICE Component.
+            if (iceAgent.getStreams().stream().allMatch(
+                    stream -> stream.getComponents().stream().allMatch(
+                            component -> component.getRemoteCandidateCount() >= 1)))
+            {
+                logger.info(
+                        "We have remote candidates for all ICE components. "
+                                + "Starting the ICE agent.");
+                iceAgent.startConnectivityEstablishment();
+            }
+        }
+        else if (iceAgent.getStream(ICE_STREAM_NAME).getRemoteUfrag() != null
+                && iceAgent.getStream(ICE_STREAM_NAME).getRemotePassword() != null)
+        {
+            // We don't have any remote candidates, but we already know the
+            // remote ufrag and password, so we can start ICE.
+            logger.info("Starting ICE agent without remote candidates.");
+            iceAgent.startConnectivityEstablishment();
+        }
+//        logger.info("BRIAN: starting connectivity establishment");
+//        iceAgent.startConnectivityEstablishment();
+//        logger.info("BRIAN: call to startConnectivityEstablishment returned");
     }
 
     private Transceiver getTransceiver() {
@@ -154,6 +207,85 @@ public class IceDtlsTransportManager
 //            }
 //        }
 //        return null;
+    }
+
+    // Almost the same as the one in IceUdpTransportManager, but we don't use the iceStream member and
+    // always assume rtcpmux
+    private int addRemoteCandidates(
+            List<CandidatePacketExtension> candidates,
+            boolean iceAgentStateIsRunning)
+    {
+        // Sort the remote candidates (host < reflexive < relayed) in order to
+        // create first the host, then the reflexive, the relayed candidates and
+        // thus be able to set the relative-candidate matching the
+        // rel-addr/rel-port attribute.
+        Collections.sort(candidates);
+
+        int generation = iceAgent.getGeneration();
+        int remoteCandidateCount = 0;
+
+        for (CandidatePacketExtension candidate : candidates)
+        {
+            // Is the remote candidate from the current generation of the
+            // iceAgent?
+            if (candidate.getGeneration() != generation)
+                continue;
+
+            Component component
+                    = iceAgent.getStream(ICE_STREAM_NAME).getComponent(candidate.getComponent());
+            String relAddr;
+            int relPort;
+            TransportAddress relatedAddress = null;
+
+            if ((relAddr = candidate.getRelAddr()) != null
+                    && (relPort = candidate.getRelPort()) != -1)
+            {
+                relatedAddress
+                        = new TransportAddress(
+                        relAddr,
+                        relPort,
+                        Transport.parse(candidate.getProtocol()));
+            }
+
+            RemoteCandidate relatedCandidate
+                    = component.findRemoteCandidate(relatedAddress);
+            RemoteCandidate remoteCandidate
+                    = new RemoteCandidate(
+                    new TransportAddress(
+                            candidate.getIP(),
+                            candidate.getPort(),
+                            Transport.parse(candidate.getProtocol())),
+                    component,
+                    org.ice4j.ice.CandidateType.parse(
+                            candidate.getType().toString()),
+                    candidate.getFoundation(),
+                    candidate.getPriority(),
+                    relatedCandidate);
+
+            // XXX IceUdpTransportManager harvests host candidates only and the
+            // ICE Components utilize the UDP protocol/transport only at the
+            // time of this writing. The ice4j library will, of course, check
+            // the theoretical reachability between the local and the remote
+            // candidates. However, we would like (1) to not mess with a
+            // possibly running iceAgent and (2) to return a consistent return
+            // value.
+            if (!canReach(component, remoteCandidate))
+            {
+                continue;
+            }
+
+            if (iceAgentStateIsRunning)
+            {
+                component.addUpdateRemoteCandidates(remoteCandidate);
+            }
+            else
+            {
+                component.addRemoteCandidate(remoteCandidate);
+            }
+            remoteCandidateCount++;
+        }
+
+        return remoteCandidateCount;
     }
 
     public void setTransceiver(Transceiver transceiver) {
@@ -349,7 +481,9 @@ public class IceDtlsTransportManager
             System.out.println("Already processed ice connected, ignoring new event");
             return;
         }
-//        getChannels().forEach(Channel::transportConnected);
+        // The sctp connection start is triggered by this, but otherwise i don't think we need it (the other channel
+        // types no longer do anything needed in there)
+        getChannels().forEach(Channel::transportConnected);
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
@@ -394,8 +528,10 @@ public class IceDtlsTransportManager
                         + " old_state=" + oldState
                         + ",new_state=" + newState);
         if (newState.isEstablished()) {
-            logger.info("BRIAN: ICE connected, need to start dtls");
+            logger.info("BRIAN: local ufrag " + iceAgent.getLocalUfrag() + " ICE connected, need to start dtls");
             onIceConnected();
+        } else if (IceProcessingState.FAILED.equals(newState)) {
+            logger.info("BRIAN: ICE failed, local ufrag " + iceAgent.getLocalUfrag());
         }
     }
 

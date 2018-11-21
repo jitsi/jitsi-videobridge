@@ -831,7 +831,7 @@ public class IceUdpTransportManager
      * specified <tt>component</tt> can reach the specified
      * <tt>remoteCandidate</tt>
      */
-    private boolean canReach(
+    protected static boolean canReach(
             Component component,
             RemoteCandidate remoteCandidate)
     {
