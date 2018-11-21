@@ -21,12 +21,8 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.*
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
-import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.isNewerThan
-import org.jitsi.nlj.util.isNextAfter
-import org.jitsi.nlj.util.numPacketsTo
-import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.service.neomedia.codec.Constants
 import org.jitsi.service.neomedia.format.MediaFormat
@@ -69,6 +65,17 @@ class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
         }
         super.handleEvent(event)
     }
+
+    override fun getStats(indent: Int): String = with (StringBuffer()) {
+        append(super.getStats(indent))
+        val stats = getCurrentStats()
+        stats.forEach { ssrc, streamStats ->
+            appendLnIndent(indent + 2, "source: $ssrc")
+            appendLnIndent(indent + 4, streamStats.getSnapshot().toString())
+        }
+
+        toString()
+    }
 }
 
 
@@ -92,7 +99,7 @@ class IncomingStreamStatistics(
     /**
      * This will be initialized to the first sequence number we process
      */
-    private var maxSeqNum: Int = 0
+    private var maxSeqNum: Int = baseSeqNum
     private var seqNumCycles: Int = 0
     private val numExpectedPackets: Int
         get()  = calculateExpectedPacketCount(0, baseSeqNum, seqNumCycles, maxSeqNum)
@@ -200,7 +207,7 @@ class IncomingStreamStatistics(
      * that it:
      * 1) Has RTP sequence number [packetSequenceNumber]
      * 2) Was sent at [packetSentTimestampMs] (note this is NOT the raw RTP timestamp, but the 'translated' timestamp
-     * which is a function of the RTP timestamp and the clockrate
+     * which is a function of the RTP timestamp and the clockrate)
      * and
      * 3) Was received at [packetReceivedTimeMs]
      */
@@ -224,10 +231,10 @@ class IncomingStreamStatistics(
                     // Very large jump
                     //TODO
                 }
-                maxSeqNum = packetSequenceNumber
                 if (maxSeqNum rolledOverTo packetSequenceNumber) {
                     seqNumCycles++
                 }
+                maxSeqNum = packetSequenceNumber
             } else {
                 // Older packet
                 if (packetSequenceNumber numPacketsTo maxSeqNum in 0..MAX_OOO_AMOUNT) {
