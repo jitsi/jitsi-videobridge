@@ -24,6 +24,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.JingleUtils;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
 
@@ -35,6 +36,7 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
@@ -673,6 +675,8 @@ public class Videobridge
         Conference conference;
         System.out.println("Received colibriConferenceIq \n" + conferenceIQ.toXML());
 
+        Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes = new HashMap<>();
+
         if (!accept(focus, options))
         {
             return IQUtils.createError(
@@ -947,6 +951,10 @@ public class Videobridge
                     initiator = true;
                 }
 
+                List<PayloadTypePacketExtension> epPayloadTypes =
+                        endpointPayloadTypes.computeIfAbsent(channel.getEndpoint().getID(), key -> new ArrayList<>());
+                epPayloadTypes.addAll(channelIQ.getPayloadTypes());
+
                 channel.setPayloadTypes(channelIQ.getPayloadTypes());
                 channel.setRtpHeaderExtensions(
                         channelIQ.getRtpHeaderExtensions());
@@ -1004,6 +1012,40 @@ public class Videobridge
                 // sourceGroupsChanged or PayloadTypesChanged, etc.
                 content.fireChannelChanged(channel);
             }
+            // TODO(brian): the code below is an transitional step in moving logic out of the channel.  instead of
+            // relying on the channel to update the transceiver with the payload types, we do it here (after gathering them
+            // for the entire endpoint, rather than one channel at a time).  This should go elsewhere, but at least here
+            // we've gotten that code out of the channel.
+            endpointPayloadTypes.forEach((epId, payloadTypes) -> {
+                logger.info("Notifying ep " + epId + " about " + payloadTypes.size() + " payload type mappings");
+                AbstractEndpoint ep = conference.getEndpoint(epId);
+                if (ep != null) {
+                    ep.transceiver.clearDynamicRtpPayloadTypes();
+                    MediaService mediaService = conference.getMediaService();
+                    payloadTypes.forEach(pt -> {
+                        //TODO(brian): the code in JingleUtils#payloadTypeToMediaFormat is a bit confusing.  If it's
+                        // an 'unknown' format, it creates an 'unknown format' instance, but then returns null instead
+                        // of returning the created format.  i see this happening with ISAC and h264 in my tests, which
+                        // i guess aren't configured as supported formats? (when i looked into the supported formats
+                        // checking, there was some weirdness there too, so worth taking another look at all this at
+                        // some point)
+                        MediaFormat mediaFormat
+                                = JingleUtils.payloadTypeToMediaFormat(
+                                pt,
+                                mediaService,
+                                null);
+                        if (mediaFormat == null) {
+                            logger.info("Unable to parse a format for pt " + pt.getID() + " -> " +
+                                    pt.getName());
+                        } else {
+                            logger.info("Notifying ep " + epId + " about payload type mapping: " +
+                                    pt.getID() + " -> " + mediaFormat.toString());
+                            ep.transceiver.addDynamicRtpPayloadType((byte)pt.getID(), mediaFormat);
+                        }
+                    });
+                }
+            });
+
 
             for (ColibriConferenceIQ.SctpConnection sctpConnIq
                     : contentIQ.getSctpConnections())

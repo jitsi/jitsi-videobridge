@@ -1460,7 +1460,6 @@ public class RtpChannel
 
 //                receivePTs = new int[payloadTypeCount];
 //                stream.clearDynamicRTPPayloadTypes();
-                getEndpoint().transceiver.clearDynamicRtpPayloadTypes();
                 for (int i = 0; i < payloadTypeCount; i++)
                 {
                     PayloadTypePacketExtension payloadType
@@ -1479,7 +1478,6 @@ public class RtpChannel
 //                        stream.addDynamicRTPPayloadType(
 //                                (byte) payloadType.getID(),
 //                                mediaFormat);
-                        getEndpoint().transceiver.addDynamicRtpPayloadType((byte)payloadType.getID(), mediaFormat);
                     }
                 }
 
