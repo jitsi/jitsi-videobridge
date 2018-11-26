@@ -1904,7 +1904,7 @@ public class RtpChannel
         }
         Transceiver transceiver = getTransceiver();
         if (transceiver != null) {
-            logger.info(getTransceiver().getStats());
+            logger.info(transceiver.getStats());
         }
 
         return true;
@@ -2108,7 +2108,6 @@ public class RtpChannel
                     // from any sender using the proper rtx ssrc
                     getContent().getConference().getEndpoints().forEach(endpoint -> {
                         endpoint.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
-
                     });
                 }
             });

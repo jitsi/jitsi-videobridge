@@ -439,7 +439,12 @@ public class IceDtlsTransportManager
                     });
 //                    System.out.println("BRIAN: transceiver writer thread sending packet " + p.toString());
                     s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
-                } catch (InterruptedException | IOException e)
+                }
+                catch (SocketClosedException e)
+                {
+                    logger.info("Socket closed for local ufrag " + iceAgent.getLocalUfrag() + ", stopping writer");
+                }
+                catch (InterruptedException | IOException e)
                 {
                     e.printStackTrace();
                     break;
@@ -463,7 +468,13 @@ public class IceDtlsTransportManager
                     PacketInfo pktInfo = new PacketInfo(pkt);
                     pktInfo.setReceivedTime(System.currentTimeMillis());
                     incomingPipelineRoot.processPackets(Collections.singletonList(pktInfo));
-                } catch (IOException e)
+                }
+                catch (SocketClosedException e)
+                {
+                    logger.info("Socket closed for local ufrag " + iceAgent.getLocalUfrag() + ", stopping reader");
+                    break;
+                }
+                catch (IOException e)
                 {
                     e.printStackTrace();
                     break;

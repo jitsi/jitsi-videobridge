@@ -163,7 +163,7 @@ class VideobridgeExpireThread
      */
     private void expire(Videobridge videobridge)
     {
-        logger.info("Running expire()");
+//        logger.info("Running expire()");
         for (Conference conference : videobridge.getConferences())
         {
             // The Conferences will live an iteration more than the Contents.
