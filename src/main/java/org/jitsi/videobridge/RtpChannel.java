@@ -908,8 +908,8 @@ public class RtpChannel
         synchronized (streamSyncRoot)
         {
             TransportManager transportManager = getTransportManager();
-            TransportCCEngine transportCCEngine
-                = transportManager.getTransportCCEngine();
+//            TransportCCEngine transportCCEngine
+//                = transportManager.getTransportCCEngine();
 
             stream = mediaService.createMediaStream(
                         null,
@@ -919,39 +919,39 @@ public class RtpChannel
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes
              // to the values of properties we may be interested in.
-            stream.addPropertyChangeListener(streamPropertyChangeListener);
-            stream.setName(getID());
-            stream.setProperty(RtpChannel.class.getName(), this);
+//            stream.addPropertyChangeListener(streamPropertyChangeListener);
+//            stream.setName(getID());
+//            stream.setProperty(RtpChannel.class.getName(), this);
+//
+//            if (stream instanceof MediaStreamImpl)
+//            {
+//                MediaStreamImpl streamImpl = (MediaStreamImpl) stream;
+//                DiagnosticContext diagnosticContext
+//                    = streamImpl.getDiagnosticContext();
+//
+//                getContent().getConference()
+//                    .appendDiagnosticInformation(diagnosticContext);
+//            }
 
-            if (stream instanceof MediaStreamImpl)
-            {
-                MediaStreamImpl streamImpl = (MediaStreamImpl) stream;
-                DiagnosticContext diagnosticContext
-                    = streamImpl.getDiagnosticContext();
-
-                getContent().getConference()
-                    .appendDiagnosticInformation(diagnosticContext);
-            }
-
-            if (transformEngine != null)
-            {
-                stream.setExternalTransformer(transformEngine);
-                //TODO(BRIAN): Need to look into what exactly is being done in here.  Is there duplicated effort?
-                new Node("External transform wrapper") {
-                    @Override
-                    protected void doProcessPackets(@NotNull List<PacketInfo> packetInfos)
-                    {
-                        //TODO: still need to wrap bitratecontroller specifically to incorporate the
-                        // willWrite logic
-                        RawPacket[] rawPackets = packetInfos.stream().map(PacketInfo::getPacket).map(PacketExtensionsKt::toRawPacket).toArray(RawPacket[]::new);
-                        RawPacket[] outPackets = transformEngine.getRTPTransformer().transform(rawPackets);
-                    }
-                };
-            }
-            if (transportCCEngine != null)
-            {
-                stream.setTransportCCEngine(transportCCEngine);
-            }
+//            if (transformEngine != null)
+//            {
+//                stream.setExternalTransformer(transformEngine);
+//                //TODO(BRIAN): Need to look into what exactly is being done in here.  Is there duplicated effort?
+//                new Node("External transform wrapper") {
+//                    @Override
+//                    protected void doProcessPackets(@NotNull List<PacketInfo> packetInfos)
+//                    {
+//                        //TODO: still need to wrap bitratecontroller specifically to incorporate the
+//                        // willWrite logic
+//                        RawPacket[] rawPackets = packetInfos.stream().map(PacketInfo::getPacket).map(PacketExtensionsKt::toRawPacket).toArray(RawPacket[]::new);
+//                        RawPacket[] outPackets = transformEngine.getRTPTransformer().transform(rawPackets);
+//                    }
+//                };
+//            }
+//            if (transportCCEngine != null)
+//            {
+//                stream.setTransportCCEngine(transportCCEngine);
+//            }
 
             logger.info(Logger.Category.STATISTICS,
                         "create_stream," + getLoggingId());
