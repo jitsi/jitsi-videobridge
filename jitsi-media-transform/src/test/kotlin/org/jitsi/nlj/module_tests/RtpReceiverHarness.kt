@@ -100,7 +100,7 @@ private fun createSrtcpTransformer(): SinglePacketTransformer {
 
 fun createReceiver(executor: ScheduledExecutorService): RtpReceiver {
     val receiver = RtpReceiverImpl(
-        Random().nextLong(),
+        Random().nextLong().toString(),
         {},
         null,
         executor

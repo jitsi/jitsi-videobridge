@@ -84,7 +84,7 @@ val srtcpTransformer = SrtpUtil.initializeTransformer(
 
 fun createRtpReceiver(executor: ScheduledExecutorService): RtpReceiver {
     val rtpReceiver = RtpReceiverImpl(
-        1,
+        "1",
         { rtcpPacket -> Unit },
         executor = executor
     )
@@ -106,7 +106,7 @@ fun main(args: Array<String>) {
     val receivers = mutableListOf<RtpReceiver>()
     val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()
 
-    val sender = RtpSenderImpl(456L, executor = executor)
+    val sender = RtpSenderImpl("456", executor = executor)
     sender.setSrtpTransformer(srtpTransformer)
     sender.setSrtcpTransformer(srtcpTransformer)
 
