@@ -40,7 +40,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 
 class RtpSenderImpl(
-    val id: Long,
+    val id: String,
     transportCcEngine: TransportCCEngine? = null,
     val executor: ScheduledExecutorService
 ) : RtpSender() {

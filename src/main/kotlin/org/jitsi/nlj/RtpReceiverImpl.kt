@@ -56,7 +56,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
 
 class RtpReceiverImpl @JvmOverloads constructor(
-    val id: Long,
+    val id: String,
     /**
      * A function to be used when these receiver wants to send RTCP packets to the
      * participant it's receiving data from (NACK packets, for example)

@@ -88,7 +88,7 @@ private fun createSrtcpTransformer(): SinglePacketTransformer {
 
 private fun createSender(executor: ScheduledExecutorService): RtpSender {
     val sender = RtpSenderImpl(
-        Random().nextLong(),
+        Random().nextLong().toString(),
         null,
         executor
     )
