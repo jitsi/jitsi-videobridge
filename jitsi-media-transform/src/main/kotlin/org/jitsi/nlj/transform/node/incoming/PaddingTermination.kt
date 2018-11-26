@@ -18,12 +18,14 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.impl.neomedia.transform.PaddingTermination
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 
 class PaddingTermination : Node("Padding termination") {
-    val paddingTermination = PaddingTermination()
+    private val paddingTermination = PaddingTermination()
+    private var numPaddingPacketsSeen = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
@@ -32,8 +34,17 @@ class PaddingTermination : Node("Padding termination") {
                 // If paddingTermination didn't return null, that means this is a packet
                 // that should be forwarded.
                 outPackets.add(packetInfo)
+            } ?: run {
+                numPaddingPacketsSeen++
             }
         }
         next(outPackets)
+    }
+
+    override fun getStats(indent: Int): String = with (StringBuffer()) {
+        append(super.getStats(indent))
+        appendLnIndent(indent + 2, "num padding packets seen: $numPaddingPacketsSeen")
+
+        toString()
     }
 }
