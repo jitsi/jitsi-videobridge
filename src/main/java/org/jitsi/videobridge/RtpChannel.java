@@ -1458,15 +1458,15 @@ public class RtpChannel
             {
                 int payloadTypeCount = payloadTypes.size();
 
-                receivePTs = new int[payloadTypeCount];
-                stream.clearDynamicRTPPayloadTypes();
+//                receivePTs = new int[payloadTypeCount];
+//                stream.clearDynamicRTPPayloadTypes();
                 getEndpoint().transceiver.clearDynamicRtpPayloadTypes();
                 for (int i = 0; i < payloadTypeCount; i++)
                 {
                     PayloadTypePacketExtension payloadType
                         = payloadTypes.get(i);
 
-                    receivePTs[i] = payloadType.getID();
+//                    receivePTs[i] = payloadType.getID();
 
                     MediaFormat mediaFormat
                         = JingleUtils.payloadTypeToMediaFormat(
@@ -1476,9 +1476,9 @@ public class RtpChannel
 
                     if (mediaFormat != null)
                     {
-                        stream.addDynamicRTPPayloadType(
-                                (byte) payloadType.getID(),
-                                mediaFormat);
+//                        stream.addDynamicRTPPayloadType(
+//                                (byte) payloadType.getID(),
+//                                mediaFormat);
                         getEndpoint().transceiver.addDynamicRtpPayloadType((byte)payloadType.getID(), mediaFormat);
                     }
                 }
