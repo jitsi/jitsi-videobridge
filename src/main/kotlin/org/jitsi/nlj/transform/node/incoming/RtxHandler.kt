@@ -22,6 +22,7 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
@@ -112,5 +113,14 @@ class RtxHandler : Node("RTX handler") {
             }
         }
         super.handleEvent(event)
+    }
+
+    override fun getStats(indent: Int): String = with(StringBuffer()) {
+        append(super.getStats(indent))
+        appendLnIndent(indent + 2, "num rtx packets received: $numRtxPacketsReceived")
+        appendLnIndent(indent + 2, "num padding packets received: $numPaddingPacketsReceived")
+
+
+        toString()
     }
 }

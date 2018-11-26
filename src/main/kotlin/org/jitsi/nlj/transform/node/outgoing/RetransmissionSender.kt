@@ -47,6 +47,7 @@ class RetransmissionSender : Node("Retransmission sender") {
      */
     private val rtxStreamSeqNums: MutableMap<Long, Int> = mutableMapOf()
 
+    private var numRetransmissionsRequested = 0
     private var numRetransmittedPackets = 0
 
     /**
@@ -58,8 +59,17 @@ class RetransmissionSender : Node("Retransmission sender") {
             logger.cdebug { "Retransmission sender ${hashCode()} retransmitting packet with original ssrc " +
                     "${pkt.header.ssrc}, original sequence number ${pkt.header.sequenceNumber} and original " +
                     "payload type: ${pkt.header.payloadType}" }
-            val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: return@forEachAs
-            val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: return@forEachAs
+            numRetransmissionsRequested++
+            val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: run {
+                logger.cdebug { "Retransmission sender ${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
+                        pkt.header.ssrc }
+                return@forEachAs
+            }
+            val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: run {
+                logger.cdebug { "Retransmission sender ${hashCode()} could not find an associated RTX payload type for original payload type " +
+                        pkt.header.payloadType }
+                return@forEachAs
+            }
             // Get a default value of 1 to start if it isn't present in the map.  If it is present
             // in the map, get the value and increment it by 1
             val rtxSeqNum = rtxStreamSeqNums.merge(rtxSsrc, 1, Integer::sum)!!
@@ -111,7 +121,8 @@ class RetransmissionSender : Node("Retransmission sender") {
     override fun getStats(indent: Int): String {
         return with(StringBuffer()) {
             append(super.getStats(indent))
-            appendLnIndent(indent + 2, "num retransmitted packets: $numRetransmittedPackets")
+            appendLnIndent(indent + 2, "num retransmissions requested: $numRetransmissionsRequested")
+            appendLnIndent(indent + 2, "num retransmissions sent: $numRetransmittedPackets")
 
             toString()
         }
