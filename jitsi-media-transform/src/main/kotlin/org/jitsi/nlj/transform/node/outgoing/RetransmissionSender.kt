@@ -61,12 +61,12 @@ class RetransmissionSender : Node("Retransmission sender") {
                     "payload type: ${pkt.header.payloadType}" }
             numRetransmissionsRequested++
             val rtxSsrc = associatedSsrcs[pkt.header.ssrc] ?: run {
-                logger.cdebug { "Retransmission sender ${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
+                logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX ssrc for original packet ssrc " +
                         pkt.header.ssrc }
                 return@forEachAs
             }
             val rtxPt = associatedPayloadTypes[pkt.header.payloadType] ?: run {
-                logger.cdebug { "Retransmission sender ${hashCode()} could not find an associated RTX payload type for original payload type " +
+                logger.cerror { "Retransmission sender ${hashCode()} could not find an associated RTX payload type for original payload type " +
                         pkt.header.payloadType }
                 return@forEachAs
             }

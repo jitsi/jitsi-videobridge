@@ -56,7 +56,7 @@ class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
             is RtpPayloadTypeAddedEvent -> {
                 // We don't want to track jitter, etc. for RTX streams
                 if (Constants.RTX.equals(event.format.encoding, true)) {
-                    logger.cinfo { "Statistics tracker ignoring format: ${event.format}" }
+                    logger.cinfo { "Statistics tracker ignoring RTX format: ${event.format}" }
                 } else {
                     payloadFormats[event.payloadType] = event.format
                 }
