@@ -149,11 +149,10 @@ class Transceiver(
 
     fun clearDynamicRtpPayloadTypes() {
         logger.cinfo { "All payload types being cleared" }
-        //TODO: ignoring this for now, since we'll have conflicts from each channel calling it
-//        val rtpPayloadTypeClearEvent = RtpPayloadTypeClearEvent()
-//        rtpReceiver.handleEvent(rtpPayloadTypeClearEvent)
-//        rtpSender.handleEvent(rtpPayloadTypeClearEvent)
-//        payloadTypes.clear()
+        val rtpPayloadTypeClearEvent = RtpPayloadTypeClearEvent()
+        rtpReceiver.handleEvent(rtpPayloadTypeClearEvent)
+        rtpSender.handleEvent(rtpPayloadTypeClearEvent)
+        payloadTypes.clear()
     }
 
     fun addDynamicRtpPayloadTypeOverride(originalPt: Byte, overloadPt: Byte) {
@@ -183,7 +182,10 @@ class Transceiver(
         rtpReceiver.setCsrcAudioLevelListener(csrcAudioLevelListener)
     }
 
+    // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
+    // code care about one or the other, but currently there is no issue treating them the same.
     fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: String) {
+        logger.cinfo { "Transreceiver $id adding ssrc association: $primarySsrc <-> $secondarySsrc ($type)"}
         val ssrcAssociationEvent = SsrcAssociationEvent(primarySsrc, secondarySsrc, type)
         rtpReceiver.handleEvent(ssrcAssociationEvent)
         rtpSender.handleEvent(ssrcAssociationEvent)
