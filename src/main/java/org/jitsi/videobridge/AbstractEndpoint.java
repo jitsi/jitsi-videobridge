@@ -40,6 +40,7 @@ import java.util.stream.*;
  * @author Boris Grozev
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
+    implements EncodingsManager.EncodingsUpdateListener
 {
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -110,6 +111,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                 handleIncomingRtcp(pkts);
             }
         });
+        conference.encodingsManager.subscribe(this);
+    }
+
+    @Override
+    public void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, String semantics) {
+        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
     }
 
     protected void handleIncomingRtp(List<PacketInfo> packetInfos)

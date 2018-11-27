@@ -2100,13 +2100,13 @@ public class RtpChannel
                     // Translate FID -> RTX (Do it this way so it's effectively final and can be used in the lambda
                     // below)
                     String semantics = sourceGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FID) ? Constants.RTX : sourceGroup.getSemantics();
-                    System.out.println("BRIAN: notifying transceivers of ssrc association: " +
-                            secondarySsrc + " -> " + primarySsrc + " (" + semantics + ")");
-                    // All channels need to be aware of the ssrc associations so that they can retransmit packet
-                    // from any sender using the proper rtx ssrc
-                    getContent().getConference().getEndpoints().forEach(endpoint -> {
-                        endpoint.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
-                    });
+                    // TODO(brian): eventually move this up out of the channel so that we can remove the need for the channel
+                    // in how trasnceivers learn about ssrc associations
+                    getEndpoint().getConference().encodingsManager.addSsrcAssociation(
+                            getEndpoint().getID(),
+                            primarySsrc,
+                            secondarySsrc,
+                            semantics);
                 }
             });
         }

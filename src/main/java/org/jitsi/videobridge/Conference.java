@@ -243,6 +243,8 @@ public class Conference
      */
     private final ExpireableImpl expireableImpl;
 
+    final EncodingsManager encodingsManager = new EncodingsManager();
+
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
      * conference in the terms of Jitsi Videobridge which has a specific
