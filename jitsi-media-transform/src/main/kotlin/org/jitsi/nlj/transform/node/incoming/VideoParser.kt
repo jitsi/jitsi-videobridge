@@ -53,7 +53,7 @@ class VideoParser : Node("Video parser") {
     // does this packet represent the start of a frame?
     // does this packet represent the end of a frame?
     override fun doProcessPackets(p: List<PacketInfo>) {
-        val outPackets = mutableListOf<PacketInfo>()
+//        val outPackets = mutableListOf<PacketInfo>()
 //        p.forEachAs<RtpPacket> { packetInfo, pkt ->
 //            val pt = pkt.header.payloadType.toUByte()
 //            payloadFormats[pt]?.let { format ->
