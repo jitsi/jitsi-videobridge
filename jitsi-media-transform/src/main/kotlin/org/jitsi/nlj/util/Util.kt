@@ -43,3 +43,10 @@ inline fun <reified Expected> Iterable<*>.forEachIf(action: (Expected) -> Unit) 
     }
 }
 
+inline fun getStackTrace(): String = with (StringBuffer()) {
+    for (ste in Thread.currentThread().stackTrace) {
+        appendln(ste.toString())
+    }
+    toString()
+}
+
