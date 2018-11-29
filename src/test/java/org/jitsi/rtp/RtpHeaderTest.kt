@@ -5,6 +5,7 @@ import io.kotlintest.matchers.haveSize
 import io.kotlintest.matchers.types.shouldBeTypeOf
 import io.kotlintest.should
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
@@ -86,19 +87,20 @@ internal class RtpHeaderTest : ShouldSpec() {
             "a header with one byte extensions" {
                 val header = RtpHeader(headerWithOneByteExtensions)
                 should("parse correctly") {
-                    header.extensions.extensionMap.size shouldBe 3
-                    header.extensions.extensionMap.values.forEach {
-                        it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                    for (i in 1..3) {
+                        val ext = header.extensions.getExtension(i)
+                        ext shouldNotBe null
+                        ext.shouldBeTypeOf<RtpOneByteHeaderExtension>()
                     }
-
                 }
             }
             "a header with two byte extensions" {
                 val header = RtpHeader(headerWithTwoByteExtensions)
                 should("parse correctly") {
-                    header.extensions.extensionMap.size shouldBe 3
-                    header.extensions.extensionMap.values.forEach {
-                        it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
+                    for (i in 1..3) {
+                        val ext = header.extensions.getExtension(i)
+                        ext shouldNotBe null
+                        ext.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
                     }
                 }
             }

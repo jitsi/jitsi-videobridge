@@ -38,11 +38,7 @@ import java.nio.ByteBuffer
  *
  */
 class RtpHeaderExtensions : Serializable {
-    // Exposing the extension map (as opposed to making it private) feels a little weird, but we'd have to implement
-    // the entire MutableMap interface to keep things as convenient in order to make it private. Plus, no methods
-    // rely on 'intercepting' calls to this map, they only care about whatever its current state is so at this point I
-    // think it feels ok to expose it.
-    val extensionMap: MutableMap<Int, RtpHeaderExtension>
+    private val extensionMap: MutableMap<Int, RtpHeaderExtension>
     private val dataSizeBytes: Int
         get() {
             return if (extensionMap.isNotEmpty()) {
@@ -170,6 +166,11 @@ class RtpHeaderExtensions : Serializable {
     constructor(extensions: MutableMap<Int, RtpHeaderExtension>) {
         this.extensionMap = extensions
     }
+
+    fun isEmpty(): Boolean = extensionMap.isEmpty()
+    fun isNotEmpty(): Boolean = extensionMap.isNotEmpty()
+    fun getExtension(id: Int): RtpHeaderExtension? = extensionMap.getOrDefault(id, null)
+    fun addExtension(id: Int, extension: RtpHeaderExtension) = extensionMap.put(id, extension)
 
     override fun getBuffer(): ByteBuffer {
         if (extensionMap.isEmpty()) {

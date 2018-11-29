@@ -3,6 +3,7 @@ package org.jitsi.rtp
 import io.kotlintest.matchers.haveSize
 import io.kotlintest.should
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.util.BufferView
@@ -55,13 +56,13 @@ internal class RtpPacketTest : ShouldSpec() {
 
                 should("add the extension correctly") {
                     newPacket.header.hasExtension shouldBe true
-                    newPacket.header.extensions.extensionMap.size shouldBe 1
-                    val newExt = newPacket.header.extensions.extensionMap.iterator().next()
-                    newExt.key shouldBe 5
-                    newExt.value.id shouldBe ext.id
-                    newExt.value.lengthBytes shouldBe ext.lengthBytes
+                    val newExt = newPacket.header.getExtension(ext.id)
+                    newExt shouldNotBe null
+                    newExt!!
+                    newExt.id shouldBe ext.id
+                    newExt.lengthBytes shouldBe ext.lengthBytes
                     for (i in 0 until ext.lengthBytes) {
-                        newExt.value.data.get(i) shouldBe ext.data.get(i)
+                        newExt.data.get(i) shouldBe ext.data.get(i)
                     }
                 }
                 should("not modify the payload") {

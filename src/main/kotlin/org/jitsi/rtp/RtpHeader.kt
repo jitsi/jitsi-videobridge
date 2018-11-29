@@ -176,7 +176,7 @@ open class RtpHeader : Serializable {
     ) {
         this.version = version
         this.hasPadding = hasPadding
-        this.hasExtension = extensions.extensionMap.isNotEmpty()
+        this.hasExtension = extensions.isNotEmpty()
         this.csrcCount = csrcCount
         this.marker = marker
         this.payloadType = payloadType
@@ -187,9 +187,9 @@ open class RtpHeader : Serializable {
         this.extensions = extensions
     }
 
-    fun getExtension(id: Int): RtpHeaderExtension? = extensions.extensionMap.getOrDefault(id, null)
+    fun getExtension(id: Int): RtpHeaderExtension? = extensions.getExtension(id)
 
-    fun addExtension(id: Int, ext: RtpHeaderExtension) = extensions.extensionMap.put(id, ext)
+    fun addExtension(id: Int, ext: RtpHeaderExtension) = extensions.addExtension(id, ext)
 
     override fun getBuffer(): ByteBuffer {
         val b = ByteBufferUtils.ensureCapacity(buf, size)
@@ -198,7 +198,7 @@ open class RtpHeader : Serializable {
 
         RtpHeader.setVersion(b, version)
         RtpHeader.setPadding(b, hasPadding)
-        hasExtension = extensions.extensionMap.isNotEmpty()
+        hasExtension = extensions.isNotEmpty()
         RtpHeader.setExtension(b, hasExtension)
         RtpHeader.setCsrcCount(b, csrcCount)
         RtpHeader.setMarker(b, marker)

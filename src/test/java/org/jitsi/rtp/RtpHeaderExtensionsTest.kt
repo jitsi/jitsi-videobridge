@@ -3,6 +3,7 @@ package org.jitsi.rtp
 import io.kotlintest.matchers.maps.shouldContainKeys
 import io.kotlintest.matchers.types.shouldBeTypeOf
 import io.kotlintest.shouldBe
+import io.kotlintest.shouldNotBe
 import io.kotlintest.specs.ShouldSpec
 import java.nio.ByteBuffer
 
@@ -33,10 +34,10 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
             "a one byte header extension block" {
                 val extensions = RtpHeaderExtensions(oneByteHeaderExtBlock)
                 should("parse all the extensions") {
-                    extensions.extensionMap.size shouldBe 3
-                    extensions.extensionMap.shouldContainKeys(1, 2, 3)
-                    extensions.extensionMap.values.forEach {
-                        it.shouldBeTypeOf<RtpOneByteHeaderExtension>()
+                    for (i in 1..3) {
+                        val ext = extensions.getExtension(i)
+                        ext shouldNotBe null
+                        ext.shouldBeTypeOf<RtpOneByteHeaderExtension>()
                     }
                 }
                 "and then serializing it" {
@@ -56,10 +57,10 @@ internal class RtpHeaderExtensionsTest : ShouldSpec() {
             "a two byte header extension block" {
                 val extensions = RtpHeaderExtensions(twoByteHeaderExtBlock)
                 should("parse all the extensions") {
-                    extensions.extensionMap.size shouldBe 3
-                    extensions.extensionMap.shouldContainKeys(1, 2, 3)
-                    extensions.extensionMap.values.forEach {
-                        it.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
+                    for (i in 1..3) {
+                        val ext = extensions.getExtension(i)
+                        ext shouldNotBe null
+                        ext.shouldBeTypeOf<RtpTwoByteHeaderExtension>()
                     }
                 }
                 "and then serializing it" {
