@@ -45,6 +45,7 @@ class DtlsClientStack @JvmOverloads constructor(
             subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
         } catch (e: Exception) {
             logger.cerror{ "BRIAN: error during dtls connection: $e" }
+            throw e
         }
     }
 
