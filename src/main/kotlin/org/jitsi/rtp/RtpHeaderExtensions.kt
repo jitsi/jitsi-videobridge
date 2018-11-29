@@ -39,27 +39,27 @@ import java.nio.ByteBuffer
  */
 class RtpHeaderExtensions : Serializable {
     private val extensionMap: MutableMap<Int, RtpHeaderExtension>
-    private val dataSizeBytes: Int
-        get() {
-            return if (extensionMap.isNotEmpty()) {
-                EXTENSIONS_HEADER_SIZE + extensionMap.values.map { it.size }.sum()
-            } else {
-                0
-            }
+    private var buf: ByteBuffer? = null
+    /**
+     * Calculating the size on the fly was using too much CPU, so we use a scheme instead to recalculate the size
+     * whenever the extensions map changes.
+     */
+    private fun recalcSize() {
+        val dataSizeBytes = if (extensionMap.isNotEmpty()) {
+            EXTENSIONS_HEADER_SIZE + extensionMap.values.map { it.size }.sum()
+        } else {
+            0
         }
-    private val paddingSizeBytes: Int
-        get() {
-            var numPaddingBytes = 0
-            while ((dataSizeBytes + numPaddingBytes) % 4 != 0) {
-                numPaddingBytes++
-            }
-            return numPaddingBytes
+        var numPaddingBytes = 0
+        while ((dataSizeBytes + numPaddingBytes) % 4 != 0) {
+            numPaddingBytes++
         }
+        size = dataSizeBytes + numPaddingBytes
+    }
     /**
      * The size, in bytes, the extensions contained here will take up when serialized to a buffer
      */
-    val size: Int
-        get() = dataSizeBytes + paddingSizeBytes
+    var size: Int = 0
 
     companion object {
         const val EXTENSIONS_HEADER_SIZE = 4
@@ -161,22 +161,29 @@ class RtpHeaderExtensions : Serializable {
 
     constructor(buf: ByteBuffer) {
         extensionMap = getExtensions(buf)
+        recalcSize()
+        this.buf = ByteBuffer.allocate(size)
     }
 
     constructor(extensions: MutableMap<Int, RtpHeaderExtension>) {
         this.extensionMap = extensions
+        recalcSize()
+        this.buf = ByteBuffer.allocate(size)
     }
 
     fun isEmpty(): Boolean = extensionMap.isEmpty()
     fun isNotEmpty(): Boolean = extensionMap.isNotEmpty()
     fun getExtension(id: Int): RtpHeaderExtension? = extensionMap.getOrDefault(id, null)
-    fun addExtension(id: Int, extension: RtpHeaderExtension) = extensionMap.put(id, extension)
+    fun addExtension(id: Int, extension: RtpHeaderExtension) {
+        extensionMap[id] = extension
+        recalcSize()
+    }
 
     override fun getBuffer(): ByteBuffer {
         if (extensionMap.isEmpty()) {
             return EMPTY_BUFFER
         }
-        val buf = ByteBufferUtils.ensureCapacity(null, size)
+        val buf = ByteBufferUtils.ensureCapacity(this.buf, size)
         buf.rewind()
         buf.limit(size)
         // Figure out what type of header extensions we have so we know which cookie
@@ -191,6 +198,7 @@ class RtpHeaderExtensions : Serializable {
         setExtensionsAndPadding(buf, extensionMap.values)
 
         buf.rewind()
+        this.buf = buf
         return buf
     }
 
