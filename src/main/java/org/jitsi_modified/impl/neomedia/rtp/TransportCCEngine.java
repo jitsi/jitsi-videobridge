@@ -249,35 +249,35 @@ public class TransportCCEngine
      *
      * @return the source SSRC to use for the outgoing RTCP TCC packets.
      */
-    private long getSourceSSRC()
-    {
-        MediaStream stream = anyVideoMediaStream;
-        if (stream == null)
-        {
-            return -1;
-        }
-
-        MediaStreamTrackReceiver receiver
-            = stream.getMediaStreamTrackReceiver();
-        if (receiver == null)
-        {
-            return -1;
-        }
-
-        MediaStreamTrackDesc[] tracks = receiver.getMediaStreamTracks();
-        if (tracks == null || tracks.length == 0)
-        {
-            return -1;
-        }
-
-        RTPEncodingDesc[] encodings = tracks[0].getRTPEncodings();
-        if (encodings == null || encodings.length == 0)
-        {
-            return -1;
-        }
-
-        return encodings[0].getPrimarySSRC();
-    }
+//    private long getSourceSSRC()
+//    {
+//        MediaStream stream = anyVideoMediaStream;
+//        if (stream == null)
+//        {
+//            return -1;
+//        }
+//
+//        MediaStreamTrackReceiver receiver
+//            = stream.getMediaStreamTrackReceiver();
+//        if (receiver == null)
+//        {
+//            return -1;
+//        }
+//
+//        MediaStreamTrackDesc[] tracks = receiver.getMediaStreamTracks();
+//        if (tracks == null || tracks.length == 0)
+//        {
+//            return -1;
+//        }
+//
+//        RTPEncodingDesc[] encodings = tracks[0].getRTPEncodings();
+//        if (encodings == null || encodings.length == 0)
+//        {
+//            return -1;
+//        }
+//
+//        return encodings[0].getPrimarySSRC();
+//    }
 
     /**
      * Examines the list of received packets for which we have not yet sent
@@ -288,108 +288,109 @@ public class TransportCCEngine
      * @param now the current time.
      * DEPRECATED this class is no longer responsible for sending tcc rtcp packets
      */
-    private void maybeSendRtcp(boolean marked, long now)
-    {
-        RTCPTCCPacket.PacketMap packets = null;
-        long delta;
-
-        synchronized (incomingPacketsSyncRoot)
-        {
-            if (incomingPackets == null || incomingPackets.isEmpty())
-            {
-                // No packets with unsent feedback.
-                return;
-            }
-
-            delta = firstIncomingTs == -1 ? 0 : (now - firstIncomingTs);
-
-            // The number of packets represented in incomingPackets (including
-            // the missing ones), i.e. the number of entries that the RTCP TCC
-            // packet would include.
-            int packetCount
-                = 1 + RTPUtils.subtractNumber(
-                    incomingPackets.lastKey(),
-                    incomingPackets.firstKey());
-
-            // This condition controls when we send feedback:
-            // 1. If 100ms have passed,
-            // 2. If we see the end of a frame, and 20ms have passed, or
-            // 3. If we have at least 100 packets.
-            // 4. We are approaching the maximum number of packets we can
-            // report on in one RTCP packet.
-            // The exact values and logic here are to be improved.
-            if (delta > 100
-                || (delta > 20 && marked)
-                || incomingPackets.size() > 100
-                || packetCount >= RTCPTCCPacket.MAX_PACKET_COUNT - 20)
-            {
-                packets = incomingPackets;
-                incomingPackets = null;
-                firstIncomingTs = -1;
-            }
-        }
-
-        if (packets != null)
-        {
-            MediaStream stream = getMediaStream();
-            if (stream == null)
-            {
-                logger.warn("No media stream, can't send RTCP.");
-                return;
-            }
-
-            try
-            {
-                long senderSSRC
-                    = anyVideoMediaStream.getStreamRTPManager().getLocalSSRC();
-                if (senderSSRC == -1)
-                {
-                    logger.warn("No sender SSRC, can't send RTCP.");
-                    return;
-                }
-
-
-                long sourceSSRC = getSourceSSRC();
-                if (sourceSSRC == -1)
-                {
-                    logger.warn("No source SSRC, can't send RTCP.");
-                    return;
-                }
-                RTCPTCCPacket rtcpPacket
-                    = new RTCPTCCPacket(
-                        senderSSRC, sourceSSRC,
-                        packets,
-                        (byte) (outgoingFbPacketCount.getAndIncrement() & 0xff),
-                        diagnosticContext);
-
-                // Inject the TCC packet *after* this engine. We don't want
-                // RTCP termination -which runs before this engine in the 
-                // egress- to drop the packet we just sent.
-                stream.injectPacket(
-                        rtcpPacket.toRawPacket(), false /* rtcp */, egressEngine);
-            }
-            catch (IllegalArgumentException iae)
-            {
-                // This comes from the RTCPTCCPacket constructor when the
-                // list of packets contains a delta which cannot be expressed
-                // in a single packet (more than 8192 milliseconds), or the
-                // number of packets to report (including the ones lost) is
-                // too big for one RTCP TCC packet. In this case we would have
-                // to split the feedback in two or more RTCP TCC packets.
-                // We currently don't do this, because it only happens if the
-                // receiver stops sending packets for over 8s or there is a
-                // significant gap in the received sequence numbers. In this
-                // case we will fail to send one feedback message.
-                logger.warn(
-                        "Not sending transport-cc feedback, delta or packet" +
-                            "count too big.");
-            }
-            catch (IOException | TransmissionFailedException e)
-            {
-                logger.error("Failed to send transport feedback RTCP: ", e);
-            }
-        }
-    }
+//    @Deprecated
+//    private void maybeSendRtcp(boolean marked, long now)
+//    {
+//        RTCPTCCPacket.PacketMap packets = null;
+//        long delta;
+//
+//        synchronized (incomingPacketsSyncRoot)
+//        {
+//            if (incomingPackets == null || incomingPackets.isEmpty())
+//            {
+//                // No packets with unsent feedback.
+//                return;
+//            }
+//
+//            delta = firstIncomingTs == -1 ? 0 : (now - firstIncomingTs);
+//
+//            // The number of packets represented in incomingPackets (including
+//            // the missing ones), i.e. the number of entries that the RTCP TCC
+//            // packet would include.
+//            int packetCount
+//                = 1 + RTPUtils.subtractNumber(
+//                    incomingPackets.lastKey(),
+//                    incomingPackets.firstKey());
+//
+//            // This condition controls when we send feedback:
+//            // 1. If 100ms have passed,
+//            // 2. If we see the end of a frame, and 20ms have passed, or
+//            // 3. If we have at least 100 packets.
+//            // 4. We are approaching the maximum number of packets we can
+//            // report on in one RTCP packet.
+//            // The exact values and logic here are to be improved.
+//            if (delta > 100
+//                || (delta > 20 && marked)
+//                || incomingPackets.size() > 100
+//                || packetCount >= RTCPTCCPacket.MAX_PACKET_COUNT - 20)
+//            {
+//                packets = incomingPackets;
+//                incomingPackets = null;
+//                firstIncomingTs = -1;
+//            }
+//        }
+//
+//        if (packets != null)
+//        {
+//            MediaStream stream = getMediaStream();
+//            if (stream == null)
+//            {
+//                logger.warn("No media stream, can't send RTCP.");
+//                return;
+//            }
+//
+//            try
+//            {
+//                long senderSSRC
+//                    = anyVideoMediaStream.getStreamRTPManager().getLocalSSRC();
+//                if (senderSSRC == -1)
+//                {
+//                    logger.warn("No sender SSRC, can't send RTCP.");
+//                    return;
+//                }
+//
+//
+//                long sourceSSRC = getSourceSSRC();
+//                if (sourceSSRC == -1)
+//                {
+//                    logger.warn("No source SSRC, can't send RTCP.");
+//                    return;
+//                }
+//                RTCPTCCPacket rtcpPacket
+//                    = new RTCPTCCPacket(
+//                        senderSSRC, sourceSSRC,
+//                        packets,
+//                        (byte) (outgoingFbPacketCount.getAndIncrement() & 0xff),
+//                        diagnosticContext);
+//
+//                // Inject the TCC packet *after* this engine. We don't want
+//                // RTCP termination -which runs before this engine in the
+//                // egress- to drop the packet we just sent.
+//                stream.injectPacket(
+//                        rtcpPacket.toRawPacket(), false /* rtcp */, egressEngine);
+//            }
+//            catch (IllegalArgumentException iae)
+//            {
+//                // This comes from the RTCPTCCPacket constructor when the
+//                // list of packets contains a delta which cannot be expressed
+//                // in a single packet (more than 8192 milliseconds), or the
+//                // number of packets to report (including the ones lost) is
+//                // too big for one RTCP TCC packet. In this case we would have
+//                // to split the feedback in two or more RTCP TCC packets.
+//                // We currently don't do this, because it only happens if the
+//                // receiver stops sending packets for over 8s or there is a
+//                // significant gap in the received sequence numbers. In this
+//                // case we will fail to send one feedback message.
+//                logger.warn(
+//                        "Not sending transport-cc feedback, delta or packet" +
+//                            "count too big.");
+//            }
+//            catch (IOException | TransmissionFailedException e)
+//            {
+//                logger.error("Failed to send transport feedback RTCP: ", e);
+//            }
+//        }
+//    }
 
     /**
      * {@inheritDoc}
