@@ -1049,6 +1049,11 @@ public class Conference
         return copy;
     }
 
+    public List<AbstractEndpoint> getEndpointsFast()
+    {
+        return new ArrayList<>(this.endpoints);
+    }
+
     /**
      * Gets the JID of the conference focus who has initialized this instance
      * and from whom requests to manage this instance must come or they will be

@@ -81,8 +81,13 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     //Public for now since the channel needs to reach in and grab it
     public Transceiver transceiver;
-//    private static ScheduledExecutorService transceiverExecutor = Executors.newSingleThreadScheduledExecutor(new NameableThreadFactory("Transceiver executor thread"));
-    private static ScheduledExecutorService transceiverExecutor = Executors.newScheduledThreadPool(10, new NameableThreadFactory("Transceiver executor thread"));
+    private ExecutorService receiverExecutor;
+    private ExecutorService senderExecutor;
+    // We'll still continue to share a single background executor, as I think it's sufficient.
+    // TODO: Though should investigate how many threads may be needed, and also verify we don't have any concurrency
+    // issues with the code using this pool
+    private static ScheduledExecutorService backgroundExecutor =
+            Executors.newScheduledThreadPool(1, new NameableThreadFactory("Background transceiver thread"));
 
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
@@ -95,7 +100,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.conference = Objects.requireNonNull(conference, "conference");
         this.id = Objects.requireNonNull(id, "id");
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
-        transceiver = new Transceiver(getID(), transceiverExecutor);
+        receiverExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver " + id + " executor"));
+        senderExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Sender " + id + " executor"));
+        transceiver = new Transceiver(getID(), receiverExecutor, senderExecutor, backgroundExecutor);
         transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
         {
             @Override
@@ -135,7 +142,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 //                }
 //
 //            });
-            getConference().getEndpoints().forEach(endpoint -> {
+            getConference().getEndpointsFast().forEach(endpoint -> {
                 if (endpoint == this)
                 {
                     return;
@@ -437,6 +444,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         this.expired = true;
         this.transceiver.stop();
+        receiverExecutor.shutdown();
+        senderExecutor.shutdown();
         getConference().endpointExpired(this);
     }
 
