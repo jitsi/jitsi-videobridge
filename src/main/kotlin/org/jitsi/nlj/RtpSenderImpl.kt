@@ -63,6 +63,11 @@ class RtpSenderImpl(
     var lastPacketWrittenTime = -1L
     var running = true
 
+    private var firstQueueReadTime: Long = -1
+    private var lastQueueReadTime: Long = -1
+    private var numQueueReads: Long = 0
+    private var numTimesQueueEmpty: Long = 0
+
     private val srtpEncryptWrapper = SrtpTransformerEncryptNode()
     private val srtcpEncryptWrapper = SrtcpTransformerEncryptNode()
     private val outgoingPacketCache = PacketCache()
@@ -133,9 +138,7 @@ class RtpSenderImpl(
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
-//        scheduleWork()
-//        backgroundExecutor.scheduleAtFixedRate(this::doWork, 0, 4, TimeUnit.MILLISECONDS)
-        executor.execute(this::doWorkBlocking)
+        executor.execute(this::doWork)
     }
 
     override fun getNackHandler(): NackHandler = nackHandler
@@ -162,7 +165,7 @@ class RtpSenderImpl(
         srtcpEncryptWrapper.setTransformer(srtcpTransformer)
     }
 
-    private fun doWorkBlocking() {
+    private fun doWork() {
         while (running) {
             val now = System.currentTimeMillis()
             if (firstQueueReadTime == -1L) {
@@ -170,61 +173,12 @@ class RtpSenderImpl(
             }
             numQueueReads++
             lastQueueReadTime = now
-//            val packetInfo = incomingPacketQueue.take()
             incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
                 outgoingRtpRoot.processPackets(listOf(it))
             }
         }
     }
 
-    private fun doWork() {
-        if (running) {
-            val now = System.currentTimeMillis()
-            if (firstQueueReadTime == -1L) {
-                firstQueueReadTime = now
-            }
-            val packetsToProcess = mutableListOf<PacketInfo>()
-            numQueueReads++
-            lastQueueReadTime = now
-            if (incomingPacketQueue.drainTo(packetsToProcess, 20) > 0) {
-                outgoingRtpRoot.processPackets(packetsToProcess)
-            } else {
-                numTimesQueueEmpty++
-            }
-
-        }
-    }
-
-    private var firstQueueReadTime: Long = -1
-    private var lastQueueReadTime: Long = -1
-    private var numQueueReads: Long = 0
-    private var numTimesQueueEmpty: Long = 0
-    private fun scheduleWork() {
-//        executor.execute {
-//            while (running) {
-//                val packetInfo = incomingPacketQueue.take()
-//                outgoingRtpRoot.processPackets(listOf(packetInfo))
-//            }
-//        }
-        executor.execute {
-            if (running) {
-                val now = System.currentTimeMillis()
-                if (firstQueueReadTime == -1L) {
-                    firstQueueReadTime = now
-                }
-                val packetsToProcess = mutableListOf<PacketInfo>()
-                numQueueReads++
-                lastQueueReadTime = now
-                if (incomingPacketQueue.drainTo(packetsToProcess, 20) > 0) {
-                    outgoingRtpRoot.processPackets(packetsToProcess)
-                } else {
-                    numTimesQueueEmpty++
-                }
-
-                scheduleWork()
-            }
-        }
-    }
 
     override fun handleEvent(event: Event) {
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
