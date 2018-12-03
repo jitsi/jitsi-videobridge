@@ -163,8 +163,10 @@ abstract class Node(
      */
     protected fun next(nextNode: Node, outPackets: List<PacketInfo>) {
         onExit(outPackets)
-        numOutputPackets += outPackets.size
-        nextNode.processPackets(outPackets)
+        if (outPackets.isNotEmpty()) {
+            numOutputPackets += outPackets.size
+            nextNode.processPackets(outPackets)
+        }
     }
 
     private fun onEntry(incomingPackets: List<PacketInfo>) {

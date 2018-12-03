@@ -38,9 +38,7 @@ class DemuxerNode : Node("Demuxer") {
         // packets is above a certain size?
         transformPaths.forEach { predicate, chain ->
             val pathPackets = p.filter { predicate.invoke(it.packet) }
-            if (pathPackets.isNotEmpty()) {
-                next(chain, pathPackets)
-            }
+            next(chain, pathPackets)
         }
     }
 
