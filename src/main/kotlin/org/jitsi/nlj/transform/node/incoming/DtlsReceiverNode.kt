@@ -69,10 +69,7 @@ class DtlsReceiverNode : Node("DTLS Receiver") {
                 outPackets.add(PacketInfo(DtlsProtocolPacket(bufCopy)))
             }
         } while (bytesReceived > 0)
-        if (outPackets.isNotEmpty()) {
-            logger.cdebug { "BRIAN: received dtls application data!" }
-            next(outPackets)
-        }
+        next(outPackets)
         // During the handshake phase, the thread which called 'connect' will
         // pull all the handshake packets through, but after that something
         // else will have to pull through any dtls application data packets
