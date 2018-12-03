@@ -126,6 +126,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
     var firstPacketProcessedTime: Long = 0
     var lastPacketProcessedTime: Long = 0
 
+    private var firstQueueReadTime: Long = -1
+    private var lastQueueReadTime: Long = -1
+    private var numQueueReads: Long = 0
+    private var numTimesQueueEmpty: Long = 0
+
     init {
         logger.cinfo { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
         rtcpTermination.subscribeToRtcp(rtcpRrGenerator)
@@ -214,13 +219,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 }
             }
         }
-
-//        scheduleWork()
-        //backgroundExecutor.scheduleAtFixedRate(this::doWork, 0, 5, TimeUnit.MILLISECONDS)
-        executor.execute(this::doWorkBlocking)
+        executor.execute(this::doWork)
     }
 
-    private fun doWorkBlocking() {
+    private fun doWork() {
         while (running) {
             val now = System.currentTimeMillis()
             if (firstQueueReadTime == -1L) {
@@ -228,7 +230,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
             }
             numQueueReads++
             lastQueueReadTime = now
-//            val packetInfo = incomingPacketQueue.take()
             incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
                 it.addEvent("Exited RTP receiver incoming queue")
                 bytesProcessed += it.packet.size
@@ -238,87 +239,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 }
                 lastPacketProcessedTime = System.currentTimeMillis()
                 processPackets(listOf(it))
-            }
-        }
-    }
-
-    private fun doWork() {
-        if (running) {
-            val now = System.currentTimeMillis()
-            if (firstQueueReadTime == -1L) {
-                firstQueueReadTime = now
-            }
-            val packets = mutableListOf<PacketInfo>()
-            numQueueReads++
-            lastQueueReadTime = now
-            if (incomingPacketQueue.drainTo(packets, 20) > 0) {
-                packets.forEach {
-                    it.addEvent("Exited RTP receiver incoming queue")
-                    bytesProcessed += it.packet.size
-                    packetsProcessed++
-                    if (firstPacketProcessedTime == 0L) {
-//                            firstPacketProcessedTime = System.currentTimeMillis()
-                        firstPacketProcessedTime = now
-                    }
-                }
-//                    lastPacketProcessedTime = System.currentTimeMillis()
-                lastPacketProcessedTime = now
-                processPackets(packets)
-            } else {
-                numTimesQueueEmpty++
-            }
-        }
-    }
-
-    private var firstQueueReadTime: Long = -1
-    private var lastQueueReadTime: Long = -1
-    private var numQueueReads: Long = 0
-    private var numTimesQueueEmpty: Long = 0
-    private fun scheduleWork() {
-        // Rescheduling this job after reading a single packet to allow
-        // other threads to run doesn't seem  to scale all that well,
-        // but doing this in a while (true) loop
-        // holds a single thread exclusively, making it impossible to play
-        // with things like sharing threads across tracks.  Processing a
-        // max amount of packets at a time seems to work as a nice
-        // compromise between the two.  It would be nice to be able to
-        // avoid the busy-loop style polling for a new packet though
-        //TODO: use drainTo (?)
-//        logger.cinfo { "Receiver ${hashCode()} scheduling work" }
-//        executor.execute {
-//            while (running) {
-//                val packetInfo = incomingPacketQueue.take()
-//                packetInfo.addEvent("Exited RTP receiver incoming queue")
-//                processPackets(listOf(packetInfo))
-//            }
-//        }
-        executor.execute {
-            if (running) {
-                val now = System.currentTimeMillis()
-                if (firstQueueReadTime == -1L) {
-                    firstQueueReadTime = now
-                }
-                val packets = mutableListOf<PacketInfo>()
-                numQueueReads++
-                lastQueueReadTime = now
-                if (incomingPacketQueue.drainTo(packets, 20) > 0) {
-                    packets.forEach {
-                        it.addEvent("Exited RTP receiver incoming queue")
-                        bytesProcessed += it.packet.size
-                        packetsProcessed++
-                        if (firstPacketProcessedTime == 0L) {
-//                            firstPacketProcessedTime = System.currentTimeMillis()
-                            firstPacketProcessedTime = now
-                        }
-                    }
-//                    lastPacketProcessedTime = System.currentTimeMillis()
-                    lastPacketProcessedTime = now
-                    processPackets(packets)
-                } else {
-                    numTimesQueueEmpty++
-                }
-
-                scheduleWork()
             }
         }
     }
