@@ -41,7 +41,7 @@ class TccGeneratorNode(
 ) : Node("TCC generator") {
     private var tccExtensionId: Int? = null
     private var currTccSeqNum: Int = 0
-    private var currTcc: Tcc = Tcc(feedbackPacketCount = currTccSeqNum++)
+    private var currTcc: RtcpFbTccPacket = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = currTccSeqNum++))
     private var lastTccSentTime: Long = 0
     /**
      * Ssrc's we've been told this endpoint will transmit on.  We'll use an
@@ -80,27 +80,21 @@ class TccGeneratorNode(
     }
 
     private fun addPacket(tccSeqNum: Int, timestamp: Long) {
-        currTcc.addPacket(tccSeqNum, timestamp)
+        currTcc.getFci().addPacket(tccSeqNum, timestamp)
 
         if (isTccReadyToSend()) {
             val mediaSsrc = if (mediaSsrcs.isNotEmpty()) mediaSsrcs.iterator().next() else -1L
-            val pkt = RtcpFbTccPacket(
-                mediaSourceSsrc = mediaSsrc,
-                referenceTime = currTcc.referenceTimeMs,
-                feedbackPacketCount = currTcc.feedbackPacketCount,
-                packetInfo = currTcc.packetInfo
-            )
-//            logger.cdebug { "Sending TCC packet $pkt" }
-            onTccPacketReady(pkt)
+            currTcc.mediaSourceSsrc = mediaSsrc
+            onTccPacketReady(currTcc)
             numTccSent++
             // Create a new TCC instance for the next set of information
-            currTcc = Tcc(feedbackPacketCount = currTccSeqNum++)
+            currTcc = RtcpFbTccPacket(fci = Tcc(feedbackPacketCount = currTccSeqNum++))
         }
     }
 
     private fun isTccReadyToSend(): Boolean {
         return (System.currentTimeMillis() - lastTccSentTime >= 70) ||
-            currTcc.packetInfo.size >= 20
+            currTcc.numPackets() >= 20
     }
 
     override fun getStats(indent: Int): String {
