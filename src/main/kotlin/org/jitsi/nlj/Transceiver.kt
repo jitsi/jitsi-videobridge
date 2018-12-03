@@ -22,7 +22,6 @@ import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RTPExtension
@@ -53,7 +52,13 @@ import java.util.concurrent.ScheduledExecutorService
  */
 class Transceiver(
     private val id: String,
-    private val executor: ScheduledExecutorService
+    private val receiverExecutor: ExecutorService,
+    private val senderExecutor: ExecutorService,
+    /**
+     * A [ScheduledExecutorService] which can be used for less important
+     * background tasks, or tasks that need to execute at some fixed delay/rate
+     */
+    private val backgroundExecutor: ScheduledExecutorService
 ) : Stoppable {
     private val logger = getLogger(this.javaClass)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
@@ -62,7 +67,7 @@ class Transceiver(
 
     private val transportCcEngine = TransportCCEngine(DiagnosticContext())
 
-    private val rtpSender: RtpSender = RtpSenderImpl(id, transportCcEngine, executor)
+    private val rtpSender: RtpSender = RtpSenderImpl(id, transportCcEngine, senderExecutor, backgroundExecutor)
     private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(
             id,
@@ -70,11 +75,13 @@ class Transceiver(
                 rtpSender.sendRtcp(listOf(rtcpPacket))
             },
             transportCcEngine,
-            executor)
+            receiverExecutor,
+            backgroundExecutor)
     val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
 
     init {
-        logger.cinfo { "Transceiver ${this.hashCode()} using executor ${executor.hashCode()}" }
+        logger.cinfo { "Transceiver ${this.hashCode()} using receiver executor ${receiverExecutor.hashCode()} " +
+                "and sender executor ${senderExecutor.hashCode()}" }
 
         // Replace the sender's default packet handler with one that will add packets to outgoingQueue
         rtpSender.packetSender = object : Node("RTP packet sender") {
@@ -185,7 +192,7 @@ class Transceiver(
     // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
     // code care about one or the other, but currently there is no issue treating them the same.
     fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: String) {
-        logger.cinfo { "Transreceiver $id adding ssrc association: $primarySsrc <-> $secondarySsrc ($type)"}
+        logger.cinfo { "Transeceiver $id adding ssrc association: $primarySsrc <-> $secondarySsrc ($type)"}
         val ssrcAssociationEvent = SsrcAssociationEvent(primarySsrc, secondarySsrc, type)
         rtpReceiver.handleEvent(ssrcAssociationEvent)
         rtpSender.handleEvent(ssrcAssociationEvent)

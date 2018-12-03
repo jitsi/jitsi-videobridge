@@ -22,6 +22,7 @@ import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.NameableThreadFactory
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
@@ -69,25 +70,27 @@ val keyingMaterial = byteArrayOf(
 )
 val tlsRole = TlsRole.CLIENT
 
-val srtpTransformer = SrtpUtil.initializeTransformer(
-    srtpProfileInformation,
-    keyingMaterial,
-    tlsRole,
-    false
-)
-val srtcpTransformer = SrtpUtil.initializeTransformer(
-    srtpProfileInformation,
-    keyingMaterial,
-    tlsRole,
-    true
-)
-
-fun createRtpReceiver(executor: ScheduledExecutorService): RtpReceiver {
+fun createRtpReceiver(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService): RtpReceiver {
     val rtpReceiver = RtpReceiverImpl(
         "1",
         { rtcpPacket -> Unit },
-        executor = executor
+        executor = executor,
+        backgroundExecutor = backgroundExecutor
     )
+
+    val srtpTransformer = SrtpUtil.initializeTransformer(
+            srtpProfileInformation,
+            keyingMaterial,
+            tlsRole,
+            false
+    )
+    val srtcpTransformer = SrtpUtil.initializeTransformer(
+            srtpProfileInformation,
+            keyingMaterial,
+            tlsRole,
+            true
+    )
+
     rtpReceiver.setSrtpTransformer(srtpTransformer)
     rtpReceiver.setSrtcpTransformer(srtcpTransformer)
 
@@ -100,13 +103,20 @@ fun createRtpReceiver(executor: ScheduledExecutorService): RtpReceiver {
     return rtpReceiver
 }
 
-fun main(args: Array<String>) {
-    val executor = Executors.newSingleThreadScheduledExecutor()
-    val numReceivers = 1
-    val receivers = mutableListOf<RtpReceiver>()
-    val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()
-
-    val sender = RtpSenderImpl("456", executor = executor)
+fun createRtpSender(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService): RtpSender {
+    val sender = RtpSenderImpl("456", executor = executor, backgroundExecutor = backgroundExecutor)
+    val srtpTransformer = SrtpUtil.initializeTransformer(
+            srtpProfileInformation,
+            keyingMaterial,
+            tlsRole,
+            false
+    )
+    val srtcpTransformer = SrtpUtil.initializeTransformer(
+            srtpProfileInformation,
+            keyingMaterial,
+            tlsRole,
+            true
+    )
     sender.setSrtpTransformer(srtpTransformer)
     sender.setSrtcpTransformer(srtcpTransformer)
 
@@ -116,9 +126,20 @@ fun main(args: Array<String>) {
         override fun doProcessPackets(p: List<PacketInfo>) {
         }
     }
+    return sender
+}
+
+fun main(args: Array<String>) {
+    val receiverExecutor = Executors.newSingleThreadExecutor(NameableThreadFactory("Receiver executor"))
+    val senderExecutor = Executors.newSingleThreadExecutor(NameableThreadFactory("Sender executor"))
+    val backgroundExecutor = Executors.newSingleThreadScheduledExecutor(NameableThreadFactory("Background executor"))
+    val numReceivers = 1
+    val receivers = mutableListOf<RtpReceiver>()
+    val receiverDoneFutures = mutableListOf<CompletableFuture<Unit>>()
+    val sender = createRtpSender(senderExecutor, backgroundExecutor)
 
     for (i in 1..numReceivers) {
-        val rtpReceiver = createRtpReceiver(executor)
+        val rtpReceiver = createRtpReceiver(receiverExecutor, backgroundExecutor)
         var numReceivedPackets = 0
         val doneFuture = CompletableFuture<Unit>()
         rtpReceiver.rtpPacketHandler = (object : Node("Packet receiver") {
@@ -128,7 +149,13 @@ fun main(args: Array<String>) {
                     println("ALL PACKETS FORWARDED")
                     doneFuture.complete(Unit)
                 }
-                sender.incomingPacketQueue.addAll(p)
+                val clonedPackets = p.map { it.packet.clone()}
+                        .map { PacketInfo(it) }
+                        .toList()
+//                p.forEach {
+//                    it.packet = it.packet.clone()
+//                }
+                sender.sendPackets(clonedPackets)
             }
         })
         receivers.add(rtpReceiver)
@@ -174,10 +201,15 @@ fun main(args: Array<String>) {
 
     receivers.forEach(RtpReceiver::stop)
 
+    sender.stop()
     println("sender stats:\n${sender.getStats()}")
 
 
-    executor.shutdownNow()
-    executor.awaitTermination(5, TimeUnit.SECONDS)
+    receiverExecutor.shutdown()
+    receiverExecutor.awaitTermination(5, TimeUnit.SECONDS)
+    senderExecutor.shutdown()
+    senderExecutor.awaitTermination(5, TimeUnit.SECONDS)
+    backgroundExecutor.shutdown()
+    backgroundExecutor.awaitTermination(5, TimeUnit.SECONDS)
 
 }

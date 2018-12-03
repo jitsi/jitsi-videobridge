@@ -31,6 +31,7 @@ import org.jitsi_modified.service.neomedia.format.DummyAudioMediaFormat
 import org.jitsi_modified.service.neomedia.format.Vp8MediaFormat
 import java.net.URI
 import java.util.Random
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -86,11 +87,12 @@ private fun createSrtcpTransformer(): SinglePacketTransformer {
     )
 }
 
-private fun createSender(executor: ScheduledExecutorService): RtpSender {
+private fun createSender(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService): RtpSender {
     val sender = RtpSenderImpl(
         Random().nextLong().toString(),
         null,
-        executor
+        executor,
+        backgroundExecutor
     )
     sender.setSrtpTransformer(createSrtpTransformer())
     sender.setSrtcpTransformer(createSrtcpTransformer())
@@ -108,11 +110,12 @@ fun main(args: Array<String>) {
         )
     )
 
-    val senderExecutor = Executors.newSingleThreadScheduledExecutor()
+    val senderExecutor = Executors.newSingleThreadExecutor()
+    val backgroundExecutor = Executors.newSingleThreadScheduledExecutor()
     val numSenders = 1
     val senders = mutableListOf<RtpSender>()
     repeat(numSenders) {
-        val sender = createSender(senderExecutor)
+        val sender = createSender(senderExecutor, backgroundExecutor)
         sender.handleEvent(RtpPayloadTypeAddedEvent(100, Vp8MediaFormat()))
         sender.handleEvent(
             RtpPayloadTypeAddedEvent(
