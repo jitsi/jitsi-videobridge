@@ -525,7 +525,14 @@ public class IceDtlsTransportManager
         packetSender.socket = s;
         System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         executor.submit(() -> {
-            dtlsStack.connect(new TlsClientImpl(), tlsTransport);
+            try {
+                dtlsStack.connect(new TlsClientImpl(), tlsTransport);
+            }
+            catch (Exception e)
+            {
+                logger.error("Error during dtls negotiation: " + e.toString() + ", closing this transport manager");
+                close();
+            }
         });
     }
 
