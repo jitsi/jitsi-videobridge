@@ -361,7 +361,6 @@ public class VideoChannel
             || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
             || Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
         {
-            System.out.println("BRIAN: property change, updating bitrate controller for channel " + hashCode());
             bitrateController.update();
         }
     }

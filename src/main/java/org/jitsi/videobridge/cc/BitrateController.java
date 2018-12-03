@@ -53,7 +53,7 @@ package org.jitsi.videobridge.cc;
 //  * and/or lower resolution (that we call spatial layers or SL). The exact
 //  * dependencies between the different layers of an SVC bitstream are codec
 //  * specific but, as a general rule of thumb higher temporal/spatial layers
-//  * depend on lower temporal/spatial layers creating a dependency graph.
+//  * depend on lower temporal/spatial layers creating a DAG of dependencies.
 //  *
 //  * For example, a 720p@30fps VP8 scalable bitstream can be broken down into 3
 //  * sub-bitstreams: one 720p@30fps layer (the highest temporal layer), that
@@ -74,7 +74,7 @@ package org.jitsi.videobridge.cc;
 //  * This hierarchy allows for fine-grained filtering up to the {@link FrameDesc}
 //  * level.
 //  *
-//  * The decision of whether to project or drop a specific RTP packet of a
+//  * The decision of whether to accept or drop a specific RTP packet of a
 //  * specific {@link FrameDesc} of a specific {@link MediaStreamTrackDesc}
 //  * depends on the bitrate allocation of the specific {@link
 //  * MediaStreamTrackDesc} and on the state of the bitstream that is produced by
@@ -233,17 +233,17 @@ package org.jitsi.videobridge.cc;
 //     private final VideoChannel dest;
 //
 //     /**
-//      * The {@link AdaptiveTrackProjection}s that this instance is managing, keyed
+//      * The {@link SimulcastController}s that this instance is managing, keyed
 //      * by the SSRCs of the associated {@link MediaStreamTrackDesc}.
 //      */
-//     private final Map<Long, AdaptiveTrackProjection>
-//         adaptiveTrackProjectionMap = new ConcurrentHashMap<>();
+//     private final Map<Long, SimulcastController>
+//         ssrcToSimulcastController = new ConcurrentHashMap<>();
 //
 //     /**
 //      * The {@link PacketTransformer} that handles incoming/outgoing RTP
 //      * packets for this {@link BitrateController} instance. Internally,
 //      * it delegates this responsibility to the appropriate media stream track
-//      * bitrate controller ({@link AdaptiveTrackProjection}, etc).
+//      * bitrate controller ({@link SimulcastController}, etc).
 //      */
 //     private final PacketTransformer rtpTransformer = new RTPTransformer();
 //
@@ -251,7 +251,7 @@ package org.jitsi.videobridge.cc;
 //      * The {@link PacketTransformer} that handles incoming/outgoing RTCP
 //      * packets for this {@link BitrateController} instance. Internally,
 //      * it delegates this responsibility to the appropriate media stream track
-//      * bitrate controller ({@link AdaptiveTrackProjection}, etc).
+//      * bitrate controller ({@link SimulcastController}, etc).
 //      */
 //     private final PacketTransformer rtcpTransformer = new RTCPTransformer();
 //
@@ -296,7 +296,7 @@ package org.jitsi.videobridge.cc;
 //     /**
 //      * The current padding parameters list for {@link #dest}.
 //      */
-//     private List<AdaptiveTrackProjection> adaptiveTrackProjections;
+//     private List<SimulcastController> simulcastControllers;
 //
 //     /**
 //      * Initializes a new {@link BitrateController} instance which is to
@@ -369,9 +369,9 @@ package org.jitsi.videobridge.cc;
 //      *
 //      * @return the current padding parameters list for {@link #dest}.
 //      */
-//     List<AdaptiveTrackProjection> getAdaptiveTrackProjections()
+//     List<SimulcastController> getSimulcastControllers()
 //     {
-//         return adaptiveTrackProjections;
+//         return simulcastControllers;
 //     }
 //
 //     /**
@@ -392,10 +392,10 @@ package org.jitsi.videobridge.cc;
 //             return false;
 //         }
 //
-//         AdaptiveTrackProjection adaptiveTrackProjection
-//             = adaptiveTrackProjectionMap.get(ssrc);
+//         SimulcastController simulcastController
+//             = ssrcToSimulcastController.get(ssrc);
 //
-//         if (adaptiveTrackProjection == null)
+//         if (simulcastController == null)
 //         {
 //             logger.warn(
 //                 "Dropping an RTP packet, because the SSRC has not " +
@@ -404,7 +404,7 @@ package org.jitsi.videobridge.cc;
 //             return false;
 //         }
 //
-//         return adaptiveTrackProjection.accept(pkt);
+//         return simulcastController.accept(pkt);
 //     }
 //
 //     public boolean accept(VideoRtpPacket pkt)
@@ -551,10 +551,10 @@ package org.jitsi.videobridge.cc;
 //         Set<String> conferenceEndpointIds = new HashSet<>();
 //
 //         // Accumulators used for tracing purposes.
-//         long totalIdealBps = 0, totalTargetBps = 0;
-//         int totalIdealIdx = 0, totalTargetIdx = 0;
+//         long totalIdealBps = 0, totalTargetBps = 0, totalCurrentBps = 0;
+//         int totalIdealIdx = 0, totalTargetIdx = 0, totalCurrentIdx = 0;
 //
-//         List<AdaptiveTrackProjection> adaptiveTrackProjections = new ArrayList<>();
+//         List<SimulcastController> simulcastControllers = new ArrayList<>();
 //         if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
 //         {
 //             for (TrackBitrateAllocation
@@ -562,38 +562,78 @@ package org.jitsi.videobridge.cc;
 //             {
 //                 conferenceEndpointIds.add(trackBitrateAllocation.endpointID);
 //
-//                 int trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
+//                 int ssrc = trackBitrateAllocation.targetSSRC,
+//                     trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
 //                     trackIdealIdx = trackBitrateAllocation.getIdealIndex();
 //
 //                 // Review this.
-//                 AdaptiveTrackProjection adaptiveTrackProjection
-//                     = lookupOrCreateAdaptiveTrackProjection(trackBitrateAllocation);
-//
-//                 if (adaptiveTrackProjection != null)
+//                 SimulcastController ctrl;
+//                 synchronized (ssrcToSimulcastController)
 //                 {
-//                     adaptiveTrackProjections.add(adaptiveTrackProjection);
-//                     adaptiveTrackProjection.setTargetIndex(trackTargetIdx);
-//                     adaptiveTrackProjection.setIdealIndex(trackIdealIdx);
+//                     ctrl = ssrcToSimulcastController.get(ssrc & 0xFFFF_FFFFL);
+//                     if (ctrl == null && trackBitrateAllocation.track != null)
+//                     {
+//                         RTPEncodingDesc[] rtpEncodings
+//                             = trackBitrateAllocation.track.getRTPEncodings();
+//
+//                         if (!ArrayUtils.isNullOrEmpty(rtpEncodings))
+//                         {
+//                             ctrl = new SimulcastController(
+//                                 this, trackBitrateAllocation.track);
+//
+//                             // Route all encodings to the specified bitrate
+//                             // controller.
+//                             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
+//                             {
+//                                 ssrcToSimulcastController.put(
+//                                     rtpEncoding.getPrimarySSRC(), ctrl);
+//
+//                                 long rtxSsrc = rtpEncoding.getSecondarySsrc(Constants.RTX);
+//                                 if (rtxSsrc != -1)
+//                                 {
+//                                     ssrcToSimulcastController.put(
+//                                         rtxSsrc, ctrl);
+//                                 }
+//                             }
+//                         }
+//                         else
+//                         {
+//                             System.out.println("Track had no rtp encodings! Couldn't create simulcast controllers");
+//                         }
+//                     }
+//                 }
+//
+//                 if (ctrl != null)
+//                 {
+//                     simulcastControllers.add(ctrl);
+//                     ctrl.setTargetIndex(trackTargetIdx);
+//                     ctrl.setIdealIndex(trackIdealIdx);
 //
 //                     if (trackBitrateAllocation.track != null
 //                             && enableVideoQualityTracing)
 //                     {
 //                         DiagnosticContext diagnosticContext
 //                             = destStream.getDiagnosticContext();
+//                         int trackCurrentIdx = ctrl.getCurrentIndex();
 //                         long trackTargetBps
 //                             = trackBitrateAllocation.getTargetBitrate();
 //                         long trackIdealBps
 //                             = trackBitrateAllocation.getIdealBitrate();
+//                         long trackCurrentBps = trackBitrateAllocation
+//                             .track.getBps(trackCurrentIdx);
 //                         totalTargetBps += trackTargetBps;
 //                         totalIdealBps += trackIdealBps;
+//                         totalCurrentBps += trackCurrentBps;
 //                         totalTargetIdx += trackTargetIdx;
 //                         totalIdealIdx += trackIdealIdx;
+//                         totalCurrentIdx += trackCurrentIdx;
 //                         // time series that tracks how a media stream track
 //                         // gets forwarded to a specific receiver.
 //                         timeSeriesLogger.trace(diagnosticContext
 //                             .makeTimeSeriesPoint("track_quality", nowMs)
 //                             .addField("track_id",
 //                                 trackBitrateAllocation.track.hashCode())
+//                             .addField("current_idx", trackCurrentIdx)
 //                             .addField("target_idx", trackTargetIdx)
 //                             .addField("ideal_idx", trackIdealIdx)
 //                             .addField("target_bps", trackTargetBps)
@@ -624,17 +664,18 @@ package org.jitsi.videobridge.cc;
 //         }
 //         else
 //         {
-//             for (AdaptiveTrackProjection adaptiveTrackProjection
-//                 : adaptiveTrackProjectionMap.values())
+//             for (SimulcastController simulcastController
+//                 : ssrcToSimulcastController.values())
 //             {
 //                 if (enableVideoQualityTracing)
 //                 {
+//                     totalCurrentIdx--;
 //                     totalIdealIdx--;
 //                     totalTargetIdx--;
 //                 }
-//                 adaptiveTrackProjection
+//                 simulcastController
 //                     .setTargetIndex(RTPEncodingDesc.SUSPENDED_INDEX);
-//                 adaptiveTrackProjection
+//                 simulcastController
 //                     .setIdealIndex(RTPEncodingDesc.SUSPENDED_INDEX);
 //             }
 //         }
@@ -645,16 +686,17 @@ package org.jitsi.videobridge.cc;
 //                 = destStream.getDiagnosticContext();
 //             timeSeriesLogger.trace(diagnosticContext
 //                     .makeTimeSeriesPoint("video_quality", nowMs)
+//                     .addField("total_current_idx", totalCurrentIdx)
 //                     .addField("total_target_idx", totalTargetIdx)
 //                     .addField("total_ideal_idx", totalIdealIdx)
 //                     .addField("available_bps", bweBps)
+//                     .addField("total_current_bps", totalCurrentBps)
 //                     .addField("total_target_bps", totalTargetBps)
 //                     .addField("total_ideal_bps", totalIdealBps));
 //         }
 //
 //         // The BandwidthProber will pick this up.
-//         this.adaptiveTrackProjections
-//             = Collections.unmodifiableList(adaptiveTrackProjections);
+//         this.simulcastControllers = simulcastControllers;
 //
 //         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
 //         {
@@ -665,64 +707,6 @@ package org.jitsi.videobridge.cc;
 //         }
 //
 //         this.forwardedEndpointIds = newForwardedEndpointIds;
-//     }
-//
-//     /**
-//      * Utility method that looks-up or creates the adaptive track projection of
-//      * a track.
-//      *
-//      * @param trackBitrateAllocation
-//      * @return the adaptive track projection for the track bitrate allocation
-//      * that is specified as an argument.
-//      */
-//     private AdaptiveTrackProjection
-//     lookupOrCreateAdaptiveTrackProjection(
-//         TrackBitrateAllocation trackBitrateAllocation)
-//     {
-//         synchronized (adaptiveTrackProjectionMap)
-//         {
-//             int ssrc = trackBitrateAllocation.targetSSRC;
-//
-//             AdaptiveTrackProjection adaptiveTrackProjection
-//                 = adaptiveTrackProjectionMap.get(ssrc & 0xFFFF_FFFFL);
-//
-//             if (adaptiveTrackProjection != null
-//                 || trackBitrateAllocation.track == null)
-//             {
-//                 return adaptiveTrackProjection;
-//             }
-//
-//             RTPEncodingDesc[] rtpEncodings
-//                 = trackBitrateAllocation.track.getRTPEncodings();
-//
-//             if (ArrayUtils.isNullOrEmpty(rtpEncodings))
-//             {
-//                 return adaptiveTrackProjection;
-//             }
-//
-//             adaptiveTrackProjection = new AdaptiveTrackProjection(
-//                 trackBitrateAllocation.track);
-//
-//             // Route all encodings to the specified bitrate controller.
-//             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
-//             {
-//                 adaptiveTrackProjectionMap.put(
-//                     rtpEncoding.getPrimarySSRC(),
-//                     adaptiveTrackProjection);
-//
-//                 long rtxSsrc
-//                     = rtpEncoding.getSecondarySsrc(Constants.RTX);
-//
-//                 if (rtxSsrc != -1)
-//                 {
-//                     adaptiveTrackProjectionMap.put(
-//                         rtxSsrc, adaptiveTrackProjection);
-//                 }
-//
-//             }
-//
-//             return adaptiveTrackProjection;
-//         }
 //     }
 //
 //     /**
@@ -1161,7 +1145,7 @@ package org.jitsi.videobridge.cc;
 //                         || encoding.getFrameRate() >= ONSTAGE_PREFERRED_FRAME_RATE)
 //                     {
 //                         ratesList.add(new RateSnapshot(
-//                             encoding.getLastStableBitrateBps(System.currentTimeMillis()), encoding));
+//                             encoding.getLastStableBitrateBps(), encoding));
 //                     }
 //
 //                     if (encoding.getHeight() <= ONSTAGE_PREFERRED_HEIGHT)
@@ -1174,7 +1158,7 @@ package org.jitsi.videobridge.cc;
 //                     // For the thumbnails, we consider all temporal layers of
 //                     // the low resolution stream.
 //                     ratesList.add(new RateSnapshot(
-//                         encoding.getLastStableBitrateBps(System.currentTimeMillis()), encoding));
+//                         encoding.getLastStableBitrateBps(), encoding));
 //                 }
 //             }
 //
@@ -1284,7 +1268,7 @@ package org.jitsi.videobridge.cc;
 //      * The {@link PacketTransformer} that handles incoming/outgoing RTP
 //      * packets for this {@link BitrateController} instance. Internally,
 //      * it delegates this responsibility to the appropriate media stream track
-//      * bitrate controller ({@link AdaptiveTrackProjection}, etc).
+//      * bitrate controller ({@link SimulcastController}, etc).
 //      */
 //     private class RTPTransformer
 //         implements PacketTransformer
@@ -1295,7 +1279,18 @@ package org.jitsi.videobridge.cc;
 //         @Override
 //         public void close()
 //         {
-//             // no-op
+//             for (SimulcastController simulcastController
+//                 : ssrcToSimulcastController.values())
+//             {
+//                 try
+//                 {
+//                     simulcastController.close();
+//                 }
+//                 catch (Exception ignored)
+//                 {
+//
+//                 }
+//             }
 //         }
 //
 //         /**
@@ -1333,42 +1328,39 @@ package org.jitsi.videobridge.cc;
 //
 //                 long ssrc = pkts[i].getSSRCAsLong();
 //
-//                 AdaptiveTrackProjection adaptiveTrackProjection
-//                     = adaptiveTrackProjectionMap.get(ssrc);
+//                 SimulcastController simulcastController
+//                     = ssrcToSimulcastController.get(ssrc);
 //
-//                 if (adaptiveTrackProjection == null)
-//                 {
-//                     pkts[i] = null;
-//                     continue;
-//                 }
-//
-//                 RawPacket[] ret;
-//                 try
-//                 {
-//                     ret = adaptiveTrackProjection.rewriteRtp(pkts[i]);
-//                 }
-//                 catch (RewriteException ex)
-//                 {
-//                     pkts[i] = null;
-//                     continue;
-//                 }
+//                 // FIXME properly support unannounced SSRCs.
+//                 RawPacket[] ret
+//                     = simulcastController == null
+//                     ? null : simulcastController.rtpTransform(pkts[i]);
 //
 //                 if (ArrayUtils.isNullOrEmpty(ret))
 //                 {
+//                     pkts[i] = null;
 //                     continue;
 //                 }
 //
-//                 int extrasLen
-//                     = ArrayUtils.isNullOrEmpty(extras) ? 0 : extras.length;
-//                 RawPacket[] newExtras = new RawPacket[extrasLen + ret.length];
-//                 System.arraycopy(ret, 0, newExtras, extrasLen, ret.length);
-//
-//                 if (extrasLen > 0)
+//                 pkts[i] = ret[0];
+//                 if (ret.length > 1)
 //                 {
-//                     System.arraycopy(extras, 0, newExtras, 0, extrasLen);
-//                 }
+//                     int extrasLen
+//                         = ArrayUtils.isNullOrEmpty(extras) ? 0 : extras.length;
 //
-//                 extras = newExtras;
+//                     RawPacket[] newExtras
+//                         = new RawPacket[extrasLen + ret.length - 1];
+//
+//                     System.arraycopy(
+//                         ret, 1, newExtras, extrasLen, ret.length - 1);
+//
+//                     if (extrasLen > 0)
+//                     {
+//                         System.arraycopy(extras, 0, newExtras, 0, extrasLen);
+//                     }
+//
+//                     extras = newExtras;
+//                 }
 //             }
 //
 //             return ArrayUtils.concat(pkts, extras);
@@ -1379,7 +1371,7 @@ package org.jitsi.videobridge.cc;
 //      * The {@link PacketTransformer} that handles incoming/outgoing RTCP
 //      * packets for this {@link BitrateController} instance. Internally,
 //      * it delegates this responsibility to the appropriate media stream track
-//      * bitrate controller ({@link AdaptiveTrackProjection}, etc).
+//      * bitrate controller ({@link SimulcastController}, etc).
 //      */
 //     private class RTCPTransformer
 //         extends SinglePacketTransformerAdapter
@@ -1404,18 +1396,11 @@ package org.jitsi.videobridge.cc;
 //                 return pkt;
 //             }
 //
-//             AdaptiveTrackProjection adaptiveTrackProjection
-//                 = adaptiveTrackProjectionMap.get(ssrc);
+//             SimulcastController simulcastController
+//                 = ssrcToSimulcastController.get(ssrc);
 //
-//             if (adaptiveTrackProjection != null)
-//             {
-//                 if (!adaptiveTrackProjection.rewriteRtcp(pkt))
-//                 {
-//                     return null;
-//                 }
-//             }
-//
-//             return pkt;
+//             return simulcastController == null
+//                     ? pkt : simulcastController.rtcpTransform(pkt);
 //         }
 //     }
 // }
