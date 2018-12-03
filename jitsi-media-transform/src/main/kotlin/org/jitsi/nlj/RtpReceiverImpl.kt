@@ -18,22 +18,8 @@ package org.jitsi.nlj
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.transform.node.MediaTypeParser
-import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.NodeEventVisitor
-import org.jitsi.nlj.transform.node.NodeStatsVisitor
-import org.jitsi.nlj.transform.node.PacketParser
-import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
-import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
-import org.jitsi.nlj.transform.node.incoming.PaddingTermination
-import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
-import org.jitsi.nlj.transform.node.incoming.RtcpTermination
-import org.jitsi.nlj.transform.node.incoming.RtxHandler
-import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
-import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
-import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
-import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
-import org.jitsi.nlj.transform.node.incoming.VideoParser
+import org.jitsi.nlj.transform.node.*
+import org.jitsi.nlj.transform.node.incoming.*
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
@@ -52,8 +38,10 @@ import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: String,
@@ -64,9 +52,16 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val rtcpSender: (RtcpPacket) -> Unit = {},
     transportCcEngine: TransportCCEngine? = null,
     /**
-     * The executor this class will use for its work
+     * The executor this class will use for its primary work (i.e. critical path
+     * packet processing).  This [RtpReceiver] will execute a blocking queue read
+     * on this executor.
      */
-    private val executor: ScheduledExecutorService /*= Executors.newSingleThreadExecutor()*/
+    private val executor: ExecutorService,
+    /**
+     * A [ScheduledExecutorService] which can be used for less important
+     * background tasks, or tasks that need to execute at some fixed delay/rate
+     */
+    private val backgroundExecutor: ScheduledExecutorService
 ) : RtpReceiver() {
     override var name: String = "RtpReceiverImpl"
     private var running: Boolean = true
@@ -78,7 +73,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val payloadTypeFilter = PayloadTypeFilterNode()
     private val audioLevelListener = AudioLevelReader()
     private val statTracker = IncomingStatisticsTracker()
-    private val rtcpRrGenerator = RtcpRrGenerator(executor, rtcpSender, statTracker)
+    private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statTracker)
     private val rtcpTermination = RtcpTermination(transportCcEngine)
 
     companion object {
@@ -125,6 +120,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
     var lastPacketWrittenTime: Long = 0
     var bytesReceived: Long = 0
     var packetsReceived: Long = 0
+
+    var bytesProcessed: Long = 0
+    var packetsProcessed: Long = 0
+    var firstPacketProcessedTime: Long = 0
+    var lastPacketProcessedTime: Long = 0
 
     init {
         logger.cinfo { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
@@ -215,9 +215,65 @@ class RtpReceiverImpl @JvmOverloads constructor(
             }
         }
 
-        scheduleWork()
+//        scheduleWork()
+        //backgroundExecutor.scheduleAtFixedRate(this::doWork, 0, 5, TimeUnit.MILLISECONDS)
+        executor.execute(this::doWorkBlocking)
     }
 
+    private fun doWorkBlocking() {
+        while (running) {
+            val now = System.currentTimeMillis()
+            if (firstQueueReadTime == -1L) {
+                firstQueueReadTime = now
+            }
+            numQueueReads++
+            lastQueueReadTime = now
+//            val packetInfo = incomingPacketQueue.take()
+            incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
+                it.addEvent("Exited RTP receiver incoming queue")
+                bytesProcessed += it.packet.size
+                packetsProcessed++
+                if (firstPacketProcessedTime == 0L) {
+                    firstPacketProcessedTime = System.currentTimeMillis()
+                }
+                lastPacketProcessedTime = System.currentTimeMillis()
+                processPackets(listOf(it))
+            }
+        }
+    }
+
+    private fun doWork() {
+        if (running) {
+            val now = System.currentTimeMillis()
+            if (firstQueueReadTime == -1L) {
+                firstQueueReadTime = now
+            }
+            val packets = mutableListOf<PacketInfo>()
+            numQueueReads++
+            lastQueueReadTime = now
+            if (incomingPacketQueue.drainTo(packets, 20) > 0) {
+                packets.forEach {
+                    it.addEvent("Exited RTP receiver incoming queue")
+                    bytesProcessed += it.packet.size
+                    packetsProcessed++
+                    if (firstPacketProcessedTime == 0L) {
+//                            firstPacketProcessedTime = System.currentTimeMillis()
+                        firstPacketProcessedTime = now
+                    }
+                }
+//                    lastPacketProcessedTime = System.currentTimeMillis()
+                lastPacketProcessedTime = now
+                processPackets(packets)
+            } else {
+                numTimesQueueEmpty++
+            }
+        }
+    }
+
+    private var firstQueueReadTime: Long = -1
+    private var lastQueueReadTime: Long = -1
+    private var numQueueReads: Long = 0
+    private var numTimesQueueEmpty: Long = 0
     private fun scheduleWork() {
         // Rescheduling this job after reading a single packet to allow
         // other threads to run doesn't seem  to scale all that well,
@@ -229,14 +285,37 @@ class RtpReceiverImpl @JvmOverloads constructor(
         // avoid the busy-loop style polling for a new packet though
         //TODO: use drainTo (?)
 //        logger.cinfo { "Receiver ${hashCode()} scheduling work" }
+//        executor.execute {
+//            while (running) {
+//                val packetInfo = incomingPacketQueue.take()
+//                packetInfo.addEvent("Exited RTP receiver incoming queue")
+//                processPackets(listOf(packetInfo))
+//            }
+//        }
         executor.execute {
             if (running) {
+                val now = System.currentTimeMillis()
+                if (firstQueueReadTime == -1L) {
+                    firstQueueReadTime = now
+                }
                 val packets = mutableListOf<PacketInfo>()
-                incomingPacketQueue.drainTo(packets, 20)
-
-                if (packets.isNotEmpty()) {
-                    packets.forEach { it.addEvent("Exited RTP receiver incoming queue") }
+                numQueueReads++
+                lastQueueReadTime = now
+                if (incomingPacketQueue.drainTo(packets, 20) > 0) {
+                    packets.forEach {
+                        it.addEvent("Exited RTP receiver incoming queue")
+                        bytesProcessed += it.packet.size
+                        packetsProcessed++
+                        if (firstPacketProcessedTime == 0L) {
+//                            firstPacketProcessedTime = System.currentTimeMillis()
+                            firstPacketProcessedTime = now
+                        }
+                    }
+//                    lastPacketProcessedTime = System.currentTimeMillis()
+                    lastPacketProcessedTime = now
                     processPackets(packets)
+                } else {
+                    numTimesQueueEmpty++
                 }
 
                 scheduleWork()
@@ -253,6 +332,14 @@ class RtpReceiverImpl @JvmOverloads constructor(
             appendLnIndent(indent + 2, "Received $packetsReceived packets ($bytesReceived bytes) in " +
                     "${lastPacketWrittenTime - firstPacketWrittenTime}ms " +
                     "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
+            appendLnIndent(indent + 2, "Processed $packetsProcessed " +
+                    "(${(packetsProcessed / (packetsReceived.toDouble())) * 100}%) ($bytesProcessed bytes) in " +
+                    "${lastPacketProcessedTime - firstPacketProcessedTime}ms " +
+                    "(${getMbps(bytesProcessed, Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime))} mbps)")
+            val queueReadTotal = lastQueueReadTime - firstQueueReadTime
+            appendLnIndent(indent + 2, "Read from queue at a rate of " +
+                    "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
+            appendLnIndent(indent + 2, "The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
             val statsVisitor = NodeStatsVisitor(this)
             inputTreeRoot.visit(statsVisitor)
             toString()

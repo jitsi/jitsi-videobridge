@@ -32,6 +32,7 @@ import org.jitsi_modified.service.neomedia.format.DummyAudioMediaFormat
 import org.jitsi_modified.service.neomedia.format.Vp8MediaFormat
 import java.net.URI
 import java.util.Random
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -98,12 +99,13 @@ private fun createSrtcpTransformer(): SinglePacketTransformer {
     )
 }
 
-fun createReceiver(executor: ScheduledExecutorService): RtpReceiver {
+fun createReceiver(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService): RtpReceiver {
     val receiver = RtpReceiverImpl(
         Random().nextLong().toString(),
         {},
         null,
-        executor
+        executor,
+        backgroundExecutor
     )
     receiver.setSrtpTransformer(createSrtpTransformer())
     receiver.setSrtcpTransformer(createSrtcpTransformer())
@@ -114,6 +116,8 @@ fun createReceiver(executor: ScheduledExecutorService): RtpReceiver {
 fun main(args: Array<String>) {
     val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1_rtp_and_rtcp.pcap"
 
+    Thread.sleep(10000)
+
     val producer = PcapPacketProducer(
         PcapFileInformation(
             pcapFile,
@@ -121,11 +125,12 @@ fun main(args: Array<String>) {
         )
     )
 
-    val receiverExecutor = Executors.newSingleThreadScheduledExecutor()
+    val backgroundExecutor = Executors.newSingleThreadScheduledExecutor()
+    val executor = Executors.newSingleThreadExecutor()
     val numReceivers = 1
     val receivers = mutableListOf<RtpReceiver>()
     repeat(numReceivers) {
-        val receiver = createReceiver(receiverExecutor)
+        val receiver = createReceiver(executor, backgroundExecutor)
         receiver.handleEvent(RtpPayloadTypeAddedEvent(100, Vp8MediaFormat()))
         receiver.handleEvent(
             RtpPayloadTypeAddedEvent(
@@ -146,8 +151,10 @@ fun main(args: Array<String>) {
     }
     println("took $time ms")
     receivers.forEach(RtpReceiver::stop)
-    receiverExecutor.shutdown()
-    receiverExecutor.awaitTermination(10, TimeUnit.SECONDS)
+    executor.shutdown()
+    backgroundExecutor.shutdownNow()
+    executor.awaitTermination(10, TimeUnit.SECONDS)
+    backgroundExecutor.awaitTermination(10, TimeUnit.SECONDS)
 
     receivers.forEach { println(it.getStats()) }
 }

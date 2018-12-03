@@ -43,7 +43,7 @@ private data class SenderInfo(
  * time (and not on a number of incoming packets received, etc.) it does not live within the packet pipelines.
  */
 class RtcpRrGenerator(
-    private val executor: ScheduledExecutorService,
+    private val backgroundExecutor: ScheduledExecutorService,
     private val rtcpSender: (RtcpPacket) -> Unit = {},
     private val incomingStatisticsTracker: IncomingStatisticsTracker
 ) : RtcpListener {
@@ -100,7 +100,7 @@ class RtcpRrGenerator(
                 )
                 rtcpSender(rrPacket)
             }
-            executor.schedule(this::doWork, 1, TimeUnit.SECONDS)
+            backgroundExecutor.schedule(this::doWork, 1, TimeUnit.SECONDS)
         }
     }
 

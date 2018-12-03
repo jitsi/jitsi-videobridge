@@ -16,10 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
-import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.NodeEventVisitor
-import org.jitsi.nlj.transform.node.NodeStatsVisitor
-import org.jitsi.nlj.transform.node.PacketCache
+import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
@@ -36,13 +33,25 @@ import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 class RtpSenderImpl(
-    val id: String,
-    transportCcEngine: TransportCCEngine? = null,
-    val executor: ScheduledExecutorService
+        val id: String,
+        transportCcEngine: TransportCCEngine? = null,
+        /**
+         * The executor this class will use for its primary work (i.e. critical path
+         * packet processing).  This [RtpSender] will execute a blocking queue read
+         * on this executor.
+         */
+        val executor: ExecutorService,
+        /**
+         * A [ScheduledExecutorService] which can be used for less important
+         * background tasks, or tasks that need to execute at some fixed delay/rate
+         */
+        val backgroundExecutor: ScheduledExecutorService
 ) : RtpSender() {
     protected val logger = getLogger(this.javaClass)
     private val outgoingRtpRoot: Node
@@ -59,7 +68,7 @@ class RtpSenderImpl(
     private val outgoingPacketCache = PacketCache()
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
-    private val rtcpSrGenerator = RtcpSrGenerator(executor, { rtcpPacket -> sendRtcp(listOf(rtcpPacket)) } , statTracker)
+    private val rtcpSrGenerator = RtcpSrGenerator(backgroundExecutor, { rtcpPacket -> sendRtcp(listOf(rtcpPacket)) } , statTracker)
     private val nackHandler: NackHandler
 
     private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
@@ -124,7 +133,9 @@ class RtpSenderImpl(
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
-        scheduleWork()
+//        scheduleWork()
+//        backgroundExecutor.scheduleAtFixedRate(this::doWork, 0, 4, TimeUnit.MILLISECONDS)
+        executor.execute(this::doWorkBlocking)
     }
 
     override fun getNackHandler(): NackHandler = nackHandler
@@ -151,13 +162,63 @@ class RtpSenderImpl(
         srtcpEncryptWrapper.setTransformer(srtcpTransformer)
     }
 
+    private fun doWorkBlocking() {
+        while (running) {
+            val now = System.currentTimeMillis()
+            if (firstQueueReadTime == -1L) {
+                firstQueueReadTime = now
+            }
+            numQueueReads++
+            lastQueueReadTime = now
+//            val packetInfo = incomingPacketQueue.take()
+            incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
+                outgoingRtpRoot.processPackets(listOf(it))
+            }
+        }
+    }
+
+    private fun doWork() {
+        if (running) {
+            val now = System.currentTimeMillis()
+            if (firstQueueReadTime == -1L) {
+                firstQueueReadTime = now
+            }
+            val packetsToProcess = mutableListOf<PacketInfo>()
+            numQueueReads++
+            lastQueueReadTime = now
+            if (incomingPacketQueue.drainTo(packetsToProcess, 20) > 0) {
+                outgoingRtpRoot.processPackets(packetsToProcess)
+            } else {
+                numTimesQueueEmpty++
+            }
+
+        }
+    }
+
+    private var firstQueueReadTime: Long = -1
+    private var lastQueueReadTime: Long = -1
+    private var numQueueReads: Long = 0
+    private var numTimesQueueEmpty: Long = 0
     private fun scheduleWork() {
+//        executor.execute {
+//            while (running) {
+//                val packetInfo = incomingPacketQueue.take()
+//                outgoingRtpRoot.processPackets(listOf(packetInfo))
+//            }
+//        }
         executor.execute {
             if (running) {
+                val now = System.currentTimeMillis()
+                if (firstQueueReadTime == -1L) {
+                    firstQueueReadTime = now
+                }
                 val packetsToProcess = mutableListOf<PacketInfo>()
-                incomingPacketQueue.drainTo(packetsToProcess, 20)
-                if (packetsToProcess.isNotEmpty()) {
+                numQueueReads++
+                lastQueueReadTime = now
+                if (incomingPacketQueue.drainTo(packetsToProcess, 20) > 0) {
                     outgoingRtpRoot.processPackets(packetsToProcess)
+                } else {
+                    numTimesQueueEmpty++
                 }
 
                 scheduleWork()
@@ -177,6 +238,10 @@ class RtpSenderImpl(
             appendLnIndent(indent + 2, "$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             appendLnIndent(indent + 2, "Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
             appendLnIndent(indent + 2, "Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
+            val queueReadTotal = lastQueueReadTime - firstQueueReadTime
+            appendLnIndent(indent + 2, "Read from queue at a rate of " +
+                    "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
+            appendLnIndent(indent + 2, "The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
             appendLnIndent(indent + 2, "nack handler stats: ${nackHandler.getStats(indent + 2)}")
             val statsVisitor = NodeStatsVisitor(this)
             outputPipelineTerminationNode.reverseVisit(statsVisitor)
