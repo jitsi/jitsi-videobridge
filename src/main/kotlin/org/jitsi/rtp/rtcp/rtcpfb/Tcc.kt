@@ -22,6 +22,7 @@ import org.jitsi.rtp.extensions.put3Bytes
 import org.jitsi.rtp.extensions.putBits
 import org.jitsi.rtp.extensions.subBuffer
 import org.jitsi.rtp.extensions.toHex
+import org.jitsi.rtp.util.ByteBufferUtils
 import org.jitsi.rtp.util.RtpUtils
 import toUInt
 import unsigned.toUByte
@@ -30,6 +31,7 @@ import unsigned.toULong
 import unsigned.toUShort
 import java.nio.ByteBuffer
 import java.util.*
+import java.util.function.BiConsumer
 import kotlin.experimental.and
 
 /**
@@ -46,7 +48,6 @@ class PacketMap : TreeMap<Int, Long>(RtpUtils.rtpSeqNumComparator) {
             println("Error getting status symbol: $e, current packet map: $this")
             throw e
         }
-
     }
 
     fun getDeltaMs(tccSeqNum: Int, referenceTime: Long): Double? {
@@ -79,6 +80,7 @@ class PacketMap : TreeMap<Int, Long>(RtpUtils.rtpSeqNumComparator) {
         return previousTimestamp
     }
 }
+
 const val NOT_RECEIVED_TS: Long = -1
 
 /**
@@ -113,32 +115,9 @@ class Tcc : FeedbackControlInformation {
     override var buf: ByteBuffer? = null
     override val fmt: Int = Tcc.FMT
     var feedbackPacketCount: Int
-    var packetInfo: PacketMap
-    var referenceTimeMs: Long
-    override val size: Int
-        get() {
-            try {
-                val deltaBlocksSize = packetInfo.keys
-                    .map { tccSeqNum -> packetInfo.getStatusSymbol(tccSeqNum, referenceTimeMs) }
-                    .map(PacketStatusSymbol::getDeltaSizeBytes)
-                    .sum()
-
-                // We always write status as vector chunks with 2 bit symbols
-                val dataSize = 8 + // header values
-                        // We can encode 7 statuses per packet chunk.  The '+ 6' is to
-                        // account for integer division.
-                        ((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES +
-                        deltaBlocksSize
-                var paddingSize = 0
-                while ((dataSize + paddingSize) % 4 != 0) {
-                    paddingSize++
-                }
-                return dataSize + paddingSize
-            } catch (e: Exception) {
-                println("Error getting size of TCC fci: $e, buffer:\n${buf?.toHex()}")
-                throw e
-            }
-        }
+    private val packetInfo: PacketMap
+    var referenceTimeMs: Long = -1
+    override var size: Int = 0
 
     companion object {
         const val FMT = 15
@@ -254,6 +233,9 @@ class Tcc : FeedbackControlInformation {
          * For now we will always write status vector chunks with 2-bit symbols.
          */
         fun setPacketInfo(buf: ByteBuffer, packetInfo: PacketMap, referenceTimestamp: Long) {
+            if (packetInfo.isEmpty()) {
+                return
+            }
             setBaseSeqNum(buf, packetInfo.firstKey())
             setPacketStatusCount(buf, packetInfo.size)
             setReferenceTimeMs(buf, referenceTimestamp)
@@ -300,16 +282,39 @@ class Tcc : FeedbackControlInformation {
         this.referenceTimeMs = getReferenceTimeMs(buf)
         this.feedbackPacketCount = getFeedbackPacketCount(buf)
         this.packetInfo = getPacketInfo(buf)
+        recalcSize()
     }
 
     constructor(
-        referenceTime: Long = -1,
-        feedbackPacketCount: Int = -1,
-        packetInfo: PacketMap = PacketMap()
+        feedbackPacketCount: Int = -1
     ) {
-        this.referenceTimeMs = referenceTime
         this.feedbackPacketCount = feedbackPacketCount
-        this.packetInfo = packetInfo
+        this.packetInfo = PacketMap()
+        recalcSize()
+    }
+
+    private fun recalcSize() {
+        try {
+            val deltaBlocksSize = packetInfo.keys
+                    .map { tccSeqNum -> packetInfo.getStatusSymbol(tccSeqNum, referenceTimeMs) }
+                    .map(PacketStatusSymbol::getDeltaSizeBytes)
+                    .sum()
+
+            // We always write status as vector chunks with 2 bit symbols
+            val dataSize = 8 + // header values
+                    // We can encode 7 statuses per packet chunk.  The '+ 6' is to
+                    // account for integer division.
+                    ((packetInfo.size + 6) / 7) * PacketStatusChunk.SIZE_BYTES +
+                    deltaBlocksSize
+            var paddingSize = 0
+            while ((dataSize + paddingSize) % 4 != 0) {
+                paddingSize++
+            }
+            size = dataSize + paddingSize
+        } catch (e: Exception) {
+            println("Error getting size of TCC fci: $e, buffer:\n${buf?.toHex()}")
+            throw e
+        }
     }
 
     fun addPacket(seqNum: Int, timestamp: Long) {
@@ -317,43 +322,52 @@ class Tcc : FeedbackControlInformation {
             this.referenceTimeMs = timestamp
         }
         packetInfo[seqNum] = timestamp
+        recalcSize()
     }
 
+    /**
+     * Iterate over the pairs of (sequence number, timestamp) represented by this TCC FCI
+     */
+    fun forEach(action: (Int, Long) -> Unit) {
+        packetInfo.forEach(action)
+    }
+
+    /**
+     * How many packets are currently represented by this TCC
+     */
+    fun numPackets(): Int = packetInfo.size
+
     override fun getBuffer(): ByteBuffer {
+        val b = ByteBufferUtils.ensureCapacity(buf, size)
+        b.rewind()
+        b.limit(size)
         try {
-            if (this.buf == null || this.buf!!.limit() < this.size) {
-                this.buf = ByteBuffer.allocate(this.size)
-            }
-            buf!!.rewind()
-            setFeedbackPacketCount(buf!!, this.feedbackPacketCount)
+            setFeedbackPacketCount(b, this.feedbackPacketCount)
             try {
-                setPacketInfo(buf!!, this.packetInfo, referenceTimeMs)
+                setPacketInfo(b, this.packetInfo, referenceTimeMs)
             } catch (e: Exception) {
-                println("BRIAN exception setting packet info to buffer: $e, buffer size: ${buf!!.limit()}, needed size: ${this.size}\n" +
+                println("BRIAN exception setting packet info to buffer: $e, buffer size: ${b.limit()}, needed size: ${this.size}\n" +
                         "the FCI was: $this")
                 throw e
             }
-            // TCC packets (from what I can tell) define their own padding, so we'll add that here
-            //TODO: sync this with the padding size calculation used in size?
-            while (buf!!.position() % 4 != 0) {
-                buf!!.put(0x00)
+            while (b.position() % 4 != 0) {
+                b.put(0x00)
             }
-            // It's possible we didn't need to use the entire buffer we already had, so make sure
-            // to set the limit where the data for this FCI actually ends
-            this.buf!!.limit(size)
-            return this.buf!!.rewind() as ByteBuffer
         } catch (e: Exception) {
             println("Exception getting tcc buffer: $e")
-            println("tcc detected size: ${this.size}, buffer capacity: ${this.buf!!.capacity()}")
+            println("tcc detected size: ${this.size}, buffer capacity: ${b.capacity()}")
             throw e
         }
+        b.rewind()
+        buf = b
+        return b
     }
 
     override fun toString(): String {
         return with (StringBuffer()) {
             appendln("TCC FCI")
             appendln("tcc seq num: $feedbackPacketCount")
-            appendln("base sequence number: ${packetInfo.firstKey()}")
+            appendln("base sequence number: ${if (packetInfo.isNotEmpty()) packetInfo.firstKey() else -1}")
             appendln("packet status count: ${packetInfo.size}")
             appendln("reference time: $referenceTimeMs")
             appendln(packetInfo.toString())

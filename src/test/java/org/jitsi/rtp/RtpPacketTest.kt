@@ -58,7 +58,7 @@ internal class RtpPacketTest : ShouldSpec() {
                     newPacket.header.hasExtension shouldBe true
                     val newExt = newPacket.header.getExtension(ext.id)
                     newExt shouldNotBe null
-                    newExt!!
+                    newExt as RtpHeaderExtension
                     newExt.id shouldBe ext.id
                     newExt.lengthBytes shouldBe ext.lengthBytes
                     for (i in 0 until ext.lengthBytes) {

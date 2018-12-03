@@ -1,5 +1,6 @@
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import io.kotlintest.matchers.maps.shouldContain
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.toHex
@@ -7,10 +8,12 @@ import org.junit.jupiter.api.Assertions.*
 import java.nio.ByteBuffer
 
 internal class TccTest : ShouldSpec() {
+    override fun isInstancePerTest(): Boolean = true
+
     private val fci = ByteBuffer.wrap(byteArrayOf(
         // base=4, pkt status count=0x1729=5929
         0x00.toByte(), 0x04.toByte(), 0x17.toByte(), 0x29.toByte(),
-        // ref time=0x298710, fbPktCount=1
+        // ref time=0x298710 (174179328L ms), fbPktCount=1
         0x29.toByte(), 0x87.toByte(), 0x10.toByte(), 0x01.toByte(),
 
         // Chunks:
@@ -117,32 +120,39 @@ internal class TccTest : ShouldSpec() {
         0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte()
     ))
 
+    val getNumDeltasInTcc: (Tcc) -> Int = { tcc ->
+        var numDeltas = 0
+        tcc.forEach { _, timestamp ->
+            if (timestamp != NOT_RECEIVED_TS) {
+                numDeltas++
+            }
+        }
+        numDeltas
+    }
+
     init {
-        "TCC Packet" {
-            "Parsing a TCC packet from a buffer" {
-                val tcc = Tcc(fci)
-                should("parse the values correctly") {
-                    // Based on the values in the packet above
-                    tcc.feedbackPacketCount shouldBe 1
-                    tcc.packetInfo.firstKey() shouldBe 4
-                    // 5929 total packet statuses
-                    tcc.packetInfo.size shouldBe 5929
-                    // We should have 14 deltas
-                    tcc.packetInfo.filter { it.value != NOT_RECEIVED_TS }.size shouldBe 14
+        "TCC FCI" {
+            "Parsing a TCC FCI from a buffer" {
+                "with one bit and two bit symbols" {
+                    should("parse the values correctly") {
+                        val tcc = Tcc(fci)
+                        // Based on the values in the packet above
+                        tcc.referenceTimeMs shouldBe 174179328L
+                        tcc.feedbackPacketCount shouldBe 1
+                        // 5929 total packet statuses
+                        tcc.numPackets() shouldBe 5929
+                        // We should have 14 deltas
+                        getNumDeltasInTcc(tcc) shouldBe 14
+                    }
                 }
-                "buf 2" { // with one bit and two bit symbols
-                    val b = ByteBuffer.wrap(byteArrayOf(
-                        0x15.toByte(), 0x60.toByte(), 0x00.toByte(), 0x0F.toByte(),
-                        0x14.toByte(), 0x36.toByte(), 0xBD.toByte(), 0x2B.toByte(),
-                        0x8A.toByte(), 0x50.toByte(), 0x40.toByte(), 0x01.toByte(),
-                        0xFC.toByte(), 0x74.toByte(), 0x84.toByte(), 0x74.toByte(),
-                        0x01.toByte(), 0x30.toByte(), 0x00.toByte(), 0x00.toByte()
-                    ))
-                    val t = Tcc(b)
-//                    println(t)
-                    t.getBuffer()
+                "with all 2 bit symbols" {
+                    val tcc = Tcc(fciAll2BitVectorChunks)
+                    val buf = tcc.getBuffer()
+                    should("write the data to the buffer correctly") {
+                        buf.compareTo(fciAll2BitVectorChunks) shouldBe 0
+                    }
                 }
-                "buf 3" { // has a negative delta
+                "with a negative delta" { // has a negative delta
                     val b = ByteBuffer.wrap(byteArrayOf(
                         0x00.toByte(), 0x0C.toByte(), 0x00.toByte(), 0xEC.toByte(),
                         0x15.toByte(), 0xF8.toByte(), 0xF7.toByte(), 0x00.toByte(),
@@ -193,58 +203,52 @@ internal class TccTest : ShouldSpec() {
                         0xFF.toByte(), 0xFC.toByte(), 0x2C.toByte(), 0x04.toByte(),
                         0x00.toByte(), 0x18.toByte(), 0x00.toByte(), 0x00.toByte()
                     ))
+                    //TODO (and probably create a simpler buffer to check this)
                     val t = Tcc(b)
-//                    println(t)
                     t.getBuffer()
-                }
-            }
-            "Creating a TCC packet" {
-                val tcc = Tcc(fciAll2BitVectorChunks)
-                val buf = tcc.getBuffer()
-                should("write the data to the buffer correctly") {
-                    buf.compareTo(fciAll2BitVectorChunks) shouldBe 0
                 }
             }
             "Creating a TCC packet from values" {
                 "which include a delta value on the border of the symbol size (64ms)" {
-                    val packetInfo = PacketMap()
-                    packetInfo[2585] = 1537916094447
-                    packetInfo[2586] = 1537916094452
-                    packetInfo[2587] = 1537916094475
-                    packetInfo[2588] = 1537916094475
-                    packetInfo[2589] = 1537916094481
-                    packetInfo[2590] = 1537916094481
-                    packetInfo[2591] = 1537916094486
-                    packetInfo[2592] = 1537916094504
-                    packetInfo[2593] = 1537916094504
-                    packetInfo[2594] = 1537916094509
-                    packetInfo[2595] = 1537916094509
-                    packetInfo[2596] = 1537916094515
-                    packetInfo[2597] = 1537916094536
-                    packetInfo[2598] = 1537916094536
-                    packetInfo[2599] = 1537916094542
-                    packetInfo[2600] = 1537916094543
-                    packetInfo[2601] = 1537916094607
-                    packetInfo[2602] = 1537916094607
-                    packetInfo[2603] = 1537916094613
-                    packetInfo[2604] = 1537916094614
-                    val tcc = Tcc(
-                        referenceTime = 1537916094447,
-                        feedbackPacketCount = 136,
-                        packetInfo = packetInfo
+                    val tcc = Tcc(feedbackPacketCount = 136)
+                    val seqNumsAndTimestamps = mapOf(
+                        2585 to 1537916094447,
+                        2586 to 1537916094452,
+                        2587 to 1537916094475,
+                        2588 to 1537916094475,
+                        2589 to 1537916094481,
+                        2590 to 1537916094481,
+                        2591 to 1537916094486,
+                        2592 to 1537916094504,
+                        2593 to 1537916094504,
+                        2594 to 1537916094509,
+                        2595 to 1537916094509,
+                        2596 to 1537916094515,
+                        2597 to 1537916094536,
+                        2598 to 1537916094536,
+                        2599 to 1537916094542,
+                        2600 to 1537916094543,
+                        2601 to 1537916094607,
+                        2602 to 1537916094607,
+                        2603 to 1537916094613,
+                        2604 to 1537916094614
                     )
+                    seqNumsAndTimestamps.forEach { seqNum, ts ->
+                        tcc.addPacket(seqNum, ts)
+                    }
                     should("serialize correctly") {
-                        tcc.getBuffer()
+                        // We know parsing from a buffer works, so we test serialization by parsing it again and
+                        //  comparing.
+                        val buf = tcc.getBuffer()
+                        val parsedTcc = Tcc(buf)
+                        parsedTcc.numPackets() shouldBe seqNumsAndTimestamps.size
+                        parsedTcc.forEach { seqNum, ts ->
+                            //TODO: it isn't this easy, as the timestamps are masked and shifted so they won't
+                            // match the originals, but the deltas should (roughly) match?
+//                            seqNumsAndTimestamps.shouldContain(seqNum, ts)
+                        }
                     }
                 }
-            }
-            "values 2" {
-                val packetMap = PacketMap()
-                mapOf<Int, Long>(
-                    1 to 3784062, 2 to 3784056, 3 to 3784056, 4 to 3784056, 5 to 3784056, 6 to 3784056, 7 to 3784056, 8 to 3784056, 9 to 3784056, 10 to 3784056, 11 to 3784056, 12 to 3784056, 13 to 3784056, 14 to 3784056, 15 to 3784056, 16 to 3784056, 17 to 3784056, 18 to 3784056, 19 to 3784056, 20 to 3784056, 21 to 3784056, 22 to 3784056, 23 to 3784056, 24 to 3784056, 25 to 3784056, 26 to 3784056, 27 to 3784056, 28 to 3784056, 29 to 3784056, 30 to 3784056, 31 to 3784056, 32 to 3784056, 33 to 3784056, 34 to 3784056, 35 to 3784056, 36 to 3784056, 37 to 3784056, 38 to 3784056, 39 to 3784056, 40 to 3784056, 41 to 3784056, 42 to 3784056, 43 to 3784056, 44 to 3784056, 45 to 3784056, 46 to 3784056, 47 to 3784056, 48 to 3784056, 49 to 3784056, 50 to 3784056, 51 to 3784056, 52 to 3784056, 53 to 3784056, 54 to 3784056, 55 to 3784056, 56 to 3784056, 57 to 3784056, 58 to 3784056, 59 to 3784056, 60 to 3784056, 61 to 3784056, 62 to 3784056, 63 to 3784056, 64 to 3784056, 65 to 3784056, 66 to 3784056, 67 to 3784056, 68 to 3784056, 69 to 3784056, 70 to 3784056, 71 to 3784056, 72 to 3784056, 73 to 3784056, 74 to -1, 75 to -1, 76 to -1, 77 to -1, 78 to -1, 79 to -1, 80 to -1, 81 to -1, 82 to -1, 83 to -1, 84 to -1, 85 to -1, 86 to -1, 87 to -1, 88 to -1, 89 to -1, 90 to -1, 91 to -1, 92 to -1, 93 to -1, 94 to -1, 95 to -1, 96 to -1, 97 to -1, 98 to -1, 99 to -1, 100 to -1, 101 to -1, 102 to -1, 103 to -1, 104 to -1, 105 to -1, 106 to -1, 107 to -1, 108 to -1, 109 to -1, 110 to -1, 111 to -1, 112 to -1
-                ).toMap(packetMap)
-                val tcc = Tcc(referenceTime = 3784056, packetInfo = packetMap)
-                tcc.getBuffer()
             }
         }
         "PacketStatusChunk" {

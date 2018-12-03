@@ -37,12 +37,15 @@ class RtcpFbTccPacket : TransportLayerFbPacket {
 
     constructor(
         mediaSourceSsrc: Long = 0,
-        referenceTime: Long = -1,
-        feedbackPacketCount: Int = -1,
-        packetInfo: PacketMap = PacketMap()
+        fci: Tcc = Tcc()
     ) : super(mediaSourceSsrc = mediaSourceSsrc) {
-        fci = Tcc(referenceTime, feedbackPacketCount, packetInfo)
+        this.fci = fci
     }
+
+    /**
+     * How many packets are currently represented by this TCC packets
+     */
+    fun numPackets(): Int = fci.numPackets()
 
     override fun clone(): Packet {
         return RtcpFbTccPacket(getBuffer().clone())
