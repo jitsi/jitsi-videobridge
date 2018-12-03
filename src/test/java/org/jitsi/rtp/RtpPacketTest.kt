@@ -70,7 +70,6 @@ internal class RtpPacketTest : ShouldSpec() {
                     for (i in 0 until payload.size) {
                         newPayload.get(i) shouldBe payload.get(i)
                     }
-
                 }
             }
 

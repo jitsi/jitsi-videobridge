@@ -104,9 +104,9 @@ class RtpHeaderExtensions : Serializable {
                 buf.rewindOneByte()
             }
         }
-        fun getHeaderExtensionType(buf: ByteBuffer): Short = buf.getShort()
+        fun getHeaderExtensionType(buf: ByteBuffer): Short = buf.getShort(0)
         fun setHeaderExtensionType(buf: ByteBuffer, type: Short) {
-            buf.putShort(type)
+            buf.putShort(0, type)
         }
 
         /**
