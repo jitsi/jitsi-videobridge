@@ -29,18 +29,17 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class DtlsClientStack @JvmOverloads constructor(
+    private val transport: DatagramTransport,
     private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol(SecureRandom())
 ) : DtlsStack() {
     private var tlsClient: TlsClient? = null
-    private var datagramTransport: DatagramTransport? = null
     private var subscribers = mutableListOf<(DTLSTransport, TlsContext) -> Unit>()
     private val logger = getLogger(this.javaClass)
 
-    override fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport) {
+    override fun connect(tlsClient: TlsClient) {
         this.tlsClient = tlsClient
-        this.datagramTransport = datagramTransport
         try {
-            val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.datagramTransport)
+            val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.transport)
             logger.cinfo { "BRIAN: dtls handshake finished" }
             subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
         } catch (e: Exception) {
