@@ -337,82 +337,83 @@ public class RtpChannel
      */
     protected boolean acceptControlInputStreamDatagramPacket(DatagramPacket p)
     {
-        InetAddress ctrlAddr = streamTarget.getControlAddress();
-        int ctrlPort = streamTarget.getControlPort();
-        boolean accept;
+        return false;
+//        InetAddress ctrlAddr = streamTarget.getControlAddress();
+//        int ctrlPort = streamTarget.getControlPort();
+//        boolean accept;
+//
+//        if (ctrlAddr == null)
+//        {
+//            streamTarget.setControlHostAddress(p.getAddress());
+//            streamTarget.setControlPort(p.getPort());
+//
+//            InetAddress dataAddr = streamTarget.getDataAddress();
+//            int dataPort = streamTarget.getDataPort();
+//
+//            if (dataAddr != null)
+//            {
+//                ctrlAddr = streamTarget.getControlAddress();
+//                ctrlPort = streamTarget.getControlPort();
 
-        if (ctrlAddr == null)
-        {
-            streamTarget.setControlHostAddress(p.getAddress());
-            streamTarget.setControlPort(p.getPort());
-
-            InetAddress dataAddr = streamTarget.getDataAddress();
-            int dataPort = streamTarget.getDataPort();
-
-            if (dataAddr != null)
-            {
-                ctrlAddr = streamTarget.getControlAddress();
-                ctrlPort = streamTarget.getControlPort();
-
-                stream.setTarget(
-                        new MediaStreamTarget(
-                                dataAddr, dataPort,
-                                ctrlAddr, ctrlPort));
-            }
-
-            accept = true;
-        }
-        else
-        {
-            accept
-                = !verifyRemoteAddress ||
-                (ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort()));
-        }
-
-        if (accept)
-        {
-            // Note that this Channel is still active.
-            touch(ActivityType.PAYLOAD /* control received */);
-
-            /*
-             * Does the data of the specified DatagramPacket resemble (a header
-             * of) an RTCP packet?
-             */
-            if (p.getLength() > RTCPHeader.SIZE)
-            {
-                byte[] data = p.getData();
-                int offset = p.getOffset();
-                byte b0 = data[offset];
-
-                if ((/* v */ ((b0 & 0xc0) >>> 6) == 2)
-                        && (/* pt */ (data[offset + 1] & 0xff)
-                                == /* BYE */ 203))
-                {
-                    int sc = b0 & 0x1f;
-
-                    if (sc > 0)
-                    {
-                        /*
-                         * The focus who has organized the telephony conference
-                         * of this Channel receives the RTP streams of the
-                         * participants on a single Channel. Consequently, it is
-                         * unable to associate the participants with the SSRCs
-                         * of the RTP streams that they send. The information
-                         * will be provided to the focus by the Jitsi
-                         * Videobridge server.
-                         */
-                        int ssrc = RTPUtils.readInt(data, offset + 4);
-
-                        if (removeReceiveSSRC(ssrc))
-                        {
-                            notifyFocus();
-                        }
-                    }
-                }
-            }
-        }
-
-        return accept;
+//                stream.setTarget(
+//                        new MediaStreamTarget(
+//                                dataAddr, dataPort,
+//                                ctrlAddr, ctrlPort));
+//            }
+//
+//            accept = true;
+//        }
+//        else
+//        {
+//            accept
+//                = !verifyRemoteAddress ||
+//                (ctrlAddr.equals(p.getAddress()) && (ctrlPort == p.getPort()));
+//        }
+//
+//        if (accept)
+//        {
+//            // Note that this Channel is still active.
+//            touch(ActivityType.PAYLOAD /* control received */);
+//
+//            /*
+//             * Does the data of the specified DatagramPacket resemble (a header
+//             * of) an RTCP packet?
+//             */
+//            if (p.getLength() > RTCPHeader.SIZE)
+//            {
+//                byte[] data = p.getData();
+//                int offset = p.getOffset();
+//                byte b0 = data[offset];
+//
+//                if ((/* v */ ((b0 & 0xc0) >>> 6) == 2)
+//                        && (/* pt */ (data[offset + 1] & 0xff)
+//                                == /* BYE */ 203))
+//                {
+//                    int sc = b0 & 0x1f;
+//
+//                    if (sc > 0)
+//                    {
+//                        /*
+//                         * The focus who has organized the telephony conference
+//                         * of this Channel receives the RTP streams of the
+//                         * participants on a single Channel. Consequently, it is
+//                         * unable to associate the participants with the SSRCs
+//                         * of the RTP streams that they send. The information
+//                         * will be provided to the focus by the Jitsi
+//                         * Videobridge server.
+//                         */
+//                        int ssrc = RTPUtils.readInt(data, offset + 4);
+//
+//                        if (removeReceiveSSRC(ssrc))
+//                        {
+//                            notifyFocus();
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        return accept;
     }
 
     /**
@@ -431,174 +432,175 @@ public class RtpChannel
      */
     protected boolean acceptDataInputStreamDatagramPacket(DatagramPacket p)
     {
-        InetAddress dataAddr = streamTarget.getDataAddress();
-        int dataPort = streamTarget.getDataPort();
-        boolean accept;
-
-        if (dataAddr == null)
-        {
-            streamTarget.setDataHostAddress(p.getAddress());
-            streamTarget.setDataPort(p.getPort());
-            dataAddr = streamTarget.getDataAddress();
-            dataPort = streamTarget.getDataPort();
-
-            InetAddress ctrlAddr = streamTarget.getControlAddress();
-            int ctrlPort = streamTarget.getControlPort();
-            MediaStreamTarget newStreamTarget;
-
-            if (ctrlAddr == null)
-            {
-                newStreamTarget
-                    = new MediaStreamTarget(
-                            new InetSocketAddress(dataAddr, dataPort),
-                            null);
-            }
-            else
-            {
-                newStreamTarget
-                    = new MediaStreamTarget(
-                            dataAddr, dataPort,
-                            ctrlAddr, ctrlPort);
-            }
-            stream.setTarget(newStreamTarget);
-
-            accept = true;
-        }
-        else
-        {
-            accept
-                = !verifyRemoteAddress ||
-                (dataAddr.equals(p.getAddress()) && (dataPort == p.getPort()));
-        }
-
-        if (accept)
-        {
-            // Note that this Channel is still active.
-            touch(ActivityType.PAYLOAD /* data received */);
-
-            /*
-             * Does the data of the specified DatagramPacket resemble (a header
-             * of) an RTP packet?
-             */
-            if (p.getLength() >= RTPHeader.SIZE)
-            {
-                byte[] data = p.getData();
-                int off = p.getOffset();
-                int v = ((data[off] & 0xc0) >>> 6);
-
-                /*
-                 * Prior to adding support for DTLS-SRTP to Jitsi Videobridge,
-                 * the SrtpControl of the MediaStream of this Channel was set to
-                 * a ZrtpControl. Consequently, the RTP PacketTransformer of
-                 * ZrtpControlImpl used to swallow the ZRTP messages. For the
-                 * purposes of compatibility, do not accept the ZRTP messages.
-                 */
-                if (v == 0)
-                {
-                    if ((data[off] & 0x10) /* x */ == 0x10)
-                    {
-                        byte[] zrtpMagicCookie = ZrtpRawPacket.ZRTP_MAGIC;
-
-                        if ((data[off + 4] == zrtpMagicCookie[0])
-                                && (data[off + 5] == zrtpMagicCookie[1])
-                                && (data[off + 6] == zrtpMagicCookie[2])
-                                && (data[off + 7] == zrtpMagicCookie[3]))
-                        {
-                            accept = false;
-                        }
-                    }
-                }
-                else if (v == 2)
-                {
-                    /*
-                     * The focus who has organized the telephony conference of
-                     * this Channel receives the RTP streams of the participants
-                     * on a single Channel. Consequently, it is unable to
-                     * associate the participants with the SSRCs of the RTP
-                     * streams that they send. The information will be provided
-                     * to the focus by the Jitsi Videobridge server.
-                     */
-                    int ssrc = RTPUtils.readInt(data, off + 8);
-                    boolean notify;
-
-                    try
-                    {
-                        notify = addReceiveSSRC(ssrc, true);
-                    }
-                    catch (SizeExceededException see)
-                    {
-                        // Drop the packet and do *not* trigger signalling
-                        // because of it.
-                        accept = false;
-                        notify = false;
-                    }
-
-                    /*
-                     * If a new SSRC has been detected on this channel, and a
-                     * Recorder is running, it needs to be notified, so that it
-                     * can map the new SSRC to an endpoint.
-                     */
-                    if (notify && getContent().isRecording())
-                    {
-                        Recorder recorder = getContent().getRecorder();
-
-                        if (recorder != null)
-                        {
-                            AbstractEndpoint endpoint = getEndpoint();
-
-                            if (endpoint != null)
-                            {
-                                Synchronizer synchronizer
-                                    = recorder.getSynchronizer();
-
-                                if (synchronizer != null)
-                                {
-                                    synchronizer.setEndpoint(
-                                            ssrc & 0xffff_ffffL,
-                                            endpoint.getID());
-                                }
-                            }
-                        }
-                    }
-
-                    /*
-                     * When performing content mixing (rather than RTP
-                     * translation/relay), the MediaStream needs a MediaFormat
-                     * to be set in order to make it capable of sending media
-                     * data.
-                     */
-                    if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
-                    {
-                        Map<Byte, MediaFormat> payloadTypes
-                            = stream.getDynamicRTPPayloadTypes();
-
-                        if (payloadTypes != null)
-                        {
-                            int pt = data[off + 1] & 0x7f;
-                            MediaFormat format = payloadTypes.get((byte) pt);
-
-                            if ((format != null)
-                                    && !format.equals(stream.getFormat()))
-                            {
-                                stream.setFormat(format);
-                                synchronized (streamSyncRoot)
-                                {   // otherwise races with stream.start()
-                                    stream.setDirection(MediaDirection.SENDRECV);
-                                }
-                                notify = true;
-                            }
-                        }
-                    }
-
-                    if (notify)
-                    {
-                        notifyFocus();
-                    }
-                }
-            }
-        }
-
-        return accept;
+        return false;
+//        InetAddress dataAddr = streamTarget.getDataAddress();
+//        int dataPort = streamTarget.getDataPort();
+//        boolean accept;
+//
+//        if (dataAddr == null)
+//        {
+//            streamTarget.setDataHostAddress(p.getAddress());
+//            streamTarget.setDataPort(p.getPort());
+//            dataAddr = streamTarget.getDataAddress();
+//            dataPort = streamTarget.getDataPort();
+//
+//            InetAddress ctrlAddr = streamTarget.getControlAddress();
+//            int ctrlPort = streamTarget.getControlPort();
+//            MediaStreamTarget newStreamTarget;
+//
+//            if (ctrlAddr == null)
+//            {
+//                newStreamTarget
+//                    = new MediaStreamTarget(
+//                            new InetSocketAddress(dataAddr, dataPort),
+//                            null);
+//            }
+//            else
+//            {
+//                newStreamTarget
+//                    = new MediaStreamTarget(
+//                            dataAddr, dataPort,
+//                            ctrlAddr, ctrlPort);
+//            }
+//            stream.setTarget(newStreamTarget);
+//
+//            accept = true;
+//        }
+//        else
+//        {
+//            accept
+//                = !verifyRemoteAddress ||
+//                (dataAddr.equals(p.getAddress()) && (dataPort == p.getPort()));
+//        }
+//
+//        if (accept)
+//        {
+//            // Note that this Channel is still active.
+//            touch(ActivityType.PAYLOAD /* data received */);
+//
+//            /*
+//             * Does the data of the specified DatagramPacket resemble (a header
+//             * of) an RTP packet?
+//             */
+//            if (p.getLength() >= RTPHeader.SIZE)
+//            {
+//                byte[] data = p.getData();
+//                int off = p.getOffset();
+//                int v = ((data[off] & 0xc0) >>> 6);
+//
+//                /*
+//                 * Prior to adding support for DTLS-SRTP to Jitsi Videobridge,
+//                 * the SrtpControl of the MediaStream of this Channel was set to
+//                 * a ZrtpControl. Consequently, the RTP PacketTransformer of
+//                 * ZrtpControlImpl used to swallow the ZRTP messages. For the
+//                 * purposes of compatibility, do not accept the ZRTP messages.
+//                 */
+//                if (v == 0)
+//                {
+//                    if ((data[off] & 0x10) /* x */ == 0x10)
+//                    {
+//                        byte[] zrtpMagicCookie = ZrtpRawPacket.ZRTP_MAGIC;
+//
+//                        if ((data[off + 4] == zrtpMagicCookie[0])
+//                                && (data[off + 5] == zrtpMagicCookie[1])
+//                                && (data[off + 6] == zrtpMagicCookie[2])
+//                                && (data[off + 7] == zrtpMagicCookie[3]))
+//                        {
+//                            accept = false;
+//                        }
+//                    }
+//                }
+//                else if (v == 2)
+//                {
+//                    /*
+//                     * The focus who has organized the telephony conference of
+//                     * this Channel receives the RTP streams of the participants
+//                     * on a single Channel. Consequently, it is unable to
+//                     * associate the participants with the SSRCs of the RTP
+//                     * streams that they send. The information will be provided
+//                     * to the focus by the Jitsi Videobridge server.
+//                     */
+//                    int ssrc = RTPUtils.readInt(data, off + 8);
+//                    boolean notify;
+//
+//                    try
+//                    {
+//                        notify = addReceiveSSRC(ssrc, true);
+//                    }
+//                    catch (SizeExceededException see)
+//                    {
+//                        // Drop the packet and do *not* trigger signalling
+//                        // because of it.
+//                        accept = false;
+//                        notify = false;
+//                    }
+//
+//                    /*
+//                     * If a new SSRC has been detected on this channel, and a
+//                     * Recorder is running, it needs to be notified, so that it
+//                     * can map the new SSRC to an endpoint.
+//                     */
+//                    if (notify && getContent().isRecording())
+//                    {
+//                        Recorder recorder = getContent().getRecorder();
+//
+//                        if (recorder != null)
+//                        {
+//                            AbstractEndpoint endpoint = getEndpoint();
+//
+//                            if (endpoint != null)
+//                            {
+//                                Synchronizer synchronizer
+//                                    = recorder.getSynchronizer();
+//
+//                                if (synchronizer != null)
+//                                {
+//                                    synchronizer.setEndpoint(
+//                                            ssrc & 0xffff_ffffL,
+//                                            endpoint.getID());
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                    /*
+//                     * When performing content mixing (rather than RTP
+//                     * translation/relay), the MediaStream needs a MediaFormat
+//                     * to be set in order to make it capable of sending media
+//                     * data.
+//                     */
+//                    if (RTPLevelRelayType.MIXER.equals(getRTPLevelRelayType()))
+//                    {
+//                        Map<Byte, MediaFormat> payloadTypes
+//                            = stream.getDynamicRTPPayloadTypes();
+//
+//                        if (payloadTypes != null)
+//                        {
+//                            int pt = data[off + 1] & 0x7f;
+//                            MediaFormat format = payloadTypes.get((byte) pt);
+//
+//                            if ((format != null)
+//                                    && !format.equals(stream.getFormat()))
+//                            {
+//                                stream.setFormat(format);
+//                                synchronized (streamSyncRoot)
+//                                {   // otherwise races with stream.start()
+//                                    stream.setDirection(MediaDirection.SENDRECV);
+//                                }
+//                                notify = true;
+//                            }
+//                        }
+//                    }
+//
+//                    if (notify)
+//                    {
+//                        notifyFocus();
+//                    }
+//                }
+//            }
+//        }
+//
+//        return accept;
     }
 
     /**
@@ -870,20 +872,20 @@ public class RtpChannel
         return stream;
     }
 
-    /**
-     * Returns the {@code SessionAddress} which is or is to be the
-     * {@code target} of {@link #stream}. When {@code DatagramPacket}s are
-     * received through the {@code DatagramSocket}s of this {@code Channel},
-     * their first RTP and RTCP sources will determine, respectively, the RTP
-     * and RTCP targets.
-     *
-     * @return the {@code SessionAddress} which is or is to be the
-     * {@code target} of {@link #stream}
-     */
-    public SessionAddress getStreamTarget()
-    {
-        return streamTarget;
-    }
+//    /**
+//     * Returns the {@code SessionAddress} which is or is to be the
+//     * {@code target} of {@link #stream}. When {@code DatagramPacket}s are
+//     * received through the {@code DatagramSocket}s of this {@code Channel},
+//     * their first RTP and RTCP sources will determine, respectively, the RTP
+//     * and RTCP targets.
+//     *
+//     * @return the {@code SessionAddress} which is or is to be the
+//     * {@code target} of {@link #stream}
+//     */
+//    public SessionAddress getStreamTarget()
+//    {
+//        return streamTarget;
+//    }
 
     /**
      * {@inheritDoc}
@@ -991,36 +993,37 @@ public class RtpChannel
     private Iterable<TransformChainManipulator>
         getTransformChainManipulators()
     {
-        try
-        {
-            ArrayList<TransformChainManipulator> manipulators =
-                    new ArrayList<>();
-
-            BundleContext bundleContext = getBundleContext();
-
-            Collection<ServiceReference<TransformChainManipulator>>
-                    serviceReferences = bundleContext.getServiceReferences(
-                            TransformChainManipulator.class,
-                            null);
-
-            for (ServiceReference<TransformChainManipulator>
-                    serviceReference : serviceReferences)
-            {
-                TransformChainManipulator transformChainManipulators =
-                        bundleContext.getService(serviceReference);
-                if (transformChainManipulators != null)
-                {
-                    manipulators.add(transformChainManipulators);
-                }
-            }
-            return manipulators;
-
-        }
-        catch (InvalidSyntaxException e)
-        {
-            logger.warn("Cannot fetch TransformChainManipulators", e);
-            return null;
-        }
+        return new ArrayList<>();
+//        try
+//        {
+//            ArrayList<TransformChainManipulator> manipulators =
+//                    new ArrayList<>();
+//
+//            BundleContext bundleContext = getBundleContext();
+//
+//            Collection<ServiceReference<TransformChainManipulator>>
+//                    serviceReferences = bundleContext.getServiceReferences(
+//                            TransformChainManipulator.class,
+//                            null);
+//
+//            for (ServiceReference<TransformChainManipulator>
+//                    serviceReference : serviceReferences)
+//            {
+//                TransformChainManipulator transformChainManipulators =
+//                        bundleContext.getService(serviceReference);
+//                if (transformChainManipulators != null)
+//                {
+//                    manipulators.add(transformChainManipulators);
+//                }
+//            }
+//            return manipulators;
+//
+//        }
+//        catch (InvalidSyntaxException e)
+//        {
+//            logger.warn("Cannot fetch TransformChainManipulators", e);
+//            return null;
+//        }
     }
 
     /**
@@ -1029,20 +1032,20 @@ public class RtpChannel
      *
      * @return the just created <tt>RtpChannelTransformEngine</tt> instance.
      */
-    RtpChannelTransformEngine initializeTransformerEngine()
-    {
-        Iterable<TransformChainManipulator> manipulators =
-                getTransformChainManipulators();
-
-        transformEngine = new RtpChannelTransformEngine(
-                this,
-                manipulators);
-        if (stream != null)
-        {
-            stream.setExternalTransformer(transformEngine);
-        }
-        return transformEngine;
-    }
+//    RtpChannelTransformEngine initializeTransformerEngine()
+//    {
+//        Iterable<TransformChainManipulator> manipulators =
+//                getTransformChainManipulators();
+//
+//        transformEngine = new RtpChannelTransformEngine(
+//                this,
+//                manipulators);
+//        if (stream != null)
+//        {
+//            stream.setExternalTransformer(transformEngine);
+//        }
+//        return transformEngine;
+//    }
 
 //    /**
 //     * Configures the given {@link MediaStream} according to the needs of this
@@ -2006,18 +2009,19 @@ public class RtpChannel
      */
     public boolean setPacketDelay(int packetDelay)
     {
-        RtpChannelTransformEngine engine = this.transformEngine;
-        if (engine == null)
-        {
-            engine = initializeTransformerEngine();
-        }
-        return engine.setPacketDelay(packetDelay);
+//        RtpChannelTransformEngine engine = this.transformEngine;
+//        if (engine == null)
+//        {
+//            engine = initializeTransformerEngine();
+//        }
+//        return engine.setPacketDelay(packetDelay);
+        return true;
     }
 
-    public void sendRtp(List<PacketInfo> packets)
-    {
-        getTransceiver().sendRtp(packets);
-    }
+//    public void sendRtp(List<PacketInfo> packets)
+//    {
+//        getTransceiver().sendRtp(packets);
+//    }
 
     /**
      * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.

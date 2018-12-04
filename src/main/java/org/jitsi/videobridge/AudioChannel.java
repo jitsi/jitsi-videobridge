@@ -122,26 +122,26 @@ public class AudioChannel
     {
         super.rtpLevelRelayTypeChanged(oldValue, newValue);
 
-        if (RTPLevelRelayType.MIXER.equals(newValue))
-        {
-            Content content = getContent();
-
-            if (MediaType.AUDIO.equals(content.getMediaType()))
-            {
-                // Allow the Jitsi Videobridge server to send the audio levels
-                // of the contributing sources to the telephony conference
-                // participants.
-                MediaStream stream = getStream();
-                MediaDevice device = content.getMixer();
-                List<RTPExtension> rtpExtensions
-                    = device.getSupportedExtensions();
-
-                if (rtpExtensions.size() == 1)
-                {
-                    stream.addRTPExtension((byte) 1, rtpExtensions.get(0));
-                }
-            }
-        }
+//        if (RTPLevelRelayType.MIXER.equals(newValue))
+//        {
+//            Content content = getContent();
+//
+//            if (MediaType.AUDIO.equals(content.getMediaType()))
+//            {
+//                // Allow the Jitsi Videobridge server to send the audio levels
+//                // of the contributing sources to the telephony conference
+//                // participants.
+//                MediaStream stream = getStream();
+//                MediaDevice device = content.getMixer();
+//                List<RTPExtension> rtpExtensions
+//                    = device.getSupportedExtensions();
+//
+//                if (rtpExtensions.size() == 1)
+//                {
+//                    stream.addRTPExtension((byte) 1, rtpExtensions.get(0));
+//                }
+//            }
+//        }
     }
 
 //    /**
@@ -170,30 +170,30 @@ public class AudioChannel
         RawPacket pkt,
         RtpChannel source)
     {
-        if (!data)
-        {
-            return true;
-        }
-
-        if (!fetchedLipSyncHack)
-        {
-            fetchedLipSyncHack = true;
-
-            List<RtpChannel> channels = getEndpoint()
-                .getChannels(MediaType.VIDEO);
-
-            if (channels != null && !channels.isEmpty())
-            {
-                associatedLipSyncHack
-                    = ((VideoChannel)channels.get(0)).getLipSyncHack();
-            }
-        }
-
-        if (associatedLipSyncHack != null)
-        {
-            associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
-                pkt, source);
-        }
+//        if (!data)
+//        {
+//            return true;
+//        }
+//
+//        if (!fetchedLipSyncHack)
+//        {
+//            fetchedLipSyncHack = true;
+//
+//            List<RtpChannel> channels = getEndpoint()
+//                .getChannels(MediaType.VIDEO);
+//
+//            if (channels != null && !channels.isEmpty())
+//            {
+//                associatedLipSyncHack
+//                    = ((VideoChannel)channels.get(0)).getLipSyncHack();
+//            }
+//        }
+//
+//        if (associatedLipSyncHack != null)
+//        {
+//            associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
+//                pkt, source);
+//        }
 
         return true;
     }

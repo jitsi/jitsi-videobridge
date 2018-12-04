@@ -431,21 +431,6 @@ public class IceDtlsTransportManager
                     }
                     PacketInfo pktInfo = transceiver.getOutgoingQueue().take();
                     Packet pkt = pktInfo.getPacket();
-//                        logger.info("outgoing writer, packet has " + pktInfo.getMetaData().size() + " metadata: ");
-//                        pktInfo.getMetaData().forEach((name, value) -> {
-//                            logger.info(name + " -> " + value);
-//                        });
-                    pktInfo.getMetaData().forEach((name, value) -> {
-                        if (name instanceof String && ((String) name).contains("TimeTag"))
-                        {
-                            Long timestamp = (Long)value;
-                            SrtpPacket packet = (SrtpPacket)pktInfo.getPacket();
-//                                logger.info("Packet " + packet.getHeader().getSsrc() + " " +
-//                                        packet.getHeader().getSequenceNumber() + " took " +
-//                                        (System.currentTimeMillis() - timestamp) + "ms from received to sent");
-                        }
-                    });
-//                    System.out.println("BRIAN: transceiver writer thread sending packet " + p.toString());
                     s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
                 }
                 catch (SocketClosedException e)

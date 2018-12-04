@@ -230,11 +230,13 @@ public class Content
                 RtpChannel src
                     = (source == null) ? null : RtpChannel.getChannel(source);
 
-                accept
-                    = dst.wants(
-                            data,
-                            pkt,
-                            src);
+                // NOTE(brian): we're not using this check right now, commenting it out so we can remove packet flows
+                // to make it clearer what's in use
+//                accept
+//                    = dst.wants(
+//                            data,
+//                            pkt,
+//                            src);
             }
         }
         return accept;

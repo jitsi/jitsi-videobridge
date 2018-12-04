@@ -241,7 +241,7 @@ public class VideoChannel
         disableLastNNotifications = cfg != null
             && cfg.getBoolean(DISABLE_LASTN_NOTIFICATIONS_PNAME, false);
 
-        initializeTransformerEngine();
+//        initializeTransformerEngine();
 
         if (cfg != null && cfg.getBoolean(LOG_OVERSENDING_STATS_PNAME, false))
         {
@@ -397,29 +397,29 @@ public class VideoChannel
         return accept;
     }
 
-    @Override
-    public void sendRtp(List<PacketInfo> packets)
-    {
-        // TODO(brian) we lose the enclosing packetInfo here because we convert the packets and pass them
-        // down in bulk. The bitrate controller transform serves as the 'external transformer' (that is, the
-        // bridge's side of the outgoing transform chain) and it may drop certain packets, so we can't
-        // just pass the original list to the transceiver after we pass the converted ones to the bitrate
-        // controller.  Maybe the bitrate controller path will look different soon.
-        RawPacket[] rawPackets = new RawPacket[packets.size()];
-        for (int i = 0; i < packets.size(); ++i) {
-            rawPackets[i] = PacketExtensionsKt.toRawPacket(packets.get(i).getPacket());
-        }
-        RawPacket[] res = bitrateController.getRTPTransformer().transform(rawPackets);
-        List<PacketInfo> newPackets = new ArrayList<>();
-        for (RawPacket re : res)
-        {
-            if (re != null) {
-                RtpPacket rtpPacket = new RtpPacket(PacketExtensionsKt.getByteBuffer(re));
-                newPackets.add(new PacketInfo(rtpPacket));
-            }
-        }
-        getTransceiver().sendRtp(newPackets);
-    }
+//    @Override
+//    public void sendRtp(List<PacketInfo> packets)
+//    {
+//        // TODO(brian) we lose the enclosing packetInfo here because we convert the packets and pass them
+//        // down in bulk. The bitrate controller transform serves as the 'external transformer' (that is, the
+//        // bridge's side of the outgoing transform chain) and it may drop certain packets, so we can't
+//        // just pass the original list to the transceiver after we pass the converted ones to the bitrate
+//        // controller.  Maybe the bitrate controller path will look different soon.
+//        RawPacket[] rawPackets = new RawPacket[packets.size()];
+//        for (int i = 0; i < packets.size(); ++i) {
+//            rawPackets[i] = PacketExtensionsKt.toRawPacket(packets.get(i).getPacket());
+//        }
+//        RawPacket[] res = bitrateController.getRTPTransformer().transform(rawPackets);
+//        List<PacketInfo> newPackets = new ArrayList<>();
+//        for (RawPacket re : res)
+//        {
+//            if (re != null) {
+//                RtpPacket rtpPacket = new RtpPacket(PacketExtensionsKt.getByteBuffer(re));
+//                newPackets.add(new PacketInfo(rtpPacket));
+//            }
+//        }
+//        getTransceiver().sendRtp(newPackets);
+//    }
 
     /**
      * {@inheritDoc}
@@ -592,65 +592,65 @@ public class VideoChannel
     {
         super.setPayloadTypes(payloadTypes);
 
-        // TODO remove this whole method.
-        boolean enableRedFilter = true;
-
-        // Support for FIR and PLI is declared per-payload type, but currently
-        // our code which requests FIR and PLI is not payload-type aware. So
-        // until this changes we will just check if any of the PTs supports
-        // FIR and PLI.
-        boolean supportsFir = false;
-        boolean supportsPli = false;
-        boolean supportsRemb = false;
-
-        // If we're not given any PTs at all, assume that we shouldn't touch
-        // RED.
-        if (payloadTypes == null || payloadTypes.isEmpty())
-        {
-            return;
-        }
-
-        for (PayloadTypePacketExtension payloadType : payloadTypes)
-        {
-            if (Constants.RED.equals(payloadType.getName()))
-            {
-                enableRedFilter = false;
-            }
-
-            for (RtcpFbPacketExtension rtcpFb :
-                    payloadType.getRtcpFeedbackTypeList())
-            {
-                if ("ccm".equals(rtcpFb.getAttribute("type"))
-                        && "fir".equals(rtcpFb.getAttribute("subtype")))
-                {
-                    supportsFir = true;
-                }
-                else if ("nack".equals(rtcpFb.getAttribute("type"))
-                    && "pli".equals(rtcpFb.getAttribute("subtype")))
-                {
-                    supportsPli = true;
-                }
-                else if ("goog-remb".equals(rtcpFb.getAttribute("type")))
-                {
-                    supportsRemb = true;
-                }
-            }
-        }
-
-        // If the endpoint supports RED we disable the filter (e.g. leave RED).
-        // Otherwise, we strip it.
-        if (transformEngine != null)
-        {
-            transformEngine.enableREDFilter(enableRedFilter);
-        }
-
-        MediaStream mediaStream = getStream();
-        if (mediaStream instanceof VideoMediaStreamImpl)
-        {
-            ((VideoMediaStreamImpl) mediaStream).setSupportsFir(supportsFir);
-            ((VideoMediaStreamImpl) mediaStream).setSupportsPli(supportsPli);
-            ((VideoMediaStreamImpl) mediaStream).setSupportsRemb(supportsRemb);
-        }
+//        // TODO remove this whole method.
+//        boolean enableRedFilter = true;
+//
+//        // Support for FIR and PLI is declared per-payload type, but currently
+//        // our code which requests FIR and PLI is not payload-type aware. So
+//        // until this changes we will just check if any of the PTs supports
+//        // FIR and PLI.
+//        boolean supportsFir = false;
+//        boolean supportsPli = false;
+//        boolean supportsRemb = false;
+//
+//        // If we're not given any PTs at all, assume that we shouldn't touch
+//        // RED.
+//        if (payloadTypes == null || payloadTypes.isEmpty())
+//        {
+//            return;
+//        }
+//
+//        for (PayloadTypePacketExtension payloadType : payloadTypes)
+//        {
+//            if (Constants.RED.equals(payloadType.getName()))
+//            {
+//                enableRedFilter = false;
+//            }
+//
+//            for (RtcpFbPacketExtension rtcpFb :
+//                    payloadType.getRtcpFeedbackTypeList())
+//            {
+//                if ("ccm".equals(rtcpFb.getAttribute("type"))
+//                        && "fir".equals(rtcpFb.getAttribute("subtype")))
+//                {
+//                    supportsFir = true;
+//                }
+//                else if ("nack".equals(rtcpFb.getAttribute("type"))
+//                    && "pli".equals(rtcpFb.getAttribute("subtype")))
+//                {
+//                    supportsPli = true;
+//                }
+//                else if ("goog-remb".equals(rtcpFb.getAttribute("type")))
+//                {
+//                    supportsRemb = true;
+//                }
+//            }
+//        }
+//
+//        // If the endpoint supports RED we disable the filter (e.g. leave RED).
+//        // Otherwise, we strip it.
+//        if (transformEngine != null)
+//        {
+//            transformEngine.enableREDFilter(enableRedFilter);
+//        }
+//
+//        MediaStream mediaStream = getStream();
+//        if (mediaStream instanceof VideoMediaStreamImpl)
+//        {
+//            ((VideoMediaStreamImpl) mediaStream).setSupportsFir(supportsFir);
+//            ((VideoMediaStreamImpl) mediaStream).setSupportsPli(supportsPli);
+//            ((VideoMediaStreamImpl) mediaStream).setSupportsRemb(supportsRemb);
+//        }
     }
 
     /**
