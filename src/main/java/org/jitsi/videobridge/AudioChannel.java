@@ -161,15 +161,15 @@ public class AudioChannel
 //        }
 //    }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    boolean wants(
-        boolean data,
-        RawPacket pkt,
-        RtpChannel source)
-    {
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    boolean wants(
+//        boolean data,
+//        RawPacket pkt,
+//        RtpChannel source)
+//    {
 //        if (!data)
 //        {
 //            return true;
@@ -194,7 +194,7 @@ public class AudioChannel
 //            associatedLipSyncHack.onRTPTranslatorWillWriteAudio(
 //                pkt, source);
 //        }
-
-        return true;
-    }
+//
+//        return true;
+//    }
 }

@@ -172,8 +172,8 @@ public class VideoChannel
     /**
      * The instance which probes for bandwidth on this {@link VideoChannel}.
      */
-    private final BandwidthProbing bandwidthProbing
-        = new BandwidthProbing(this);
+//    private final BandwidthProbing bandwidthProbing
+//        = new BandwidthProbing(this);
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -254,45 +254,45 @@ public class VideoChannel
             logOversendingStatsRunnable = null;
         }
 
-        getRecurringExecutor().registerRecurringRunnable(bandwidthProbing);
+//        getRecurringExecutor().registerRecurringRunnable(bandwidthProbing);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void maybeStartStream()
-        throws IOException
-    {
-        MediaStream stream = getStream();
-        boolean previouslyStarted = stream != null && stream.isStarted();
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    protected void maybeStartStream()
+//        throws IOException
+//    {
+//        MediaStream stream = getStream();
+//        boolean previouslyStarted = stream != null && stream.isStarted();
+//
+////        super.maybeStartStream();
+//
+//        // If a recvonly channel is created, existing streams won't be
+//        // forwarded to it until the next keyframe comes in.
+//        // bitrateController.update gets called before ICE has completed so the
+//        // keyframe comes in before this channel is actually started. So update
+//        // the bitrate controller when the stream starts which will request a
+//        // keyframe from other channels if needed.
+//
+//        stream = getStream();
+//        boolean currentlyStarted = stream != null && stream.isStarted();
+//
+//        if (currentlyStarted && !previouslyStarted)
+//        {
+//            bitrateController.update(null, -1);
+//        }
+//    }
 
-//        super.maybeStartStream();
-
-        // If a recvonly channel is created, existing streams won't be
-        // forwarded to it until the next keyframe comes in.
-        // bitrateController.update gets called before ICE has completed so the
-        // keyframe comes in before this channel is actually started. So update
-        // the bitrate controller when the stream starts which will request a
-        // keyframe from other channels if needed.
-
-        stream = getStream();
-        boolean currentlyStarted = stream != null && stream.isStarted();
-
-        if (currentlyStarted && !previouslyStarted)
-        {
-            bitrateController.update(null, -1);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void updateBitrateController()
-    {
-        bitrateController.update();
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    protected void updateBitrateController()
+//    {
+//        bitrateController.update();
+//    }
 
     /**
      * {@inheritDoc}
@@ -303,15 +303,15 @@ public class VideoChannel
         return DEFAULT_RTCP_RECV_REPORT_SSRCS;
     }
 
-    @Override
-    void initialize(RTPLevelRelayType rtpLevelRelayType)
-        throws IOException
-    {
-        super.initialize(rtpLevelRelayType);
-
-        ((VideoMediaStream) getStream()).getOrCreateBandwidthEstimator()
-            .addListener(bitrateController::update);
-    }
+//    @Override
+//    void initialize(RTPLevelRelayType rtpLevelRelayType)
+//        throws IOException
+//    {
+//        super.initialize(rtpLevelRelayType);
+//
+//        ((VideoMediaStream) getStream()).getOrCreateBandwidthEstimator()
+//            .addListener(bitrateController::update);
+//    }
 
     /**
      * Gets the {@link BitrateController} which controls which endpoints'
@@ -350,52 +350,63 @@ public class VideoChannel
         return lastN;
     }
 
-    @Override
-    public void propertyChange(PropertyChangeEvent ev)
-    {
-        super.propertyChange(ev);
+//    @Override
+//    public void propertyChange(PropertyChangeEvent ev)
+//    {
+//        super.propertyChange(ev);
+//
+//        String propertyName = ev.getPropertyName();
+//
+//        if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
+//            || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
+//            || Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
+//        {
+//            bitrateController.update();
+//        }
+//    }
 
-        String propertyName = ev.getPropertyName();
-
-        if (Endpoint.PINNED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
-            || Endpoint.SELECTED_ENDPOINTS_PROPERTY_NAME.equals(propertyName)
-            || Conference.ENDPOINTS_PROPERTY_NAME.equals(propertyName))
-        {
-            bitrateController.update();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    boolean wants(
-        boolean data,
-        RawPacket pkt,
-        RtpChannel source)
-    {
-        if (!data)
-        {
-            return true;
-        }
-
-        return bitrateController.accept(pkt);
-    }
-
-    @Override
-    boolean wants(Packet pkt)
-    {
-        if (pkt instanceof RtcpPacket)
-        {
-            return true;
-        }
-        boolean accept = bitrateController.accept((VideoRtpPacket)pkt);
-        if (!accept) {
-            System.out.println("Bitrate controller not accepting video packet");
-        }
-
-        return accept;
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    boolean wants(
+//        boolean data,
+//        RawPacket pkt,
+//        RtpChannel source)
+//    {
+//        if (!data)
+//        {
+//            return true;
+//        }
+//
+//        boolean accept = bitrateController.accept(pkt);
+//        if (!accept) {
+//            System.out.println("Bitrate controller not accepting video packet");
+//        }
+//
+//        if (accept && lipSyncHack != null)
+//        {
+//            lipSyncHack
+//                .onRTPTranslatorWillWriteVideo(pkt, source);
+//        }
+//
+//        return accept;
+//    }
+//
+//    @Override
+//    boolean wants(Packet pkt)
+//    {
+//        if (pkt instanceof RtcpPacket)
+//        {
+//            return true;
+//        }
+//        boolean accept = bitrateController.accept((VideoRtpPacket)pkt);
+//        if (!accept) {
+//            System.out.println("Bitrate controller not accepting video packet");
+//        }
+//
+//        return accept;
+//    }
 
 //    @Override
 //    public void sendRtp(List<PacketInfo> packets)
@@ -434,10 +445,10 @@ public class VideoChannel
 
         // Note that it is not ideal, but safe to send this event more than
         // once (e.g. if the endpoint message transport re-connects).
-        sendLastNEndpointsChangeEvent(
-            bitrateController.getForwardedEndpoints(),
-            null,
-            null);
+//        sendLastNEndpointsChangeEvent(
+//            bitrateController.getForwardedEndpoints(),
+//            null,
+//            null);
     }
 
     /**
@@ -469,8 +480,8 @@ public class VideoChannel
 
         if (recurringExecutor != null)
         {
-            recurringExecutor
-                .deRegisterRecurringRunnable(bandwidthProbing);
+//            recurringExecutor
+//                .deRegisterRecurringRunnable(bandwidthProbing);
         }
 
         MediaStream mediaStream = getStream();
@@ -579,7 +590,7 @@ public class VideoChannel
     @Override
     void speechActivityEndpointsChanged(List<AbstractEndpoint> endpoints)
     {
-        bitrateController.update(endpoints, -1);
+//        bitrateController.update(endpoints, -1);
     }
 
     /**
@@ -728,7 +739,7 @@ public class VideoChannel
     public void setMaxFrameHeight(int maxFrameHeight)
     {
         this.maxFrameHeight = maxFrameHeight;
-        this.bitrateController.update();
+//        this.bitrateController.update();
     }
 
     /**

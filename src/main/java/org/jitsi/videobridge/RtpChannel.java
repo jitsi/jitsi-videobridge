@@ -43,7 +43,7 @@ import org.jitsi.service.neomedia.stats.*;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.transform.*;
+//import org.jitsi.videobridge.transform.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jxmpp.jid.*;
 import org.osgi.framework.*;
@@ -181,9 +181,9 @@ public class RtpChannel
      */
     private MediaStream stream;
 
-    private Thread receiverReadThread;
-    private DtlsControlImpl dtlsControl;
-    private DtlsTransformEngine dtlsTransformEngine;
+//    private Thread receiverReadThread;
+//    private DtlsControlImpl dtlsControl;
+//    private DtlsTransformEngine dtlsTransformEngine;
 
     /**
      * Used to synchronize access to {@link #stream}.
@@ -224,7 +224,7 @@ public class RtpChannel
     /**
      * The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
      */
-    RtpChannelTransformEngine transformEngine = null;
+//    RtpChannelTransformEngine transformEngine = null;
 
     /**
      * The {@link Logger} to be used by this instance to print debug
@@ -1366,32 +1366,32 @@ public class RtpChannel
     {
     }
 
-    /**
-     * Notifies this instance that the <tt>RTPTranslator</tt> that it uses will
-     * write a specific packet/<tt>buffer</tt> from a specific <tt>Channel</tt>.
-     * Allows this instance to apply the logic of <tt>lastN</tt> and disallow
-     * the translation of the specified packet from the specified source
-     * <tt>Channel</tt> into this destination <tt>Channel</tt>.
-     *
-     * @param data
-     * @param pkt
-     * @param source
-     * @return <tt>true</tt> to allow the <tt>RTPTranslator</tt> to write the
-     * specified packet/<tt>buffer</tt> into this <tt>Channel</tt>; otherwise,
-     * <tt>false</tt>
-     */
-    boolean wants(
-        boolean data,
-        RawPacket pkt,
-        RtpChannel source)
-    {
-        return true;
-    }
-
-    boolean wants(Packet pkt)
-    {
-        return true;
-    }
+//    /**
+//     * Notifies this instance that the <tt>RTPTranslator</tt> that it uses will
+//     * write a specific packet/<tt>buffer</tt> from a specific <tt>Channel</tt>.
+//     * Allows this instance to apply the logic of <tt>lastN</tt> and disallow
+//     * the translation of the specified packet from the specified source
+//     * <tt>Channel</tt> into this destination <tt>Channel</tt>.
+//     *
+//     * @param data
+//     * @param pkt
+//     * @param source
+//     * @return <tt>true</tt> to allow the <tt>RTPTranslator</tt> to write the
+//     * specified packet/<tt>buffer</tt> into this <tt>Channel</tt>; otherwise,
+//     * <tt>false</tt>
+//     */
+//    boolean wants(
+//        boolean data,
+//        RawPacket pkt,
+//        RtpChannel source)
+//    {
+//        return true;
+//    }
+//
+//    boolean wants(Packet pkt)
+//    {
+//        return true;
+//    }
 
     /**
      * Notifies this {@link RtpChannel} that its associated {@link Endpoint}'s
@@ -1888,21 +1888,21 @@ public class RtpChannel
 
         updateStatisticsOnExpire();
 
-        TransformEngine transformEngine = this.transformEngine;
-        if (transformEngine != null)
-        {
-            PacketTransformer t = transformEngine.getRTPTransformer();
-            if (t != null)
-            {
-                t.close();
-            }
-
-            t = transformEngine.getRTCPTransformer();
-            if (t != null)
-            {
-                t.close();
-            }
-        }
+//        TransformEngine transformEngine = this.transformEngine;
+//        if (transformEngine != null)
+//        {
+//            PacketTransformer t = transformEngine.getRTPTransformer();
+//            if (t != null)
+//            {
+//                t.close();
+//            }
+//
+//            t = transformEngine.getRTCPTransformer();
+//            if (t != null)
+//            {
+//                t.close();
+//            }
+//        }
 
         return true;
     }
@@ -2023,15 +2023,15 @@ public class RtpChannel
 //        getTransceiver().sendRtp(packets);
 //    }
 
-    /**
-     * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
-     *
-     * @return The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
-     */
-    public RtpChannelTransformEngine getTransformEngine()
-    {
-        return this.transformEngine;
-    }
+//    /**
+//     * Gets the <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+//     *
+//     * @return The <tt>TransformEngine</tt> of this <tt>RtpChannel</tt>.
+//     */
+//    public RtpChannelTransformEngine getTransformEngine()
+//    {
+//        return this.transformEngine;
+//    }
 
     /**
      * Updates the {@code MediaStreamTrackReceiver} with the new RTP encoding
