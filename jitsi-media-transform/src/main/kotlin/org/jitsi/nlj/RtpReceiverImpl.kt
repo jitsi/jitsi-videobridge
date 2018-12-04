@@ -63,7 +63,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     private val backgroundExecutor: ScheduledExecutorService
 ) : RtpReceiver() {
-    override var name: String = "RtpReceiverImpl"
     private var running: Boolean = true
     private val inputTreeRoot: Node
     private val incomingPacketQueue = LinkedBlockingQueue<PacketInfo>()
@@ -200,7 +199,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                             } catch (e: Exception) {
                                 logger.cerror {
                                     with (StringBuffer()) {
-                                        appendln("Exception extracting RTCP.  The origina, decrypted packet buffer is " +
+                                        appendln("Exception extracting RTCP.  The original, decrypted packet buffer is " +
                                                 "one of these:")
                                         prevRtcpPackets.forEach {
                                             appendln(it.getBuffer().toHex())

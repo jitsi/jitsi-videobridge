@@ -25,7 +25,6 @@ import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.util.Logger
 import java.time.Duration
 import kotlin.properties.Delegates
 
@@ -59,10 +58,13 @@ class NodeEventVisitor(val event: Event) : NodeVisitor {
  *
  */
 abstract class Node(
-    override var name: String
+    var name: String
 ) : PacketHandler, EventHandler, StatsProducer, Stoppable {
     private var nextNode: Node? = null
     private val inputNodes: MutableList<Node> = mutableListOf()
+    // Create these once here so we don't allocate a new string every time
+    private val nodeEntryString = "Entered node $name"
+    private val nodeExitString = "Exited node $name"
 
     protected val logger = getLogger(this.javaClass)
 
@@ -176,7 +178,7 @@ abstract class Node(
         }
         incomingPackets.forEach {
             numBytes += it.packet.size
-            it.addEvent("Entered node $name")
+            it.addEvent(nodeEntryString)
         }
         lastPacketTime = System.nanoTime()
         numInputPackets += incomingPackets.size
@@ -186,7 +188,7 @@ abstract class Node(
         val processingDuration = System.nanoTime() - startTime
         totalProcessingDuration += processingDuration
         outPackets.forEach {
-            it.addEvent("Exited node $name")
+            it.addEvent(nodeExitString)
         }
     }
 }

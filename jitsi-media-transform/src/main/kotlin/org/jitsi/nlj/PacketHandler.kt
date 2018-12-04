@@ -18,7 +18,6 @@ package org.jitsi.nlj
 import org.jitsi.nlj.transform.StatsProducer
 
 interface PacketHandler : EventHandler, StatsProducer {
-    var name: String
     /**
      * Process the given packets
      */
