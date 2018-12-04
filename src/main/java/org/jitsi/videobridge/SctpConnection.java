@@ -61,19 +61,19 @@ public class SctpConnection
     /**
      * Generator used to track debug IDs.
      */
-    private static int debugIdGen = -1;
+    protected static int debugIdGen = -1;
 
     /**
      * DTLS transport buffer size.
      * Note: randomly chosen.
      */
-    private static final int DTLS_BUFFER_SIZE = 2048;
+    protected static final int DTLS_BUFFER_SIZE = 2048;
 
     /**
      * Switch used for debugging SCTP traffic purposes.
      * FIXME to be removed
      */
-    private static final boolean LOG_SCTP_PACKETS = false;
+    protected static final boolean LOG_SCTP_PACKETS = false;
 
     /**
      * The {@link Logger} used by the {@link SctpConnection} class to
@@ -100,7 +100,7 @@ public class SctpConnection
     /**
      * SCTP transport buffer size.
      */
-    private static final int SCTP_BUFFER_SIZE = DTLS_BUFFER_SIZE - 13;
+    protected static final int SCTP_BUFFER_SIZE = DTLS_BUFFER_SIZE - 13;
 
     /**
      * The pool of <tt>Thread</tt>s which run <tt>SctpConnection</tt>s.
@@ -209,7 +209,7 @@ public class SctpConnection
      * {@link SctpConnection}. We use it to avoid synchronizing on {@code this}
      * which is a {@link Channel}.
      */
-    private final Object syncRoot = new Object();
+    protected final Object syncRoot = new Object();
 
     /**
      * The {@link PacketQueue} instance in which we place packets coming from

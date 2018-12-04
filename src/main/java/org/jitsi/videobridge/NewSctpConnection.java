@@ -52,23 +52,6 @@ public class NewSctpConnection
                SctpSocket.NotificationListener
 {
     /**
-     * Generator used to track debug IDs.
-     */
-    private static int debugIdGen = -1;
-
-    /**
-     * DTLS transport buffer size.
-     * Note: randomly chosen.
-     */
-    private static final int DTLS_BUFFER_SIZE = 2048;
-
-    /**
-     * Switch used for debugging SCTP traffic purposes.
-     * FIXME to be removed
-     */
-    private static final boolean LOG_SCTP_PACKETS = false;
-
-    /**
      * The {@link Logger} used by the {@link NewSctpConnection} class to
      * print debug information. Note that instances should use {@link #logger}
      * instead.
@@ -77,20 +60,9 @@ public class NewSctpConnection
         = Logger.getLogger(NewSctpConnection.class);
 
     /**
-     * SCTP transport buffer size.
-     */
-    private static final int SCTP_BUFFER_SIZE = DTLS_BUFFER_SIZE - 13;
-
-    /**
-     * The object used to synchronize access to fields specific to this
-     * {@link NewSctpConnection}. We use it to avoid synchronizing on {@code this}
-     * which is a {@link Channel}.
-     */
-    private final Object syncRoot = new Object();
-
-    /**
      * The {@link PacketQueue} instance in which we place packets coming from
      * the SCTP stack which are to be sent via {@link #transformer}.
+     * NOTE(brian): we need our own version of this here because we use a different handler
      */
     private final RawPacketQueue packetQueue;
 
@@ -236,6 +208,11 @@ public class NewSctpConnection
         {
             // FIXME local SCTP port is hardcoded in bridge offer SDP (Jitsi
             // Meet)
+            //TODO(brian): passing the port in at all here seems misleading, because usrsctp isn't
+            // directly reading from/binding to any socket anyway.  apparently usrsctp doesn't enforce
+            // any unique-ness amongst the sockets, so i'm wondering if we should remove this from the API
+            // altogether to avoid confusion?  or, is there a way in our API to have it bind and this is still
+            // useful?  still, we could distinguish the use cases in the API
             sctpSocket = Sctp.createSocket(5000);
             assocIsUp = false;
             acceptedIncomingConnection = false;
