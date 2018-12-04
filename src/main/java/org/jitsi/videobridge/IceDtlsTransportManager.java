@@ -52,13 +52,21 @@ public class IceDtlsTransportManager
     private static final String ICE_STREAM_NAME = "ice-stream-name";
     //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
     private ExecutorService executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool"));
-    private DtlsStack dtlsStack = new DtlsClientStack();
     private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
+    private DtlsSenderNode dtlsSender = new DtlsSenderNode();
+    /**
+     * The transport we pass to the DTLS client stack so it can read and write data
+     */
+    private DatagramTransport tlsTransport = new QueueDatagramTransport(
+            dtlsReceiver::receive,
+            (buf, off, len) -> { dtlsSender.send(buf, off, len); return Unit.INSTANCE; },
+            1500
+    );
+    private DtlsStack dtlsStack = new DtlsClientStack(tlsTransport);
     //TODO: temp store dtls transport because newsctpconnection grabs it
     DTLSTransport dtlsTransport;
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
     private Transceiver transceiver = null;
-    private DtlsSenderNode dtlsSender = new DtlsSenderNode();
     class SocketSenderNode extends Node {
         public MultiplexingDatagramSocket socket = null;
         SocketSenderNode() {
@@ -505,11 +513,6 @@ public class IceDtlsTransportManager
         // module chain
         installIncomingPacketReader(s);
 
-        DatagramTransport tlsTransport = new QueueDatagramTransport(
-                dtlsReceiver::receive,
-                (buf, off, len) -> { dtlsSender.send(buf, off, len); return Unit.INSTANCE; },
-                1500
-        );
         dtlsStack.onHandshakeComplete((dtlsTransport, tlsContext) -> {
             System.out.println("BRIAN: dtls handshake complete, got srtp profile: " + dtlsStack.getChosenSrtpProtectionProfile());
             dtlsReceiver.setDtlsTransport(dtlsTransport);
@@ -526,7 +529,7 @@ public class IceDtlsTransportManager
         System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         executor.submit(() -> {
             try {
-                dtlsStack.connect(new TlsClientImpl(), tlsTransport);
+                dtlsStack.connect(new TlsClientImpl());
             }
             catch (Exception e)
             {
