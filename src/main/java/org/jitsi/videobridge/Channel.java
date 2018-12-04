@@ -608,10 +608,10 @@ public abstract class Channel
      * @return the time in milliseconds of the last activity related to this
      * <tt>Channel</tt>
      */
-    public long getLastActivityTime()
-    {
-        return lastActivityTime.get();
-    }
+//    public long getLastActivityTime()
+//    {
+//        return lastActivityTime.get();
+//    }
 
     /**
      * Gets the time in milliseconds of the last payload related activity

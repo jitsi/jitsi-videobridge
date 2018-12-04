@@ -356,6 +356,10 @@ public class IceDtlsTransportManager
 //        fingerprintPE.setHash(transceiver.getLocalFingerprintHashFunction());
         fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
         fingerprintPE.setSetup("ACTPASS");
+        //TODO(brian): need to include the Colibiri websocket url when describing
+        // (see IceUdpTransportManager#describe and #getColibriWsUrl)
+        //TODO(brian): also in IceUdpTransportManager#describe, look at #generateCandidateID, do
+        // we need this?
     }
 
     @Override
