@@ -48,7 +48,7 @@ abstract class DtlsStack {
         }
     }
 
-    abstract fun connect(tlsClient: TlsClient, datagramTransport: DatagramTransport)
+    abstract fun connect(tlsClient: TlsClient)
 
     abstract fun onHandshakeComplete(func: (DTLSTransport, TlsContext) -> Unit)
 
