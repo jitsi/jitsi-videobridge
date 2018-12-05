@@ -76,7 +76,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val rtcpTermination = RtcpTermination(transportCcEngine)
 
     companion object {
-        val logger: Logger = Logger.getLogger(this::class.java)
+        private val logger: Logger = Logger.getLogger(this::class.java)
+        private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
+        private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP receiver incoming queue"
     }
 
     /**
@@ -227,7 +229,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             numQueueReads++
             lastQueueReadTime = now
             incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
-                it.addEvent("Exited RTP receiver incoming queue")
+                it.addEvent(PACKET_QUEUE_EXIT_EVENT)
                 bytesProcessed += it.packet.size
                 packetsProcessed++
                 if (firstPacketProcessedTime == 0L) {
@@ -269,6 +271,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     override fun enqueuePacket(p: PacketInfo) {
 //        logger.cinfo { "Receiver ${hashCode()} enqueing data" }
         bytesReceived += p.packet.size
+        p.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         incomingPacketQueue.add(p)
         packetsReceived++
         if (firstPacketWrittenTime == 0L) {
