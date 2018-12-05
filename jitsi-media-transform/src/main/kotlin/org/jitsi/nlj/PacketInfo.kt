@@ -18,10 +18,6 @@ package org.jitsi.nlj
 import org.jitsi.rtp.Packet
 import java.time.Duration
 
-fun Duration.toMicros(): Long {
-    return this.nano / 1000L
-}
-
 class EventTimeline(
     private val timeline: MutableList<Pair<String, Long>> = mutableListOf()
 ) : Iterable<Pair<String, Long>> {
@@ -77,7 +73,6 @@ class EventTimeline(
  */
 class PacketInfo @JvmOverloads constructor(
     var packet: Packet,
-    val metaData: MutableMap<Any, Any> = mutableMapOf(),
     val timeline: EventTimeline = EventTimeline()
     ) {
     /**
@@ -98,7 +93,7 @@ class PacketInfo @JvmOverloads constructor(
      * will be copied for the cloned PacketInfo).
      */
     fun clone(): PacketInfo {
-        val clone = PacketInfo(packet.clone(), metaData.toMutableMap(), timeline.clone())
+        val clone = PacketInfo(packet.clone(), timeline.clone())
         clone.receivedTime = receivedTime
         return clone
     }
