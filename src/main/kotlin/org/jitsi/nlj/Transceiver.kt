@@ -78,6 +78,9 @@ class Transceiver(
             receiverExecutor,
             backgroundExecutor)
     val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
+    companion object {
+        const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
+    }
 
     init {
         logger.cinfo { "Transceiver ${this.hashCode()} using receiver executor ${receiverExecutor.hashCode()} " +
@@ -97,7 +100,7 @@ class Transceiver(
      * this transceiver is associated with) to be processed by the receiver pipeline.
      */
     fun handleIncomingPacket(p: PacketInfo) {
-        p.addEvent("Entered RTP receiver incoming queue")
+        p.addEvent(PACKET_QUEUE_ENTRY_EVENT)
         rtpReceiver.enqueuePacket(p)
     }
 
