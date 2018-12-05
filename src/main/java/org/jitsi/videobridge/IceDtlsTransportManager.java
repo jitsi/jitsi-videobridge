@@ -489,11 +489,12 @@ public class IceDtlsTransportManager
     private void onIceConnected() {
         iceConnected = true;
         if (iceConnectedProcessed) {
-            System.out.println("Already processed ice connected, ignoring new event");
+            logger.info("TransportManager " + id + " already processed ice connected, ignoring new event");
             return;
         }
         // The sctp connection start is triggered by this, but otherwise i don't think we need it (the other channel
         // types no longer do anything needed in there)
+        logger.info("BRIAN: iceConnected for transport manager " + id);
         getChannels().forEach(Channel::transportConnected);
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
@@ -616,7 +617,10 @@ public class IceDtlsTransportManager
     @Override
     public synchronized void close()
     {
-        iceAgent.removeStateChangeListener(this::iceAgentStateChange);
+        logger.info("Closing Transport manager" + id);
+        if (iceAgent != null) {
+            iceAgent.removeStateChangeListener(this::iceAgentStateChange);
+        }
         super.close();
         executor.shutdown();
         while (!executor.isTerminated()) {

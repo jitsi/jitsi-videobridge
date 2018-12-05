@@ -599,10 +599,10 @@ public class IceUdpTransportManager
      * Assures that no more than one <tt>SctpConnection</tt> is added. Keeps
      * {@link #sctpConnection} and {@link #channelForDtls} up to date.
      */
-    @Override
-    public boolean addChannel(Channel channel)
-    {
-        return true;
+//    @Override
+//    public boolean addChannel(Channel channel)
+//    {
+//        return true;
 //        if (closed)
 //        {
 //            return false;
@@ -677,7 +677,7 @@ public class IceUdpTransportManager
 //        }
 //
 //        return true;
-    }
+//    }
 
     private int addRemoteCandidates(
             List<CandidatePacketExtension> candidates,
