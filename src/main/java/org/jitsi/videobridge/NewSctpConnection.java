@@ -160,7 +160,7 @@ public class NewSctpConnection
         {
             Content content = getContent();
 
-            return new IceDtlsTransportManager(content.getConference());
+            return new IceDtlsTransportManager(getEndpoint().getID(), content.getConference());
         }
         else
         {

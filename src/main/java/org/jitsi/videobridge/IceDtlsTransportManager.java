@@ -49,7 +49,7 @@ public class IceDtlsTransportManager
 {
     private static final Logger logger
             = Logger.getLogger(IceDtlsTransportManager.class);
-    private static final String ICE_STREAM_NAME = "ice-stream-name";
+    private final String ICE_STREAM_NAME;
     //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
     private ExecutorService executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool"));
     private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
@@ -94,11 +94,14 @@ public class IceDtlsTransportManager
 
     private Node incomingPipelineRoot = createIncomingPipeline();
     private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
+    private String id;
 
-    public IceDtlsTransportManager(Conference conference)
+    public IceDtlsTransportManager(String id, Conference conference)
             throws IOException
     {
-        super(conference, true, 1, ICE_STREAM_NAME, null);
+        super(conference, true, 1, "ice-stream-" + id, null);
+        this.id = id;
+        this.ICE_STREAM_NAME = "ice-stream-" + id;
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
         logger.info("BRIAN: finished IceDtlsTransportManager ctor");
     }
@@ -613,6 +616,7 @@ public class IceDtlsTransportManager
     @Override
     public synchronized void close()
     {
+        iceAgent.removeStateChangeListener(this::iceAgentStateChange);
         super.close();
         executor.shutdown();
         while (!executor.isTerminated()) {
