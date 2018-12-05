@@ -61,7 +61,7 @@ abstract class Node(
     var name: String
 ) : PacketHandler, EventHandler, StatsProducer, Stoppable {
     private var nextNode: Node? = null
-    private val inputNodes: MutableList<Node> = mutableListOf()
+    private val inputNodes: MutableList<Node> by lazy { mutableListOf<Node>() }
     // Create these once here so we don't allocate a new string every time
     private val nodeEntryString = "Entered node $name"
     private val nodeExitString = "Exited node $name"
