@@ -181,9 +181,9 @@ public class NewSctpConnection
     protected void maybeStartStream()
             throws IOException
     {
-        System.out.println("BRIAN: sctpconnection maybestartstream");
+        System.out.println("BRIAN: newsctpconnection maybestartstream");
         // connector
-        final StreamConnector connector = getStreamConnector();
+//        final StreamConnector connector = getStreamConnector();
 
         synchronized (syncRoot)
         {
@@ -200,7 +200,7 @@ public class NewSctpConnection
                             {
                                 Sctp.init();
 
-                                runOnDtlsTransport(connector);
+                                runOnDtlsTransport(null);
                             }
                             catch (IOException e)
                             {
@@ -231,7 +231,7 @@ public class NewSctpConnection
         throws IOException
     {
         System.out.println("BRIAN: starting dtls transport thread");
-        byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
+//        byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
 
         synchronized (syncRoot)
         {
