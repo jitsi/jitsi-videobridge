@@ -190,9 +190,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 pktInfos.forEach { pktInfo ->
                                     val compoundRtcpPackets = RtcpIterator(pktInfo.packet.getBuffer()).getAll()
                                     compoundRtcpPackets.forEach {
-                                        // For each compound RTCP packet, create a new PacketInfo with the packet and a copy
-                                        // of any metadata in the original PacketInfo
-                                        outPackets.add(PacketInfo(it, pktInfo.metaData.toMutableMap()))
+                                        // For each compound RTCP packet, create a new PacketInfo
+                                        outPackets.add(PacketInfo(it))
                                     }
                                 }
                                 outPackets
