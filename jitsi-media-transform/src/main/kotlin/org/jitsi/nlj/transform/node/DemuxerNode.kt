@@ -19,7 +19,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.rtp.Packet
 
-class DemuxerNode : Node("Demuxer") {
+class DemuxerNode(name: String) : Node("$name demuxer") {
     private var transformPaths: MutableMap<PacketPredicate, Node> = mutableMapOf()
 
     fun addPacketPath(pp: PacketPath) {

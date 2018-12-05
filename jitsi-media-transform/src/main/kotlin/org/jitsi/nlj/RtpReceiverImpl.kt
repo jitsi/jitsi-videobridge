@@ -136,8 +136,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
         inputTreeRoot = pipeline {
             node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
-            demux {
-                name = "SRTP/SRTCP demuxer"
+            demux("SRTP/SRTCP") {
                 packetPath {
                     predicate = { pkt -> RtpProtocol.isRtp(pkt.getBuffer()) }
                     path = pipeline {
@@ -147,8 +146,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(srtpDecryptWrapper)
                         node(MediaTypeParser())
                         node(statTracker)
-                        demux {
-                            name = "Media type demuxer"
+                        demux("Media type") {
                             packetPath {
                                 predicate = { pkt -> pkt is AudioRtpPacket }
                                 path = pipeline {

@@ -62,8 +62,8 @@ class PipelineBuilder {
         addNode(node)
     }
 
-    fun demux(block: DemuxerNode.() -> Unit) {
-        val demuxer = DemuxerNode().apply(block)
+    fun demux(name: String, block: DemuxerNode.() -> Unit) {
+        val demuxer = DemuxerNode(name).apply(block)
         addNode(demuxer)
     }
 
