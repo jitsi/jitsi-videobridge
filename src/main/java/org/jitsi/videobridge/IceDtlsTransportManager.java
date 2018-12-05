@@ -51,7 +51,7 @@ public class IceDtlsTransportManager
             = Logger.getLogger(IceDtlsTransportManager.class);
     private final String ICE_STREAM_NAME;
     //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
-    private ExecutorService executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool"));
+    private ExecutorService executor;
     private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
     private DtlsSenderNode dtlsSender = new DtlsSenderNode();
     /**
@@ -102,6 +102,7 @@ public class IceDtlsTransportManager
         super(conference, true, 1, "ice-stream-" + id, null);
         this.id = id;
         this.ICE_STREAM_NAME = "ice-stream-" + id;
+        executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool-" + id));
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
         logger.info("BRIAN: finished IceDtlsTransportManager ctor");
     }
@@ -116,7 +117,8 @@ public class IceDtlsTransportManager
                     " is already established, not restarting");
             return;
         }
-        logger.info("BRIAN: starting connectivity establishment with extension: " + transport.toXML());
+        logger.info("BRIAN: transport manager " + id + " with local ufrag " + iceAgent.getLocalUfrag() +
+                " starting connectivity establishment with extension: " + transport.toXML());
         // Get the remote fingerprints and set them in the DTLS stack so we
         // have them to do the DTLS handshake later
         List<DtlsFingerprintPacketExtension> dfpes
