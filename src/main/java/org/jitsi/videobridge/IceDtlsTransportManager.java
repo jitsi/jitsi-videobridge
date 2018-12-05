@@ -113,18 +113,17 @@ public class IceDtlsTransportManager
     public void startConnectivityEstablishment(IceUdpTransportPacketExtension transport)
     {
         if (iceAgent.getState().isEstablished()) {
-            logger.info("BRIAN: local ufrag " + iceAgent.getLocalUfrag() +
+            logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
                     " is already established, not restarting");
             return;
         }
-        logger.info("BRIAN: transport manager " + id + " with local ufrag " + iceAgent.getLocalUfrag() +
+        logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
                 " starting connectivity establishment with extension: " + transport.toXML());
         // Get the remote fingerprints and set them in the DTLS stack so we
         // have them to do the DTLS handshake later
         List<DtlsFingerprintPacketExtension> dfpes
                 = transport.getChildExtensionsOfType(
                 DtlsFingerprintPacketExtension.class);
-        logger.info("BRIAN: have " + dfpes.size() + " remote fingerprints");
 
         Map<String, String> remoteFingerprints = new HashMap<>();
         dfpes.forEach(dfpe -> {
@@ -136,7 +135,7 @@ public class IceDtlsTransportManager
             }
         });
         if (remoteFingerprints.isEmpty()) {
-            logger.info("Empty transport extension, not starting connectivity yet");
+            logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() + " empty transport extension, not starting connectivity yet");
             return;
         }
 
@@ -156,9 +155,8 @@ public class IceDtlsTransportManager
         List<CandidatePacketExtension> candidates
                 = transport.getChildExtensionsOfType(
                 CandidatePacketExtension.class);
-        logger.info("BRIAN: got " + candidates.size() + " candidates " + candidates);
         if (iceAgentStateIsRunning && candidates.isEmpty()) {
-            logger.info("ICE agent is already running and this extension contained no candidates, returning");
+            logger.info("ICE agent is already running and this extension contained no new candidates, returning");
             return;
         }
 
@@ -202,24 +200,10 @@ public class IceDtlsTransportManager
             logger.info("Starting ICE agent without remote candidates.");
             iceAgent.startConnectivityEstablishment();
         }
-//        logger.info("BRIAN: starting connectivity establishment");
-//        iceAgent.startConnectivityEstablishment();
-//        logger.info("BRIAN: call to startConnectivityEstablishment returned");
     }
 
     private Transceiver getTransceiver() {
         return this.transceiver;
-//        List<Channel> channels = getChannels();
-//        for (Channel channel : channels) {
-//            if (channel instanceof RtpChannel)
-//            {
-//                RtpChannel rtpChannel = (RtpChannel) channel;
-//                if (rtpChannel.getEndpoint() != null && rtpChannel.getEndpoint().transceiver != null) {
-//                    return rtpChannel.getEndpoint().transceiver;
-//                }
-//            }
-//        }
-//        return null;
     }
 
     // Almost the same as the one in IceUdpTransportManager, but we don't use the iceStream member and
@@ -356,9 +340,7 @@ public class IceDtlsTransportManager
             fingerprintPE = new DtlsFingerprintPacketExtension();
             pe.addChildExtension(fingerprintPE);
         }
-//        fingerprintPE.setFingerprint(transceiver.getLocalFingerprint());
         fingerprintPE.setFingerprint(dtlsStack.getLocalFingerprint());
-//        fingerprintPE.setHash(transceiver.getLocalFingerprintHashFunction());
         fingerprintPE.setHash(dtlsStack.getLocalFingerprintHashFunction());
         fingerprintPE.setSetup("ACTPASS");
         //TODO(brian): need to include the Colibiri websocket url when describing
@@ -376,7 +358,7 @@ public class IceDtlsTransportManager
     private Node createIncomingPipeline() {
         PipelineBuilder builder = new PipelineBuilder();
 
-        DemuxerNode dtlsSrtpDemuxer = new DemuxerNode();
+        DemuxerNode dtlsSrtpDemuxer = new DemuxerNode("DTLS/SRTP");
         // DTLS path
         PacketPath dtlsPath = new PacketPath();
         dtlsPath.setPredicate((packet) -> {
