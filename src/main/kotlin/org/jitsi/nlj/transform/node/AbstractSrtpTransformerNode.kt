@@ -17,6 +17,8 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.util.cinfo
 
 abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
     /**
@@ -41,16 +43,49 @@ abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
      */
     abstract fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo>
 
+    /**
+     * How many packets this node received but had to drop due to not having the SRTP transformer
+     */
+    private var numDroppedPackets = 0
+    private var firstPacketReceivedTimestamp = -1L
+    private var firstPacketForwardedTimestamp = -1L
+    /**
+     * How many packets, total, we put into the cache while waiting for the transformer
+     * (this includes packets which may have been dropped due to the cache filling up)
+     */
+    private var numCachedPackets = 0
+
     override fun doProcessPackets(p: List<PacketInfo>) {
+        if (firstPacketReceivedTimestamp == -1L) {
+            firstPacketReceivedTimestamp = System.currentTimeMillis()
+        }
         transformer?.let {
+            if (firstPacketForwardedTimestamp == -1L) {
+                firstPacketForwardedTimestamp = System.currentTimeMillis()
+            }
             val outPackets = mutableListOf<PacketInfo>()
             outPackets.addAll(doTransform(cachedPackets, it))
             cachedPackets.clear()
             outPackets.addAll(doTransform(p, it))
             next(outPackets)
         } ?: run {
+            numCachedPackets += p.size
             cachedPackets.addAll(p)
+            while (cachedPackets.size > 1024) {
+                cachedPackets.removeAt(0)
+                numDroppedPackets++
+            }
         }
     }
 
+    override fun getStats(indent: Int): String = with(StringBuffer()) {
+        append(super.getStats(indent))
+        appendLnIndent(indent + 2, "num cached packets: ${cachedPackets.size}")
+        appendLnIndent(indent + 2, "num dropped packets before transformer: $numDroppedPackets")
+        val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
+        appendLnIndent(indent + 2, "time between first packet received and first forwarded: " +
+                "$timeBetweenReceivedAndForwarded ms")
+
+        toString()
+    }
 }
