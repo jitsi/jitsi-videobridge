@@ -89,6 +89,11 @@ class RtpSenderImpl(
 
     private var tempSenderSsrc: Long? = null
 
+    companion object {
+        private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
+        private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"
+    }
+
     init {
         logger.cinfo { "Sender ${this.hashCode()} using executor ${executor.hashCode()}" }
         outgoingRtpRoot = pipeline {
@@ -144,7 +149,10 @@ class RtpSenderImpl(
     override fun getNackHandler(): NackHandler = nackHandler
 
     override fun sendPackets(pkts: List<PacketInfo>) {
-        pkts.forEach { numIncomingBytes += it.packet.size }
+        pkts.forEach {
+            numIncomingBytes += it.packet.size
+            it.addEvent(PACKET_QUEUE_ENTRY_EVENT)
+        }
         incomingPacketQueue.addAll(pkts)
         if (firstPacketWrittenTime == -1L) {
             firstPacketWrittenTime = System.currentTimeMillis()
@@ -174,6 +182,7 @@ class RtpSenderImpl(
             numQueueReads++
             lastQueueReadTime = now
             incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
+                it.addEvent(PACKET_QUEUE_EXIT_EVENT)
                 outgoingRtpRoot.processPackets(listOf(it))
             }
         }
