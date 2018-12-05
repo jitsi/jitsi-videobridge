@@ -910,13 +910,11 @@ public class RtpChannel
         synchronized (streamSyncRoot)
         {
             TransportManager transportManager = getTransportManager();
-//            TransportCCEngine transportCCEngine
-//                = transportManager.getTransportCCEngine();
 
             stream = mediaService.createMediaStream(
                         null,
                         mediaType,
-                        getSrtpControl());
+                        null);
 
              // Add the PropertyChangeListener to the MediaStream prior to
              // performing further initialization so that we do not miss changes

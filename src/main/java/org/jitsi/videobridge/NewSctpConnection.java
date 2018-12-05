@@ -231,7 +231,6 @@ public class NewSctpConnection
         throws IOException
     {
         System.out.println("BRIAN: starting dtls transport thread");
-//        byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
 
         synchronized (syncRoot)
         {

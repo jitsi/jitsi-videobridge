@@ -530,23 +530,23 @@ public abstract class Channel
         return creationTimestamp;
     }
 
-    /**
-     * Child classes should implement this method and return
-     * <tt>DtlsControl</tt> instance if they are willing to use DTLS transport.
-     * Otherwise, <tt>null</tt> should be returned.
-     *
-     * @return <tt>DtlsControl</tt> if this instance supports DTLS transport or
-     * <tt>null</tt> otherwise.
-     */
-    protected SrtpControl getSrtpControl()
-    {
-        TransportManager transportManager = getTransportManager();
-
-        return
-            (transportManager == null)
-                ? null
-                : transportManager.getSrtpControl(this);
-    }
+//    /**
+//     * Child classes should implement this method and return
+//     * <tt>DtlsControl</tt> instance if they are willing to use DTLS transport.
+//     * Otherwise, <tt>null</tt> should be returned.
+//     *
+//     * @return <tt>DtlsControl</tt> if this instance supports DTLS transport or
+//     * <tt>null</tt> otherwise.
+//     */
+//    protected SrtpControl getSrtpControl()
+//    {
+//        TransportManager transportManager = getTransportManager();
+//
+//        return
+//            (transportManager == null)
+//                ? null
+//                : transportManager.getSrtpControl(this);
+//    }
 
     /**
      * @return the {@link AbstractEndpoint} of the conference participant associated

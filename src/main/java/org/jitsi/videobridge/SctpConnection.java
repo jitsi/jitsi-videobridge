@@ -1090,170 +1090,212 @@ public class SctpConnection
     protected void runOnDtlsTransport(StreamConnector connector)
         throws IOException
     {
-        SrtpControl srtpControl
-            = getTransportManager().getSrtpControl(this);
-        DtlsTransformEngine engine
-            = (DtlsTransformEngine) srtpControl.getTransformEngine();
-        DtlsPacketTransformer transformer
-            = (DtlsPacketTransformer) engine.getRTPTransformer();
-        if (this.transformer == null)
-        {
-            this.transformer = transformer;
-        }
-
-        byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
-
-        if (LOG_SCTP_PACKETS)
-        {
-            System.setProperty(
-                    ConfigurationService.PNAME_SC_HOME_DIR_LOCATION,
-                    System.getProperty("java.io.tmpdir"));
-            System.setProperty(
-                    ConfigurationService.PNAME_SC_HOME_DIR_NAME,
-                    SctpConnection.class.getName());
-        }
-
-        synchronized (syncRoot)
-        {
-            // FIXME local SCTP port is hardcoded in bridge offer SDP (Jitsi
-            // Meet)
-            sctpSocket = Sctp.createSocket(5000);
-            assocIsUp = false;
-            acceptedIncomingConnection = false;
-        }
-
-        // Implement output network link for SCTP stack on DTLS transport
-        sctpSocket.setLink(new NetworkLink()
-        {
-            @Override
-            public void onConnOut(SctpSocket s, byte[] packet)
-                throws IOException
-            {
-                if (LOG_SCTP_PACKETS)
-                {
-                    LibJitsi.getPacketLoggingService().logPacket(
-                            PacketLoggingService.ProtocolName.ICE4J,
-                            new byte[] { 0, 0, 0, (byte) debugId },
-                            5000,
-                            new byte[] { 0, 0, 0, (byte) (debugId + 1) },
-                            remoteSctpPort,
-                            PacketLoggingService.TransportName.UDP,
-                            true,
-                            packet);
-                }
-
-                // Send through DTLS transport. Add to the queue in order to
-                // make sure we don't block the thread which executes this.
-                packetQueue.add(packet, 0, packet.length);
-            }
-        });
-
-        if (logger.isDebugEnabled())
-        {
-            logger.debug(
-                    "Connecting SCTP to port: " + remoteSctpPort + " to "
-                        + getEndpoint().getID());
-        }
-
-        sctpSocket.setNotificationListener(this);
-        sctpSocket.listen();
-
-        sctpSocket.setDataCallback(this);
-
-        sctpDispatcher.execute(this::acceptIncomingSctpConnection);
-
-        // Setup iceSocket
-        DatagramSocket datagramSocket = connector.getDataSocket();
-        IceSocketWrapper iceSocket;
-
-        if (datagramSocket != null)
-        {
-            iceSocket = new IceUdpSocketWrapper(datagramSocket);
-        }
-        else
-        {
-            iceSocket = new IceTcpSocketWrapper(connector.getDataTCPSocket());
-        }
-
-        DatagramPacket recv
-            = new DatagramPacket(receiveBuffer, 0, receiveBuffer.length);
-
-        // Receive loop, breaks when SCTP socket is closed
-        try
-        {
-            do
-            {
-                iceSocket.receive(recv);
-
-                RawPacket[] send
-                    = {
-                        new RawPacket(
-                                recv.getData(),
-                                recv.getOffset(),
-                                recv.getLength())
-                    };
-
-                send = transformer.reverseTransform(send);
-                // Check for app data
-                if (send == null || send.length == 0)
-                    continue;
-
-                // We received data for the SCTP socket, this SctpConnection
-                // is still alive
-                touch(ActivityType.PAYLOAD);
-
-                if (LOG_SCTP_PACKETS)
-                {
-                    PacketLoggingService pktLogging
-                        = LibJitsi.getPacketLoggingService();
-                    byte[] srcAddr
-                        = new byte[] { 0, 0, 0, (byte) (debugId + 1) };
-                    byte[] dstAddr = new byte[] { 0, 0, 0, (byte) debugId };
-
-                    for (RawPacket s : send)
-                    {
-                        if (s == null)
-                            continue;
-
-                        pktLogging.logPacket(
-                                PacketLoggingService.ProtocolName.ICE4J,
-                                srcAddr, remoteSctpPort,
-                                dstAddr, 5000,
-                                PacketLoggingService.TransportName.UDP,
-                                false,
-                                s.getBuffer(), s.getOffset(), s.getLength());
-                    }
-                }
-
-                if (sctpSocket == null)
-                    break;
-
-                // Pass network packet to SCTP stack
-                for (RawPacket s : send)
-                {
-                    if (s != null)
-                    {
-                        sctpSocket.onConnIn(
-                                s.getBuffer(), s.getOffset(), s.getLength());
-                    }
-                }
-            }
-            while (true);
-        }
-        catch (SocketException ex)
-        {
-            if (!"Socket closed".equals(ex.getMessage())
-                && !(ex instanceof SocketClosedException))
-            {
-                throw ex;
-            }
-        }
-        finally
-        {
-            // Eventually, close the socket although it should happen in
-            // expire().
-            closeStream();
-        }
+//        SrtpControl srtpControl
+//            = getTransportManager().getSrtpControl(this);
+//        DtlsTransformEngine engine
+//            = (DtlsTransformEngine) srtpControl.getTransformEngine();
+//        DtlsPacketTransformer transformer
+//            = (DtlsPacketTransformer) engine.getRTPTransformer();
+//        if (this.transformer == null)
+//        {
+//            this.transformer = transformer;
+//        }
+//
+//        byte[] receiveBuffer = new byte[SCTP_BUFFER_SIZE];
+//
+//        if (LOG_SCTP_PACKETS)
+//        {
+//            System.setProperty(
+//                    ConfigurationService.PNAME_SC_HOME_DIR_LOCATION,
+//                    System.getProperty("java.io.tmpdir"));
+//            System.setProperty(
+//                    ConfigurationService.PNAME_SC_HOME_DIR_NAME,
+//                    SctpConnection.class.getName());
+//        }
+//
+//        synchronized (syncRoot)
+//        {
+//            // FIXME local SCTP port is hardcoded in bridge offer SDP (Jitsi
+//            // Meet)
+//            sctpSocket = Sctp.createSocket(5000);
+//            assocIsUp = false;
+//            acceptedIncomingConnection = false;
+//        }
+//
+//        // Implement output network link for SCTP stack on DTLS transport
+//        sctpSocket.setLink(new NetworkLink()
+//        {
+//            @Override
+//            public void onConnOut(SctpSocket s, byte[] packet)
+//                throws IOException
+//            {
+//                if (LOG_SCTP_PACKETS)
+//                {
+//                    LibJitsi.getPacketLoggingService().logPacket(
+//                            PacketLoggingService.ProtocolName.ICE4J,
+//                            new byte[] { 0, 0, 0, (byte) debugId },
+//                            5000,
+//                            new byte[] { 0, 0, 0, (byte) (debugId + 1) },
+//                            remoteSctpPort,
+//                            PacketLoggingService.TransportName.UDP,
+//                            true,
+//                            packet);
+//                }
+//
+//                // Send through DTLS transport. Add to the queue in order to
+//                // make sure we don't block the thread which executes this.
+//                packetQueue.add(packet, 0, packet.length);
+//            }
+//        });
+//
+//        if (logger.isDebugEnabled())
+//        {
+//            logger.debug(
+//                    "Connecting SCTP to port: " + remoteSctpPort + " to "
+//                        + getEndpoint().getID());
+//        }
+//
+//        sctpSocket.setNotificationListener(this);
+//        sctpSocket.listen();
+//
+//        // Notify that from now on SCTP connection is considered functional
+//        sctpSocket.setDataCallback(this);
+//
+//        // FIXME manage threads
+//        threadPool.execute(
+//                new Runnable()
+//                {
+//                    @Override
+//                    public void run()
+//                    {
+//                        SctpSocket sctpSocket = null;
+//                        try
+//                        {
+//                            // sctpSocket is set to null on close
+//                            sctpSocket = SctpConnection.this.sctpSocket;
+//                            while (sctpSocket != null)
+//                            {
+//                                if (sctpSocket.accept())
+//                                {
+//                                    acceptedIncomingConnection = true;
+//                                    logger.info("SCTP socket accepted for "
+//                                            + "endpoint "
+//                                            + getEndpoint().getID());
+//                                    break;
+//                                }
+//                                Thread.sleep(100);
+//                                sctpSocket = SctpConnection.this.sctpSocket;
+//                            }
+//                            if (isReady())
+//                            {
+//                                notifySctpConnectionReady();
+//                            }
+//                        }
+//                        catch (Exception e)
+//                        {
+//                            logger.error("Error accepting SCTP connection", e);
+//                        }
+//
+//                        if (sctpSocket == null && logger.isInfoEnabled())
+//                        {
+//                            logger.info("SctpConnection " + getID() + " closed"
+//                                        + " before SctpSocket accept()-ed.");
+//                        }
+//                    }
+//                });
+//
+//        // Setup iceSocket
+//        DatagramSocket datagramSocket = connector.getDataSocket();
+//        IceSocketWrapper iceSocket;
+//
+//        if (datagramSocket != null)
+//        {
+//            iceSocket = new IceUdpSocketWrapper(datagramSocket);
+//        }
+//        else
+//        {
+//            iceSocket = new IceTcpSocketWrapper(connector.getDataTCPSocket());
+//        }
+//
+//        DatagramPacket recv
+//            = new DatagramPacket(receiveBuffer, 0, receiveBuffer.length);
+//
+//        // Receive loop, breaks when SCTP socket is closed
+//        try
+//        {
+//            do
+//            {
+//                iceSocket.receive(recv);
+//
+//                RawPacket[] send
+//                    = {
+//                        new RawPacket(
+//                                recv.getData(),
+//                                recv.getOffset(),
+//                                recv.getLength())
+//                    };
+//
+//                send = transformer.reverseTransform(send);
+//                // Check for app data
+//                if (send == null || send.length == 0)
+//                    continue;
+//
+//                // We received data for the SCTP socket, this SctpConnection
+//                // is still alive
+//                touch(ActivityType.PAYLOAD);
+//
+//                if (LOG_SCTP_PACKETS)
+//                {
+//                    PacketLoggingService pktLogging
+//                        = LibJitsi.getPacketLoggingService();
+//                    byte[] srcAddr
+//                        = new byte[] { 0, 0, 0, (byte) (debugId + 1) };
+//                    byte[] dstAddr = new byte[] { 0, 0, 0, (byte) debugId };
+//
+//                    for (RawPacket s : send)
+//                    {
+//                        if (s == null)
+//                            continue;
+//
+//                        pktLogging.logPacket(
+//                                PacketLoggingService.ProtocolName.ICE4J,
+//                                srcAddr, remoteSctpPort,
+//                                dstAddr, 5000,
+//                                PacketLoggingService.TransportName.UDP,
+//                                false,
+//                                s.getBuffer(), s.getOffset(), s.getLength());
+//                    }
+//                }
+//
+//                if (sctpSocket == null)
+//                    break;
+//
+//                // Pass network packet to SCTP stack
+//                for (RawPacket s : send)
+//                {
+//                    if (s != null)
+//                    {
+//                        sctpSocket.onConnIn(
+//                                s.getBuffer(), s.getOffset(), s.getLength());
+//                    }
+//                }
+//            }
+//            while (true);
+//        }
+//        catch (SocketException ex)
+//        {
+//            if (!"Socket closed".equals(ex.getMessage())
+//                && !(ex instanceof SocketClosedException))
+//            {
+//                throw ex;
+//            }
+//        }
+//        finally
+//        {
+//            // Eventually, close the socket although it should happen in
+//            // expire().
+//            closeStream();
+//        }
     }
 
     /**
