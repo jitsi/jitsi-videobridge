@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
+import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
