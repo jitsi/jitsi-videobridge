@@ -13,26 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj.transform.node.outgoing
+package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.dtls.DtlsStack
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.rtp.DtlsProtocolPacket
-import org.jitsi.rtp.Packet
-import java.nio.ByteBuffer
+import org.jitsi.nlj.util.cinfo
 
 /**
- * A Node to handle the output of the sctp stack to bridge it back
- * into a pipeline.  This acts as the send half of the 'DatagramTransport'
- * (so it handles already encrypted DTLS packets).
+ * [DtlsReceiverNode] bridges a chain of modules to a DTLS's transport
+ * (used by the bouncycastle stack).  Receives incoming DTLS data, passes it
+ * to the DTLS stack and forwards any DTLS app packets
  */
-class DtlsSenderNode : Node("DTLS Sender") {
+class DtlsReceiver(
+        private val dtlsStack: DtlsStack
+) : Node("DTLS Receiver") {
     override fun doProcessPackets(p: List<PacketInfo>) {
-        next(p)
-    }
-
-    //TODO: change thread contexts here?
-    fun send(buf: ByteArray, off: Int, length: Int) {
-        processPackets(listOf(PacketInfo(DtlsProtocolPacket(ByteBuffer.wrap(buf, off, length)))))
+        logger.cinfo { "DTLS receiver processing incoming DTLS packets" }
+        val appPackets = dtlsStack.processIncomingDtlsPackets(p)
+        next(appPackets)
     }
 }

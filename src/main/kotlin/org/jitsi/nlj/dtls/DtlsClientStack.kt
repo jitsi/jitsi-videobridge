@@ -16,46 +16,27 @@
 package org.jitsi.nlj.dtls
 
 import org.bouncycastle.crypto.tls.DTLSClientProtocol
-import org.bouncycastle.crypto.tls.DTLSTransport
-import org.bouncycastle.crypto.tls.DatagramTransport
 import org.bouncycastle.crypto.tls.TlsClient
-import org.bouncycastle.crypto.tls.TlsContext
-import org.jitsi.nlj.util.NameableThreadFactory
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.nlj.util.getLogger
 import java.security.SecureRandom
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
-class DtlsClientStack @JvmOverloads constructor(
-    private val transport: DatagramTransport,
-    private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol(SecureRandom())
+class DtlsClientStack(
+        private val dtlsClientProtocol: DTLSClientProtocol = DTLSClientProtocol(SecureRandom())
 ) : DtlsStack() {
     private var tlsClient: TlsClient? = null
-    private var subscribers = mutableListOf<(DTLSTransport, TlsContext) -> Unit>()
-    private val logger = getLogger(this.javaClass)
 
-    override fun connect(tlsClient: TlsClient) {
+    fun connect(tlsClient: TlsClient) {
         this.tlsClient = tlsClient
         try {
-            val dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this.transport)
-            logger.cinfo { "BRIAN: dtls handshake finished" }
-            subscribers.forEach { it(dtlsTransport, (tlsClient as TlsClientImpl).getContext()) }
+            dtlsTransport = dtlsClientProtocol.connect(this.tlsClient, this)
+            logger.cinfo { "DTLS handshake finished" }
+            handshakeCompleteHandler((tlsClient as TlsClientImpl).getContext())
         } catch (e: Exception) {
-            logger.cerror{ "BRIAN: error during dtls connection: $e" }
+            logger.cerror{ "Error during DTLS connection: $e" }
             throw e
         }
     }
 
-    override fun onHandshakeComplete(func: (DTLSTransport, TlsContext) -> Unit) {
-        subscribers.add(func)
-    }
-
-    //TODO: better way we can get the chosen profile out without having to cast?
     override fun getChosenSrtpProtectionProfile(): Int = (tlsClient as? TlsClientImpl)?.chosenSrtpProtectionProfile ?: 0
-
-    //TODO: same as above
-    override fun getTlsContext(): TlsContext? = (tlsClient as? TlsClientImpl)?.getContext()
 }
-

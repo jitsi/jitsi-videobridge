@@ -1,32 +1,29 @@
 package org.jitsi.nlj.transform.module
 
+import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.bouncycastle.cert.X509CertificateHolder
 import org.bouncycastle.cert.X509v1CertificateBuilder
 import org.bouncycastle.cert.jcajce.JcaX509v1CertificateBuilder
-import org.bouncycastle.crypto.tls.Certificate
-import org.bouncycastle.crypto.tls.DTLSClientProtocol
-import org.bouncycastle.crypto.tls.DTLSServerProtocol
-import org.bouncycastle.crypto.tls.DatagramTransport
-import org.bouncycastle.crypto.tls.DefaultTlsServer
-import org.bouncycastle.crypto.tls.DefaultTlsSignerCredentials
-import org.bouncycastle.crypto.tls.ProtocolVersion
-import org.bouncycastle.crypto.tls.SRTPProtectionProfile
-import org.bouncycastle.crypto.tls.TlsSRTPUtils
-import org.bouncycastle.crypto.tls.TlsSignerCredentials
-import org.bouncycastle.crypto.tls.TlsUtils
-import org.bouncycastle.crypto.tls.UseSRTPData
+import org.bouncycastle.crypto.tls.*
 import org.bouncycastle.crypto.util.PrivateKeyFactory
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder
 import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.dtls.DtlsClientStack
 import org.jitsi.nlj.dtls.TlsClientImpl
-import java.lang.Thread.sleep
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.incoming.DtlsReceiver
+import org.jitsi.nlj.transform.node.outgoing.DtlsSender
+import org.jitsi.rtp.UnparsedPacket
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.util.*
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import javax.security.auth.x500.X500Principal
@@ -43,7 +40,7 @@ class FakeTransport : DatagramTransport {
         pData?.let {
             System.arraycopy(it.buf, it.off, buf, off, Math.min(length, it.length))
         }
-        return pData?.length ?: 0
+        return pData?.length ?: -1
     }
 
     override fun send(buf: ByteArray, off: Int, length: Int) {
@@ -115,57 +112,51 @@ class TlsServerImpl : DefaultTlsServer() {
     }
 }
 
+// A simple, somewhat hacky test just to verify the handshake can complete and we can send data
 internal class DtlsStackTest : ShouldSpec() {
     init {
+        val dtls = DtlsClientStack()
+        val receiver = DtlsReceiver(dtls)
+        val sender = DtlsSender(dtls)
+
         val serverTransport = FakeTransport()
         val dtlsServer = TlsServerImpl()
         val serverProtocol = DTLSServerProtocol(SecureRandom())
 
-        val clientProtocol = DTLSClientProtocol(SecureRandom());
-        val clientTransport = FakeTransport()
-        val tlsClient = TlsClientImpl()
-
-        clientTransport.sendFunc = { buf, off, len ->
-            println("Client sending message")
-            serverTransport.incomingQueue.add(PacketData(buf, off, len))
-        }
         serverTransport.sendFunc = { buf, off, len ->
-            println("Server sending message")
-            clientTransport.incomingQueue.add(PacketData(buf, off, len))
+            receiver.processPackets(listOf(PacketInfo(UnparsedPacket(ByteBuffer.wrap(buf, off, len)))))
         }
+        sender.attach(object : Node("sender network") {
+            override fun doProcessPackets(p: List<PacketInfo>) {
+                p.forEach {
+                    serverTransport.incomingQueue.add(PacketData(
+                            it.packet.getBuffer().array(),
+                            it.packet.getBuffer().arrayOffset(),
+                            it.packet.getBuffer().limit()))
+                }
+            }
+        })
 
-        thread {
+        val receivedDataFuture = CompletableFuture<String>()
+        var serverRunning = true
+        val serverThread = thread {
             val serverDtlsTransport = serverProtocol.accept(dtlsServer, serverTransport)
-            println("Server accept")
-            while (true) {
-                val buf = ByteArray(1500)
-                val len = serverDtlsTransport.receive(buf, 0, 1500, 1000)
-                println("Server got dtls data: ${String(buf, 0, len)}")
+            val buf = ByteArray(1500)
+            while (serverRunning) {
+                val len = serverDtlsTransport.receive(buf, 0, 1500, 100)
+                if (len > 0) {
+                    val receivedStr = String(buf, 0, len)
+                    receivedDataFuture.complete(receivedStr)
+                }
             }
         }
 
-        println("Client connecting")
-        val dtlsTransport = clientProtocol.connect(tlsClient, clientTransport)
-        println("Client done connecting")
+        dtls.connect(TlsClientImpl())
         val message = "Hello, world"
-        dtlsTransport.send(message.toByteArray(), 0, message.length)
+        dtls.sendDtlsAppData(PacketInfo(UnparsedPacket(ByteBuffer.wrap(message.toByteArray()))))
+        receivedDataFuture.get() shouldBe message
 
-        sleep(5000)
-        println(tlsClient.getContext().securityParameters.masterSecret)
-    }
-}
-
-internal class DtlsStack2Test : ShouldSpec() {
-    init {
-//        val dtlsInputQueue = LinkedBlockingQueue<ByteBuffer>();
-//        val dtlsOutputQueue = LinkedBlockingQueue<ByteBuffer>();
-//        val transport = QueueDatagramTransport(dtlsInputQueue, dtlsOutputQueue)
-//        val dtlsStack = DtlsClientStack(transport);
-//
-//        dtlsStack.connect()
-//
-//        Thread.sleep(60000)
-//
-//        println("local fingperint: ${dtlsStack.localFingerprint}")
+        serverRunning = false
+        serverThread.join()
     }
 }
