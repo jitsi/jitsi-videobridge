@@ -52,17 +52,9 @@ public class IceDtlsTransportManager
     private final String ICE_STREAM_NAME;
     //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
     private ExecutorService executor;
-    private DtlsReceiverNode dtlsReceiver = new DtlsReceiverNode();
-    private DtlsSenderNode dtlsSender = new DtlsSenderNode();
-    /**
-     * The transport we pass to the DTLS client stack so it can read and write data
-     */
-    private DatagramTransport tlsTransport = new QueueDatagramTransport(
-            dtlsReceiver::receive,
-            (buf, off, len) -> { dtlsSender.send(buf, off, len); return Unit.INSTANCE; },
-            1500
-    );
-    private DtlsStack dtlsStack = new DtlsClientStack(tlsTransport);
+    private DtlsClientStack dtlsStack = new DtlsClientStack();
+    private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
+    private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
     //TODO: temp store dtls transport because newsctpconnection grabs it
     DTLSTransport dtlsTransport;
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
@@ -490,11 +482,9 @@ public class IceDtlsTransportManager
         // module chain
         installIncomingPacketReader(s);
 
-        dtlsStack.onHandshakeComplete((dtlsTransport, tlsContext) -> {
-            System.out.println("BRIAN: dtls handshake complete, got srtp profile: " + dtlsStack.getChosenSrtpProtectionProfile());
-            dtlsReceiver.setDtlsTransport(dtlsTransport);
-            this.dtlsTransport = dtlsTransport;
-            Transceiver transceiver = getTransceiver();
+        dtlsStack.onHandshakeComplete((tlsContext) -> {
+            logger.info("TransportManager " + id + " DTLS handshake complete.  Got SRTP profile " +
+                    dtlsStack.getChosenSrtpProtectionProfile());
             if (transceiver != null) {
                 transceiver.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
             } else {
@@ -502,6 +492,7 @@ public class IceDtlsTransportManager
             }
             return Unit.INSTANCE;
         });
+
         packetSender.socket = s;
         System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         executor.submit(() -> {
