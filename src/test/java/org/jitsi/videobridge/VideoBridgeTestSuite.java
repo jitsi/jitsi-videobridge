@@ -29,6 +29,7 @@ import org.junit.runners.*;
     {
         FocusControlTest.class,
         RawUdpConferenceTest.class,
+        SctpConnectionTest.class,
         EndpointMessageBuilderTest.class,
         MediaStreamTrackFactoryTest.class,
         BridgeShutdownTest.class, // This one must be the last one
