@@ -1054,18 +1054,20 @@ public class SctpConnection
                             {
                                 if (sctpSocket.accept())
                                 {
+                                    boolean wasReady = isReady();
+
                                     acceptedIncomingConnection = true;
+
                                     logger.info("SCTP socket accepted for "
                                             + "endpoint "
                                             + getEndpoint().getID());
+                                    if (isReady() && !wasReady) {
+                                        notifySctpConnectionReady();
+                                    }
                                     break;
                                 }
                                 Thread.sleep(100);
                                 sctpSocket = SctpConnection.this.sctpSocket;
-                            }
-                            if (isReady())
-                            {
-                                notifySctpConnectionReady();
                             }
                         }
                         catch (Exception e)
