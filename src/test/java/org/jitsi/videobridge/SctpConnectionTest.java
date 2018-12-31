@@ -10,28 +10,32 @@ import org.junit.runner.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.*;
 import org.jxmpp.stringprep.*;
+import org.powermock.core.classloader.annotations.*;
 import org.powermock.modules.junit4.*;
 
 import static org.junit.Assert.*;
+import static org.powermock.api.easymock.PowerMock.*;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(SctpConnection.class)
 public class SctpConnectionTest
 {
     /**
      * Tested <tt>SctpConnection</tt> instance.
      */
-    private static SctpConnection sctpConnection;
+    private SctpConnection sctpConnection;
 
     /**
      * Test fixtures.
      */
 
-    private static OSGiHandler osgiHandler = new OSGiHandler();
+    private OSGiHandler osgiHandler = new OSGiHandler();
 
     /**
      * Initializes OSGi
      */
-    @BeforeClass
-    public static void setUp()
+    @Before
+    public void setUp()
         throws Exception
     {
         osgiHandler.start();
@@ -77,8 +81,8 @@ public class SctpConnectionTest
     /**
      * Shutdown OSGi
      */
-    @AfterClass
-    public static void tearDown()
+    @After
+    public void tearDown()
         throws InterruptedException
     {
         osgiHandler.stop();
@@ -147,6 +151,9 @@ public class SctpConnectionTest
         SctpSocket sctpSocket = null;
         byte[] data = getCommunicationUpPacket();
         SctpNotification notification = SctpNotification.parse(data);
+
+        // createPartialMock(SctpNotification.class, "notifySctpConnectionReady");
+        // expectPrivate(sctpConnection, "notifySctpConnectionReady");
 
         sctpConnection.onSctpNotification(sctpSocket, notification);
     }
