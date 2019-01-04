@@ -55,6 +55,7 @@ public class IceDtlsTransportManager
     private DtlsClientStack dtlsStack = new DtlsClientStack();
     private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
     private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
+    private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
     //TODO: temp store dtls transport because newsctpconnection grabs it
     DTLSTransport dtlsTransport;
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
@@ -347,6 +348,15 @@ public class IceDtlsTransportManager
         return IceUdpTransportPacketExtension.NAMESPACE;
     }
 
+    @Override
+    public void onTransportConnected(Runnable handler) {
+        if (isConnected()) {
+            handler.run();
+        } else {
+            transportConnectedSubscribers.add(handler);
+        }
+    }
+
     private Node createIncomingPipeline() {
         PipelineBuilder builder = new PipelineBuilder();
 
@@ -399,6 +409,10 @@ public class IceDtlsTransportManager
         builder.node(dtlsSender);
         builder.node(packetSender);
         return builder.build();
+    }
+
+    public void sendDtlsData(PacketInfo packet) {
+        outgoingDtlsPipelineRoot.processPackets(Collections.singletonList(packet));
     }
 
     // Start a thread for each transceiver.  Each thread will read from the transceiver's outgoing queue
@@ -471,7 +485,8 @@ public class IceDtlsTransportManager
         // The sctp connection start is triggered by this, but otherwise i don't think we need it (the other channel
         // types no longer do anything needed in there)
         logger.info("BRIAN: iceConnected for transport manager " + id);
-        getChannels().forEach(Channel::transportConnected);
+//        getChannels().forEach(Channel::transportConnected);
+        transportConnectedSubscribers.forEach(Runnable::run);
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 

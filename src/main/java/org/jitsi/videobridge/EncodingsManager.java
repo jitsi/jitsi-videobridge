@@ -29,6 +29,10 @@ public class EncodingsManager {
         });
     }
 
+    /**
+     * Subscribe to future updates and be notified of any existing ssrc associations.
+     * @param listener
+     */
     public void subscribe(EncodingsUpdateListener listener) {
         listeners.add(listener);
 

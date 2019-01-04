@@ -1091,8 +1091,11 @@ public class Videobridge
                     }
                     else
                     {
+                        endpoint.createSctpConnection();
+                        //TODO(brian): the below code about creating an sctp connection will go away, but we keep it
+                        // around for now so we can use it for 'describe' in the iq response.  the sctp connection
+                        // has just been changed to do nothing
                         int sctpPort = sctpConnIq.getPort();
-
                         try
                         {
                             sctpConn

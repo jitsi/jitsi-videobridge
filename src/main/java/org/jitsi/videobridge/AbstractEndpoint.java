@@ -20,12 +20,16 @@ import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.Node;
 import org.jitsi.nlj.util.*;
+import org.jitsi.rtp.UnparsedPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.sctp.SctpManager;
+import org.jitsi_modified.sctp4j.SctpDataSender;
 
 import java.io.*;
 import java.lang.ref.*;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.*;
@@ -81,6 +85,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     //Public for now since the channel needs to reach in and grab it
     public Transceiver transceiver;
+    private SctpManager sctpManager;
     private ExecutorService receiverExecutor;
     private ExecutorService senderExecutor;
     // We'll still continue to share a single background executor, as I think it's sufficient.
@@ -119,11 +124,43 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
             }
         });
         conference.encodingsManager.subscribe(this);
+        //TODO: need to clean up the association of transportmanager <-> endpoint and how they know about one another
+        //TODO: technically we want to start this once dtls is complete, is this good enough though?
+        getConference().getTransportManager(AbstractEndpoint.this.id).onTransportConnected(() -> {
+            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
+            if (sctpManager != null) {
+                new Thread(() -> {
+                    LinkedBlockingQueue<PacketInfo> sctpPackets = ((IceDtlsTransportManager)getConference().getTransportManager(AbstractEndpoint.this.id)).sctpAppPackets;
+                    while (true) {
+                        try {
+                            PacketInfo sctpPacket = null;
+                            sctpPacket = sctpPackets.take();
+                            System.out.println("SCTP reader received and incoming sctp packet");
+                            sctpManager.handleIncomingSctp(sctpPacket);
+                        } catch (InterruptedException e) {
+                            System.out.println("Interruped while trying to receive sctp packet");
+                        }
+                    }
+                }, "Incoming SCTP reader").start();
+            }
+        });
     }
 
     @Override
     public void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, String semantics) {
         transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
+    }
+
+    public void createSctpConnection() {
+        System.out.println("Creating SCTP manager");
+        this.sctpManager = new SctpManager(
+            (data, offset, length) -> {
+                System.out.println("Sending outgoing SCTP data");
+                ((IceDtlsTransportManager)getConference().getTransportManager(AbstractEndpoint.this.id)).sendDtlsData(new PacketInfo(new UnparsedPacket(ByteBuffer.wrap(data, offset, length))));
+                return 0;
+            }
+        );
+        sctpManager.createConnection();
     }
 
     protected void handleIncomingRtp(List<PacketInfo> packetInfos)
