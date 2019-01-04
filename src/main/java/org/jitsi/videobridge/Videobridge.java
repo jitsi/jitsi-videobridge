@@ -783,6 +783,7 @@ public class Videobridge
      * represents the response to the specified request or <tt>null</tt> to
      * reply with <tt>feature-not-implemented</tt>
      */
+    @Deprecated
     public IQ handleColibriConferenceIQ(
             ColibriConferenceIQ conferenceIQ,
             int options)

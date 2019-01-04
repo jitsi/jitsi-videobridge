@@ -223,6 +223,10 @@ public abstract class Channel
             String transportNamespace,
             Boolean initiator)
     {
+        if (true)
+        {
+            throw new Error("NO CHANNELS ALLOWED");
+        }
         Objects.requireNonNull(content, "content");
         org.jivesoftware.smack.util.StringUtils.requireNotNullOrEmpty(id, "id");
 

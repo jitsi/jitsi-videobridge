@@ -825,9 +825,13 @@ class HandlerImpl
                     try
                     {
                         IQ responseIQ
-                            = videobridge.handleColibriConferenceIQ(
-                                    requestConferenceIQ,
-                                    Videobridge.OPTION_ALLOW_NO_FOCUS);
+                                = videobridge.handleColibriConferenceIq2(
+                                requestConferenceIQ,
+                                Videobridge.OPTION_ALLOW_NO_FOCUS);
+//                        IQ responseIQ
+//                            = videobridge.handleColibriConferenceIQ(
+//                                    requestConferenceIQ,
+//                                    Videobridge.OPTION_ALLOW_NO_FOCUS);
 
                         if (responseIQ instanceof ColibriConferenceIQ)
                         {

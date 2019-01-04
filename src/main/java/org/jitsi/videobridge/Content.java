@@ -189,6 +189,10 @@ public class Content
      */
     public Content(Conference conference, String name)
     {
+        if (true)
+        {
+            throw new Error("NO CONTENTS ALLOWED");
+        }
         this.conference = Objects.requireNonNull(conference, "conference");
         this.name = Objects.requireNonNull(name, "name");
         this.loggingId = conference.getLoggingId() + ",content=" + name;

@@ -260,6 +260,10 @@ public class SctpConnection
               channelBundleId,
               IceUdpTransportPacketExtension.NAMESPACE,
               initiator);
+        if (true)
+        {
+            throw new Error("NO SCTPCONNECTIONS ALLOWED");
+        }
 
         logger
             = Logger.getLogger(classLogger, content.getConference().getLogger());
