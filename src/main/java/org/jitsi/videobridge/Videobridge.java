@@ -714,6 +714,8 @@ public class Videobridge
         conference.describeShallow(responseConferenceIQ);
         responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
 
+        Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes = new HashMap<>();
+        Map<String, List<RTPHdrExtPacketExtension>> endpointHeaderExts = new HashMap<>();
         for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
         {
             /*
@@ -737,13 +739,20 @@ public class Videobridge
             responseConferenceIQ.addContent(responseContentIQ);
 
             try {
-                List<ColibriConferenceIQ.Channel> describedChannels =
-                        processChannels(contentIQ.getChannels(), conference, content);
+                List<ColibriConferenceIQ.Channel> describedChannels = processChannels(
+                        contentIQ.getChannels(),
+                        endpointPayloadTypes,
+                        endpointHeaderExts,
+                        conference,
+                        content);
                 describedChannels.forEach(responseContentIQ::addChannel);
             } catch (IqProcessingException e) {
                 logger.error("Error processing channels in IQ: " + e.toString());
                 return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
             }
+
+            notifyEndpointsOfPayloadTypes(endpointPayloadTypes, getConference(conference.getId(), null));
+            notifyEndpointsOfRtpHeaderExtensions(endpointHeaderExts, getConference(conference.getId(), null));
 
             try {
                 List<ColibriConferenceIQ.SctpConnection> describedSctpConnections =
@@ -823,12 +832,12 @@ public class Videobridge
 
     private List<ColibriConferenceIQ.Channel> processChannels(
             List<ColibriConferenceIQ.Channel> channels,
+            Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes,
+            Map<String, List<RTPHdrExtPacketExtension>> endpointHeaderExts,
             ColibriShim.ConferenceShim conference,
             ColibriShim.ContentShim content) throws IqProcessingException
     {
         List<ColibriConferenceIQ.Channel> createdOrUpdatedChannels = new ArrayList<>();
-        Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes = new HashMap<>();
-        Map<String, List<RTPHdrExtPacketExtension>> endpointHeaderExts = new HashMap<>();
         Map<String, List<SourceGroupPacketExtension>> endpointSourceGroups = new HashMap<>();
 
         for (ColibriConferenceIQ.Channel channelIq : channels)
@@ -946,8 +955,6 @@ public class Videobridge
             createdOrUpdatedChannels.add(responseChannelIQ);
         }
 
-        notifyEndpointsOfPayloadTypes(endpointPayloadTypes, getConference(conference.getId(), null));
-        notifyEndpointsOfRtpHeaderExtensions(endpointHeaderExts, getConference(conference.getId(), null));
         addSourceGroups(endpointSourceGroups, getConference(conference.getId(), null));
         return createdOrUpdatedChannels;
     }
