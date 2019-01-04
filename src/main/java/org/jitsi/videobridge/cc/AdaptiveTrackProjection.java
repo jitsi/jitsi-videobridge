@@ -19,9 +19,11 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.impl.neomedia.rtp.translator.*;
+import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.format.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.vp8.*;
 
 import java.lang.ref.*;
@@ -37,6 +39,13 @@ import java.lang.ref.*;
  */
 public class AdaptiveTrackProjection
 {
+    /**
+     * The <tt>Logger</tt> used by the <tt>AdaptiveTrackProjection</tt> class
+     * and its instances for logging output.
+     */
+    private static final Logger logger
+        = Logger.getLogger(AdaptiveTrackProjection.class);
+
     /**
      * An empty {@link RawPacket} array that is used as a return value and
      * indicates that the input packet needs to be dropped.
@@ -261,20 +270,30 @@ public class AdaptiveTrackProjection
         }
         else
         {
-            RawPacketCache incomingRawPacketCache;
+            RawPacketCache incomingRawPacketCache = null;
             MediaStreamTrackDesc source = getSource();
             if (source != null)
             {
-                // Piggy back till max seen.
-                incomingRawPacketCache = source
-                    .getMediaStreamTrackReceiver()
-                    .getStream()
-                    .getCachingTransformer()
-                    .getIncomingRawPacketCache();
-            }
-            else
-            {
-                incomingRawPacketCache = null;
+                MediaStreamImpl stream
+                    = source.getMediaStreamTrackReceiver().getStream();
+                if (stream != null)
+                {
+                    CachingTransformer cachingTransformer
+                        = stream.getCachingTransformer();
+                    if (cachingTransformer != null)
+                    {
+                        incomingRawPacketCache
+                            = cachingTransformer.getIncomingRawPacketCache();
+                    }
+                    else
+                    {
+                        logger.warn("incoming packet cache is null.");
+                    }
+                }
+                else
+                {
+                    logger.warn("stream is null.");
+                }
             }
 
             return contextCopy.rewriteRtp(rtpRtcpPacket, incomingRawPacketCache);
