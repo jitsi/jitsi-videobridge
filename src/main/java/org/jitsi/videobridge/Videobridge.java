@@ -1034,6 +1034,9 @@ public class Videobridge
         // relying on the channel to update the transceiver with the payload types, we do it here (after gathering them
         // for the entire endpoint, rather than one channel at a time).  This should go elsewhere, but at least here
         // we've gotten that code out of the channel.
+        //TODO: there's a bug here, where i think only the video channel is being updated so we clear the payload types
+        // and then only re-set the video ones.  not sure exactly what changed from the logic being moved, but we
+        // need to come up with a new way to do this anyway.
         endpointPayloadTypes.forEach((epId, payloadTypes) -> {
             logger.info("Notifying ep " + epId + " about " + payloadTypes.size() + " payload type mappings");
             AbstractEndpoint ep = conference.getEndpoint(epId);
