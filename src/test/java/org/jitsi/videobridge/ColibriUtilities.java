@@ -45,8 +45,11 @@ public class ColibriUtilities
         ColibriConferenceIQ.Content audioContent
             = new ColibriConferenceIQ.Content(MediaType.AUDIO.toString());
 
+        String endpointId = "dummy_ep_id";
         ColibriConferenceIQ.Channel channel
             = new ColibriConferenceIQ.Channel();
+        channel.setEndpoint(endpointId);
+        channel.setChannelBundleId(endpointId);
 
         audioContent.addChannel(channel);
 
