@@ -247,9 +247,15 @@ public class AdaptiveTrackProjection
             return null;
         }
 
+        AdaptiveTrackProjectionContext contextCopy = context;
+        if (contextCopy == null)
+        {
+            return EMPTY_PACKET_ARR;
+        }
+
         if (RTCPPacketPredicate.INSTANCE.test(rtpRtcpPacket))
         {
-            return context.rewriteRtcp(rtpRtcpPacket)
+            return contextCopy.rewriteRtcp(rtpRtcpPacket)
                 ? EMPTY_PACKET_ARR
                 : DROP_PACKET_ARR;
         }
@@ -271,7 +277,7 @@ public class AdaptiveTrackProjection
                 incomingRawPacketCache = null;
             }
 
-            return context.rewriteRtp(rtpRtcpPacket, incomingRawPacketCache);
+            return contextCopy.rewriteRtp(rtpRtcpPacket, incomingRawPacketCache);
         }
     }
 
