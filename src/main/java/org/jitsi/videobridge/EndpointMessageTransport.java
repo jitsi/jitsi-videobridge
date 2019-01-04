@@ -418,8 +418,14 @@ class EndpointMessageTransport
             }
             else
             {
+                String reason = "";
+                if (sctpConnection == null) {
+                    reason = " because sctp is not connected.";
+                } else if (!sctpConnection.isReady()) {
+                    reason = " because sctp is not ready.";
+                }
                 logger.warn(
-                    "SCTP connection with " + endpointId + " not ready yet.");
+                    "SCTP session with " + endpointId + " unavailable" + reason);
             }
         }
 
