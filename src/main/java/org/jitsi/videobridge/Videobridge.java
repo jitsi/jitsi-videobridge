@@ -732,41 +732,6 @@ public class Videobridge
 
         responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
 
-//        ColibriConferenceIQ.Recording recordingIQ = conferenceIQ.getRecording();
-//
-//        if (recordingIQ != null)
-//        {
-//            String tokenIQ = recordingIQ.getToken();
-//
-//            if (tokenIQ != null)
-//            {
-//                String tokenConfig
-//                    = getConfigurationService().getString(
-//                            Videobridge.MEDIA_RECORDING_TOKEN_PNAME);
-//
-//                if (tokenIQ.equals(tokenConfig))
-//                {
-//                    ColibriConferenceIQ.Recording.State recState
-//                        = recordingIQ.getState();
-//                    boolean recording
-//                        = conference.setRecording(
-//                                ColibriConferenceIQ.Recording.State.ON
-//                                        .equals(recState)
-//                                    || ColibriConferenceIQ.Recording.State
-//                                            .PENDING.equals(recState));
-//                    ColibriConferenceIQ.Recording responseRecordingIq
-//                            = new ColibriConferenceIQ.Recording(recState);
-//
-//                    if (recording)
-//                    {
-//                        responseRecordingIq.setDirectory(
-//                                conference.getRecordingDirectory());
-//                    }
-//                    responseConferenceIQ.setRecording(responseRecordingIq);
-//                }
-//            }
-//        }
-
         // TODO(gp) Remove ColibriConferenceIQ.RTCPTerminationStrategy
         for (ColibriConferenceIQ.Content contentIQ
                 : conferenceIQ.getContents())
