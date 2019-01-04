@@ -67,6 +67,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
 
+    private final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
+
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
      */
@@ -126,24 +128,24 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         conference.encodingsManager.subscribe(this);
         //TODO: need to clean up the association of transportmanager <-> endpoint and how they know about one another
         //TODO: technically we want to start this once dtls is complete, is this good enough though?
-        getConference().getTransportManager(AbstractEndpoint.this.id).onTransportConnected(() -> {
-            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
-            if (sctpManager != null) {
-                new Thread(() -> {
-                    LinkedBlockingQueue<PacketInfo> sctpPackets = ((IceDtlsTransportManager)getConference().getTransportManager(AbstractEndpoint.this.id)).sctpAppPackets;
-                    while (true) {
-                        try {
-                            PacketInfo sctpPacket = null;
-                            sctpPacket = sctpPackets.take();
-                            System.out.println("SCTP reader received and incoming sctp packet");
-                            sctpManager.handleIncomingSctp(sctpPacket);
-                        } catch (InterruptedException e) {
-                            System.out.println("Interruped while trying to receive sctp packet");
-                        }
-                    }
-                }, "Incoming SCTP reader").start();
-            }
-        });
+//        getConference().getTransportManager(AbstractEndpoint.this.id).onTransportConnected(() -> {
+//            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
+//            if (sctpManager != null) {
+//                new Thread(() -> {
+//                    LinkedBlockingQueue<PacketInfo> sctpPackets = ((IceDtlsTransportManager)getConference().getTransportManager(AbstractEndpoint.this.id)).sctpAppPackets;
+//                    while (true) {
+//                        try {
+//                            PacketInfo sctpPacket = null;
+//                            sctpPacket = sctpPackets.take();
+//                            System.out.println("SCTP reader received and incoming sctp packet");
+//                            sctpManager.handleIncomingSctp(sctpPacket);
+//                        } catch (InterruptedException e) {
+//                            System.out.println("Interruped while trying to receive sctp packet");
+//                        }
+//                    }
+//                }, "Incoming SCTP reader").start();
+//            }
+//        });
     }
 
     @Override
@@ -161,6 +163,33 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
             }
         );
         sctpManager.createConnection();
+    }
+
+    public void setTransportManager(IceUdpTransportManager transportManager)
+    {
+        //TODO: store the transport manager(?)
+
+        //TODO: technically we want to start this once dtls is complete, is this good enough though?
+        transportManager.onTransportConnected(() -> {
+            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
+            if (sctpManager != null) {
+                new Thread(() -> {
+                    LinkedBlockingQueue<PacketInfo> sctpPackets = ((IceDtlsTransportManager)getConference().getTransportManager(AbstractEndpoint.this.id)).sctpAppPackets;
+                    while (true) {
+                        try {
+                            PacketInfo sctpPacket = null;
+                            sctpPacket = sctpPackets.take();
+                            System.out.println("SCTP reader received and incoming sctp packet");
+                            sctpManager.handleIncomingSctp(sctpPacket);
+                        } catch (InterruptedException e) {
+                            System.out.println("Interruped while trying to receive sctp packet");
+                        }
+                    }
+                }, "Incoming SCTP reader").start();
+            }
+        });
+
+        ((IceDtlsTransportManager)transportManager).setTransceiver(this.transceiver);
     }
 
     protected void handleIncomingRtp(List<PacketInfo> packetInfos)
@@ -228,6 +257,36 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public AbstractEndpointMessageTransport getMessageTransport()
     {
         return null;
+    }
+
+    public void addChannel(ColibriShim.Channel channel)
+    {
+        synchronized (channelShims)
+        {
+            channelShims.add(new WeakReference<>(channel));
+        }
+        System.out.println("Endpoint added channel shim, now have " + channelShims.size() +
+                " channel shims");
+    }
+
+    public void removeChannel(ColibriShim.Channel channel)
+    {
+        synchronized (channelShims)
+        {
+            for (Iterator<WeakReference<ColibriShim.Channel>> i = channelShims.iterator(); i.hasNext();)
+            {
+                ColibriShim.Channel existingChannel = i.next().get();
+                if (existingChannel != null && existingChannel.equals(channel)) {
+                    i.remove();
+                }
+            }
+            System.out.println("Endpoint removed channel shim, now have " + channelShims.size() +
+                    " channel shims");
+            if (channelShims.isEmpty())
+            {
+                expire();
+            }
+        }
     }
 
     /**
@@ -479,6 +538,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void expire()
     {
+        System.out.println("Endpoint expiring");
         this.expired = true;
         this.transceiver.stop();
         receiverExecutor.shutdown();

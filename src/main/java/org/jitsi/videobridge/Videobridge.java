@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import java.io.*;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.regex.*;
@@ -36,6 +37,7 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.codec.Constants;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
@@ -46,6 +48,7 @@ import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
+import org.jivesoftware.smack.util.XmlStringBuilder;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.provider.*;
 import org.jxmpp.jid.*;
@@ -622,7 +625,7 @@ public class Videobridge
     public IQ handleColibriConferenceIQ(ColibriConferenceIQ conferenceIQ)
     {
         return
-            handleColibriConferenceIQ(conferenceIQ, defaultProcessingOptions);
+            handleColibriConferenceIq2(conferenceIQ, defaultProcessingOptions);
     }
 
     /**
@@ -654,6 +657,120 @@ public class Videobridge
         {
             return true;
         }
+    }
+
+    public IQ handleColibriConferenceIq2(ColibriConferenceIQ conferenceIQ, int options)
+    {
+        Jid focus = conferenceIQ.getFrom();
+        System.out.println("Received colibriConferenceIq \n" + conferenceIQ.toXML());
+
+        if (!accept(focus, options))
+        {
+            return IQUtils.createError(
+                    conferenceIQ, XMPPError.Condition.not_authorized);
+        }
+
+        ColibriShim.ConferenceShim conference;
+
+        String conferenceId = conferenceIQ.getID();
+        if (conferenceId == null)
+        {
+            if (isShutdownInProgress())
+            {
+                return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIQ);
+            }
+            else
+            {
+                conference = colibriShim.createConference(focus, conferenceIQ.getName(), conferenceIQ.getGID());
+                if (conference == null)
+                {
+                    return IQUtils.createError(
+                            conferenceIQ,
+                            XMPPError.Condition.internal_server_error,
+                            "Failed to create new conference");
+                }
+            }
+        }
+        else
+        {
+            conference = colibriShim.getConference(conferenceId);
+            //TODO: should we validate the underying conference object got created as well?
+            if (conference == null)
+            {
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.bad_request,
+                        "Conference not found for ID: " + conferenceId);
+            }
+        }
+
+        ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
+        conference.describeShallow(responseConferenceIQ);
+        responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
+
+        for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
+        {
+            /*
+             * The content element springs into existence whenever it gets
+             * mentioned, it does not need explicit creation (in contrast to
+             * the conference and channel elements).
+             */
+            String contentName = contentIQ.getName();
+            ColibriShim.ContentShim content = conference.getOrCreateContent(contentName);
+            if (content == null)
+            {
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.internal_server_error,
+                        "Failed to create new content for name: "
+                                + contentName);
+            }
+
+            ColibriConferenceIQ.Content responseContentIQ = new ColibriConferenceIQ.Content(content.getName());
+
+            responseConferenceIQ.addContent(responseContentIQ);
+
+            try {
+                List<ColibriConferenceIQ.Channel> describedChannels =
+                        processChannels2(contentIQ.getChannels(), conference, content);
+                describedChannels.forEach(responseContentIQ::addChannel);
+            } catch (IqProcessingException e) {
+                logger.error("Error processing channels in IQ: " + e.toString());
+                return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
+            }
+
+            try {
+                List<ColibriConferenceIQ.SctpConnection> describedSctpConnections =
+                        processSctpConnections2(contentIQ.getSctpConnections(), conference, content);
+                describedSctpConnections.forEach(responseContentIQ::addSctpConnection);
+            } catch (IqProcessingException e) {
+                logger.error("Error processing sctp connections in IQ: " + e.toString());
+                return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
+            }
+        }
+
+        for (ColibriConferenceIQ.ChannelBundle channelBundleIq : conferenceIQ.getChannelBundles())
+        {
+            ColibriShim.ChannelBundleShim channelBundleShim =
+                    conference.getOrCreateChannelBundle(channelBundleIq.getId());
+            IceUdpTransportPacketExtension transportIq = channelBundleIq.getTransport();
+
+            if (channelBundleShim != null && transportIq != null)
+            {
+                channelBundleShim.startConnectivityEstablishment(transportIq);
+            }
+        }
+
+        //TODO update endpoints(?)
+
+        Set<String> channelBundleIdsToDescribe = getAllSignaledChannelBundleIds(conferenceIQ);
+        conference.describeChannelBundles(responseConferenceIQ, channelBundleIdsToDescribe);
+        conference.describeEndpoints(responseConferenceIQ);
+
+        responseConferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.result);
+
+        System.out.println("Sending colibri conference iq response:\n" + responseConferenceIQ.toXML());
+        return responseConferenceIQ;
     }
 
     /**
@@ -826,6 +943,225 @@ public class Videobridge
         }
     }
 
+    private ColibriShim colibriShim = new ColibriShim(this);
+
+    private List<ColibriConferenceIQ.Channel> processChannels2(
+            List<ColibriConferenceIQ.Channel> channels,
+            ColibriShim.ConferenceShim conference,
+            ColibriShim.ContentShim content) throws IqProcessingException
+    {
+        List<ColibriConferenceIQ.Channel> createdOrUpdatedChannels = new ArrayList<>();
+        Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes = new HashMap<>();
+        Map<String, List<RTPHdrExtPacketExtension>> endpointHeaderExts = new HashMap<>();
+        Map<String, List<SourceGroupPacketExtension>> endpointSourceGroups = new HashMap<>();
+
+        for (ColibriConferenceIQ.Channel channelIq : channels)
+        {
+            String channelId = channelIq.getID();
+            int channelExpire = channelIq.getExpire();
+            String channelBundleId = channelIq.getChannelBundleId();
+            String endpointId = channelIq.getEndpoint();
+
+            ColibriConferenceIQ.OctoChannel octoChannelIQ
+                    = channelIq instanceof ColibriConferenceIQ.OctoChannel
+                    ? (ColibriConferenceIQ.OctoChannel) channelIq
+                    : null;
+
+            ColibriShim.Channel channel;
+            if (channelId == null)
+            {
+                if (channelExpire == 0)
+                {
+                    // An expire attribute in the channel element with
+                    // value equal to zero requests the immediate
+                    // expiration of the channel in question.
+                    // Consequently, it does not make sense to have it in a
+                    // channel allocation request.
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "Channel expire request for empty ID");
+                }
+                if (endpointId == null)
+                {
+                    //TODO: is it reasonable to enforce this?
+                    //If we're creating a channel, we need to know which endpoint it belongs
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "Channel creation requested without endpoint ID");
+                }
+                if (!endpointId.equals(channelBundleId))
+                {
+                    //TODO: can we enforce this?
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "Endpoint ID does not match channel bundle ID");
+                }
+                channel = content.createRtpChannel(conference, endpointId, octoChannelIQ != null);
+                if (channel == null)
+                {
+                    throw new IqProcessingException(XMPPError.Condition.internal_server_error, "Error creating channel");
+                }
+            }
+            else
+            {
+                channel = content.getChannel(channelId);
+                if (channel == null)
+                {
+                    if (channelExpire == 0)
+                    {
+                        // Channel expired on its own before it was requested to be expired
+                        continue;
+                    }
+                    throw new IqProcessingException(
+                            XMPPError.Condition.internal_server_error, "Error finding channel " + channelId);
+                }
+            }
+            MediaDirection channelDirection = channelIq.getDirection();
+            Collection<PayloadTypePacketExtension> channelPayloadTypes = channelIq.getPayloadTypes();
+            Collection<RTPHdrExtPacketExtension> channelRtpHeaderExtensions = channelIq.getRtpHeaderExtensions();
+            Collection<SourcePacketExtension> channelSources = channelIq.getSources();
+            Collection<SourceGroupPacketExtension> channelSourceGroups = channelIq.getSourceGroups();
+            Integer channelLastN = channelIq.getLastN();
+
+            if (channelExpire != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+            {
+                if (channelExpire < 0)
+                {
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "Invalid 'expire' value: " + channelExpire);
+                }
+                channel.setExpire(channelExpire);
+                /*
+                 * If the request indicates that it wants the channel
+                 * expired and the channel is indeed expired, then
+                 * the request is valid and has correctly been acted upon.
+                 */
+                if ((channelExpire == 0) && channel.isExpired())
+                {
+                    continue;
+                }
+            }
+            channel.direction = channelDirection;
+
+            List<PayloadTypePacketExtension> epPayloadTypes =
+                    endpointPayloadTypes.computeIfAbsent(endpointId, key -> new ArrayList<>());
+            epPayloadTypes.addAll(channelPayloadTypes);
+            channel.setPayloadTypes(channelPayloadTypes);
+
+            List<RTPHdrExtPacketExtension> epHeaderExts =
+                    endpointHeaderExts.computeIfAbsent(endpointId, key -> new ArrayList<>());
+            epHeaderExts.addAll(channelIq.getRtpHeaderExtensions());
+            channel.rtpHeaderExtensions = channelRtpHeaderExtensions;
+
+            channel.sources = channelSources;
+
+
+            if (channelSourceGroups != null)
+            {
+                List<SourceGroupPacketExtension> epSourceGroups =
+                        endpointSourceGroups.computeIfAbsent(endpointId, key -> new ArrayList<>());
+                epSourceGroups.addAll(channelSourceGroups);
+            }
+            channel.sourceGroups = channelSourceGroups;
+
+            if (channelLastN != null)
+            {
+                channel.lastN = channelLastN;
+            }
+            ColibriConferenceIQ.Channel responseChannelIQ = new ColibriConferenceIQ.Channel();
+            channel.describe(responseChannelIQ);
+            createdOrUpdatedChannels.add(responseChannelIQ);
+        }
+
+        notifyEndpointsOfPayloadTypes(endpointPayloadTypes, getConference(conference.getId(), null));
+        notifyEndpointsOfRtpHeaderExtensions(endpointHeaderExts, getConference(conference.getId(), null));
+        addSourceGroups(endpointSourceGroups, getConference(conference.getId(), null));
+        return createdOrUpdatedChannels;
+    }
+
+    private void addSourceGroups(Map<String, List<SourceGroupPacketExtension>> epSourceGroups, Conference conference)
+    {
+        epSourceGroups.forEach((epId, currEpSourceGroups) -> {
+            currEpSourceGroups.forEach(srcGroup -> {
+                long primarySsrc = srcGroup.getSources().get(0).getSSRC();
+                long secondarySsrc = srcGroup.getSources().get(1).getSSRC();
+                // Translate FID -> RTX (Do it this way so it's effectively final and can be used in the lambda
+                // below)
+                String semantics =
+                        srcGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FID) ? Constants.RTX : srcGroup.getSemantics();
+                if (!semantics.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
+                {
+                    conference.encodingsManager.addSsrcAssociation(epId, primarySsrc, secondarySsrc, semantics);
+                }
+
+            });
+        });
+    }
+
+
+    private void notifyEndpointsOfRtpHeaderExtensions(
+            Map<String, List<RTPHdrExtPacketExtension>> epHeaderExtensions,
+            Conference conference)
+    {
+        //TODO: like payload types, we may have a buf here if the extensions get updated for a single channel.  if that
+        // happens we will clear all of them, but only re-add the ones from the updated channel
+        epHeaderExtensions.forEach((epId, headerExtensions) -> {
+            logger.info("Notifying ep " + epId + " about " + headerExtensions.size() + " header extensions");
+            AbstractEndpoint ep = conference.getEndpoint(epId);
+            if (ep != null)
+            {
+                ep.transceiver.clearRtpExtensions();
+                headerExtensions.forEach(hdrExt -> {
+                    URI uri = hdrExt.getURI();
+                    Byte id = Byte.valueOf(hdrExt.getID());
+
+                    ep.transceiver.addRtpExtension(id, new RTPExtension(uri));
+                });
+            }
+        });
+
+    }
+
+    private void notifyEndpointsOfPayloadTypes(
+            Map<String, List<PayloadTypePacketExtension>> epPayloadTypes,
+            Conference conference)
+    {
+        // TODO(brian): the code below is an transitional step in moving logic out of the channel.  instead of
+        // relying on the channel to update the transceiver with the payload types, we do it here (after gathering them
+        // for the entire endpoint, rather than one channel at a time).  This should go elsewhere, but at least here
+        // we've gotten that code out of the channel.
+        //TODO: there's a bug here, where i think only the video channel is being updated so we clear the payload types
+        // and then only re-set the video ones.  not sure exactly what changed from the logic being moved, but we
+        // need to come up with a new way to do this anyway.
+        epPayloadTypes.forEach((epId, payloadTypes) -> {
+            logger.info("Notifying ep " + epId + " about " + payloadTypes.size() + " payload type mappings");
+            AbstractEndpoint ep = conference.getEndpoint(epId);
+            if (ep != null) {
+                ep.transceiver.clearDynamicRtpPayloadTypes();
+                MediaService mediaService = conference.getMediaService();
+                payloadTypes.forEach(pt -> {
+                    //TODO(brian): the code in JingleUtils#payloadTypeToMediaFormat is a bit confusing.  If it's
+                    // an 'unknown' format, it creates an 'unknown format' instance, but then returns null instead
+                    // of returning the created format.  i see this happening with ISAC and h264 in my tests, which
+                    // i guess aren't configured as supported formats? (when i looked into the supported formats
+                    // checking, there was some weirdness there too, so worth taking another look at all this at
+                    // some point)
+                    MediaFormat mediaFormat
+                            = JingleUtils.payloadTypeToMediaFormat(
+                            pt,
+                            mediaService,
+                            null);
+                    if (mediaFormat == null) {
+                        logger.info("Unable to parse a format for pt " + pt.getID() + " -> " +
+                                pt.getName());
+                    } else {
+                        logger.info("Notifying ep " + epId + " about payload type mapping: " +
+                                pt.getID() + " -> " + mediaFormat.toString());
+                        ep.transceiver.addDynamicRtpPayloadType((byte)pt.getID(), mediaFormat);
+                    }
+                });
+            }
+        });
+
+    }
+
     private List<ColibriConferenceIQ.Channel> processChannels(
             List<ColibriConferenceIQ.Channel> channels,
             Conference conference,
@@ -940,7 +1276,14 @@ public class Videobridge
 
             if (endpoint != null)
             {
+                System.out.println("BRIAN: setting channel's endpoint.  channel was created? " + channelCreated);
                 channel.setEndpoint(endpoint);
+            } else if (channelCreated) {
+                //TODO: this does appear to happen.  for example, we get a colibri iq which contains the following:
+                // <iq id='ZwZVi-86' type='get'><conference xmlns='http://jitsi.org/protocol/colibri'><content name='audio'><channel expire='1'/></content></conference></iq>
+                // (i don't get why this makes sense, and i don't think it's from health checks as i had those commented
+                // out).  for now i will assume we get an endpoint id in an IQ which creates channels
+                throw new Error("CHANNEL CREATED WITH NO ENDPOINT ID");
             }
 
             /*
@@ -1020,53 +1363,87 @@ public class Videobridge
             channel.describe(responseChannelIQ);
             createdOrUpdatedChannels.add(responseChannelIQ);
 
-            EventAdmin eventAdmin;
-            if (channelCreated && (eventAdmin = getEventAdmin()) != null)
-            {
-                eventAdmin.sendEvent(EventFactory.channelCreated(channel));
-            }
+            //TODO: don't think we need this anymore
+//            EventAdmin eventAdmin;
+//            if (channelCreated && (eventAdmin = getEventAdmin()) != null)
+//            {
+//                eventAdmin.sendEvent(EventFactory.channelCreated(channel));
+//            }
 
             // XXX we might want to fire more precise events, like
             // sourceGroupsChanged or PayloadTypesChanged, etc.
-            content.fireChannelChanged(channel);
+            //TODO: don't think we need this anymore
+//            content.fireChannelChanged(channel);
         }
-        // TODO(brian): the code below is an transitional step in moving logic out of the channel.  instead of
-        // relying on the channel to update the transceiver with the payload types, we do it here (after gathering them
-        // for the entire endpoint, rather than one channel at a time).  This should go elsewhere, but at least here
-        // we've gotten that code out of the channel.
-        //TODO: there's a bug here, where i think only the video channel is being updated so we clear the payload types
-        // and then only re-set the video ones.  not sure exactly what changed from the logic being moved, but we
-        // need to come up with a new way to do this anyway.
-        endpointPayloadTypes.forEach((epId, payloadTypes) -> {
-            logger.info("Notifying ep " + epId + " about " + payloadTypes.size() + " payload type mappings");
-            AbstractEndpoint ep = conference.getEndpoint(epId);
-            if (ep != null) {
-                ep.transceiver.clearDynamicRtpPayloadTypes();
-                MediaService mediaService = conference.getMediaService();
-                payloadTypes.forEach(pt -> {
-                    //TODO(brian): the code in JingleUtils#payloadTypeToMediaFormat is a bit confusing.  If it's
-                    // an 'unknown' format, it creates an 'unknown format' instance, but then returns null instead
-                    // of returning the created format.  i see this happening with ISAC and h264 in my tests, which
-                    // i guess aren't configured as supported formats? (when i looked into the supported formats
-                    // checking, there was some weirdness there too, so worth taking another look at all this at
-                    // some point)
-                    MediaFormat mediaFormat
-                            = JingleUtils.payloadTypeToMediaFormat(
-                            pt,
-                            mediaService,
-                            null);
-                    if (mediaFormat == null) {
-                        logger.info("Unable to parse a format for pt " + pt.getID() + " -> " +
-                                pt.getName());
-                    } else {
-                        logger.info("Notifying ep " + epId + " about payload type mapping: " +
-                                pt.getID() + " -> " + mediaFormat.toString());
-                        ep.transceiver.addDynamicRtpPayloadType((byte)pt.getID(), mediaFormat);
-                    }
-                });
-            }
-        });
+        notifyEndpointsOfPayloadTypes(endpointPayloadTypes, conference);
         return createdOrUpdatedChannels;
+    }
+
+
+    private List<ColibriConferenceIQ.SctpConnection> processSctpConnections2(
+            List<ColibriConferenceIQ.SctpConnection> sctpConnections,
+            ColibriShim.ConferenceShim conference,
+            ColibriShim.ContentShim content) throws IqProcessingException {
+        List<ColibriConferenceIQ.SctpConnection> createdOrUpdatedSctpConnections = new ArrayList<>();
+        for (ColibriConferenceIQ.SctpConnection sctpConnIq : sctpConnections)
+        {
+            String sctpConnId = sctpConnIq.getID();
+            String endpointID = sctpConnIq.getEndpoint();
+            ColibriShim.SctpConnection sctpConnection;
+            int sctpConnExpire = sctpConnIq.getExpire();
+            String channelBundleId = sctpConnIq.getChannelBundleId();
+
+            if (sctpConnId == null)
+            {
+                if (sctpConnExpire == 0)
+                {
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "SCTP connection expire request for empty ID");
+                }
+
+                if (endpointID == null)
+                {
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "No endpoint ID specified for the new SCTP connection");
+                }
+
+                sctpConnection = content.createSctpConnection(conference.getId(), endpointID);
+            }
+            else
+            {
+                sctpConnection = content.getSctpConnection(sctpConnId);
+                if (sctpConnection == null && sctpConnExpire == 0)
+                {
+                    continue;
+                }
+                else if (sctpConnection == null)
+                {
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "No SCTP connection found for ID: " + sctpConnId);
+                }
+            }
+            if (sctpConnExpire != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+            {
+                if (sctpConnExpire < 0)
+                {
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "Invalid 'expire' value: " + sctpConnExpire);
+                }
+                sctpConnection.setExpire(sctpConnExpire);
+                //TODO: re-add when expiration is re-implemented
+                // Check if SCTP connection has expired.
+//                if (expire == 0 && sctpConn.isExpired())
+//                {
+//                    continue;
+//                }
+            }
+            ColibriConferenceIQ.SctpConnection responseSctpIq = new ColibriConferenceIQ.SctpConnection();
+
+            sctpConnection.describe(responseSctpIq);
+
+            createdOrUpdatedSctpConnections.add(responseSctpIq);
+        }
+        return createdOrUpdatedSctpConnections;
     }
 
     /**

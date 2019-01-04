@@ -32,6 +32,7 @@ import net.java.sip.communicator.util.*;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.util.UtilKt;
 import org.jitsi.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -1348,7 +1349,7 @@ public class Conference
                 {
                     transportManager = new IceDtlsTransportManager(channelBundleId, this);
                     logger.info("BRIAN: CREATING NEW TRANSPORT MANAGER " + transportManager.hashCode() +
-                            " for bundle id " + channelBundleId);
+                            " for bundle id " + channelBundleId + " from:\n" + UtilKt.getStackTrace());
                 }
                 catch (IOException ioe)
                 {
