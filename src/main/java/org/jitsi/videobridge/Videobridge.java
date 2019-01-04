@@ -39,7 +39,6 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.MediaFormat;
 import org.jitsi.util.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.octo.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.util.*;
@@ -680,52 +679,44 @@ public class Videobridge
             return IQUtils.createError(
                     conferenceIQ, XMPPError.Condition.not_authorized);
         }
-        else
-        {
-            /*
-             * The presence of the id attribute in the conference element
-             * signals whether a new conference is to be created or an existing
-             * conference is to be modified.
-             */
-            String id = conferenceIQ.getID();
+        /*
+         * The presence of the id attribute in the conference element
+         * signals whether a new conference is to be created or an existing
+         * conference is to be modified.
+         */
+        String id = conferenceIQ.getID();
 
-            if (id == null)
+        if (id == null)
+        {
+            if (isShutdownInProgress())
             {
-                if (isShutdownInProgress())
-                {
-                    return ColibriConferenceIQ
-                        .createGracefulShutdownErrorResponse(conferenceIQ);
-                }
-                else
-                {
-                    conference
-                        = createConference(
-                                focus,
-                                conferenceIQ.getName(),
-                                conferenceIQ.getGID());
-                    if (conference == null)
-                    {
-                        return IQUtils.createError(
-                                conferenceIQ,
-                                XMPPError.Condition.internal_server_error,
-                                "Failed to create new conference");
-                    }
-                }
+                return ColibriConferenceIQ.createGracefulShutdownErrorResponse(conferenceIQ);
             }
             else
             {
-                conference = getConference(id, focus);
+                conference = createConference(focus, conferenceIQ.getName(), conferenceIQ.getGID());
                 if (conference == null)
                 {
                     return IQUtils.createError(
                             conferenceIQ,
-                            XMPPError.Condition.bad_request,
-                            "Conference not found for ID: " + id);
+                            XMPPError.Condition.internal_server_error,
+                            "Failed to create new conference");
                 }
             }
-
-            conference.setLastKnownFocus(conferenceIQ.getFrom());
         }
+        else
+        {
+            conference = getConference(id, focus);
+            if (conference == null)
+            {
+                return IQUtils.createError(
+                        conferenceIQ,
+                        XMPPError.Condition.bad_request,
+                        "Conference not found for ID: " + id);
+            }
+        }
+
+        conference.setLastKnownFocus(conferenceIQ.getFrom());
 
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
@@ -733,8 +724,7 @@ public class Videobridge
         responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
 
         // TODO(gp) Remove ColibriConferenceIQ.RTCPTerminationStrategy
-        for (ColibriConferenceIQ.Content contentIQ
-                : conferenceIQ.getContents())
+        for (ColibriConferenceIQ.Content contentIQ : conferenceIQ.getContents())
         {
             /*
              * The content element springs into existence whenever it gets
@@ -752,8 +742,7 @@ public class Videobridge
                             + contentName);
             }
 
-            ColibriConferenceIQ.Content responseContentIQ
-                = new ColibriConferenceIQ.Content(content.getName());
+            ColibriConferenceIQ.Content responseContentIQ = new ColibriConferenceIQ.Content(content.getName());
 
             responseConferenceIQ.addContent(responseContentIQ);
 
@@ -776,13 +765,10 @@ public class Videobridge
             }
 
         }
-        for (ColibriConferenceIQ.ChannelBundle channelBundleIq
-                : conferenceIQ.getChannelBundles())
+        for (ColibriConferenceIQ.ChannelBundle channelBundleIq : conferenceIQ.getChannelBundles())
         {
-            TransportManager transportManager
-                = conference.getTransportManager(channelBundleIq.getId());
-            IceUdpTransportPacketExtension transportIq
-                = channelBundleIq.getTransport();
+            TransportManager transportManager = conference.getTransportManager(channelBundleIq.getId());
+            IceUdpTransportPacketExtension transportIq = channelBundleIq.getTransport();
 
             if (transportManager != null && transportIq != null)
             {
@@ -792,20 +778,16 @@ public class Videobridge
 
         // Update the endpoint information of Videobridge with the endpoint
         // information of the IQ.
-        for (ColibriConferenceIQ.Endpoint colibriEndpoint
-                : conferenceIQ.getEndpoints())
+        for (ColibriConferenceIQ.Endpoint colibriEndpoint : conferenceIQ.getEndpoints())
         {
             conference.updateEndpoint(colibriEndpoint);
         }
 
-        Set<String> channelBundleIdsToDescribe = getChannelBundleIdsToDescribe(conferenceIQ);
-        conference.describeChannelBundles(
-            responseConferenceIQ,
-            channelBundleIdsToDescribe);
+        Set<String> channelBundleIdsToDescribe = getAllSignaledChannelBundleIds(conferenceIQ);
+        conference.describeChannelBundles(responseConferenceIQ, channelBundleIdsToDescribe);
         conference.describeEndpoints(responseConferenceIQ);
 
-        responseConferenceIQ.setType(
-                org.jivesoftware.smack.packet.IQ.Type.result);
+        responseConferenceIQ.setType(org.jivesoftware.smack.packet.IQ.Type.result);
 
         return responseConferenceIQ;
     }
@@ -815,7 +797,7 @@ public class Videobridge
      * @param conferenceIq
      * @return
      */
-    private Set<String> getChannelBundleIdsToDescribe(ColibriConferenceIQ conferenceIq)
+    private Set<String> getAllSignaledChannelBundleIds(ColibriConferenceIQ conferenceIq)
     {
         Set<String> channelBundleIds = new HashSet<>();
         for (ColibriConferenceIQ.Content contentIq : conferenceIq.getContents()) {
@@ -834,7 +816,7 @@ public class Videobridge
         return channelBundleIds;
     }
 
-    class IqProcessingException extends Exception {
+    private class IqProcessingException extends Exception {
         public final XMPPError.Condition condition;
         public final String errorMessage;
 
@@ -850,6 +832,7 @@ public class Videobridge
             Content content) throws IqProcessingException {
         List<ColibriConferenceIQ.Channel> createdOrUpdatedChannels = new ArrayList<>();
         Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes = new HashMap<>();
+
         for (ColibriConferenceIQ.Channel channelIQ : channels)
         {
             ColibriConferenceIQ.OctoChannel octoChannelIQ
@@ -865,9 +848,8 @@ public class Videobridge
             // request should be included in the response.
             RtpChannel channel;
             boolean channelCreated = false;
-            String transportNamespace
-                    = channelIQ.getTransport() != null ?
-                    channelIQ.getTransport().getNamespace() : null;
+            String transportNamespace =
+                    channelIQ.getTransport() != null ? channelIQ.getTransport().getNamespace() : null;
 
             /*
              * The presence of the id attribute in the channel
@@ -889,8 +871,7 @@ public class Videobridge
 
                 try
                 {
-                    channel
-                            = content.createRtpChannel(
+                    channel = content.createRtpChannel(
                             channelBundleId,
                             transportNamespace,
                             channelIQ.isInitiator(),
@@ -1001,21 +982,16 @@ public class Videobridge
             epPayloadTypes.addAll(channelIQ.getPayloadTypes());
 
             channel.setPayloadTypes(channelIQ.getPayloadTypes());
-            channel.setRtpHeaderExtensions(
-                    channelIQ.getRtpHeaderExtensions());
+            channel.setRtpHeaderExtensions(channelIQ.getRtpHeaderExtensions());
 
             channel.setDirection(channelIQ.getDirection());
 
-            channel.setRtpEncodingParameters(
-                    channelIQ.getSources(), channelIQ.getSourceGroups());
+            channel.setRtpEncodingParameters(channelIQ.getSources(), channelIQ.getSourceGroups());
 
             if (channelBundleId != null)
             {
-                TransportManager transportManager
-                        = conference.getTransportManager(
-                        channelBundleId,
-                        true,
-                        initiator);
+                TransportManager transportManager =
+                        conference.getTransportManager(channelBundleId, true, initiator);
 
                 transportManager.addChannel(channel);
             }
@@ -1026,14 +1002,12 @@ public class Videobridge
             {
                 if (channel instanceof OctoChannel)
                 {
-                    ((OctoChannel) channel)
-                            .setRelayIds(octoChannelIQ.getRelays());
+                    ((OctoChannel) channel).setRelayIds(octoChannelIQ.getRelays());
                 }
                 else
                 {
-                    logger.warn(
-                            "Channel type mismatch: requested Octo, found "
-                                    + channel.getClass().getSimpleName());
+                    logger.warn("Channel type mismatch: requested Octo, found " +
+                            channel.getClass().getSimpleName());
                 }
             }
 
@@ -1041,8 +1015,7 @@ public class Videobridge
              * Provide (a description of) the current state of the channel
              * as part of the response.
              */
-            ColibriConferenceIQ.Channel responseChannelIQ
-                    = new ColibriConferenceIQ.Channel();
+            ColibriConferenceIQ.Channel responseChannelIQ = new ColibriConferenceIQ.Channel();
 
             channel.describe(responseChannelIQ);
             createdOrUpdatedChannels.add(responseChannelIQ);
@@ -1133,8 +1106,7 @@ public class Videobridge
                             XMPPError.Condition.bad_request, "No endpoint ID specified for the new SCTP connection");
                 }
 
-                AbstractEndpoint endpoint
-                        = conference.getOrCreateEndpoint(endpointID);
+                AbstractEndpoint endpoint = conference.getOrCreateEndpoint(endpointID);
                 if (endpoint == null)
                 {
                     throw new IqProcessingException(
@@ -1150,12 +1122,8 @@ public class Videobridge
                     int sctpPort = sctpConnIq.getPort();
                     try
                     {
-                        sctpConn
-                                = content.createSctpConnection(
-                                endpoint,
-                                sctpPort,
-                                channelBundleId,
-                                sctpConnIq.isInitiator());
+                        sctpConn = content.createSctpConnection(
+                                endpoint, sctpPort, channelBundleId, sctpConnIq.isInitiator());
                     }
                     catch (IOException ioe)
                     {
@@ -1187,8 +1155,7 @@ public class Videobridge
             }
 
             // expire
-            if (expire
-                    != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+            if (expire != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
             {
                 if (expire < 0)
                 {
@@ -1229,17 +1196,13 @@ public class Videobridge
             if (channelBundleId != null)
             {
                 TransportManager transportManager
-                        = conference.getTransportManager(
-                        channelBundleId,
-                        true,
-                        initiator);
+                        = conference.getTransportManager(channelBundleId, true, initiator);
 
                 transportManager.addChannel(sctpConn);
             }
 
             // response
-            ColibriConferenceIQ.SctpConnection responseSctpIq
-                    = new ColibriConferenceIQ.SctpConnection();
+            ColibriConferenceIQ.SctpConnection responseSctpIq = new ColibriConferenceIQ.SctpConnection();
 
             sctpConn.describe(responseSctpIq);
 
