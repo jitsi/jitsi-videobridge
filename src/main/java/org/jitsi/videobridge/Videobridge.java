@@ -675,8 +675,6 @@ public class Videobridge
         Conference conference;
         System.out.println("Received colibriConferenceIq \n" + conferenceIQ.toXML());
 
-        Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes = new HashMap<>();
-
         if (!accept(focus, options))
         {
             return IQUtils.createError(
@@ -731,7 +729,6 @@ public class Videobridge
 
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
-        Set<String> channelBundleIdsToDescribe = new HashSet<>();
 
         responseConferenceIQ.setGracefulShutdown(isShutdownInProgress());
 
@@ -795,256 +792,14 @@ public class Videobridge
 
             responseConferenceIQ.addContent(responseContentIQ);
 
-            for (ColibriConferenceIQ.Channel channelIQ
-                    : contentIQ.getChannels())
-            {
-                ColibriConferenceIQ.OctoChannel octoChannelIQ
-                    = channelIQ instanceof ColibriConferenceIQ.OctoChannel
-                        ? (ColibriConferenceIQ.OctoChannel) channelIQ
-                        : null;
-
-                String channelID = channelIQ.getID();
-                int channelExpire = channelIQ.getExpire();
-                String channelBundleId = channelIQ.getChannelBundleId();
-
-                // Channel bundles mentioned in "channel" elements in the
-                // request should be included in the response.
-                channelBundleIdsToDescribe.add(channelBundleId);
-                RtpChannel channel;
-                boolean channelCreated = false;
-                String transportNamespace
-                    = channelIQ.getTransport() != null ?
-                        channelIQ.getTransport().getNamespace() : null;
-
-                /*
-                 * The presence of the id attribute in the channel
-                 * element signals whether a new channel is to be
-                 * created or an existing channel is to be modified.
-                 */
-                if (channelID == null)
-                {
-                    if (channelExpire == 0)
-                    {
-                        // An expire attribute in the channel element with
-                        // value equal to zero requests the immediate
-                        // expiration of the channel in question.
-                        // Consequently, it does not make sense to have it in a
-                        // channel allocation request.
-                        return IQUtils.createError(
-                                conferenceIQ,
-                                XMPPError.Condition.bad_request,
-                                "Channel expire request for empty ID");
-                    }
-
-                    try
-                    {
-                        channel
-                            = content.createRtpChannel(
-                                channelBundleId,
-                                transportNamespace,
-                                channelIQ.isInitiator(),
-                                channelIQ.getRTPLevelRelayType(),
-                                octoChannelIQ != null);
-                    }
-                    catch (IOException ioe)
-                    {
-                        logger.error("Failed to create RtpChannel:", ioe);
-                        channel = null;
-                    }
-
-                    if (channel == null)
-                    {
-                        return IQUtils.createError(
-                                conferenceIQ,
-                                XMPPError.Condition.internal_server_error,
-                                "Failed to allocate new RTP Channel");
-                    }
-
-                    channelCreated = true;
-                }
-                else
-                {
-                    // Request for an existing channel.
-                    channel
-                        = (RtpChannel) content.getChannel(channelID);
-                    if (channel == null)
-                    {
-                        if (channelExpire == 0)
-                        {
-                            // Channel already expired?
-                            continue;
-                        }
-                        else
-                        {
-                            return IQUtils.createError(
-                                conferenceIQ,
-                                XMPPError.Condition.bad_request,
-                                "No RTP channel found for ID: " + channelID);
-                        }
-                    }
-                }
-
-                if (channelExpire
-                        != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
-                {
-                    if (channelExpire < 0)
-                    {
-                        return IQUtils.createError(
-                                conferenceIQ,
-                                XMPPError.Condition.bad_request,
-                                "Invalid 'expire' value: " + channelExpire);
-                    }
-
-                    channel.setExpire(channelExpire);
-                    /*
-                     * If the request indicates that it wants the channel
-                     * expired and the channel is indeed expired, then
-                     * the request is valid and has correctly been acted upon.
-                     */
-                    if ((channelExpire == 0) && channel.isExpired())
-                    {
-                        continue;
-                    }
-                }
-
-                // endpoint
-                // The attribute endpoint is optional. If a value is not
-                // specified, then the Channel endpoint is to not be changed.
-                String endpoint = channelIQ.getEndpoint();
-
-                if (endpoint != null)
-                {
-                    channel.setEndpoint(endpoint);
-                }
-
-                /*
-                 * The attribute last-n is optional. If a value is not
-                 * specified, then the Channel lastN is to not be changed.
-                 */
-                Integer lastN = channelIQ.getLastN();
-
-                if (lastN != null)
-                {
-                    channel.setLastN(lastN);
-                }
-
-                // Packet delay - for automated testing purpose only
-                Integer packetDelay = channelIQ.getPacketDelay();
-                if (packetDelay != null)
-                {
-                    channel.setPacketDelay(packetDelay);
-                }
-
-                /*
-                 * XXX The attribute initiator is optional. If a value is not
-                 * specified, then the Channel initiator is to be assumed
-                 * default or to not be changed.
-                 */
-                Boolean initiator = channelIQ.isInitiator();
-
-                if (initiator != null)
-                {
-                    channel.setInitiator(initiator);
-                }
-                else
-                {
-                    initiator = true;
-                }
-
-                List<PayloadTypePacketExtension> epPayloadTypes =
-                        endpointPayloadTypes.computeIfAbsent(channel.getEndpoint().getID(), key -> new ArrayList<>());
-                epPayloadTypes.addAll(channelIQ.getPayloadTypes());
-
-                channel.setPayloadTypes(channelIQ.getPayloadTypes());
-                channel.setRtpHeaderExtensions(
-                        channelIQ.getRtpHeaderExtensions());
-
-                channel.setDirection(channelIQ.getDirection());
-
-                channel.setRtpEncodingParameters(
-                    channelIQ.getSources(), channelIQ.getSourceGroups());
-
-                if (channelBundleId != null)
-                {
-                    TransportManager transportManager
-                        = conference.getTransportManager(
-                            channelBundleId,
-                            true,
-                            initiator);
-
-                    transportManager.addChannel(channel);
-                }
-
-                channel.setTransport(channelIQ.getTransport());
-
-                if (octoChannelIQ != null)
-                {
-                    if (channel instanceof OctoChannel)
-                    {
-                        ((OctoChannel) channel)
-                            .setRelayIds(octoChannelIQ.getRelays());
-                    }
-                    else
-                    {
-                        logger.warn(
-                            "Channel type mismatch: requested Octo, found "
-                                + channel.getClass().getSimpleName());
-                    }
-                }
-
-                /*
-                 * Provide (a description of) the current state of the channel
-                 * as part of the response.
-                 */
-                ColibriConferenceIQ.Channel responseChannelIQ
-                    = new ColibriConferenceIQ.Channel();
-
-                channel.describe(responseChannelIQ);
-                responseContentIQ.addChannel(responseChannelIQ);
-
-                EventAdmin eventAdmin;
-                if (channelCreated && (eventAdmin = getEventAdmin()) != null)
-                {
-                    eventAdmin.sendEvent(EventFactory.channelCreated(channel));
-                }
-
-                // XXX we might want to fire more precise events, like
-                // sourceGroupsChanged or PayloadTypesChanged, etc.
-                content.fireChannelChanged(channel);
+            try {
+                List<ColibriConferenceIQ.Channel> describedChannels =
+                        processChannels(contentIQ.getChannels(), conference, content);
+                describedChannels.forEach(responseContentIQ::addChannel);
+            } catch (IqProcessingException e) {
+                logger.error("Error processing channels in IQ: " + e.toString());
+                return IQUtils.createError(conferenceIQ, e.condition, e.errorMessage);
             }
-            // TODO(brian): the code below is an transitional step in moving logic out of the channel.  instead of
-            // relying on the channel to update the transceiver with the payload types, we do it here (after gathering them
-            // for the entire endpoint, rather than one channel at a time).  This should go elsewhere, but at least here
-            // we've gotten that code out of the channel.
-            endpointPayloadTypes.forEach((epId, payloadTypes) -> {
-                logger.info("Notifying ep " + epId + " about " + payloadTypes.size() + " payload type mappings");
-                AbstractEndpoint ep = conference.getEndpoint(epId);
-                if (ep != null) {
-                    ep.transceiver.clearDynamicRtpPayloadTypes();
-                    MediaService mediaService = conference.getMediaService();
-                    payloadTypes.forEach(pt -> {
-                        //TODO(brian): the code in JingleUtils#payloadTypeToMediaFormat is a bit confusing.  If it's
-                        // an 'unknown' format, it creates an 'unknown format' instance, but then returns null instead
-                        // of returning the created format.  i see this happening with ISAC and h264 in my tests, which
-                        // i guess aren't configured as supported formats? (when i looked into the supported formats
-                        // checking, there was some weirdness there too, so worth taking another look at all this at
-                        // some point)
-                        MediaFormat mediaFormat
-                                = JingleUtils.payloadTypeToMediaFormat(
-                                pt,
-                                mediaService,
-                                null);
-                        if (mediaFormat == null) {
-                            logger.info("Unable to parse a format for pt " + pt.getID() + " -> " +
-                                    pt.getName());
-                        } else {
-                            logger.info("Notifying ep " + epId + " about payload type mapping: " +
-                                    pt.getID() + " -> " + mediaFormat.toString());
-                            ep.transceiver.addDynamicRtpPayloadType((byte)pt.getID(), mediaFormat);
-                        }
-                    });
-                }
-            });
 
             try {
                 List<ColibriConferenceIQ.SctpConnection> describedSctpConnections =
@@ -1059,9 +814,6 @@ public class Videobridge
         for (ColibriConferenceIQ.ChannelBundle channelBundleIq
                 : conferenceIQ.getChannelBundles())
         {
-            // Channel bundles mentioned in the request should be included in
-            // the response.
-            channelBundleIdsToDescribe.add(channelBundleIq.getId());
             TransportManager transportManager
                 = conference.getTransportManager(channelBundleIq.getId());
             IceUdpTransportPacketExtension transportIq
@@ -1081,6 +833,7 @@ public class Videobridge
             conference.updateEndpoint(colibriEndpoint);
         }
 
+        Set<String> channelBundleIdsToDescribe = getChannelBundleIdsToDescribe(conferenceIQ);
         conference.describeChannelBundles(
             responseConferenceIQ,
             channelBundleIdsToDescribe);
@@ -1124,6 +877,255 @@ public class Videobridge
             this.condition = condition;
             this.errorMessage = errorMessage;
         }
+    }
+
+    private List<ColibriConferenceIQ.Channel> processChannels(
+            List<ColibriConferenceIQ.Channel> channels,
+            Conference conference,
+            Content content) throws IqProcessingException {
+        List<ColibriConferenceIQ.Channel> createdOrUpdatedChannels = new ArrayList<>();
+        Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes = new HashMap<>();
+        for (ColibriConferenceIQ.Channel channelIQ : channels)
+        {
+            ColibriConferenceIQ.OctoChannel octoChannelIQ
+                    = channelIQ instanceof ColibriConferenceIQ.OctoChannel
+                    ? (ColibriConferenceIQ.OctoChannel) channelIQ
+                    : null;
+
+            String channelID = channelIQ.getID();
+            int channelExpire = channelIQ.getExpire();
+            String channelBundleId = channelIQ.getChannelBundleId();
+
+            // Channel bundles mentioned in "channel" elements in the
+            // request should be included in the response.
+            RtpChannel channel;
+            boolean channelCreated = false;
+            String transportNamespace
+                    = channelIQ.getTransport() != null ?
+                    channelIQ.getTransport().getNamespace() : null;
+
+            /*
+             * The presence of the id attribute in the channel
+             * element signals whether a new channel is to be
+             * created or an existing channel is to be modified.
+             */
+            if (channelID == null)
+            {
+                if (channelExpire == 0)
+                {
+                    // An expire attribute in the channel element with
+                    // value equal to zero requests the immediate
+                    // expiration of the channel in question.
+                    // Consequently, it does not make sense to have it in a
+                    // channel allocation request.
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "Channel expire request for empty ID");
+                }
+
+                try
+                {
+                    channel
+                            = content.createRtpChannel(
+                            channelBundleId,
+                            transportNamespace,
+                            channelIQ.isInitiator(),
+                            channelIQ.getRTPLevelRelayType(),
+                            octoChannelIQ != null);
+                }
+                catch (IOException ioe)
+                {
+                    logger.error("Failed to create RtpChannel:", ioe);
+                    channel = null;
+                }
+
+                if (channel == null)
+                {
+                    throw new IqProcessingException(
+                            XMPPError.Condition.internal_server_error, "Failed to allocate new RTP Channel");
+                }
+
+                channelCreated = true;
+            }
+            else
+            {
+                // Request for an existing channel.
+                channel
+                        = (RtpChannel) content.getChannel(channelID);
+                if (channel == null)
+                {
+                    if (channelExpire == 0)
+                    {
+                        // Channel already expired?
+                        continue;
+                    }
+                    else
+                    {
+                        throw new IqProcessingException(
+                                XMPPError.Condition.bad_request, "No RTP channel found for ID: " + channelID);
+                    }
+                }
+            }
+
+            if (channelExpire
+                    != ColibriConferenceIQ.Channel.EXPIRE_NOT_SPECIFIED)
+            {
+                if (channelExpire < 0)
+                {
+                    throw new IqProcessingException(
+                            XMPPError.Condition.bad_request, "Invalid 'expire' value: " + channelExpire);
+                }
+
+                channel.setExpire(channelExpire);
+                /*
+                 * If the request indicates that it wants the channel
+                 * expired and the channel is indeed expired, then
+                 * the request is valid and has correctly been acted upon.
+                 */
+                if ((channelExpire == 0) && channel.isExpired())
+                {
+                    continue;
+                }
+            }
+
+            // endpoint
+            // The attribute endpoint is optional. If a value is not
+            // specified, then the Channel endpoint is to not be changed.
+            String endpoint = channelIQ.getEndpoint();
+
+            if (endpoint != null)
+            {
+                channel.setEndpoint(endpoint);
+            }
+
+            /*
+             * The attribute last-n is optional. If a value is not
+             * specified, then the Channel lastN is to not be changed.
+             */
+            Integer lastN = channelIQ.getLastN();
+
+            if (lastN != null)
+            {
+                channel.setLastN(lastN);
+            }
+
+            // Packet delay - for automated testing purpose only
+            Integer packetDelay = channelIQ.getPacketDelay();
+            if (packetDelay != null)
+            {
+                channel.setPacketDelay(packetDelay);
+            }
+
+            /*
+             * XXX The attribute initiator is optional. If a value is not
+             * specified, then the Channel initiator is to be assumed
+             * default or to not be changed.
+             */
+            Boolean initiator = channelIQ.isInitiator();
+
+            if (initiator != null)
+            {
+                channel.setInitiator(initiator);
+            }
+            else
+            {
+                initiator = true;
+            }
+
+            List<PayloadTypePacketExtension> epPayloadTypes =
+                    endpointPayloadTypes.computeIfAbsent(channel.getEndpoint().getID(), key -> new ArrayList<>());
+            epPayloadTypes.addAll(channelIQ.getPayloadTypes());
+
+            channel.setPayloadTypes(channelIQ.getPayloadTypes());
+            channel.setRtpHeaderExtensions(
+                    channelIQ.getRtpHeaderExtensions());
+
+            channel.setDirection(channelIQ.getDirection());
+
+            channel.setRtpEncodingParameters(
+                    channelIQ.getSources(), channelIQ.getSourceGroups());
+
+            if (channelBundleId != null)
+            {
+                TransportManager transportManager
+                        = conference.getTransportManager(
+                        channelBundleId,
+                        true,
+                        initiator);
+
+                transportManager.addChannel(channel);
+            }
+
+            channel.setTransport(channelIQ.getTransport());
+
+            if (octoChannelIQ != null)
+            {
+                if (channel instanceof OctoChannel)
+                {
+                    ((OctoChannel) channel)
+                            .setRelayIds(octoChannelIQ.getRelays());
+                }
+                else
+                {
+                    logger.warn(
+                            "Channel type mismatch: requested Octo, found "
+                                    + channel.getClass().getSimpleName());
+                }
+            }
+
+            /*
+             * Provide (a description of) the current state of the channel
+             * as part of the response.
+             */
+            ColibriConferenceIQ.Channel responseChannelIQ
+                    = new ColibriConferenceIQ.Channel();
+
+            channel.describe(responseChannelIQ);
+            createdOrUpdatedChannels.add(responseChannelIQ);
+
+            EventAdmin eventAdmin;
+            if (channelCreated && (eventAdmin = getEventAdmin()) != null)
+            {
+                eventAdmin.sendEvent(EventFactory.channelCreated(channel));
+            }
+
+            // XXX we might want to fire more precise events, like
+            // sourceGroupsChanged or PayloadTypesChanged, etc.
+            content.fireChannelChanged(channel);
+        }
+        // TODO(brian): the code below is an transitional step in moving logic out of the channel.  instead of
+        // relying on the channel to update the transceiver with the payload types, we do it here (after gathering them
+        // for the entire endpoint, rather than one channel at a time).  This should go elsewhere, but at least here
+        // we've gotten that code out of the channel.
+        endpointPayloadTypes.forEach((epId, payloadTypes) -> {
+            logger.info("Notifying ep " + epId + " about " + payloadTypes.size() + " payload type mappings");
+            AbstractEndpoint ep = conference.getEndpoint(epId);
+            if (ep != null) {
+                ep.transceiver.clearDynamicRtpPayloadTypes();
+                MediaService mediaService = conference.getMediaService();
+                payloadTypes.forEach(pt -> {
+                    //TODO(brian): the code in JingleUtils#payloadTypeToMediaFormat is a bit confusing.  If it's
+                    // an 'unknown' format, it creates an 'unknown format' instance, but then returns null instead
+                    // of returning the created format.  i see this happening with ISAC and h264 in my tests, which
+                    // i guess aren't configured as supported formats? (when i looked into the supported formats
+                    // checking, there was some weirdness there too, so worth taking another look at all this at
+                    // some point)
+                    MediaFormat mediaFormat
+                            = JingleUtils.payloadTypeToMediaFormat(
+                            pt,
+                            mediaService,
+                            null);
+                    if (mediaFormat == null) {
+                        logger.info("Unable to parse a format for pt " + pt.getID() + " -> " +
+                                pt.getName());
+                    } else {
+                        logger.info("Notifying ep " + epId + " about payload type mapping: " +
+                                pt.getID() + " -> " + mediaFormat.toString());
+                        ep.transceiver.addDynamicRtpPayloadType((byte)pt.getID(), mediaFormat);
+                    }
+                });
+            }
+        });
+        return createdOrUpdatedChannels;
     }
 
     /**
