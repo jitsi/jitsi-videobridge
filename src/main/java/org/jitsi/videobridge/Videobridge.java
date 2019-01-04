@@ -15,20 +15,13 @@
  */
 package org.jitsi.videobridge;
 
-import java.io.*;
-import java.net.URI;
-import java.util.*;
-import java.util.concurrent.atomic.*;
-import java.util.regex.*;
-
 import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.health.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
-import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.JingleUtils;
+import net.java.sip.communicator.impl.protocol.jabber.jinglesdp.*;
 import net.java.sip.communicator.service.shutdown.*;
 import net.java.sip.communicator.util.*;
-
 import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
@@ -38,22 +31,25 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.Constants;
-import org.jitsi.service.neomedia.format.MediaFormat;
-import org.jitsi.util.*;
+import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.Logger;
-import org.jitsi.videobridge.octo.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.pubsub.*;
 import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
-import org.jivesoftware.smack.util.XmlStringBuilder;
 import org.jivesoftware.smackx.pubsub.*;
 import org.jivesoftware.smackx.pubsub.provider.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
+
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.atomic.*;
+import java.util.regex.*;
 
 /**
  * Represents the Jitsi Videobridge which creates, lists and destroys
@@ -742,7 +738,7 @@ public class Videobridge
 
             try {
                 List<ColibriConferenceIQ.Channel> describedChannels =
-                        processChannels2(contentIQ.getChannels(), conference, content);
+                        processChannels(contentIQ.getChannels(), conference, content);
                 describedChannels.forEach(responseContentIQ::addChannel);
             } catch (IqProcessingException e) {
                 logger.error("Error processing channels in IQ: " + e.toString());
@@ -751,7 +747,7 @@ public class Videobridge
 
             try {
                 List<ColibriConferenceIQ.SctpConnection> describedSctpConnections =
-                        processSctpConnections2(contentIQ.getSctpConnections(), conference, content);
+                        processSctpConnections(contentIQ.getSctpConnections(), conference, content);
                 describedSctpConnections.forEach(responseContentIQ::addSctpConnection);
             } catch (IqProcessingException e) {
                 logger.error("Error processing sctp connections in IQ: " + e.toString());
@@ -825,7 +821,7 @@ public class Videobridge
 
     private ColibriShim colibriShim = new ColibriShim(this);
 
-    private List<ColibriConferenceIQ.Channel> processChannels2(
+    private List<ColibriConferenceIQ.Channel> processChannels(
             List<ColibriConferenceIQ.Channel> channels,
             ColibriShim.ConferenceShim conference,
             ColibriShim.ContentShim content) throws IqProcessingException
@@ -1052,7 +1048,7 @@ public class Videobridge
      * @return
      * @throws IqProcessingException if there are any errors during the processing of the incoming connections
      */
-    private List<ColibriConferenceIQ.SctpConnection> processSctpConnections2(
+    private List<ColibriConferenceIQ.SctpConnection> processSctpConnections(
             List<ColibriConferenceIQ.SctpConnection> sctpConnections,
             ColibriShim.ConferenceShim conference,
             ColibriShim.ContentShim content) throws IqProcessingException {
