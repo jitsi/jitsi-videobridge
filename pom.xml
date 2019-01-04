@@ -86,7 +86,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>ice4j</artifactId>
-      <version>2.0.0-20181005.221549-11</version>
+      <version>2.0.0-20181213.100259-20</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -157,7 +157,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>libjitsi</artifactId>
-      <version>1.0-20181119.181042-364</version>
+      <version>1.0-20190104.144247-368</version>
     </dependency>
 
     <dependency>
