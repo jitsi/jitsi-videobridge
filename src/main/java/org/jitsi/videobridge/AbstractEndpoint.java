@@ -126,26 +126,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
             }
         });
         conference.encodingsManager.subscribe(this);
-        //TODO: need to clean up the association of transportmanager <-> endpoint and how they know about one another
-        //TODO: technically we want to start this once dtls is complete, is this good enough though?
-//        getConference().getTransportManager(AbstractEndpoint.this.id).onTransportConnected(() -> {
-//            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
-//            if (sctpManager != null) {
-//                new Thread(() -> {
-//                    LinkedBlockingQueue<PacketInfo> sctpPackets = ((IceDtlsTransportManager)getConference().getTransportManager(AbstractEndpoint.this.id)).sctpAppPackets;
-//                    while (true) {
-//                        try {
-//                            PacketInfo sctpPacket = null;
-//                            sctpPacket = sctpPackets.take();
-//                            System.out.println("SCTP reader received and incoming sctp packet");
-//                            sctpManager.handleIncomingSctp(sctpPacket);
-//                        } catch (InterruptedException e) {
-//                            System.out.println("Interruped while trying to receive sctp packet");
-//                        }
-//                    }
-//                }, "Incoming SCTP reader").start();
-//            }
-//        });
     }
 
     @Override
@@ -165,6 +145,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         sctpManager.createConnection();
     }
 
+    //TODO(brian): not sure if this is the final way we'll associate the transport manager and endpoint/transceiver,
+    // but it's a step.
     public void setTransportManager(IceUdpTransportManager transportManager)
     {
         //TODO: store the transport manager(?)
