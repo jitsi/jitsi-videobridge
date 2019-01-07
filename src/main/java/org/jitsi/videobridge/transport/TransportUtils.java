@@ -27,4 +27,47 @@ public class TransportUtils
                 anyMatch(
                         localCandidate -> localCandidate.canReach(remoteCandidate));
     }
+
+    /**
+     * @return the highest local port used by any of the local candidates of
+     * {@code iceStream}, which falls in the range [{@code min}, {@code max}].
+     */
+    public static int getMaxAllocatedPort(IceMediaStream iceStream, int min, int max)
+    {
+        return
+                Math.max(
+                        getMaxAllocatedPort(
+                                iceStream.getComponent(Component.RTP),
+                                min, max),
+                        getMaxAllocatedPort(
+                                iceStream.getComponent(Component.RTCP),
+                                min, max));
+    }
+
+    /**
+     * @return the highest local port used by any of the local candidates of
+     * {@code component}, which falls in the range [{@code min}, {@code max}].
+     */
+    private static int getMaxAllocatedPort(Component component, int min, int max)
+    {
+        int maxAllocatedPort = -1;
+
+        if (component != null)
+        {
+            for (LocalCandidate candidate : component.getLocalCandidates())
+            {
+                int candidatePort = candidate.getTransportAddress().getPort();
+
+                if (min <= candidatePort
+                        && candidatePort <= max
+                        && maxAllocatedPort < candidatePort)
+                {
+                    maxAllocatedPort = candidatePort;
+                }
+            }
+        }
+
+        return maxAllocatedPort;
+    }
+
 }

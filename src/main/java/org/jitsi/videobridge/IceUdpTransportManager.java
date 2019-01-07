@@ -108,13 +108,6 @@ public abstract class IceUdpTransportManager
     private static KeepAliveStrategy keepAliveStrategy
             = KeepAliveStrategy.SELECTED_AND_TCP;
 
-
-    /**
-     * The single (if any) <tt>Channel</tt> instance, whose sockets are
-     * currently configured to accept DTLS packets.
-     */
-//    private Channel channelForDtls = null;
-
     /**
      * Whether this <tt>TransportManager</tt> has been closed.
      */
@@ -137,27 +130,9 @@ public abstract class IceUdpTransportManager
     private final String id;
 
     /**
-     * The <tt>Thread</tt> used by this <tt>TransportManager</tt> to wait until
-     * {@link #iceAgent} has established a connection.
-     */
-    private Thread connectThread;
-
-    /**
-     * Used to synchronize access to {@link #connectThread}.
-     */
-    private final Object connectThreadSyncRoot = new Object();
-
-    /**
      * The ICE {@link Agent}.
      */
     protected Agent iceAgent;
-
-    /**
-     * The <tt>PropertyChangeListener</tt> which is (to be) notified about
-     * changes in the <tt>state</tt> of {@link #iceAgent}.
-     */
-//    private final PropertyChangeListener iceAgentStateChangeListener
-//        = this::iceAgentStateChange;
 
     /**
      * Whether ICE connectivity has been established.
@@ -185,79 +160,10 @@ public abstract class IceUdpTransportManager
     private final boolean controlling;
 
     /**
-     * The number of {@link Component}-s to create in
-     * {@link #iceStream}.
-     */
-    private int numComponents;
-
-    /**
-     * Whether we're using rtcp-mux or not.
-     */
-    private boolean rtcpmux;
-
-    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
     private final Logger logger;
-
-    /**
-     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
-     *
-     * @param conference the <tt>Conference</tt> which created this
-     * <tt>TransportManager</tt>.
-     * @param controlling {@code true} if the new instance is to serve as a
-     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
-     * @throws IOException
-     */
-    public IceUdpTransportManager(Conference conference,
-                                  boolean controlling)
-        throws IOException
-    {
-        this(conference, controlling, 2, DEFAULT_ICE_STREAM_NAME, null);
-    }
-
-    /**
-     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
-     *
-     * @param conference the <tt>Conference</tt> which created this
-     * <tt>TransportManager</tt>.
-     * @param controlling {@code true} if the new instance is to serve as a
-     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
-     * @param numComponents the number of ICE components that this instance is
-     * to start with.
-     * @throws IOException
-     */
-    public IceUdpTransportManager(Conference conference,
-                                  boolean controlling,
-                                  int numComponents)
-        throws IOException
-    {
-        this(conference, controlling, numComponents,
-             DEFAULT_ICE_STREAM_NAME, null);
-    }
-
-    /**
-     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
-     *
-     * @param conference the <tt>Conference</tt> which created this
-     * <tt>TransportManager</tt>.
-     * @param controlling {@code true} if the new instance is to serve as a
-     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
-     * @param numComponents the number of ICE components that this instance is
-     * to start with.
-     * @param id an identifier of the {@link IceUdpTransportManager}.
-     * @throws IOException
-     */
-    public IceUdpTransportManager(Conference conference,
-                                  boolean controlling,
-                                  int numComponents,
-                                  String id)
-        throws IOException
-    {
-        this(conference, controlling, numComponents,
-             DEFAULT_ICE_STREAM_NAME, id);
-    }
 
     /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
@@ -280,19 +186,20 @@ public abstract class IceUdpTransportManager
                                   String id)
         throws IOException
     {
+        if (numComponents != 1)
+        {
+            throw new Error("Non-RTCPMUX currently unsupported");
+        }
         this.conference = conference;
         this.id = id;
         this.controlling = controlling;
-        this.numComponents = numComponents;
-        this.rtcpmux = numComponents == 1;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
 
         // Setup the diagnostic context.
         conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("transport", hashCode());
 
-        iceAgent = createIceAgent(controlling, iceStreamName, rtcpmux);
-//        iceAgent.addStateChangeListener(iceAgentStateChangeListener);
+        iceAgent = createIceAgent(controlling, iceStreamName, true /* rtcpmux */);
         iceStream = iceAgent.getStream(iceStreamName);
         iceStream.addPairChangeListener(iceStreamPairChangeListener);
 
@@ -301,25 +208,6 @@ public abstract class IceUdpTransportManager
         {
             eventAdmin.sendEvent(EventFactory.transportCreated(this));
         }
-    }
-
-    /**
-     * Initializes a new <tt>IceUdpTransportManager</tt> instance.
-     *
-     * @param conference the <tt>Conference</tt> which created this
-     * <tt>TransportManager</tt>.
-     * @param controlling {@code true} if the new instance is to serve as a
-     * controlling ICE agent and passive DTLS endpoint; otherwise, {@code false}
-     * @param iceStreamName the name of the ICE stream to be created by this
-     * instance.
-     * @throws IOException
-     */
-    public IceUdpTransportManager(Conference conference,
-                                  boolean controlling,
-                                  String iceStreamName)
-        throws IOException
-    {
-        this(conference, controlling, 2, iceStreamName);
     }
 
     /**
@@ -412,17 +300,8 @@ public abstract class IceUdpTransportManager
             }
             if (iceAgent != null)
             {
-//                iceAgent.removeStateChangeListener(iceAgentStateChangeListener);
                 iceAgent.free();
                 iceAgent = null;
-            }
-
-            synchronized (connectThreadSyncRoot)
-            {
-                if (connectThread != null)
-                {
-                    connectThread.interrupt();
-                }
             }
 
             super.close();
@@ -466,14 +345,14 @@ public abstract class IceUdpTransportManager
                 keepAliveStrategy,
                 useComponentSocket);
 
-        if (numComponents > 1)
-        {
-            iceAgent.createComponent(
-                    iceStream, Transport.UDP,
-                    portBase + 1, portBase + 1, portBase + 101,
-                    keepAliveStrategy,
-                    useComponentSocket);
-        }
+//         if (numComponents > 1)
+//         {
+//             iceAgent.createComponent(
+//                     iceStream, Transport.UDP,
+//                     portBase + 1, portBase + 1, portBase + 101,
+//                     keepAliveStrategy,
+//                     useComponentSocket);
+//         }
 
         // Attempt to minimize subsequent bind retries: see if we have allocated
         // any ports from the dynamic range, and if so update the port tracker.
@@ -482,7 +361,7 @@ public abstract class IceUdpTransportManager
         // configured min port. When maxPort is reached, allocation will begin
         // from minPort again, so we don't have to worry about wraps.
         int maxAllocatedPort
-            = getMaxAllocatedPort(
+            = TransportUtils.getMaxAllocatedPort(
                     iceStream,
                     portTracker.getMinPort(),
                     portTracker.getMaxPort());
@@ -497,48 +376,6 @@ public abstract class IceUdpTransportManager
         }
 
         return iceAgent;
-    }
-
-    /**
-     * @return the highest local port used by any of the local candidates of
-     * {@code iceStream}, which falls in the range [{@code min}, {@code max}].
-     */
-    private int getMaxAllocatedPort(IceMediaStream iceStream, int min, int max)
-    {
-        return
-            Math.max(
-                    getMaxAllocatedPort(
-                            iceStream.getComponent(Component.RTP),
-                            min, max),
-                    getMaxAllocatedPort(
-                            iceStream.getComponent(Component.RTCP),
-                            min, max));
-    }
-
-    /**
-     * @return the highest local port used by any of the local candidates of
-     * {@code component}, which falls in the range [{@code min}, {@code max}].
-     */
-    private int getMaxAllocatedPort(Component component, int min, int max)
-    {
-        int maxAllocatedPort = -1;
-
-        if (component != null)
-        {
-            for (LocalCandidate candidate : component.getLocalCandidates())
-            {
-                int candidatePort = candidate.getTransportAddress().getPort();
-
-                if (min <= candidatePort
-                        && candidatePort <= max
-                        && maxAllocatedPort < candidatePort)
-                {
-                    maxAllocatedPort = candidatePort;
-                }
-            }
-        }
-
-        return maxAllocatedPort;
     }
 
     /**
@@ -567,7 +404,7 @@ public abstract class IceUdpTransportManager
      * Gets the <tt>Conference</tt> object that this <tt>TransportManager</tt>
      * is associated with.
      */
-    public Conference getConference()
+    protected Conference getConference()
     {
         return conference;
     }
@@ -650,25 +487,6 @@ public abstract class IceUdpTransportManager
     private void setRtcpmux(IceUdpTransportPacketExtension transport)
     {
         //TODO(brian): need to reimeplement this if we're going to support non-rtcpmux
-        if (transport.isRtcpMux())
-        {
-//            rtcpmux = true;
-//            if (channelForDtls != null && channelForDtls instanceof RtpChannel)
-//            {
-//                ((RtpChannel) channelForDtls)
-//                    .getDatagramFilter(true)
-//                        .setAcceptNonRtp(false);
-//            }
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void startConnectivityEstablishment(
-            IceUdpTransportPacketExtension transport)
-    {
     }
 
     /**
