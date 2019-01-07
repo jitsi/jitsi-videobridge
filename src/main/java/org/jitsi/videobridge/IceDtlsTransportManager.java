@@ -33,6 +33,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.transport.*;
 
 import java.beans.*;
 import java.io.*;
@@ -263,7 +264,7 @@ public class IceDtlsTransportManager
             // candidates. However, we would like (1) to not mess with a
             // possibly running iceAgent and (2) to return a consistent return
             // value.
-            if (!canReach(component, remoteCandidate))
+            if (!TransportUtils.canReach(component, remoteCandidate))
             {
                 continue;
             }
