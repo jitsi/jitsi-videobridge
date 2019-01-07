@@ -379,13 +379,15 @@ public class Health
      * @return a {@code IceUdpTransportPacketExtension} representation of the
      * {@code TransportManager} of {@code channel}
      */
+    //TODO(brian): get rid of this or fix it
     private static IceUdpTransportPacketExtension describeTransportManager(
             Channel channel)
     {
-        ColibriConferenceIQ.ChannelCommon iq
-            = (channel instanceof SctpConnection)
-                ? new ColibriConferenceIQ.SctpConnection()
-                : new ColibriConferenceIQ.Channel();
+//        ColibriConferenceIQ.ChannelCommon iq
+//            = (channel instanceof SctpConnection)
+//                ? new ColibriConferenceIQ.SctpConnection()
+//                : new ColibriConferenceIQ.Channel();
+        ColibriConferenceIQ.ChannelCommon iq = new ColibriConferenceIQ.Channel();
 
         channel.getTransportManager().describe(iq);
         return iq.getTransport();

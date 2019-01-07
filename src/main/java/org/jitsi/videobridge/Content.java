@@ -385,48 +385,6 @@ public class Content
     }
 
     /**
-     * Creates new <tt>SctpConnection</tt> with given <tt>Endpoint</tt> on given
-     * <tt>sctpPort</tt>.
-     *
-     * @param endpoint the <tt>Endpoint</tt> of <tt>SctpConnection</tt>
-     * @param sctpPort remote SCTP port that will be used by new
-     * <tt>SctpConnection</tt>.
-     * @param channelBundleId the ID of the channel-bundle that the created
-     * <tt>SctpConnection</tt> is to be a part of (or <tt>null</tt> if it is not
-     * to be a part of a channel-bundle).
-     * @param initiator the value to use for the initiator field, or
-     * <tt>null</tt> to use the default value.
-     * @return new <tt>SctpConnection</tt> with given <tt>Endpoint</tt>
-     * @throws IOException if the new {@link SctpConnection} instance fails to
-     * initialize.
-     */
-    @Deprecated
-//    public SctpConnection createSctpConnection(
-//            AbstractEndpoint endpoint,
-//            int sctpPort,
-//            String channelBundleId,
-//            Boolean initiator)
-//        throws IOException
-//    {
-//        SctpConnection sctpConnection;
-//
-//        synchronized (channels)
-//        {
-//            String id = generateChannelID();
-//
-//            sctpConnection
-//                = new NewSctpConnection(id, this, endpoint, sctpPort,
-//                                     channelBundleId, initiator);
-//            channels.put(sctpConnection.getID(), sctpConnection);
-//        }
-//
-//        // Initialize SCTP connection
-//        sctpConnection.initialize();
-//
-//        return sctpConnection;
-//    }
-
-    /**
      * Gets the indicator which determines whether this <tt>Content</tt> has
      * expired.
      *
@@ -898,19 +856,6 @@ public class Content
             }
             return rtpTranslator;
         }
-    }
-
-    /**
-     * Returns <tt>SctpConnection</tt> for given <tt>Endpoint</tt>.
-     *
-     * @param id the <tt>id</tt> of <tt>SctpConnection</tt> that we're looking
-     * for.
-     * @return <tt>SctpConnection</tt> for given <tt>Endpoint</tt> if any or
-     * <tt>null</tt> otherwise.
-     */
-    public SctpConnection getSctpConnection(String id)
-    {
-        return (SctpConnection) getChannel(id);
     }
 
     /**

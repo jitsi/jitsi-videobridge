@@ -558,6 +558,7 @@ public class Conference
      * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
      * properties of this instance on
      */
+    //TODO(brian): port this logic over to the shim
     public void describeDeep(ColibriConferenceIQ iq)
     {
         describeShallow(iq);
@@ -576,22 +577,11 @@ public class Conference
 
             for (Channel channel : content.getChannels())
             {
-                if (channel instanceof SctpConnection)
-                {
-                    ColibriConferenceIQ.SctpConnection sctpConnectionIQ
-                        = new ColibriConferenceIQ.SctpConnection();
+                ColibriConferenceIQ.Channel channelIQ
+                    = new ColibriConferenceIQ.Channel();
 
-                    channel.describe(sctpConnectionIQ);
-                    contentIQ.addSctpConnection(sctpConnectionIQ);
-                }
-                else
-                {
-                    ColibriConferenceIQ.Channel channelIQ
-                        = new ColibriConferenceIQ.Channel();
-
-                    channel.describe(channelIQ);
-                    contentIQ.addChannel(channelIQ);
-                }
+                channel.describe(channelIQ);
+                contentIQ.addChannel(channelIQ);
             }
         }
     }

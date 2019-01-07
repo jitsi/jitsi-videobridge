@@ -79,8 +79,7 @@ public abstract class AbstractEndpointMessageTransport
      * @param src the transport channel on which {@code jsonObject} has
      * been received
      * @param jsonObject the JSON object with {@link Videobridge#COLIBRI_CLASS}
-     * {@code ClientHello} which has been received by the associated
-     * {@code SctpConnection}
+     * {@code ClientHello} which has been received by the associated SCTP connection
      */
     protected void onClientHello(Object src, JSONObject jsonObject)
     {

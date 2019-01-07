@@ -447,16 +447,6 @@ public class IceUdpTransportManager
     private boolean rtcpmux;
 
     /**
-     * The <tt>SctpConnection</tt> instance, if any, added as a <tt>Channel</tt>
-     * to this <tt>IceUdpTransportManager</tt>.
-     *
-     * Currently we support a single <tt>SctpConnection</tt> in one
-     * <tt>IceUdpTransportManager</tt> and if it exists, it will receive all
-     * DTLS packets.
-     */
-    private SctpConnection sctpConnection = null;
-
-    /**
      * The {@link Logger} to be used by this instance to print debug
      * information.
      */
@@ -593,12 +583,12 @@ public class IceUdpTransportManager
         this(conference, controlling, 2, iceStreamName);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * Assures that no more than one <tt>SctpConnection</tt> is added. Keeps
-     * {@link #sctpConnection} and {@link #channelForDtls} up to date.
-     */
+//    /**
+//     * {@inheritDoc}
+//     *
+//     * Assures that no more than one <tt>SctpConnection</tt> is added. Keeps
+//     * {@link #sctpConnection} and {@link #channelForDtls} up to date.
+//     */
 //    @Override
 //    public boolean addChannel(Channel channel)
 //    {
@@ -1580,50 +1570,6 @@ public class IceUdpTransportManager
         if (rtpSocket == null || rtcpSocket == null)
         {
             throw new IllegalStateException("No sockets from ice4j.");
-        }
-
-
-        if (channel instanceof SctpConnection)
-        {
-            DatagramSocket udpSocket = rtpSocket.getUDPSocket();
-            Socket tcpSocket = rtpSocket.getTCPSocket();
-            if (udpSocket instanceof MultiplexingDatagramSocket)
-            {
-                MultiplexingDatagramSocket multiplexing
-                    = (MultiplexingDatagramSocket) udpSocket;
-                try
-                {
-                    DatagramSocket dtlsSocket
-                        = multiplexing.getSocket(new DTLSDatagramFilter());
-
-                    return new DefaultStreamConnector(dtlsSocket, null);
-                }
-                catch (SocketException se)
-                {
-                    logger.warn("Failed to create DTLS socket: " + se);
-                }
-            }
-            else if (tcpSocket instanceof MultiplexingSocket)
-            {
-                MultiplexingSocket multiplexing
-                    = (MultiplexingSocket) tcpSocket;
-                try
-                {
-                    Socket dtlsSocket
-                        = multiplexing.getSocket(new DTLSDatagramFilter());
-
-                    return new DefaultTCPStreamConnector(dtlsSocket, null);
-                }
-                catch(IOException ioe)
-                {
-                    logger.warn("Failed to create DTLS socket: " + ioe);
-                }
-            }
-            else
-            {
-                logger.warn("No valid sockets from ice4j.");
-                return null;
-            }
         }
 
         if (! (channel instanceof RtpChannel))
