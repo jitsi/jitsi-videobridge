@@ -331,10 +331,10 @@ public abstract class Channel
         {
             return new RawUdpTransportManager(this);
         }
-        else if (OctoTransportManager.NAMESPACE.equals(xmlNamespace))
-        {
-            return new OctoTransportManager(this);
-        }
+//        else if (OctoTransportManager.NAMESPACE.equals(xmlNamespace))
+//        {
+//            return new OctoTransportManager(this);
+//        }
         else
         {
             throw new IllegalArgumentException(

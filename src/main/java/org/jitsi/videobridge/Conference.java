@@ -98,14 +98,14 @@ public class Conference
      */
     private final List<AbstractEndpoint> endpoints = new LinkedList<>();
 
-    /**
-     * The {@link OctoEndpoints} instance, if Octo is enabled for this
-     * conference, which manages the foreign {@link AbstractEndpoint}s of the
-     * conference (i.e. endpoints connected to remote jitsi-videobridge
-     * instances).
-     * If/while Octo is not enabled for the conference, this is {@code null}.
-     */
-    private OctoEndpoints octoEndpoints = null;
+//    /**
+//     * The {@link OctoEndpoints} instance, if Octo is enabled for this
+//     * conference, which manages the foreign {@link AbstractEndpoint}s of the
+//     * conference (i.e. endpoints connected to remote jitsi-videobridge
+//     * instances).
+//     * If/while Octo is not enabled for the conference, this is {@code null}.
+//     */
+//    private OctoEndpoints octoEndpoints = null;
 
     /**
      * The {@link EventAdmin} instance (to be) used by this {@code Conference}
@@ -358,11 +358,11 @@ public class Conference
             }
         }
 
-        OctoEndpoints octoEndpoints = this.octoEndpoints;
-        if (sendToOcto && octoEndpoints != null)
-        {
-            octoEndpoints.sendMessage(msg);
-        }
+//        OctoEndpoints octoEndpoints = this.octoEndpoints;
+//        if (sendToOcto && octoEndpoints != null)
+//        {
+//            octoEndpoints.sendMessage(msg);
+//        }
     }
 
     /**
@@ -1277,21 +1277,21 @@ public class Conference
         firePropertyChange(ENDPOINTS_PROPERTY_NAME, null, null);
     }
 
-    /**
-     * @return the {@link OctoEndpoints} instance for this {@link Conference}.
-     */
-    public OctoEndpoints getOctoEndpoints()
-    {
-        synchronized (endpoints)
-        {
-            if (octoEndpoints == null)
-            {
-                octoEndpoints = new OctoEndpoints(this);
-            }
-
-            return octoEndpoints;
-        }
-    }
+//    /**
+//     * @return the {@link OctoEndpoints} instance for this {@link Conference}.
+//     */
+//    public OctoEndpoints getOctoEndpoints()
+//    {
+//        synchronized (endpoints)
+//        {
+//            if (octoEndpoints == null)
+//            {
+//                octoEndpoints = new OctoEndpoints(this);
+//            }
+//
+//            return octoEndpoints;
+//        }
+//    }
 
     /**
      * Notifies this {@link Conference} that one of its {@link Endpoint}s
