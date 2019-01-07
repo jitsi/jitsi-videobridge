@@ -296,15 +296,6 @@ public class IceDtlsTransportManager
     }
 
     @Override
-    public StreamConnector getStreamConnector(Channel channel)
-    {
-        // Get socket wrapper for rtp/rtcp
-        // Create DefaultStreamConnector
-        //TODO
-        return null;
-    }
-
-    @Override
     public MediaStreamTarget getStreamTarget(Channel channel) {
         //TODO
         return null;

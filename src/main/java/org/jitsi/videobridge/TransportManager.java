@@ -297,18 +297,19 @@ public abstract class TransportManager
      */
     public abstract SrtpControl getSrtpControl(Channel channel);
 
-    /**
-     * Gets the <tt>StreamConnector</tt> which represents the datagram sockets
-     * allocated by this instance for the purposes of a specific
-     * <tt>Channel</tt>.
-     *
-     * @param channel the <tt>Channel</tt> for which to return the
-     * <tt>StreamConnector</tt>.
-     * @return the <tt>StreamConnector</tt> which represents the datagram
-     * sockets allocated by this instance for the purposes of a specific
-     * <tt>Channel</tt>.
-     */
-    public abstract StreamConnector getStreamConnector(Channel channel);
+//    /**
+//     * Gets the <tt>StreamConnector</tt> which represents the datagram sockets
+//     * allocated by this instance for the purposes of a specific
+//     * <tt>Channel</tt>.
+//     *
+//     * @param channel the <tt>Channel</tt> for which to return the
+//     * <tt>StreamConnector</tt>.
+//     * @return the <tt>StreamConnector</tt> which represents the datagram
+//     * sockets allocated by this instance for the purposes of a specific
+//     * <tt>Channel</tt>.
+//     */
+//    @Deprecated
+//    public abstract StreamConnector getStreamConnector(Channel channel);
 
     /**
      * Gets the <tt>MediaStreamTarget</tt> which represents the remote addresses
@@ -318,6 +319,7 @@ public abstract class TransportManager
      * @return the <tt>MediaStreamTarget</tt> which represents the remote
      * addresses to transmit RTP and RTCP to and from
      */
+    @Deprecated
     public abstract MediaStreamTarget getStreamTarget(Channel channel);
 
     /**
@@ -342,44 +344,45 @@ public abstract class TransportManager
     public abstract void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport);
 
-    /**
-     * Notifies this <tt>TransportManager</tt> that the configured RTP Payload
-     * Type numbers for one of its <tt>RtpChannel</tt>s have been updated.
-     *
-     * @param channel
-     */
-    public void payloadTypesChanged(RtpChannel channel)
-    {
-        checkPayloadTypes(channel);
-    }
+//    /**
+//     * Notifies this <tt>TransportManager</tt> that the configured RTP Payload
+//     * Type numbers for one of its <tt>RtpChannel</tt>s have been updated.
+//     *
+//     * @param channel
+//     */
+//    public void payloadTypesChanged(RtpChannel channel)
+//    {
+//        checkPayloadTypes(channel);
+//    }
 
-    /**
-     * Logs a warning if the addition of <tt>channel</tt> to <tt>_channels</tt>
-     * will result in the same Payload Type number being received by more than
-     * one channel (which is bound to cause issues and probably indicates a
-     * problem on the signalling side).
-     *
-     * @param channel the <tt>Channel</tt> being added.
-     */
-    private void checkPayloadTypes(RtpChannel channel)
-    {
-        for (Channel c : getChannels())
-        {
-            if (!(c instanceof RtpChannel) || c == channel)
-                continue;
-
-            // We only have a couple of PTs for each channel and this does not
-            // execute often.
-            for (int pt1 : ((RtpChannel) c).getReceivePTs())
-                for (int pt2 : channel.getReceivePTs())
-                {
-                    if (pt1 == pt2)
-                        logger.warn(
-                                "The same PT (" + pt1 + ") used by two "
-                                    + "channels in the same bundle.");
-                }
-        }
-    }
+    //TODO(brian): maybe we want to keep this logic (and reimplement it)?
+//    /**
+//     * Logs a warning if the addition of <tt>channel</tt> to <tt>_channels</tt>
+//     * will result in the same Payload Type number being received by more than
+//     * one channel (which is bound to cause issues and probably indicates a
+//     * problem on the signalling side).
+//     *
+//     * @param channel the <tt>Channel</tt> being added.
+//     */
+//    private void checkPayloadTypes(RtpChannel channel)
+//    {
+//        for (Channel c : getChannels())
+//        {
+//            if (!(c instanceof RtpChannel) || c == channel)
+//                continue;
+//
+//            // We only have a couple of PTs for each channel and this does not
+//            // execute often.
+//            for (int pt1 : ((RtpChannel) c).getReceivePTs())
+//                for (int pt2 : channel.getReceivePTs())
+//                {
+//                    if (pt1 == pt2)
+//                        logger.warn(
+//                                "The same PT (" + pt1 + ") used by two "
+//                                    + "channels in the same bundle.");
+//                }
+//        }
+//    }
 
     /**
      * Checks whether this transport manager has established connectivity.

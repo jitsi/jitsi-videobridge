@@ -46,7 +46,7 @@ import org.osgi.framework.*;
 @Deprecated
 public class Content
     extends PropertyChangeNotifier
-    implements RTPTranslator.WriteFilter, Expireable
+    implements Expireable
 {
     /**
      * The @{link #Logger} used by the {@link Content} class. Note that class
@@ -190,40 +190,40 @@ public class Content
         touch();
     }
 
-    /**
-     * Implements
-     * {@link RTPTranslator.WriteFilter#accept(
-     *      MediaStream, RawPacket, MediaStream, boolean)}
-     */
-    @Override
-    public boolean accept(
-        MediaStream source,
-        RawPacket pkt,
-        MediaStream destination,
-        boolean data)
-    {
-        boolean accept = true;
-
-        if (destination != null)
-        {
-            RtpChannel dst = RtpChannel.getChannel(destination);
-
-            if (dst != null)
-            {
-                RtpChannel src
-                    = (source == null) ? null : RtpChannel.getChannel(source);
-
-                // NOTE(brian): we're not using this check right now, commenting it out so we can remove packet flows
-                // to make it clearer what's in use
-//                accept
-//                    = dst.wants(
-//                            data,
-//                            pkt,
-//                            src);
-            }
-        }
-        return accept;
-    }
+//    /**
+//     * Implements
+//     * {@link RTPTranslator.WriteFilter#accept(
+//     *      MediaStream, RawPacket, MediaStream, boolean)}
+//     */
+//    @Override
+//    public boolean accept(
+//        MediaStream source,
+//        RawPacket pkt,
+//        MediaStream destination,
+//        boolean data)
+//    {
+//        boolean accept = true;
+//
+//        if (destination != null)
+//        {
+//            RtpChannel dst = RtpChannel.getChannel(destination);
+//
+//            if (dst != null)
+//            {
+//                RtpChannel src
+//                    = (source == null) ? null : RtpChannel.getChannel(source);
+//
+//                // NOTE(brian): we're not using this check right now, commenting it out so we can remove packet flows
+//                // to make it clearer what's in use
+////                accept
+////                    = dst.wants(
+////                            data,
+////                            pkt,
+////                            src);
+//            }
+//        }
+//        return accept;
+//    }
 
 //    /**
 //     * Initializes a new <tt>RtpChannel</tt> instance and adds it to the list of
@@ -409,23 +409,23 @@ public class Content
         finally
         {
             // Expire the Channels of this Content.
-            for (Channel channel : getChannels())
-            {
-                try
-                {
-                    channel.expire();
-                }
-                catch (Throwable t)
-                {
-                    logger.warn(
-                        "Failed to expire channel " + channel.getLoggingId(),
-                        t);
-                    if (t instanceof ThreadDeath)
-                    {
-                        throw (ThreadDeath) t;
-                    }
-                }
-            }
+//            for (Channel channel : getChannels())
+//            {
+//                try
+//                {
+//                    channel.expire();
+//                }
+//                catch (Throwable t)
+//                {
+//                    logger.warn(
+//                        "Failed to expire channel " + channel.getLoggingId(),
+//                        t);
+//                    if (t instanceof ThreadDeath)
+//                    {
+//                        throw (ThreadDeath) t;
+//                    }
+//                }
+//            }
 
             synchronized (rtpLevelRelaySyncRoot)
             {
@@ -450,29 +450,29 @@ public class Content
      * @param channel the <tt>Channel</tt> to be expired by this
      * <tt>Content</tt>
      */
-    public void expireChannel(Channel channel)
-    {
-        String id = channel.getID();
-        boolean expireChannel;
-
-        synchronized (channels)
-        {
-            if (channel.equals(channels.get(id)))
-            {
-                channels.remove(id);
-                channelsFast = new LinkedList<>(channels.values());
-                expireChannel = true;
-            }
-            else
-            {
-                expireChannel = false;
-            }
-        }
-        if (expireChannel)
-        {
-            channel.expire();
-        }
-    }
+//    public void expireChannel(Channel channel)
+//    {
+//        String id = channel.getID();
+//        boolean expireChannel;
+//
+//        synchronized (channels)
+//        {
+//            if (channel.equals(channels.get(id)))
+//            {
+//                channels.remove(id);
+//                channelsFast = new LinkedList<>(channels.values());
+//                expireChannel = true;
+//            }
+//            else
+//            {
+//                expireChannel = false;
+//            }
+//        }
+//        if (expireChannel)
+//        {
+//            channel.expire();
+//        }
+//    }
 
     /**
      * Generates a new <tt>Channel</tt> ID which is not guaranteed to be unique.
@@ -690,53 +690,53 @@ public class Content
      * traffic between the <tt>Channel</tt>s of this <tt>Content</tt> which use
      * a translator as their RTP-level relay
      */
-    public RTPTranslator getRTPTranslator()
-    {
-        synchronized (rtpLevelRelaySyncRoot)
-        {
-            /*
-             * The expired field of Content is initially assigned true and the
-             * only possible change of the value is from true to false, never
-             * from false to true. Moreover, an existing rtpTranslator will be
-             * disposed after the change of expired from true to false.
-             * Consequently, no synchronization with respect to the access of
-             * expired is required.
-             */
-            if ((rtpTranslator == null) && !expired)
-            {
-                rtpTranslator = getMediaService().createRTPTranslator();
-                if (rtpTranslator != null)
-                {
-                    new RTPTranslatorWriteFilter(rtpTranslator, this);
-                    if (rtpTranslator instanceof RTPTranslatorImpl)
-                    {
-                        RTPTranslatorImpl rtpTranslatorImpl
-                            = (RTPTranslatorImpl) rtpTranslator;
-
-                        /*
-                         * XXX(gp) some thoughts on the use of initialLocalSSRC:
-                         *
-                         * 1. By using the initialLocalSSRC as the SSRC of the
-                         * translator aren't we breaking the mixing
-                         * functionality? because FMJ is going to use its "own"
-                         * SSRC to for mixed stream, which remains unannounced.
-                         *
-                         * 2. By using an initialLocalSSRC we're losing the FMJ
-                         * collision detection mechanism.
-                         *
-                         * The places that are involved in this have been tagged
-                         * with TAG(cat4-local-ssrc-hurricane).
-                         */
-                        initialLocalSSRC
-                            = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
-
-                        rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
-                    }
-                }
-            }
-            return rtpTranslator;
-        }
-    }
+//    public RTPTranslator getRTPTranslator()
+//    {
+//        synchronized (rtpLevelRelaySyncRoot)
+//        {
+//            /*
+//             * The expired field of Content is initially assigned true and the
+//             * only possible change of the value is from true to false, never
+//             * from false to true. Moreover, an existing rtpTranslator will be
+//             * disposed after the change of expired from true to false.
+//             * Consequently, no synchronization with respect to the access of
+//             * expired is required.
+//             */
+//            if ((rtpTranslator == null) && !expired)
+//            {
+//                rtpTranslator = getMediaService().createRTPTranslator();
+//                if (rtpTranslator != null)
+//                {
+//                    new RTPTranslatorWriteFilter(rtpTranslator, this);
+//                    if (rtpTranslator instanceof RTPTranslatorImpl)
+//                    {
+//                        RTPTranslatorImpl rtpTranslatorImpl
+//                            = (RTPTranslatorImpl) rtpTranslator;
+//
+//                        /*
+//                         * XXX(gp) some thoughts on the use of initialLocalSSRC:
+//                         *
+//                         * 1. By using the initialLocalSSRC as the SSRC of the
+//                         * translator aren't we breaking the mixing
+//                         * functionality? because FMJ is going to use its "own"
+//                         * SSRC to for mixed stream, which remains unannounced.
+//                         *
+//                         * 2. By using an initialLocalSSRC we're losing the FMJ
+//                         * collision detection mechanism.
+//                         *
+//                         * The places that are involved in this have been tagged
+//                         * with TAG(cat4-local-ssrc-hurricane).
+//                         */
+//                        initialLocalSSRC
+//                            = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
+//
+//                        rtpTranslatorImpl.setLocalSSRC(initialLocalSSRC);
+//                    }
+//                }
+//            }
+//            return rtpTranslator;
+//        }
+//    }
 
     /**
      * Sets the time in milliseconds of the last activity related to this
@@ -755,14 +755,14 @@ public class Content
         }
     }
 
-    /**
-     *
-     * @param channel
-     */
-    public void fireChannelChanged(RtpChannel channel)
-    {
-        firePropertyChange(CHANNEL_MODIFIED_PROPERTY_NAME, channel, channel);
-    }
+//    /**
+//     *
+//     * @param channel
+//     */
+//    public void fireChannelChanged(RtpChannel channel)
+//    {
+//        firePropertyChange(CHANNEL_MODIFIED_PROPERTY_NAME, channel, channel);
+//    }
 
     /**
      * @return a string which identifies this {@link Content} for the purposes
@@ -797,52 +797,52 @@ public class Content
         expireableImpl.safeExpire();
     }
 
-    private static class RTPTranslatorWriteFilter
-        implements RTPTranslator.WriteFilter
-    {
-        private final WeakReference<RTPTranslator> rtpTranslator;
-
-        private final WeakReference<RTPTranslator.WriteFilter> writeFilter;
-
-        public RTPTranslatorWriteFilter(
-            RTPTranslator rtpTranslator,
-            RTPTranslator.WriteFilter writeFilter)
-        {
-            this.rtpTranslator = new WeakReference<>(rtpTranslator);
-            this.writeFilter = new WeakReference<>(writeFilter);
-
-            rtpTranslator.addWriteFilter(this);
-        }
-
-        @Override
-        public boolean accept(
-            MediaStream source,
-            RawPacket pkt,
-            MediaStream destination,
-            boolean data)
-        {
-            RTPTranslator.WriteFilter writeFilter = this.writeFilter.get();
-            boolean accept = true;
-
-            if (writeFilter == null)
-            {
-                RTPTranslator rtpTranslator = this.rtpTranslator.get();
-
-                if (rtpTranslator != null)
-                {
-                    rtpTranslator.removeWriteFilter(this);
-                }
-            }
-            else
-            {
-                accept
-                    = writeFilter.accept(
-                    source,
-                    pkt,
-                    destination,
-                    data);
-            }
-            return accept;
-        }
-    }
+//    private static class RTPTranslatorWriteFilter
+//        implements RTPTranslator.WriteFilter
+//    {
+//        private final WeakReference<RTPTranslator> rtpTranslator;
+//
+//        private final WeakReference<RTPTranslator.WriteFilter> writeFilter;
+//
+//        public RTPTranslatorWriteFilter(
+//            RTPTranslator rtpTranslator,
+//            RTPTranslator.WriteFilter writeFilter)
+//        {
+//            this.rtpTranslator = new WeakReference<>(rtpTranslator);
+//            this.writeFilter = new WeakReference<>(writeFilter);
+//
+//            rtpTranslator.addWriteFilter(this);
+//        }
+//
+//        @Override
+//        public boolean accept(
+//            MediaStream source,
+//            RawPacket pkt,
+//            MediaStream destination,
+//            boolean data)
+//        {
+//            RTPTranslator.WriteFilter writeFilter = this.writeFilter.get();
+//            boolean accept = true;
+//
+//            if (writeFilter == null)
+//            {
+//                RTPTranslator rtpTranslator = this.rtpTranslator.get();
+//
+//                if (rtpTranslator != null)
+//                {
+//                    rtpTranslator.removeWriteFilter(this);
+//                }
+//            }
+//            else
+//            {
+//                accept
+//                    = writeFilter.accept(
+//                    source,
+//                    pkt,
+//                    destination,
+//                    data);
+//            }
+//            return accept;
+//        }
+//    }
 }

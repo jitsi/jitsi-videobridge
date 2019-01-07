@@ -228,34 +228,34 @@ public abstract class Channel
         {
             throw new Error("NO CHANNELS ALLOWED");
         }
-        Objects.requireNonNull(content, "content");
-        org.jivesoftware.smack.util.StringUtils.requireNotNullOrEmpty(id, "id");
-
-        this.id = id;
-        this.content = content;
-        this.channelBundleId = channelBundleId;
-        if (initiator != null)
-        {
-            this.initiator = initiator;
-        }
-
-        this.logger
-            = Logger.getLogger(classLogger,
-                               content.getConference().getLogger());
-
-        // Get default transport namespace
-        if (StringUtils.isNullOrEmpty(transportNamespace))
-        {
-            transportNamespace
-                = getContent().getConference()
-                    .getVideobridge().getDefaultTransportManager();
-        }
-
-        this.transportNamespace = transportNamespace;
-
-        expireableImpl = new ExpireableImpl(getLoggingId(), this::expire);
-
-        touch();
+//        Objects.requireNonNull(content, "content");
+//        org.jivesoftware.smack.util.StringUtils.requireNotNullOrEmpty(id, "id");
+//
+//        this.id = id;
+//        this.content = content;
+//        this.channelBundleId = channelBundleId;
+//        if (initiator != null)
+//        {
+//            this.initiator = initiator;
+//        }
+//
+//        this.logger
+//            = Logger.getLogger(classLogger,
+//                               content.getConference().getLogger());
+//
+//        // Get default transport namespace
+//        if (StringUtils.isNullOrEmpty(transportNamespace))
+//        {
+//            transportNamespace
+//                = getContent().getConference()
+//                    .getVideobridge().getDefaultTransportManager();
+//        }
+//
+//        this.transportNamespace = transportNamespace;
+//
+//        expireableImpl = new ExpireableImpl(getLoggingId(), this::expire);
+//
+//        touch();
     }
 
     /**
@@ -268,22 +268,22 @@ public abstract class Channel
     protected abstract void closeStream()
         throws IOException;
 
-    /**
-     * Initializes the pair of <tt>DatagramSocket</tt>s for RTP and RTCP
-     * traffic.
-     *
-     * @return a new <tt>StreamConnector</tt> instance which represents the pair
-     * of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
-     * <tt>rtpConnector</tt> is to use
-     */
-    protected StreamConnector createStreamConnector()
-    {
-        TransportManager transportManager = getTransportManager();
-        return
-            transportManager != null
-                ? transportManager.getStreamConnector(this)
-                : null;
-    }
+//    /**
+//     * Initializes the pair of <tt>DatagramSocket</tt>s for RTP and RTCP
+//     * traffic.
+//     *
+//     * @return a new <tt>StreamConnector</tt> instance which represents the pair
+//     * of <tt>DatagramSocket</tt>s for RTP and RTCP traffic
+//     * <tt>rtpConnector</tt> is to use
+//     */
+//    protected StreamConnector createStreamConnector()
+//    {
+//        TransportManager transportManager = getTransportManager();
+//        return
+//            transportManager != null
+//                ? transportManager.getStreamConnector(this)
+//                : null;
+//    }
 
     /**
      * Initializes a <tt>MediaStreamTarget</tt> instance which identifies the
@@ -342,39 +342,39 @@ public abstract class Channel
         }
     }
 
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
-     * properties of this instance. Thus, the specified <tt>iq</tt> may be
-     * thought of as a description of this instance.
-     *
-     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
-     * values of the properties of this instance
-     */
-    public void describe(ColibriConferenceIQ.ChannelCommon iq)
-    {
-        AbstractEndpoint endpoint = getEndpoint();
-
-        if (endpoint != null)
-        {
-            iq.setEndpoint(endpoint.getID());
-        }
-
-        iq.setID(id);
-        iq.setExpire(getExpire());
-        iq.setInitiator(isInitiator());
-
-        // If a channel is part of a bundle, its transport will be described in
-        // the channel-bundle itself.
-        if (channelBundleId != null)
-        {
-            iq.setChannelBundleId(channelBundleId);
-        }
-        else
-        {
-            describeTransportManager(iq);
-        }
-    }
+//    /**
+//     * Sets the values of the properties of a specific
+//     * <tt>ColibriConferenceIQ.Channel</tt> to the values of the respective
+//     * properties of this instance. Thus, the specified <tt>iq</tt> may be
+//     * thought of as a description of this instance.
+//     *
+//     * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
+//     * values of the properties of this instance
+//     */
+//    public void describe(ColibriConferenceIQ.ChannelCommon iq)
+//    {
+//        AbstractEndpoint endpoint = getEndpoint();
+//
+//        if (endpoint != null)
+//        {
+//            iq.setEndpoint(endpoint.getID());
+//        }
+//
+//        iq.setID(id);
+//        iq.setExpire(getExpire());
+//        iq.setInitiator(isInitiator());
+//
+//        // If a channel is part of a bundle, its transport will be described in
+//        // the channel-bundle itself.
+//        if (channelBundleId != null)
+//        {
+//            iq.setChannelBundleId(channelBundleId);
+//        }
+//        else
+//        {
+//            describeTransportManager(iq);
+//        }
+//    }
 
     /**
      * Sets the values of the properties of a specific
@@ -401,104 +401,104 @@ public abstract class Channel
      * @return {@code true} if the channel was expired as a result of this
      * call, and {@code false} if the channel was already expired.
      */
-    public boolean expire()
-    {
-        synchronized (this)
-        {
-            if (expired)
-            {
-                return false;
-            }
-            else
-            {
-                expired = true;
-            }
-        }
-
-        Content content = getContent();
-        Conference conference = content.getConference();
-
-        EventAdmin eventAdmin = conference.getEventAdmin();
-        if (eventAdmin != null)
-        {
-            eventAdmin.sendEvent(EventFactory.channelExpired(this));
-        }
-
-        try
-        {
-            content.expireChannel(this);
-        }
-        finally
-        {
-            // stream
-            try
-            {
-                closeStream();
-            }
-            catch (Throwable t)
-            {
-                logger.warn(
-                        "Failed to close the MediaStream/stream of channel "
-                            + getID() + " of content " + content.getName()
-                            + " of conference " + conference.getID() + "!",
-                        t);
-                if (t instanceof ThreadDeath)
-                {
-                    throw (ThreadDeath) t;
-                }
-            }
-
-            // transportManager
-            try
-            {
-                synchronized (transportManagerSyncRoot)
-                {
-                    if (transportManager != null)
-                    {
-                        transportManager.close(this);
-                    }
-                }
-            }
-            catch (Throwable t)
-            {
-                logger.warn(
-                        "Failed to close the TransportManager/transportManager"
-                            + " of channel " + getID() + " of content "
-                            + content.getName() + " of conference "
-                            + conference.getID() + "!",
-                        t);
-                if (t instanceof ThreadDeath)
-                {
-                    throw (ThreadDeath) t;
-                }
-            }
-
-            // endpoint
-            try
-            {
-                // Remove this Channel from the Endpoint. Accomplished by
-                // pretending that the Endpoint associated with this Channel has
-                // changed to null.
-                onEndpointChanged(getEndpoint(), null);
-            }
-            catch (Throwable t)
-            {
-                if (t instanceof ThreadDeath)
-                {
-                    throw (ThreadDeath) t;
-                }
-            }
-
-            if (logger.isInfoEnabled())
-            {
-
-                logger.info(Logger.Category.STATISTICS,
-                            "expire_ch," + getLoggingId());
-            }
-        }
-
-        return true;
-    }
+//    public boolean expire()
+//    {
+//        synchronized (this)
+//        {
+//            if (expired)
+//            {
+//                return false;
+//            }
+//            else
+//            {
+//                expired = true;
+//            }
+//        }
+//
+//        Content content = getContent();
+//        Conference conference = content.getConference();
+//
+//        EventAdmin eventAdmin = conference.getEventAdmin();
+//        if (eventAdmin != null)
+//        {
+//            eventAdmin.sendEvent(EventFactory.channelExpired(this));
+//        }
+//
+//        try
+//        {
+//            content.expireChannel(this);
+//        }
+//        finally
+//        {
+//            // stream
+//            try
+//            {
+//                closeStream();
+//            }
+//            catch (Throwable t)
+//            {
+//                logger.warn(
+//                        "Failed to close the MediaStream/stream of channel "
+//                            + getID() + " of content " + content.getName()
+//                            + " of conference " + conference.getID() + "!",
+//                        t);
+//                if (t instanceof ThreadDeath)
+//                {
+//                    throw (ThreadDeath) t;
+//                }
+//            }
+//
+//            // transportManager
+//            try
+//            {
+//                synchronized (transportManagerSyncRoot)
+//                {
+//                    if (transportManager != null)
+//                    {
+//                        transportManager.close(this);
+//                    }
+//                }
+//            }
+//            catch (Throwable t)
+//            {
+//                logger.warn(
+//                        "Failed to close the TransportManager/transportManager"
+//                            + " of channel " + getID() + " of content "
+//                            + content.getName() + " of conference "
+//                            + conference.getID() + "!",
+//                        t);
+//                if (t instanceof ThreadDeath)
+//                {
+//                    throw (ThreadDeath) t;
+//                }
+//            }
+//
+//            // endpoint
+//            try
+//            {
+//                // Remove this Channel from the Endpoint. Accomplished by
+//                // pretending that the Endpoint associated with this Channel has
+//                // changed to null.
+//                onEndpointChanged(getEndpoint(), null);
+//            }
+//            catch (Throwable t)
+//            {
+//                if (t instanceof ThreadDeath)
+//                {
+//                    throw (ThreadDeath) t;
+//                }
+//            }
+//
+//            if (logger.isInfoEnabled())
+//            {
+//
+//                logger.info(Logger.Category.STATISTICS,
+//                            "expire_ch," + getLoggingId());
+//            }
+//        }
+//
+//        return true;
+//    }
 
     /**
      * Gets the <tt>BundleContext</tt> associated with this <tt>Channel</tt>.
@@ -646,18 +646,18 @@ public abstract class Channel
         return lastTransportActivityTime.get();
     }
 
-    /**
-     * Gets the <tt>StreamConnector</tt> currently used by this instance.
-     * @return the <tt>StreamConnector</tt> currently used by this instance.
-     */
-    StreamConnector getStreamConnector()
-    {
-        if (streamConnector == null)
-        {
-            streamConnector = createStreamConnector();
-        }
-        return streamConnector;
-    }
+//    /**
+//     * Gets the <tt>StreamConnector</tt> currently used by this instance.
+//     * @return the <tt>StreamConnector</tt> currently used by this instance.
+//     */
+//    StreamConnector getStreamConnector()
+//    {
+//        if (streamConnector == null)
+//        {
+//            streamConnector = createStreamConnector();
+//        }
+//        return streamConnector;
+//    }
 
     /**
      * Gets the <tt>TransportManager</tt> for this <tt>Channel</tt>.
@@ -751,11 +751,12 @@ public abstract class Channel
      * @param oldValue old <tt>Endpoint</tt>, can be <tt>null</tt>.
      * @param newValue new <tt>Endpoint</tt>, can be <tt>null</tt>.
      */
-    protected void onEndpointChanged(
-        AbstractEndpoint oldValue, AbstractEndpoint newValue)
-    {
-        firePropertyChange(ENDPOINT_PROPERTY_NAME, oldValue, newValue);
-    }
+//    @Deprecated
+//    protected void onEndpointChanged(
+//        AbstractEndpoint oldValue, AbstractEndpoint newValue)
+//    {
+//        firePropertyChange(ENDPOINT_PROPERTY_NAME, oldValue, newValue);
+//    }
 
     /**
      * Sets the identifier of the newEndpointId of the conference participant
@@ -766,34 +767,34 @@ public abstract class Channel
      */
     public void setEndpoint(String newEndpointId)
     {
-        try
-        {
-            AbstractEndpoint oldValue = this.endpoint;
-
-            // Is the endpoint really changing?
-            if (oldValue == null)
-            {
-                if (newEndpointId == null)
-                {
-                    return;
-                }
-            }
-            else if (oldValue.getID().equals(newEndpointId))
-            {
-                return;
-            }
-
-            // The endpoint is really changing.
-            AbstractEndpoint newValue
-                = getContent().getConference()
-                        .getOrCreateEndpoint(newEndpointId);
-            setEndpoint(newValue);
-            ((IceDtlsTransportManager)getTransportManager()).setTransceiver(newValue.transceiver);
-        }
-        finally
-        {
-            touch(); // It seems this Channel is still active.
-        }
+//        try
+//        {
+//            AbstractEndpoint oldValue = this.endpoint;
+//
+//            // Is the endpoint really changing?
+//            if (oldValue == null)
+//            {
+//                if (newEndpointId == null)
+//                {
+//                    return;
+//                }
+//            }
+//            else if (oldValue.getID().equals(newEndpointId))
+//            {
+//                return;
+//            }
+//
+//            // The endpoint is really changing.
+//            AbstractEndpoint newValue
+//                = getContent().getConference()
+//                        .getOrCreateEndpoint(newEndpointId);
+//            setEndpoint(newValue);
+//            ((IceDtlsTransportManager)getTransportManager()).setTransceiver(newValue.transceiver);
+//        }
+//        finally
+//        {
+//            touch(); // It seems this Channel is still active.
+//        }
     }
 
     /**
@@ -801,15 +802,15 @@ public abstract class Channel
      * instance.
      * @param endpoint the new {@link Endpoint} instance.
      */
-    public void setEndpoint(AbstractEndpoint endpoint)
-    {
-        AbstractEndpoint oldEndpoint = this.endpoint;
-        if (oldEndpoint != endpoint)
-        {
-            this.endpoint = endpoint;
-            onEndpointChanged(oldEndpoint, endpoint);
-        }
-    }
+//    public void setEndpoint(AbstractEndpoint endpoint)
+//    {
+//        AbstractEndpoint oldEndpoint = this.endpoint;
+//        if (oldEndpoint != endpoint)
+//        {
+//            this.endpoint = endpoint;
+//            onEndpointChanged(oldEndpoint, endpoint);
+//        }
+//    }
 
     /**
      * Sets the number of seconds of inactivity after which this
@@ -821,21 +822,21 @@ public abstract class Channel
      */
     public void setExpire(int expire)
     {
-        if (expire < 0)
-        {
-            throw new IllegalArgumentException("expire");
-        }
-
-        this.expire = expire;
-
-        if (this.expire == 0)
-        {
-            expire();
-        }
-        else
-        {
-            touch(); // It seems this Channel is still active.
-        }
+//        if (expire < 0)
+//        {
+//            throw new IllegalArgumentException("expire");
+//        }
+//
+//        this.expire = expire;
+//
+//        if (this.expire == 0)
+//        {
+//            expire();
+//        }
+//        else
+//        {
+//            touch(); // It seems this Channel is still active.
+//        }
     }
 
     /**
@@ -941,7 +942,7 @@ public abstract class Channel
      */
     void transportClosed()
     {
-        expire();
+//        expire();
     }
 
     /**

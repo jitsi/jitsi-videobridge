@@ -42,12 +42,12 @@ public class Health
      */
     private static final Logger logger = Logger.getLogger(Health.class);
 
-    /**
-     * The {@link MediaType}s of {@link RtpChannel}s supported by
-     * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
-     * by {@link
+//    /**
+//     * The {@link MediaType}s of {@link RtpChannel}s supported by
+//     * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
+//     * by {@link
 //     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
-     */
+//     */
     //TODO(brian): maybe this will be able to go away?  see how it fits in with the shim scheme
     private static final MediaType[] MEDIA_TYPES
         = { MediaType.AUDIO, MediaType.VIDEO };
@@ -296,30 +296,29 @@ public class Health
         throws Exception
     {
         //TODO(brian): need to reimplement all this
-        // RtpChannel
-        for (MediaType mediaType : MEDIA_TYPES)
-        {
-            List<RtpChannel> aRtpChannels = a.getChannels(mediaType);
-            int count = aRtpChannels.size();
-            List<RtpChannel> bRtpChannels = b.getChannels(mediaType);
-
-            // Fail as quickly as possible
-            if (count != bRtpChannels.size())
-            {
-                throw new IllegalStateException(
-                        "Endpoint#getChannels(MediaType)");
-            }
-            else
-            {
-                // Note that the channel count is 0 because we don't add the
-                // channels we create to the endpoint (see the FIXME in
-                // check(Conference conference))
-                for (int i = 0; i < count; ++i)
-                {
-                    connect(aRtpChannels.get(i), bRtpChannels.get(i));
-                }
-            }
-        }
+//        for (MediaType mediaType : MEDIA_TYPES)
+//        {
+//            List<RtpChannel> aRtpChannels = a.getChannels(mediaType);
+//            int count = aRtpChannels.size();
+//            List<RtpChannel> bRtpChannels = b.getChannels(mediaType);
+//
+//            // Fail as quickly as possible
+//            if (count != bRtpChannels.size())
+//            {
+//                throw new IllegalStateException(
+//                        "Endpoint#getChannels(MediaType)");
+//            }
+//            else
+//            {
+//                // Note that the channel count is 0 because we don't add the
+//                // channels we create to the endpoint (see the FIXME in
+//                // check(Conference conference))
+//                for (int i = 0; i < count; ++i)
+//                {
+//                    connect(aRtpChannels.get(i), bRtpChannels.get(i));
+//                }
+//            }
+//
 
         // SctpConnection
 //        SctpConnection aSctpConnection = a.getSctpConnection();

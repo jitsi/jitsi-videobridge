@@ -236,10 +236,10 @@ public class EventFactory
         return new Event(MSG_TRANSPORT_READY_TOPIC, properties);
     }
 
-    public static Event streamStarted(RtpChannel rtpChannel)
-    {
-        return new Event(STREAM_STARTED_TOPIC, makeProperties(rtpChannel));
-    }
+//    public static Event streamStarted(RtpChannel rtpChannel)
+//    {
+//        return new Event(STREAM_STARTED_TOPIC, makeProperties(rtpChannel));
+//    }
 
     /**
      * Creates a new "transport channel added" <tt>Event</tt>, which indicates

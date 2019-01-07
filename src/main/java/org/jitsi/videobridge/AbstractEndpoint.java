@@ -57,10 +57,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private final Conference conference;
 
-    /**
-     * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
-     */
-    private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
+//    /**
+//     * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
+//     */
+//    private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
 
     private final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
 
@@ -234,134 +234,49 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         }
     }
 
-    /**
-     * Adds a specific {@link RtpChannel} to the list of channels
-     * associated with this {@link AbstractEndpoint}.
-     *
-     * @param channel the {@link RtpChannel }to add.
-     * @return {@code true} if the list of {@link RtpChannel}s associated with
-     * this endpoint changed as a result of the method invocation; otherwise,
-     * {@code false}.
-     */
-    public boolean addChannel(RtpChannel channel)
-    {
-        Objects.requireNonNull(channel, "channel");
-
-        // The expire state of Channel is final. Adding an expired Channel to
-        // an Endpoint is a no-op.
-        if (channel.isExpired())
-        {
-            return false;
-        }
-
-        boolean added = false;
-        boolean removed = false;
-
-        synchronized (channels)
-        {
-            boolean add = true;
-
-            for (Iterator<WeakReference<RtpChannel>> i = channels.iterator();
-                 i.hasNext();)
-            {
-                RtpChannel c = i.next().get();
-
-                if (c == null)
-                {
-                    i.remove();
-                    removed = true;
-                }
-                else if (c.equals(channel))
-                {
-                    add = false;
-                }
-                else if (c.isExpired())
-                {
-                    i.remove();
-                    removed = true;
-                }
-            }
-            if (add)
-            {
-                channels.add(new WeakReference<>(channel));
-                added = true;
-            }
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return added;
-    }
-
-    /**
-     * Gets the number of {@link RtpChannel}s of this endpoint which,
-     * optionally, are of a specific {@link MediaType}.
-     *
-     * @param mediaType the {@link MediaType} of the {@link RtpChannel}s to
-     * count or {@code null} to count all {@link RtpChannel}s.
-     * @return the number of {@link RtpChannel}s of this endpoint which,
-     * , optionally, are of the specified {@link MediaType}.
-     */
-    int getChannelCount(MediaType mediaType)
-    {
-        return getChannels(mediaType).size();
-    }
-
-    /**
-     * @return a list with all {@link RtpChannel}s of this {@link Endpoint}.
-     */
-    @Deprecated
-    public List<RtpChannel> getChannels()
-    {
-        return getChannels(null);
-    }
-
-    /**
-     * Gets a list with the {@link RtpChannel}s of this {@link Endpoint} with a
-     * particular {@link MediaType} (or all of them, if {@code mediaType} is
-     * {@code null}).
-     *
-     * @param mediaType the {@link MediaType} to match. If {@code null}, all
-     * channels of this endpoint will be returned.
-     * @return a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
-     * a particular <tt>MediaType</tt>.
-     */
-    public List<RtpChannel> getChannels(MediaType mediaType)
-    {
-        boolean removed = false;
-        List<RtpChannel> channels = new LinkedList<>();
-
-        synchronized (this.channels)
-        {
-            for (Iterator<WeakReference<RtpChannel>> i
-                        = this.channels.iterator();
-                    i.hasNext();)
-            {
-                RtpChannel c = i.next().get();
-
-                if ((c == null) || c.isExpired())
-                {
-                    i.remove();
-                    removed = true;
-                }
-                else if ((mediaType == null)
-                        || mediaType.equals(c.getContent().getMediaType()))
-                {
-                    channels.add(c);
-                }
-            }
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return channels;
-    }
+//    /**
+//     * Gets a list with the {@link RtpChannel}s of this {@link Endpoint} with a
+//     * particular {@link MediaType} (or all of them, if {@code mediaType} is
+//     * {@code null}).
+//     *
+//     * @param mediaType the {@link MediaType} to match. If {@code null}, all
+//     * channels of this endpoint will be returned.
+//     * @return a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
+//     * a particular <tt>MediaType</tt>.
+//     */
+//    public List<RtpChannel> getChannels(MediaType mediaType)
+//    {
+//        boolean removed = false;
+//        List<RtpChannel> channels = new LinkedList<>();
+//
+//        synchronized (this.channels)
+//        {
+//            for (Iterator<WeakReference<RtpChannel>> i
+//                        = this.channels.iterator();
+//                    i.hasNext();)
+//            {
+//                RtpChannel c = i.next().get();
+//
+//                if ((c == null) || c.isExpired())
+//                {
+//                    i.remove();
+//                    removed = true;
+//                }
+//                else if ((mediaType == null)
+//                        || mediaType.equals(c.getContent().getMediaType()))
+//                {
+//                    channels.add(c);
+//                }
+//            }
+//        }
+//
+//        if (removed)
+//        {
+//            maybeExpire();
+//        }
+//
+//        return channels;
+//    }
 
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
@@ -415,40 +330,40 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return expired;
     }
 
-    /**
-     * Removes a specific <tt>Channel</tt> from the list of <tt>Channel</tt>s
-     * associated with this <tt>Endpoint</tt>.
-     *
-     * @param channel the <tt>Channel</tt> to remove from the list of
-     * <tt>Channel</tt>s associated with this <tt>Endpoint</tt>
-     * @return <tt>true</tt> if the list of <tt>Channel</tt>s associated with
-     * this <tt>Endpoint</tt> changed as a result of the method invocation;
-     * otherwise, <tt>false</tt>
-     */
-    public boolean removeChannel(RtpChannel channel)
-    {
-        if (channel == null)
-        {
-            return false;
-        }
-
-        boolean removed;
-
-        synchronized (channels)
-        {
-            removed = channels.removeIf(w -> {
-                Channel c = w.get();
-                return c == null || c.equals(channel) || c.isExpired();
-            });
-        }
-
-        if (removed)
-        {
-            maybeExpire();
-        }
-
-        return removed;
-    }
+//    /**
+//     * Removes a specific <tt>Channel</tt> from the list of <tt>Channel</tt>s
+//     * associated with this <tt>Endpoint</tt>.
+//     *
+//     * @param channel the <tt>Channel</tt> to remove from the list of
+//     * <tt>Channel</tt>s associated with this <tt>Endpoint</tt>
+//     * @return <tt>true</tt> if the list of <tt>Channel</tt>s associated with
+//     * this <tt>Endpoint</tt> changed as a result of the method invocation;
+//     * otherwise, <tt>false</tt>
+//     */
+//    public boolean removeChannel(RtpChannel channel)
+//    {
+//        if (channel == null)
+//        {
+//            return false;
+//        }
+//
+//        boolean removed;
+//
+//        synchronized (channels)
+//        {
+//            removed = channels.removeIf(w -> {
+//                Channel c = w.get();
+//                return c == null || c.equals(channel) || c.isExpired();
+//            });
+//        }
+//
+//        if (removed)
+//        {
+//            maybeExpire();
+//        }
+//
+//        return removed;
+//    }
 
     /**
      * Sets the display name of this <tt>Endpoint</tt>.
@@ -527,51 +442,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         return Collections.EMPTY_SET;
     }
-
-    /**
-     * Gets an array that contains all the {@link MediaStreamTrackDesc} of the
-     * specified media type associated with this {@link Endpoint}.
-     *
-     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
-     * get.
-     * @return an array that contains all the {@link MediaStreamTrackDesc} of
-     * the specified media type associated with this {@link Endpoint}, or null.
-     */
-    public MediaStreamTrackDesc[] getMediaStreamTracks(MediaType mediaType)
-    {
-        return
-            getAllMediaStreamTracks(mediaType)
-                .toArray(new MediaStreamTrackDesc[0]);
-    }
-
-    /**
-     * @return all {@link MediaStreamTrackDesc} of all channels of type
-     * {@code mediaType} associated with this endpoint. Note that this may
-     * include {@link MediaStreamTrackDesc}s which do not belong to this
-     * endpoint.
-     * @param mediaType the media type of the {@link MediaStreamTrackDesc} to
-     * get.
-     */
-    protected List<MediaStreamTrackDesc> getAllMediaStreamTracks(
-        MediaType mediaType)
-    {
-        List<RtpChannel> channels = getChannels(mediaType);
-
-        if (channels == null || channels.isEmpty())
-        {
-            return Collections.EMPTY_LIST;
-        }
-
-        List<MediaStreamTrackDesc> allTracks = new LinkedList<>();
-        channels.stream()
-            .map(channel -> channel.getStream().getMediaStreamTrackReceiver())
-            .filter(Objects::nonNull)
-            .forEach(
-                trackReceiver -> allTracks.addAll(
-                    Arrays.asList(trackReceiver.getMediaStreamTracks())));
-        return allTracks;
-    }
-
 
     /**
      * Sends a specific {@link String} {@code msg} to the remote end of this

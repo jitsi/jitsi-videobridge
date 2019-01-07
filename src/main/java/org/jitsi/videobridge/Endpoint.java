@@ -208,11 +208,6 @@ public class Endpoint
     protected void maybeExpire()
     {
         //TODO(brian): need to reimplement the expire logic
-
-        if (getChannelCount(null) == 0)
-        {
-            expire();
-        }
     }
 
     /**
@@ -428,17 +423,9 @@ public class Endpoint
             return icePassword;
         }
 
-        List<RtpChannel> channels = getChannels();
-        if (channels == null || channels.isEmpty())
+        if (transportManager != null)
         {
-            return null;
-        }
-
-        // We just use the first channel, assuming bundle.
-        TransportManager tm = channels.get(0).getTransportManager();
-        if (tm instanceof IceUdpTransportManager)
-        {
-            String password = ((IceUdpTransportManager) tm).getIcePassword();
+            String password = transportManager.getIcePassword();
             if (password != null)
             {
                 this.icePassword = password;

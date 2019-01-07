@@ -430,41 +430,42 @@ public class RawUdpTransportManager
     /**
      * {@inheritDoc}
      */
+    //TODO(brian): need to reimplememnt this
     @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
-        StreamConnector streamConnector = getStreamConnector(channel);
-
-        // RTP
-        {
-            DatagramSocket socket = streamConnector.getDataSocket();
-            CandidatePacketExtension candidate = new CandidatePacketExtension();
-
-            candidate.setComponent(
-                    CandidatePacketExtension.RTP_COMPONENT_ID);
-            candidate.setGeneration(generation);
-            candidate.setID(rtpCandidateID);
-            candidate.setIP(socket.getLocalAddress().getHostAddress());
-            candidate.setPort(socket.getLocalPort());
-            candidate.setType(CandidateType.host);
-
-            pe.addCandidate(candidate);
-        }
-
-        // RTCP
-        {
-            DatagramSocket socket = streamConnector.getControlSocket();
-            CandidatePacketExtension candidate = new CandidatePacketExtension();
-
-            candidate.setComponent(CandidatePacketExtension.RTCP_COMPONENT_ID);
-            candidate.setGeneration(generation);
-            candidate.setID(rtcpCandidateID);
-            candidate.setIP(socket.getLocalAddress().getHostAddress());
-            candidate.setPort(socket.getLocalPort());
-            candidate.setType(CandidateType.host);
-
-            pe.addCandidate(candidate);
-        }
+//        StreamConnector streamConnector = getStreamConnector(channel);
+//
+//        // RTP
+//        {
+//            DatagramSocket socket = streamConnector.getDataSocket();
+//            CandidatePacketExtension candidate = new CandidatePacketExtension();
+//
+//            candidate.setComponent(
+//                    CandidatePacketExtension.RTP_COMPONENT_ID);
+//            candidate.setGeneration(generation);
+//            candidate.setID(rtpCandidateID);
+//            candidate.setIP(socket.getLocalAddress().getHostAddress());
+//            candidate.setPort(socket.getLocalPort());
+//            candidate.setType(CandidateType.host);
+//
+//            pe.addCandidate(candidate);
+//        }
+//
+//        // RTCP
+//        {
+//            DatagramSocket socket = streamConnector.getControlSocket();
+//            CandidatePacketExtension candidate = new CandidatePacketExtension();
+//
+//            candidate.setComponent(CandidatePacketExtension.RTCP_COMPONENT_ID);
+//            candidate.setGeneration(generation);
+//            candidate.setID(rtcpCandidateID);
+//            candidate.setIP(socket.getLocalAddress().getHostAddress());
+//            candidate.setPort(socket.getLocalPort());
+//            candidate.setType(CandidateType.host);
+//
+//            pe.addCandidate(candidate);
+//        }
     }
 
     /**
@@ -477,14 +478,14 @@ public class RawUdpTransportManager
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public StreamConnector getStreamConnector(Channel channel)
-    {
-        return streamConnector;
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public StreamConnector getStreamConnector(Channel channel)
+//    {
+//        return streamConnector;
+//    }
 
     /**
      * {@inheritDoc}

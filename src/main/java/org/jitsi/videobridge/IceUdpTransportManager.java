@@ -396,6 +396,7 @@ public class IceUdpTransportManager
     /**
      * The <tt>DtlsControl</tt> that this <tt>TransportManager</tt> uses.
      */
+    @Deprecated
     private final DtlsControlImpl dtlsControl;
 
     /**
@@ -903,7 +904,7 @@ public class IceUdpTransportManager
     /**
      * {@inheritDoc}
      *
-     * Keeps {@link #sctpConnection} and {@link #channelForDtls} up to date.
+//     * Keeps {@link #sctpConnection} and {@link #channelForDtls} up to date.
      */
     @Override
     public boolean close(Channel channel)
@@ -1533,184 +1534,185 @@ public class IceUdpTransportManager
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     public SrtpControl getSrtpControl(Channel channel)
     {
         return dtlsControl;
     }
 
-    /**
-     * {@inheritDoc}
-     * </p>
-     * Note, that we don't cache any instances that we create here, so this
-     * method should be called no more than once for each channel!
-     */
-    @Override
-    public StreamConnector getStreamConnector(Channel channel)
-    {
-        if (!getChannels().contains(channel))
-        {
-            return null;
-        }
-
-        IceSocketWrapper rtpSocket
-            = getSocketForComponent(iceStream.getComponent(Component.RTP));
-
-        IceSocketWrapper rtcpSocket;
-        if (numComponents > 1 && !rtcpmux)
-        {
-            rtcpSocket
-                = getSocketForComponent(iceStream.getComponent(Component.RTCP));
-        }
-        else
-        {
-            rtcpSocket = rtpSocket;
-        }
-
-        if (rtpSocket == null || rtcpSocket == null)
-        {
-            throw new IllegalStateException("No sockets from ice4j.");
-        }
-
-        if (! (channel instanceof RtpChannel))
-        {
-            return null;
-        }
-
-        RtpChannel rtpChannel = (RtpChannel) channel;
-        DatagramSocket rtpUdpSocket = rtpSocket.getUDPSocket();
-        DatagramSocket rtcpUdpSocket = rtcpSocket.getUDPSocket();
-        if (rtpUdpSocket instanceof MultiplexingDatagramSocket
-            && rtcpUdpSocket instanceof MultiplexingDatagramSocket)
-        {
-            return getUDPStreamConnector(
-                rtpChannel,
-                (MultiplexingDatagramSocket) rtpUdpSocket,
-                (MultiplexingDatagramSocket) rtcpUdpSocket);
-        }
-
-        Socket rtpTcpSocket = rtpSocket.getTCPSocket();
-        Socket rtcpTcpSocket = rtcpSocket.getTCPSocket();
-        if (rtpTcpSocket instanceof MultiplexingSocket
-            && rtcpTcpSocket instanceof MultiplexingSocket)
-        {
-            return getTCPStreamConnector(
-                rtpChannel,
-                (MultiplexingSocket) rtpTcpSocket,
-                (MultiplexingSocket) rtcpTcpSocket);
-        }
-
-        logger.warn("No valid sockets from ice4j");
-        return null;
-    }
-
-    /**
-     * Creates and returns a UDP <tt>StreamConnector</tt> to be used by a
-     * specific <tt>RtpChannel</tt>, using a specific set of
-     * {@link MultiplexingDatagramSocket} from which to read. The provided
-     * sockets are not used directly, but using a filter for the specified
-     * channel (so that they can be shared for example by an audio channel and
-     * a video channel).
-     *
-     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
-     * <tt>StreamConnector</tt>.
-     * @param rtpSocket the socket from which to read RTP
-     * @param rtcpSocket the socket from which to read RTCP.
-     * @return a UDP <tt>StreamConnector</tt>.
-     */
-    private StreamConnector getUDPStreamConnector(
-        RtpChannel rtpChannel,
-        MultiplexingDatagramSocket rtpSocket,
-        MultiplexingDatagramSocket rtcpSocket)
-    {
-        Objects.requireNonNull(rtpSocket, "rtpSocket");
-        Objects.requireNonNull(rtcpSocket, "rtcpSocket");
-
-        try
-        {
-            MultiplexedDatagramSocket channelRtpSocket
-                = rtpSocket.getSocket(
-                    rtpChannel.getDatagramFilter(false /* RTP */));
-            MultiplexedDatagramSocket channelRtcpSocket
-                = rtcpSocket.getSocket(
-                    rtpChannel.getDatagramFilter(true /* RTCP */));
-
-            return new DefaultStreamConnector(
-                channelRtpSocket,
-                channelRtcpSocket,
-                rtcpmux);
-        }
-        catch (SocketException se) // never thrown
-        {
-            logger.error("An unexpected exception occurred.", se );
-            return null;
-        }
-    }
-
-    /**
-     * Creates and returns a TCP <tt>StreamConnector</tt> to be used by a
-     * specific <tt>RtpChannel</tt>, using a specific pair of
-     * {@link MultiplexingSocket} from which to read. The provided sockets are
-     * not used directly, but using a filter for the specified channel (so that
-     * they can be shared for example by an audio channel and a video channel).
-     *
-     * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
-     * <tt>StreamConnector</tt>.
-     * @param rtpSocket the socket from which to read RTP
-     * @param rtcpSocket the socket from which to read RTCP.
-     * @return a UDP <tt>StreamConnector</tt>.
-     */
-    private StreamConnector getTCPStreamConnector(
-        RtpChannel rtpChannel,
-        MultiplexingSocket rtpSocket,
-        MultiplexingSocket rtcpSocket)
-    {
-        Objects.requireNonNull(rtpSocket, "rtpSocket");
-        Objects.requireNonNull(rtcpSocket, "rtcpSocket");
-
-        try
-        {
-            MultiplexedSocket channelRtpSocket
-                = rtpSocket.getSocket(
-                rtpChannel.getDatagramFilter(false /* RTP */));
-            MultiplexedSocket channelRtcpSocket
-                = rtcpSocket.getSocket(
-                rtpChannel.getDatagramFilter(true /* RTCP */));
-
-            return new DefaultTCPStreamConnector(
-                channelRtpSocket,
-                channelRtcpSocket,
-                rtcpmux);
-        }
-        catch (SocketException se) // never thrown
-        {
-            logger.error("An unexpected exception occurred.", se );
-            return null;
-        }
-    }
-
-    /**
-     * Extracts the {@link IceSocketWrapper} for a specific {@link Component}.
-     * The way this is implemented depends on whether the component socket is
-     * configured or not.
-     * @param component the {@link Component} to get a socket from.
-     * @return the socket.
-     */
-    private IceSocketWrapper getSocketForComponent(Component component)
-    {
-        if (useComponentSocket)
-        {
-            return component.getSocketWrapper();
-        }
-        else
-        {
-            CandidatePair selectedPair = component.getSelectedPair();
-
-            return
-                (selectedPair == null) ? null : selectedPair
-                    .getIceSocketWrapper();
-        }
-    }
+//     /**
+//      * {@inheritDoc}
+//      * </p>
+//      * Note, that we don't cache any instances that we create here, so this
+//      * method should be called no more than once for each channel!
+//      */
+//     @Override
+//     public StreamConnector getStreamConnector(Channel channel)
+//     {
+//         if (!getChannels().contains(channel))
+//         {
+//             return null;
+//         }
+//
+//         IceSocketWrapper rtpSocket
+//             = getSocketForComponent(iceStream.getComponent(Component.RTP));
+//
+//         IceSocketWrapper rtcpSocket;
+//         if (numComponents > 1 && !rtcpmux)
+//         {
+//             rtcpSocket
+//                 = getSocketForComponent(iceStream.getComponent(Component.RTCP));
+//         }
+//         else
+//         {
+//             rtcpSocket = rtpSocket;
+//         }
+//
+//         if (rtpSocket == null || rtcpSocket == null)
+//         {
+//             throw new IllegalStateException("No sockets from ice4j.");
+//         }
+//
+//         if (! (channel instanceof RtpChannel))
+//         {
+//             return null;
+//         }
+//
+//         RtpChannel rtpChannel = (RtpChannel) channel;
+//         DatagramSocket rtpUdpSocket = rtpSocket.getUDPSocket();
+//         DatagramSocket rtcpUdpSocket = rtcpSocket.getUDPSocket();
+//         if (rtpUdpSocket instanceof MultiplexingDatagramSocket
+//             && rtcpUdpSocket instanceof MultiplexingDatagramSocket)
+//         {
+//             return getUDPStreamConnector(
+//                 rtpChannel,
+//                 (MultiplexingDatagramSocket) rtpUdpSocket,
+//                 (MultiplexingDatagramSocket) rtcpUdpSocket);
+//         }
+//
+//         Socket rtpTcpSocket = rtpSocket.getTCPSocket();
+//         Socket rtcpTcpSocket = rtcpSocket.getTCPSocket();
+//         if (rtpTcpSocket instanceof MultiplexingSocket
+//             && rtcpTcpSocket instanceof MultiplexingSocket)
+//         {
+//             return getTCPStreamConnector(
+//                 rtpChannel,
+//                 (MultiplexingSocket) rtpTcpSocket,
+//                 (MultiplexingSocket) rtcpTcpSocket);
+//         }
+//
+//         logger.warn("No valid sockets from ice4j");
+//         return null;
+//     }
+//
+//     /**
+//      * Creates and returns a UDP <tt>StreamConnector</tt> to be used by a
+//      * specific <tt>RtpChannel</tt>, using a specific set of
+//      * {@link MultiplexingDatagramSocket} from which to read. The provided
+//      * sockets are not used directly, but using a filter for the specified
+//      * channel (so that they can be shared for example by an audio channel and
+//      * a video channel).
+//      *
+//      * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
+//      * <tt>StreamConnector</tt>.
+//      * @param rtpSocket the socket from which to read RTP
+//      * @param rtcpSocket the socket from which to read RTCP.
+//      * @return a UDP <tt>StreamConnector</tt>.
+//      */
+//     private StreamConnector getUDPStreamConnector(
+//         RtpChannel rtpChannel,
+//         MultiplexingDatagramSocket rtpSocket,
+//         MultiplexingDatagramSocket rtcpSocket)
+//     {
+//         Objects.requireNonNull(rtpSocket, "rtpSocket");
+//         Objects.requireNonNull(rtcpSocket, "rtcpSocket");
+//
+//         try
+//         {
+//             MultiplexedDatagramSocket channelRtpSocket
+//                 = rtpSocket.getSocket(
+//                     rtpChannel.getDatagramFilter(false /* RTP */));
+//             MultiplexedDatagramSocket channelRtcpSocket
+//                 = rtcpSocket.getSocket(
+//                     rtpChannel.getDatagramFilter(true /* RTCP */));
+//
+//             return new DefaultStreamConnector(
+//                 channelRtpSocket,
+//                 channelRtcpSocket,
+//                 rtcpmux);
+//         }
+//         catch (SocketException se) // never thrown
+//         {
+//             logger.error("An unexpected exception occurred.", se );
+//             return null;
+//         }
+//     }
+//
+//     /**
+//      * Creates and returns a TCP <tt>StreamConnector</tt> to be used by a
+//      * specific <tt>RtpChannel</tt>, using a specific pair of
+//      * {@link MultiplexingSocket} from which to read. The provided sockets are
+//      * not used directly, but using a filter for the specified channel (so that
+//      * they can be shared for example by an audio channel and a video channel).
+//      *
+//      * @param rtpChannel the <tt>RtpChannel</tt> which is to use the created
+//      * <tt>StreamConnector</tt>.
+//      * @param rtpSocket the socket from which to read RTP
+//      * @param rtcpSocket the socket from which to read RTCP.
+//      * @return a UDP <tt>StreamConnector</tt>.
+//      */
+//     private StreamConnector getTCPStreamConnector(
+//         RtpChannel rtpChannel,
+//         MultiplexingSocket rtpSocket,
+//         MultiplexingSocket rtcpSocket)
+//     {
+//         Objects.requireNonNull(rtpSocket, "rtpSocket");
+//         Objects.requireNonNull(rtcpSocket, "rtcpSocket");
+//
+//         try
+//         {
+//             MultiplexedSocket channelRtpSocket
+//                 = rtpSocket.getSocket(
+//                 rtpChannel.getDatagramFilter(false /* RTP */));
+//             MultiplexedSocket channelRtcpSocket
+//                 = rtcpSocket.getSocket(
+//                 rtpChannel.getDatagramFilter(true /* RTCP */));
+//
+//             return new DefaultTCPStreamConnector(
+//                 channelRtpSocket,
+//                 channelRtcpSocket,
+//                 rtcpmux);
+//         }
+//         catch (SocketException se) // never thrown
+//         {
+//             logger.error("An unexpected exception occurred.", se );
+//             return null;
+//         }
+//     }
+//
+//     /**
+//      * Extracts the {@link IceSocketWrapper} for a specific {@link Component}.
+//      * The way this is implemented depends on whether the component socket is
+//      * configured or not.
+//      * @param component the {@link Component} to get a socket from.
+//      * @return the socket.
+//      */
+//     private IceSocketWrapper getSocketForComponent(Component component)
+//     {
+//         if (useComponentSocket)
+//         {
+//             return component.getSocketWrapper();
+//         }
+//         else
+//         {
+//             CandidatePair selectedPair = component.getSelectedPair();
+//
+//             return
+//                 (selectedPair == null) ? null : selectedPair
+//                     .getIceSocketWrapper();
+//         }
+//     }
 
     private MediaStreamTarget getStreamTarget()
     {
@@ -1782,6 +1784,7 @@ public class IceUdpTransportManager
      * {@inheritDoc}
      */
     @Override
+    @Deprecated
     public MediaStreamTarget getStreamTarget(Channel channel)
     {
         return getStreamTarget();
@@ -1870,12 +1873,12 @@ public class IceUdpTransportManager
         }
     }
 
-    /**
-     * Notifies all channels of this <tt>TransportManager</tt> that connectivity
-     * has been established (and they can now obtain valid values through
-     * {@link #getStreamConnector(Channel)} and
-     * {@link #getStreamTarget(Channel)}.
-     */
+//    /**
+//     * Notifies all channels of this <tt>TransportManager</tt> that connectivity
+//     * has been established (and they can now obtain valid values through
+//     * {@link #getStreamConnector(Channel)} and
+//     * {@link #getStreamTarget(Channel)}.
+//     */
 //    private void onIceConnected()
 //    {
 //        iceConnected = true;
@@ -2065,15 +2068,16 @@ public class IceUdpTransportManager
 
     private void setRtcpmux(IceUdpTransportPacketExtension transport)
     {
+        //TODO(brian): need to reimeplement this if we're going to support non-rtcpmux
         if (transport.isRtcpMux())
         {
-            rtcpmux = true;
-            if (channelForDtls != null && channelForDtls instanceof RtpChannel)
-            {
-                ((RtpChannel) channelForDtls)
-                    .getDatagramFilter(true)
-                        .setAcceptNonRtp(false);
-            }
+//            rtcpmux = true;
+//            if (channelForDtls != null && channelForDtls instanceof RtpChannel)
+//            {
+//                ((RtpChannel) channelForDtls)
+//                    .getDatagramFilter(true)
+//                        .setAcceptNonRtp(false);
+//            }
         }
         dtlsControl.setRtcpmux(rtcpmux);
     }

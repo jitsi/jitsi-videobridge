@@ -142,11 +142,6 @@ class EndpointMessageTransport
         }
 
         endpoint.getConference().endpointMessageTransportConnected(endpoint);
-
-        for (RtpChannel channel : endpoint.getChannels())
-        {
-            channel.endpointMessageTransportConnected();
-        }
     }
 
     /**

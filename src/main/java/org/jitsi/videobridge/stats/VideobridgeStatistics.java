@@ -588,79 +588,80 @@ public class VideobridgeStatistics
                     else if (MediaType.VIDEO.equals(mediaType))
                         videoChannels += content.getChannelCount();
 
-                    for (Channel channel : content.getChannels())
-                    {
-                        if (channel instanceof RtpChannel)
-                        {
-                            RtpChannel rtpChannel = (RtpChannel) channel;
-                            MediaStream stream = rtpChannel.getStream();
-                            if (stream == null)
-                            {
-                                continue;
-                            }
-                            MediaStreamStats2 stats
-                                = stream.getMediaStreamStats();
-                            if (stats == null) {
-                                continue;
-                            }
-                            ReceiveTrackStats receiveStats
-                                = stats.getReceiveStats();
-                            SendTrackStats sendStats = stats.getSendStats();
-
-                            packetsReceived += receiveStats.getCurrentPackets();
-                            packetsReceivedLost
-                                += receiveStats.getCurrentPacketsLost();
-                            fractionLostCount += 1;
-                            fractionLostSum += sendStats.getLossRate();
-                            packetRateDownload += receiveStats.getPacketRate();
-                            packetRateUpload += sendStats.getPacketRate();
-
-                            bitrateDownloadBps += receiveStats.getBitrate();
-                            bitrateUploadBps += sendStats.getBitrate();
-
-                            double jitter = sendStats.getJitter();
-                            if (jitter != TrackStats.JITTER_UNSET)
-                            {
-                                // We take the abs because otherwise the
-                                // aggregate makes no sense.
-                                jitterSumMs += Math.abs(jitter);
-                                jitterCount++;
-                            }
-                            jitter = receiveStats.getJitter();
-                            if (jitter != TrackStats.JITTER_UNSET)
-                            {
-                                // We take the abs because otherwise the
-                                // aggregate makes no sense.
-                                jitterSumMs += Math.abs(jitter);
-                                jitterCount++;
-                            }
-
-                            long rtt = sendStats.getRtt();
-                            if (rtt > 0)
-                            {
-                                rttSumMs += rtt;
-                                rttCount++;
-                            }
-
-                            //TODO(brian): re-implement this
-//                            if (channel instanceof VideoChannel)
+                    //TODO(brian): need to reimplement this in the post-channel world
+//                    for (Channel channel : content.getChannels())
+//                    {
+//                        if (channel instanceof RtpChannel)
+//                        {
+//                            RtpChannel rtpChannel = (RtpChannel) channel;
+//                            MediaStream stream = rtpChannel.getStream();
+//                            if (stream == null)
 //                            {
-//                                VideoChannel videoChannel
-//                                    = (VideoChannel) channel;
-//
-//                                //assume we're receiving a stream
-//                                int channelStreams = 1;
-//                                int lastN = videoChannel.getLastN();
-//                                channelStreams
-//                                    += (lastN == -1)
-//                                        ? (contentChannelCount - 1)
-//                                        : Math.min(
-//                                                lastN, contentChannelCount - 1);
-//
-//                                videoStreams += channelStreams;
+//                                continue;
 //                            }
-                        }
-                    }
+//                            MediaStreamStats2 stats
+//                                = stream.getMediaStreamStats();
+//                            if (stats == null) {
+//                                continue;
+//                            }
+//                            ReceiveTrackStats receiveStats
+//                                = stats.getReceiveStats();
+//                            SendTrackStats sendStats = stats.getSendStats();
+//
+//                            packetsReceived += receiveStats.getCurrentPackets();
+//                            packetsReceivedLost
+//                                += receiveStats.getCurrentPacketsLost();
+//                            fractionLostCount += 1;
+//                            fractionLostSum += sendStats.getLossRate();
+//                            packetRateDownload += receiveStats.getPacketRate();
+//                            packetRateUpload += sendStats.getPacketRate();
+//
+//                            bitrateDownloadBps += receiveStats.getBitrate();
+//                            bitrateUploadBps += sendStats.getBitrate();
+//
+//                            double jitter = sendStats.getJitter();
+//                            if (jitter != TrackStats.JITTER_UNSET)
+//                            {
+//                                // We take the abs because otherwise the
+//                                // aggregate makes no sense.
+//                                jitterSumMs += Math.abs(jitter);
+//                                jitterCount++;
+//                            }
+//                            jitter = receiveStats.getJitter();
+//                            if (jitter != TrackStats.JITTER_UNSET)
+//                            {
+//                                // We take the abs because otherwise the
+//                                // aggregate makes no sense.
+//                                jitterSumMs += Math.abs(jitter);
+//                                jitterCount++;
+//                            }
+//
+//                            long rtt = sendStats.getRtt();
+//                            if (rtt > 0)
+//                            {
+//                                rttSumMs += rtt;
+//                                rttCount++;
+//                            }
+//
+//                            //TODO(brian): re-implement this
+////                            if (channel instanceof VideoChannel)
+////                            {
+////                                VideoChannel videoChannel
+////                                    = (VideoChannel) channel;
+////
+////                                //assume we're receiving a stream
+////                                int channelStreams = 1;
+////                                int lastN = videoChannel.getLastN();
+////                                channelStreams
+////                                    += (lastN == -1)
+////                                        ? (contentChannelCount - 1)
+////                                        : Math.min(
+////                                                lastN, contentChannelCount - 1);
+////
+////                                videoStreams += channelStreams;
+////                            }
+//                        }
+//                    }
                 }
             }
 

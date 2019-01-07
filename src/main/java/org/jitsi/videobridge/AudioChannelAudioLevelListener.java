@@ -32,16 +32,16 @@ public class AudioChannelAudioLevelListener
      * The (audio) {@link RtpChannel} associated with this
      * {@link AudioChannelAudioLevelListener}.
      */
-    private final RtpChannel channel;
+//    private final RtpChannel channel;
 
-    /**
-     * Initializes a new {@link AudioChannelAudioLevelListener} instance.
-     * @param channel the associated (audio) {@link RtpChannel}.
-     */
-    public AudioChannelAudioLevelListener(RtpChannel channel)
-    {
-        this.channel = channel;
-    }
+//    /**
+//     * Initializes a new {@link AudioChannelAudioLevelListener} instance.
+//     * @param channel the associated (audio) {@link RtpChannel}.
+//     */
+//    public AudioChannelAudioLevelListener(RtpChannel channel)
+//    {
+//        this.channel = channel;
+//    }
 
     /**
      * Notifies this instance that the
@@ -61,50 +61,50 @@ public class AudioChannelAudioLevelListener
              * Forward the audio levels of the contributors to this Channel to
              * the active/dominant speaker detection/identification algorithm.
              */
-            int[] receiveSSRCs = channel.getReceiveSSRCs();
-
-            if (receiveSSRCs.length != 0)
-            {
-                /*
-                 * The SSRCs are at the even indices, their audio levels at the
-                 * immediately subsequent odd indices.
-                 */
-                for (int i = 0, count = levels.length / 2; i < count; i++)
-                {
-                    int i2 = i * 2;
-                    long ssrc = levels[i2];
-                    /*
-                     * The contributing SSRCs may not all be from sources
-                     * associated with this Channel and we're only interested in
-                     * the latter here.
-                     */
-                    boolean isReceiveSSRC = false;
-
-                    for (int receiveSSRC : receiveSSRCs)
-                    {
-                        if (ssrc == (0xFFFF_FFFFL & receiveSSRC))
-                        {
-                            isReceiveSSRC = true;
-                            break;
-                        }
-                    }
-                    if (isReceiveSSRC)
-                    {
-                        ConferenceSpeechActivity conferenceSpeechActivity
-                            = channel.conferenceSpeechActivity;
-
-                        if (conferenceSpeechActivity != null)
-                        {
-                            int level = (int) levels[i2 + 1];
-
-                            conferenceSpeechActivity.levelChanged(
-                                this.channel,
-                                ssrc,
-                                level);
-                        }
-                    }
-                }
-            }
+//            int[] receiveSSRCs = channel.getReceiveSSRCs();
+//
+//            if (receiveSSRCs.length != 0)
+//            {
+//                /*
+//                 * The SSRCs are at the even indices, their audio levels at the
+//                 * immediately subsequent odd indices.
+//                 */
+//                for (int i = 0, count = levels.length / 2; i < count; i++)
+//                {
+//                    int i2 = i * 2;
+//                    long ssrc = levels[i2];
+//                    /*
+//                     * The contributing SSRCs may not all be from sources
+//                     * associated with this Channel and we're only interested in
+//                     * the latter here.
+//                     */
+//                    boolean isReceiveSSRC = false;
+//
+//                    for (int receiveSSRC : receiveSSRCs)
+//                    {
+//                        if (ssrc == (0xFFFF_FFFFL & receiveSSRC))
+//                        {
+//                            isReceiveSSRC = true;
+//                            break;
+//                        }
+//                    }
+//                    if (isReceiveSSRC)
+//                    {
+//                        ConferenceSpeechActivity conferenceSpeechActivity
+//                            = channel.conferenceSpeechActivity;
+//
+//                        if (conferenceSpeechActivity != null)
+//                        {
+//                            int level = (int) levels[i2 + 1];
+//
+//                            conferenceSpeechActivity.levelChanged(
+//                                this.channel,
+//                                ssrc,
+//                                level);
+//                        }
+//                    }
+//                }
+//            }
         }
     }
 }

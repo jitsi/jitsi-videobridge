@@ -517,20 +517,20 @@ public class Conference
     {
         describeShallow(iq);
 
-        for (Content content : getContents())
-        {
-            ColibriConferenceIQ.Content contentIQ
-                = iq.getOrCreateContent(content.getName());
-
-            for (Channel channel : content.getChannels())
-            {
-                ColibriConferenceIQ.Channel channelIQ
-                    = new ColibriConferenceIQ.Channel();
-
-                channel.describe(channelIQ);
-                contentIQ.addChannel(channelIQ);
-            }
-        }
+//        for (Content content : getContents())
+//        {
+//            ColibriConferenceIQ.Content contentIQ
+//                = iq.getOrCreateContent(content.getName());
+//
+//            for (Channel channel : content.getChannels())
+//            {
+//                ColibriConferenceIQ.Channel channelIQ
+//                    = new ColibriConferenceIQ.Channel();
+//
+//                channel.describe(channelIQ);
+//                contentIQ.addChannel(channelIQ);
+//            }
+//        }
     }
 
     /**
