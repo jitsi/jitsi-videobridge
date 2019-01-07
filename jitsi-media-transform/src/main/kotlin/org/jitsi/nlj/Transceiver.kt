@@ -184,9 +184,9 @@ class Transceiver(
 //        rtpExtensions.clear()
     }
 
-    fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
+    fun setAudioLevelListener(audioLevelListener: AudioLevelListener) {
         logger.cinfo { "BRIAN: transceiver setting csrc audio level listener on receiver" }
-        rtpReceiver.setCsrcAudioLevelListener(csrcAudioLevelListener)
+        rtpReceiver.setAudioLevelListener(audioLevelListener)
     }
 
     // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
