@@ -64,6 +64,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     private final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
 
+    private final LastNFilter lastNFilter = new LastNFilter();
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -126,6 +127,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     @Override
     public void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, String semantics) {
         transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
+    }
+
+    void speechActivityEndpointsChanged(List<String> endpoints)
+    {
+        System.out.println("Endpoint " + getID() + " got notified about active endpoints: " + endpoints);
+        lastNFilter.setEndpointsSortedByActivity(endpoints);
     }
 
 

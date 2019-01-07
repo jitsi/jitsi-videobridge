@@ -24,6 +24,7 @@ import java.text.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
+import java.util.stream.*;
 
 import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
@@ -1328,21 +1329,16 @@ public class Conference
      */
     private void speechActivityEndpointsChanged()
     {
-        for (Content content : getContents())
-        {
-            if (MediaType.VIDEO.equals(content.getMediaType()))
-            {
-                List<AbstractEndpoint> endpoints
-                    = Collections.unmodifiableList(
-                        speechActivity.getEndpoints());
+        List<String> sortedActiveEndpoints =
+                Collections.unmodifiableList(
+                        speechActivity.getEndpoints()
+                                .stream()
+                                .map(AbstractEndpoint::getID)
+                                .collect(Collectors.toList()));
 
-                content.getChannels().stream()
-                    .filter(c -> c instanceof RtpChannel)
-                    .forEach(
-                        c -> ((RtpChannel) c)
-                            .speechActivityEndpointsChanged(endpoints));
-            }
-        }
+        getEndpoints().forEach(ep -> {
+            ep.speechActivityEndpointsChanged(sortedActiveEndpoints);
+        });
     }
 
     /**
