@@ -1486,10 +1486,12 @@ public class Conference
     @Override
     public boolean shouldExpire()
     {
-        return
-            getContents().length == 0
-                && getLastActivityTime() + 1000L * Channel.DEFAULT_EXPIRE
-                        < System.currentTimeMillis();
+        //TODO(brian): fix this when reimplementing expire logic
+        return false;
+//        return
+//            getContents().length == 0
+//                && getLastActivityTime() + 1000L * Channel.DEFAULT_EXPIRE
+//                        < System.currentTimeMillis();
     }
 
     /**

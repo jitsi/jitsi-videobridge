@@ -289,19 +289,6 @@ public class IceDtlsTransportManager
     }
 
     @Override
-    public SrtpControl getSrtpControl(Channel channel)
-    {
-        //TODO
-        return null;
-    }
-
-    @Override
-    public MediaStreamTarget getStreamTarget(Channel channel) {
-        //TODO
-        return null;
-    }
-
-    @Override
     protected void describe(IceUdpTransportPacketExtension pe)
     {
         pe.setPassword(iceAgent.getLocalPassword());

@@ -46,7 +46,6 @@ import org.osgi.framework.*;
 @Deprecated
 public class Content
     extends PropertyChangeNotifier
-    implements Expireable
 {
     /**
      * The @{link #Logger} used by the {@link Content} class. Note that class
@@ -79,9 +78,9 @@ public class Content
     /**
      * The <tt>Channel</tt>s of this <tt>Content</tt> mapped by their IDs.
      */
-    private final Map<String,Channel> channels = new HashMap<>();
+//    private final Map<String,Channel> channels = new HashMap<>();
 
-    private List<Channel> channelsFast = new ArrayList<>();
+//    private List<Channel> channelsFast = new ArrayList<>();
 
     /**
      * The <tt>Conference</tt> which has initialized this <tt>Content</tt>.
@@ -490,20 +489,20 @@ public class Content
      * @return a new channel ID, unique in the list of this {@link Content}'s
      * channels.
      */
-    private String generateUniqueChannelID()
-    {
-        synchronized (channels)
-        {
-            String id;
-            do
-            {
-                id = generateChannelID();
-            }
-            while (channels.containsKey(id));
-
-            return id;
-        }
-    }
+//    private String generateUniqueChannelID()
+//    {
+//        synchronized (channels)
+//        {
+//            String id;
+//            do
+//            {
+//                id = generateChannelID();
+//            }
+//            while (channels.containsKey(id));
+//
+//            return id;
+//        }
+//    }
 
     /**
      * Gets the <tt>BundleContext</tt> associated with this <tt>Content</tt>.
@@ -527,56 +526,56 @@ public class Content
      * <tt>Content</tt> which has the specified <tt>id</tt> if such a
      * <tt>Channel</tt> exists; otherwise, <tt>null</tt>
      */
-    public Channel getChannel(String id)
-    {
-        Channel channel;
+//    public Channel getChannel(String id)
+//    {
+//        Channel channel;
+//
+//        synchronized (channels)
+//        {
+//            channel = channels.get(id);
+//        }
+//
+//        // It seems the channel is still active.
+//        if (channel != null)
+//        {
+//            channel.touch();
+//        }
+//
+//        return channel;
+//    }
 
-        synchronized (channels)
-        {
-            channel = channels.get(id);
-        }
-
-        // It seems the channel is still active.
-        if (channel != null)
-        {
-            channel.touch();
-        }
-
-        return channel;
-    }
-
-    /**
-     * Gets the number of <tt>Channel</tt>s of this <tt>Content</tt> that are
-     * not expired.
-     *
-     * @return the number of <tt>Channel</tt>s of this <tt>Content</tt> that are
-     * not expired.
-     */
-    public int getChannelCount()
-    {
-        return (int) getChannels().stream()
-            .filter(c -> c != null && !c.isExpired())
-            .count();
-    }
-
-    /**
-     * Gets the <tt>Channel</tt>s of this <tt>Content</tt>.
-     *
-     * @return the <tt>Channel</tt>s of this <tt>Content</tt>
-     */
-    public List<Channel> getChannels()
-    {
-        synchronized (channels)
-        {
-            return new LinkedList<>(channels.values());
-        }
-    }
-
-    public List<Channel> getChannelsFast()
-    {
-        return channelsFast;
-
-    }
+//    /**
+//     * Gets the number of <tt>Channel</tt>s of this <tt>Content</tt> that are
+//     * not expired.
+//     *
+//     * @return the number of <tt>Channel</tt>s of this <tt>Content</tt> that are
+//     * not expired.
+//     */
+//    public int getChannelCount()
+//    {
+//        return (int) getChannels().stream()
+//            .filter(c -> c != null && !c.isExpired())
+//            .count();
+//    }
+//
+//    /**
+//     * Gets the <tt>Channel</tt>s of this <tt>Content</tt>.
+//     *
+//     * @return the <tt>Channel</tt>s of this <tt>Content</tt>
+//     */
+//    public List<Channel> getChannels()
+//    {
+//        synchronized (channels)
+//        {
+//            return new LinkedList<>(channels.values());
+//        }
+//    }
+//
+//    public List<Channel> getChannelsFast()
+//    {
+//        return channelsFast;
+//
+//    }
 
     /**
      * Gets the <tt>Conference</tt> which has initialized this <tt>Content</tt>.
@@ -779,23 +778,23 @@ public class Content
      * </p>
      * @return {@code true} if this {@link Content} is ready to be expired.
      */
-    @Override
-    public boolean shouldExpire()
-    {
-        return
-            getChannels().isEmpty()
-                && getLastActivityTime() + 1000L * Channel.DEFAULT_EXPIRE
-                        < System.currentTimeMillis();
-    }
+//    @Override
+//    public boolean shouldExpire()
+//    {
+//        return
+//            getChannels().isEmpty()
+//                && getLastActivityTime() + 1000L * Channel.DEFAULT_EXPIRE
+//                        < System.currentTimeMillis();
+//    }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void safeExpire()
-    {
-        expireableImpl.safeExpire();
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public void safeExpire()
+//    {
+//        expireableImpl.safeExpire();
+//    }
 
 //    private static class RTPTranslatorWriteFilter
 //        implements RTPTranslator.WriteFilter

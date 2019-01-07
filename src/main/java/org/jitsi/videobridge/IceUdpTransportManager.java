@@ -359,7 +359,7 @@ public class IceUdpTransportManager
      * The single (if any) <tt>Channel</tt> instance, whose sockets are
      * currently configured to accept DTLS packets.
      */
-    private Channel channelForDtls = null;
+//    private Channel channelForDtls = null;
 
     /**
      * Whether this <tt>TransportManager</tt> has been closed.
@@ -832,28 +832,28 @@ public class IceUdpTransportManager
                 localCandidate -> localCandidate.canReach(remoteCandidate));
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * TODO: In the case of multiple {@code Channel}s in one
-     * {@code TransportManager} it is unclear how to handle changes to the
-     * {@code initiator} property from individual channels.
-     */
-    @Override
-    protected void channelPropertyChange(PropertyChangeEvent ev)
-    {
-        super.channelPropertyChange(ev);
-
-        /*
-        if (Channel.INITIATOR_PROPERTY.equals(ev.getPropertyName())
-                && iceAgent != null)
-        {
-            Channel channel = (Channel) ev.getSource();
-
-            iceAgent.setControlling(channel.isInitiator());
-        }
-        */
-    }
+//    /**
+//     * {@inheritDoc}
+//     *
+//     * TODO: In the case of multiple {@code Channel}s in one
+//     * {@code TransportManager} it is unclear how to handle changes to the
+//     * {@code initiator} property from individual channels.
+//     */
+//    @Override
+//    protected void channelPropertyChange(PropertyChangeEvent ev)
+//    {
+//        super.channelPropertyChange(ev);
+//
+//        /*
+//        if (Channel.INITIATOR_PROPERTY.equals(ev.getPropertyName())
+//                && iceAgent != null)
+//        {
+//            Channel channel = (Channel) ev.getSource();
+//
+//            iceAgent.setControlling(channel.isInitiator());
+//        }
+//        */
+//    }
 
     /**
      * {@inheritDoc}
@@ -867,7 +867,7 @@ public class IceUdpTransportManager
             // is removed.
             closed = true;
 
-            getChannels().forEach(this::close);
+//            getChannels().forEach(this::close);
 
 //            if (dtlsControl != null)
 //            {
@@ -901,114 +901,114 @@ public class IceUdpTransportManager
         }
     }
 
-    /**
-     * {@inheritDoc}
-     *
+//    /**
+//     * {@inheritDoc}
+//     *
 //     * Keeps {@link #sctpConnection} and {@link #channelForDtls} up to date.
-     */
-    @Override
-    public boolean close(Channel channel)
-    {
-        return false;
-//        boolean removed = super.close(channel);
-//
-//        if (removed)
-//        {
-//            if (channel == sctpConnection)
-//            {
-//                sctpConnection = null;
-//            }
-//
-//            if (channel == channelForDtls)
-//            {
-//                if (sctpConnection != null)
-//                {
-//                    channelForDtls = sctpConnection;
-//                }
-//                else if (channel instanceof RtpChannel)
-//                {
-//                    RtpChannel newChannelForDtls = null;
-//
-//                    for (Channel c : getChannels())
-//                    {
-//                        if (c instanceof RtpChannel)
-//                        {
-//                            newChannelForDtls = (RtpChannel) c;
-//                        }
-//                    }
-//                    if (newChannelForDtls != null)
-//                    {
-//                        newChannelForDtls.getDatagramFilter(false)
-//                                .setAcceptNonRtp(true);
-//                        newChannelForDtls.getDatagramFilter(true)
-//                                .setAcceptNonRtp(!rtcpmux);
-//                    }
-//                    channelForDtls = newChannelForDtls;
-//                }
-//
-//                if (channel instanceof RtpChannel)
-//                {
-//                    RtpChannel rtpChannel = (RtpChannel) channel;
-//
-//                    rtpChannel.getDatagramFilter(false).setAcceptNonRtp(false);
-//                    rtpChannel.getDatagramFilter(true).setAcceptNonRtp(false);
-//                }
-//            }
-//
-//            try
-//            {
-//                StreamConnector connector = channel.getStreamConnector();
-//
-//                if (connector != null)
-//                {
-//                    DatagramSocket datagramSocket = connector.getDataSocket();
-//
-//                    if (datagramSocket != null)
-//                    {
-//                        datagramSocket.close();
-//                    }
-//                    datagramSocket = connector.getControlSocket();
-//                    if (datagramSocket != null)
-//                    {
-//                        datagramSocket.close();
-//                    }
-//
-//                    Socket socket = connector.getDataTCPSocket();
-//
-//                    if (socket != null)
-//                    {
-//                        socket.close();
-//                    }
-//                    socket = connector.getControlTCPSocket();
-//                    if (socket != null)
-//                    {
-//                        socket.close();
-//                    }
-//                }
-//            }
-//            catch (IOException ioe)
-//            {
-//                logger.info(
-//                    "Failed to close sockets when closing a channel:" + ioe);
-//            }
-//
-//            EventAdmin eventAdmin = conference.getEventAdmin();
-//            if (eventAdmin != null)
-//            {
-//                eventAdmin.sendEvent(
-//                        EventFactory.transportChannelRemoved(channel));
-//            }
-//
-//            channel.transportClosed();
-//        }
-//
-//        if (getChannels().isEmpty())
-//        {
-//            close();
-//        }
-//
-//        return removed;
-    }
+//     */
+//    @Override
+//    public boolean close(Channel channel)
+//    {
+//        return false;
+////        boolean removed = super.close(channel);
+////
+////        if (removed)
+////        {
+////            if (channel == sctpConnection)
+////            {
+////                sctpConnection = null;
+////            }
+////
+////            if (channel == channelForDtls)
+////            {
+////                if (sctpConnection != null)
+////                {
+////                    channelForDtls = sctpConnection;
+////                }
+////                else if (channel instanceof RtpChannel)
+////                {
+////                    RtpChannel newChannelForDtls = null;
+////
+////                    for (Channel c : getChannels())
+////                    {
+////                        if (c instanceof RtpChannel)
+////                        {
+////                            newChannelForDtls = (RtpChannel) c;
+////                        }
+////                    }
+////                    if (newChannelForDtls != null)
+////                    {
+////                        newChannelForDtls.getDatagramFilter(false)
+////                                .setAcceptNonRtp(true);
+////                        newChannelForDtls.getDatagramFilter(true)
+////                                .setAcceptNonRtp(!rtcpmux);
+////                    }
+////                    channelForDtls = newChannelForDtls;
+////                }
+////
+////                if (channel instanceof RtpChannel)
+////                {
+////                    RtpChannel rtpChannel = (RtpChannel) channel;
+////
+////                    rtpChannel.getDatagramFilter(false).setAcceptNonRtp(false);
+////                    rtpChannel.getDatagramFilter(true).setAcceptNonRtp(false);
+////                }
+////            }
+////
+////            try
+////            {
+////                StreamConnector connector = channel.getStreamConnector();
+////
+////                if (connector != null)
+////                {
+////                    DatagramSocket datagramSocket = connector.getDataSocket();
+////
+////                    if (datagramSocket != null)
+////                    {
+////                        datagramSocket.close();
+////                    }
+////                    datagramSocket = connector.getControlSocket();
+////                    if (datagramSocket != null)
+////                    {
+////                        datagramSocket.close();
+////                    }
+////
+////                    Socket socket = connector.getDataTCPSocket();
+////
+////                    if (socket != null)
+////                    {
+////                        socket.close();
+////                    }
+////                    socket = connector.getControlTCPSocket();
+////                    if (socket != null)
+////                    {
+////                        socket.close();
+////                    }
+////                }
+////            }
+////            catch (IOException ioe)
+////            {
+////                logger.info(
+////                    "Failed to close sockets when closing a channel:" + ioe);
+////            }
+////
+////            EventAdmin eventAdmin = conference.getEventAdmin();
+////            if (eventAdmin != null)
+////            {
+////                eventAdmin.sendEvent(
+////                        EventFactory.transportChannelRemoved(channel));
+////            }
+////
+////            channel.transportClosed();
+////        }
+////
+////        if (getChannels().isEmpty())
+////        {
+////            close();
+////        }
+////
+////        return removed;
+//    }
 
     /**
      * Initializes a new {@code DtlsControlImpl} instance.
@@ -1531,15 +1531,15 @@ public class IceUdpTransportManager
         return conference != null ? conference.getBundleContext() : null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Deprecated
-    @Override
-    public SrtpControl getSrtpControl(Channel channel)
-    {
-        return dtlsControl;
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Deprecated
+//    @Override
+//    public SrtpControl getSrtpControl(Channel channel)
+//    {
+//        return dtlsControl;
+//    }
 
 //     /**
 //      * {@inheritDoc}
@@ -1780,15 +1780,15 @@ public class IceUdpTransportManager
         return streamTarget;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @Deprecated
-    public MediaStreamTarget getStreamTarget(Channel channel)
-    {
-        return getStreamTarget();
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    @Deprecated
+//    public MediaStreamTarget getStreamTarget(Channel channel)
+//    {
+//        return getStreamTarget();
+//    }
 
     /**
      * {@inheritDoc}
@@ -1866,10 +1866,11 @@ public class IceUdpTransportManager
         if (IceMediaStream.PROPERTY_PAIR_CONSENT_FRESHNESS_CHANGED.equals(
                 ev.getPropertyName()))
         {
+            //TODO(brian): touch activity in new scheme here
             // TODO we might not necessarily want to keep all channels alive by
             // the ICE connection.
-            getChannels().forEach(
-                channel -> channel.touch(Channel.ActivityType.TRANSPORT));
+//            getChannels().forEach(
+//                channel -> channel.touch(Channel.ActivityType.TRANSPORT));
         }
     }
 
@@ -2247,18 +2248,18 @@ public class IceUdpTransportManager
         return iceConnected;
     }
 
-    /**
-     * @return a string which identifies this {@link IceUdpTransportManager}
-     * for the purposes of logging. The string is a comma-separated list of
-     * "key=value" pairs.
-     */
-    private String getLoggingId()
-    {
-        // Only use the ID string for channelForDtls, because what we care
-        // about is the info for any of the channels, and channelForDtls
-        // always contains a channel when we have one.
-        return Channel.getLoggingId(channelForDtls);
-    }
+//    /**
+//     * @return a string which identifies this {@link IceUdpTransportManager}
+//     * for the purposes of logging. The string is a comma-separated list of
+//     * "key=value" pairs.
+//     */
+//    private String getLoggingId()
+//    {
+//        // Only use the ID string for channelForDtls, because what we care
+//        // about is the info for any of the channels, and channelForDtls
+//        // always contains a channel when we have one.
+//        return Channel.getLoggingId(channelForDtls);
+//    }
 
     /**
      * {@inheritDoc}

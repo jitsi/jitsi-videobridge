@@ -631,17 +631,17 @@ public class ConferenceSpeechActivity
      * specified <tt>channel</tt> for the RTP stream with the specified
      * <tt>ssrc</tt> 
      */
-    public void levelChanged(Channel channel, long ssrc, int level)
-    {
-        // ActiveSpeakerDetector
-        ActiveSpeakerDetector activeSpeakerDetector
-            = getActiveSpeakerDetector();
-
-        if (activeSpeakerDetector != null)
-        {
-            activeSpeakerDetector.levelChanged(ssrc, level);
-        }
-    }
+//    public void levelChanged(Channel channel, long ssrc, int level)
+//    {
+//        // ActiveSpeakerDetector
+//        ActiveSpeakerDetector activeSpeakerDetector
+//            = getActiveSpeakerDetector();
+//
+//        if (activeSpeakerDetector != null)
+//        {
+//            activeSpeakerDetector.levelChanged(ssrc, level);
+//        }
+//    }
 
     /**
      * Starts a new <tt>EventDispatcher</tt> or notifies an existing one to fire

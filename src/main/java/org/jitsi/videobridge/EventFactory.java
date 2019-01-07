@@ -119,30 +119,6 @@ public class EventFactory
         = "org/jitsi/videobridge/IceUdpTransportManager/TRANSPORT_CHANGED";
 
     /**
-     * Creates a new "channel created" <tt>Event</tt>, which indicates the
-     * creation of a new COLIBRI channel.
-     * @param channel the newly created COLIBRI channel.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event channelCreated(Channel channel)
-    {
-        return new Event(CHANNEL_CREATED_TOPIC, makeProperties(channel));
-    }
-
-    /**
-     * Creates a new "channel expired" <tt>Event</tt>, which indicates the
-     * expiry of a COLIBRI channel.
-     * @param channel the expired COLIBRI channel.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event channelExpired(Channel channel)
-    {
-        return new Event(CHANNEL_EXPIRED_TOPIC, makeProperties(channel));
-    }
-
-    /**
      * Creates a new "conference created" <tt>Event</tt>, which indicates the
      * creation of a new COLIBRI conference.
      * @param conference the newly created COLIBRI conference.
@@ -241,37 +217,39 @@ public class EventFactory
 //        return new Event(STREAM_STARTED_TOPIC, makeProperties(rtpChannel));
 //    }
 
-    /**
-     * Creates a new "transport channel added" <tt>Event</tt>, which indicates
-     * that a COLIBRI channel was added to a Jitsi Videobridge TransportManager.
-     * @param channel the added COLIBRI channel.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event transportChannelAdded(
-            Channel channel)
-    {
-        return
-            new Event(
-                    TRANSPORT_CHANNEL_ADDED_TOPIC,
-                    makeProperties(channel));
-    }
+    //TODO(brian): re-add this?
+//    /**
+//     * Creates a new "transport channel added" <tt>Event</tt>, which indicates
+//     * that a COLIBRI channel was added to a Jitsi Videobridge TransportManager.
+//     * @param channel the added COLIBRI channel.
+//     *
+//     * @return the <tt>Event</tt> which was created.
+//     */
+//    public static Event transportChannelAdded(
+//            Channel channel)
+//    {
+//        return
+//            new Event(
+//                    TRANSPORT_CHANNEL_ADDED_TOPIC,
+//                    makeProperties(channel));
+//    }
 
-    /**
-     * Creates a new "transport channel removed" <tt>Event</tt>, which indicates
-     * that a COLIBRI channel was removed from a Jitsi Videobridge
-     * TransportManager.
-     * @param channel the removed COLIBRI channel.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event transportChannelRemoved(Channel channel)
-    {
-        return
-            new Event(
-                    TRANSPORT_CHANNEL_REMOVED_TOPIC,
-                    makeProperties(channel));
-    }
+    //TODO(brian): re-add this?
+//    /**
+//     * Creates a new "transport channel removed" <tt>Event</tt>, which indicates
+//     * that a COLIBRI channel was removed from a Jitsi Videobridge
+//     * TransportManager.
+//     * @param channel the removed COLIBRI channel.
+//     *
+//     * @return the <tt>Event</tt> which was created.
+//     */
+//    public static Event transportChannelRemoved(Channel channel)
+//    {
+//        return
+//            new Event(
+//                    TRANSPORT_CHANNEL_REMOVED_TOPIC,
+//                    makeProperties(channel));
+//    }
 
     /**
      * Creates a new "transport connected" <tt>Event</tt>, which indicates

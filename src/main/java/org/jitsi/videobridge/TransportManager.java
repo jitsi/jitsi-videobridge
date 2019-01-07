@@ -66,24 +66,9 @@ public abstract class TransportManager
         = new PortTracker(DEFAULT_MIN_PORT, DEFAULT_MAX_PORT);
 
     /**
-     * The <tt>PropertyChangeListener</tt> which listens to changes in the
-     * values of the properties of <tt>Channel</tt>-s in {@link #_channels}.
-     * Facilitates extenders.
-     */
-    private final PropertyChangeListener channelPropertyChangeListener
-        = new PropertyChangeListener()
-        {
-            @Override
-            public void propertyChange(PropertyChangeEvent ev)
-            {
-                channelPropertyChange(ev);
-            }
-        };
-
-    /**
      * The <tt>Channel</tt> which has initialized this instance
      */
-    private List<Channel> _channels = Collections.emptyList();
+//    private List<Channel> _channels = Collections.emptyList();
 
     /**
      * The {@code Object} which synchronizes the access to {@link #_channels}.
@@ -98,56 +83,13 @@ public abstract class TransportManager
     }
 
     /**
-     * Adds a <tt>Channel</tt> to the list of channels maintained by this
-     * <tt>TransportManager</tt>.
-     *
-     * @param channel the <tt>Channel</tt> to add.
-     * @return <tt>true</tt> if the <tt>Channel</tt> was added, <tt>false</tt>
-     * otherwise.
-     */
-    public boolean addChannel(Channel channel)
-    {
-        synchronized (_channelsSyncRoot)
-        {
-            if (!_channels.contains(channel))
-            {
-                // Implement _channels as a copy-on-write storage in order to
-                // reduce the synchronized blocks and, thus, the risks of
-                // deadlocks.
-                List<Channel> newChannels = new LinkedList<>(_channels);
-
-                newChannels.add(channel);
-                _channels = newChannels;
-
-                channel.addPropertyChangeListener(
-                        channelPropertyChangeListener);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Notifies this <tt>TransportManager</tt> that the value of a property of a
-     * <tt>Channel</tt> from {@link #_channels} has changed from a specific old
-     * value to a specific new value.
-     *
-     * @param ev a <tt>PropertyChangeEvent</tt> which specifies the name of the
-     * property which had its value changed and the old and new values of that
-     * property
-     */
-    protected void channelPropertyChange(PropertyChangeEvent ev)
-    {
-    }
-
-    /**
      * Releases the resources acquired by this <tt>TransportManager</tt> and
      * prepares it for garbage collection.
      */
     public void close()
     {
-        for (Channel channel : getChannels())
-            close(channel);
+//        for (Channel channel : getChannels())
+//            close(channel);
     }
 
     /**
@@ -158,33 +100,33 @@ public abstract class TransportManager
      * @return <tt>true</tt> if the <tt>Channel</tt> was removed, <tt>false</tt>
      * if the channel was not in the list.
      */
-    public boolean close(Channel channel)
-    {
-        if (channel == null)
-            return false;
-
-        channel.removePropertyChangeListener(channelPropertyChangeListener);
-
-        synchronized (_channelsSyncRoot)
-        {
-            List<Channel> newChannels = new LinkedList<>(_channels);
-            boolean removed = newChannels.remove(channel);
-
-            if (removed)
-            {
-                _channels = newChannels;
-
-                // Remove transport manager from parent conference and its
-                // corresponding channel bundle ID description.
-                if (getChannels().isEmpty())
-                {
-                    channel.getContent().getConference().closeTransportManager(
-                            this);
-                }
-            }
-            return removed;
-        }
-    }
+//    public boolean close(Channel channel)
+//    {
+//        if (channel == null)
+//            return false;
+//
+//        channel.removePropertyChangeListener(channelPropertyChangeListener);
+//
+//        synchronized (_channelsSyncRoot)
+//        {
+//            List<Channel> newChannels = new LinkedList<>(_channels);
+//            boolean removed = newChannels.remove(channel);
+//
+//            if (removed)
+//            {
+//                _channels = newChannels;
+//
+//                // Remove transport manager from parent conference and its
+//                // corresponding channel bundle ID description.
+//                if (getChannels().isEmpty())
+//                {
+//                    channel.getContent().getConference().closeTransportManager(
+//                            this);
+//                }
+//            }
+//            return removed;
+//        }
+//    }
 
     /**
      * Sets the values of the properties of a specific
@@ -281,46 +223,10 @@ public abstract class TransportManager
      * @return the list of <tt>Channel</tt>s maintained by this
      * <tt>TransportManager</tt>.
      */
-    protected List<Channel> getChannels()
-    {
-        return _channels;
-    }
-
-    /**
-     * Returns the <tt>DtlsControl</tt> allocated by this instance for use by a
-     * specific <tt>Channel</tt>.
-     *
-     * @param channel the <tt>Channel</tt> for which to return the
-     * <tt>DtlsControl</tt>.
-     * @return the <tt>DtlsControl</tt> allocated by this instance for use by a
-     * specific <tt>Channel</tt>.
-     */
-    public abstract SrtpControl getSrtpControl(Channel channel);
-
-//    /**
-//     * Gets the <tt>StreamConnector</tt> which represents the datagram sockets
-//     * allocated by this instance for the purposes of a specific
-//     * <tt>Channel</tt>.
-//     *
-//     * @param channel the <tt>Channel</tt> for which to return the
-//     * <tt>StreamConnector</tt>.
-//     * @return the <tt>StreamConnector</tt> which represents the datagram
-//     * sockets allocated by this instance for the purposes of a specific
-//     * <tt>Channel</tt>.
-//     */
-//    @Deprecated
-//    public abstract StreamConnector getStreamConnector(Channel channel);
-
-    /**
-     * Gets the <tt>MediaStreamTarget</tt> which represents the remote addresses
-     * to transmit RTP and RTCP to and from. A non-<tt>null</tt> remote address
-     * will disable latching on the associated component.
-     *
-     * @return the <tt>MediaStreamTarget</tt> which represents the remote
-     * addresses to transmit RTP and RTCP to and from
-     */
-    @Deprecated
-    public abstract MediaStreamTarget getStreamTarget(Channel channel);
+//    protected List<Channel> getChannels()
+//    {
+//        return _channels;
+//    }
 
     /**
      * Gets the XML namespace of the Jingle transport implemented by this

@@ -340,58 +340,59 @@ public class Health
 //        connect(aSctpConnection, bSctpConnection);
     }
 
-    /**
-     * Connects a pair of {@link Channel}s between themselves.
-     *
-     * @param a the {@code Channel} to connect to {@code b}
-     * @param b the {@code Channel} to connect to {@code a}
-     * @throws Exception
-     */
-    private static void connect(Channel a, Channel b)
-        throws Exception
-    {
-        IceUdpTransportPacketExtension aTransport = describeTransportManager(a);
+    //TODO(brian): need to reimplement this without channels
+//    /**
+//     * Connects a pair of {@link Channel}s between themselves.
+//     *
+//     * @param a the {@code Channel} to connect to {@code b}
+//     * @param b the {@code Channel} to connect to {@code a}
+//     * @throws Exception
+//     */
+//    private static void connect(Channel a, Channel b)
+//        throws Exception
+//    {
+//        IceUdpTransportPacketExtension aTransport = describeTransportManager(a);
+//
+//        // Fail as quickly as possible.
+//        if (aTransport == null)
+//        {
+//            throw new NullPointerException("Failed to describe transport.");
+//        }
+//
+//        IceUdpTransportPacketExtension bTransport = describeTransportManager(b);
+//
+//        // Fail as quickly as possible.
+//        if (bTransport == null)
+//        {
+//            throw new NullPointerException("Failed to describe transport.");
+//        }
+//
+//        b.setTransport(aTransport);
+//        a.setTransport(bTransport);
+//    }
 
-        // Fail as quickly as possible.
-        if (aTransport == null)
-        {
-            throw new NullPointerException("Failed to describe transport.");
-        }
-
-        IceUdpTransportPacketExtension bTransport = describeTransportManager(b);
-
-        // Fail as quickly as possible.
-        if (bTransport == null)
-        {
-            throw new NullPointerException("Failed to describe transport.");
-        }
-
-        b.setTransport(aTransport);
-        a.setTransport(bTransport);
-    }
-
-    /**
-     * Builds a {@link IceUdpTransportPacketExtension} representation of the
-     * {@link TransportManager} of a specific {@link Channel}.
-     *
-     * @param channel the {@code Channel} whose {@code TransportManager} is to
-     * be represented as a {@code IceUdpTransportPacketExtension}
-     * @return a {@code IceUdpTransportPacketExtension} representation of the
-     * {@code TransportManager} of {@code channel}
-     */
-    //TODO(brian): get rid of this or fix it
-    private static IceUdpTransportPacketExtension describeTransportManager(
-            Channel channel)
-    {
+//    /**
+//     * Builds a {@link IceUdpTransportPacketExtension} representation of the
+//     * {@link TransportManager} of a specific {@link Channel}.
+//     *
+//     * @param channel the {@code Channel} whose {@code TransportManager} is to
+//     * be represented as a {@code IceUdpTransportPacketExtension}
+//     * @return a {@code IceUdpTransportPacketExtension} representation of the
+//     * {@code TransportManager} of {@code channel}
+//     */
+    //TODO(brian): do we still need this
+//    private static IceUdpTransportPacketExtension describeTransportManager(
+//            Channel channel)
+//    {
 //        ColibriConferenceIQ.ChannelCommon iq
 //            = (channel instanceof SctpConnection)
 //                ? new ColibriConferenceIQ.SctpConnection()
 //                : new ColibriConferenceIQ.Channel();
-        ColibriConferenceIQ.ChannelCommon iq = new ColibriConferenceIQ.Channel();
-
-        channel.getTransportManager().describe(iq);
-        return iq.getTransport();
-    }
+//        ColibriConferenceIQ.ChannelCommon iq = new ColibriConferenceIQ.Channel();
+//
+//        channel.getTransportManager().describe(iq);
+//        return iq.getTransport();
+//    }
 
     /**
      * Generates a pseudo-random {@code Endpoint} ID which is not guaranteed to

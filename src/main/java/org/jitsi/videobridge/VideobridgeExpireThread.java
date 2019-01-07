@@ -62,12 +62,18 @@ class VideobridgeExpireThread
      */
     public static final String EXPIRE_CHECK_SLEEP_SEC
             = "org.jitsi.videobridge.EXPIRE_CHECK_SLEEP_SEC";
+    /**
+     * The default number of seconds of inactivity after which <tt>Channel</tt>s
+     * expire.
+     * NOTE(brian): move from Channel
+     */
+    public static final int DEFAULT_EXPIRE = 60;
 
     /**
      * The default value of the {@link #EXPIRE_CHECK_SLEEP_SEC} property.
      */
     private static final int EXPIRE_CHECK_SLEEP_SEC_DEFAULT =
-            Channel.DEFAULT_EXPIRE;
+            DEFAULT_EXPIRE;
 
     /**
      * The {@link PeriodicRunnable} registered with {@link #EXECUTOR} which is
@@ -171,28 +177,28 @@ class VideobridgeExpireThread
             {
                 EXPIRE_EXECUTOR.execute(conference::safeExpire);
             }
-            else
-            {
-                for (Content content : conference.getContents())
-                {
-                     // The Contents will live an iteration more than the
-                     // Channels.
-                    if (content.shouldExpire())
-                    {
-                        EXPIRE_EXECUTOR.execute(content::safeExpire);
-                    }
-                    else
-                    {
-                        for (Channel channel : content.getChannels())
-                        {
-                            if (channel.shouldExpire())
-                            {
-                                EXPIRE_EXECUTOR.execute(channel::safeExpire);
-                            }
-                        }
-                    }
-                }
-            }
+//            else
+//            {
+//                for (Content content : conference.getContents())
+//                {
+//                     // The Contents will live an iteration more than the
+//                     // Channels.
+//                    if (content.shouldExpire())
+//                    {
+//                        EXPIRE_EXECUTOR.execute(content::safeExpire);
+//                    }
+//                    else
+//                    {
+//                        for (Channel channel : content.getChannels())
+//                        {
+//                            if (channel.shouldExpire())
+//                            {
+//                                EXPIRE_EXECUTOR.execute(channel::safeExpire);
+//                            }
+//                        }
+//                    }
+//                }
+//            }
         }
     }
 }

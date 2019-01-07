@@ -270,6 +270,14 @@ public class ColibriShim {
             }
         }
 
+        public Collection<ContentShim> getContents()
+        {
+            synchronized (contents)
+            {
+                return new ArrayList<>(contents.values());
+            }
+        }
+
         public AbstractEndpoint getOrCreateEndpoint(String endpointId)
         {
             return conference.getOrCreateEndpoint(endpointId);
@@ -364,6 +372,14 @@ public class ColibriShim {
             videobridge.createConference(focus, confName, confGid);
 
             return conference;
+        }
+    }
+
+    public Collection<ConferenceShim> getConferences()
+    {
+        synchronized (conferenceShims)
+        {
+            return new ArrayList<>(conferenceShims.values());
         }
     }
 

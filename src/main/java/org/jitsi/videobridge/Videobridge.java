@@ -407,19 +407,14 @@ public class Videobridge
     {
         int channelCount = 0;
 
-        for (Conference conference : getConferences())
+        for (ColibriShim.ConferenceShim conferenceShim : colibriShim.getConferences())
         {
-            if (conference != null && !conference.isExpired())
+            for (ColibriShim.ContentShim contentShim : conferenceShim.getContents())
             {
-                for (Content content : conference.getContents())
-                {
-                    if (content != null && !content.isExpired())
-                    {
-                        channelCount += content.getChannelCount();
-                    }
-                }
+                channelCount += contentShim.getChannels().size();
             }
         }
+
         return channelCount;
     }
 
