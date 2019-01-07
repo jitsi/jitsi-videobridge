@@ -142,8 +142,6 @@ public class VP8FrameProjection
      */
     VP8FrameProjection makeNext(@NotNull RawPacket firstPacketOfFrame, long nowMs)
     {
-        // assert vp8Frame == null || vp8Frame.isLast();
-
         // If it's not (a partially transmitted frame) and this is a quality
         // that we want to forward, it is now time to make a new source frame
         // descriptor.
