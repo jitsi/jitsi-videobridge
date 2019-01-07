@@ -25,10 +25,10 @@ import org.jitsi.nlj.transform.node.Node
  * (so it handles already encrypted DTLS packets).
  */
 class DtlsSender(
-        private val dtlsStack: DtlsStack
+    private val dtlsStack: DtlsStack
 ) : Node("DTLS sender") {
     init {
-        dtlsStack.onOutgoingProtocolData =  { dtlsPackets -> next(dtlsPackets) }
+        dtlsStack.onOutgoingProtocolData =  ::next
     }
 
     override fun doProcessPackets(p: List<PacketInfo>) {
