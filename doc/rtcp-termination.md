@@ -1,221 +1,94 @@
-Introduction
-============
-
-NOTE: This document is outdated atm.
-
-Jitsi Videobridge by default relays all RTCP traffic end-to-end, which
-is causing endpoint adaptivity to adjust to the worst recipient.
-
-This document describes how to make Jitsi Videobridge terminate most
-of that signalling and generate its own. We basically do that by
-filtering sender reports, receiver reports and REMB messages.
-
-Things like FIR requests (that basically just ask for a new key frame)
-and NACKs (that request specific packet retransmission) are left
-untouched and re-transmitted.
-
-Understanding how Chrome behaves (with respect to RTCP feedback)
-================================================================
-
-We profiled RTCP traffic from Chrome and, apart from the core RTCP
-reports (SRs, RRs, SDES and BYEs defined in RFC 3550), Chrome
-understands and reacts to a bunch of other RTCP packets, in accordance
-with [I-D.ietf-rtcp-rtp-usage]:
-
-- Picture Loss Indication                              (from RFC 4585)
-- Slice Loss Indication                                (from RFC 4585)
-- Negative Acknowledgments                             (from RFC 4585)
-- Reference Picture Selection Indication               (from RFC 4585)
-- Full Intra Request                                   (from RFC 5104)
-- Temporal-Spatial Trade-Off Request                   (from RFC 5104)
-- Temporary Maximum Media Stream Bit Rate Request      (from RFC 5104)
-- Temporary Maximum Media Stream Bit Rate Notification (from RFC 5104)
-- Extended Jitter Reports                              (from RFC 5450)
-- Receiver Reference Time XR Block                     (from RFC 3611)
-- DLRR XR Block                                        (from RFC 3611)
-- VoIP Metrics XR Block                                (from RFC 3611)
-- Receiver Estimated Maximum Bitrate (from draft-alvestrand-rmcat-remb-03) 
-
-Based on our tests, Chrome actively sends:
-
-- Non-compound RRs.
-- Compound RTCP packets that begin with an SR and that include an
-  SDES. If the compound RTCP packet refers to a video stream, then it
-  also includes a REMB and it may include a NACK or a PLI, if there
-  was a lost frame.
-
-So, we want to:
-
-- Forward NACKs/PLIs and SRs from the peers (stripped off of any
-  receiver feedback)
-- Mute RRs (and receiver feedback in SRs)
-- Generate RRs with REMBs. The exact values of the RR and REMB would
-  be defined by the active RTCP termination strategy.
-
-Implementation
-==============
-
-We implemented that in the following way :
-
-- Abstracted away the RTCP report generation functionality from
-  `RTCPTransmitter`. We introduced a new interface called
-  `RTCPReportBuilder` whose implementations are plugged into the
-  `RTCPTransmitter` (in FMJ). The default implementation is called
-  `DefaultRTCPReportBuilderImpl`. It lives in FMJ and implements the
-  current report generation behavior of FMJ.
-  
-- libjitsi and/or other parts of the video bridge can override the
-  default RTCP report generation behavior by parametrizing the RTP
-  session manager (in FMJ) with an implementation of the
-  `RTCPReportBuilder` interface. Keep in mind that in the JVB each content
-  has its own RTP translator.
-  
-- Created an interface called `RTCPPacketTransformer` whose purpose is
-  to inspect and/or modify and/or eliminate incoming RTCP packets. It
-  can be thought of as a `PacketTransformer` for incoming RTCP packets.
-  
-- Created an interface called `RTCPTerminationStrategy` containing two
-  methods 1. `getRTCPReportBuilder()` and 2. `getRTCPPacketTransformer()`.
-  
-  `RTCPTerminationStrategy` implementations are the "chefs d'orchestre"
-  of RTCP termination. They are meant to 1. optionally generate
-  arbitrary RTCP packets, and 2. inspect and/or modify and/or
-  eliminate incoming RTCP packets, through the `RTCPReportBuilder` and
-  the `RTCPPacketTransformer` instances returned by their respective
-  methods.
-  
-- Created an RTCP packet parser/assembler with support for the RTCP
-  packets that are of interest to us : SRs, RRs, SDES, BYEs, REMBs,
-  NACKs and PLIs.
-  
-- Created an RTCP transformer engine that's plugged into each
-  `MediaStream` transform engine chain and that feeds incoming RTCP
-  packets to the `RTCPPacketTransformer` of the currently active
-  `RTCPTerminationStrategy` class for inspection and/or modification
-  and/or elimination.
-
-We've also implemented 4 simple strategies (`RTCPTerminationStrategy`
-implementations) :
-
-- `MaxThroughputRTCPTerminationStrategy` which maximizes endpoint
-  throughput. It does that by sending REMB messages with the largest
-  possible exp and mantissa values. This strategy is only meant to be
-  used in tests.
-
-- `MinThroughputRTCPTerminationStrategy` which minimizes endpoint
-  throughput. It does that by sending REMB messages with the smallest
-  possible exp and mantissa values. This strategy is only meant to be
-  used in tests.
-
-- `SilentBridgeRTCPTerminationStrategy` which forwards whatever it
-  receives from the network but it doesn't generate anything. This
-  strategy will be useful for conferences for up to 2 participants.
-
-- `PassthroughRTCPTerminationStrategy` which forwards whatever it
-  receives from the network and it also generates RTCP receiver
-  reports using the FMJ built-in algorithm. This is the default
-  behavior, at least for now.
-
-Highest quality RTCP termination strategy
------------------------------------------
-
-We've also a strategy called `HighestQualityRTCPTerminationStrategy`,
-that is to be used in production environments and that works in the
-following way :
-
-For each media sender we can calculate a reverse map of all its
-receivers and the feedback they report. From this the bridge can
-calculate a reverse map map (not a typo) like this:
-
-    <media sender, <media receiver, feedback>>
-
-For example, suppose we have a conference of 4 endpoints like in the
-figure bellow :
-
-       +---+      +-------------+      +---+
-       | A |<---->|             |<---->| B |
-       +---+      |    Jitsi    |      +---+
-                  | Videobridge |
-       +---+      |             |      +---+
-       | C |<---->|             |<---->| D |
-       +---+      +-------------+      +---+
-       
-    Figure 1: Sample video conference
-
-The reverse map map would have the following form :
-
-    <A, <B, feedback of B>>
-    <A, <C, feedback of C>>
-    ...
-    <B, <A, feedback of A>>
-    <B, <C, feedback of C>>
-    ...
-
-In other words, for each endpoint that sends video, the bridge
-calculates the following picture :
-
-                   +-------------+-data->+---+
-                   |             |       | B | RANK#3
-                   |             |<-feed-+---+
-                   |             |
-       +---+-data->|    Jitsi    |-data->+---+
-       | A |       | Videobridge |       | D | RANK#1
-       +---+<-feed-|             |<-feed-+---+
-                   |             |
-                   |             |-data->+---+
-                   |             |       | C | RANK#2
-                   +-------------+<-feed-+---+
-
-    Figure 2: Partial view of the conference. A sends media and receives 
-              feedback. B, D, C receive media and send feedback.
-
-This calculation is not instantaneous, so it takes place ONLY when we
-the bridge decides to send RTCP feedback, and not, for example, when
-we inspect/modify incoming RTCP packets.
-
-We do that by keeping a feedback cache that holds the most recent
-`RTCPReportBlock[]` and `RTCPREMBPackets` grouped by media receiver
-SSRC. So, at any given moment we have the last reported feedback for
-all the media receivers in the conference, and from that we can
-calculate the above reverse map map.
-
-What's most interesting, maybe, is the score logic :
+## Introduction
 
 
-    double score = feedback.remb.mantissa * Math.pow(2, feedback.remb.exp);
-    if (feedback.rr != null) {
-      score = ((100 - feedback.rr.lost) / 100) * score;
-    }
+The Jitsi Videobridge (JVB) is a Selective Forwarding Unit (SFU) (or a Selective
+Forwarding Middlebox as per [[RFC7667]] nomenclature) and as such it
+_terminates_ RTCP [[RFC3550]] traffic; the endpoints of a group call are
+"tricked" to believe that that are in a one-on-one call with the JVB. This has
+the notable desirable property that _bad_ down-link conditions at a particular
+receiver do not typically affect the sending bitrate of the senders because,
+from their perspective, there is only one receiver (the JVB) with a presumably
+good down-link.
 
+The JVB, in its turn, estimates its available up-link bandwidth [[BWE]] towards
+a particular receiver (or, symmetrically, the available down-link of a
+particular receiver) and it distributes it [[BWD]] among the several video
+tracks that the several senders of a group-call are sharing. This results in a
+bitrate allocation for each track of each sender for each receiver in a call.
+Each video track is _projected_ [[RFC7667], Section-3.7] differently onto each
+receiver, depending on its bitrate allocation and its adaptivity features such
+as simulcast [[SIMULCAST]], scalable video coding [[SVC]] and last-N [[LASTN]].
 
-The score is basically the available bandwidth estimation after taking
-into consideration the packet losses.
+While RTCP termination and bandwidth distribution are essential group
+conferencing features they are not desirable and they may degrade the quality of
+service in one-on-one calls. Unfortunately, there is no way to them at the
+moment, i.e. it is not possible to make the JVB behave as a translator
+[[RFC7667]], not even for one-on-one calls. Due to this limitation it is
+recommended to use a TURN server [[TURN]] to relay one-to-one calls for optimal
+conferencing experience.
 
-For each media sender and after having calculated the score for each
-media receiver, we consider only the Nth percentile to find the best
-score and we then report that one.
+In the next few paragraphs, we'll describe how RTCP termination works exactly
+and which components are responsible for which task. For an overview of the
+media transport aspects of the WebRTC framework and RTP usage
+[[I-D.ietf-rtcweb-rtp-usage]] is highly recommended.
 
-Configuration
--------------
+## RTCP for bandwidth estimations
 
-The current active RTCP termination strategy can be defined in the
-Jitsi Videobridge configuration file by adding a configuration
-property that can be used to specify the RTCP termination strategy to
-be used by the bridge:
+RTCP Sender Reports (SRs) [[RFC3550], Section 6.4.1] are used by media senders
+to compute RTT and by media receivers for A/V syncing and for computing packet
+loss. In its media sender role the JVB projects SSRCs for bandwidth adaptivity,
+it needs to produce its own SRs. RTCP SR generation takes place in the various
+`AdaptiveTrackProjectionContext` implementations (see, for example,
+`BasicAdaptiveTrackProjectionContext#rewriteRtcp`).
 
-       org.jitsi.videobridge.rtcp.strategy=STRATEGY_FULLY_QUALIFIED_NAME
+For estimating the available up-link bandwidth towards a particular receiver
+(or, symmetrically, the available down-link bandwidth of a particular receiver)
+the JVB expects from the receiver Receiver Reports (RRs) and Transport-wide
+Congestion Control (TCCs) feedback
+[[I-D.holmer-rmcat-transport-wide-cc-extensions]]. Receiver Estimated Maximum
+Bitrate (REMBs) [[I-D.draft-alvestrand-rmcat-remb]]
+can be used instead of TCCs if the delay-based controller is configured to run
+on the receiving endpoint, but that's not the default nowadays.
 
-Strategies can be swapped-in/out dynamically through COLIBRI which can
-be useful both for testing (i.e. we change on the fly the active
-strategy to observe the impact of the change). To enable, for example,
-the highest quality RTCP termination strategy, the focus of a colibri
-conference can execute:
+The JVB (acting as a sender) consumes the TCC packets and feeds them to the
+delay-based bandwidth estimator of our GCC implementation in order to produce a
+bandwidth estimation [[BWE]]. The TCC packets (along with RRs and REMBs) are
+intercepted in `MediaStreamStatsImpl` where listeners can register and receive
+notifications about incoming packets. They are removed from incoming RTCP
+compound packets by the `RTCPReceiverFeedbackTermination#reverseTransform`.
 
-    focus.setRTCPTerminationStrategy('org.jitsi.impl.neomedia.rtcp.' +
-	      'termination.strategies.HighestQualityRTCPTerminationStrategy')
+As a media receiver the JVB reports packet loss information back to the sending
+endpoints. RTCP SR consumption for packet loss computation happens in FMJ, which
+is the reason why we always let RTCP SRs to go through the translator core of
+the JVB (see `VideoChannel#rtpTranslatorWillWrite()`). The JVB produces RRs and 
+REMBs (if the delay-based controller runs at the receiver) at a regular pace in
+`RTCPReceiverFeedbackTermination`.
 
-using the JavaScript Console, for example. The other 4 strategies
-mentioned in the previous update can be enabled/disabled similarly :
+## Other RTCP
 
-    focus.setRTCPTerminationStrategy('org.jitsi.impl.neomedia.rtcp.' +
-	      'termination.strategies.STRATEGY_NAME')
+Full Intra Request (FIRs) and Picture Loss Indication (PLIs) [[RFC5104]] are 
+intercepted in `RTCPReceiverFeedbackTermination` and the bridge generates its 
+own PLI request (which is throttled), if the receiving endpoint supports PLIs, 
+or an FIR otherwise. The JVB may also decide to send a PLI/FIR when specific
+events happen, such as a participant A has gone on-stage on a participant B.
+
+Negative ACKnoledgements (NACKs) [[RFC4585]] are intercepted in 
+`RTXTransformer#reverseTransform`. Once a NACK packet is handled (i.e. the 
+reportedly missing packets have been re-transmitted, if they're in the egress 
+packet cache), it's removed from the RTCP compound packet and the compound 
+packet is let through. The bridge will generate its own NACKs when it detects a
+whole in the sequence numbers. This is handled by the `RetransmissionRequester`.
+
+[SIMULCAST]: simulcast.md
+[LASTN]: last-n.md
+[SVC]: svc.md
+[BWE]: bandwidth-estimations.md
+[BWD]: bandwidth-distribution.md
+[TURN]: https://github.com/jitsi/jitsi-meet/blob/master/doc/turn.md
+[RFC7667]: https://tools.ietf.org/html/rfc7667
+[RFC3550]: https://tools.ietf.org/html/rfc3550
+[RFC4585]: https://tools.ietf.org/html/rfc4585
+[RFC5104]: https://tools.ietf.org/html/rfc5104
+[I-D.ietf-rtcweb-rtp-usage]: https://tools.ietf.org/html/draft-ietf-rtcweb-rtp-usage-26
+[I-D.holmer-rmcat-transport-wide-cc-extensions]: https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01
+[I-D.draft-alvestrand-rmcat-remb]: https://tools.ietf.org/html/draft-alvestrand-rmcat-remb-03
