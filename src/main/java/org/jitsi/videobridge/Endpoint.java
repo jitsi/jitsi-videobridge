@@ -125,20 +125,6 @@ public class Endpoint
     }
 
     /**
-     * Returns this {@link Endpoint}'s {@link SctpConnection}, if any. Note
-     * that this should NOT be used for sending messages -- use the abstract
-     * {@link EndpointMessageTransport} instead.
-     *
-     * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt> or
-     * <tt>null</tt> otherwise.
-     */
-    @Deprecated
-    public SctpConnection getSctpConnection()
-    {
-        return getMessageTransport().getSctpConnection();
-    }
-
-    /**
      * @return the {@link Set} of selected endpoints, represented as a set of
      * endpoint IDs.
      */
@@ -221,7 +207,9 @@ public class Endpoint
     @Override
     protected void maybeExpire()
     {
-        if (getSctpConnection() == null && getChannelCount(null) == 0)
+        //TODO(brian): need to reimplement the expire logic
+
+        if (getChannelCount(null) == 0)
         {
             expire();
         }
@@ -347,20 +335,21 @@ public class Endpoint
      * @param sctpConnection the <tt>SctpConnection</tt> to be bound to this
      * <tt>Endpoint</tt>.
      */
-    void setSctpConnection(SctpConnection sctpConnection)
-    {
-        EndpointMessageTransport messageTransport
-            = getMessageTransport();
-        if (messageTransport != null)
-        {
-            messageTransport.setSctpConnection(sctpConnection);
-        }
-
-        if (getSctpConnection() == null)
-        {
-            maybeExpire();
-        }
-    }
+//    @Deprecated
+//    void setSctpConnection(SctpConnection sctpConnection)
+//    {
+//        EndpointMessageTransport messageTransport
+//            = getMessageTransport();
+//        if (messageTransport != null)
+//        {
+//            messageTransport.setSctpConnection(sctpConnection);
+//        }
+//
+//        if (getSctpConnection() == null)
+//        {
+//            maybeExpire();
+//        }
+//    }
 
     /**
      * Checks whether a WebSocket connection with a specific password string

@@ -245,21 +245,21 @@ public class EndpointConnectionStatus
                 .max().orElse(0);
 
         // Also check SctpConnection
-        SctpConnection sctpConnection = endpoint.getSctpConnection();
-        if (sctpConnection != null)
-        {
-            long lastSctpActivity
-                = sctpConnection.getLastTransportActivityTime();
-            if (lastSctpActivity > lastActivity)
-            {
-                lastActivity = lastSctpActivity;
-            }
-            long creationTimestamp = sctpConnection.getCreationTimestamp();
-            if (creationTimestamp > mostRecentChannelCreated)
-            {
-                mostRecentChannelCreated = creationTimestamp;
-            }
-        }
+//        SctpConnection sctpConnection = endpoint.getSctpConnection();
+//        if (sctpConnection != null)
+//        {
+//            long lastSctpActivity
+//                = sctpConnection.getLastTransportActivityTime();
+//            if (lastSctpActivity > lastActivity)
+//            {
+//                lastActivity = lastSctpActivity;
+//            }
+//            long creationTimestamp = sctpConnection.getCreationTimestamp();
+//            if (creationTimestamp > mostRecentChannelCreated)
+//            {
+//                mostRecentChannelCreated = creationTimestamp;
+//            }
+//        }
 
         //TODO(brian): this looks at channel activity times, which are now gone.  need to re-implement
         // some form of that and have this code look there.  for now, hard-coding things to active

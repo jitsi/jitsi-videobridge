@@ -294,6 +294,7 @@ public class Health
     private static void connect(Endpoint a, Endpoint b)
         throws Exception
     {
+        //TODO(brian): need to reimplement all this
         // RtpChannel
         for (MediaType mediaType : MEDIA_TYPES)
         {
@@ -320,23 +321,23 @@ public class Health
         }
 
         // SctpConnection
-        SctpConnection aSctpConnection = a.getSctpConnection();
-
-        // Fail as quickly as possible.
-        if (aSctpConnection == null)
-        {
-            throw new NullPointerException("aSctpConnection is null");
-        }
-
-        SctpConnection bSctpConnection = b.getSctpConnection();
-
-        // Fail as quickly as possible.
-        if (bSctpConnection == null)
-        {
-            throw new NullPointerException("bSctpConnection is null");
-        }
-
-        connect(aSctpConnection, bSctpConnection);
+//        SctpConnection aSctpConnection = a.getSctpConnection();
+//
+//        // Fail as quickly as possible.
+//        if (aSctpConnection == null)
+//        {
+//            throw new NullPointerException("aSctpConnection is null");
+//        }
+//
+//        SctpConnection bSctpConnection = b.getSctpConnection();
+//
+//        // Fail as quickly as possible.
+//        if (bSctpConnection == null)
+//        {
+//            throw new NullPointerException("bSctpConnection is null");
+//        }
+//
+//        connect(aSctpConnection, bSctpConnection);
     }
 
     /**

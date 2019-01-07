@@ -56,8 +56,6 @@ import org.jitsi.util.Logger; // Disambiguation.
 @Deprecated
 public class SctpConnection
     extends Channel
-    implements SctpDataCallback,
-               SctpSocket.NotificationListener
 {
     /**
      * Generator used to track debug IDs.
@@ -155,7 +153,7 @@ public class SctpConnection
     /**
      * Data channels mapped by SCTP stream identified(sid).
      */
-    private final Map<Integer,WebRtcDataStream> channels = new HashMap<>();
+//    private final Map<Integer,WebRtcDataStream> channels = new HashMap<>();
 
     /**
      * Debug ID used to distinguish SCTP sockets in packet logs.
@@ -177,7 +175,7 @@ public class SctpConnection
      * List of <tt>WebRtcDataStreamListener</tt>s that will be notified whenever
      * new WebRTC data channel is opened.
      */
-    private final List<WebRtcDataStreamListener> listeners = new ArrayList<>();
+//    private final List<WebRtcDataStreamListener> listeners = new ArrayList<>();
 
     /**
      * There's the SCTP socket accept task running as the first task in
@@ -285,21 +283,21 @@ public class SctpConnection
      * @param listener the <tt>WebRtcDataStreamListener</tt> to be added to the
      * listeners list.
      */
-    public void addChannelListener(WebRtcDataStreamListener listener)
-    {
-        if (listener == null)
-        {
-            throw new NullPointerException("listener");
-        }
-        else
-        {
-            synchronized (listeners)
-            {
-                if (!listeners.contains(listener))
-                    listeners.add(listener);
-            }
-        }
-    }
+//    public void addChannelListener(WebRtcDataStreamListener listener)
+//    {
+//        if (listener == null)
+//        {
+//            throw new NullPointerException("listener");
+//        }
+//        else
+//        {
+//            synchronized (listeners)
+//            {
+//                if (!listeners.contains(listener))
+//                    listeners.add(listener);
+//            }
+//        }
+//    }
 
     /**
      * {@inheritDoc}
@@ -395,25 +393,25 @@ public class SctpConnection
      * <tt>null</tt> if there are no <tt>WebRtcDataStreamListener</tt>s added to
      * this instance
      */
-    private WebRtcDataStreamListener[] getChannelListeners()
-    {
-        WebRtcDataStreamListener[] ls;
-
-        synchronized (listeners)
-        {
-            if (listeners.isEmpty())
-            {
-                ls = null;
-            }
-            else
-            {
-                ls
-                    = listeners.toArray(
-                            new WebRtcDataStreamListener[listeners.size()]);
-            }
-        }
-        return ls;
-    }
+//    private WebRtcDataStreamListener[] getChannelListeners()
+//    {
+//        WebRtcDataStreamListener[] ls;
+//
+//        synchronized (listeners)
+//        {
+//            if (listeners.isEmpty())
+//            {
+//                ls = null;
+//            }
+//            else
+//            {
+//                ls
+//                    = listeners.toArray(
+//                            new WebRtcDataStreamListener[listeners.size()]);
+//            }
+//        }
+//        return ls;
+//    }
 
     /**
      * Select a WebRTC data channel that should be used for writing by default.
@@ -430,38 +428,36 @@ public class SctpConnection
      * @return a writeable <tt>WebRtcDataStream</tt> if it's ready or
      * <tt>null</tt> otherwise.
      */
-    public WebRtcDataStream getDefaultDataStream()
-    {
-        synchronized (syncRoot)
-        {
-            if (sctpSocket != null)
-            {
-                // Tries to elect a stream with the highest client SID
-                WebRtcDataStream highestClientSid
-                    = channels.values()
-                        .stream()
-                        .filter(
-                            s -> isInitiator()
-                                ? s.getSid() % 2 == 1
-                                : s.getSid() % 2 == 0)
-                        .max(Comparator.comparingInt(WebRtcDataStream::getSid))
-                        .orElse(null);
-
-                if (highestClientSid != null)
-                {
-                    return highestClientSid;
-                }
-
-                // Return the highest SID (probably will be the JVB's one)
-                return channels.values()
-                    .stream()
-                    .max(Comparator.comparingInt(WebRtcDataStream::getSid))
-                    .orElse(null);
-            }
-
-            return null;
-        }
-    }
+//    public WebRtcDataStream getDefaultDataStream()
+//        throws IOException
+//    {
+//        WebRtcDataStream def;
+//
+//        synchronized (syncRoot)
+//        {
+//            if (sctpSocket == null)
+//            {
+//                def = null;
+//            }
+//            else
+//            {
+//                // Channel that runs on sid 0
+//                def = channels.get(0);
+//                if (def == null)
+//                    def = openChannel(0, 0, 0, 0, "default");
+//
+//                // Pawel Domas: Must be acknowledged before use.
+//                // XXX Lyubomir Marinov: We're always sending ordered. According
+//                // to "WebRTC Data Channel Establishment Protocol", we can start
+//                // sending messages containing user data after the
+//                // DATA_CHANNEL_OPEN message has been sent without waiting for
+//                // the reception of the corresponding DATA_CHANNEL_ACK message.
+////                if (!def.isAcknowledged())
+////                    def = null;
+//            }
+//        }
+//        return def;
+//    }
 
     /**
      * Returns <tt>true</tt> if this <tt>SctpConnection</tt> is connected to the
@@ -559,70 +555,77 @@ public class SctpConnection
 //        }
     }
 
-    /**
-     * Notifies listeners about WebRTC data channel opened event.
-     *
-     * This notification is executed from the {@link #sctpDispatcher}, so that
-     * it's in sync with how the SCTP packets are processed allowing any data
-     * callbacks to be set immediately when the data channel is open without
-     * missing any packets. When the {@link #MSG_OPEN_CHANNEL} message arrives
-     * no further packets are processed until all listener have been notified.
-     *
-     * @param dataChannel
-     */
-    private void notifyChannelOpened(final WebRtcDataStream dataChannel)
-    {
-        if (!isExpired())
-        {
-            WebRtcDataStreamListener[] ls = getChannelListeners();
+//    /**
+//     * Submits {@link #notifyChannelOpenedInEventDispatcher(WebRtcDataStream)}
+//     * to {@link #eventDispatcher} for asynchronous execution.
+//     *
+//     * @param dataChannel
+//     */
+//    private void notifyChannelOpened(final WebRtcDataStream dataChannel)
+//    {
+//        if (!isExpired())
+//        {
+//            eventDispatcher.execute(
+//                () -> notifyChannelOpenedInEventDispatcher(dataChannel));
+//        }
+//    }
 
-            if (ls != null)
-            {
-                for (WebRtcDataStreamListener l : ls)
-                {
-                    l.onChannelOpened(this, dataChannel);
-                }
-            }
-        }
-    }
+//    private void notifyChannelOpenedInEventDispatcher(
+//            WebRtcDataStream dataChannel)
+//    {
+//        // When executing asynchronously in eventDispatcher, it is technically
+//        // possible that this SctpConnection may have expired by now.
+//        if (!isExpired())
+//        {
+//            WebRtcDataStreamListener[] ls = getChannelListeners();
+//
+//            if (ls != null)
+//            {
+//                for (WebRtcDataStreamListener l : ls)
+//                {
+//                    l.onChannelOpened(this, dataChannel);
+//                }
+//            }
+//        }
+//    }
 
     /**
      * Submits {@link #notifySctpConnectionReadyInEventDispatcher()} to
      * {@link #eventDispatcher} for asynchronous execution.
      */
-    protected void notifySctpConnectionReady()
-    {
-        if (!isExpired())
-        {
-            eventDispatcher.execute(
-                this::notifySctpConnectionReadyInEventDispatcher);
-        }
-    }
+//    protected void notifySctpConnectionReady()
+//    {
+//        if (!isExpired())
+//        {
+//            eventDispatcher.execute(
+//                this::notifySctpConnectionReadyInEventDispatcher);
+//        }
+//    }
 
     /**
      * Notifies the <tt>WebRtcDataStreamListener</tt>s added to this instance
      * that this <tt>SctpConnection</tt> is ready i.e. it is connected to the
      * remote peer and operational.
      */
-    private void notifySctpConnectionReadyInEventDispatcher()
-    {
-        /*
-         * When executing asynchronously in eventDispatcher, it is technically
-         * possible that this SctpConnection may have expired by now.
-         */
-        if (!isExpired() && isReady())
-        {
-            WebRtcDataStreamListener[] ls = getChannelListeners();
-
-            if (ls != null)
-            {
-                for (WebRtcDataStreamListener l : ls)
-                {
-                    l.onSctpConnectionReady(this);
-                }
-            }
-        }
-    }
+//    private void notifySctpConnectionReadyInEventDispatcher()
+//    {
+//        /*
+//         * When executing asynchronously in eventDispatcher, it is technically
+//         * possible that this SctpConnection may have expired by now.
+//         */
+//        if (!isExpired() && isReady())
+//        {
+//            WebRtcDataStreamListener[] ls = getChannelListeners();
+//
+//            if (ls != null)
+//            {
+//                for (WebRtcDataStreamListener l : ls)
+//                {
+//                    l.onSctpConnectionReady(this);
+//                }
+//            }
+//        }
+//    }
 
     /**
      * Handles a control packet.
@@ -630,14 +633,14 @@ public class SctpConnection
      * @param data raw packet data that arrived on control PPID.
      * @param sid SCTP stream id on which the data has arrived.
      */
-    private void onCtrlPacket(byte[] data, int sid)
-        throws IOException
-    {
-        synchronized (syncRoot)
-        {
-            onCtrlPacketNotSynchronized(data, sid);
-        }
-    }
+//    private void onCtrlPacket(byte[] data, int sid)
+//        throws IOException
+//    {
+//        synchronized (syncRoot)
+//        {
+//            onCtrlPacketNotSynchronized(data, sid);
+//        }
+//    }
 
     /**
      * Handles a control packet. Should only be called while holding the lock on
@@ -646,126 +649,121 @@ public class SctpConnection
      * @param data raw packet data that arrived on control PPID.
      * @param sid SCTP stream id on which the data has arrived.
      */
-    private void onCtrlPacketNotSynchronized(byte[] data, int sid)
-        throws IOException
-    {
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
-
-        if (messageType == MSG_CHANNEL_ACK)
-        {
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(Logger.Category.STATISTICS,
-                             "sctp_ack_received," + getLoggingId()
-                                + " sid=" + sid);
-            }
-            // Open channel ACK
-            WebRtcDataStream channel = channels.get(sid);
-            if (channel != null)
-            {
-                // Ack check prevents from firing multiple notifications
-                // if we get more than one ACKs (by mistake/bug).
-                if (!channel.isAcknowledged())
-                {
-                    channel.ackReceived();
-                    notifyChannelOpened(channel);
-                }
-                else
-                {
-                    logger.log(Level.WARNING, Logger.Category.STATISTICS,
-                                 "sctp_redundant_ack_received," + getLoggingId()
-                                     + " sid=" + sid);
-                }
-            }
-            else
-            {
-                logger.error(Logger.Category.STATISTICS,
-                           "sctp_no_channel_for_sid," + getLoggingId()
-                               + " sid=" + sid);
-            }
-        }
-        else if (messageType == MSG_OPEN_CHANNEL)
-        {
-            int channelType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
-            int priority
-                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
-            long reliability
-                = /* 4 bytes unsigned integer */ 0xFFFFFFFFL & buffer.getInt();
-            int labelLength
-                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
-            int protocolLength
-                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
-            String label;
-            String protocol;
-
-            if (labelLength == 0)
-            {
-                label = "";
-            }
-            else
-            {
-                byte[] labelBytes = new byte[labelLength];
-
-                buffer.get(labelBytes);
-                label = new String(labelBytes, "UTF-8");
-            }
-            if (protocolLength == 0)
-            {
-                protocol = "";
-            }
-            else
-            {
-                byte[] protocolBytes = new byte[protocolLength];
-
-                buffer.get(protocolBytes);
-                protocol = new String(protocolBytes, "UTF-8");
-            }
-
-            if (logger.isDebugEnabled())
-            {
-                logger.debug(Logger.Category.STATISTICS,
-                           "dc_open_request," + getLoggingId()
-                           + " sid=" + sid
-                           + ",type=" + channelType
-                           + ",prio=" + priority
-                           + ",reliab=" + reliability
-                           + ",label=" + label
-                           + ",proto=" + protocol);
-            }
-
-            WebRtcDataStream.DataCallback oldCallback = null;
-            if (channels.containsKey(sid))
-            {
-                // FIXME According to the RFC the DTLS initiator should be using
-                // even and the responder odd SID numbers, so such conflict
-                // should never happen. If it happens then the JVB should
-                // shutdown (reset) the SCTP stream identified by
-                // the conflicting SID.
-                logger.log(Level.SEVERE, Logger.Category.STATISTICS,
-                           "sctp_channel_exists," + getLoggingId()
-                           + " sid=" + sid);
-                oldCallback = channels.get(sid).getDataCallback();
-            }
-
-            WebRtcDataStream newChannel
-                = new WebRtcDataStream(this, sctpSocket, sid, label, true);
-            channels.put(sid, newChannel);
-
-            if (oldCallback != null)
-            {
-                // Save the data callback from the previous channel object
-                newChannel.setDataCallback(oldCallback);
-            }
-
-            sendOpenChannelAck(sid);
-            notifyChannelOpened(newChannel);
-        }
-        else
-        {
-            logger.error("Unexpected ctrl msg type: " + messageType);
-        }
-    }
+//    private void onCtrlPacketNotSynchronized(byte[] data, int sid)
+//        throws IOException
+//    {
+//        ByteBuffer buffer = ByteBuffer.wrap(data);
+//        int messageType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
+//
+//        if (messageType == MSG_CHANNEL_ACK)
+//        {
+//            if (logger.isDebugEnabled())
+//            {
+//                logger.debug(Logger.Category.STATISTICS,
+//                             "sctp_ack_received," + getLoggingId()
+//                                + " sid=" + sid);
+//            }
+//            // Open channel ACK
+//            WebRtcDataStream channel = channels.get(sid);
+//            if (channel != null)
+//            {
+//                // Ack check prevents from firing multiple notifications
+//                // if we get more than one ACKs (by mistake/bug).
+//                if (!channel.isAcknowledged())
+//                {
+//                    channel.ackReceived();
+//                    notifyChannelOpened(channel);
+//                }
+//                else
+//                {
+//                    logger.log(Level.WARNING, Logger.Category.STATISTICS,
+//                                 "sctp_redundant_ack_received," + getLoggingId()
+//                                     + " sid=" + sid);
+//                }
+//            }
+//            else
+//            {
+//                logger.error(Logger.Category.STATISTICS,
+//                           "sctp_no_channel_for_sid," + getLoggingId()
+//                               + " sid=" + sid);
+//            }
+//        }
+//        else if (messageType == MSG_OPEN_CHANNEL)
+//        {
+//            int channelType = /* 1 byte unsigned integer */ 0xFF & buffer.get();
+//            int priority
+//                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+//            long reliability
+//                = /* 4 bytes unsigned integer */ 0xFFFFFFFFL & buffer.getInt();
+//            int labelLength
+//                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+//            int protocolLength
+//                = /* 2 bytes unsigned integer */ 0xFFFF & buffer.getShort();
+//            String label;
+//            String protocol;
+//
+//            if (labelLength == 0)
+//            {
+//                label = "";
+//            }
+//            else
+//            {
+//                byte[] labelBytes = new byte[labelLength];
+//
+//                buffer.get(labelBytes);
+//                label = new String(labelBytes, "UTF-8");
+//            }
+//            if (protocolLength == 0)
+//            {
+//                protocol = "";
+//            }
+//            else
+//            {
+//                byte[] protocolBytes = new byte[protocolLength];
+//
+//                buffer.get(protocolBytes);
+//                protocol = new String(protocolBytes, "UTF-8");
+//            }
+//
+//            if (logger.isDebugEnabled())
+//            {
+//                logger.debug(Logger.Category.STATISTICS,
+//                           "dc_open_request," + getLoggingId()
+//                           + " sid=" + sid
+//                           + ",type=" + channelType
+//                           + ",prio=" + priority
+//                           + ",reliab=" + reliability
+//                           + ",label=" + label
+//                           + ",proto=" + protocol);
+//            }
+//
+//            WebRtcDataStream.DataCallback oldCallback = null;
+//            if (channels.containsKey(sid))
+//            {
+//                logger.log(Level.WARNING, Logger.Category.STATISTICS,
+//                           "sctp_channel_exists," + getLoggingId()
+//                           + " sid=" + sid);
+//                oldCallback = channels.get(sid).getDataCallback();
+//            }
+//
+//            WebRtcDataStream newChannel
+//                = new WebRtcDataStream(sctpSocket, sid, label, true);
+//            channels.put(sid, newChannel);
+//
+//            if (oldCallback != null)
+//            {
+//                // Save the data callback from the previous channel object
+//                newChannel.setDataCallback(oldCallback);
+//            }
+//
+//            sendOpenChannelAck(sid);
+//            notifyChannelOpened(newChannel);
+//        }
+//        else
+//        {
+//            logger.error("Unexpected ctrl msg type: " + messageType);
+//        }
+//    }
 
     /**
      * {@inheritDoc}
@@ -774,123 +772,16 @@ public class SctpConnection
     protected void onEndpointChanged(
         AbstractEndpoint oldValue, AbstractEndpoint newValue)
     {
-        super.onEndpointChanged(oldValue, newValue);
-
-        if (oldValue != null && oldValue instanceof Endpoint)
-        {
-            ((Endpoint) oldValue).setSctpConnection(null);
-        }
-        if (newValue != null && newValue instanceof Endpoint)
-        {
-            ((Endpoint) newValue).setSctpConnection(this);
-        }
-    }
-
-    /**
-     * Implements notification in order to track socket state.
-     */
-    @Override
-    public void onSctpNotification(SctpSocket socket,
-                                   SctpNotification notification)
-    {
-        synchronized (syncRoot)
-        {
-            if (logger.isDebugEnabled())
-            {
-                // SCTP_SENDER_DRY_EVENT is logged too often. It means that the
-                // data queue is now empty and we don't care.
-                if (SctpNotification.SCTP_SENDER_DRY_EVENT
-                    != notification.sn_type)
-                {
-                    logger.info(Logger.Category.STATISTICS,
-                                "sctp_notification," + getLoggingId()
-                                    + " notification=" + notification);
-                }
-            }
-
-            switch (notification.sn_type)
-            {
-            case SctpNotification.SCTP_ASSOC_CHANGE:
-                SctpNotification.AssociationChange assocChange
-                    = (SctpNotification.AssociationChange) notification;
-
-                switch (assocChange.state)
-                {
-                case SctpNotification.AssociationChange.SCTP_COMM_UP:
-                    synchronized (isReadyWaitLock)
-                    {
-                        if (!assocIsUp)
-                        {
-                            assocIsUp = true;
-                            isReadyWaitLock.notifyAll();
-                        }
-                    }
-                    break;
-
-                case SctpNotification.AssociationChange.SCTP_COMM_LOST:
-                case SctpNotification.AssociationChange.SCTP_SHUTDOWN_COMP:
-                case SctpNotification.AssociationChange.SCTP_CANT_STR_ASSOC:
-                    closeStream();
-                    break;
-                }
-                break;
-            }
-        }
-    }
-
-    /**
-     * Opens new WebRTC data channel.
-     */
-    private void openDefaultWebRTCDataChannel()
-    {
-        try
-        {
-            // XXX RFC says that the DTLS initiator uses even and responder odd
-            // SID numbers for the channels they open. It's important to note
-            // here that more complex logic ensuring SID correctness and
-            // availability will be required if the bridge would be to open more
-            // than 1 channel. The JVB is still able to handle multiple incoming
-            // channels because it's the client that verifies that it's SID
-            // numbers.
-            int sid = isInitiator() ? 0 : 1;
-
-            logger.debug(String.format(
-                "Will open default WebRTC data channel for: %s next SID: %d",
-                getLoggingId(), sid));
-
-            openChannel(
-                /* type */ 0,
-                /* prio */ 0,
-                /* reliab - 0 means reliable and ordered */ 0,
-                /* sid */ sid,
-                /* label */ "default");
-        }
-        catch (IOException e)
-        {
-            logger.error(
-                String.format(
-                    "Could open the default data stream for endpoint: %s",
-                    getLoggingId()),
-                e);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * SCTP input data callback.
-     */
-    @Override
-    public void onSctpPacket(
-            byte[] data, int sid, int ssn, int tsn, long ppid, int context,
-            int flags)
-    {
-        sctpDispatcher.execute(() -> {
-            if (!isExpired() && sctpSocket != null)
-            {
-                processSctpPacket(data, sid, ssn, tsn, ppid, context, flags);
-            }
-        });
+//        super.onEndpointChanged(oldValue, newValue);
+//
+//        if (oldValue != null && oldValue instanceof Endpoint)
+//        {
+//            ((Endpoint) oldValue).setSctpConnection(null);
+//        }
+//        if (newValue != null && newValue instanceof Endpoint)
+//        {
+//            ((Endpoint) newValue).setSctpConnection(this);
+//        }
     }
 
     /**
@@ -926,16 +817,16 @@ public class SctpConnection
      *         WebRTC data channel.
      * @throws IOException if IO error occurs.
      */
-    public WebRtcDataStream openChannel(
-        int type, int prio, long reliab, int sid, String label)
-        throws IOException
-    {
-        System.out.println("BRIAN: OPENING SCTP CHANNEL");
-        synchronized (syncRoot)
-        {
-            return openChannelNotSynchronized(type, prio, reliab, sid, label);
-        }
-    }
+//    public WebRtcDataStream openChannel(
+//        int type, int prio, long reliab, int sid, String label)
+//        throws IOException
+//    {
+//        System.out.println("BRIAN: OPENING SCTP CHANNEL");
+//        synchronized (syncRoot)
+//        {
+//            return openChannelNotSynchronized(type, prio, reliab, sid, label);
+//        }
+//    }
 
     /**
      * Opens new WebRTC data channel using specified parameters. This should
@@ -944,69 +835,69 @@ public class SctpConnection
      * See {@link #openChannel(int, int, long, int, String)} for a more detailed
      * description.
      */
-    private WebRtcDataStream openChannelNotSynchronized(
-            int type, int prio, long reliab, int sid, String label)
-        throws IOException
-    {
-        if (channels.containsKey(sid))
-            throw new IOException("Channel on sid: " + sid + " already exists");
-
-        // Label Length & Label
-        byte[] labelBytes;
-        int labelByteLength;
-
-        if (label == null)
-        {
-            labelBytes = null;
-            labelByteLength = 0;
-        }
-        else
-        {
-            labelBytes = label.getBytes("UTF-8");
-            labelByteLength = Math.min(labelBytes.length, 0xFFFF);
-        }
-
-        // Protocol Length & Protocol
-        String protocol = WEBRTC_DATA_CHANNEL_PROTOCOL;
-        byte[] protocolBytes = protocol.getBytes("UTF-8");
-        int protocolByteLength = Math.min(protocolBytes.length, 0xFFFF);
-
-        ByteBuffer packet
-            = ByteBuffer.allocate(12 + labelByteLength + protocolByteLength);
-
-        // Message open new channel on current sid
-        // Message Type
-        packet.put((byte) MSG_OPEN_CHANNEL);
-        // Channel Type
-        packet.put((byte) type);
-        // Priority
-        packet.putShort((short) prio);
-        // Reliability Parameter
-        packet.putInt((int) reliab);
-        // Label Length
-        packet.putShort((short) labelByteLength);
-        // Protocol Length
-        packet.putShort((short) protocolByteLength);
-        // Label
-        if (labelByteLength != 0)
-            packet.put(labelBytes, 0, labelByteLength);
-        // Protocol
-        if (protocolByteLength != 0)
-            packet.put(protocolBytes, 0, protocolByteLength);
-
-        int sentCount
-            = sctpSocket.send(packet.array(), true, sid, WEB_RTC_PPID_CTRL);
-
-        if (sentCount != packet.capacity())
-            throw new IOException("Failed to open new chanel on sid: " + sid);
-
-        WebRtcDataStream channel
-            = new WebRtcDataStream(this, sctpSocket, sid, label, false);
-
-        channels.put(sid, channel);
-
-        return channel;
-    }
+//    private WebRtcDataStream openChannelNotSynchronized(
+//            int type, int prio, long reliab, int sid, String label)
+//        throws IOException
+//    {
+//        if (channels.containsKey(sid))
+//            throw new IOException("Channel on sid: " + sid + " already exists");
+//
+//        // Label Length & Label
+//        byte[] labelBytes;
+//        int labelByteLength;
+//
+//        if (label == null)
+//        {
+//            labelBytes = null;
+//            labelByteLength = 0;
+//        }
+//        else
+//        {
+//            labelBytes = label.getBytes("UTF-8");
+//            labelByteLength = Math.min(labelBytes.length, 0xFFFF);
+//        }
+//
+//        // Protocol Length & Protocol
+//        String protocol = WEBRTC_DATA_CHANNEL_PROTOCOL;
+//        byte[] protocolBytes = protocol.getBytes("UTF-8");
+//        int protocolByteLength = Math.min(protocolBytes.length, 0xFFFF);
+//
+//        ByteBuffer packet
+//            = ByteBuffer.allocate(12 + labelByteLength + protocolByteLength);
+//
+//        // Message open new channel on current sid
+//        // Message Type
+//        packet.put((byte) MSG_OPEN_CHANNEL);
+//        // Channel Type
+//        packet.put((byte) type);
+//        // Priority
+//        packet.putShort((short) prio);
+//        // Reliability Parameter
+//        packet.putInt((int) reliab);
+//        // Label Length
+//        packet.putShort((short) labelByteLength);
+//        // Protocol Length
+//        packet.putShort((short) protocolByteLength);
+//        // Label
+//        if (labelByteLength != 0)
+//            packet.put(labelBytes, 0, labelByteLength);
+//        // Protocol
+//        if (protocolByteLength != 0)
+//            packet.put(protocolBytes, 0, protocolByteLength);
+//
+//        int sentCount
+//            = sctpSocket.send(packet.array(), true, sid, WEB_RTC_PPID_CTRL);
+//
+//        if (sentCount != packet.capacity())
+//            throw new IOException("Failed to open new chanel on sid: " + sid);
+//
+//        WebRtcDataStream channel
+//            = new WebRtcDataStream(sctpSocket, sid, label, false);
+//
+//        channels.put(sid, channel);
+//
+//        return channel;
+//    }
 
     /**
      * Method called from
@@ -1081,16 +972,16 @@ public class SctpConnection
      * @param listener the <tt>WebRtcDataStreamListener</tt> to be removed from
      * the listeners list.
      */
-    public void removeChannelListener(WebRtcDataStreamListener listener)
-    {
-        if (listener != null)
-        {
-            synchronized (listeners)
-            {
-                listeners.remove(listener);
-            }
-        }
-    }
+//    public void removeChannelListener(WebRtcDataStreamListener listener)
+//    {
+//        if (listener != null)
+//        {
+//            synchronized (listeners)
+//            {
+//                listeners.remove(listener);
+//            }
+//        }
+//    }
 
     protected void runOnDtlsTransport(StreamConnector connector)
         throws IOException
