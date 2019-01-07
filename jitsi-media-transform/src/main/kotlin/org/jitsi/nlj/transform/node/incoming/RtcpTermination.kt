@@ -66,6 +66,7 @@ class RtcpTermination(
                 is RtcpFbTccPacket -> handleTccPacket(pkt)
                 is RtcpFbNackPacket -> {
                     numNacksReceived++
+                    //TODO: nack handler should just be done as a normal RTCP subscriber?
                     nackHandler?.onNackPacket(pkt)
                 }
                 is RtcpSrPacket -> {
