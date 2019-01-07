@@ -40,6 +40,7 @@ import org.jitsi.util.*;
 import org.jitsi.util.Logger;
 import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.transport.*;
 import org.osgi.framework.*;
 
 /**
@@ -59,40 +60,6 @@ public abstract class IceUdpTransportManager
     private static final String DEFAULT_ICE_STREAM_NAME = "stream";
 
     /**
-     * The name of the property which disables the use of a
-     * <tt>TcpHarvester</tt>.
-     */
-    public static final String DISABLE_TCP_HARVESTER
-        = "org.jitsi.videobridge.DISABLE_TCP_HARVESTER";
-
-    /**
-     * The name of the property which controls the port number used for
-     * <tt>SinglePortUdpHarvester</tt>s.
-     */
-    public static final String SINGLE_PORT_HARVESTER_PORT
-            = "org.jitsi.videobridge.SINGLE_PORT_HARVESTER_PORT";
-
-    /**
-     * The name of the property used to control {@link #keepAliveStrategy}.
-     */
-    public static final String KEEP_ALIVE_STRATEGY_PNAME
-            = "org.jitsi.videobridge.KEEP_ALIVE_STRATEGY";
-
-    /**
-     * The {@link KeepAliveStrategy} to configure for ice4j {@link Component}s,
-     * which will dictate which candidate pairs to keep alive.
-     * Default to keeping alive the selected pair and any TCP pairs.
-     */
-    private static KeepAliveStrategy keepAliveStrategy
-        = KeepAliveStrategy.SELECTED_AND_TCP;
-
-    /**
-     * The default value of the port to be used for
-     * {@code SinglePortUdpHarvester}.
-     */
-    private static final int SINGLE_PORT_DEFAULT_VALUE = 10000;
-
-    /**
      * The {@link Logger} used by the {@link IceUdpTransportManager} class to
      * print debug information. Note that instances should use {@link #logger}
      * instead.
@@ -101,87 +68,15 @@ public abstract class IceUdpTransportManager
         = Logger.getLogger(IceUdpTransportManager.class);
 
     /**
-     * The default port that the <tt>TcpHarvester</tt> will
-     * bind to.
-     */
-    private static final int TCP_DEFAULT_PORT = 443;
-
-    /**
-     * The port on which the <tt>TcpHarvester</tt> will bind to
-     * if no port is specifically configured, and binding to
-     * <tt>DEFAULT_TCP_PORT</tt> fails (for example, if the process doesn't have
-     * the required privileges to bind to a port below 1024).
-     */
-    private static final int TCP_FALLBACK_PORT = 4443;
-
-    /**
-     * The name of the property which specifies an additional port to be
-     * advertised by the TCP harvester.
-     */
-    public static final String TCP_HARVESTER_MAPPED_PORT
-        = "org.jitsi.videobridge.TCP_HARVESTER_MAPPED_PORT";
-
-    /**
-     * The name of the property which controls the port to which the
-     * <tt>TcpHarvester</tt> will bind.
-     */
-    public static final String TCP_HARVESTER_PORT
-        = "org.jitsi.videobridge.TCP_HARVESTER_PORT";
-
-    /**
-     * The name of the property which controls the use of ssltcp candidates by
-     * <tt>TcpHarvester</tt>.
-     */
-    public static final String TCP_HARVESTER_SSLTCP
-        = "org.jitsi.videobridge.TCP_HARVESTER_SSLTCP";
-
-    /**
      * The name of the property that can be used to control the value of
      * {@link #iceUfragPrefix}.
      */
     public static final String ICE_UFRAG_PREFIX_PNAME
-        = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
-
+            = "org.jitsi.videobridge.ICE_UFRAG_PREFIX";
     /**
      * The optional prefix to use for generated ICE local username fragments.
      */
     private static String iceUfragPrefix;
-
-    /**
-     * The default value of the <tt>TCP_HARVESTER_SSLTCP</tt> property.
-     */
-    private static final boolean TCP_HARVESTER_SSLTCP_DEFAULT = true;
-
-    /**
-     * The single <tt>TcpHarvester</tt> instance for the
-     * application.
-     */
-    private static TcpHarvester tcpHarvester = null;
-
-    /**
-     * The <tt>SinglePortUdpHarvester</tt>s which will be appended to ICE
-     * <tt>Agent</tt>s managed by <tt>IceUdpTransportManager</tt> instances.
-     */
-    private static List<SinglePortUdpHarvester> singlePortHarvesters = null;
-
-    /**
-     * Global variable do we consider this transport manager as healthy.
-     * By default we consider healthy, if we fail to bind to the single port
-     * port we consider the bridge as unhealthy.
-     */
-    public static boolean healthy = true;
-
-    /**
-     * The flag which indicates whether application-wide harvesters, stored
-     * in the static fields {@link #tcpHarvester} and
-     * {@link #singlePortHarvesters} have been initialized.
-     */
-    private static boolean staticConfigurationInitialized = false;
-
-    /**
-     * The "mapped port" added to {@link #tcpHarvester}, or -1.
-     */
-    private static int tcpHarvesterMappedPort = -1;
 
     /**
      * Whether the "component socket" feature of ice4j should be used. If this
@@ -200,160 +95,19 @@ public abstract class IceUdpTransportManager
         = "org.jitsi.videobridge.USE_COMPONENT_SOCKET";
 
     /**
-     * Initializes the static <tt>Harvester</tt> instances used by all
-     * <tt>IceUdpTransportManager</tt> instances, that is
-     * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
-     *
-     * @param cfg the {@link ConfigurationService} which provides values to
-     * configurable properties of the behavior/logic of the method
-     * implementation
+     * The name of the property used to control {@link #keepAliveStrategy}.
      */
-    private static void initializeStaticConfiguration(ConfigurationService cfg)
-    {
-        synchronized (IceUdpTransportManager.class)
-        {
-            if (staticConfigurationInitialized)
-            {
-                return;
-            }
-            staticConfigurationInitialized = true;
-
-            useComponentSocket
-                = cfg.getBoolean(USE_COMPONENT_SOCKET_PNAME, useComponentSocket);
-            classLogger.info("Using component socket: " + useComponentSocket);
-
-            iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
-
-            String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
-            KeepAliveStrategy strategy
-                = KeepAliveStrategy.fromString(strategyName);
-            if (strategyName != null && strategy == null)
-            {
-                classLogger.warn("Invalid keep alive strategy name: "
-                                     + strategyName);
-            }
-            else if (strategy != null)
-            {
-                keepAliveStrategy = strategy;
-            }
-
-            int singlePort = cfg.getInt(SINGLE_PORT_HARVESTER_PORT,
-                                        SINGLE_PORT_DEFAULT_VALUE);
-            if (singlePort != -1)
-            {
-                singlePortHarvesters
-                    = SinglePortUdpHarvester.createHarvesters(singlePort);
-                if (singlePortHarvesters.isEmpty())
-                {
-                    singlePortHarvesters = null;
-                    classLogger.info("No single-port harvesters created.");
-                }
-
-                IceUdpTransportManager.healthy = singlePortHarvesters != null;
-            }
-
-            if (!cfg.getBoolean(DISABLE_TCP_HARVESTER, false))
-            {
-                int port = cfg.getInt(TCP_HARVESTER_PORT, -1);
-                boolean fallback = false;
-                boolean ssltcp = cfg.getBoolean(TCP_HARVESTER_SSLTCP,
-                                                TCP_HARVESTER_SSLTCP_DEFAULT);
-
-                if (port == -1)
-                {
-                    port = TCP_DEFAULT_PORT;
-                    fallback = true;
-                }
-
-                try
-                {
-                    tcpHarvester = new TcpHarvester(port, ssltcp);
-                }
-                catch (IOException ioe)
-                {
-                    classLogger.warn(
-                        "Failed to initialize TCP harvester on port " + port
-                            + ": " + ioe
-                            + (fallback
-                            ? ". Retrying on port " + TCP_FALLBACK_PORT
-                            : "")
-                            + ".");
-                    // If no fallback is allowed, the method will return.
-                }
-                if (tcpHarvester == null)
-                {
-                    // If TCP_HARVESTER_PORT specified a port, then fallback was
-                    // disabled. However, if the binding on the port (above)
-                    // fails, then the method should return.
-                    if (!fallback)
-                        return;
-
-                    port = TCP_FALLBACK_PORT;
-                    try
-                    {
-                        tcpHarvester
-                            = new TcpHarvester(port, ssltcp);
-                    }
-                    catch (IOException ioe)
-                    {
-                        classLogger.warn(
-                            "Failed to initialize TCP harvester on fallback"
-                                + " port " + port + ": " + ioe);
-                        return;
-                    }
-                }
-
-                if (classLogger.isInfoEnabled())
-                {
-                    classLogger.info("Initialized TCP harvester on port " + port
-                                         + ", using SSLTCP:" + ssltcp);
-                }
-
-                int mappedPort = cfg.getInt(TCP_HARVESTER_MAPPED_PORT, -1);
-                if (mappedPort != -1)
-                {
-                    tcpHarvesterMappedPort = mappedPort;
-                    tcpHarvester.addMappedPort(mappedPort);
-                }
-            }
-        }
-    }
+    public static final String KEEP_ALIVE_STRATEGY_PNAME
+            = "org.jitsi.videobridge.KEEP_ALIVE_STRATEGY";
 
     /**
-     * Stops the static <tt>Harvester</tt> instances used by all
-     * <tt>IceUdpTransportManager</tt> instances, that is
-     * {@link #tcpHarvester} and {@link #singlePortHarvesters}.
-     *
-     * @param cfg the {@link ConfigurationService} which provides values to
-     * configurable properties of the behavior/logic of the method
-     * implementation
+     * The {@link KeepAliveStrategy} to configure for ice4j {@link Component}s,
+     * which will dictate which candidate pairs to keep alive.
+     * Default to keeping alive the selected pair and any TCP pairs.
      */
-    public static void closeStaticConfiguration(ConfigurationService cfg)
-    {
-        synchronized (IceUdpTransportManager.class)
-        {
-            if (!staticConfigurationInitialized)
-            {
-                return;
-            }
-            staticConfigurationInitialized = false;
+    private static KeepAliveStrategy keepAliveStrategy
+            = KeepAliveStrategy.SELECTED_AND_TCP;
 
-            if (singlePortHarvesters != null)
-            {
-                singlePortHarvesters.forEach(AbstractUdpListener::close);
-                singlePortHarvesters = null;
-            }
-
-            if (tcpHarvester != null)
-            {
-                tcpHarvester.close();
-                tcpHarvester = null;
-            }
-
-            // Reset the flag to initial state.
-            healthy = true;
-        }
-    }
 
     /**
      * The single (if any) <tt>Channel</tt> instance, whose sockets are
@@ -454,13 +208,6 @@ public abstract class IceUdpTransportManager
     private final Logger logger;
 
     /**
-     * The {@link TransportCCEngine} instance for this transport channel. It
-     * handles transport-wide numbering of packets. It is shared among the
-     * {@link RtpChannel}s/{@link MediaStream}s of this transport manager.
-     */
-    private final TransportCCEngine transportCCEngine;
-
-    /**
      * Initializes a new <tt>IceUdpTransportManager</tt> instance.
      *
      * @param conference the <tt>Conference</tt> which created this
@@ -545,7 +292,6 @@ public abstract class IceUdpTransportManager
         this.numComponents = numComponents;
         this.rtcpmux = numComponents == 1;
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
-        this.transportCCEngine = new TransportCCEngine(diagnosticContext);
 
         // Setup the diagnostic context.
         conference.appendDiagnosticInformation(diagnosticContext);
@@ -603,25 +349,43 @@ public abstract class IceUdpTransportManager
                     ConfigurationService.class);
         boolean disableDynamicHostHarvester = false;
 
+        useComponentSocket
+                = cfg.getBoolean(USE_COMPONENT_SOCKET_PNAME, useComponentSocket);
+        classLogger.info("Using component socket: " + useComponentSocket);
+
+        iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
+        String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
+        KeepAliveStrategy strategy
+                = KeepAliveStrategy.fromString(strategyName);
+        if (strategyName != null && strategy == null)
+        {
+            classLogger.warn("Invalid keep alive strategy name: "
+                    + strategyName);
+        }
+        else if (strategy != null)
+        {
+            keepAliveStrategy = strategy;
+        }
+
         if (rtcpmux)
         {
             // TODO CandidateHarvesters may take (non-trivial) time to
-            // initialize so initialize them as soon as possible, don't wait to
+            // initialize so initialize them as soon as possible, don't wa it to
             // initialize them after a Channel is requested.
             // XXX Unfortunately, TcpHarvester binds to specific local addresses
             // while Jetty binds to all/any local addresses and, consequently,
             // the order of the binding is important at the time of this
             // writing. That's why TcpHarvester is left to initialize as late as
             // possible right now.
-            initializeStaticConfiguration(cfg);
+            Harvesters.initializeStaticConfiguration(cfg);
 
-            if (tcpHarvester != null)
+            if (Harvesters.tcpHarvester != null)
             {
-                iceAgent.addCandidateHarvester(tcpHarvester);
+                iceAgent.addCandidateHarvester(Harvesters.tcpHarvester);
             }
-            if (singlePortHarvesters != null)
+            if (Harvesters.singlePortHarvesters != null)
             {
-                for (CandidateHarvester harvester : singlePortHarvesters)
+                for (CandidateHarvester harvester : Harvesters.singlePortHarvesters)
                 {
                     iceAgent.addCandidateHarvester(harvester);
                     disableDynamicHostHarvester = true;
@@ -980,13 +744,5 @@ public abstract class IceUdpTransportManager
     public boolean isConnected()
     {
         return iceConnected;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public TransportCCEngine getTransportCCEngine()
-    {
-        return transportCCEngine;
     }
 }
