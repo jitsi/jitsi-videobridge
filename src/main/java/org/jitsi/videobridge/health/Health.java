@@ -114,7 +114,7 @@ public class Health
      * {@code Videobridge} to check the health (status) of
      * @throws Exception if an error occurs while checking the health (status)
      * of the {@code videobridge} associated with {@code conference} or the
-     * check determines that the {@code Videobridge} is not healthy 
+     * check determines that the {@code Videobridge} is not healthy
      */
     private static void check(Conference conference)
         throws Exception
@@ -127,82 +127,82 @@ public class Health
         // Initialize the Endpoints, Contents, RtpChannels, SctpConnections.
 
         // Endpoint
-        Endpoint[] endpoints = new Endpoint[2];
-
-        for (int i = 0; i < endpoints.length; ++i)
-        {
-            Endpoint endpoint
-                = (Endpoint) conference.getOrCreateEndpoint(generateEndpointID());
-
-            // Fail as quickly as possible.
-            if (endpoint == null)
-            {
-                throw new NullPointerException("Failed to create an endpoint.");
-            }
-
-            endpoints[i] = endpoint;
-
-            String channelBundleId = null;
-            // Since Endpoints will connect between themselves, they should be
-            // opposite in initiator terms.
-            Boolean initiator = i % 2 == 0;
-
-            for (MediaType mediaType : MEDIA_TYPES)
-            {
-                // Content
-                Content content
-                    = conference.getOrCreateContent(mediaType.toString());
-                // RtpChannel
-                RtpChannel rtpChannel
-                    = content.createRtpChannel(
-                            channelBundleId,
-                            /* transportNamespace */ null,
-                            initiator,
-                            null);
-
-                // FIXME: Without the call to setEndpoint() the channel is not
-                // added to the endpoint and as a result the channels of the two
-                // endpoints will not be connected as part of the health check.
-                // We are now intentionally not doing the call because:
-                // 1. The code has been running like this for a long time
-                //     without any known failures to detect issues.
-                // 2. Connecting a pair of audio channels and a pair of video
-                //     channels with the current code will result in 4
-                //     additional ICE Agents being instantiated, which is a
-                //     significant use of resources.
-                // 3. We have a longer-term solution of refactoring the code to
-                //     use channel bundles which will also solve this problem.
-
-                // rtpChannel.setEndpoint(endpoint);
-
-                // Fail as quickly as possible.
-                if (rtpChannel == null)
-                {
-                    throw new NullPointerException(
-                        "Failed to create a channel.");
-                }
-            }
-
-            // SctpConnection
-            Content dataContent = conference.getOrCreateContent("data");
-            SctpConnection sctpConnection
-                = dataContent.createSctpConnection(
-                        endpoint,
-                        /* sctpPort */ RANDOM.nextInt(),
-                        channelBundleId,
-                        initiator);
-
-            // Fail as quickly as possible.
-            if (sctpConnection == null)
-            {
-                throw new NullPointerException(
-                    "Failed to create SCTP connection.");
-            }
-        }
-
-        // Connect the Endpoints (i.e. RtpChannels and SctpConnections) between
-        // themselves.
-        interconnect(endpoints);
+//        Endpoint[] endpoints = new Endpoint[2];
+//
+//        for (int i = 0; i < endpoints.length; ++i)
+//        {
+//            Endpoint endpoint
+//                = (Endpoint) conference.getOrCreateEndpoint(generateEndpointID());
+//
+//            // Fail as quickly as possible.
+//            if (endpoint == null)
+//            {
+//                throw new NullPointerException("Failed to create an endpoint.");
+//            }
+//
+//            endpoints[i] = endpoint;
+//
+//            String channelBundleId = null;
+//            // Since Endpoints will connect between themselves, they should be
+//            // opposite in initiator terms.
+//            Boolean initiator = i % 2 == 0;
+//
+//            for (MediaType mediaType : MEDIA_TYPES)
+//            {
+//                // Content
+//                Content content
+//                    = conference.getOrCreateContent(mediaType.toString());
+//                // RtpChannel
+//                RtpChannel rtpChannel
+//                    = content.createRtpChannel(
+//                            channelBundleId,
+//                            /* transportNamespace */ null,
+//                            initiator,
+//                            null);
+//
+//                // FIXME: Without the call to setEndpoint() the channel is not
+//                // added to the endpoint and as a result the channels of the two
+//                // endpoints will not be connected as part of the health check.
+//                // We are now intentionally not doing the call because:
+//                // 1. The code has been running like this for a long time
+//                //     without any known failures to detect issues.
+//                // 2. Connecting a pair of audio channels and a pair of video
+//                //     channels with the current code will result in 4
+//                //     additional ICE Agents being instantiated, which is a
+//                //     significant use of resources.
+//                // 3. We have a longer-term solution of refactoring the code to
+//                //     use channel bundles which will also solve this problem.
+//
+//                // rtpChannel.setEndpoint(endpoint);
+//
+//                // Fail as quickly as possible.
+//                if (rtpChannel == null)
+//                {
+//                    throw new NullPointerException(
+//                        "Failed to create a channel.");
+//                }
+//            }
+//
+//            // SctpConnection
+//            Content dataContent = conference.getOrCreateContent("data");
+//            SctpConnection sctpConnection
+//                = dataContent.createSctpConnection(
+//                        endpoint,
+//                        /* sctpPort */ RANDOM.nextInt(),
+//                        channelBundleId,
+//                        initiator);
+//
+//            // Fail as quickly as possible.
+//            if (sctpConnection == null)
+//            {
+//                throw new NullPointerException(
+//                    "Failed to create SCTP connection.");
+//            }
+//        }
+//
+//        // Connect the Endpoints (i.e. RtpChannels and SctpConnections) between
+//        // themselves.
+//        interconnect(endpoints);
     }
 
     /**
@@ -212,7 +212,7 @@ public class Health
      * of
      * @throws Exception if an error occurs while checking the health (status)
      * of {@code videobridge} or the check determines that {@code videobridge}
-     * is not healthy 
+     * is not healthy
      */
     private static void doCheck(Videobridge videobridge)
         throws Exception

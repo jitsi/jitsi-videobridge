@@ -400,30 +400,31 @@ public class Content
      * @throws IOException if the new {@link SctpConnection} instance fails to
      * initialize.
      */
-    public SctpConnection createSctpConnection(
-            AbstractEndpoint endpoint,
-            int sctpPort,
-            String channelBundleId,
-            Boolean initiator)
-        throws IOException
-    {
-        SctpConnection sctpConnection;
-
-        synchronized (channels)
-        {
-            String id = generateChannelID();
-
-            sctpConnection
-                = new NewSctpConnection(id, this, endpoint, sctpPort,
-                                     channelBundleId, initiator);
-            channels.put(sctpConnection.getID(), sctpConnection);
-        }
-
-        // Initialize SCTP connection
-        sctpConnection.initialize();
-
-        return sctpConnection;
-    }
+    @Deprecated
+//    public SctpConnection createSctpConnection(
+//            AbstractEndpoint endpoint,
+//            int sctpPort,
+//            String channelBundleId,
+//            Boolean initiator)
+//        throws IOException
+//    {
+//        SctpConnection sctpConnection;
+//
+//        synchronized (channels)
+//        {
+//            String id = generateChannelID();
+//
+//            sctpConnection
+//                = new NewSctpConnection(id, this, endpoint, sctpPort,
+//                                     channelBundleId, initiator);
+//            channels.put(sctpConnection.getID(), sctpConnection);
+//        }
+//
+//        // Initialize SCTP connection
+//        sctpConnection.initialize();
+//
+//        return sctpConnection;
+//    }
 
     /**
      * Gets the indicator which determines whether this <tt>Content</tt> has
