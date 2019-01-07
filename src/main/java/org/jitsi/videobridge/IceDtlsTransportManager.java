@@ -55,7 +55,10 @@ public class IceDtlsTransportManager
     private DtlsClientStack dtlsStack = new DtlsClientStack();
     private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
     private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
+    //TODO(brian): these 2 subscriber lists should be combined into a sort of 'transportmanagereventhandler' interface
+    // but, what about thingds like dtlsConnected which only appliesd to IceDtlsTransportManager?
     private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
+    private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
     //TODO: temp store dtls transport because newsctpconnection grabs it
     DTLSTransport dtlsTransport;
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
@@ -88,6 +91,7 @@ public class IceDtlsTransportManager
     private Node incomingPipelineRoot = createIncomingPipeline();
     private Node outgoingDtlsPipelineRoot = createOutgoingDtlsPipeline();
     private String id;
+    protected boolean dtlsHandshakeComplete = false;
 
     public IceDtlsTransportManager(String id, Conference conference)
             throws IOException
@@ -327,11 +331,24 @@ public class IceDtlsTransportManager
     }
 
     @Override
-    public void onTransportConnected(Runnable handler) {
+    public void onTransportConnected(Runnable handler)
+    {
         if (isConnected()) {
             handler.run();
         } else {
             transportConnectedSubscribers.add(handler);
+        }
+    }
+
+    public void onDtlsHandshakeComplete(Runnable handler)
+    {
+        if (dtlsHandshakeComplete)
+        {
+            handler.run();
+        }
+        else
+        {
+            dtlsConnectedSubscribers.add(handler);
         }
     }
 
@@ -463,7 +480,6 @@ public class IceDtlsTransportManager
         // The sctp connection start is triggered by this, but otherwise i don't think we need it (the other channel
         // types no longer do anything needed in there)
         logger.info("BRIAN: iceConnected for transport manager " + id);
-//        getChannels().forEach(Channel::transportConnected);
         transportConnectedSubscribers.forEach(Runnable::run);
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
@@ -476,10 +492,13 @@ public class IceDtlsTransportManager
         installIncomingPacketReader(s);
 
         dtlsStack.onHandshakeComplete((tlsContext) -> {
+            dtlsHandshakeComplete = true;
             logger.info("TransportManager " + id + " DTLS handshake complete.  Got SRTP profile " +
                     dtlsStack.getChosenSrtpProtectionProfile());
             if (transceiver != null) {
+                //TODO: emit this as part of the dtls handshake complete event?
                 transceiver.setSrtpInformation(dtlsStack.getChosenSrtpProtectionProfile(), tlsContext);
+                dtlsConnectedSubscribers.forEach(Runnable::run);
             } else {
                 logger.error("Couldn't get transceiver to set srtp information");
             }

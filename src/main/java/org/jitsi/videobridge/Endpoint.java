@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -83,6 +84,11 @@ public class Endpoint
     private final Logger logger;
 
     /**
+     * The {@link SctpManager} instance we'll use to manage the SCTP connection
+     */
+    private SctpManager sctpManager;
+
+    /**
      * The password of the ICE Agent associated with this endpoint: note that
      * without bundle an endpoint might have multiple channels with different
      * ICE Agents. In this case one of the channels will be chosen (in an
@@ -98,6 +104,9 @@ public class Endpoint
      * A count of how many endpoints have 'selected' this endpoint
      */
     private AtomicInteger selectedCount = new AtomicInteger(0);
+
+    private static final ExecutorService ioPool =
+            Executors.newCachedThreadPool(new NameableThreadFactory("Endpoint ioPool"));
 
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
@@ -224,49 +233,63 @@ public class Endpoint
         {
             messageTransport.close();
         }
+        sctpManager.closeConnection();
+
         logger.info(transceiver.getStats());
     }
 
     private DataChannelStack dataChannelStack;
-    private SctpManager sctpManager;
     private IceUdpTransportManager transportManager;
+
+    private void readIncomingSctpPackets()
+    {
+        LinkedBlockingQueue<PacketInfo> sctpPackets =
+                ((IceDtlsTransportManager)transportManager).sctpAppPackets;
+        while (true) {
+            try {
+                PacketInfo sctpPacket = sctpPackets.take();
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Endpoint " + getID() + " received an incoming sctp packet " +
+                            " (size " + sctpPacket.getPacket().getBuffer().limit() + ")");
+
+                }
+                if (sctpManager != null)
+                {
+                    sctpManager.handleIncomingSctp(sctpPacket);
+                }
+                else
+                {
+                    logger.warn("Endpoint " + getID() + " received an SCTP packet but the SCTP manager is " +
+                            "null, dropping the packet");
+                }
+            } catch (InterruptedException e) {
+                logger.error("Interrupted while reading from sctp packet queue: " + e.toString());
+            }
+        }
+    }
 
     //TODO(brian): not sure if this is the final way we'll associate the transport manager and endpoint/transceiver,
     // but it's a step.
     public void setTransportManager(IceUdpTransportManager transportManager)
     {
         this.transportManager = transportManager;
-
-        //TODO: technically we want to start this once dtls is complete, is this good enough though?
-        transportManager.onTransportConnected(() -> {
-            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
-            if (sctpManager != null) {
-                new Thread(() -> {
-                    LinkedBlockingQueue<PacketInfo> sctpPackets =
-                            ((IceDtlsTransportManager)transportManager).sctpAppPackets;
-                    while (true) {
-                        try {
-                            PacketInfo sctpPacket = sctpPackets.take();
-                            System.out.println("SCTP reader " + getID() + " received an incoming sctp packet " +
-                                    " (size " + sctpPacket.getPacket().getBuffer().limit() + ")");
-                            sctpManager.handleIncomingSctp(sctpPacket);
-                        } catch (InterruptedException e) {
-                            System.out.println("Interrupted while trying to receive sctp packet");
-                        }
-                    }
-                }, "Incoming SCTP reader").start();
-            }
+        ((IceDtlsTransportManager)transportManager).onDtlsHandshakeComplete(() -> {
+            logger.info("Endpoint " + getID() + " dtls handshake is complete, starting a reader for incoming SCTP" +
+                    " packets");
+            ioPool.submit(this::readIncomingSctpPackets);
         });
 
         ((IceDtlsTransportManager)transportManager).setTransceiver(this.transceiver);
     }
 
     public void createSctpConnection() {
-        System.out.println("Creating SCTP manager");
+        logger.info("Endpoint " + getID() + " creating SCTP manager");
+        // Create the SctpManager and provide it a method for sending SCTP data
         this.sctpManager = new SctpManager(
                 (data, offset, length) -> {
-                    System.out.println("Sending outgoing SCTP data");
-                    ((IceDtlsTransportManager)transportManager).sendDtlsData(new PacketInfo(new UnparsedPacket(ByteBuffer.wrap(data, offset, length))));
+                    PacketInfo packet = new PacketInfo(new UnparsedPacket(ByteBuffer.wrap(data, offset, length)));
+                    ((IceDtlsTransportManager)transportManager).sendDtlsData(packet);
                     return 0;
                 }
         );
@@ -278,8 +301,12 @@ public class Endpoint
             @Override
             public void onReady()
             {
-                System.out.println("SCTP connection is ready! Opening data channel");
-                //TODO: open data channel -- if we do it this way though, maybe we'll miss a message?
+                //NOTE(brian): i believe the bridge is responsible for opening the data channel, but if not we can
+                // make how we open/wait for the datachannel connection dynamic
+                logger.info("Endpoint " + getID() + "'s SCTP connection is ready. Opening data channel");
+                //TODO: there's a chance we could miss a data channel open message here if the sctp connection
+                // opens and the remote side sends an open channel message before the datachannel has set itself as
+                // the handler for data on the sctp connection
                 DataChannel dataChannel = dataChannelStack.createDataChannel(
                         DataChannelProtocolConstants.RELIABLE,
                         0,
@@ -293,7 +320,7 @@ public class Endpoint
             @Override
             public void onDisconnected()
             {
-                System.out.println("SCTP is disconnected!");
+                logger.info("Endpoint " + getID() + "'s SCTP connection is disconnected");
             }
         };
         dataChannelStack = new DataChannelStack(socket);
@@ -302,7 +329,7 @@ public class Endpoint
             @Override
             public void onDataChannelOpenedRemotely(DataChannel dataChannel)
             {
-                System.out.println("Data channel was opened remotely!");
+                logger.info("Remote side opened a data channel.  This is not handled!");
             }
         });
         //TODO: move this to an executor/pool
@@ -310,41 +337,17 @@ public class Endpoint
         new Thread(() -> {
             while (!socket.accept())
             {
-                System.out.println("SCTP socket " + socket.hashCode() + " trying to accept connection");
                 try
                 {
                     Thread.sleep(100);
                 } catch (InterruptedException e)
                 {
-                    System.out.println("Interrupted while trying to accept incoming SCTP connection: " + e.toString());
                     break;
                 }
             }
-            System.out.println("SCTP socket " + socket.hashCode() + " accepted connection");
+            logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
         }).start();
     }
-
-    /**
-     * Sets the <tt>SctpConnection</tt> associated with this <tt>Endpoint</tt>.
-     *
-     * @param sctpConnection the <tt>SctpConnection</tt> to be bound to this
-     * <tt>Endpoint</tt>.
-     */
-//    @Deprecated
-//    void setSctpConnection(SctpConnection sctpConnection)
-//    {
-//        EndpointMessageTransport messageTransport
-//            = getMessageTransport();
-//        if (messageTransport != null)
-//        {
-//            messageTransport.setSctpConnection(sctpConnection);
-//        }
-//
-//        if (getSctpConnection() == null)
-//        {
-//            maybeExpire();
-//        }
-//    }
 
     /**
      * Checks whether a WebSocket connection with a specific password string

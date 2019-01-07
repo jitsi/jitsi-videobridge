@@ -16,6 +16,8 @@ public class DataChannelStack
     private final SctpSocket sctpSocket;
     private DataChannelStackEventListener listener;
 
+    //TODO(brian): use generic onIncomingData/dataSender lambda/interfaces rather than
+    // passing the sctpsocket in directly
     public DataChannelStack(SctpSocket sctpSocket)
     {
         this.sctpSocket = sctpSocket;
