@@ -46,8 +46,9 @@ public class Health
      * The {@link MediaType}s of {@link RtpChannel}s supported by
      * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
      * by {@link
-     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
+//     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
      */
+    //TODO(brian): maybe this will be able to go away?  see how it fits in with the shim scheme
     private static final MediaType[] MEDIA_TYPES
         = { MediaType.AUDIO, MediaType.VIDEO };
 

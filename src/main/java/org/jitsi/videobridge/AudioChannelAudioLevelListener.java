@@ -22,12 +22,9 @@ import org.jitsi.service.neomedia.event.*;
  * a particular {@link RtpChannel} and forwards received audio levels to the
  * channel's {@link ConferenceSpeechActivity}.
  *
- * This is split from {@link AudioChannel} because the functionality is needed
- * in both {@link AudioChannel} and
- * {@link org.jitsi.videobridge.octo.OctoChannel}.
- *
  * @author Boris Grozev
  */
+//TODO(brian): need to bring this class back and plumb it into the transceiver (since we no longer have an audio channel)
 public class AudioChannelAudioLevelListener
     implements CsrcAudioLevelListener
 {
