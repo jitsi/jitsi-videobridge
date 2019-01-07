@@ -235,6 +235,14 @@ public class ColibriShim {
             }
         }
 
+        public Collection<ColibriShim.Channel> getChannels()
+        {
+            synchronized (channels)
+            {
+                return new ArrayList<Channel>(channels.values());
+            }
+        }
+
         public ColibriShim.SctpConnection getSctpConnection(String id)
         {
             synchronized (sctpConnections)

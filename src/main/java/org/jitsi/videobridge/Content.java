@@ -475,39 +475,6 @@ public class Content
     }
 
     /**
-     * Returns a <tt>Channel</tt> of this <tt>Content</tt>, which has
-     * <tt>receiveSSRC</tt> in its list of received SSRCs, or <tt>null</tt> in
-     * case no such <tt>Channel</tt> exists.
-     *
-     * @param receiveSSRC the SSRC to search for.
-     * @return a <tt>Channel</tt> of this <tt>Content</tt>, which has
-     * <tt>receiveSSRC</tt> in its list of received SSRCs, or <tt>null</tt> in
-     * case no such <tt>Channel</tt> exists.
-     */
-    Channel findChannelByReceiveSSRC(long receiveSSRC)
-    {
-        for (Channel channel : getChannels())
-        {
-            //FIXME: fix instanceof
-            if(!(channel instanceof RtpChannel))
-            {
-                continue;
-            }
-
-            RtpChannel rtpChannel = (RtpChannel) channel;
-
-            for (int channelReceiveSSRC : rtpChannel.getReceiveSSRCs())
-            {
-                if (receiveSSRC == (0xffff_ffffL & channelReceiveSSRC))
-                {
-                    return channel;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
      * Generates a new <tt>Channel</tt> ID which is not guaranteed to be unique.
      *
      * @return a new <tt>Channel</tt> ID which is not guaranteed to be unique

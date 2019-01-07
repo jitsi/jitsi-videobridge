@@ -830,6 +830,14 @@ public class Videobridge
 
     private ColibriShim colibriShim = new ColibriShim(this);
 
+    //TODO: we've got concurrency issues here, we could:
+    // 1) hopefully get rid of the need for this and then we can remove the getter
+    // 2) return a copy?
+    public ColibriShim getColibriShim()
+    {
+        return colibriShim;
+    }
+
     private List<ColibriConferenceIQ.Channel> processChannels(
             List<ColibriConferenceIQ.Channel> channels,
             Map<String, List<PayloadTypePacketExtension>> endpointPayloadTypes,

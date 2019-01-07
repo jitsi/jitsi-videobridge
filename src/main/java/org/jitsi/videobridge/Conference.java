@@ -766,37 +766,6 @@ public class Conference
     }
 
     /**
-     * Finds a <tt>Channel</tt> of this <tt>Conference</tt> which receives a
-     * specific SSRC and is with a specific <tt>MediaType</tt>.
-     *
-     * @param receiveSSRC the SSRC of a received RTP stream whose receiving
-     * <tt>Channel</tt> in this <tt>Conference</tt> is to be found
-     * @param mediaType the <tt>MediaType</tt> of the <tt>Channel</tt> to be
-     * found
-     * @return the <tt>Channel</tt> in this <tt>Conference</tt> which receives
-     * the specified <tt>ssrc</tt> and is with the specified <tt>mediaType</tt>;
-     * otherwise, <tt>null</tt>
-     */
-    public Channel findChannelByReceiveSSRC(
-            long receiveSSRC,
-            MediaType mediaType)
-    {
-        for (Content content : getContents())
-        {
-            if (mediaType.equals(content.getMediaType()))
-            {
-                Channel channel = content.findChannelByReceiveSSRC(receiveSSRC);
-
-                if (channel != null)
-                {
-                    return channel;
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
      * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
      * stream with a specific SSRC and with a specific <tt>MediaType</tt>.
      *
@@ -811,9 +780,21 @@ public class Conference
     AbstractEndpoint findEndpointByReceiveSSRC(
         long receiveSSRC, MediaType mediaType)
     {
-        Channel channel = findChannelByReceiveSSRC(receiveSSRC, mediaType);
+        ColibriShim colibriShim = videobridge.getColibriShim();
+        ColibriShim.ConferenceShim conferenceShim = colibriShim.getConference(this.getID());
+        ColibriShim.ContentShim contentShim = conferenceShim.getOrCreateContent(mediaType.toString());
 
-        return (channel == null) ? null : channel.getEndpoint(receiveSSRC);
+        for (ColibriShim.Channel channelShim : contentShim.getChannels())
+        {
+            for (SourcePacketExtension sourceExt : channelShim.sources)
+            {
+                if (sourceExt.getSSRC() == receiveSSRC)
+                {
+                    return channelShim.endpoint;
+                }
+            }
+        }
+        return null;
     }
 
     /**
