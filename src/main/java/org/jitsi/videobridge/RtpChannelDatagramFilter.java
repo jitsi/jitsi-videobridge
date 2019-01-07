@@ -26,6 +26,7 @@ import org.jitsi.util.*;
  *
  * @author Boris Grozev
  */
+@Deprecated
 public class RtpChannelDatagramFilter
     implements DatagramPacketFilter
 {

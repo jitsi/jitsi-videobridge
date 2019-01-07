@@ -46,6 +46,7 @@ import java.util.concurrent.*;
  * @author Lyubomir Marinov
  * @author Boris Grozev
  */
+@Deprecated
 public class NewSctpConnection
     extends SctpConnection
     implements SctpDataCallback,

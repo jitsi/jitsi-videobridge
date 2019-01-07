@@ -25,6 +25,7 @@ import java.io.*;
  *
  * @author Pawel Domas
  */
+@Deprecated
 public class WebRtcDataStream
 {
     /**

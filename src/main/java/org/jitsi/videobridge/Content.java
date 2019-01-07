@@ -43,6 +43,7 @@ import org.osgi.framework.*;
  * @author Boris Grozev
  * @author George Politis
  */
+@Deprecated
 public class Content
     extends PropertyChangeNotifier
     implements RTPTranslator.WriteFilter, Expireable

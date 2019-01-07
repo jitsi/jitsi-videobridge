@@ -28,6 +28,7 @@ import org.jitsi.service.neomedia.recording.*;
  *
  * @author Boris Grozev
  */
+@Deprecated
 class RecorderEventHandlerImpl
     implements RecorderEventHandler
 {

@@ -22,6 +22,7 @@ package org.jitsi.videobridge;
  * @author Pawel Domas
  * @author Lyubomir Marinov
  */
+@Deprecated
 public interface WebRtcDataStreamListener
 {
     /**

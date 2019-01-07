@@ -30,6 +30,7 @@ import org.jitsi.service.neomedia.event.*;
  *
  * @author Lyubomir Marinov
  */
+@Deprecated
 public class AudioChannel
     extends RtpChannel
 {

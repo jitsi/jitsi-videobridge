@@ -48,6 +48,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author Lyubomir Marinov
  * @author George Politis
  */
+@Deprecated
 public class VideoChannel
     extends RtpChannel
 {
