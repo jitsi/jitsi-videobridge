@@ -107,6 +107,13 @@ public class JvbBundleConfig
     {
         return BUNDLES;
     }
+    /**
+     * The property name of the setting that enables/disables VP8 picture id
+     * rewriting.
+     */
+    //TODO(brian): moved this here when removing SimulcastController, find a home for it.
+    public static final String ENABLE_VP8_PICID_REWRITING_PNAME
+            = "org.jitsi.videobridge.ENABLE_VP8_PICID_REWRITING";
 
     @Override
     public Map<String, String> getSystemPropertyDefaults()

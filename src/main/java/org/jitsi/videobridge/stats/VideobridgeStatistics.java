@@ -642,22 +642,23 @@ public class VideobridgeStatistics
                                 rttCount++;
                             }
 
-                            if (channel instanceof VideoChannel)
-                            {
-                                VideoChannel videoChannel
-                                    = (VideoChannel) channel;
-
-                                //assume we're receiving a stream
-                                int channelStreams = 1;
-                                int lastN = videoChannel.getLastN();
-                                channelStreams
-                                    += (lastN == -1)
-                                        ? (contentChannelCount - 1)
-                                        : Math.min(
-                                                lastN, contentChannelCount - 1);
-
-                                videoStreams += channelStreams;
-                            }
+                            //TODO(brian): re-implement this
+//                            if (channel instanceof VideoChannel)
+//                            {
+//                                VideoChannel videoChannel
+//                                    = (VideoChannel) channel;
+//
+//                                //assume we're receiving a stream
+//                                int channelStreams = 1;
+//                                int lastN = videoChannel.getLastN();
+//                                channelStreams
+//                                    += (lastN == -1)
+//                                        ? (contentChannelCount - 1)
+//                                        : Math.min(
+//                                                lastN, contentChannelCount - 1);
+//
+//                                videoStreams += channelStreams;
+//                            }
                         }
                     }
                 }

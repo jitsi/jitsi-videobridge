@@ -1528,15 +1528,6 @@ public class Videobridge
                     System.setProperty(newPropertyName, propertyValue);
                 }
             }
-
-            String disableNackTerminaton
-                = cfg.getString(VideoChannel.DISABLE_NACK_TERMINATION_PNAME);
-            if (disableNackTerminaton != null)
-            {
-                System.setProperty(
-                    RtxTransformer.DISABLE_NACK_TERMINATION_PNAME,
-                    disableNackTerminaton);
-            }
         }
 
         // Initialize the the host candidate interface filters in the ice4j
@@ -1645,7 +1636,6 @@ public class Videobridge
                 }
             }
 
-            System.clearProperty(VideoChannel.ENABLE_LIPSYNC_HACK_PNAME);
             System.clearProperty(RtxTransformer.DISABLE_NACK_TERMINATION_PNAME);
         }
     }
@@ -1680,23 +1670,25 @@ public class Videobridge
                 if (conference != null && !conference.isExpired())
                 {
                     conferenceCount++;
+                    //TODO(brian): for now just assume every endpoint has 3 streams (audio/video/data)
+                    streamCount += conference.getEndpointCount() * 3;
 
-                    for (Content content : conference.getContents())
-                    {
-                        if (content != null && !content.isExpired())
-                        {
-                            int contentChannelCount = content.getChannelCount();
-
-                            channelCount += contentChannelCount;
-                            if (MediaType.VIDEO.equals(content.getMediaType()))
-                            {
-                                streamCount
-                                    += getContentStreamCount(
-                                            content,
-                                            contentChannelCount);
-                            }
-                        }
-                    }
+//                    for (Content content : conference.getContents())
+//                    {
+//                        if (content != null && !content.isExpired())
+//                        {
+//                            int contentChannelCount = content.getChannelCount();
+//
+//                            channelCount += contentChannelCount;
+//                            if (MediaType.VIDEO.equals(content.getMediaType()))
+//                            {
+//                                streamCount
+//                                    += getContentStreamCount(
+//                                            content,
+//                                            contentChannelCount);
+//                            }
+//                        }
+//                    }
                 }
             }
         }
@@ -1732,23 +1724,23 @@ public class Videobridge
      * @return  the number of video streams for a given <tt>Content</tt>. See the
      * documentation for {@link #getConferenceCountString()}.
      */
-    private int getContentStreamCount(
-        Content content,
-        final int contentChannelCount)
-    {
-        return content.getChannels().stream()
-            .filter(
-                c -> c != null && !c.isExpired() && c instanceof VideoChannel)
-            .mapToInt(c ->
-            {
-                int lastN = ((VideoChannel) c).getLastN();
-                int lastNSteams =
-                    lastN == -1
-                        ? contentChannelCount - 1
-                        : Math.min(lastN, contentChannelCount - 1);
-                return lastNSteams + 1; // assume we're receiving 1 stream
-            }).sum();
-    }
+//    private int getContentStreamCount(
+//        Content content,
+//        final int contentChannelCount)
+//    {
+//        return content.getChannels().stream()
+//            .filter(
+//                c -> c != null && !c.isExpired() && c instanceof VideoChannel)
+//            .mapToInt(c ->
+//            {
+//                int lastN = ((VideoChannel) c).getLastN();
+//                int lastNSteams =
+//                    lastN == -1
+//                        ? contentChannelCount - 1
+//                        : Math.min(lastN, contentChannelCount - 1);
+//                return lastNSteams + 1; // assume we're receiving 1 stream
+//            }).sum();
+//    }
 
     /**
      * Basic statistics/metrics about the videobridge like cumulative/total

@@ -364,13 +364,14 @@ public abstract class AbstractEndpointMessageTransport
 
         if (endpoint != null)
         {
-            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
-            {
-                if (channel instanceof VideoChannel)
-                {
-                    ((VideoChannel) channel).setMaxFrameHeight(maxFrameHeight);
-                }
-            }
+            //TODO(brian): need to re-implement this once the simulcast logic gets brought back
+//            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
+//            {
+//                if (channel instanceof VideoChannel)
+//                {
+//                    ((VideoChannel) channel).setMaxFrameHeight(maxFrameHeight);
+//                }
+//            }
         }
     }
 
