@@ -90,11 +90,6 @@ public class Conference
     }
 
     /**
-     * The <tt>Content</tt>s of this <tt>Conference</tt>.
-     */
-    private final List<Content> contents = new LinkedList<>();
-
-    /**
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
     private final List<AbstractEndpoint> endpoints = new LinkedList<>();
@@ -614,30 +609,6 @@ public class Conference
         }
         finally
         {
-            // Expire the Contents of this Conference.
-            for (Content content : getContents())
-            {
-                try
-                {
-                    content.expire();
-                }
-                catch (Throwable t)
-                {
-                    logger.warn(
-                            "Failed to expire content " + content.getName()
-                                + " of conference " + getID() + "!",
-                            t);
-                    if (t instanceof InterruptedException)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
-                    else if (t instanceof ThreadDeath)
-                    {
-                        throw (ThreadDeath) t;
-                    }
-                }
-            }
-
             // Close the transportManagers of this Conference. Normally, there
             // will be no TransportManager left to close at this point because
             // all Channels have expired and the last Channel to be removed from
@@ -741,32 +712,6 @@ public class Conference
     }
 
     /**
-     * Expires a specific <tt>Content</tt> of this <tt>Conference</tt> (i.e. if
-     * the specified <tt>content</tt> is not in the list of <tt>Content</tt>s of
-     * this <tt>Conference</tt>, does nothing).
-     *
-     * @param content the <tt>Content</tt> to be expired by this
-     * <tt>Conference</tt>
-     */
-    public void expireContent(Content content)
-    {
-        boolean expireContent;
-
-        synchronized (contents)
-        {
-            expireContent = contents.contains(content);
-            if (expireContent)
-            {
-                contents.remove(content);
-            }
-        }
-        if (expireContent)
-        {
-            content.expire();
-        }
-    }
-
-    /**
      * Finds an <tt>Endpoint</tt> of this <tt>Conference</tt> which sends an RTP
      * stream with a specific SSRC and with a specific <tt>MediaType</tt>.
      *
@@ -808,20 +753,6 @@ public class Conference
     public BundleContext getBundleContext()
     {
         return getVideobridge().getBundleContext();
-    }
-
-    /**
-     * Gets the <tt>Content</tt>s of this <tt>Conference</tt>.
-     *
-     * @return the <tt>Content</tt>s of this <tt>Conference</tt>
-     */
-    @Deprecated
-    public Content[] getContents()
-    {
-        synchronized (contents)
-        {
-            return contents.toArray(new Content[contents.size()]);
-        }
     }
 
     /**
@@ -1001,55 +932,6 @@ public class Conference
         }
 
         return mediaService;
-    }
-
-    /**
-     * Gets a <tt>Content</tt> of this <tt>Conference</tt> which has a specific
-     * name. If a <tt>Content</tt> of this <tt>Conference</tt> with the
-     * specified <tt>name</tt> does not exist at the time the method is invoked,
-     * the method initializes a new <tt>Content</tt> instance with the specified
-     * <tt>name</tt> and adds it to the list of <tt>Content</tt>s of this
-     * <tt>Conference</tt>.
-     *
-     * @param name the name of the <tt>Content</tt> which is to be returned
-     * @return a <tt>Content</tt> of this <tt>Conference</tt> which has the
-     * specified <tt>name</tt>
-     */
-    public Content getOrCreateContent(String name)
-    {
-        Content content;
-
-        synchronized (contents)
-        {
-            content
-                = contents.stream()
-                    .filter(c -> c.getName().equals(name))
-                    .findFirst().orElse(null);
-            if (content != null)
-            {
-                content.touch(); // It seems the content is still active.
-                return content;
-            }
-
-            content = new Content(this, name);
-            contents.add(content);
-        }
-
-        if (logger.isInfoEnabled())
-        {
-            /*
-             * The method Videobridge.getChannelCount() should better be
-             * executed outside synchronized blocks in order to reduce the risks
-             * of causing deadlocks.
-             */
-            Videobridge videobridge = getVideobridge();
-
-            logger.info(Logger.Category.STATISTICS,
-                        "create_content," + content.getLoggingId()
-                            + " " + videobridge.getConferenceCountString());
-        }
-
-        return content;
     }
 
     /**

@@ -143,30 +143,6 @@ public class EventFactory
     }
 
     /**
-     * Creates a new "content created" <tt>Event</tt>, which indicates the
-     * creation of a new COLIBRI content.
-     * @param content the newly created COLIBRI content.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event contentCreated(Content content)
-    {
-        return new Event(CONTENT_CREATED_TOPIC, makeProperties(content));
-    }
-
-    /**
-     * Creates a new "content expired" <tt>Event</tt>, which indicates the
-     * expiry of a COLIBRI content.
-     * @param content the expired COLIBRI content.
-     *
-     * @return the <tt>Event</tt> which was created.
-     */
-    public static Event contentExpired(Content content)
-    {
-        return new Event(CONTENT_EXPIRED_TOPIC, makeProperties(content));
-    }
-
-    /**
      * Creates a new "endpoint created" <tt>Event</tt>, which indicates that
      * a COLIBRI endpoint was created.
      * @param endpoint the newly created endpoint.
