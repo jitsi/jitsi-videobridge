@@ -1,5 +1,6 @@
 package org.jitsi.videobridge.datachannel.protocol;
 
+import java.nio.*;
 import java.nio.charset.*;
 
 public class DataChannelStringMessage extends DataChannelMessage
@@ -15,5 +16,11 @@ public class DataChannelStringMessage extends DataChannelMessage
     {
         String stringData = new String(data, StandardCharsets.UTF_8);
         return new DataChannelStringMessage(stringData);
+    }
+
+    @Override
+    public ByteBuffer getBuffer()
+    {
+        return ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -15,7 +15,10 @@ public class DataChannel
     protected final int sid;
     protected final String label;
 
+    protected boolean ready = false;
+
     private DataChannelStack.DataChannelEventListener eventListener;
+    private DataChannelStack.DataChannelMessageListener messageListener;
 
     //TODO: all data channel instances will be sharing the socket, so make sure it's thread safe
     public DataChannel(SctpSocket sctpSocket, int channelType, int priority, long reliability, int sid, String label)
@@ -44,15 +47,26 @@ public class DataChannel
         }
     }
 
+    public boolean isReady()
+    {
+        return ready;
+    }
+
     public void onDataChannelEvents(DataChannelStack.DataChannelEventListener listener)
     {
         this.eventListener = listener;
+    }
+
+    public void onDataChannelMessage(DataChannelStack.DataChannelMessageListener dataChannelMessageListener)
+    {
+        this.messageListener = dataChannelMessageListener;
     }
 
     public void onIncomingMsg(DataChannelMessage message)
     {
         if (message instanceof OpenChannelAckMessage)
         {
+            ready = true;
             eventListener.onDataChannelOpened();
         }
         else if (message instanceof DataChannelStringMessage)
@@ -66,5 +80,14 @@ public class DataChannel
             System.out.println("Received data channel binary message: " +
                     ByteBufferKt.toHex(ByteBuffer.wrap(dataChannelBinaryMessage.data)));
         }
+
+        messageListener.onDataChannelMessage(message);
+    }
+
+    public void sendString(String message)
+    {
+        System.out.println("TEMP: Sending data channel message " + message);
+        DataChannelStringMessage stringMessage = new DataChannelStringMessage(message);
+        sctpSocket.send(stringMessage.getBuffer(), true, sid, DataChannelProtocolConstants.WEBRTC_PPID_STRING);
     }
 }

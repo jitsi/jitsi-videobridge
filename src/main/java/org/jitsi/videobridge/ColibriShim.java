@@ -120,8 +120,16 @@ public class ColibriShim {
                             .getTransportManager(bundleId, true, true);
 
             // Bundle ID and endpoint ID must be the same
-            ColibriShim.this.videobridge.getConference(conferenceId, null).getEndpoint(bundleId)
-                    .setTransportManager(transportManager);
+            AbstractEndpoint ep = ColibriShim.this.videobridge.getConference(conferenceId, null).getEndpoint(bundleId);
+            if (ep instanceof Endpoint)
+            {
+                ((Endpoint)ep).setTransportManager(transportManager);
+            }
+            else
+            {
+                throw new Error("Tried to set a transport manager on an invalid ep type: " + ep.getClass());
+            }
+
         }
 
         public void startConnectivityEstablishment(IceUdpTransportPacketExtension transportExtension)
@@ -201,14 +209,21 @@ public class ColibriShim {
             {
                 AbstractEndpoint endpoint =
                         ColibriShim.this.videobridge.getConference(conferenceId, null).getOrCreateEndpoint(endpointId);
-                String sctpConnId = generateUniqueChannelID();
-                SctpConnection connection = new SctpConnection(sctpConnId, endpoint);
-                sctpConnections.put(sctpConnId, connection);
+                if (endpoint instanceof Endpoint)
+                {
+                    String sctpConnId = generateUniqueChannelID();
+                    SctpConnection connection = new SctpConnection(sctpConnId, endpoint);
+                    sctpConnections.put(sctpConnId, connection);
 
-                // Trigger the creation of the actual new SCTP connection
-                endpoint.createSctpConnection();
+                    // Trigger the creation of the actual new SCTP connection
+                    ((Endpoint)endpoint).createSctpConnection();
 
-                return connection;
+                    return connection;
+                }
+                else
+                {
+                    throw new Error("Tried to create an SCTP connection on invalid ep type: " + endpoint.getClass());
+                }
             }
         }
 

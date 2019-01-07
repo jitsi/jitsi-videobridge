@@ -15,11 +15,19 @@
  */
 package org.jitsi.videobridge;
 
+import org.jitsi.nlj.*;
+import org.jitsi.rtp.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.datachannel.*;
+import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
+import org.jitsi.videobridge.sctp.*;
+import org.jitsi_modified.sctp4j.*;
 
 import java.io.*;
+import java.nio.*;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
@@ -124,6 +132,7 @@ public class Endpoint
      * @return an <tt>SctpConnection</tt> bound to this <tt>Endpoint</tt> or
      * <tt>null</tt> otherwise.
      */
+    @Deprecated
     public SctpConnection getSctpConnection()
     {
         return getMessageTransport().getSctpConnection();
@@ -233,6 +242,103 @@ public class Endpoint
             messageTransport.close();
         }
         logger.info(transceiver.getStats());
+    }
+
+    private DataChannelStack dataChannelStack;
+    private SctpManager sctpManager;
+    private IceUdpTransportManager transportManager;
+
+    //TODO(brian): not sure if this is the final way we'll associate the transport manager and endpoint/transceiver,
+    // but it's a step.
+    public void setTransportManager(IceUdpTransportManager transportManager)
+    {
+        this.transportManager = transportManager;
+
+        //TODO: technically we want to start this once dtls is complete, is this good enough though?
+        transportManager.onTransportConnected(() -> {
+            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
+            if (sctpManager != null) {
+                new Thread(() -> {
+                    LinkedBlockingQueue<PacketInfo> sctpPackets =
+                            ((IceDtlsTransportManager)transportManager).sctpAppPackets;
+                    while (true) {
+                        try {
+                            PacketInfo sctpPacket = sctpPackets.take();
+                            System.out.println("SCTP reader " + getID() + " received an incoming sctp packet " +
+                                    " (size " + sctpPacket.getPacket().getBuffer().limit() + ")");
+                            sctpManager.handleIncomingSctp(sctpPacket);
+                        } catch (InterruptedException e) {
+                            System.out.println("Interrupted while trying to receive sctp packet");
+                        }
+                    }
+                }, "Incoming SCTP reader").start();
+            }
+        });
+
+        ((IceDtlsTransportManager)transportManager).setTransceiver(this.transceiver);
+    }
+
+    public void createSctpConnection() {
+        System.out.println("Creating SCTP manager");
+        this.sctpManager = new SctpManager(
+                (data, offset, length) -> {
+                    System.out.println("Sending outgoing SCTP data");
+                    ((IceDtlsTransportManager)transportManager).sendDtlsData(new PacketInfo(new UnparsedPacket(ByteBuffer.wrap(data, offset, length))));
+                    return 0;
+                }
+        );
+        // NOTE(brian): as far as I know we always act as the 'server' for sctp connections, but if not we can make
+        // which type we use dynamic
+        SctpServerSocket socket = sctpManager.createServerSocket();
+        socket.eventHandler = new SctpSocket.SctpSocketEventHandler()
+        {
+            @Override
+            public void onReady()
+            {
+                System.out.println("SCTP connection is ready! Opening data channel");
+                //TODO: open data channel -- if we do it this way though, maybe we'll miss a message?
+                DataChannel dataChannel = dataChannelStack.createDataChannel(
+                        DataChannelProtocolConstants.RELIABLE,
+                        0,
+                        0,
+                        0,
+                        "default");
+                Endpoint.this.messageTransport.setDataChannel(dataChannel);
+                dataChannel.open();
+            }
+
+            @Override
+            public void onDisconnected()
+            {
+                System.out.println("SCTP is disconnected!");
+            }
+        };
+        dataChannelStack = new DataChannelStack(socket);
+        dataChannelStack.onDataChannelStackEvents(new DataChannelStack.DataChannelStackEventListener()
+        {
+            @Override
+            public void onDataChannelOpenedRemotely(DataChannel dataChannel)
+            {
+                System.out.println("Data channel was opened remotely!");
+            }
+        });
+        //TODO: move this to an executor/pool
+        socket.listen();
+        new Thread(() -> {
+            while (!socket.accept())
+            {
+                System.out.println("SCTP socket " + socket.hashCode() + " trying to accept connection");
+                try
+                {
+                    Thread.sleep(100);
+                } catch (InterruptedException e)
+                {
+                    System.out.println("Interrupted while trying to accept incoming SCTP connection: " + e.toString());
+                    break;
+                }
+            }
+            System.out.println("SCTP socket " + socket.hashCode() + " accepted connection");
+        }).start();
     }
 
     /**

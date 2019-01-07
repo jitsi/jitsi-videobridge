@@ -38,6 +38,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
  * @author Boris Grozev
  * @author Pawel Domas
  */
+@Deprecated
 public abstract class Channel
     extends PropertyChangeNotifier
     implements Expireable

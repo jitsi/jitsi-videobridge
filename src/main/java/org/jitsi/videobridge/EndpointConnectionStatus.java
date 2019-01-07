@@ -261,6 +261,10 @@ public class EndpointConnectionStatus
             }
         }
 
+        //TODO(brian): this looks at channel activity times, which are now gone.  need to re-implement
+        // some form of that and have this code look there.  for now, hard-coding things to active
+        lastActivity = System.currentTimeMillis();
+
         // Transport not initialized yet
         if (lastActivity == 0)
         {

@@ -109,4 +109,8 @@ public class DataChannelStack
     public interface DataChannelEventListener {
         void onDataChannelOpened();
     }
+
+    public interface DataChannelMessageListener {
+        void onDataChannelMessage(DataChannelMessage dataChannelMessage);
+    }
 }

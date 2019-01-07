@@ -24,6 +24,7 @@ public class DataChannelProtocolMessage extends DataChannelMessage
         return HEADER_SIZE_BYTES;
     }
 
+    @Override
     public ByteBuffer getBuffer()
     {
         ByteBuffer buf = ByteBuffer.allocate(getSizeBytes());

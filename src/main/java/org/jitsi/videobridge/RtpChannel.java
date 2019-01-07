@@ -63,6 +63,7 @@ import java.util.stream.*;
  * @author Boris Grozev
  * @author George Politis
  */
+@Deprecated
 public class RtpChannel
     extends Channel
     implements PropertyChangeListener
@@ -1399,6 +1400,7 @@ public class RtpChannel
      * Note that this may happen more than once (e.g. if the client opens a new
      * web-socket).
      */
+    @Deprecated
     void endpointMessageTransportConnected()
     {
     }

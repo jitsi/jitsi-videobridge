@@ -53,6 +53,7 @@ import org.jitsi.util.Logger; // Disambiguation.
  * @author Lyubomir Marinov
  * @author Boris Grozev
  */
+@Deprecated
 public class SctpConnection
     extends Channel
     implements SctpDataCallback,

@@ -18,23 +18,16 @@ package org.jitsi.videobridge;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.nlj.*;
-import org.jitsi.nlj.transform.node.Node;
+import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.rtp.UnparsedPacket;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
-import org.jitsi.videobridge.datachannel.*;
-import org.jitsi.videobridge.datachannel.protocol.*;
-import org.jitsi.videobridge.sctp.SctpManager;
-import org.jitsi_modified.sctp4j.*;
 
 import java.io.*;
 import java.lang.ref.*;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.*;
 
 /**
  * Represents an endpoint in a conference (i.e. the entity associated with
@@ -71,7 +64,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     private final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
 
-    private IceUdpTransportManager transportManager;
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -91,7 +83,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     //Public for now since the channel needs to reach in and grab it
     public Transceiver transceiver;
-    private SctpManager sctpManager;
     private ExecutorService receiverExecutor;
     private ExecutorService senderExecutor;
     // We'll still continue to share a single background executor, as I think it's sufficient.
@@ -137,106 +128,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
     }
 
-    private DataChannelStack dataChannelStack;
 
-    public void createSctpConnection() {
-        System.out.println("Creating SCTP manager");
-        this.sctpManager = new SctpManager(
-                (data, offset, length) -> {
-                    System.out.println("Sending outgoing SCTP data");
-                    ((IceDtlsTransportManager)transportManager).sendDtlsData(new PacketInfo(new UnparsedPacket(ByteBuffer.wrap(data, offset, length))));
-                    return 0;
-                }
-        );
-        // NOTE(brian): as far as I know we always act as the 'server' for sctp connections, but if not we can make
-        // which type we use dynamic
-        SctpServerSocket socket = sctpManager.createServerSocket();
-        socket.eventHandler = new SctpSocket.SctpSocketEventHandler()
-        {
-            @Override
-            public void onReady()
-            {
-                System.out.println("SCTP connection is ready! Opening data channel");
-                //TODO: open data channel -- if we do it this way though, maybe we'll miss a message?
-                DataChannel dataChannel = dataChannelStack.createDataChannel(
-                        DataChannelProtocolConstants.RELIABLE,
-                        0,
-                        0,
-                        0,
-                        "default");
-                dataChannel.onDataChannelEvents(new DataChannelStack.DataChannelEventListener()
-                {
-                    @Override
-                    public void onDataChannelOpened()
-                    {
-                        System.out.println("Locally created data channel opened!");
-                    }
-                });
-                dataChannel.open();
-            }
-
-            @Override
-            public void onDisconnected()
-            {
-                System.out.println("SCTP is disconnected!");
-            }
-        };
-        dataChannelStack = new DataChannelStack(socket);
-        dataChannelStack.onDataChannelStackEvents(new DataChannelStack.DataChannelStackEventListener()
-        {
-            @Override
-            public void onDataChannelOpenedRemotely(DataChannel dataChannel)
-            {
-                System.out.println("Data channel was opened remotely!");
-            }
-        });
-        //TODO: move this to an executor/pool
-        socket.listen();
-        new Thread(() -> {
-            while (!socket.accept())
-            {
-                System.out.println("SCTP socket " + socket.hashCode() + " trying to accept connection");
-                try
-                {
-                    Thread.sleep(100);
-                } catch (InterruptedException e)
-                {
-                    System.out.println("Interrupted while trying to accept incoming SCTP connection: " + e.toString());
-                    break;
-                }
-            }
-            System.out.println("SCTP socket " + socket.hashCode() + " accepted connection");
-        }).start();
-    }
-
-    //TODO(brian): not sure if this is the final way we'll associate the transport manager and endpoint/transceiver,
-    // but it's a step.
-    public void setTransportManager(IceUdpTransportManager transportManager)
-    {
-        this.transportManager = transportManager;
-
-        //TODO: technically we want to start this once dtls is complete, is this good enough though?
-        transportManager.onTransportConnected(() -> {
-            System.out.println("Endpoint sees transport is connected, now reading incoming sctp packets");
-            if (sctpManager != null) {
-                new Thread(() -> {
-                    LinkedBlockingQueue<PacketInfo> sctpPackets = ((IceDtlsTransportManager)getConference().getTransportManager(AbstractEndpoint.this.id)).sctpAppPackets;
-                    while (true) {
-                        try {
-                            PacketInfo sctpPacket = sctpPackets.take();
-                            System.out.println("SCTP reader " + getID() + " received an incoming sctp packet " +
-                                    " (size " + sctpPacket.getPacket().getBuffer().limit() + ")");
-                            sctpManager.handleIncomingSctp(sctpPacket);
-                        } catch (InterruptedException e) {
-                            System.out.println("Interrupted while trying to receive sctp packet");
-                        }
-                    }
-                }, "Incoming SCTP reader").start();
-            }
-        });
-
-        ((IceDtlsTransportManager)transportManager).setTransceiver(this.transceiver);
-    }
 
     protected void handleIncomingRtp(List<PacketInfo> packetInfos)
     {
@@ -414,6 +306,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     /**
      * @return a list with all {@link RtpChannel}s of this {@link Endpoint}.
      */
+    @Deprecated
     public List<RtpChannel> getChannels()
     {
         return getChannels(null);

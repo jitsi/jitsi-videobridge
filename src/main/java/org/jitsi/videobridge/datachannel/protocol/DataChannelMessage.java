@@ -1,5 +1,8 @@
 package org.jitsi.videobridge.datachannel.protocol;
 
-public class DataChannelMessage
+import java.nio.*;
+
+public abstract class DataChannelMessage
 {
+    public abstract ByteBuffer getBuffer();
 }
