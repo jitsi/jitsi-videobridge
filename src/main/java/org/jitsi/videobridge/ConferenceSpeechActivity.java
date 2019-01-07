@@ -270,6 +270,10 @@ public class ConferenceSpeechActivity
 
         if (conference != null)
         {
+            logger.info(
+                    "BRIAN: The dominant speaker in conference "
+                            + conference.getID() + " is now the SSRC " + ssrc
+                            + ".");
             if (logger.isTraceEnabled())
             {
                 logger.trace(
@@ -619,11 +623,9 @@ public class ConferenceSpeechActivity
 
     /**
      * Notifies this instance that a new audio level was received or measured by
-     * a <tt>Channel</tt> for an RTP stream with a specific synchronization
+     * an <tt>Endpoint</tt> for an RTP stream with a specific synchronization
      * source identifier/SSRC.
      *
-     * @param channel the <tt>Channel</tt> which received or measured the new
-     * audio level for the RTP stream identified by the specified <tt>ssrc</tt>
      * @param ssrc the synchronization source identifier/SSRC of the RTP stream
      * for which a new audio level was received or measured by the specified
      * <tt>channel</tt>
@@ -631,17 +633,15 @@ public class ConferenceSpeechActivity
      * specified <tt>channel</tt> for the RTP stream with the specified
      * <tt>ssrc</tt> 
      */
-//    public void levelChanged(Channel channel, long ssrc, int level)
-//    {
-//        // ActiveSpeakerDetector
-//        ActiveSpeakerDetector activeSpeakerDetector
-//            = getActiveSpeakerDetector();
-//
-//        if (activeSpeakerDetector != null)
-//        {
-//            activeSpeakerDetector.levelChanged(ssrc, level);
-//        }
-//    }
+    public void levelChanged(long ssrc, int level)
+    {
+        ActiveSpeakerDetector activeSpeakerDetector = getActiveSpeakerDetector();
+
+        if (activeSpeakerDetector != null)
+        {
+            activeSpeakerDetector.levelChanged(ssrc, level);
+        }
+    }
 
     /**
      * Starts a new <tt>EventDispatcher</tt> or notifies an existing one to fire

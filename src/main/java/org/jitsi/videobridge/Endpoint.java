@@ -88,6 +88,8 @@ public class Endpoint
      */
     private SctpManager sctpManager;
 
+    private AudioLevelListenerImpl audioLevelListener;
+
     /**
      * The password of the ICE Agent associated with this endpoint: note that
      * without bundle an endpoint might have multiple channels with different
@@ -121,7 +123,10 @@ public class Endpoint
         super(conference, id);
 
         messageTransport = new EndpointMessageTransport(this);
-        this.logger = Logger.getLogger(classLogger, conference.getLogger());
+        logger = Logger.getLogger(classLogger, conference.getLogger());
+
+        audioLevelListener = new AudioLevelListenerImpl(conference.getSpeechActivity());
+        transceiver.setAudioLevelListener(audioLevelListener);
     }
 
     /**
