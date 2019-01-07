@@ -94,12 +94,6 @@ public class Conference
     private final List<Content> contents = new LinkedList<>();
 
     /**
-     * An instance used to save information about the endpoints of this
-     * <tt>Conference</tt>, when media recording is enabled.
-     */
-    private EndpointRecorder endpointRecorder = null;
-
-    /**
      * The <tt>Endpoint</tt>s participating in this <tt>Conference</tt>.
      */
     private final List<AbstractEndpoint> endpoints = new LinkedList<>();
@@ -176,12 +170,6 @@ public class Conference
      */
     private final PropertyChangeListener propertyChangeListener
         = new WeakReferencePropertyChangeListener(this);
-
-    /**
-     * The <tt>RecorderEventHandler</tt> which is used to handle recording
-     * events for this <tt>Conference</tt>.
-     */
-    private RecorderEventHandlerImpl recorderEventHandler = null;
 
     /**
      * Whether media recording is currently enabled for this <tt>Conference</tt>.
@@ -413,41 +401,6 @@ public class Conference
     }
 
     /**
-     * Checks whether <tt>path</tt> is a valid directory for recording (creates
-     * it if necessary).
-     * @param path the path to the directory to check.
-     * @return <tt>true</tt> if the directory <tt>path</tt> can be used for
-     * media recording, <tt>false</tt> otherwise.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    private boolean checkRecordingDirectory(String path)
-    {
-        if (StringUtils.isNullOrEmpty(path))
-        {
-            return false;
-        }
-
-        File dir = new File(path);
-
-        if (!dir.exists())
-        {
-            dir.mkdir();
-            if (!dir.exists())
-            {
-                return false;
-            }
-        }
-        if (!dir.isDirectory() || !dir.canWrite())
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
      * Closes given {@link #transportManagers} of this <tt>Conference</tt>
      * and removes corresponding channel bundle.
      */
@@ -563,13 +516,6 @@ public class Conference
     {
         describeShallow(iq);
 
-        if (isRecording())
-        {
-            ColibriConferenceIQ.Recording recordingIQ
-                = new ColibriConferenceIQ.Recording(State.ON.toString());
-            recordingIQ.setDirectory(getRecordingDirectory());
-            iq.setRecording(recordingIQ);
-        }
         for (Content content : getContents())
         {
             ColibriConferenceIQ.Content contentIQ
@@ -630,11 +576,6 @@ public class Conference
             broadcastMessage(
                     createDominantSpeakerEndpointChangeEvent(
                         dominantSpeaker.getID()));
-
-            if (isRecording() && (recorderEventHandler != null))
-            {
-                recorderEventHandler.dominantSpeakerChanged(dominantSpeaker);
-            }
         }
     }
 
@@ -662,13 +603,6 @@ public class Conference
         if (eventAdmin != null)
         {
             eventAdmin.sendEvent(EventFactory.conferenceExpired(this));
-        }
-
-        setRecording(false);
-        if (recorderEventHandler != null)
-        {
-            recorderEventHandler.close();
-            recorderEventHandler = null;
         }
 
         Videobridge videobridge = getVideobridge();
@@ -988,34 +922,6 @@ public class Conference
     }
 
     /**
-     * Returns the <tt>EndpointRecorder</tt> instance used to save the
-     * endpoints information for this <tt>Conference</tt>. Creates an instance
-     * if none exists.
-     * @return the <tt>EndpointRecorder</tt> instance used to save the
-     * endpoints information for this <tt>Conference</tt>.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    private EndpointRecorder getEndpointRecorder()
-    {
-        if (endpointRecorder == null)
-        {
-            try
-            {
-                endpointRecorder
-                    = new EndpointRecorder(
-                            getRecordingPath() + "/endpoints.json");
-            }
-            catch (IOException ioe)
-            {
-                logger.warn("Could not create EndpointRecorder. " + ioe);
-            }
-        }
-        return endpointRecorder;
-    }
-
-    /**
      * Gets the <tt>Endpoint</tt>s participating in/contributing to this
      * <tt>Conference</tt>.
      *
@@ -1144,10 +1050,6 @@ public class Conference
             }
 
             content = new Content(this, name);
-            if (isRecording())
-            {
-                content.setRecording(true, getRecordingPath());
-            }
             contents.add(content);
         }
 
@@ -1184,103 +1086,6 @@ public class Conference
     public AbstractEndpoint getOrCreateEndpoint(String id)
     {
         return getEndpoint(id, /* create */ true);
-    }
-
-     /**
-      * @deprecated remove-with-recording
-      */
-    @Deprecated
-    RecorderEventHandler getRecorderEventHandler()
-    {
-        if (recorderEventHandler == null)
-        {
-            Throwable t;
-
-            try
-            {
-                recorderEventHandler
-                    = new RecorderEventHandlerImpl(
-                            this,
-                            getMediaService().createRecorderEventHandlerJson(
-                                    getRecordingPath() + "/metadata.json"));
-                t = null;
-            }
-            catch (IOException | IllegalArgumentException e)
-            {
-                t = e;
-            }
-            if (t !=  null)
-            {
-                logger.warn("Could not create RecorderEventHandler. " + t);
-            }
-        }
-        return recorderEventHandler;
-    }
-
-    /**
-     * Returns the directory where the recording should be stored
-     *
-     * @return the directory of the new recording
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    String getRecordingDirectory()
-    {
-        if (this.recordingDirectory == null)
-        {
-            SimpleDateFormat dateFormat
-                = new SimpleDateFormat("yyyy-MM-dd.HH-mm-ss.");
-            this.recordingDirectory
-                = dateFormat.format(new Date()) + getID() +
-                        ((name != null) ? "_" + name : "");
-        }
-
-        return this.recordingDirectory;
-    }
-
-    /**
-     * Returns the path to the directory where the media recording related files
-     * should be saved, or <tt>null</tt> if recording is not enabled in the
-     * configuration, or a recording path has not been configured.
-     *
-     * @return the path to the directory where the media recording related files
-     * should be saved, or <tt>null</tt> if recording is not enabled in the
-     * configuration, or a recording path has not been configured.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    private String getRecordingPath()
-    {
-        if (recordingPath == null)
-        {
-            ConfigurationService cfg
-                = getVideobridge().getConfigurationService();
-
-            if (cfg != null)
-            {
-                boolean recordingIsEnabled
-                    = cfg.getBoolean(
-                            Videobridge.ENABLE_MEDIA_RECORDING_PNAME,
-                            false);
-
-                if (recordingIsEnabled)
-                {
-                    String path
-                        = cfg.getString(
-                                Videobridge.MEDIA_RECORDING_PATH_PNAME,
-                                null);
-
-                    if (path != null)
-                    {
-                        this.recordingPath
-                            = path + "/" + this.getRecordingDirectory();
-                    }
-                }
-            }
-        }
-        return recordingPath;
     }
 
     /**
@@ -1384,48 +1189,6 @@ public class Conference
         // to expired is to set it to true so there is no need to synchronize
         // the reading of expired.
         return expired;
-    }
-
-    /**
-     * Checks whether media recording is currently enabled for this
-     * <tt>Conference</tt>.
-     * @return <tt>true</tt> if media recording is currently enabled for this
-     * <tt>Conference</tt>, false otherwise.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    public boolean isRecording()
-    {
-        boolean recording = this.recording;
-
-        //if one of the contents is not recording, stop all recording
-        if (recording)
-        {
-            synchronized (contents)
-            {
-                for (Content content : contents)
-                {
-                    MediaType mediaType = content.getMediaType();
-
-                    if (!MediaType.VIDEO.equals(mediaType)
-                            && !MediaType.AUDIO.equals(mediaType))
-                    {
-                        continue;
-                    }
-                    if (!content.isRecording())
-                    {
-                        recording = false;
-                    }
-                }
-            }
-        }
-        if (this.recording != recording)
-        {
-            setRecording(recording);
-        }
-
-        return this.recording;
     }
 
     /**
@@ -1573,156 +1336,6 @@ public class Conference
     }
 
     /**
-     * Attempts to enable or disable media recording for this
-     * <tt>Conference</tt>.
-     *
-     * @param recording whether to enable or disable recording.
-     * @return the state of the media recording for this <tt>Conference</tt>
-     * after the attempt to enable (or disable).
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    boolean setRecording(boolean recording)
-    {
-        if (recording != this.recording)
-        {
-            if (recording)
-            {
-                //try enable recording
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug(
-                            "Starting recording for conference with id="
-                                + getID());
-                }
-
-                String path = getRecordingPath();
-                boolean failedToStart = !checkRecordingDirectory(path);
-
-                if (!failedToStart)
-                {
-                    RecorderEventHandler handler = getRecorderEventHandler();
-
-                    if (handler == null)
-                    {
-                        failedToStart = true;
-                    }
-                }
-                if (!failedToStart)
-                {
-                    EndpointRecorder endpointRecorder = getEndpointRecorder();
-
-                    if (endpointRecorder == null)
-                    {
-                        failedToStart = true;
-                    }
-                    else
-                    {
-                        for (AbstractEndpoint endpoint : getEndpoints())
-                        {
-                            endpointRecorder.updateEndpoint(endpoint);
-                        }
-                    }
-                }
-
-                /*
-                 * The Recorders of the Contents need to share a single
-                 * Synchronizer, we take it from the first Recorder.
-                 */
-                boolean first = true;
-                Synchronizer synchronizer = null;
-
-                for (Content content : contents)
-                {
-                    MediaType mediaType = content.getMediaType();
-
-                    if (!MediaType.VIDEO.equals(mediaType)
-                            && !MediaType.AUDIO.equals(mediaType))
-                    {
-                        continue;
-                    }
-
-                    if (!failedToStart)
-                    {
-                        failedToStart = !content.setRecording(true, path);
-                    }
-                    if (failedToStart)
-                    {
-                        break;
-                    }
-
-                    if (first)
-                    {
-                        first = false;
-                        synchronizer = content.getRecorder().getSynchronizer();
-                    }
-                    else
-                    {
-                        Recorder recorder = content.getRecorder();
-
-                        if (recorder != null)
-                        {
-                            recorder.setSynchronizer(synchronizer);
-                        }
-                    }
-
-                    content.feedKnownSsrcsToSynchronizer();
-                }
-
-                if (failedToStart)
-                {
-                    recording = false;
-                    logger.warn(
-                            "Failed to start media recording for conference "
-                                + getID());
-                }
-            }
-
-            // either we were asked to disable recording, or we failed to
-            // enable it
-            if (!recording)
-            {
-                if (logger.isDebugEnabled())
-                {
-                    logger.debug(
-                            "Stopping recording for conference with id="
-                                + getID());
-                }
-
-                for (Content content : contents)
-                {
-                    MediaType mediaType = content.getMediaType();
-
-                    if (MediaType.AUDIO.equals(mediaType)
-                            || MediaType.VIDEO.equals(mediaType))
-                    {
-                        content.setRecording(false, null);
-                    }
-                }
-
-                if (recorderEventHandler != null)
-                {
-                    recorderEventHandler.close();
-                }
-                recorderEventHandler = null;
-                recordingPath = null;
-                recordingDirectory = null;
-
-                if (endpointRecorder != null)
-                {
-                    endpointRecorder.close();
-                }
-                endpointRecorder = null;
-            }
-
-            this.recording = recording;
-        }
-
-        return this.recording;
-    }
-
-    /**
      * Notifies this <tt>Conference</tt> that the ordered list of
      * <tt>Endpoint</tt>s of {@link #speechActivity} i.e. the dominant speaker
      * history has changed.
@@ -1824,11 +1437,6 @@ public class Conference
                               && !oldDisplayName.equals(newDisplayName)))
                 {
                     endpoint.setDisplayName(newDisplayName);
-
-                    if (isRecording() && endpointRecorder != null)
-                    {
-                        endpointRecorder.updateEndpoint(endpoint);
-                    }
 
                     EventAdmin eventAdmin = getEventAdmin();
                     if (eventAdmin != null)

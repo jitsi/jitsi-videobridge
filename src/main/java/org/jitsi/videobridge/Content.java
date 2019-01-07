@@ -134,28 +134,6 @@ public class Content
     private final String loggingId;
 
     /**
-     * The <tt>Recorder</tt> instance used to record video.
-     */
-    private Recorder recorder = null;
-
-    /**
-     * Whether media recording is currently enabled for this <tt>Content</tt>.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    private boolean recording = false;
-
-    /**
-     * Path to the directory into which files relating to media recording for
-     * this <tt>Content</tt> will be stored.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    private String recordingPath = null;
-
-    /**
      * The <tt>Object</tt> which synchronizes the access to the RTP-level relays
      * (i.e. {@link #mixer} and {@link #rtpTranslator}) provided by this
      * <tt>Content</tt>.
@@ -416,8 +394,6 @@ public class Content
             }
         }
 
-        setRecording(false, null);
-
         Conference conference = getConference();
 
         EventAdmin eventAdmin = conference.getEventAdmin();
@@ -495,41 +471,6 @@ public class Content
         if (expireChannel)
         {
             channel.expire();
-        }
-    }
-
-    /**
-     * If media recording is started, finds all SSRCs received on all channels,
-     * and sets their endpoints to the <tt>Recorder</tt>'s <tt>Synchronizer</tt>
-     * instance.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    void feedKnownSsrcsToSynchronizer()
-    {
-        Recorder recorder;
-        if (isRecording() && (recorder = getRecorder()) != null)
-        {
-            Synchronizer synchronizer = recorder.getSynchronizer();
-            for (Channel channel : getChannels())
-            {
-                if (!(channel instanceof RtpChannel))
-                {
-                    continue;
-                }
-                AbstractEndpoint endpoint = channel.getEndpoint();
-                if (endpoint == null)
-                {
-                    continue;
-                }
-
-                for(int s : ((RtpChannel) channel).getReceiveSSRCs())
-                {
-                    long ssrc = s & 0xffff_ffffL;
-                    synchronizer.setEndpoint(ssrc, endpoint.getID());
-                }
-            }
         }
     }
 
@@ -774,35 +715,6 @@ public class Content
     }
 
     /**
-     * Gets the <tt>Recorder</tt> instance used to record media for this
-     * <tt>Content</tt>. Creates it, if necessary.
-     *
-     * TODO: For the moment it is assumed that only RTP translation is used.
-     *
-     * @return the <tt>Recorder</tt> instance used to record media for this
-     * <tt>Content</tt>.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    public Recorder getRecorder()
-    {
-        if (recorder == null)
-        {
-            MediaType mediaType = getMediaType();
-
-            if (MediaType.AUDIO.equals(mediaType)
-                    || MediaType.VIDEO.equals(mediaType))
-            {
-                recorder = getMediaService().createRecorder(getRTPTranslator());
-                recorder.setEventHandler(
-                        getConference().getRecorderEventHandler());
-            }
-        }
-        return recorder;
-    }
-
-    /**
      * Gets the <tt>RTPTranslator</tt> which forwards the RTP and RTCP traffic
      * between the <tt>Channel</tt>s of this <tt>Content</tt> which use a
      * translator as their RTP-level relay.
@@ -857,96 +769,6 @@ public class Content
             }
             return rtpTranslator;
         }
-    }
-
-    /**
-     * Returns <tt>true</tt> if media recording for this <tt>Content</tt> is
-     * currently enabled, and <tt>false</tt> otherwise.
-     *
-     * @return <tt>true</tt> if media recording for this <tt>Content</tt> is
-     * currently enabled, and <tt>false</tt> otherwise.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    public boolean isRecording()
-    {
-        return recording;
-    }
-
-    /**
-     * Attempts to enable or disable media recording for this <tt>Content</tt>
-     * and updates the recording path.
-     *
-     * @param recording whether to enable or disable media recording.
-     * @param path the path to the directory into which to store files related
-     * to media recording for this <tt>Content</tt>.
-     *
-     * @return the state of the media recording for this <tt>Content</tt>
-     * after the attempt to enable (or disable).
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    public boolean setRecording(boolean recording, String path)
-    {
-        this.recordingPath = path;
-
-        if (this.recording != recording)
-        {
-            Recorder recorder = getRecorder();
-            if (recording)
-            {
-                if (recorder != null)
-                {
-                    recording = startRecorder(recorder);
-                }
-                else
-                {
-                    recording = false;
-                }
-            }
-            else //disable recording
-            {
-                if (recorder != null)
-                {
-                    recorder.stop();
-                    this.recorder = null;
-                }
-                recording = false;
-            }
-        }
-
-        this.recording = recording;
-        return this.recording;
-    }
-
-    /**
-     * Tries to start a specific <tt>Recorder</tt>.
-     * @param recorder the <tt>Recorder</tt> to start.
-     * @return <tt>true</tt> if <tt>recorder</tt> was started, <tt>false</tt>
-     * otherwise.
-     *
-     * @deprecated remove-with-recording
-     */
-    @Deprecated
-    private boolean startRecorder(Recorder recorder)
-    {
-        boolean started = false;
-        String format = MediaType.AUDIO.equals(getMediaType()) ? "mp3" : null;
-
-        try
-        {
-            recorder.start(format, recordingPath);
-            started = true;
-        }
-        catch (IOException | MediaException ioe)
-        {
-            logger.error("Failed to start recorder: " + ioe);
-            started = false;
-        }
-
-        return started;
     }
 
     /**

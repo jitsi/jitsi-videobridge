@@ -1796,12 +1796,6 @@ public class RtpChannel
             Recorder recorder = null;
             Synchronizer synchronizer = null;
             AbstractEndpoint endpoint = null;
-            if (getContent().isRecording())
-            {
-                recorder = getContent().getRecorder();
-                synchronizer = recorder.getSynchronizer();
-                endpoint = getEndpoint();
-            }
 
             for (Integer addedSSRC : addedSSRCs)
             {
@@ -1810,16 +1804,6 @@ public class RtpChannel
                     // Do allow the number of explicitly signalled SSRCs to
                     // exceed the limit.
                     addReceiveSSRC(addedSSRC, false);
-
-                    // If recording is enabled, we need to add the mapping from
-                    // SSRC to EndpointID into the Synchronizer
-                    // instance used by RecorderRtpImpl.
-                    if (recorder != null && endpoint != null && synchronizer != null)
-                    {
-                        synchronizer.setEndpoint(
-                                addedSSRC & 0xffff_ffffL,
-                                endpoint.getID());
-                    }
                 }
                 catch (SizeExceededException see)
                 {
