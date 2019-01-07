@@ -15,38 +15,28 @@
  */
 package org.jitsi.videobridge;
 
+import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.util.*;
+import org.jetbrains.annotations.*;
+import org.jitsi.eventadmin.*;
+import org.jitsi.nlj.util.*;
+import org.jitsi.service.libjitsi.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.util.Logger;
+import org.jitsi.util.*;
+import org.jitsi.util.event.*;
+import org.jitsi.videobridge.util.*;
+import org.jxmpp.jid.*;
+import org.jxmpp.jid.parts.*;
+import org.osgi.framework.*;
+
 import java.beans.*;
 import java.io.*;
-import java.lang.*;
-import java.lang.Deprecated;
 import java.lang.reflect.*;
-import java.text.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.logging.*;
 import java.util.stream.*;
-
-import kotlin.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
-import net.java.sip.communicator.util.*;
-
-import org.jetbrains.annotations.*;
-import org.jitsi.eventadmin.*;
-import org.jitsi.nlj.util.UtilKt;
-import org.jitsi.rtp.*;
-import org.jitsi.service.configuration.*;
-import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.recording.*;
-import org.jitsi.util.*;
-import org.jitsi.util.Logger;
-import org.jitsi.util.event.*;
-import org.jitsi.videobridge.util.*;
-import org.jitsi.videobridge.octo.*;
-import org.jxmpp.jid.*;
-import org.jxmpp.jid.parts.*;
-import org.osgi.framework.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 

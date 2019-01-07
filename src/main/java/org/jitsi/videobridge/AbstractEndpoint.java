@@ -57,11 +57,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private final Conference conference;
 
-//    /**
-//     * The list of <tt>Channel</tt>s associated with this <tt>Endpoint</tt>.
-//     */
-//    private final List<WeakReference<RtpChannel>> channels = new LinkedList<>();
-
     private final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
 
     private final LastNFilter lastNFilter = new LastNFilter();
@@ -234,50 +229,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         }
     }
 
-//    /**
-//     * Gets a list with the {@link RtpChannel}s of this {@link Endpoint} with a
-//     * particular {@link MediaType} (or all of them, if {@code mediaType} is
-//     * {@code null}).
-//     *
-//     * @param mediaType the {@link MediaType} to match. If {@code null}, all
-//     * channels of this endpoint will be returned.
-//     * @return a <tt>List</tt> with the channels of this <tt>Endpoint</tt> with
-//     * a particular <tt>MediaType</tt>.
-//     */
-//    public List<RtpChannel> getChannels(MediaType mediaType)
-//    {
-//        boolean removed = false;
-//        List<RtpChannel> channels = new LinkedList<>();
-//
-//        synchronized (this.channels)
-//        {
-//            for (Iterator<WeakReference<RtpChannel>> i
-//                        = this.channels.iterator();
-//                    i.hasNext();)
-//            {
-//                RtpChannel c = i.next().get();
-//
-//                if ((c == null) || c.isExpired())
-//                {
-//                    i.remove();
-//                    removed = true;
-//                }
-//                else if ((mediaType == null)
-//                        || mediaType.equals(c.getContent().getMediaType()))
-//                {
-//                    channels.add(c);
-//                }
-//            }
-//        }
-//
-//        if (removed)
-//        {
-//            maybeExpire();
-//        }
-//
-//        return channels;
-//    }
-
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
      *
@@ -329,41 +280,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         return expired;
     }
-
-//    /**
-//     * Removes a specific <tt>Channel</tt> from the list of <tt>Channel</tt>s
-//     * associated with this <tt>Endpoint</tt>.
-//     *
-//     * @param channel the <tt>Channel</tt> to remove from the list of
-//     * <tt>Channel</tt>s associated with this <tt>Endpoint</tt>
-//     * @return <tt>true</tt> if the list of <tt>Channel</tt>s associated with
-//     * this <tt>Endpoint</tt> changed as a result of the method invocation;
-//     * otherwise, <tt>false</tt>
-//     */
-//    public boolean removeChannel(RtpChannel channel)
-//    {
-//        if (channel == null)
-//        {
-//            return false;
-//        }
-//
-//        boolean removed;
-//
-//        synchronized (channels)
-//        {
-//            removed = channels.removeIf(w -> {
-//                Channel c = w.get();
-//                return c == null || c.equals(channel) || c.isExpired();
-//            });
-//        }
-//
-//        if (removed)
-//        {
-//            maybeExpire();
-//        }
-//
-//        return removed;
-//    }
 
     /**
      * Sets the display name of this <tt>Endpoint</tt>.

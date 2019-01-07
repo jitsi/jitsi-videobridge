@@ -66,16 +66,6 @@ public abstract class TransportManager
         = new PortTracker(DEFAULT_MIN_PORT, DEFAULT_MAX_PORT);
 
     /**
-     * The <tt>Channel</tt> which has initialized this instance
-     */
-//    private List<Channel> _channels = Collections.emptyList();
-
-    /**
-     * The {@code Object} which synchronizes the access to {@link #_channels}.
-     */
-    private final Object _channelsSyncRoot = new Object();
-
-    /**
      * Initializes a new <tt>TransportManager</tt> instance.
      */
     protected TransportManager()
@@ -88,45 +78,7 @@ public abstract class TransportManager
      */
     public void close()
     {
-//        for (Channel channel : getChannels())
-//            close(channel);
     }
-
-    /**
-     * Removes a <tt>Channel</tt> from the list of channels maintained by this
-     * <tt>TransportManager</tt>.
-     *
-     * @param channel the <tt>Channel</tt> to remove.
-     * @return <tt>true</tt> if the <tt>Channel</tt> was removed, <tt>false</tt>
-     * if the channel was not in the list.
-     */
-//    public boolean close(Channel channel)
-//    {
-//        if (channel == null)
-//            return false;
-//
-//        channel.removePropertyChangeListener(channelPropertyChangeListener);
-//
-//        synchronized (_channelsSyncRoot)
-//        {
-//            List<Channel> newChannels = new LinkedList<>(_channels);
-//            boolean removed = newChannels.remove(channel);
-//
-//            if (removed)
-//            {
-//                _channels = newChannels;
-//
-//                // Remove transport manager from parent conference and its
-//                // corresponding channel bundle ID description.
-//                if (getChannels().isEmpty())
-//                {
-//                    channel.getContent().getConference().closeTransportManager(
-//                            this);
-//                }
-//            }
-//            return removed;
-//        }
-//    }
 
     /**
      * Sets the values of the properties of a specific
@@ -215,18 +167,6 @@ public abstract class TransportManager
         }
         return Long.toHexString(candidateID);
     }
-
-    /**
-     * Returns the list of <tt>Channel</tt>s maintained by this
-     * <tt>TransportManager</tt>.
-     *
-     * @return the list of <tt>Channel</tt>s maintained by this
-     * <tt>TransportManager</tt>.
-     */
-//    protected List<Channel> getChannels()
-//    {
-//        return _channels;
-//    }
 
     /**
      * Gets the XML namespace of the Jingle transport implemented by this
