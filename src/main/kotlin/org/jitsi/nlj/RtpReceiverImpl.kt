@@ -34,7 +34,6 @@ import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpIterator
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.util.RtpProtocol
-import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
@@ -70,7 +69,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender)
     private val payloadTypeFilter = PayloadTypeFilterNode()
-    private val audioLevelListener = AudioLevelReader()
+    private val audioLevelReader = AudioLevelReader()
     private val statTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statTracker)
     private val rtcpTermination = RtcpTermination(transportCcEngine)
@@ -152,7 +151,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                             packetPath {
                                 predicate = { pkt -> pkt is AudioRtpPacket }
                                 path = pipeline {
-                                    node(audioLevelListener)
+                                    node(audioLevelReader)
                                     node(rtpPacketHandlerWrapper)
                                 }
                             }
@@ -292,8 +291,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
         inputTreeRoot.visit(NodeEventVisitor(event))
     }
 
-    override fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener) {
-        audioLevelListener.csrcAudioLevelListener = csrcAudioLevelListener
+    override fun setAudioLevelListener(audioLevelListener: AudioLevelListener) {
+        audioLevelReader.audioLevelListener = audioLevelListener
     }
 
     override fun stop() {

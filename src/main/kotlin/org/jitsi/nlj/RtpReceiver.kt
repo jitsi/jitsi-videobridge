@@ -16,8 +16,6 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
-import org.jitsi.rtp.Packet
-import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 
 abstract class RtpReceiver :
     PacketHandler, EventHandler, Stoppable {
@@ -50,7 +48,7 @@ abstract class RtpReceiver :
      */
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
 
-    abstract fun setCsrcAudioLevelListener(csrcAudioLevelListener: CsrcAudioLevelListener)
+    abstract fun setAudioLevelListener(audioLevelListener: AudioLevelListener)
 
     abstract fun setNackHandler(nackHandler: NackHandler)
 }
