@@ -148,12 +148,6 @@ public abstract class IceUdpTransportManager
     private final Object connectThreadSyncRoot = new Object();
 
     /**
-     * The <tt>DtlsControl</tt> that this <tt>TransportManager</tt> uses.
-     */
-    @Deprecated
-    private final DtlsControlImpl dtlsControl;
-
-    /**
      * The ICE {@link Agent}.
      */
     protected Agent iceAgent;
@@ -296,8 +290,6 @@ public abstract class IceUdpTransportManager
         // Setup the diagnostic context.
         conference.appendDiagnosticInformation(diagnosticContext);
         diagnosticContext.put("transport", hashCode());
-
-        dtlsControl = createDtlsControl();
 
         iceAgent = createIceAgent(controlling, iceStreamName, rtcpmux);
 //        iceAgent.addStateChangeListener(iceAgentStateChangeListener);
@@ -459,39 +451,6 @@ public abstract class IceUdpTransportManager
 
             super.close();
         }
-    }
-
-    /**
-     * Initializes a new {@code DtlsControlImpl} instance.
-     *
-     * @return a new {@code DtlsControlImpl} instance
-     */
-    private DtlsControlImpl createDtlsControl()
-    {
-        DtlsControlImpl dtlsControl
-            = new DtlsControlImpl(/* srtpDisabled */ false);
-
-        dtlsControl.registerUser(this);
-        // (1) According to https://tools.ietf.org/html/rfc5245#section-5.2, in
-        // the case of two full ICE agents: [t]he agent that generated the offer
-        // which started the ICE processing MUST take the controlling role, and
-        // the other MUST take the controlled role.
-        // (2) According to https://tools.ietf.org/html/rfc5763#section-5: [t]he
-        // endpoint that is the offerer MUST use the setup attribute value of
-        // setup:actpass and be prepared to receive a client_hello before it
-        // receives the answer. The answerer MUST use either a setup attribute
-        // value of setup:active or setup:passive.
-        dtlsControl.setSetup(
-                controlling
-                    ? DtlsControl.Setup.ACTPASS
-                    : DtlsControl.Setup.ACTIVE);
-        // XXX For DTLS, the media type doesn't matter (as long as it's not
-        // null).
-        // XXX The actual start of the DTLS servers/clients will be delayed
-        // until an rtpConnector is set (when a MediaStream with this
-        // SrtpControl starts or is assigned a target).
-        dtlsControl.start(MediaType.AUDIO);
-        return dtlsControl;
     }
 
     /**
@@ -725,7 +684,6 @@ public abstract class IceUdpTransportManager
 //                        .setAcceptNonRtp(false);
 //            }
         }
-        dtlsControl.setRtcpmux(rtcpmux);
     }
 
     /**
