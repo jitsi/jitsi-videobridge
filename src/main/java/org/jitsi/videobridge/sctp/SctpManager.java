@@ -1,10 +1,7 @@
 package org.jitsi.videobridge.sctp;
 
-import org.jitsi.nlj.PacketInfo;
-import org.jitsi_modified.sctp4j.Sctp4j;
-import org.jitsi_modified.sctp4j.SctpDataCallback;
-import org.jitsi_modified.sctp4j.SctpDataSender;
-import org.jitsi_modified.sctp4j.SctpSocket;
+import org.jitsi.nlj.*;
+import org.jitsi_modified.sctp4j.*;
 
 import java.nio.ByteBuffer;
 
@@ -12,9 +9,7 @@ import java.nio.ByteBuffer;
  * Manages the SCTP connection and handles incoming and outgoing SCTP packets.
  *
  * We create one of these per endpoint and currently only support a single SCTP connection per endpoint, because we
- * don't (currently) determine which specific SCTP socket to which an incoming SCTP packet belongs.  (I'm assuming
- * there is a way to do this by inspecting the received packet, but we don't currently have a use case for that
- * anyway).
+ * that's all we use.
  */
 public class SctpManager {
     private SctpSocket socket = null;
@@ -23,13 +18,11 @@ public class SctpManager {
      * (e.g. used in the connection negotiation)
      */
     private final SctpDataSender dataSender;
-    /**
-     * The {@link SctpDataCallback} can be set at any time, and will be invoked with any SCTP app packets (that is,
-     * application packets which have been sent over SCTP, e.g. datachannel packets).
-     */
-    private SctpDataCallback dataCallback;
+
+    // We hard-code 5000 in the offer, so just mark it as the default here.
+    private static int DEFAULT_SCTP_PORT = 5000;
     static {
-        Sctp4j.init();
+        Sctp4j.init(DEFAULT_SCTP_PORT);
     }
 
     public SctpManager(SctpDataSender dataSender) {
@@ -42,38 +35,21 @@ public class SctpManager {
      */
     public void handleIncomingSctp(PacketInfo sctpPacket) {
         ByteBuffer packetBuffer = sctpPacket.getPacket().getBuffer();
+        System.out.println("SCTP socket " + socket.hashCode() + " received a packet of size " + packetBuffer.limit());
         socket.onConnIn(packetBuffer.array(), packetBuffer.arrayOffset(), packetBuffer.limit());
     }
 
-    public void onSctpAppData(SctpDataCallback dataCallback) {
-        this.dataCallback = dataCallback;
+    public SctpServerSocket createServerSocket()
+    {
+        socket = Sctp4j.createServerSocket(DEFAULT_SCTP_PORT);
+        socket.outgoingDataSender = this.dataSender;
+        return (SctpServerSocket)socket;
     }
 
-    public void createConnection() {
-        socket = Sctp4j.createSocket();
+    public SctpClientSocket crerateClientSocket() {
+        socket = Sctp4j.createClientSocket(DEFAULT_SCTP_PORT);
         socket.outgoingDataSender = this.dataSender;
-        socket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
-            if (this.dataCallback != null) {
-                this.dataCallback.onSctpPacket(data, sid, ssn, tsn, ppid, context, flags);
-            } else {
-                // TODO: my thought is that we shouldn't get any app data until we start a datachannel negotiation,
-                // which should have installed itself as a datacallback, so throwing for now to verify if that's the
-                // case
-                throw new Error("Received SCTP app data but no handler!");
-            }
-        };
-        socket.eventHandler = new SctpSocket.SctpSocketEventHandler() {
-            @Override
-            public void onConnected() {
-                System.out.println("SCTP connected!");
-            }
-
-            @Override
-            public void onDisconnected() {
-                System.out.println("SCTP disconnected!");
-            }
-        };
-        socket.listen();
+        return (SctpClientSocket)socket;
     }
 
     public void closeConnection() {
