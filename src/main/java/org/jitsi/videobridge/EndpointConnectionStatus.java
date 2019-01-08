@@ -209,14 +209,14 @@ public class EndpointConnectionStatus
                 = Videobridge.getVideobridges(bundleContext);
             for (Videobridge videobridge : jvbs)
             {
+                cleanupExpiredEndpointsStatus();
+
                 Conference[] conferences = videobridge.getConferences();
                 Arrays.stream(conferences)
                     .forEachOrdered(
                         conference ->
                             conference.getEndpoints()
                                 .forEach(this::monitorEndpointActivity));
-
-                cleanupExpiredEndpointsStatus();
             }
         }
     }
@@ -350,7 +350,25 @@ public class EndpointConnectionStatus
 
     private void cleanupExpiredEndpointsStatus()
     {
-        inactiveEndpoints.removeIf(e -> e.getConference().isExpired());
+        inactiveEndpoints.removeIf(e -> {
+            Conference conference = e.getConference();
+            AbstractEndpoint replacement = conference.getEndpoint(e.getID());
+            boolean endpointReplaced = replacement != null && replacement != e;
+
+            // If an Endpoint from the inactive list has been re-created it
+            // means that at this point all participants currently have it in
+            // the "inactive" state, so broadcast "active" in order to reset.
+            if (endpointReplaced)
+            {
+                if (replacement instanceof Endpoint)
+                {
+                    sendEndpointConnectionStatus(
+                        (Endpoint) replacement, true, null);
+                }
+            }
+
+            return conference.isExpired() || endpointReplaced;
+        });
         if (logger.isDebugEnabled())
         {
             inactiveEndpoints.stream()
