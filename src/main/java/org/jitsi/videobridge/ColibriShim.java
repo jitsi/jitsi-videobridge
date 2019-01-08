@@ -8,6 +8,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadT
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.RTPHdrExtPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.SourceGroupPacketExtension;
 import org.jetbrains.annotations.NotNull;
+import org.jitsi.nlj.util.*;
 import org.jitsi.service.neomedia.MediaDirection;
 import org.jxmpp.jid.Jid;
 import org.jxmpp.jid.parts.Localpart;
@@ -54,6 +55,10 @@ public class ColibriShim {
 
         public Integer getExpire()
         {
+            if (expire == null)
+            {
+                throw new Error("Null expire value for channel " + id);
+            }
             return expire;
         }
 

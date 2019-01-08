@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.util.*;
@@ -26,7 +27,9 @@ import org.jitsi.videobridge.sctp.*;
 import org.jitsi_modified.sctp4j.*;
 
 import java.io.*;
+import java.lang.ref.*;
 import java.nio.*;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -216,12 +219,35 @@ public class Endpoint
     }
 
     /**
-     * Expires this {@link Endpoint} if it has no channels and no SCTP connection.
+     * Previously, an endpoint expired when all of its channels did.  Channels now only exist in their 'shim'
+     * form for backwards compatibility, so to find out whether or not the endpoint expired, we'll check the
+     * activity timestamps from the transceiver and use the largest of the expire times set in the channel shims.
      */
     @Override
-    protected void maybeExpire()
+    public boolean shouldExpire()
     {
-        //TODO(brian): need to reimplement the expire logic
+        PacketIOActivity packetIOActivity = this.transceiver.getPacketIOActivity();
+
+        int maxExpireTimeSecsFromChannelShims = channelShims.stream()
+                .map(WeakReference::get)
+                .filter(Objects::nonNull)
+                .map(ColibriShim.Channel::getExpire)
+                .mapToInt(exp -> exp)
+                .max()
+                .orElse(0);
+
+        long now = System.currentTimeMillis();
+        Duration timeSincePacketReceived = Duration.ofMillis(now - packetIOActivity.getLastPacketReceivedTimestampMs());
+        Duration timeSincePacketSent = Duration.ofMillis(now - packetIOActivity.getLastPacketSentTimestampMs());
+
+        if (timeSincePacketReceived.getSeconds() > maxExpireTimeSecsFromChannelShims &&
+                timeSincePacketSent.getSeconds() > maxExpireTimeSecsFromChannelShims)
+        {
+            System.out.println("Endpoint " + getID() + " has neither received nor sent a packet in over " +
+                    maxExpireTimeSecsFromChannelShims + " seconds, should expire");
+            return true;
+        }
+        return false;
     }
 
     /**

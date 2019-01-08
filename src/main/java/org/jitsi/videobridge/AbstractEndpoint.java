@@ -16,12 +16,10 @@
 package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.event.*;
 
 import java.io.*;
@@ -57,7 +55,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     private final Conference conference;
 
-    private final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
+    /**
+     * The list of {@link ColibriShim.Channel}s associated with this endpoint.  This allows us to expire the endpoint
+     * once all of its 'channels' have been removed.
+     */
+    protected final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
 
     private final LastNFilter lastNFilter = new LastNFilter();
 
@@ -325,6 +327,18 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     /**
+     * Return true if this endpoint should expire (based on whatever logic is appropriate for that endpoint
+     * implementation.
+     *
+     * NOTE(brian): Currently the bridge will automatically expire an endpoint if all of its channel shims are removed.
+     *  Maybe we should instead have this logic always be called before expiring instead?  But that would mean that
+     *  expiration in the case of channel removal would take longer.
+     *
+     * @return true if this endpoint should expire, false otherwise
+     */
+    public abstract boolean shouldExpire();
+
+    /**
      * @return a string which identifies this {@link Endpoint} for the
      * purposes of logging. The string is a comma-separated list of "key=value"
      * pairs.
@@ -333,13 +347,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         return loggingId;
     }
-
-    /**
-     * Expires this {@link Endpoint} if it has no channels and no SCTP
-     * connection.
-     */
-    protected void maybeExpire()
-    {}
 
     /**
      * @return the {@link Set} of selected endpoints, represented as a set of

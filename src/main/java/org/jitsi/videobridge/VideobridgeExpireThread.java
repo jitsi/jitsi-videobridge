@@ -26,8 +26,8 @@ import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**
- * Implements a <tt>Thread</tt> which expires the {@link Channel}s of a specific
- * <tt>Videobridge</tt>.
+ * Implements a <tt>Thread</tt> which expires the {@link AbstractEndpoint}s and
+ * {@link Conference}s of a specific <tt>Videobridge</tt>.
  *
  * @author Lyubomir Marinov
  */
@@ -49,8 +49,8 @@ class VideobridgeExpireThread
             VideobridgeExpireThread.class.getSimpleName());
 
     /**
-     * The executor used to expire the individual {@link Channel}s,
-     * {@link Content}s, or {@link Conference}s.
+     * The executor used to expire the individual {@link AbstractEndpoint}s
+     * or {@link Conference}s.
      */
     private static final Executor EXPIRE_EXECUTOR
         = ExecutorUtils.newCachedThreadPool(
@@ -177,28 +177,17 @@ class VideobridgeExpireThread
             {
                 EXPIRE_EXECUTOR.execute(conference::safeExpire);
             }
-//            else
-//            {
-//                for (Content content : conference.getContents())
-//                {
-//                     // The Contents will live an iteration more than the
-//                     // Channels.
-//                    if (content.shouldExpire())
-//                    {
-//                        EXPIRE_EXECUTOR.execute(content::safeExpire);
-//                    }
-//                    else
-//                    {
-//                        for (Channel channel : content.getChannels())
-//                        {
-//                            if (channel.shouldExpire())
-//                            {
-//                                EXPIRE_EXECUTOR.execute(channel::safeExpire);
-//                            }
-//                        }
-//                    }
-//                }
-//            }
+            else
+            {
+                for (AbstractEndpoint endpoint : conference.getEndpoints())
+                {
+                    if (endpoint.shouldExpire())
+                    {
+                        logger.info("Expiring endpoint " + endpoint.getID());
+                        EXPIRE_EXECUTOR.execute(endpoint::expire);
+                    }
+                }
+            }
         }
     }
 }
