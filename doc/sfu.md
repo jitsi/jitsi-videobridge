@@ -174,11 +174,11 @@ qualities is implemented in the different specializations of the
 
 While RTCP termination and bandwidth distribution are essential group
 conferencing features they are not desirable and they may degrade the quality of
-service in one-on-one calls. Unfortunately, there is no way to them at the
-moment, i.e. it is not possible to make the JVB behave as a translator
-[[RFC7667]], not even for one-on-one calls. Due to this limitation it is
-recommended to use a TURN server [[TURN]] to relay one-to-one calls for optimal
-conferencing experience.
+service in one-on-one calls. Unfortunately, there is no way to disable these 
+advanced features at the moment, i.e. it is not possible to make the JVB behave
+as a translator [[RFC7667]], not even for one-on-one calls. Due to this
+limitation it is recommended to use a TURN server [[TURN]] to relay one-to-one 
+calls for optimal conferencing experience.
 
 [MCS]: https://www.w3.org/TR/mediacapture-streams
 [WEBRTC]: https://www.w3.org/TR/webrtc/
