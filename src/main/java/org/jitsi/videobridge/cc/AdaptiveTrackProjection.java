@@ -47,13 +47,6 @@ public class AdaptiveTrackProjection
         = Logger.getLogger(AdaptiveTrackProjection.class);
 
     /**
-     * An empty {@link RawPacket} array that is used as a return value and
-     * indicates that the input packet needs to be dropped.
-     */
-    public static final RawPacket[]
-        DROP_PACKET_ARR = AdaptiveTrackProjectionContext.DROP_PACKET_ARR;
-
-    /**
      * An empty {@link RawPacket} array that is used as a return value when no
      * packets need to be piggy-backed.
      */
@@ -242,62 +235,66 @@ public class AdaptiveTrackProjection
     }
 
     /**
-     * Rewrites both RTP and RTCP packets and returns any additional packets
-     * that need to be piggy-backed.
+     * Rewrites an RTP packet and it returns any additional RTP packets that
+     * need to be piggy-backed.
      *
-     * @param rtpRtcpPacket an RTP or an RTCP packet to rewrite.
-     * @return any piggy-backed packets to include with the packet, or
-     * {@link #DROP_PACKET_ARR} if the packet needs to be dropped.
+     * @param rtpPacket the RTP packet to rewrite.
+     * @return any piggy-backed packets to include with the packet.
      */
-    public RawPacket[] rewrite(@NotNull RawPacket rtpRtcpPacket)
+    RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket)
+        throws
+        RewriteException
     {
-        if (rtpRtcpPacket.isInvalid())
-        {
-            return null;
-        }
-
         AdaptiveTrackProjectionContext contextCopy = context;
         if (contextCopy == null)
         {
             return EMPTY_PACKET_ARR;
         }
 
-        if (RTCPPacketPredicate.INSTANCE.test(rtpRtcpPacket))
+        RawPacketCache incomingRawPacketCache = null;
+        MediaStreamTrackDesc source = getSource();
+        if (source != null)
         {
-            return contextCopy.rewriteRtcp(rtpRtcpPacket)
-                ? EMPTY_PACKET_ARR
-                : DROP_PACKET_ARR;
-        }
-        else
-        {
-            RawPacketCache incomingRawPacketCache = null;
-            MediaStreamTrackDesc source = getSource();
-            if (source != null)
+            MediaStreamImpl stream
+                = source.getMediaStreamTrackReceiver().getStream();
+            if (stream != null)
             {
-                MediaStreamImpl stream
-                    = source.getMediaStreamTrackReceiver().getStream();
-                if (stream != null)
+                CachingTransformer cachingTransformer
+                    = stream.getCachingTransformer();
+                if (cachingTransformer != null)
                 {
-                    CachingTransformer cachingTransformer
-                        = stream.getCachingTransformer();
-                    if (cachingTransformer != null)
-                    {
-                        incomingRawPacketCache
-                            = cachingTransformer.getIncomingRawPacketCache();
-                    }
-                    else
-                    {
-                        logger.warn("incoming packet cache is null.");
-                    }
+                    incomingRawPacketCache
+                        = cachingTransformer.getIncomingRawPacketCache();
                 }
                 else
                 {
-                    logger.warn("stream is null.");
+                    logger.warn("incoming packet cache is null.");
                 }
             }
-
-            return contextCopy.rewriteRtp(rtpRtcpPacket, incomingRawPacketCache);
+            else
+            {
+                logger.warn("stream is null.");
+            }
         }
+
+        return contextCopy.rewriteRtp(rtpPacket, incomingRawPacketCache);
+    }
+
+    /**
+     * Rewrites an RTCP packet.
+     *
+     * @param rtcpPacket the RTCP packet to rewrite.
+     * @return true to let the RTCP packet through, false to drop.
+     */
+    public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
+    {
+        AdaptiveTrackProjectionContext contextCopy = context;
+        if (contextCopy == null)
+        {
+            return true;
+        }
+
+        return contextCopy.rewriteRtcp(rtcpPacket);
     }
 
     /**

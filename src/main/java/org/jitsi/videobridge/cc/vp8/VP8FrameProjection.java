@@ -270,20 +270,15 @@ public class VP8FrameProjection
     }
 
     /**
-     * Rewrites an RTP packet. If this is the first packet of a frame and if a
-     * packet cache has been specified, we piggy-backing any missed packets.
+     * Rewrites an RTP packet that belongs to {@link #vp8Frame}. If this is the
+     * first packet of a frame and if a packet cache has been specified, we
+     * piggy-backing any missed packets.
      *
      * @param cache the cache to pull piggy-backed packets from.
      * @param rtpPacket the RTP packet to project.
      */
     RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket, RawPacketCache cache)
     {
-        if (!vp8Frame.matchesFrame(rtpPacket))
-        {
-            // The packet does not belong to this VP8 frame.
-            return AdaptiveTrackProjection.DROP_PACKET_ARR;
-        }
-
         int originalSequenceNumber = rtpPacket.getSequenceNumber();
 
         rewriteRtpInternal(rtpPacket);

@@ -35,12 +35,6 @@ import org.jitsi.service.neomedia.*;
 public interface AdaptiveTrackProjectionContext
 {
     /**
-     * An empty {@link RawPacket} array that is used as a return value and
-     * indicates that the input packet needs to be dropped.
-     */
-    RawPacket[] DROP_PACKET_ARR = new RawPacket[0];
-
-    /**
      * An empty {@link RawPacket} array that is used as a return value when no
      * packets need to be piggy-backed.
      */
@@ -71,11 +65,13 @@ public interface AdaptiveTrackProjectionContext
      * @param rtpPacket the RTP packet to rewrite.
      * @param incomingRawPacketCache the packet cache to pull piggy-backed
      * packets from.
-     * @return any RTP packets to piggy-back, or {@link #DROP_PACKET_ARR} if the
-     * packet needs to be dropped.
+     * @return any RTP packets to piggy-back, or {@link #EMPTY_PACKET_ARR}.
+     * @throws RewriteException the underlying code has failed to rewrite the
+     * RTP packet that is specified as an argument.
      */
     RawPacket[]
-    rewriteRtp(RawPacket rtpPacket, RawPacketCache incomingRawPacketCache);
+    rewriteRtp(RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
+        throws RewriteException;
 
     /**
      * Rewrites the RTCP packet that is specified as an argument.

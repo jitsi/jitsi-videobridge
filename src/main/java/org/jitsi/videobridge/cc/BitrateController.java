@@ -52,7 +52,7 @@ import java.util.concurrent.*;
  * and/or lower resolution (that we call spatial layers or SL). The exact
  * dependencies between the different layers of an SVC bitstream are codec
  * specific but, as a general rule of thumb higher temporal/spatial layers
- * depend on lower temporal/spatial layers creating a DAG of dependencies.
+ * depend on lower temporal/spatial layers creating a dependency graph.
  *
  * For example, a 720p@30fps VP8 scalable bitstream can be broken down into 3
  * sub-bitstreams: one 720p@30fps layer (the highest temporal layer), that
@@ -1313,8 +1313,13 @@ public class BitrateController
                     pkts[i] = null;
                     continue;
                 }
-                RawPacket[] ret = adaptiveTrackProjection.rewrite(pkts[i]);
-                if (ret == AdaptiveTrackProjection.DROP_PACKET_ARR)
+
+                RawPacket[] ret;
+                try
+                {
+                    ret = adaptiveTrackProjection.rewriteRtp(pkts[i]);
+                }
+                catch (RewriteException ex)
                 {
                     pkts[i] = null;
                     continue;
@@ -1376,8 +1381,7 @@ public class BitrateController
 
             if (adaptiveTrackProjection != null)
             {
-                RawPacket[] ret = adaptiveTrackProjection.rewrite(pkt);
-                if (ret == AdaptiveTrackProjection.DROP_PACKET_ARR)
+                if (!adaptiveTrackProjection.rewriteRtcp(pkt))
                 {
                     return null;
                 }

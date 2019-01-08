@@ -332,28 +332,25 @@ public class VP8AdaptiveTrackProjectionContext
      * @param incomingRawPacketCache the packet cache to pull piggy-backed
      * packets from. Null is permissible, but in that case no packets will be
      * piggy backed.
-     * @return any RTP packets to piggy-back, or {@link #DROP_PACKET_ARR} if the
-     * packet needs to be dropped.
+     * @return any RTP packets to piggy-bac
+     * @throws RewriteException if a VP8 frame projection is not found
+     * for the RTP packet that is specified as a parameter.
      */
     @Override
     public RawPacket[] rewriteRtp(
         @NotNull RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
+        throws RewriteException
     {
         VP8FrameProjection vp8FrameProjection
             = lookupVP8FrameProjection(rtpPacket);
         if (vp8FrameProjection == null)
         {
-            // This is not a projected packet.
-            return DROP_PACKET_ARR;
+            // This packet does not belong to a projected frame.
+            throw new RewriteException();
         }
 
         RawPacket[] ret
             = vp8FrameProjection.rewriteRtp(rtpPacket, incomingRawPacketCache);
-
-        if (ret == DROP_PACKET_ARR)
-        {
-            return DROP_PACKET_ARR;
-        }
 
         synchronized (transmittedSyncRoot)
         {
