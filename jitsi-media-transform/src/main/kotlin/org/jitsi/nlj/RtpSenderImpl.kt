@@ -16,6 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
@@ -25,7 +26,6 @@ import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
@@ -193,23 +193,20 @@ class RtpSenderImpl(
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
     }
 
-    override fun getStats(indent: Int): String {
+    override fun getStats(): StatBlock {
         val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
-        return with (StringBuffer()) {
-            appendLnIndent(indent, "RTP Sender $id")
-            appendLnIndent(indent + 2, "queue size: ${incomingPacketQueue.size}")
-            appendLnIndent(indent + 2, "$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
-            appendLnIndent(indent + 2, "Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
-            appendLnIndent(indent + 2, "Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
+        return StatBlock("RTP sender $id").apply {
+            addStat("queue size: ${incomingPacketQueue.size}")
+            addStat("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
+            addStat("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
+            addStat("Sent $numBytesSent bytes in ${lastPacketSentTime - firstPacketSentTime} ms ($bitRateMbps mbps)")
             val queueReadTotal = lastQueueReadTime - firstQueueReadTime
-            appendLnIndent(indent + 2, "Read from queue at a rate of " +
+            addStat("Read from queue at a rate of " +
                     "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
-            appendLnIndent(indent + 2, "The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
-            appendLnIndent(indent + 2, "nack handler stats: ${nackHandler.getStats(indent + 2)}")
+            addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
+            addStat("nack handler stats: ${nackHandler.getStats()}")
             val statsVisitor = NodeStatsVisitor(this)
             outputPipelineTerminationNode.reverseVisit(statsVisitor)
-
-            toString()
         }
     }
 

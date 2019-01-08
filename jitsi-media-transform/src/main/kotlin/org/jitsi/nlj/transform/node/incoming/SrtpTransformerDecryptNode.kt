@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cinfo
@@ -50,12 +51,11 @@ class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wra
         return decryptedPackets
     }
 
-    override fun getStats(indent: Int): String {
-        return with(StringBuffer()) {
-            append(super.getStats(indent))
-            appendLnIndent(indent + 2, "num decrypt failures: $numDecryptFailures")
-
-            toString()
+    override fun getStats(): StatBlock {
+        val parentStats = super.getStats()
+        return StatBlock(name).apply {
+            addAll(parentStats)
+            addStat("num decrypt failures: $numDecryptFailures")
         }
     }
 }

@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj
 
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
@@ -59,14 +60,12 @@ class NackHandler(
         }
     }
 
-    override fun getStats(indent: Int): String {
-        return with (StringBuffer()) {
-            appendLnIndent(indent, "Nack handler")
-            appendLnIndent(indent + 2, "num nack packets received: $numNackedPackets")
-            appendLnIndent(indent + 2, "num nacked packets: $numNackedPackets")
-            appendLnIndent(indent + 2, "num retransmitted packets: $numRetransmittedPackets")
-            appendLnIndent(indent + 2, "num cache misses: $numCacheMisses")
-            toString()
+    override fun getStats(): StatBlock {
+        return StatBlock("Nack handler").apply {
+            addStat( "num nack packets received: $numNackedPackets")
+            addStat( "num nacked packets: $numNackedPackets")
+            addStat( "num retransmitted packets: $numRetransmittedPackets")
+            addStat( "num cache misses: $numCacheMisses")
         }
     }
 }

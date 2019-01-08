@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.rtcp.RtcpPacket
 
@@ -26,7 +27,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
  * RTCP) but in the sense of a webrtc 'RTCRTPSender' which handles
  * all RTP and RTP control packets.
  */
-abstract class RtpSender : EventHandler, Stoppable {
+abstract class RtpSender : EventHandler, Stoppable,StatsProducer {
     var numPacketsSent = 0
     var numBytesSent: Long = 0
     var firstPacketSentTime: Long = -1
@@ -44,7 +45,6 @@ abstract class RtpSender : EventHandler, Stoppable {
     abstract fun getNackHandler(): NackHandler
     abstract fun sendPackets(pkts: List<PacketInfo>)
     abstract fun sendRtcp(pkts: List<RtcpPacket>)
-    abstract fun getStats(indent: Int = 0): String
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
 }

@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.impl.neomedia.transform.PaddingTermination
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.toRawPacket
@@ -41,10 +42,11 @@ class PaddingTermination : Node("Padding termination") {
         next(outPackets)
     }
 
-    override fun getStats(indent: Int): String = with (StringBuffer()) {
-        append(super.getStats(indent))
-        appendLnIndent(indent + 2, "num padding packets seen: $numPaddingPacketsSeen")
-
-        toString()
+    override fun getStats(): StatBlock {
+        val parentStats = super.getStats()
+        return StatBlock(name).apply {
+            addAll(parentStats)
+            addStat("num padding packets seen: $numPaddingPacketsSeen")
+        }
     }
 }

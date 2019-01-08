@@ -18,12 +18,12 @@ package org.jitsi.nlj
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.incoming.*
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.Packet
@@ -139,6 +139,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
             node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })
             demux("SRTP/SRTCP") {
                 packetPath {
+                    name = "SRTP path"
                     predicate = { pkt -> RtpProtocol.isRtp(pkt.getBuffer()) }
                     path = pipeline {
                         node(PacketParser("SRTP Parser") { SrtpPacket(it.getBuffer()) })
@@ -149,6 +150,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                         node(statTracker)
                         demux("Media type") {
                             packetPath {
+                                name = "Audio path"
                                 predicate = { pkt -> pkt is AudioRtpPacket }
                                 path = pipeline {
                                     node(audioLevelReader)
@@ -156,6 +158,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                 }
                             }
                             packetPath {
+                                name = "Video path"
                                 predicate = { pkt -> pkt is VideoRtpPacket }
                                 path = pipeline {
                                     node(RtxHandler())
@@ -169,6 +172,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                     }
                 }
                 packetPath {
+                    name = "SRTCP path"
                     predicate = { pkt -> RtpProtocol.isRtcp(pkt.getBuffer()) }
                     path = pipeline {
                         val prevRtcpPackets = mutableListOf<Packet>()
@@ -242,24 +246,16 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun processPackets(pkts: List<PacketInfo>) = inputTreeRoot.processPackets(pkts)
 
-    override fun getStats(indent: Int): String {
-        return with (StringBuffer()) {
-            appendLnIndent(indent, "RTP Receiver $id")
-            appendLnIndent(indent + 2, "queue size: ${incomingPacketQueue.size}")
-            appendLnIndent(indent + 2, "Received $packetsReceived packets ($bytesReceived bytes) in " +
-                    "${lastPacketWrittenTime - firstPacketWrittenTime}ms " +
-                    "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
-            appendLnIndent(indent + 2, "Processed $packetsProcessed " +
-                    "(${(packetsProcessed / (packetsReceived.toDouble())) * 100}%) ($bytesProcessed bytes) in " +
-                    "${lastPacketProcessedTime - firstPacketProcessedTime}ms " +
-                    "(${getMbps(bytesProcessed, Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime))} mbps)")
+    override fun getStats(): StatBlock {
+        return StatBlock("RTP receiver $id").apply {
+            addStat( "queue size: ${incomingPacketQueue.size}")
+            addStat( "Received $packetsReceived packets ($bytesReceived bytes) in " + "${lastPacketWrittenTime - firstPacketWrittenTime}ms " + "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
+            addStat("Processed $packetsProcessed " + "(${(packetsProcessed / (packetsReceived.toDouble())) * 100}%) ($bytesProcessed bytes) in " + "${lastPacketProcessedTime - firstPacketProcessedTime}ms " + "(${getMbps(bytesProcessed, Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime))} mbps)")
             val queueReadTotal = lastQueueReadTime - firstQueueReadTime
-            appendLnIndent(indent + 2, "Read from queue at a rate of " +
-                    "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
-            appendLnIndent(indent + 2, "The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
+            addStat("Read from queue at a rate of " + "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
+            addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
             val statsVisitor = NodeStatsVisitor(this)
             inputTreeRoot.visit(statsVisitor)
-            toString()
         }
     }
 

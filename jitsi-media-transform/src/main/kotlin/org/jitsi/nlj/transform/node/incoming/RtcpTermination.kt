@@ -19,6 +19,7 @@ import org.jitsi.nlj.NackHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtcpRrGenerator
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
@@ -102,12 +103,11 @@ class RtcpTermination(
         transportCcEngine?.tccReceived(tccPacket)
     }
 
-    override fun getStats(indent: Int): String {
-        return with(StringBuffer()) {
-            append(super.getStats(indent))
-            appendLnIndent(indent + 2, "num nack packets rx: $numNacksReceived")
-
-            toString()
+    override fun getStats(): StatBlock {
+        val parentStats = super.getStats()
+        return StatBlock(name).apply {
+            addAll(parentStats)
+            addStat("num nack packets rx: $numNacksReceived")
         }
     }
 }

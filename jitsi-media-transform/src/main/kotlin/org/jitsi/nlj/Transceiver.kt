@@ -17,21 +17,21 @@ package org.jitsi.nlj
 
 import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
-import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RTPExtension
-import org.jitsi.service.neomedia.event.CsrcAudioLevelListener
 import org.jitsi.service.neomedia.format.MediaFormat
 import org.jitsi.util.DiagnosticContext
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.nio.ByteBuffer
-import java.util.*
+import java.util.Arrays
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -60,7 +60,7 @@ class Transceiver(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     private val backgroundExecutor: ScheduledExecutorService
-) : Stoppable {
+) : Stoppable, StatsProducer {
     private val logger = getLogger(this.javaClass)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
@@ -225,13 +225,11 @@ class Transceiver(
         rtpSender.setSrtcpTransformer(srtcpTransformer)
     }
 
-    fun getStats(): String {
-        return with(StringBuffer()) {
-            appendln("Transceiver $id stats")
-            append(rtpReceiver.getStats(2))
-            append(rtpSender.getStats(2))
+    override fun getStats(): StatBlock {
+        return StatBlock("Transceiver $id").apply {
+            addStat("RTP Receiver", rtpReceiver.getStats())
+            addStat("RTP Sender", rtpSender.getStats())
 
-            toString()
         }
     }
 
