@@ -207,7 +207,7 @@ class VP8Frame
      * @param vp8Frame the {@link VP8Frame} to check whether it's the next TL0.
      * @return true if the VP8 frame is the next TL0.
      */
-    private boolean isNextTL0(@NotNull VP8Frame vp8Frame)
+    private boolean isNextTemporalBaseLayerFrame(@NotNull VP8Frame vp8Frame)
     {
         return matchesSSRC(vp8Frame) && vp8Frame.isTL0
             && nextTL0PICIDX(tl0PICIDX) == vp8Frame.tl0PICIDX;
@@ -327,7 +327,8 @@ class VP8Frame
 
             // XXX this actually makes it possible to miss a reference frame :(
             // It would require significant effort to prevent such a case.
-            return isNextTL0(vp8Frame) || matchesTL0PICIDX(vp8Frame);
+            return isNextTemporalBaseLayerFrame(vp8Frame)
+                || matchesTL0PICIDX(vp8Frame);
         }
         else if (isTL0)
         {
@@ -336,9 +337,10 @@ class VP8Frame
             // keyframe; this case is handled above).
 
             boolean accept = endingSequenceNumberIsKnown()
-                && (isNextTL0(vp8Frame) || matchesTL0PICIDX(vp8Frame));
+                && (isNextTemporalBaseLayerFrame(vp8Frame)
+                || matchesTL0PICIDX(vp8Frame));
 
-            if (!accept && isNextTL0(vp8Frame))
+            if (!accept && isNextTemporalBaseLayerFrame(vp8Frame))
             {
                 // we're skipping a TL0.
                 needsKeyframe = true;
@@ -352,7 +354,7 @@ class VP8Frame
             // frames MUST NOT be corrupted, unless the new frame is a keyframe
             // or a TL0 reference frame.
 
-            return (isNextTL0(vp8Frame)
+            return (isNextTemporalBaseLayerFrame(vp8Frame)
                 || (endingSequenceNumberIsKnown() && matchesTL0PICIDX(vp8Frame)));
         }
     }
