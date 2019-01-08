@@ -16,14 +16,13 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.util.PacketPredicate
-import org.jitsi.rtp.Packet
+import org.jitsi.nlj.stats.StatBlock
 
 class DemuxerNode(name: String) : Node("$name demuxer") {
-    private var transformPaths: MutableMap<PacketPredicate, Node> = mutableMapOf()
+    private var transformPaths: MutableSet<ConditionalPacketPath> = mutableSetOf()
 
-    fun addPacketPath(pp: PacketPath) {
-        transformPaths[pp.predicate] = pp.path
+    fun addPacketPath(pp: ConditionalPacketPath) {
+        transformPaths.add(pp)
         // DemuxerNode never uses the plain 'next' call since it doesn't have a single 'next'
         // node (it has multiple downstream paths), but we want to make sure the paths correctly
         // see this Demuxer in their 'inputNodes' so that we can traverse the reverse tree
@@ -36,16 +35,16 @@ class DemuxerNode(name: String) : Node("$name demuxer") {
     override fun doProcessPackets(p: List<PacketInfo>) {
         // Is this scheme always better? Or only when the list of
         // packets is above a certain size?
-        transformPaths.forEach { predicate, chain ->
-            val pathPackets = p.filter { predicate.invoke(it.packet) }
-            next(chain, pathPackets)
+        transformPaths.forEach { conditionalPath ->
+            val pathPackets = p.filter { conditionalPath.predicate.invoke(it.packet) }
+            next(conditionalPath.path, pathPackets)
         }
     }
 
     override fun visit(visitor: NodeVisitor) {
         visitor.visit(this)
-        transformPaths.forEach { pred, path ->
-            path.visit(visitor)
+        transformPaths.forEach { conditionalPath ->
+            conditionalPath.path.visit(visitor)
         }
     }
 }

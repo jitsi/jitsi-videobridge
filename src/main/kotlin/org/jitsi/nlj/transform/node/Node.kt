@@ -20,6 +20,7 @@ import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Stoppable
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
@@ -32,13 +33,10 @@ interface NodeVisitor {
     fun visit(node: Node)
 }
 
-class NodeStatsVisitor(val sb: StringBuffer = StringBuffer()) : NodeVisitor {
+class NodeStatsVisitor(val statBlock: StatBlock) : NodeVisitor {
     override fun visit(node: Node) {
-        //TODO: How to do the indent?
-        // if, instead of returning a string, we returned some stat structure
-        // which could support nesting (for sub paths like demuxer) then i
-        // think we could get better formatting
-        sb.append(node.getStats())
+        val block = node.getStats()
+        statBlock.addStat(block.name, block)
     }
 }
 
@@ -129,23 +127,15 @@ abstract class Node(
         // No-op by default
     }
 
-    override fun getStats(indent: Int): String {
-        return with (StringBuffer()) {
-            appendLnIndent(indent, "$name stats:")
-            appendLnIndent(indent + 2, "numInputPackets: $numInputPackets")
-            appendLnIndent(indent + 2, "numOutputPackets: $numOutputPackets")
-            appendLnIndent(indent + 2, "total time spent: ${Duration.ofNanos(totalProcessingDuration).toMillis()} ms")
-            appendLnIndent(indent + 2, "average time spent per packet: ${Duration.ofNanos(totalProcessingDuration / Math.max(numInputPackets, 1)).toMillis()} ms")
-            appendLnIndent(indent + 2, "$numBytes bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
-            appendLnIndent(indent + 2, "throughput: ${getMbps(
-                numBytes,
-                Duration.ofNanos(lastPacketTime - firstPacketTime)
-            )} mbps")
-            appendLnIndent(indent + 2, "individual module throughput: ${getMbps(
-                numBytes,
-                Duration.ofNanos(totalProcessingDuration)
-            )} mbps")
-            toString()
+    override fun getStats(): StatBlock {
+        return StatBlock("Node $name ${hashCode()}").apply {
+            addStat("numInputPackets: $numInputPackets")
+            addStat("numOutputPackets: $numOutputPackets")
+            addStat("total time spent: ${Duration.ofNanos(totalProcessingDuration).toMillis()} ms")
+            addStat("average time spent per packet: ${Duration.ofNanos(totalProcessingDuration / Math.max(numInputPackets, 1)).toMillis()} ms")
+            addStat("$numBytes bytes over ${Duration.ofNanos(lastPacketTime - firstPacketTime).toMillis()} ms")
+            addStat("throughput: ${getMbps(numBytes, Duration.ofNanos(lastPacketTime - firstPacketTime))} mbps")
+            addStat("individual module throughput: ${getMbps(numBytes, Duration.ofNanos(totalProcessingDuration))} mbps")
         }
     }
 
@@ -193,7 +183,8 @@ abstract class Node(
     }
 }
 
-class PacketPath {
+class ConditionalPacketPath {
+    var name: String by Delegates.notNull()
     var predicate: PacketPredicate by Delegates.notNull()
     var path: Node by Delegates.notNull()
 }

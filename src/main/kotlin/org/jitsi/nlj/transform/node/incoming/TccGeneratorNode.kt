@@ -22,6 +22,7 @@ import org.jitsi.nlj.ReceiveSsrcRemovedEvent
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cinfo
@@ -97,12 +98,11 @@ class TccGeneratorNode(
             currTcc.numPackets() >= 20
     }
 
-    override fun getStats(indent: Int): String {
-        return with (StringBuffer()) {
-            append(super.getStats(indent))
-            appendLnIndent(indent + 2, "num tcc packets sent: $numTccSent")
-            toString()
+    override fun getStats(): StatBlock {
+        val parentStats = super.getStats()
+        return StatBlock(name).apply {
+            addAll(parentStats)
+            addStat( "num tcc packets sent: $numTccSent")
         }
     }
-
 }

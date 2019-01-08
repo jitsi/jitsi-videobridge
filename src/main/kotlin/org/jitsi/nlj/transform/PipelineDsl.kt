@@ -18,15 +18,15 @@ package org.jitsi.nlj.transform
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.DemuxerNode
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.transform.node.PacketPath
+import org.jitsi.nlj.transform.node.ConditionalPacketPath
 import org.jitsi.rtp.Packet
 
 
 //TODO: look into @DslMarker to prevent inner dsl builders from accidentally setting parent
 // member variables when they overlap
 
-fun DemuxerNode.packetPath(b: PacketPath.() -> Unit) {
-    this.addPacketPath(PacketPath().apply(b))
+fun DemuxerNode.packetPath(b: ConditionalPacketPath.() -> Unit) {
+    this.addPacketPath(ConditionalPacketPath().apply(b))
 }
 
 class PipelineBuilder {

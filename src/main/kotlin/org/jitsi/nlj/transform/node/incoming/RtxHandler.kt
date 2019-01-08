@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
@@ -115,12 +116,12 @@ class RtxHandler : Node("RTX handler") {
         super.handleEvent(event)
     }
 
-    override fun getStats(indent: Int): String = with(StringBuffer()) {
-        append(super.getStats(indent))
-        appendLnIndent(indent + 2, "num rtx packets received: $numRtxPacketsReceived")
-        appendLnIndent(indent + 2, "num padding packets received: $numPaddingPacketsReceived")
-
-
-        toString()
+    override fun getStats(): StatBlock {
+        val parentStats = super.getStats()
+        return StatBlock(name).apply {
+            addAll(parentStats)
+            addStat("num rtx packets received: $numRtxPacketsReceived")
+            addStat("num padding packets received: $numPaddingPacketsReceived")
+        }
     }
 }

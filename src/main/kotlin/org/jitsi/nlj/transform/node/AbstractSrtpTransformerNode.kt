@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cinfo
 
@@ -78,14 +79,15 @@ abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
         }
     }
 
-    override fun getStats(indent: Int): String = with(StringBuffer()) {
-        append(super.getStats(indent))
-        appendLnIndent(indent + 2, "num cached packets: ${cachedPackets.size}")
-        appendLnIndent(indent + 2, "num dropped packets before transformer: $numDroppedPackets")
-        val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
-        appendLnIndent(indent + 2, "time between first packet received and first forwarded: " +
-                "$timeBetweenReceivedAndForwarded ms")
-
-        toString()
+    override fun getStats(): StatBlock {
+        val parentStats = super.getStats()
+        return StatBlock(name).apply {
+            addAll(parentStats)
+            addStat("num cached packets: ${cachedPackets.size}")
+            addStat("num dropped packets before transformer: $numDroppedPackets")
+            val timeBetweenReceivedAndForwarded = firstPacketForwardedTimestamp - firstPacketReceivedTimestamp
+            addStat("time between first packet received and first forwarded: " +
+                    "$timeBetweenReceivedAndForwarded ms")
+        }
     }
 }

@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
@@ -118,13 +119,12 @@ class RetransmissionSender : Node("Retransmission sender") {
         super.handleEvent(event)
     }
 
-    override fun getStats(indent: Int): String {
-        return with(StringBuffer()) {
-            append(super.getStats(indent))
-            appendLnIndent(indent + 2, "num retransmissions requested: $numRetransmissionsRequested")
-            appendLnIndent(indent + 2, "num retransmissions sent: $numRetransmittedPackets")
-
-            toString()
+    override fun getStats(): StatBlock {
+        val parentStats = super.getStats()
+        return StatBlock(name).apply {
+            addAll(parentStats)
+            addStat("num retransmissions requested: $numRetransmissionsRequested")
+            addStat("num retransmissions sent: $numRetransmittedPackets")
         }
     }
 }

@@ -146,5 +146,5 @@ fun main(args: Array<String>) {
     senderExecutor.shutdown()
     senderExecutor.awaitTermination(10, TimeUnit.SECONDS)
 
-    senders.forEach { println(it.getStats()) }
+    senders.forEach { println(it.getStats().prettyPrint()) }
 }
