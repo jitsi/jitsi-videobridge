@@ -12,9 +12,9 @@ that that are in a one-on-one call with the JVB. This has the notable desirable
 property that _bad_ down-link conditions at a particular receiver do not
 typically affect the sending bitrate of the senders because, from their
 perspective, there is only one receiver (the JVB) with a presumably good
-down-link. The JVB, in its turn, _estimates_ its available up-link bandwidth
-towards a particular receiver (or, symmetrically, the available down-link of a
-particular receiver) and it _distributes_ it among the several video _tracks_
+down-link. The JVB, in its turn, _estimates_ the available down-link of a
+particular receiver(or, symmetrically, its available up-link bandwidth towards 
+a particular receiver) and it _distributes_ it among the several video _tracks_
 [[MCS], section 4.3] that the several senders of a group-call are sharing.
 
 Due to different video tracks having different bitrate allocations depending on
@@ -74,8 +74,8 @@ it needs to produce its own SRs. RTCP SR generation takes place in the various
 `AdaptiveTrackProjectionContext` implementations (see, for example,
 `BasicAdaptiveTrackProjectionContext#rewriteRtcp`).
 
-For estimating the available up-link bandwidth towards a particular receiver
-(or, symmetrically, the available down-link bandwidth of a particular receiver)
+For estimating the available down-link bandwidth of a particular receiver (or,
+symmetrically,  the available up-link bandwidth towards a particular receiver)
 the JVB expects from the receiver Receiver Reports (RRs) and Transport-wide
 Congestion Control (TCCs) feedback
 [[I-D.holmer-rmcat-transport-wide-cc-extensions]]. Receiver Estimated Maximum
