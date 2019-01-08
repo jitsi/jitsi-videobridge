@@ -85,7 +85,7 @@ class EndpointMessageTransport
      * The {@link WebRtcDataStream} currently used by this
      * {@link EndpointMessageTransport} instance for writing.
      */
-    private WebRtcDataStream webrtcDataStream;
+    private WebRtcDataStream writableWebRtcDataStream;
 
     /**
      * The listener which will be added to {@link SctpConnection}s associated
@@ -143,9 +143,9 @@ class EndpointMessageTransport
 
         if (_defaultStream != null)
         {
-            WebRtcDataStream oldDataStream = this.webrtcDataStream;
+            WebRtcDataStream oldDataStream = this.writableWebRtcDataStream;
 
-            this.webrtcDataStream = _defaultStream;
+            this.writableWebRtcDataStream = _defaultStream;
 
             _defaultStream.setDataCallback(EndpointMessageTransport.this);
 
@@ -435,7 +435,7 @@ class EndpointMessageTransport
         {
             if (sctpConnection != null && sctpConnection.isReady())
             {
-                dst = webrtcDataStream;
+                dst = writableWebRtcDataStream;
 
                 if (dst == null)
                 {
@@ -605,10 +605,10 @@ class EndpointMessageTransport
                 // in the new SCTP connection (because the call to
                 // hookUpDefaultWebRtcDataChannel didn't select any) and where
                 // the current one belongs to the old SCTP connection.
-                if (webrtcDataStream != null
-                    && webrtcDataStream.getSctpConnection() == oldValue)
+                if (writableWebRtcDataStream != null
+                    && writableWebRtcDataStream.getSctpConnection() == oldValue)
                 {
-                    webrtcDataStream = null;
+                    writableWebRtcDataStream = null;
                 }
 
                 oldValue.removeChannelListener(webRtcDataStreamListener);
