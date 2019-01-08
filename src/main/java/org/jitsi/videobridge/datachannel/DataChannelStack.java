@@ -1,5 +1,6 @@
 package org.jitsi.videobridge.datachannel;
 
+import org.jitsi.util.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi_modified.sctp4j.*;
 
@@ -10,10 +11,12 @@ import java.util.*;
  * message from the remote side
  */
 //TODO: revisit thread safety in here
+//TODO: add an arbitrary ID
 public class DataChannelStack
 {
     private final Map<Integer, DataChannel> dataChannels = new HashMap<>();
     private final SctpSocket sctpSocket;
+    private final Logger logger = Logger.getLogger(this.getClass());
     private DataChannelStackEventListener listener;
 
     //TODO(brian): use generic onIncomingData/dataSender lambda/interfaces rather than
@@ -26,11 +29,14 @@ public class DataChannelStack
         // put something else as the SCTP data callback which could then demux the data to a datachannel
         // and whatever else sent/received data over SCTP.
         sctpSocket.dataCallback = (data, sid, ssn, tsn, ppid, context, flags) -> {
-            System.out.println("Data channel stack reveived SCTP message");
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Data channel stack reveived SCTP message");
+            }
             DataChannelMessage message = DataChannelProtocolMessageParser.parse(data, ppid);
             if (message instanceof OpenChannelMessage)
             {
-                System.out.println("Received data channel open message");
+                logger.info("Received data channel open message");
                 OpenChannelMessage openChannelMessage = (OpenChannelMessage)message;
                 // Remote side wants to open a channel
                 DataChannel dataChannel = new RemotelyOpenedDataChannel(
@@ -48,7 +54,7 @@ public class DataChannelStack
                 DataChannel dataChannel= dataChannels.get(sid);
                 if (dataChannel == null)
                 {
-                    System.out.println("Could not find data channel for sid " + sid);
+                    logger.error("Could not find data channel for sid " + sid);
                     return;
                 }
                 dataChannel.onIncomingMsg(message);
@@ -91,7 +97,6 @@ public class DataChannelStack
      * @param label text label for the channel.
      * @return new instance of <tt>WebRtcDataStream</tt> that represents opened
      *         WebRTC data channel.
-     * @throws IOException if IO error occurs.
      */
     public DataChannel createDataChannel(int channelType, int priority, long reliability, int sid, String label)
     {
