@@ -56,10 +56,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private final Conference conference;
 
     /**
-     * The list of {@link ColibriShim.Channel}s associated with this endpoint.  This allows us to expire the endpoint
+     * The list of {@link ColibriShim.ChannelShim}s associated with this endpoint.  This allows us to expire the endpoint
      * once all of its 'channels' have been removed.
      */
-    protected final List<WeakReference<ColibriShim.Channel>> channelShims = new LinkedList<>();
+    protected final List<WeakReference<ColibriShim.ChannelShim>> channelShims = new LinkedList<>();
 
     private final LastNFilter lastNFilter = new LastNFilter();
 
@@ -201,24 +201,24 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return null;
     }
 
-    public void addChannel(ColibriShim.Channel channel)
+    public void addChannel(ColibriShim.ChannelShim channelShim)
     {
         synchronized (channelShims)
         {
-            channelShims.add(new WeakReference<>(channel));
+            channelShims.add(new WeakReference<>(channelShim));
         }
         System.out.println("Endpoint added channel shim, now have " + channelShims.size() +
                 " channel shims");
     }
 
-    public void removeChannel(ColibriShim.Channel channel)
+    public void removeChannel(ColibriShim.ChannelShim channelShim)
     {
         synchronized (channelShims)
         {
-            for (Iterator<WeakReference<ColibriShim.Channel>> i = channelShims.iterator(); i.hasNext();)
+            for (Iterator<WeakReference<ColibriShim.ChannelShim>> i = channelShims.iterator(); i.hasNext();)
             {
-                ColibriShim.Channel existingChannel = i.next().get();
-                if (existingChannel != null && existingChannel.equals(channel)) {
+                ColibriShim.ChannelShim existingChannelShim = i.next().get();
+                if (existingChannelShim != null && existingChannelShim.equals(channelShim)) {
                     i.remove();
                 }
             }

@@ -8,7 +8,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadT
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.RTPHdrExtPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.SourceGroupPacketExtension;
 import org.jetbrains.annotations.NotNull;
-import org.jitsi.nlj.util.*;
 import org.jitsi.service.neomedia.MediaDirection;
 import org.jxmpp.jid.Jid;
 import org.jxmpp.jid.parts.Localpart;
@@ -20,7 +19,8 @@ import java.util.*;
  * data that is sent/expected in COLIBRI but is no longer directly used.
  */
 public class ColibriShim {
-    class Channel {
+    class ChannelShim
+    {
         final String id;
         final AbstractEndpoint endpoint;
         final boolean isOcto;
@@ -34,7 +34,7 @@ public class ColibriShim {
         private Integer expire;
         private boolean expired = false;
 
-        public Channel(
+        public ChannelShim(
                 @NotNull String id,
                 @NotNull AbstractEndpoint endpoint,
                 boolean isOcto)
@@ -103,7 +103,8 @@ public class ColibriShim {
         }
     }
 
-    class SctpConnection extends Channel {
+    class SctpConnection extends ChannelShim
+    {
         public SctpConnection(
                 @NotNull String id,
                 @NotNull AbstractEndpoint endpoint)
@@ -150,7 +151,7 @@ public class ColibriShim {
 
     class ContentShim {
         private final String name;
-        private final Map<String, Channel> channels = new HashMap<>();
+        private final Map<String, ChannelShim> channels = new HashMap<>();
         private final Map<String, SctpConnection> sctpConnections = new HashMap<>();
 
         public ContentShim(String name)
@@ -194,7 +195,7 @@ public class ColibriShim {
         }
 
 
-        public ColibriShim.Channel createRtpChannel(
+        public ChannelShim createRtpChannel(
                 ConferenceShim conference,
                 String endpointId,
                 boolean isOcto) {
@@ -202,9 +203,9 @@ public class ColibriShim {
             {
                 String channelId = generateUniqueChannelID();
 
-                Channel channel = new Channel(channelId, conference.getOrCreateEndpoint(endpointId), isOcto);
-                channels.put(channelId, channel);
-                return channel;
+                ChannelShim channelShim = new ChannelShim(channelId, conference.getOrCreateEndpoint(endpointId), isOcto);
+                channels.put(channelId, channelShim);
+                return channelShim;
             }
         }
 
@@ -232,7 +233,7 @@ public class ColibriShim {
             }
         }
 
-        public ColibriShim.Channel getChannel(String channelId)
+        public ChannelShim getChannel(String channelId)
         {
             synchronized (channels)
             {
@@ -240,11 +241,11 @@ public class ColibriShim {
             }
         }
 
-        public Collection<ColibriShim.Channel> getChannels()
+        public Collection<ChannelShim> getChannels()
         {
             synchronized (channels)
             {
-                return new ArrayList<Channel>(channels.values());
+                return new ArrayList<ChannelShim>(channels.values());
             }
         }
 

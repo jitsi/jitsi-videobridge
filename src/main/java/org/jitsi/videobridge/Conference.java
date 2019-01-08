@@ -720,7 +720,7 @@ public class Conference
         ColibriShim.ConferenceShim conferenceShim = colibriShim.getConference(this.getID());
         ColibriShim.ContentShim contentShim = conferenceShim.getOrCreateContent(mediaType.toString());
 
-        for (ColibriShim.Channel channelShim : contentShim.getChannels())
+        for (ColibriShim.ChannelShim channelShim : contentShim.getChannels())
         {
             for (SourcePacketExtension sourceExt : channelShim.sources)
             {
