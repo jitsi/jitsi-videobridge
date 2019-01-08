@@ -108,7 +108,7 @@ public class IceDtlsTransportManager
     //TODO: need to take another look and make sure we're properly replicating all the behavior of this
     // method in IceUdpTransportManager
     @Override
-    public void startConnectivityEstablishment(IceUdpTransportPacketExtension transport)
+    public void startConnectivityEstablishment(IceUdpTransportPacketExtension remoteTransportInformation)
     {
         if (iceAgent.getState().isEstablished()) {
             logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
@@ -116,33 +116,34 @@ public class IceDtlsTransportManager
             return;
         }
         logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
-                " starting connectivity establishment with extension: " + transport.toXML());
+                " starting connectivity establishment with extension: " + remoteTransportInformation.toXML());
         // Get the remote fingerprints and set them in the DTLS stack so we
         // have them to do the DTLS handshake later
-        List<DtlsFingerprintPacketExtension> dfpes
-                = transport.getChildExtensionsOfType(
-                DtlsFingerprintPacketExtension.class);
+        List<DtlsFingerprintPacketExtension> fingerprintExtensions
+                = remoteTransportInformation.getChildExtensionsOfType(DtlsFingerprintPacketExtension.class);
 
         Map<String, String> remoteFingerprints = new HashMap<>();
-        dfpes.forEach(dfpe -> {
-            if (dfpe.getHash() != null && dfpe.getFingerprint() != null) {
-                logger.info("Adding fingerprint " + dfpe.getHash() + " -> " + dfpe.getFingerprint());
-                remoteFingerprints.put(dfpe.getHash(), dfpe.getFingerprint());
+        fingerprintExtensions.forEach(fingerprintExtension -> {
+            if (fingerprintExtension.getHash() != null && fingerprintExtension.getFingerprint() != null) {
+                logger.info("Adding fingerprint " + fingerprintExtension.getHash() +
+                        " -> " + fingerprintExtension.getFingerprint());
+                remoteFingerprints.put(fingerprintExtension.getHash(), fingerprintExtension.getFingerprint());
             } else {
                 logger.info("Ignoring empty transport extension");
             }
         });
         if (remoteFingerprints.isEmpty()) {
-            logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() + " empty transport extension, not starting connectivity yet");
+            logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
+                    " empty transport extension, not starting connectivity yet");
             return;
         }
 
         // Set the remote ufrag/password
-        if (transport.getUfrag() != null) {
-            iceAgent.getStream(ICE_STREAM_NAME).setRemoteUfrag(transport.getUfrag());
+        if (remoteTransportInformation.getUfrag() != null) {
+            iceAgent.getStream(ICE_STREAM_NAME).setRemoteUfrag(remoteTransportInformation.getUfrag());
         }
-        if (transport.getPassword() != null) {
-            iceAgent.getStream(ICE_STREAM_NAME).setRemotePassword(transport.getPassword());
+        if (remoteTransportInformation.getPassword() != null) {
+            iceAgent.getStream(ICE_STREAM_NAME).setRemotePassword(remoteTransportInformation.getPassword());
         }
 
         // If ICE is running already, we try to update the checklists with the
@@ -150,15 +151,14 @@ public class IceDtlsTransportManager
         boolean iceAgentStateIsRunning
                 = IceProcessingState.RUNNING.equals(iceAgent.getState());
 
-        List<CandidatePacketExtension> candidates
-                = transport.getChildExtensionsOfType(
-                CandidatePacketExtension.class);
-        if (iceAgentStateIsRunning && candidates.isEmpty()) {
+        List<CandidatePacketExtension> remoteCandidates
+                = remoteTransportInformation.getChildExtensionsOfType(CandidatePacketExtension.class);
+        if (iceAgentStateIsRunning && remoteCandidates.isEmpty()) {
             logger.info("ICE agent is already running and this extension contained no new candidates, returning");
             return;
         }
 
-        int remoteCandidateCount = addRemoteCandidates(candidates, iceAgentStateIsRunning);
+        int remoteCandidateCount = addRemoteCandidates(remoteCandidates, iceAgentStateIsRunning);
 
         if (iceAgentStateIsRunning) {
             if (remoteCandidateCount == 0) {
@@ -204,8 +204,15 @@ public class IceDtlsTransportManager
         return this.transceiver;
     }
 
-    // Almost the same as the one in IceUdpTransportManager, but we don't use the iceStream member and
-    // always assume rtcpmux
+    /**
+     *
+     * @param candidates
+     * @param iceAgentStateIsRunning
+     * @return the number of network reachable remote candidates contained in the given list of candidates
+     *
+     * NOTE(brian): Almost the same as the one that was in IceUdpTransportManager, but we don't use the iceStream
+     * member (we get the stream dynamically) and we always assume rtcpmux
+     */
     private int addRemoteCandidates(
             List<CandidatePacketExtension> candidates,
             boolean iceAgentStateIsRunning)
