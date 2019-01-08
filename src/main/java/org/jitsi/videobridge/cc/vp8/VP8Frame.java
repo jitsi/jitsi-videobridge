@@ -334,8 +334,10 @@ class VP8Frame
         {
             // This instance is a TL0. TL0 reference frames MUST NOT be
             // corrupted (unless the new frame that we're processing is a
-            // keyframe; this case is handled above).
-
+            // keyframe; this case is handled above). If the last/ending
+            // sequence number of the this TL0 frame is known, we don't have to
+            // worry about the 'running out of room' problem; we can therefore
+            // accept the new frame.
             boolean accept = endingSequenceNumberIsKnown()
                 && (isNextTemporalBaseLayerFrame(vp8Frame)
                 || matchesTL0PICIDX(vp8Frame));

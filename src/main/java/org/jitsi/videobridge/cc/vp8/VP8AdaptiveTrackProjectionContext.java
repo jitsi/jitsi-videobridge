@@ -236,11 +236,11 @@ public class VP8AdaptiveTrackProjectionContext
     }
 
     /**
-     * Determines whether a packet needs to be accepted or not.
+     * Determines whether a packet should be accepted or not.
      *
      * @param rtpPacket the RTP packet to determine whether to project or not.
      * @param targetIndex the target index to achieve
-     * @return true if the packet is accepted, false otherwise.
+     * @return true if the packet should be accepted, false otherwise.
      */
     @Override
     public boolean accept(@NotNull RawPacket rtpPacket, int targetIndex)
