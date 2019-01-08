@@ -358,7 +358,8 @@ public class IceDtlsTransportManager
 
         DemuxerNode dtlsSrtpDemuxer = new DemuxerNode("DTLS/SRTP");
         // DTLS path
-        PacketPath dtlsPath = new PacketPath();
+        ConditionalPacketPath dtlsPath = new ConditionalPacketPath();
+        dtlsPath.setName("DTLS path");
         dtlsPath.setPredicate((packet) -> {
             int b = packet.getBuffer().get(0) & 0xFF;
             return (b >= 20 && b <= 63);
@@ -374,7 +375,8 @@ public class IceDtlsTransportManager
         dtlsSrtpDemuxer.addPacketPath(dtlsPath);
 
         // SRTP path
-        PacketPath srtpPath = new PacketPath();
+        ConditionalPacketPath srtpPath = new ConditionalPacketPath();
+        srtpPath.setName("SRTP path");
         srtpPath.setPredicate(packet -> {
             int b = packet.getBuffer().get(0) & 0xFF;
             return (b < 20 || b > 63);
