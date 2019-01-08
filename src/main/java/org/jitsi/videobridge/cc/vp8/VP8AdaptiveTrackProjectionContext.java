@@ -180,6 +180,10 @@ public class VP8AdaptiveTrackProjectionContext
         // of a frame, then we don't process it right now. It'll get its chance
         // when the first packet arrives and, if it's chosen for forwarding,
         // we'll piggy-back any missed packets.
+        //
+        // This is to keep things simple (i.e. make it easy to compute the
+        // starting sequence number of the projection of an accepted frame).
+
         byte[] buf = rtpPacket.getBuffer();
         int payloadOff = rtpPacket.getPayloadOffset();
         if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buf, payloadOff))
