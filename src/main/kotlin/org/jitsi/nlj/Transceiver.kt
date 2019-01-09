@@ -19,6 +19,7 @@ import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.StatBlock
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.transform.node.Node
@@ -65,6 +66,7 @@ class Transceiver(
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
+    val packetIOActivity = PacketIOActivity()
 
     private val transportCcEngine = TransportCCEngine(DiagnosticContext())
 
@@ -98,6 +100,7 @@ class Transceiver(
      * this transceiver is associated with) to be processed by the receiver pipeline.
      */
     fun handleIncomingPacket(p: PacketInfo) {
+        packetIOActivity.lastPacketReceivedTimestampMs = System.currentTimeMillis()
         rtpReceiver.enqueuePacket(p)
     }
 
@@ -105,7 +108,10 @@ class Transceiver(
      * Send packets to the endpoint this transceiver is associated with by
      * passing them out the sender's outgoing pipeline
      */
-    fun sendRtp(rtpPackets: List<PacketInfo>) = rtpSender.sendPackets(rtpPackets)
+    fun sendRtp(rtpPackets: List<PacketInfo>) {
+        packetIOActivity.lastPacketSentTimestampMs = System.currentTimeMillis()
+        rtpSender.sendPackets(rtpPackets)
+    }
 
     fun sendRtcp(rtcpPackets: List<RtcpPacket>) = rtpSender.sendRtcp(rtcpPackets)
 
