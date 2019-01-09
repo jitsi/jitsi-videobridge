@@ -720,18 +720,18 @@ public class Videobridge
              * mentioned, it does not need explicit creation (in contrast to
              * the conference and channel elements).
              */
-            String contentName = contentIQ.getName();
-            ColibriShim.ContentShim content = conference.getOrCreateContent(contentName);
+            MediaType contentType = MediaType.parseString(contentIQ.getName());
+            ColibriShim.ContentShim content = conference.getOrCreateContent(contentType);
             if (content == null)
             {
                 return IQUtils.createError(
                         conferenceIQ,
                         XMPPError.Condition.internal_server_error,
-                        "Failed to create new content for name: "
-                                + contentName);
+                        "Failed to create new content for type: "
+                                + contentType);
             }
 
-            ColibriConferenceIQ.Content responseContentIQ = new ColibriConferenceIQ.Content(content.getName());
+            ColibriConferenceIQ.Content responseContentIQ = new ColibriConferenceIQ.Content(content.getType().toString());
 
             responseConferenceIQ.addContent(responseContentIQ);
 

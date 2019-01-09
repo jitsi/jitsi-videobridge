@@ -718,7 +718,7 @@ public class Conference
     {
         ColibriShim colibriShim = videobridge.getColibriShim();
         ColibriShim.ConferenceShim conferenceShim = colibriShim.getConference(this.getID());
-        ColibriShim.ContentShim contentShim = conferenceShim.getOrCreateContent(mediaType.toString());
+        ColibriShim.ContentShim contentShim = conferenceShim.getOrCreateContent(mediaType);
 
         for (ColibriShim.ChannelShim channelShim : contentShim.getChannels())
         {

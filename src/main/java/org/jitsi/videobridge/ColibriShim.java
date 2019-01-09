@@ -8,7 +8,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadT
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.RTPHdrExtPacketExtension;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.SourceGroupPacketExtension;
 import org.jetbrains.annotations.NotNull;
-import org.jitsi.service.neomedia.MediaDirection;
+import org.jitsi.service.neomedia.*;
 import org.jxmpp.jid.Jid;
 import org.jxmpp.jid.parts.Localpart;
 
@@ -150,13 +150,13 @@ public class ColibriShim {
     }
 
     class ContentShim {
-        private final String name;
+        private final MediaType type;
         private final Map<String, ChannelShim> channels = new HashMap<>();
         private final Map<String, SctpConnection> sctpConnections = new HashMap<>();
 
-        public ContentShim(String name)
+        public ContentShim(MediaType type)
         {
-            this.name = name;
+            this.type = type;
         }
 
         /**
@@ -190,8 +190,8 @@ public class ColibriShim {
             }
         }
 
-        public String getName() {
-            return name;
+        public MediaType getType() {
+            return type;
         }
 
 
@@ -260,8 +260,7 @@ public class ColibriShim {
     public class ConferenceShim {
         public final Conference conference;
 
-        // name -> ContentShim
-        private final Map<String, ContentShim> contents = new HashMap<>();
+        private final Map<MediaType, ContentShim> contents = new HashMap<>();
         private final Map<String, ChannelBundleShim> channelBundles = new HashMap<>();
 
         public ConferenceShim(Jid focus, Localpart name, boolean enableLogging, String confGid)
@@ -269,10 +268,10 @@ public class ColibriShim {
             this.conference = videobridge.createConference(focus, name, enableLogging, confGid);
         }
 
-        public ContentShim getOrCreateContent(String name) {
+        public ContentShim getOrCreateContent(MediaType type) {
             synchronized (contents)
             {
-                return contents.computeIfAbsent(name, key -> new ContentShim(name));
+                return contents.computeIfAbsent(type, key -> new ContentShim(type));
             }
         }
 
