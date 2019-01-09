@@ -161,9 +161,9 @@
 ////        receiver2.running = false
 ////
 ////        println("Producer wrote ${p.packetsWritten} packets")
-////        println(receiver1.getStats())
-////        println(receiver2.getStats())
-//////    println(stream3.getStats())
+////        println(receiver1.getNodeStats())
+////        println(receiver2.getNodeStats())
+//////    println(stream3.getNodeStats())
 ////
 ////        println("=======")
 ////        println("Bridge:")
@@ -172,8 +172,8 @@
 ////        println("  forwarded ${b.numForwardedPackets} packets")
 ////        println("      per packet ssrc: ${b.processedPacketsPerSsrc}")
 ////        println("      per destination ssrc: ${b.packetsPerDestination}")
-////        println(sender1.getStats())
-////        println(sender2.getStats())
+////        println(sender1.getNodeStats())
+////        println(sender2.getNodeStats())
 ////
 ////        val totalPacketsSent = listOf(sender1, sender2).map(RtpSender::numPacketsSent).sum()
 ////        println("Transmitted $totalPacketsSent packets")

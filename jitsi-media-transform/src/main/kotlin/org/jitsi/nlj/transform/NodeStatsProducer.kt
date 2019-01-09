@@ -17,7 +17,7 @@ package org.jitsi.nlj.transform
 
 import org.jitsi.nlj.stats.NodeStatsBlock
 
-interface StatsProducer {
-    fun getStats(): NodeStatsBlock
+interface NodeStatsProducer {
+    fun getNodeStats(): NodeStatsBlock
 }
 

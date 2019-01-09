@@ -193,7 +193,7 @@ class RtpSenderImpl(
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
     }
 
-    override fun getStats(): NodeStatsBlock {
+    override fun getNodeStats(): NodeStatsBlock {
         val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
         return NodeStatsBlock("RTP sender $id").apply {
             addStat("queue size: ${incomingPacketQueue.size}")
@@ -204,7 +204,7 @@ class RtpSenderImpl(
             addStat("Read from queue at a rate of " +
                     "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
             addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
-            addStat("nack handler stats: ${nackHandler.getStats()}")
+            addStat("nack handler stats: ${nackHandler.getNodeStats()}")
             val statsVisitor = NodeStatsVisitor(this)
             outputPipelineTerminationNode.reverseVisit(statsVisitor)
         }

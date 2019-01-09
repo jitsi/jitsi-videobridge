@@ -246,7 +246,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun processPackets(pkts: List<PacketInfo>) = inputTreeRoot.processPackets(pkts)
 
-    override fun getStats(): NodeStatsBlock {
+    override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("RTP receiver $id").apply {
             addStat( "queue size: ${incomingPacketQueue.size}")
             addStat( "Received $packetsReceived packets ($bytesReceived bytes) in " + "${lastPacketWrittenTime - firstPacketWrittenTime}ms " + "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
