@@ -22,7 +22,9 @@ import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.ExecutorShutdownTimeoutException
 import org.jitsi.nlj.util.NameableThreadFactory
+import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
@@ -205,11 +207,8 @@ fun main(args: Array<String>) {
     println("sender stats:\n${sender.getStats()}")
 
 
-    receiverExecutor.shutdown()
-    receiverExecutor.awaitTermination(5, TimeUnit.SECONDS)
-    senderExecutor.shutdown()
-    senderExecutor.awaitTermination(5, TimeUnit.SECONDS)
-    backgroundExecutor.shutdown()
-    backgroundExecutor.awaitTermination(5, TimeUnit.SECONDS)
+    receiverExecutor.safeShutdown(Duration.ofSeconds(5))
+    senderExecutor.safeShutdown(Duration.ofSeconds(5))
+    backgroundExecutor.safeShutdown(Duration.ofSeconds(5))
 
 }
