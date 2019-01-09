@@ -446,6 +446,9 @@ public class IceDtlsTransportManager
 
     // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver
     private void installIncomingPacketReader(MultiplexingDatagramSocket s) {
+        //todo(brian): i'm not sure we'll want to run this via this executor.  this executor is intended for io
+        // operations, which this mainly is, but it does also do the work of handling the packets a bit (in the
+        // dtls case) so maybe should keep this to just io heavy part (reading from the queue)?
         executor.submit(() -> {
             byte[] buf = new byte[1500];
             while (true) {
