@@ -20,6 +20,7 @@ import java.util.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.util.*;
 
+import org.dom4j.*;
 import org.jitsi.meet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
@@ -92,6 +93,13 @@ public class ComponentImpl
     private final XmppCommon common = new XmppCommon();
 
     /**
+     * The map holds stripes for each conference as weak references.
+     * See {@link #getStripeForPacket(Packet)} for more info on what a stripe
+     * is.
+     */
+    private final Map<String, Object> stripeMap = new WeakHashMap<>();
+
+    /**
      * Initializes a new <tt>ComponentImpl</tt> instance.
      * @param host the hostname or IP address to which this component will be
      *             connected.
@@ -159,6 +167,55 @@ public class ComponentImpl
     public String getName()
     {
         return NAME;
+    }
+
+    /**
+     * The JVB's XMPP component synchronously processes packets related to
+     * one conference, but will process in parallel packets which belong to
+     * multiple conferences. It does that by using the
+     * {@code StripedExecutorService} under the hood and generating a stripe
+     * for each conference ID. See {@link ComponentBase} docs, Jicoco source
+     * code and
+     * https://www.javaspecialists.eu/archive/Issue206.html for more details.
+     *
+     * {@inheritDoc}
+     */
+    protected Object getStripeForPacket(Packet p)
+    {
+        if (p instanceof IQ)
+        {
+            IQ iq = (IQ) p;
+            Element childElem = iq.getChildElement();
+            if (childElem == null)
+            {
+                return null;
+            }
+
+            if (ColibriConferenceIQ.NAMESPACE.equals(
+                    childElem.getNamespace().getStringValue())
+                        && ColibriConferenceIQ.ELEMENT_NAME.equals(
+                                    childElem.getName()))
+            {
+                // It's a ColibriConferenceIQ - the conference ID
+                Attribute confIdAttr
+                        = childElem.attribute(ColibriConferenceIQ.ID_ATTR_NAME);
+
+                if (confIdAttr != null)
+                {
+                    Object stripe;
+                    String conferenceId = confIdAttr.getValue();
+                    synchronized (stripeMap)
+                    {
+                        stripe
+                            = stripeMap.computeIfAbsent(
+                                    conferenceId,
+                                    i -> "Conference stripe: " + i);
+                        return stripe;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /**

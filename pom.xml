@@ -59,7 +59,7 @@
     <dependency>
       <groupId>org.igniterealtime</groupId>
       <artifactId>tinder</artifactId>
-      <version>1.3.0</version>
+      <version>1.3.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.igniterealtime.smack</groupId>
@@ -91,7 +91,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>jicoco</artifactId>
-      <version>1.1-20180821.201527-7</version>
+      <version>1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
