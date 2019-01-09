@@ -423,14 +423,10 @@ public class IceDtlsTransportManager
     // Start a thread for each transceiver.  Each thread will read from the transceiver's outgoing queue
     // and send that data on the shared socket
     private void installTransceiverOutgoingPacketSenders(MultiplexingDatagramSocket s) {
-        new Thread(() -> {
-            Transceiver transceiver = getTransceiver();
+        executor.submit(() -> {
             while (true) {
                 try
                 {
-                    while (transceiver == null) {
-                        transceiver = getTransceiver();
-                    }
                     PacketInfo pktInfo = transceiver.getOutgoingQueue().take();
                     Packet pkt = pktInfo.getPacket();
                     s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
@@ -445,7 +441,7 @@ public class IceDtlsTransportManager
                     break;
                 }
             }
-        }, "Outgoing write thread").start();
+        });
     }
 
     // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver
@@ -516,12 +512,10 @@ public class IceDtlsTransportManager
         });
 
         packetSender.socket = s;
-        System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
+        logger.info("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         executor.submit(() -> {
             try {
-                System.out.println("TEMP: dtls connecting");
                 dtlsStack.connect(new TlsClientImpl());
-                System.out.println("TEMP: dtls connect finished");
             }
             catch (Exception e)
             {
