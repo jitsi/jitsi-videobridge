@@ -93,6 +93,8 @@ public class Endpoint
 
     private AudioLevelListenerImpl audioLevelListener;
 
+    private CompletableFuture<Boolean> onTransportManagerSet = new CompletableFuture<>();
+
     /**
      * The password of the ICE Agent associated with this endpoint: note that
      * without bundle an endpoint might have multiple channels with different
@@ -312,6 +314,7 @@ public class Endpoint
         });
 
         ((IceDtlsTransportManager)transportManager).setTransceiver(this.transceiver);
+        onTransportManagerSet.complete(true);
     }
 
     public void createSctpConnection() {
@@ -364,21 +367,23 @@ public class Endpoint
             }
         });
         socket.listen();
-        ((IceDtlsTransportManager)transportManager).onDtlsHandshakeComplete(() -> {
-            //TODO: move this to an executor/pool
-            new Thread(() -> {
-                while (!socket.accept())
-                {
-                    try
+        onTransportManagerSet.thenRun(() -> {
+            ((IceDtlsTransportManager)transportManager).onDtlsHandshakeComplete(() -> {
+                //TODO: move this to an executor/pool
+                new Thread(() -> {
+                    while (!socket.accept())
                     {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e)
-                    {
-                        break;
+                        try
+                        {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e)
+                        {
+                            break;
+                        }
                     }
-                }
-                logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
-            }).start();
+                    logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
+                }).start();
+            });
         });
     }
 
