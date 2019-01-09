@@ -16,6 +16,8 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.rtcp.NackHandler
+import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock

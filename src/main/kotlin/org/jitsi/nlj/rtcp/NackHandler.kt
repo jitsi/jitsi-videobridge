@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj
+package org.jitsi.nlj.rtcp
 
+import org.jitsi.nlj.PacketHandler
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
