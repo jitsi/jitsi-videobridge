@@ -291,6 +291,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
         audioLevelReader.audioLevelListener = audioLevelListener
     }
 
+    override fun getStreamStats(): Map<Long, IncomingStreamStatistics> = statTracker.getCurrentStats()
+
     override fun stop() {
         running = false
         rtcpRrGenerator.running = false
