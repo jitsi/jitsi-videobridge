@@ -446,7 +446,7 @@ public class IceDtlsTransportManager
 
     // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver
     private void installIncomingPacketReader(MultiplexingDatagramSocket s) {
-        new Thread(() -> {
+        executor.submit(() -> {
             byte[] buf = new byte[1500];
             while (true) {
                 DatagramPacket p = new DatagramPacket(buf, 0, 1500);
@@ -471,8 +471,7 @@ public class IceDtlsTransportManager
                     break;
                 }
             }
-        }, "Incoming read thread").start();
-
+        });
     }
 
     private boolean iceConnectedProcessed = false;
