@@ -20,6 +20,7 @@ import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
+import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
@@ -188,6 +189,7 @@ class RtpSenderImpl(
         }
     }
 
+    override fun getStreamStats(): Map<Long, OutgoingStreamStatistics> = statTracker.getCurrentStats()
 
     override fun handleEvent(event: Event) {
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))

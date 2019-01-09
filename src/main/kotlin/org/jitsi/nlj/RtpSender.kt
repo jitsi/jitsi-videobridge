@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.transform.NodeStatsProducer
+import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
 import org.jitsi.rtp.rtcp.RtcpPacket
 
 
@@ -46,4 +47,5 @@ abstract class RtpSender : EventHandler, Stoppable,NodeStatsProducer {
     abstract fun sendRtcp(pkts: List<RtcpPacket>)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
+    abstract fun getStreamStats(): Map<Long, OutgoingStreamStatistics>
 }
