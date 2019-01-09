@@ -124,7 +124,7 @@ public class Videobridge
 
     /**
      * The pseudo-random generator which is to be used when generating
-     * {@link Conference} and {@link Channel} IDs in order to minimize busy
+     * {@link Conference} IDs in order to minimize busy
      * waiting for the value of {@link System#currentTimeMillis()} to change.
      */
     public static final Random RANDOM = new Random();

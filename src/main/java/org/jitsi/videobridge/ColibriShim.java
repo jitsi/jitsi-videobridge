@@ -172,7 +172,7 @@ public class ColibriShim {
         }
 
         /**
-         * @return a new channel ID, unique in the list of this {@link Content}'s
+         * @return a new channel ID, unique in the list of this {@link ContentShim}'s
          * channels.
          */
         private String generateUniqueChannelID()
@@ -245,7 +245,7 @@ public class ColibriShim {
         {
             synchronized (channels)
             {
-                return new ArrayList<ChannelShim>(channels.values());
+                return new ArrayList<>(channels.values());
             }
         }
 
@@ -264,9 +264,9 @@ public class ColibriShim {
         private final Map<String, ContentShim> contents = new HashMap<>();
         private final Map<String, ChannelBundleShim> channelBundles = new HashMap<>();
 
-        public ConferenceShim(Jid focus, Localpart name, String confGid)
+        public ConferenceShim(Jid focus, Localpart name, boolean enableLogging, String confGid)
         {
-            this.conference = videobridge.createConference(focus, name, confGid);
+            this.conference = videobridge.createConference(focus, name, enableLogging, confGid);
         }
 
         public ContentShim getOrCreateContent(String name) {
@@ -343,34 +343,7 @@ public class ColibriShim {
 
 
     private final Map<String, ConferenceShim> conferenceShims = new HashMap<>();
-    private static final Random RANDOM = new Random();
     private final Videobridge videobridge;
-
-    /**
-     * Generates a new <tt>Conference</tt> ID which is not guaranteed to be
-     * unique.
-     *
-     * @return a new <tt>Conference</tt> ID which is not guaranteed to be unique
-     */
-    private String generateConferenceID()
-    {
-        return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
-    }
-
-    private String generateUniqueConferenceId()
-    {
-        synchronized (conferenceShims)
-        {
-            String id;
-            do
-            {
-                id = generateConferenceID();
-            }
-            while (conferenceShims.containsKey(id));
-
-            return id;
-        }
-    }
 
     public ColibriShim(Videobridge videobridge)
     {
@@ -378,9 +351,13 @@ public class ColibriShim {
     }
 
     public ConferenceShim createConference(Jid focus, Localpart confName, String confGid) {
+        return createConference(focus, confName, true /* enable logging */, confGid);
+    }
+
+    public ConferenceShim createConference(Jid focus, Localpart confName, boolean enableLogging, String confGid) {
         synchronized (conferenceShims)
         {
-            ConferenceShim conference = new ConferenceShim(focus, confName, confGid);
+            ConferenceShim conference = new ConferenceShim(focus, confName, enableLogging, confGid);
 
             conferenceShims.put(conference.getId(), conference);
 
