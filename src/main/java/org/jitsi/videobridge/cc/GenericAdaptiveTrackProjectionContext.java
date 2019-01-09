@@ -25,13 +25,34 @@ import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 
 /**
+ * A generic implementation of an adaptive track projection context that can be
+ * used with non-SVC codecs or when simulcast is not enabled/used or when
+ * support for these advanced features is not implemented in the bridge. In this
+ * restricted case the track can have only two states (or qualities), either off
+ * or on (or -1, 0).
+ *
+ * Instances of this class suspend a track when the target quality is set to -1.
+ * When the target quality is set back to 0, the request key frame flag will be
+ * set to true and the track will be re-activated when a key frame is received.
+ * (so support for key frame detection for the specific media format of the
+ * track that is being adapted is necessary).
+ *
+ * In order to make the suspend/resume operation transparent (at least in the
+ * RTP level), this instances rewrites the RTP sequence to hide the gaps caused
+ * by the suspend/resume operation.
+ *
+ * This may not be sufficient for fluid playback at the receiver as the decoder
+ * may be unable to handle codec specific discontinuities (such as discontinuous
+ * picture IDs in VP8). In this case a codec specific adaptive track projection
+ * implementation will have to be used instead.
+ *
  * @author George Politis
  */
-public class BasicAdaptiveTrackProjectionContext
+class GenericAdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
     /**
-     *
+     * Raised when a track has been resumed (after being suspended).
      */
     private boolean needsKeyframe = true;
 
@@ -41,17 +62,19 @@ public class BasicAdaptiveTrackProjectionContext
     private final MediaFormat format;
 
     /**
-     *
+     * The maximum sequence number that we have sent.
      */
     private int maxDestinationSequenceNumber;
 
     /**
-     *
+     * The delta to apply to the sequence numbers of the RTP packets of the
+     * source track.
      */
     private int sequenceNumberDelta;
 
     /**
-     *
+     * The synchronization root of {@link #transmittedBytes} and
+     * {@link #transmittedPackets}.
      */
     private final Object transmittedSyncRoot = new Object();
 
@@ -72,11 +95,20 @@ public class BasicAdaptiveTrackProjectionContext
      *
      * @param format the media format to expect
      */
-    BasicAdaptiveTrackProjectionContext(MediaFormat format)
+    GenericAdaptiveTrackProjectionContext(MediaFormat format)
     {
         this.format = format;
     }
 
+    /**
+     * Determines whether an RTP packet from the source track should be accepted
+     * or not. If the track is currently suspended, a key frame is necessary to
+     * start accepting packets again.
+     *
+     * @param rtpPacket the RTP packet to determine whether to accept or not.
+     * @param targetIndex the target quality index
+     * @return true if the packet should be accepted, false otherwise.
+     */
     @Override
     public synchronized boolean
     accept(@NotNull RawPacket rtpPacket, int targetIndex)
@@ -155,12 +187,26 @@ public class BasicAdaptiveTrackProjectionContext
         }
     }
 
+    /**
+     * @return true when a track has been resumed (after being suspended).
+     */
     @Override
     public boolean needsKeyframe()
     {
         return needsKeyframe;
     }
 
+    /**
+     * Applies a delta to the sequence number of the RTP packet that is
+     * specified as an argument in order to make suspending/resuming of the
+     * source track transparent at the RTP level.
+     *
+     * @param rtpPacket the RTP packet to rewrite.
+     * @param incomingRawPacketCache the packet cache to pull piggy-backed
+     * packets from. It can be left null because piggybacking is not
+     * implemented.
+     * @return {@link #EMPTY_PACKET_ARR}
+     */
     @Override
     public RawPacket[] rewriteRtp(
         @NotNull RawPacket rtpPacket, RawPacketCache incomingRawPacketCache)
@@ -184,6 +230,14 @@ public class BasicAdaptiveTrackProjectionContext
         return EMPTY_PACKET_ARR;
     }
 
+    /**
+     * If the first RTCP packet of the compound RTCP packet that is specified as
+     * a parameter is an SR, then this method updates the transmitted bytes and
+     * transmitted packets of that first SR.
+     *
+     * @param rtcpPacket the compound RTCP packet to rewrite.
+     * @return true.
+     */
     @Override
     public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
     {

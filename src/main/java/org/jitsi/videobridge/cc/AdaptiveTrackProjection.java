@@ -230,7 +230,7 @@ public class AdaptiveTrackProjection
         }
         else
         {
-            return new BasicAdaptiveTrackProjectionContext(format);
+            return new GenericAdaptiveTrackProjectionContext(format);
         }
     }
 
