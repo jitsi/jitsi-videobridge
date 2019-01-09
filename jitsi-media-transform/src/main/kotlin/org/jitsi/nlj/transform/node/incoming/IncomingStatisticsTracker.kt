@@ -108,6 +108,7 @@ class IncomingStreamStatistics(
     private var cumulativePacketsLost: Int = 0
     private var outOfOrderPacketCount: Int = 0
     private var jitter: Double = 0.0
+    private var numReceivedPackets: Int = 0
     // End variables protected by statsLock
 
     /**
@@ -188,7 +189,8 @@ class IncomingStreamStatistics(
 
     fun getSnapshot(): Snapshot {
         synchronized (statsLock) {
-            return Snapshot(maxSeqNum, seqNumCycles, numExpectedPackets, cumulativePacketsLost, jitter)
+            return Snapshot(numReceivedPackets, maxSeqNum, seqNumCycles, numExpectedPackets,
+                    cumulativePacketsLost, jitter)
         }
     }
 
@@ -219,6 +221,7 @@ class IncomingStreamStatistics(
         packetReceivedTimeMs: Int
     ) {
         synchronized(statsLock) {
+            numReceivedPackets++
             if (packetSequenceNumber isNewerThan maxSeqNum) {
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {
@@ -280,6 +283,7 @@ class IncomingStreamStatistics(
      * A class to export a consistent snapshot of the data held inside [IncomingStreamStatistics]
      */
     data class Snapshot(
+        val numRececivedPackets: Int = 0,
         val maxSeqNum: Int = 0,
         val seqNumCycles: Int = 0,
         val numExpectedPackets: Int = 0,
@@ -288,7 +292,9 @@ class IncomingStreamStatistics(
     ) {
         fun getDelta(previousSnapshot: Snapshot): Snapshot {
             return Snapshot(
-                maxSeqNum, seqNumCycles,
+                numRececivedPackets - previousSnapshot.numRececivedPackets,
+                maxSeqNum,
+                seqNumCycles,
                 numExpectedPackets - previousSnapshot.numExpectedPackets,
                 cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,
                 jitter

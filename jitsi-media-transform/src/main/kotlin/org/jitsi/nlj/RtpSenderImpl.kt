@@ -16,6 +16,8 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.rtcp.NackHandler
+import org.jitsi.nlj.rtcp.RtcpSrGenerator
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
@@ -74,7 +76,16 @@ class RtpSenderImpl(
     private val outgoingPacketCache = PacketCache()
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
-    private val rtcpSrGenerator = RtcpSrGenerator(backgroundExecutor, { rtcpPacket -> sendRtcp(listOf(rtcpPacket)) } , statTracker)
+    /**
+     * The SR generator runs on its own in the background.  It will access the outgoing stats via the given
+     * [OutgoingStatisticsTracker] to grab a snapshot of the current state for filling out an SR and sending it
+     * via the given RTCP sender.
+     */
+    private val rtcpSrGenerator = RtcpSrGenerator(
+            backgroundExecutor,
+            { rtcpPacket -> sendRtcp(listOf(rtcpPacket)) },
+            statTracker
+    )
     private val nackHandler: NackHandler
 
     private val outputPipelineTerminationNode = object : Node("Output pipeline termination node") {
@@ -192,7 +203,6 @@ class RtpSenderImpl(
     override fun getStreamStats(): Map<Long, OutgoingStreamStatistics.Snapshot> {
         return statTracker.getCurrentStats().map { (ssrc, stats) ->
             Pair(ssrc, stats.getSnapshot())
-
         }.toMap()
     }
 

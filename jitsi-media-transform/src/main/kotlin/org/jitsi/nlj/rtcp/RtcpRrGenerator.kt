@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.nlj
+package org.jitsi.nlj.rtcp
 
-import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
-import org.jitsi.nlj.transform.node.incoming.RtcpListener
+import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
+import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
 import org.jitsi.rtp.rtcp.RtcpHeader
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -59,6 +59,7 @@ class RtcpRrGenerator(
         val packet = packetInfo.packet
         when (packet) {
             is RtcpSrPacket -> {
+                // Note the time we received an SR so that it can be used when creating RtcpReportBlocks
                 //TODO: we have a concurrency issue here: we could be halfway through updating the senderinfo when
                 // the doWork context thread runs
                 val senderInfo = senderInfos.computeIfAbsent(packet.header.senderSsrc) { SenderInfo() }

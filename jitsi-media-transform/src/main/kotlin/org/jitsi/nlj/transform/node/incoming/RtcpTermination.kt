@@ -15,8 +15,9 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.NackHandler
+import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
@@ -32,10 +33,6 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.util.concurrent.ConcurrentHashMap
-
-interface RtcpListener {
-    fun onRtcpPacket(packetInfo: PacketInfo)
-}
 
 class RtcpTermination(
     private val transportCcEngine: TransportCCEngine? = null
