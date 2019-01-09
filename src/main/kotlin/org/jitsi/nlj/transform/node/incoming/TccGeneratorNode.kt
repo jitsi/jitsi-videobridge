@@ -22,9 +22,8 @@ import org.jitsi.nlj.ReceiveSsrcRemovedEvent
 import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpExtensionClearEvent
 import org.jitsi.nlj.forEachAs
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
@@ -98,9 +97,9 @@ class TccGeneratorNode(
             currTcc.numPackets() >= 20
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val parentStats = super.getStats()
-        return StatBlock(name).apply {
+        return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat( "num tcc packets sent: $numTccSent")
         }

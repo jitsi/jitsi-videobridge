@@ -15,9 +15,8 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.StatsProducer
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.nlj.util.getLogger
@@ -60,8 +59,8 @@ class NackHandler(
         }
     }
 
-    override fun getStats(): StatBlock {
-        return StatBlock("Nack handler").apply {
+    override fun getStats(): NodeStatsBlock {
+        return NodeStatsBlock("Nack handler").apply {
             addStat( "num nack packets received: $numNackedPackets")
             addStat( "num nacked packets: $numNackedPackets")
             addStat( "num retransmitted packets: $numRetransmittedPackets")

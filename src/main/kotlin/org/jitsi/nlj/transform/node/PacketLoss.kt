@@ -16,8 +16,7 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.stats.StatBlock
-import org.jitsi.nlj.util.appendLnIndent
+import org.jitsi.nlj.stats.NodeStatsBlock
 import java.util.*
 
 /**
@@ -34,9 +33,9 @@ class PacketLoss(private val lossRate: Double) : Node("Packet loss") {
         next(forwardedPackets)
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val parentStats = super.getStats()
-        return StatBlock(name).apply {
+        return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("configured drop rate: $lossRate, actual drop " +
                     "rate: ${packetsDropped / packetsSeen.toDouble()}")

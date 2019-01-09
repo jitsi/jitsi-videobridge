@@ -21,16 +21,13 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
-import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.RtxPacket
-import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.codec.Constants
 import org.jitsi.util.Logger
 import unsigned.toUInt
@@ -116,9 +113,9 @@ class RtxHandler : Node("RTX handler") {
         super.handleEvent(event)
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val parentStats = super.getStats()
-        return StatBlock(name).apply {
+        return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("num rtx packets received: $numRtxPacketsReceived")
             addStat("num padding packets received: $numPaddingPacketsReceived")

@@ -2,7 +2,7 @@ package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.util.appendLnIndent
 
-class StatBlock(val name: String) {
+class NodeStatsBlock(val name: String) {
     val stats = mutableMapOf<String, Any?>()
 
     fun addStat(name: String, value: Any)
@@ -17,7 +17,7 @@ class StatBlock(val name: String) {
     /**
      * Add all the stats from [otherBlock], but don't use its name
      */
-    fun addAll(otherBlock: StatBlock) {
+    fun addAll(otherBlock: NodeStatsBlock) {
         stats.putAll(otherBlock.stats)
     }
 
@@ -26,7 +26,7 @@ class StatBlock(val name: String) {
             appendLnIndent(indentLevel, name)
             stats.forEach { statName, statValue ->
                 when (statValue) {
-                    is StatBlock -> {
+                    is NodeStatsBlock -> {
                         appendln(statValue.prettyPrint(indentLevel + 2))
                     }
                     is Any -> {

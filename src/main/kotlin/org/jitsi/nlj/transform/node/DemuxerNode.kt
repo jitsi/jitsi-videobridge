@@ -16,7 +16,6 @@
 package org.jitsi.nlj.transform.node
 
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.stats.StatBlock
 
 class DemuxerNode(name: String) : Node("$name demuxer") {
     private var transformPaths: MutableSet<ConditionalPacketPath> = mutableSetOf()

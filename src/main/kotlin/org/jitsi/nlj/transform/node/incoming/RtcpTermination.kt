@@ -17,16 +17,12 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.NackHandler
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.RtcpRrGenerator
-import org.jitsi.nlj.forEachAs
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpByePacket
-import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSdesPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
@@ -103,9 +99,9 @@ class RtcpTermination(
         transportCcEngine?.tccReceived(tccPacket)
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val parentStats = super.getStats()
-        return StatBlock(name).apply {
+        return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("num nack packets rx: $numNacksReceived")
         }

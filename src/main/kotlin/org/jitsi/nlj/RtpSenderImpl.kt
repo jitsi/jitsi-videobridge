@@ -16,7 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
@@ -193,9 +193,9 @@ class RtpSenderImpl(
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val bitRateMbps = getMbps(numBytesSent, Duration.ofMillis(lastPacketSentTime - firstPacketSentTime))
-        return StatBlock("RTP sender $id").apply {
+        return NodeStatsBlock("RTP sender $id").apply {
             addStat("queue size: ${incomingPacketQueue.size}")
             addStat("$numIncomingBytes incoming bytes in ${lastPacketWrittenTime - firstPacketWrittenTime} (${getMbps(numIncomingBytes, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             addStat("Sent $numPacketsSent packets in ${lastPacketSentTime - firstPacketSentTime} ms")
