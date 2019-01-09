@@ -19,7 +19,7 @@ import java.util.*;
  * data that is sent/expected in COLIBRI but is no longer directly used.
  */
 public class ColibriShim {
-    class ChannelShim
+    public class ChannelShim
     {
         final String id;
         final AbstractEndpoint endpoint;
@@ -149,7 +149,7 @@ public class ColibriShim {
         }
     }
 
-    class ContentShim {
+    public class ContentShim {
         private final MediaType type;
         private final Map<String, ChannelShim> channels = new HashMap<>();
         private final Map<String, SctpConnection> sctpConnections = new HashMap<>();

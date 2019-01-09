@@ -21,6 +21,8 @@ import java.util.*;
 import java.util.concurrent.locks.*;
 
 import net.java.sip.communicator.util.*;
+import org.jitsi.nlj.stats.*;
+import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.stats.*;
@@ -556,6 +558,59 @@ public class VideobridgeStatistics
             totalPacketsReceivedOcto += jvbStats.totalPacketsReceivedOcto.get();
             totalPacketsSentOcto += jvbStats.totalPacketsSentOcto.get();
 
+
+            conferences = videobridge.getColibriShim().getConferences().size();
+
+            for (ColibriShim.ConferenceShim conferenceShim : videobridge.getColibriShim().getConferences())
+            {
+                //TODO: can/should we do everything here via the shim only?
+                Conference conference = conferenceShim.conference;
+                if (!conference.includeInStatistics())
+                {
+                    continue;
+                }
+                int conferenceEndpoints = conference.getEndpointCount();
+                if (conferenceEndpoints > largestConferenceSize)
+                {
+                    largestConferenceSize = conferenceEndpoints;
+                }
+                int conferenceSizeIndex
+                        = conferenceEndpoints < conferenceSizes.length
+                        ? conferenceEndpoints
+                        : conferenceSizes.length - 1;
+                conferenceSizes[conferenceSizeIndex]++;
+
+                for (ColibriShim.ContentShim contentShim : conferenceShim.getContents())
+                {
+                    int contentChannelCount = contentShim.getChannels().size();
+                    MediaType mediaType = contentShim.getType();
+                    if (MediaType.AUDIO.equals(mediaType))
+                    {
+                        audioChannels += contentChannelCount;
+                    }
+                    else if (MediaType.VIDEO.equals(mediaType))
+                    {
+                        videoChannels += contentChannelCount;
+                    }
+
+                    for (AbstractEndpoint abstractEndpoint : conference.getEndpoints())
+                    {
+                        if (abstractEndpoint instanceof Endpoint)
+                        {
+                            Endpoint endpoint = (Endpoint)abstractEndpoint;
+
+                            TransceiverStreamStats streamStats = endpoint.transceiver.getStreamStats();
+                            int transceiverPacketsReceived = streamStats.getIncomingStreamStatistics()
+                                    .values()
+                                    .stream()
+                                    .mapToInt(IncomingStreamStatistics.Snapshot::getNumRececivedPackets)
+                                    .sum();
+                            packetsReceived += transceiverPacketsReceived;
+
+                        }
+                    }
+                }
+            }
 
             for (Conference conference : videobridge.getConferences())
             {
