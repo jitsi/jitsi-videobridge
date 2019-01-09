@@ -291,7 +291,11 @@ class RtpReceiverImpl @JvmOverloads constructor(
         audioLevelReader.audioLevelListener = audioLevelListener
     }
 
-    override fun getStreamStats(): Map<Long, IncomingStreamStatistics> = statTracker.getCurrentStats()
+    override fun getStreamStats(): Map<Long, IncomingStreamStatistics.Snapshot> {
+        return statTracker.getCurrentStats().map { (ssrc, stats) ->
+            Pair(ssrc, stats.getSnapshot())
+        }.toMap()
+    }
 
     override fun stop() {
         running = false

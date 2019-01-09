@@ -55,13 +55,13 @@ class OutgoingStreamStatistics(
         }
     }
 
-    fun getSnapshot(): StatisticsSnapshot {
+    fun getSnapshot(): Snapshot {
         synchronized (statsLock) {
-            return StatisticsSnapshot(packetCount, octetCount, mostRecentRtpTimestamp)
+            return Snapshot(packetCount, octetCount, mostRecentRtpTimestamp)
         }
     }
 
-    data class StatisticsSnapshot(
+    data class Snapshot(
         val packetCount: Int,
         val octetCount: Int,
         val mostRecentRtpTimestamp: Long

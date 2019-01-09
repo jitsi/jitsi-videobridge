@@ -189,7 +189,12 @@ class RtpSenderImpl(
         }
     }
 
-    override fun getStreamStats(): Map<Long, OutgoingStreamStatistics> = statTracker.getCurrentStats()
+    override fun getStreamStats(): Map<Long, OutgoingStreamStatistics.Snapshot> {
+        return statTracker.getCurrentStats().map { (ssrc, stats) ->
+            Pair(ssrc, stats.getSnapshot())
+
+        }.toMap()
+    }
 
     override fun handleEvent(event: Event) {
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
