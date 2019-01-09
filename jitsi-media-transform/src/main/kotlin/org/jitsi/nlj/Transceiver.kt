@@ -20,7 +20,7 @@ import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.PacketIOActivity
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
@@ -231,8 +231,8 @@ class Transceiver(
         rtpSender.setSrtcpTransformer(srtcpTransformer)
     }
 
-    override fun getStats(): StatBlock {
-        return StatBlock("Transceiver $id").apply {
+    override fun getStats(): NodeStatsBlock {
+        return NodeStatsBlock("Transceiver $id").apply {
             addStat("RTP Receiver", rtpReceiver.getStats())
             addStat("RTP Sender", rtpSender.getStats())
 

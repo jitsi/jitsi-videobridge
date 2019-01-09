@@ -20,7 +20,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.*
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
@@ -67,9 +67,9 @@ class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
         super.handleEvent(event)
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val parentStats = super.getStats()
-        return StatBlock(name).apply {
+        return NodeStatsBlock(name).apply {
             addAll(parentStats)
             val stats = getCurrentStats()
             stats.forEach { ssrc, streamStats ->

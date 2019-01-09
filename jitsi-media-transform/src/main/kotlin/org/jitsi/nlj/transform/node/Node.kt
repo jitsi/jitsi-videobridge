@@ -20,11 +20,10 @@ import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Stoppable
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.StatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.getLogger
 import java.time.Duration
 import kotlin.properties.Delegates
@@ -33,10 +32,10 @@ interface NodeVisitor {
     fun visit(node: Node)
 }
 
-class NodeStatsVisitor(val statBlock: StatBlock) : NodeVisitor {
+class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor {
     override fun visit(node: Node) {
         val block = node.getStats()
-        statBlock.addStat(block.name, block)
+        nodeStatsBlock.addStat(block.name, block)
     }
 }
 
@@ -127,8 +126,8 @@ abstract class Node(
         // No-op by default
     }
 
-    override fun getStats(): StatBlock {
-        return StatBlock("Node $name ${hashCode()}").apply {
+    override fun getStats(): NodeStatsBlock {
+        return NodeStatsBlock("Node $name ${hashCode()}").apply {
             addStat("numInputPackets: $numInputPackets")
             addStat("numOutputPackets: $numOutputPackets")
             addStat("total time spent: ${Duration.ofNanos(totalProcessingDuration).toMillis()} ms")

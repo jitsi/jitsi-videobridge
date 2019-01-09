@@ -17,9 +17,7 @@ package org.jitsi.nlj.transform.node
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.stats.StatBlock
-import org.jitsi.nlj.util.appendLnIndent
-import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.stats.NodeStatsBlock
 
 abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
     /**
@@ -79,9 +77,9 @@ abstract class AbstractSrtpTransformerNode(name: String) : Node(name) {
         }
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val parentStats = super.getStats()
-        return StatBlock(name).apply {
+        return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("num cached packets: ${cachedPackets.size}")
             addStat("num dropped packets before transformer: $numDroppedPackets")

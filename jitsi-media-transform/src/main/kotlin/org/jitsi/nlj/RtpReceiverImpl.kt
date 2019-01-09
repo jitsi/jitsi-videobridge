@@ -18,7 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.*
 import org.jitsi.nlj.transform.node.incoming.*
 import org.jitsi.nlj.transform.packetPath
@@ -246,8 +246,8 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     override fun processPackets(pkts: List<PacketInfo>) = inputTreeRoot.processPackets(pkts)
 
-    override fun getStats(): StatBlock {
-        return StatBlock("RTP receiver $id").apply {
+    override fun getStats(): NodeStatsBlock {
+        return NodeStatsBlock("RTP receiver $id").apply {
             addStat( "queue size: ${incomingPacketQueue.size}")
             addStat( "Received $packetsReceived packets ($bytesReceived bytes) in " + "${lastPacketWrittenTime - firstPacketWrittenTime}ms " + "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             addStat("Processed $packetsProcessed " + "(${(packetsProcessed / (packetsReceived.toDouble())) * 100}%) ($bytesProcessed bytes) in " + "${lastPacketProcessedTime - firstPacketProcessedTime}ms " + "(${getMbps(bytesProcessed, Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime))} mbps)")

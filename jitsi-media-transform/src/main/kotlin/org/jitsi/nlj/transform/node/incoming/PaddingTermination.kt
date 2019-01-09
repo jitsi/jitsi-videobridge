@@ -17,12 +17,9 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.impl.neomedia.transform.PaddingTermination
 import org.jitsi.nlj.PacketInfo
-import org.jitsi.nlj.stats.StatBlock
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.appendLnIndent
 import org.jitsi.nlj.util.toRawPacket
-import org.jitsi.rtp.Packet
-import org.jitsi.rtp.RtpPacket
 
 class PaddingTermination : Node("Padding termination") {
     private val paddingTermination = PaddingTermination()
@@ -42,9 +39,9 @@ class PaddingTermination : Node("Padding termination") {
         next(outPackets)
     }
 
-    override fun getStats(): StatBlock {
+    override fun getStats(): NodeStatsBlock {
         val parentStats = super.getStats()
-        return StatBlock(name).apply {
+        return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("num padding packets seen: $numPaddingPacketsSeen")
         }
