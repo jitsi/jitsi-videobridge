@@ -98,16 +98,24 @@ public abstract class TransportManager
         if ((pe == null) || !namespace.equals(pe.getNamespace()))
         {
             if (IceUdpTransportPacketExtension.NAMESPACE.equals(namespace))
+            {
                 pe = new IceUdpTransportPacketExtension();
+            }
             else if (RawUdpTransportPacketExtension.NAMESPACE.equals(namespace))
+            {
                 pe = new RawUdpTransportPacketExtension();
+            }
             else
+            {
                 pe = null;
+            }
 
             iq.setTransport(pe);
         }
         if (pe != null)
+        {
             describe(pe);
+        }
     }
 
     /**
@@ -119,7 +127,9 @@ public abstract class TransportManager
      *
      * @param iq the <tt>ColibriConferenceIQ.Channel</tt> on which to set the
      * values of the properties of this instance
+     * NOTE(brian): we only support rtcpmux as of now, so no need for this one anymore
      */
+    @Deprecated
     public void describe(ColibriConferenceIQ.ChannelCommon iq)
     {
         IceUdpTransportPacketExtension pe = iq.getTransport();
