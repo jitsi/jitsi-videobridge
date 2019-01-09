@@ -242,8 +242,7 @@ public class AdaptiveTrackProjection
      * @return any piggy-backed packets to include with the packet.
      */
     RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket)
-        throws
-        RewriteException
+        throws RewriteException
     {
         AdaptiveTrackProjectionContext contextCopy = context;
         if (contextCopy == null)
