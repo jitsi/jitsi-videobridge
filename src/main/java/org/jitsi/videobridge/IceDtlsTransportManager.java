@@ -519,7 +519,9 @@ public class IceDtlsTransportManager
         System.out.println("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         executor.submit(() -> {
             try {
+                System.out.println("TEMP: dtls connecting");
                 dtlsStack.connect(new TlsClientImpl());
+                System.out.println("TEMP: dtls connect finished");
             }
             catch (Exception e)
             {
@@ -538,10 +540,17 @@ public class IceDtlsTransportManager
                 "BRIAN: ice_state_change,"
                         + " old_state=" + oldState
                         + ",new_state=" + newState);
-        if (newState.isEstablished()) {
+        //TODO(brian): this isn't accurate enough to know that we connected.  It's possible we go from RUNNING to
+        // TERMINATED and isEstablished returns true for TERMINATED no matter what.  is there something better
+        // we can key off of?
+//        if (newState.isEstablished()) {
+        if (IceProcessingState.COMPLETED.equals(newState))
+        {
             logger.info("BRIAN: local ufrag " + iceAgent.getLocalUfrag() + " ICE connected, need to start dtls");
             onIceConnected();
-        } else if (IceProcessingState.FAILED.equals(newState)) {
+        }
+        else if (IceProcessingState.FAILED.equals(newState))
+        {
             logger.info("BRIAN: ICE failed, local ufrag " + iceAgent.getLocalUfrag());
         }
     }
