@@ -27,10 +27,13 @@ import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.srtpProfileInformation
 import org.jitsi.nlj.tlsRole
+import org.jitsi.nlj.util.ExecutorShutdownTimeoutException
+import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi_modified.service.neomedia.format.DummyAudioMediaFormat
 import org.jitsi_modified.service.neomedia.format.Vp8MediaFormat
 import java.net.URI
+import java.time.Duration
 import java.util.Random
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -151,10 +154,8 @@ fun main(args: Array<String>) {
     }
     println("took $time ms")
     receivers.forEach(RtpReceiver::stop)
-    executor.shutdown()
-    backgroundExecutor.shutdownNow()
-    executor.awaitTermination(10, TimeUnit.SECONDS)
-    backgroundExecutor.awaitTermination(10, TimeUnit.SECONDS)
+    executor.safeShutdown(Duration.ofSeconds(10))
+    backgroundExecutor.safeShutdown(Duration.ofSeconds(10))
 
     receivers.forEach { println(it.getStats().prettyPrint()) }
 }

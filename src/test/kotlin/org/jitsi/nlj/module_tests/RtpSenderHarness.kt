@@ -24,12 +24,14 @@ import org.jitsi.nlj.RtpSenderImpl
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.util.safeShutdown
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.util.RtpProtocol
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi_modified.service.neomedia.format.DummyAudioMediaFormat
 import org.jitsi_modified.service.neomedia.format.Vp8MediaFormat
 import java.net.URI
+import java.time.Duration
 import java.util.Random
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -143,8 +145,7 @@ fun main(args: Array<String>) {
     }
     println("took $time ms")
     senders.forEach(RtpSender::stop)
-    senderExecutor.shutdown()
-    senderExecutor.awaitTermination(10, TimeUnit.SECONDS)
+    senderExecutor.safeShutdown(Duration.ofSeconds(10))
 
     senders.forEach { println(it.getStats().prettyPrint()) }
 }
