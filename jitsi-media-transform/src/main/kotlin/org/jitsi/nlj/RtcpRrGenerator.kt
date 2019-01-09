@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit
 private data class SenderInfo(
     var lastSrCompactedTimestamp: Int = 0,
     var lastSrReceivedTime: Long = 0,
-    var statsSnapshot: IncomingStreamStatistics.StatisticsSnapshot = IncomingStreamStatistics.StatisticsSnapshot()
+    var statsSnapshot: IncomingStreamStatistics.Snapshot = IncomingStreamStatistics.Snapshot()
 )
 
 /**

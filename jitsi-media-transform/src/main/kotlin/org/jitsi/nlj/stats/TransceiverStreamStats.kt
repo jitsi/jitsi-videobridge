@@ -5,6 +5,6 @@ import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
 
 
 data class TransceiverStreamStats(
-    val incomingStreamStatistics: Map<Long, IncomingStreamStatistics>,
-    val outgoingStreamStatistics: Map<Long, OutgoingStreamStatistics>
+    val incomingStreamStatistics: Map<Long, IncomingStreamStatistics.Snapshot>,
+    val outgoingStreamStatistics: Map<Long, OutgoingStreamStatistics.Snapshot>
 )

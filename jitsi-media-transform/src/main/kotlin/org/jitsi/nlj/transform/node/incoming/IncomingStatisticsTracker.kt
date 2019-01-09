@@ -186,9 +186,9 @@ class IncomingStreamStatistics(
         }
     }
 
-    fun getSnapshot(): StatisticsSnapshot {
+    fun getSnapshot(): Snapshot {
         synchronized (statsLock) {
-            return StatisticsSnapshot(maxSeqNum, seqNumCycles, numExpectedPackets, cumulativePacketsLost, jitter)
+            return Snapshot(maxSeqNum, seqNumCycles, numExpectedPackets, cumulativePacketsLost, jitter)
         }
     }
 
@@ -279,15 +279,15 @@ class IncomingStreamStatistics(
     /**
      * A class to export a consistent snapshot of the data held inside [IncomingStreamStatistics]
      */
-    data class StatisticsSnapshot(
+    data class Snapshot(
         val maxSeqNum: Int = 0,
         val seqNumCycles: Int = 0,
         val numExpectedPackets: Int = 0,
         val cumulativePacketsLost: Int = 0,
         val jitter: Double = 0.0
     ) {
-        fun getDelta(previousSnapshot: StatisticsSnapshot): StatisticsSnapshot {
-            return StatisticsSnapshot(
+        fun getDelta(previousSnapshot: Snapshot): Snapshot {
+            return Snapshot(
                 maxSeqNum, seqNumCycles,
                 numExpectedPackets - previousSnapshot.numExpectedPackets,
                 cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,

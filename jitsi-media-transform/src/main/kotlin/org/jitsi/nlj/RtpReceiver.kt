@@ -53,5 +53,5 @@ abstract class RtpReceiver :
 
     abstract fun setNackHandler(nackHandler: NackHandler)
 
-    abstract fun getStreamStats(): Map<Long, IncomingStreamStatistics>
+    abstract fun getStreamStats(): Map<Long, IncomingStreamStatistics.Snapshot>
 }

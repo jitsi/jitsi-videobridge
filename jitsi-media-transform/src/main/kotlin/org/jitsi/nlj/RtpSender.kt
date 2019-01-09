@@ -47,5 +47,5 @@ abstract class RtpSender : EventHandler, Stoppable,NodeStatsProducer {
     abstract fun sendRtcp(pkts: List<RtcpPacket>)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
-    abstract fun getStreamStats(): Map<Long, OutgoingStreamStatistics>
+    abstract fun getStreamStats(): Map<Long, OutgoingStreamStatistics.Snapshot>
 }
