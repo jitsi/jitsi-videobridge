@@ -257,8 +257,8 @@ public class ColibriShim {
             }
         }
     }
-    class ConferenceShim {
-        final Conference conference;
+    public class ConferenceShim {
+        public final Conference conference;
 
         // name -> ContentShim
         private final Map<String, ContentShim> contents = new HashMap<>();

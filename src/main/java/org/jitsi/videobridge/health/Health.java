@@ -26,8 +26,10 @@ import org.jitsi.videobridge.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import java.io.*;
+import java.util.*;
 
 /**
  * Checks the health of {@link Videobridge}.
@@ -42,16 +44,6 @@ public class Health
      * instances to print debug information.
      */
     private static final Logger logger = Logger.getLogger(Health.class);
-
-//    /**
-//     * The {@link MediaType}s of {@link RtpChannel}s supported by
-//     * {@link Videobridge}. For example, {@link MediaType#DATA} is not supported
-//     * by {@link
-//     * Content#createRtpChannel(String, String, Boolean, RTPLevelRelayType)}.
-//     */
-    //TODO(brian): maybe this will be able to go away?  see how it fits in with the shim scheme
-    private static final MediaType[] MEDIA_TYPES
-        = { MediaType.AUDIO, MediaType.VIDEO };
 
     /**
      * The pseudo-random generator used to generate random input for
@@ -112,21 +104,21 @@ public class Health
      * specific {@link Conference}. The specified {@code conference} will be
      * used to perform the check i.e. for testing purposes.
      *
-     * @param conference the {@code Conference} associated with the
+     * @param conferenceShim the {@code Conference} associated with the
      * {@code Videobridge} to check the health (status) of
      * @throws Exception if an error occurs while checking the health (status)
      * of the {@code videobridge} associated with {@code conference} or the
      * check determines that the {@code Videobridge} is not healthy
      */
-    private static void check(Conference conference)
+    private static void check(ColibriShim.ConferenceShim conferenceShim)
     {
-        // Endpoint
-        Endpoint[] endpoints = new Endpoint[2];
+        final int numEndpoints = 2;
+        ArrayList<Endpoint> endpoints = new ArrayList<>(numEndpoints);
 
-        for (int i = 0; i < endpoints.length; ++i)
+        for (int i = 0; i < numEndpoints; ++i)
         {
             Endpoint endpoint
-                = (Endpoint) conference.getOrCreateEndpoint(generateEndpointID());
+                = (Endpoint) conferenceShim.getOrCreateEndpoint(generateEndpointID());
 
             // Fail as quickly as possible.
             if (endpoint == null)
@@ -134,14 +126,41 @@ public class Health
                 throw new NullPointerException("Failed to create an endpoint.");
             }
 
-            endpoints[i] = endpoint;
+            // Create and install the transport manager
+            conferenceShim.getOrCreateChannelBundle(endpoint.getID());
+
+            endpoints.add(endpoint);
+            endpoints.add(endpoint);
 
             endpoint.createSctpConnection();
         }
 
-        // Connect the Endpoints (i.e. RtpChannels and SctpConnections) between
-        // themselves.
-//        interconnect(endpoints);
+
+        // TODO(brian): The below connection won't work with single port mode.  I think this is because both agent's
+        // bind to the single port and we can't demux the ice packets correctly.  Forcing non-single port mode (via
+        // hardcoding rtcpmux to false elsewhere) works, but causes other problems since we don't properly support
+        // non-rtcpmux.
+
+//        Endpoint ep0 = endpoints.get(0);
+//        TransportManager ep0TransportManager =
+//                conferenceShim.conference.getTransportManager(ep0.getID(), false, false);
+//
+//        Endpoint ep1 = endpoints.get(1);
+//        TransportManager ep1TransportManager =
+//                conferenceShim.conference.getTransportManager(ep1.getID(), false, false);
+//
+//        // Connect endpoint 0 to endpoint 1
+//        ColibriConferenceIQ.ChannelBundle channelBundle0Iq = new ColibriConferenceIQ.ChannelBundle(ep0.getID());
+//        ColibriShim.ChannelBundleShim channelBundle0Shim = conferenceShim.getChannelBundle(ep0.getID());
+//        channelBundle0Shim.describe(channelBundle0Iq);
+//        IceUdpTransportPacketExtension tpe = channelBundle0Iq.getTransport();
+//        ep1TransportManager.startConnectivityEstablishment(channelBundle0Iq.getTransport());
+//
+//        // Connect endpoint 1 to endpoint 0
+//        ColibriConferenceIQ.ChannelBundle channelBundle1Iq = new ColibriConferenceIQ.ChannelBundle(ep1.getID());
+//        ColibriShim.ChannelBundleShim channelBundle1Shim = conferenceShim.getChannelBundle(ep1.getID());
+//        channelBundle1Shim.describe(channelBundle1Iq);
+//        ep0TransportManager.startConnectivityEstablishment(channelBundle1Iq.getTransport());
     }
 
     /**
@@ -169,15 +188,12 @@ public class Health
         checkXmppConnection(videobridge);
 
         // Conference
-        Conference conference
-            = videobridge.createConference(
-                    /* focus */ null,
-                    /* name */ null,
-                    /* enableLogging */ false,
-                    /* gid */ null);
+        ColibriShim.ConferenceShim conferenceShim =
+                videobridge.getColibriShim().createConference(null, null, null);
+        System.out.println("TEMP: created conference " + conferenceShim.getId() + " from health check");
 
         // Fail as quickly as possible.
-        if (conference == null)
+        if (conferenceShim == null || conferenceShim.conference == null)
         {
             throw new NullPointerException("Failed to create a conference");
         }
@@ -185,11 +201,12 @@ public class Health
         {
             try
             {
-                check(conference);
+                check(conferenceShim);
             }
             finally
             {
-                conference.expire();
+                //TODO(brian)
+//                conference.expire();
             }
         }
     }
@@ -224,115 +241,6 @@ public class Health
     }
 
     /**
-     * Connects a pair of {@link Endpoint}s between themselves.
-     *
-     * @param a the {@code Endpoint} to connect to {@code b}
-     * @param b the {@code Endpoint} to connect to {@code a}
-     * @throws Exception
-     */
-    private static void connect(Endpoint a, Endpoint b)
-        throws Exception
-    {
-        //TODO(brian): need to reimplement all this
-//        for (MediaType mediaType : MEDIA_TYPES)
-//        {
-//            List<RtpChannel> aRtpChannels = a.getChannels(mediaType);
-//            int count = aRtpChannels.size();
-//            List<RtpChannel> bRtpChannels = b.getChannels(mediaType);
-//
-//            // Fail as quickly as possible
-//            if (count != bRtpChannels.size())
-//            {
-//                throw new IllegalStateException(
-//                        "Endpoint#getChannels(MediaType)");
-//            }
-//            else
-//            {
-//                // Note that the channel count is 0 because we don't add the
-//                // channels we create to the endpoint (see the FIXME in
-//                // check(Conference conference))
-//                for (int i = 0; i < count; ++i)
-//                {
-//                    connect(aRtpChannels.get(i), bRtpChannels.get(i));
-//                }
-//            }
-//
-
-        // SctpConnection
-//        SctpConnection aSctpConnection = a.getSctpConnection();
-//
-//        // Fail as quickly as possible.
-//        if (aSctpConnection == null)
-//        {
-//            throw new NullPointerException("aSctpConnection is null");
-//        }
-//
-//        SctpConnection bSctpConnection = b.getSctpConnection();
-//
-//        // Fail as quickly as possible.
-//        if (bSctpConnection == null)
-//        {
-//            throw new NullPointerException("bSctpConnection is null");
-//        }
-//
-//        connect(aSctpConnection, bSctpConnection);
-    }
-
-    //TODO(brian): need to reimplement this without channels
-//    /**
-//     * Connects a pair of {@link Channel}s between themselves.
-//     *
-//     * @param a the {@code Channel} to connect to {@code b}
-//     * @param b the {@code Channel} to connect to {@code a}
-//     * @throws Exception
-//     */
-//    private static void connect(Channel a, Channel b)
-//        throws Exception
-//    {
-//        IceUdpTransportPacketExtension aTransport = describeTransportManager(a);
-//
-//        // Fail as quickly as possible.
-//        if (aTransport == null)
-//        {
-//            throw new NullPointerException("Failed to describe transport.");
-//        }
-//
-//        IceUdpTransportPacketExtension bTransport = describeTransportManager(b);
-//
-//        // Fail as quickly as possible.
-//        if (bTransport == null)
-//        {
-//            throw new NullPointerException("Failed to describe transport.");
-//        }
-//
-//        b.setTransport(aTransport);
-//        a.setTransport(bTransport);
-//    }
-
-//    /**
-//     * Builds a {@link IceUdpTransportPacketExtension} representation of the
-//     * {@link TransportManager} of a specific {@link Channel}.
-//     *
-//     * @param channel the {@code Channel} whose {@code TransportManager} is to
-//     * be represented as a {@code IceUdpTransportPacketExtension}
-//     * @return a {@code IceUdpTransportPacketExtension} representation of the
-//     * {@code TransportManager} of {@code channel}
-//     */
-    //TODO(brian): do we still need this
-//    private static IceUdpTransportPacketExtension describeTransportManager(
-//            Channel channel)
-//    {
-//        ColibriConferenceIQ.ChannelCommon iq
-//            = (channel instanceof SctpConnection)
-//                ? new ColibriConferenceIQ.SctpConnection()
-//                : new ColibriConferenceIQ.Channel();
-//        ColibriConferenceIQ.ChannelCommon iq = new ColibriConferenceIQ.Channel();
-//
-//        channel.getTransportManager().describe(iq);
-//        return iq.getTransport();
-//    }
-
-    /**
      * Generates a pseudo-random {@code Endpoint} ID which is not guaranteed to
      * be unique.
      *
@@ -342,23 +250,6 @@ public class Health
     private static String generateEndpointID()
     {
         return Long.toHexString(System.currentTimeMillis() + RANDOM.nextLong());
-    }
-
-    /**
-     * Connects a specific list of {@link Endpoint}s between themselves (in
-     * consecutive pairs).
-     *
-     * @param endpoints the list of {@code Endpoint}s to connect between
-     * themselves (in consecutive pairs)
-     * @throws Exception
-     */
-    private static void interconnect(Endpoint[] endpoints)
-        throws Exception
-    {
-        for (int i = 0; i < endpoints.length;)
-        {
-            connect(endpoints[i++], endpoints[i++]);
-        }
     }
 
     /**
