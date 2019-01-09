@@ -363,21 +363,23 @@ public class Endpoint
                 logger.info("Remote side opened a data channel.  This is not handled!");
             }
         });
-        //TODO: move this to an executor/pool
         socket.listen();
-        new Thread(() -> {
-            while (!socket.accept())
-            {
-                try
+        ((IceDtlsTransportManager)transportManager).onDtlsHandshakeComplete(() -> {
+            //TODO: move this to an executor/pool
+            new Thread(() -> {
+                while (!socket.accept())
                 {
-                    Thread.sleep(100);
-                } catch (InterruptedException e)
-                {
-                    break;
+                    try
+                    {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e)
+                    {
+                        break;
+                    }
                 }
-            }
-            logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
-        }).start();
+                logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
+            }).start();
+        });
     }
 
     /**
