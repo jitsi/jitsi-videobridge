@@ -53,7 +53,6 @@ class OutgoingStreamStatistics(
             octetCount += packetSizeOctets
             mostRecentRtpTimestamp = rtpTimestamp
         }
-
     }
 
     fun getSnapshot(): StatisticsSnapshot {
