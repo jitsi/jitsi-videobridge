@@ -21,7 +21,7 @@ import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.StatsProducer
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
@@ -61,7 +61,7 @@ class Transceiver(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     private val backgroundExecutor: ScheduledExecutorService
-) : Stoppable, StatsProducer {
+) : Stoppable, NodeStatsProducer {
     private val logger = getLogger(this.javaClass)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
@@ -231,10 +231,10 @@ class Transceiver(
         rtpSender.setSrtcpTransformer(srtcpTransformer)
     }
 
-    override fun getStats(): NodeStatsBlock {
+    override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Transceiver $id").apply {
-            addStat("RTP Receiver", rtpReceiver.getStats())
-            addStat("RTP Sender", rtpSender.getStats())
+            addStat("RTP Receiver", rtpReceiver.getNodeStats())
+            addStat("RTP Sender", rtpSender.getNodeStats())
 
         }
     }

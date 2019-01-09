@@ -97,8 +97,8 @@ class TccGeneratorNode(
             currTcc.numPackets() >= 20
     }
 
-    override fun getStats(): NodeStatsBlock {
-        val parentStats = super.getStats()
+    override fun getNodeStats(): NodeStatsBlock {
+        val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat( "num tcc packets sent: $numTccSent")

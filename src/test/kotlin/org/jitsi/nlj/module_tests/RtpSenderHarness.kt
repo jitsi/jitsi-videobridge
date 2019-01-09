@@ -36,7 +36,6 @@ import java.util.Random
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 
 //TODO: the below information is hard-coded to the hard-coded pcap we're using.  put this in a file associated
@@ -147,5 +146,5 @@ fun main(args: Array<String>) {
     senders.forEach(RtpSender::stop)
     senderExecutor.safeShutdown(Duration.ofSeconds(10))
 
-    senders.forEach { println(it.getStats().prettyPrint()) }
+    senders.forEach { println(it.getNodeStats().prettyPrint()) }
 }

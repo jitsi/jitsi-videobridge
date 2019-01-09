@@ -22,10 +22,8 @@ import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.ExecutorShutdownTimeoutException
 import org.jitsi.nlj.util.NameableThreadFactory
 import org.jitsi.nlj.util.safeShutdown
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.UnparsedPacket
 import org.jitsi.rtp.extensions.clone
 import org.jitsi.service.neomedia.RTPExtension
@@ -39,7 +37,6 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 
 // All of this information is specific to the pcap file
 const val pcapFile = "/Users/bbaldino/new_pipeline_captures/capture_1_incoming_participant_1_rtp_and_rtcp.pcap"
@@ -197,14 +194,14 @@ fun main(args: Array<String>) {
     sleep(3000)
     val finishTime = System.nanoTime()
     val time = Duration.ofNanos(finishTime - startTime)
-    receivers.forEach { println(it.getStats()) }
+    receivers.forEach { println(it.getNodeStats()) }
 
     println("$numReceivers receiver pipelines processed $numExpectedPackets packets each in a total of ${time.toMillis()}ms")
 
     receivers.forEach(RtpReceiver::stop)
 
     sender.stop()
-    println("sender stats:\n${sender.getStats()}")
+    println("sender stats:\n${sender.getNodeStats()}")
 
 
     receiverExecutor.safeShutdown(Duration.ofSeconds(5))

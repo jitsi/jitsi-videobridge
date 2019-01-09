@@ -21,7 +21,7 @@ import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.Stoppable
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.StatsProducer
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.PacketPredicate
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.getLogger
@@ -34,7 +34,7 @@ interface NodeVisitor {
 
 class NodeStatsVisitor(val nodeStatsBlock: NodeStatsBlock) : NodeVisitor {
     override fun visit(node: Node) {
-        val block = node.getStats()
+        val block = node.getNodeStats()
         nodeStatsBlock.addStat(block.name, block)
     }
 }
@@ -56,7 +56,7 @@ class NodeEventVisitor(val event: Event) : NodeVisitor {
  */
 abstract class Node(
     var name: String
-) : PacketHandler, EventHandler, StatsProducer, Stoppable {
+) : PacketHandler, EventHandler, NodeStatsProducer, Stoppable {
     private var nextNode: Node? = null
     private val inputNodes: MutableList<Node> by lazy { mutableListOf<Node>() }
     // Create these once here so we don't allocate a new string every time
@@ -126,7 +126,7 @@ abstract class Node(
         // No-op by default
     }
 
-    override fun getStats(): NodeStatsBlock {
+    override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Node $name ${hashCode()}").apply {
             addStat("numInputPackets: $numInputPackets")
             addStat("numOutputPackets: $numOutputPackets")

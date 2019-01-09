@@ -16,7 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.StatsProducer
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.nlj.util.getLogger
@@ -32,7 +32,7 @@ import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
 class NackHandler(
     private val packetCache: NewRawPacketCache,
     private val onNackedPacketsReady: PacketHandler
-) : StatsProducer {
+) : NodeStatsProducer {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0
@@ -59,7 +59,7 @@ class NackHandler(
         }
     }
 
-    override fun getStats(): NodeStatsBlock {
+    override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Nack handler").apply {
             addStat( "num nack packets received: $numNackedPackets")
             addStat( "num nacked packets: $numNackedPackets")
