@@ -113,7 +113,7 @@ public class ColibriShim {
         }
     }
 
-    class ChannelBundleShim {
+    public class ChannelBundleShim {
         private final String bundleId;
         private final IceUdpTransportManager transportManager;
 
@@ -295,6 +295,15 @@ public class ColibriShim {
             {
                 return channelBundles.computeIfAbsent(channelBundleId, id -> new ChannelBundleShim(getId(), channelBundleId));
             }
+        }
+
+        public ChannelBundleShim getChannelBundle(String channelBundleId)
+        {
+            synchronized (channelBundles)
+            {
+                return channelBundles.get(channelBundleId);
+            }
+
         }
 
         public void describeChannelBundles(ColibriConferenceIQ iq, Set<String> channelBundleIdsToDescribe)

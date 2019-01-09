@@ -983,7 +983,7 @@ public class Conference
      * with ID <tt>channelBundleId</tt>.
      */
     private static int numForwarded = 0;
-    IceUdpTransportManager getTransportManager(
+    public IceUdpTransportManager getTransportManager(
             String channelBundleId,
             boolean create,
             boolean initiator)
