@@ -316,6 +316,13 @@ public class VP8FrameProjection
             {
                 // the call to accept (synchronized) may update the
                 // maxSequenceNumber.
+                //
+                // XXX Calling accept here might seem bizarre so it merit a
+                // small explanation. This call takes place in the transform
+                // thread, so by the time we get to rewrite the accepted first
+                // packet of a frame, the first packet of another frame may have
+                // already been accepted, which means there's no longer space to
+                // piggyback anything.
                 if (accept(lastPacket))
                 {
                     piggyBackedPackets.add(lastPacket);
