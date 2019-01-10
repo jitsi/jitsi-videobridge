@@ -21,7 +21,10 @@ import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrGenerator
 import org.jitsi.nlj.stats.DownlinkStreamStats
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.*
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.NodeEventVisitor
+import org.jitsi.nlj.transform.node.NodeStatsVisitor
+import org.jitsi.nlj.transform.node.PacketCache
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
@@ -140,6 +143,7 @@ class RtpSenderImpl(
         }
 
         nackHandler = NackHandler(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
+        rtcpEventNotifier.addRtcpEventListener(nackHandler)
 
         //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
         outgoingRtcpRoot = pipeline {
@@ -163,8 +167,6 @@ class RtpSenderImpl(
         }
         executor.execute(this::doWork)
     }
-
-    override fun getNackHandler(): NackHandler = nackHandler
 
     override fun sendPackets(pkts: List<PacketInfo>) {
         pkts.forEach {
@@ -230,7 +232,7 @@ class RtpSenderImpl(
             addStat("Read from queue at a rate of " +
                     "${numQueueReads / (Duration.ofMillis(queueReadTotal).seconds.toDouble())} times per second")
             addStat("The queue was empty $numTimesQueueEmpty out of $numQueueReads times")
-            addStat("nack handler stats: ${nackHandler.getNodeStats()}")
+            addStat("Nack handler", nackHandler.getNodeStats())
             val statsVisitor = NodeStatsVisitor(this)
             outputPipelineTerminationNode.reverseVisit(statsVisitor)
         }

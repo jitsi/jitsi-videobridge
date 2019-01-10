@@ -34,14 +34,21 @@ import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
 class NackHandler(
     private val packetCache: NewRawPacketCache,
     private val onNackedPacketsReady: PacketHandler
-) : NodeStatsProducer {
+) : NodeStatsProducer, RtcpListener {
     private var numNacksReceived = 0
     private var numNackedPackets = 0
     private var numRetransmittedPackets = 0
     private var numCacheMisses = 0
     private val logger = getLogger(this.javaClass)
 
-    fun onNackPacket(nackPacket: RtcpFbNackPacket) {
+    override fun onRtcpPacketReceived(packetInfo: PacketInfo) {
+        val packet = packetInfo.packet
+        if (packet is RtcpFbNackPacket) {
+            onNackPacket(packet)
+        }
+    }
+
+    private fun onNackPacket(nackPacket: RtcpFbNackPacket) {
         numNacksReceived++
         val nackedPackets = mutableListOf<Packet>()
         val ssrc = nackPacket.mediaSourceSsrc

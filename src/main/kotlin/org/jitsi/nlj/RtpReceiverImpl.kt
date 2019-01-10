@@ -265,10 +265,6 @@ class RtpReceiverImpl @JvmOverloads constructor(
         }
     }
 
-    override fun setNackHandler(nackHandler: NackHandler) {
-        rtcpTermination.nackHandler = nackHandler
-    }
-
     override fun enqueuePacket(p: PacketInfo) {
 //        logger.cinfo { "Receiver ${hashCode()} enqueing data" }
         bytesReceived += p.packet.size
