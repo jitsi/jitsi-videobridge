@@ -22,6 +22,7 @@ import org.jitsi.rtp.util.ByteBufferUtils
 import toUInt
 import unsigned.toULong
 import java.nio.ByteBuffer
+import java.util.Objects
 
 /**
  *        +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
@@ -175,6 +176,25 @@ class SenderInfo {
 
             toString()
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other?.javaClass != javaClass) {
+            return false
+        }
+        other as SenderInfo
+        return (ntpTimestamp == other.ntpTimestamp &&
+                compactedNtpTimestamp == other.compactedNtpTimestamp &&
+                rtpTimestamp == other.rtpTimestamp &&
+                sendersPacketCount == other.sendersPacketCount &&
+                sendersOctetCount == other.sendersOctetCount)
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(ntpTimestamp, compactedNtpTimestamp, rtpTimestamp, sendersPacketCount, sendersOctetCount)
     }
 }
 
