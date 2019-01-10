@@ -82,7 +82,7 @@ class XmppCommon
      *
      * @return the videobridge instance, <tt>null</tt> when none is running.
      */
-    private Videobridge getVideobridge()
+    Videobridge getVideobridge()
     {
         BundleContext bundleContext = getBundleContext();
         return bundleContext != null
