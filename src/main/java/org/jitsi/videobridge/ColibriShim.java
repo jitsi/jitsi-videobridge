@@ -103,9 +103,9 @@ public class ColibriShim {
         }
     }
 
-    class SctpConnection extends ChannelShim
+    class SctpConnectionShim extends ChannelShim
     {
-        public SctpConnection(
+        public SctpConnectionShim(
                 @NotNull String id,
                 @NotNull AbstractEndpoint endpoint)
         {
@@ -152,7 +152,7 @@ public class ColibriShim {
     public class ContentShim {
         private final MediaType type;
         private final Map<String, ChannelShim> channels = new HashMap<>();
-        private final Map<String, SctpConnection> sctpConnections = new HashMap<>();
+        private final Map<String, SctpConnectionShim> sctpConnections = new HashMap<>();
 
         public ContentShim(MediaType type)
         {
@@ -209,7 +209,7 @@ public class ColibriShim {
             }
         }
 
-        public SctpConnection createSctpConnection(String conferenceId, String endpointId)
+        public SctpConnectionShim createSctpConnection(String conferenceId, String endpointId)
         {
             synchronized (sctpConnections)
             {
@@ -218,7 +218,7 @@ public class ColibriShim {
                 if (endpoint instanceof Endpoint)
                 {
                     String sctpConnId = generateUniqueChannelID();
-                    SctpConnection connection = new SctpConnection(sctpConnId, endpoint);
+                    SctpConnectionShim connection = new SctpConnectionShim(sctpConnId, endpoint);
                     sctpConnections.put(sctpConnId, connection);
 
                     // Trigger the creation of the actual new SCTP connection
@@ -249,12 +249,17 @@ public class ColibriShim {
             }
         }
 
-        public ColibriShim.SctpConnection getSctpConnection(String id)
+        public SctpConnectionShim getSctpConnection(String id)
         {
             synchronized (sctpConnections)
             {
                 return sctpConnections.get(id);
             }
+        }
+
+        public void expire()
+        {
+
         }
     }
     public class ConferenceShim {
@@ -302,6 +307,13 @@ public class ColibriShim {
             {
                 return channelBundles.get(channelBundleId);
             }
+        }
+
+        /**
+         * Expire this conference and everything within it
+         */
+        public void expire()
+        {
 
         }
 

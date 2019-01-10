@@ -1060,20 +1060,20 @@ public class Videobridge
      * descriptions of the created and/or updated SCTP connection instances.
      * @param sctpConnections
      * @param conference
-     * @param content
+     * @param contentShim
      * @return
      * @throws IqProcessingException if there are any errors during the processing of the incoming connections
      */
     private List<ColibriConferenceIQ.SctpConnection> processSctpConnections(
             List<ColibriConferenceIQ.SctpConnection> sctpConnections,
             ColibriShim.ConferenceShim conference,
-            ColibriShim.ContentShim content) throws IqProcessingException {
+            ColibriShim.ContentShim contentShim) throws IqProcessingException {
         List<ColibriConferenceIQ.SctpConnection> createdOrUpdatedSctpConnections = new ArrayList<>();
         for (ColibriConferenceIQ.SctpConnection sctpConnIq : sctpConnections)
         {
             String sctpConnId = sctpConnIq.getID();
             String endpointID = sctpConnIq.getEndpoint();
-            ColibriShim.SctpConnection sctpConnection;
+            ColibriShim.SctpConnectionShim sctpConnectionShim;
             int sctpConnExpire = sctpConnIq.getExpire();
 
             if (sctpConnId == null)
@@ -1090,16 +1090,16 @@ public class Videobridge
                             XMPPError.Condition.bad_request, "No endpoint ID specified for the new SCTP connection");
                 }
 
-                sctpConnection = content.createSctpConnection(conference.getId(), endpointID);
+                sctpConnectionShim = contentShim.createSctpConnection(conference.getId(), endpointID);
             }
             else
             {
-                sctpConnection = content.getSctpConnection(sctpConnId);
-                if (sctpConnection == null && sctpConnExpire == 0)
+                sctpConnectionShim = contentShim.getSctpConnection(sctpConnId);
+                if (sctpConnectionShim == null && sctpConnExpire == 0)
                 {
                     continue;
                 }
-                else if (sctpConnection == null)
+                else if (sctpConnectionShim == null)
                 {
                     throw new IqProcessingException(
                             XMPPError.Condition.bad_request, "No SCTP connection found for ID: " + sctpConnId);
@@ -1112,19 +1112,19 @@ public class Videobridge
                     throw new IqProcessingException(
                             XMPPError.Condition.bad_request, "Invalid 'expire' value: " + sctpConnExpire);
                 }
-                sctpConnection.setExpire(sctpConnExpire);
-                if (sctpConnExpire == 0 && sctpConnection.isExpired())
+                sctpConnectionShim.setExpire(sctpConnExpire);
+                if (sctpConnExpire == 0 && sctpConnectionShim.isExpired())
                 {
                     continue;
                 }
             }
             else
             {
-                sctpConnection.setExpire(sctpConnExpire);
+                sctpConnectionShim.setExpire(sctpConnExpire);
             }
             ColibriConferenceIQ.SctpConnection responseSctpIq = new ColibriConferenceIQ.SctpConnection();
 
-            sctpConnection.describe(responseSctpIq);
+            sctpConnectionShim.describe(responseSctpIq);
 
             createdOrUpdatedSctpConnections.add(responseSctpIq);
         }
