@@ -32,10 +32,10 @@ import org.jitsi.util.*;
  * either off or on (or -1, 0).
  *
  * Instances of this class suspend a track when the target quality is set to -1.
- * When the target quality is set back to 0, the request key frame flag will be
- * set to true and the track will be re-activated when a key frame is received.
- * (so support for key frame detection for the specific media format of the
- * track that is being adapted is necessary).
+ * When the target quality is set back to 0, the request key frame flag is
+ * raised and the track is re-activated after a key frame is received.
+ * (consequently support for key frame detection for the specific media format
+ * of the track that is being adapted is necessary).
  *
  * In order to make the suspend/resume operation transparent (at least in the
  * RTP level), instances of this class rewrite the RTP sequence to hide the gaps
