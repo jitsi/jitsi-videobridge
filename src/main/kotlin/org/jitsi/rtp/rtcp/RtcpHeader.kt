@@ -27,6 +27,7 @@ import unsigned.toUInt
 import unsigned.toULong
 import unsigned.toUShort
 import java.nio.ByteBuffer
+import java.util.Objects
 
 /**
  * Models the RTCP header as defined in https://tools.ietf.org/html/rfc3550#section-6.1
@@ -129,5 +130,26 @@ open class RtcpHeader : Serializable {
             appendln("senderSsrc: $senderSsrc")
             this.toString()
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other?.javaClass != javaClass) {
+            return false
+        }
+        other as RtcpHeader
+        return (size == other.size &&
+                version == other.version &&
+                hasPadding == other.hasPadding &&
+                reportCount == other.reportCount &&
+                packetType == other.packetType &&
+                length == other.length &&
+                senderSsrc == other.senderSsrc)
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(size, version, hasPadding, reportCount, packetType, length, senderSsrc)
     }
 }
