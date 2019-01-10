@@ -2,7 +2,7 @@ package org.jitsi.nlj.stats
 
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpListener
-import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.rtp.rtcp.RtcpReportBlock
@@ -23,11 +23,11 @@ class DownlinkStreamStats : RtcpListener {
         val packet = packetInfo.packet
         when (packet) {
             is RtcpSrPacket -> {
-                logger.cinfo { "Received SR packet with ${packet.reportBlocks} report blocks" }
+                logger.cdebug { "Received SR packet with ${packet.reportBlocks.size} report blocks" }
                 packet.reportBlocks.forEach { reportBlock -> processReportBlock(packetInfo.receivedTime, reportBlock) }
             }
             is RtcpRrPacket -> {
-                logger.cinfo { "Received RR packet with ${packet.reportBlocks} report blocks" }
+                logger.cdebug { "Received RR packet with ${packet.reportBlocks.size} report blocks" }
                 packet.reportBlocks.forEach { reportBlock -> processReportBlock(packetInfo.receivedTime, reportBlock) }
             }
         }
@@ -36,7 +36,7 @@ class DownlinkStreamStats : RtcpListener {
     override fun onRtcpPacketSent(packet: RtcpPacket) {
         when (packet) {
             is RtcpSrPacket -> {
-                logger.cinfo { "Tracking sent SR packet with NTP timestamp ${packet.senderInfo.ntpTimestamp} and " +
+                logger.cdebug { "Tracking sent SR packet with NTP timestamp ${packet.senderInfo.ntpTimestamp} and " +
                         "compacted timestamp ${packet.senderInfo.compactedNtpTimestamp}" }
                 srSentTimes[packet.senderInfo.compactedNtpTimestamp] =
                         System.currentTimeMillis()
