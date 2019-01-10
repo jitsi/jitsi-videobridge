@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpSender
 import org.jitsi.nlj.RtpSenderImpl
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -92,6 +93,7 @@ private fun createSender(executor: ExecutorService, backgroundExecutor: Schedule
     val sender = RtpSenderImpl(
         Random().nextLong().toString(),
         null,
+        RtcpEventNotifier(),
         executor,
         backgroundExecutor
     )

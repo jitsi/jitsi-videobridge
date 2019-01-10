@@ -17,6 +17,7 @@ package org.jitsi.nlj.transform.node.incoming
 
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
@@ -35,22 +36,12 @@ import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.util.concurrent.ConcurrentHashMap
 
 class RtcpTermination(
+    private val rtcpEventNotifier: RtcpEventNotifier,
     private val transportCcEngine: TransportCCEngine? = null
 ) : Node("RTCP termination") {
     //TODO: change this to use rtcpListeners
     var nackHandler: NackHandler? = null
     private var numNacksReceived = 0
-    /**
-     * Set of entities interested in being notified of received RTCP packets
-     */
-    private val rtcpListeners: MutableSet<RtcpListener> = ConcurrentHashMap.newKeySet()
-
-    /**
-     * [RtcpTermination] is responsible for all of the primary RTCP handling and termination.  There are, however,
-     * other entities which may be interested in RTCP packets for other reasons, so we allow other entities to
-     * be notified when RTCP packets are received.
-     */
-    fun subscribeToRtcp(rtcpListener: RtcpListener) = rtcpListeners.add(rtcpListener)
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
@@ -87,7 +78,7 @@ class RtcpTermination(
                 }
             }
             //TODO: keep an eye on if anything in here takes a while it could slow the packet pipeline down
-            rtcpListeners.forEach { it.onRtcpPacket(packetInfo) }
+            rtcpEventNotifier.notifyRtcpReceived(packetInfo)
         }
         next(outPackets)
     }

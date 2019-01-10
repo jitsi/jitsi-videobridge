@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtcp.NackHandler
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrGenerator
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.*
@@ -44,6 +45,7 @@ import java.util.concurrent.TimeUnit
 class RtpSenderImpl(
         val id: String,
         transportCcEngine: TransportCCEngine? = null,
+        private val rtcpEventNotifier: RtcpEventNotifier,
         /**
          * The executor this class will use for its primary work (i.e. critical path
          * packet processing).  This [RtpSender] will execute a blocking queue read
@@ -107,14 +109,14 @@ class RtpSenderImpl(
     }
 
     init {
-        logger.cinfo { "Sender ${this.hashCode()} using executor ${executor.hashCode()}" }
+        logger.cinfo { "Sender $id using executor ${executor.hashCode()}" }
         outgoingRtpRoot = pipeline {
             simpleNode("TEMP sender ssrc setter") { pktInfos ->
                 if (tempSenderSsrc == null && pktInfos.isNotEmpty()) {
                     val pktInfo = pktInfos[0]
                     if (pktInfo.packet is RtpPacket) {
                         tempSenderSsrc = (pktInfo.packet as? RtpPacket)?.header?.ssrc
-                        logger.cinfo { "RtpSenderImpl ${hashCode()} setting sender ssrc to $tempSenderSsrc" }
+                        logger.cinfo { "RtpSenderImpl $id setting sender ssrc to $tempSenderSsrc" }
                     }
                 }
                 pktInfos
@@ -173,6 +175,9 @@ class RtpSenderImpl(
     }
 
     override fun sendRtcp(pkts: List<RtcpPacket>) {
+        pkts.forEach {
+            rtcpEventNotifier.notifyRtcpSent(it)
+        }
         //TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
         outgoingRtcpRoot.processPackets(pkts.map { PacketInfo(it) })
     }
