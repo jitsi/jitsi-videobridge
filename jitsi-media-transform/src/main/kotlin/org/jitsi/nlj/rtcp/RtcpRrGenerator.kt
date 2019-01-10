@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit
  * TODO: rename to not be confused with Sender Info in SR?
  */
 private data class SenderInfo(
-    var lastSrCompactedTimestamp: Int = 0,
+    var lastSrCompactedTimestamp: Long = 0,
     var lastSrReceivedTime: Long = 0,
     var statsSnapshot: IncomingStreamStatistics.Snapshot = IncomingStreamStatistics.Snapshot()
 )
@@ -55,7 +55,7 @@ class RtcpRrGenerator(
         doWork()
     }
 
-    override fun onRtcpPacket(packetInfo: PacketInfo) {
+    override fun onRtcpPacketReceived(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
         when (packet) {
             is RtcpSrPacket -> {
@@ -87,7 +87,7 @@ class RtcpRrGenerator(
                     statsDelta.seqNumCycles,
                     statsDelta.maxSeqNum,
                     statsDelta.jitter.toLong(),
-                    senderInfo.lastSrCompactedTimestamp.toLong(),
+                    senderInfo.lastSrCompactedTimestamp,
                     ((now - senderInfo.lastSrReceivedTime) * 65.536).toLong()
                 ))
             }
