@@ -254,12 +254,14 @@ public class AdaptiveTrackProjection
         MediaStreamTrackDesc source = getSource();
         if (source != null)
         {
-            MediaStreamImpl stream
-                = source.getMediaStreamTrackReceiver().getStream();
+            MediaStreamImpl
+                stream = source.getMediaStreamTrackReceiver().getStream();
+
             if (stream != null)
             {
-                CachingTransformer cachingTransformer
-                    = stream.getCachingTransformer();
+                CachingTransformer
+                    cachingTransformer = stream.getCachingTransformer();
+
                 if (cachingTransformer != null)
                 {
                     incomingRawPacketCache
