@@ -20,6 +20,7 @@ import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
+import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.stats.TransceiverStreamStats
@@ -69,6 +70,7 @@ class Transceiver(
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
     val packetIOActivity = PacketIOActivity()
+    private val endpointConnectionStats = EndpointConnectionStats()
     /**
      * A central place to subscribe to be notified on the reception or transmission of RTCP packets for
      * this transceiver.  This is intended to be used by internal entities: mainly logic for things like generating
@@ -95,6 +97,8 @@ class Transceiver(
     init {
         logger.cinfo { "Transceiver ${this.hashCode()} using receiver executor ${receiverExecutor.hashCode()} " +
                 "and sender executor ${senderExecutor.hashCode()}" }
+
+        rtcpEventNotifier.addRtcpEventListener(endpointConnectionStats)
 
         // Replace the sender's default packet handler with one that will add packets to outgoingQueue
         rtpSender.packetSender = object : Node("RTP packet sender") {

@@ -9,15 +9,41 @@ import org.jitsi.rtp.rtcp.RtcpReportBlock
 import org.jitsi.rtp.rtcp.RtcpRrPacket
 import org.jitsi.rtp.rtcp.RtcpSrPacket
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * This class models stats which comes from SRs
+ * Tracks stats which are not necessarily tied to send or receive but the endpoint overall
  */
-class DownlinkStreamStats : RtcpListener {
+class EndpointConnectionStats : RtcpListener {
+    interface EndpointConnectionStatsListener {
+        fun onRttUpdate(newRtt: Double)
+    }
+    data class Snapshot(
+        val rtt: Double
+    )
+    private val endpointConnectionStatsListeners: MutableList<EndpointConnectionStatsListener> = CopyOnWriteArrayList()
+
     // Maps the compacted NTP timestamp found in an SR SenderInfo to the clock time (in milliseconds)
     //  at which it was transmitted
     private val srSentTimes: MutableMap<Long, Long> = ConcurrentHashMap()
-    protected val logger = getLogger(this.javaClass)
+    private val logger = getLogger(this.javaClass)
+
+    /**
+     * The calculated RTT, in milliseconds, between the bridge and the endpoint
+     */
+    private var rtt: Double = 0.0
+
+    //TODO(brian): allow adding a listener to be updated when stats change.  We will use this in the future to plumb
+    // things like the RTT into the bandwidth estimation logic
+    fun addListener(listener: EndpointConnectionStatsListener) {
+        endpointConnectionStatsListeners.add(listener)
+    }
+
+    fun getSnapshot(): Snapshot {
+        //NOTE(brian): right now we only track a single stat, so synchronization isn't necessary.  If we add more
+        // stats and it's appropriate they be 'snapshotted' together at the same time, we'll need to add a lock here
+        return Snapshot(rtt)
+    }
 
     override fun onRtcpPacketReceived(packetInfo: PacketInfo) {
         val packet = packetInfo.packet
@@ -52,8 +78,8 @@ class DownlinkStreamStats : RtcpListener {
                 // The delaySinceLastSr value is given in 1/65536ths of a second, so divide it by 65.536 to get it
                 // in milliseconds
                 val remoteProcessingDelayMs = reportBlock.delaySinceLastSr / 65.536
-                //TODO: store the RTT
-                val rtt = receivedTime - srSentTime - remoteProcessingDelayMs
+                rtt = receivedTime - srSentTime - remoteProcessingDelayMs
+                endpointConnectionStatsListeners.forEach { it.onRttUpdate(rtt) }
             }
         }
     }
