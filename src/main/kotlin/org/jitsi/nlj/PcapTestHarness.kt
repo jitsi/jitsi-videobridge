@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import io.pkts.Pcap
 import io.pkts.packet.UDPPacket
 import io.pkts.protocol.Protocol
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -69,10 +70,13 @@ val keyingMaterial = byteArrayOf(
 )
 val tlsRole = TlsRole.CLIENT
 
+private val rtcpEventNotifier = RtcpEventNotifier()
+
 fun createRtpReceiver(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService): RtpReceiver {
     val rtpReceiver = RtpReceiverImpl(
         "1",
         { rtcpPacket -> Unit },
+        rtcpEventNotifier = rtcpEventNotifier,
         executor = executor,
         backgroundExecutor = backgroundExecutor
     )
@@ -103,7 +107,11 @@ fun createRtpReceiver(executor: ExecutorService, backgroundExecutor: ScheduledEx
 }
 
 fun createRtpSender(executor: ExecutorService, backgroundExecutor: ScheduledExecutorService): RtpSender {
-    val sender = RtpSenderImpl("456", executor = executor, backgroundExecutor = backgroundExecutor)
+    val sender = RtpSenderImpl(
+            "456",
+            executor = executor,
+            backgroundExecutor = backgroundExecutor,
+            rtcpEventNotifier = rtcpEventNotifier)
     val srtpTransformer = SrtpUtil.initializeTransformer(
             srtpProfileInformation,
             keyingMaterial,

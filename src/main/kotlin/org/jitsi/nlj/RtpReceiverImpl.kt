@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtcp.NackHandler
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
@@ -52,6 +53,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
      */
     private val rtcpSender: (RtcpPacket) -> Unit = {},
     transportCcEngine: TransportCCEngine? = null,
+    private val rtcpEventNotifier: RtcpEventNotifier,
     /**
      * The executor this class will use for its primary work (i.e. critical path
      * packet processing).  This [RtpReceiver] will execute a blocking queue read
@@ -74,7 +76,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val audioLevelReader = AudioLevelReader()
     private val statTracker = IncomingStatisticsTracker()
     private val rtcpRrGenerator = RtcpRrGenerator(backgroundExecutor, rtcpSender, statTracker)
-    private val rtcpTermination = RtcpTermination(transportCcEngine)
+    private val rtcpTermination = RtcpTermination(rtcpEventNotifier, transportCcEngine)
 
     companion object {
         private val logger: Logger = Logger.getLogger(this::class.java)
@@ -135,7 +137,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
 
     init {
         logger.cinfo { "Receiver ${this.hashCode()} using executor ${executor.hashCode()}" }
-        rtcpTermination.subscribeToRtcp(rtcpRrGenerator)
+        rtcpEventNotifier.addRtcpEventListener(rtcpRrGenerator)
 
         inputTreeRoot = pipeline {
             node(PacketParser("SRTP protocol parser") { SrtpProtocolPacket(it.getBuffer()) })

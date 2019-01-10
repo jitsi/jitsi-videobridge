@@ -22,6 +22,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpReceiver
 import org.jitsi.nlj.RtpReceiverImpl
 import org.jitsi.nlj.keyingMaterial
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -105,6 +106,7 @@ fun createReceiver(executor: ExecutorService, backgroundExecutor: ScheduledExecu
         Random().nextLong().toString(),
         {},
         null,
+        RtcpEventNotifier(),
         executor,
         backgroundExecutor
     )

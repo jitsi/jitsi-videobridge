@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
+import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.PacketIOActivity
@@ -68,10 +69,17 @@ class Transceiver(
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()
     val packetIOActivity = PacketIOActivity()
+    /**
+     * A central place to subscribe to be notified on the reception or transmission of RTCP packets for
+     * this transceiver.  This is intended to be used by internal entities: mainly logic for things like generating
+     * SRs and RRs and calculating RTT.  Since it is used for both send and receive, it is held here and passed to
+     * the sender and receive so each can push or subscribe to updates.
+     */
+    private val rtcpEventNotifier = RtcpEventNotifier()
 
     private val transportCcEngine = TransportCCEngine(DiagnosticContext())
 
-    private val rtpSender: RtpSender = RtpSenderImpl(id, transportCcEngine, senderExecutor, backgroundExecutor)
+    private val rtpSender: RtpSender = RtpSenderImpl(id, transportCcEngine, rtcpEventNotifier, senderExecutor, backgroundExecutor)
     private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(
             id,
@@ -79,6 +87,7 @@ class Transceiver(
                 rtpSender.sendRtcp(listOf(rtcpPacket))
             },
             transportCcEngine,
+            rtcpEventNotifier,
             receiverExecutor,
             backgroundExecutor)
     val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
