@@ -82,7 +82,7 @@ class RtcpRrGenerator(
                 val statsDelta = statsSnapshot.getDelta(senderInfo.statsSnapshot)
                 reportBlocks.add(RtcpReportBlock(
                     ssrc,
-                    (statsDelta.cumulativePacketsLost / statsDelta.numExpectedPackets) * 256,
+                    statsDelta.fractionLost,
                     statsDelta.cumulativePacketsLost,
                     statsDelta.seqNumCycles,
                     statsDelta.maxSeqNum,

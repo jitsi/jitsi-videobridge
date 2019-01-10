@@ -290,6 +290,9 @@ class IncomingStreamStatistics(
         val cumulativePacketsLost: Int = 0,
         val jitter: Double = 0.0
     ) {
+        val fractionLost: Int
+            get() = (cumulativePacketsLost / numExpectedPackets) * 256
+
         fun getDelta(previousSnapshot: Snapshot): Snapshot {
             return Snapshot(
                 numRececivedPackets - previousSnapshot.numRececivedPackets,
@@ -301,7 +304,6 @@ class IncomingStreamStatistics(
             )
         }
     }
-
 }
 
 /*
