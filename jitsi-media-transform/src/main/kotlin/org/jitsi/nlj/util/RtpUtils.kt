@@ -16,6 +16,7 @@
 package org.jitsi.nlj.util
 
 import org.jitsi.util.RTPUtils
+import org.jitsi.util.TimeUtils
 import toUInt
 import unsigned.toUint
 import java.nio.ByteBuffer
@@ -57,28 +58,9 @@ class RtpUtils {
         /**
          * Given [timestampMs] (a timestamp in milliseconds), convert it to an NTP timestamp represented
          * as a pair of ints: the first one being the most significant word and the second being the least
-         * significant word
-         * http://lists.ntp.org/pipermail/questions/2006-July/010866.html
-         * TODO: have i implemented this right?
+         * significant word.
          */
-        private fun millisToNtpTimestampMswLsw(timestampMs: Long): Pair<Int, Int> {
-            val seconds = Duration.ofMillis(timestampMs).seconds + 2208988800
-            val remainingMillis = timestampMs - Duration.ofSeconds(seconds).toMillis()
-
-            val msw = seconds.toUInt()
-            val lsw = (remainingMillis / 1000 * 4294967296).toUInt()
-            return Pair(msw, lsw)
-        }
-
-        fun millisToNtpTimestamp(timestampMs: Long): Long {
-            val (msw, lsw) = millisToNtpTimestampMswLsw(timestampMs)
-            val buf = ByteBuffer.allocate(8)
-            buf.putInt(msw)
-            buf.putInt(lsw)
-            buf.flip()
-
-            return buf.getLong()
-        }
+        fun millisToNtpTimestamp(timestampMs: Long): Long = TimeUtils.toNtpTime(timestampMs)
 
         fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Double): Int {
             return ((rtpTimestamp / ticksPerSecond) * 1000).toInt()
