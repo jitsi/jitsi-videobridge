@@ -196,7 +196,9 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     val compoundRtcpPackets = RtcpIterator(pktInfo.packet.getBuffer()).getAll()
                                     compoundRtcpPackets.forEach {
                                         // For each compound RTCP packet, create a new PacketInfo
-                                        outPackets.add(PacketInfo(it))
+                                        val splitPacket = PacketInfo(it, timeline = pktInfo.timeline.clone())
+                                        splitPacket.receivedTime = pktInfo.receivedTime
+                                        outPackets.add(splitPacket)
                                     }
                                 }
                                 outPackets
