@@ -68,6 +68,17 @@ public class AdaptiveTrackProjection
     /**
      * The payload specific track projection context that's responsible for
      * rewriting the packets of a projected track.
+     *
+     * XXX The more general scheme and more correct approach would be to have
+     * the adaptive track projection manage a context per payload type. The
+     * intention was to implement the more general approach but, at the time of
+     * this righting, we have no use case for that right now nor an easy way to
+     * test this dynamic payload type changes. So practically what happens is
+     * that we create the context once, and it remains the same throughout the
+     * life of the this instance. It's not really possible to simplify and make
+     * the context final (=> create it during construction) because we need a
+     * payload type (could be VP9, could be H264, could be VP8) so it has to be
+     * created on packet arrival.
      */
     private AdaptiveTrackProjectionContext context;
 
