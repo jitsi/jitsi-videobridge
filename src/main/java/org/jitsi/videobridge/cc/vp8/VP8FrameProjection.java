@@ -288,7 +288,11 @@ public class VP8FrameProjection
             return AdaptiveTrackProjection.EMPTY_PACKET_ARR;
         }
 
-        // We piggy-back any re-ordered packets of this frame.
+        // We piggy-back any re-ordered packets of this frame. This is basically
+        // finds every sequence number after the packet we're processing (which
+        // we've detected as being the first packet of the frame) which is
+        // present in the cache, until we hit one of a different frame (which we
+        // check by comparing the timestamps).
         long vp8FrameSSRC = vp8Frame.getSSRCAsLong()
             , vp8FrameTimestamp = vp8Frame.getTimestamp();
 
