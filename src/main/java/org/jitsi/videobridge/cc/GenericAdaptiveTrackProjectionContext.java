@@ -28,8 +28,8 @@ import org.jitsi.util.*;
  * A generic implementation of an adaptive track projection context that can be
  * used with non-SVC codecs or when simulcast is not enabled/used or when
  * support for these advanced features is not implemented in the bridge. In this
- * restricted case the track can have only two states (or qualities), either off
- * or on (or -1, 0).
+ * restricted case the track projection can have only two states (or qualities),
+ * either off or on (or -1, 0).
  *
  * Instances of this class suspend a track when the target quality is set to -1.
  * When the target quality is set back to 0, the request key frame flag will be
@@ -38,13 +38,13 @@ import org.jitsi.util.*;
  * track that is being adapted is necessary).
  *
  * In order to make the suspend/resume operation transparent (at least in the
- * RTP level), this instances rewrites the RTP sequence to hide the gaps caused
- * by the suspend/resume operation.
+ * RTP level), instances of this class rewrite the RTP sequence to hide the gaps
+ * caused by the suspend/resume operation.
  *
  * This may not be sufficient for fluid playback at the receiver as the decoder
  * may be unable to handle codec specific discontinuities (such as discontinuous
  * picture IDs in VP8). In this case a codec specific adaptive track projection
- * implementation will have to be used instead.
+ * context implementation will have to be used instead.
  *
  * @author George Politis
  */
