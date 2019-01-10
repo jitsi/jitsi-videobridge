@@ -163,6 +163,17 @@ public class ComponentImpl
     }
 
     /**
+     * Returns the {@link Videobridge} instance that is managing conferences
+     * for this component. Returns <tt>null</tt> if no instance is running.
+     *
+     * @return the videobridge instance, <tt>null</tt> when none is running.
+     */
+    public Videobridge getVideobridge()
+    {
+        return common.getVideobridge();
+    }
+
+    /**
      * Handles an <tt>org.xmpp.packet.IQ</tt> stanza of type <tt>get</tt> or
      * <tt>set</tt> which represents a request. Converts the specified
      * <tt>org.xmpp.packet.IQ</tt> to an
@@ -477,16 +488,5 @@ public class ComponentImpl
         {
             common.stop(bundleContext);
         }
-    }
-
-    /**
-     * Returns the {@link Videobridge} instance that is managing conferences
-     * for this component. Returns <tt>null</tt> if no instance is running.
-     *
-     * @return the videobridge instance, <tt>null</tt> when none is running.
-     */
-    public Videobridge getVideobridge()
-    {
-        return common.getVideobridge();
     }
 }
