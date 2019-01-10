@@ -626,7 +626,8 @@ public class BitrateController
         }
 
         // The BandwidthProber will pick this up.
-        this.adaptiveTrackProjections = adaptiveTrackProjections;
+        this.adaptiveTrackProjections
+            = Collections.unmodifiableList(adaptiveTrackProjections);
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
