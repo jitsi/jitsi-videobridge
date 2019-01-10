@@ -156,6 +156,10 @@ public class AdaptiveTrackProjection
         AdaptiveTrackProjectionContext
             contextCopy = getContext(RawPacket.getPayloadType(rtpPacket));
 
+        // XXX We want to let the context know that the stream has been
+        // suspended so that it can raise the needsKeyframe flag and also allow
+        // it to compute a sequence number delta when the target becomes > -1.
+
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(rtpPacket, targetIndexCopy);
 
