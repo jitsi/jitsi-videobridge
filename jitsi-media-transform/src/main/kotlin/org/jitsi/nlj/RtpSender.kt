@@ -43,7 +43,6 @@ abstract class RtpSender : EventHandler, Stoppable,NodeStatsProducer {
             lastPacketSentTime = System.currentTimeMillis()
         }
     }
-    abstract fun getNackHandler(): NackHandler
     abstract fun sendPackets(pkts: List<PacketInfo>)
     abstract fun sendRtcp(pkts: List<RtcpPacket>)
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)

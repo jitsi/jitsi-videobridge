@@ -102,7 +102,6 @@ class Transceiver(
                 outgoingQueue.addAll(p)
             }
         }
-        rtpReceiver.setNackHandler(rtpSender.getNackHandler())
     }
 
     /**

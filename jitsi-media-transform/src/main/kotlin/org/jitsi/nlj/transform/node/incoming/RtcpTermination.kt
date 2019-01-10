@@ -15,10 +15,8 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
-import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
-import org.jitsi.nlj.rtcp.RtcpListener
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
@@ -33,14 +31,11 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbNackPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPliPacket
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbTccPacket
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
-import java.util.concurrent.ConcurrentHashMap
 
 class RtcpTermination(
     private val rtcpEventNotifier: RtcpEventNotifier,
     private val transportCcEngine: TransportCCEngine? = null
 ) : Node("RTCP termination") {
-    //TODO: change this to use rtcpListeners
-    var nackHandler: NackHandler? = null
     private var numNacksReceived = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
@@ -51,8 +46,6 @@ class RtcpTermination(
                 is RtcpFbTccPacket -> handleTccPacket(pkt)
                 is RtcpFbNackPacket -> {
                     numNacksReceived++
-                    //TODO: nack handler should just be done as a normal RTCP subscriber?
-                    nackHandler?.onNackPacket(pkt)
                 }
                 is RtcpSrPacket -> {
                     //TODO
