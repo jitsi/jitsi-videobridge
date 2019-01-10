@@ -73,8 +73,8 @@ class SenderInfo {
      * The high 16 bits of the integer part must be determined
      * independently.
      */
-    val compactedNtpTimestamp: Int
-        get() = ntpTimestamp.and(0x0000FFFFFFFF0000).shr(16).toUInt()
+    val compactedNtpTimestamp: Long
+        get() = ntpTimestamp.and(0x0000FFFFFFFF0000).shr(16)
 
     /**
      * RTP timestamp: 32 bits
@@ -307,6 +307,9 @@ class RtcpSrPacket : RtcpPacket {
         b.rewind()
         b.limit(size)
 
+        header.packetType = RtcpSrPacket.PT
+        header.length = lengthValue
+        header.reportCount = reportBlocks.size
         RtcpPacket.setHeader(b, header)
         RtcpSrPacket.setSenderInfo(b, senderInfo)
         RtcpSrPacket.setReportBlocks(b, reportBlocks)

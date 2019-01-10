@@ -12,15 +12,6 @@ import kotlin.math.exp
 internal class RtcpSrPacketTest : ShouldSpec() {
     override fun isInstancePerTest(): Boolean = true
 
-    private val expectedHeader = RtcpHeader(
-        version = 2,
-        hasPadding = false,
-        reportCount = 2,
-        packetType = 200,
-        length = 42, // TODO make this accurate?
-        senderSsrc = 12345
-    )
-
     private val expectedSenderInfo = SenderInfo(
         ntpTimestamp = 0x7FFFFFFFFFFFFFFF,
         rtpTimestamp = 0xFFFFFFFF,
@@ -49,6 +40,19 @@ internal class RtcpSrPacketTest : ShouldSpec() {
         delaySinceLastSr = 34567
     )
 
+    private val lengthValue =
+            (RtcpHeader.SIZE_BYTES + SenderInfo.SIZE_BYTES + RtcpReportBlock.SIZE_BYTES + RtcpReportBlock.SIZE_BYTES + 3) / 4 - 1
+
+    private val expectedHeader = RtcpHeader(
+            version = 2,
+            hasPadding = false,
+            reportCount = 2,
+            packetType = 200,
+            length = lengthValue,
+            senderSsrc = 12345
+    )
+
+
     init {
         "creation" {
             "from a buffer" {
@@ -61,6 +65,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                 val srPacket = RtcpSrPacket(buf)
                 should("read everything correctly") {
                     srPacket.senderInfo.ntpTimestamp shouldBe expectedSenderInfo.ntpTimestamp
+                    srPacket.senderInfo.compactedNtpTimestamp shouldBe 0xFFFFFFFF
                     srPacket.senderInfo.rtpTimestamp shouldBe expectedSenderInfo.rtpTimestamp
                     srPacket.senderInfo.sendersPacketCount shouldBe expectedSenderInfo.sendersPacketCount
                     srPacket.senderInfo.sendersOctetCount shouldBe expectedSenderInfo.sendersOctetCount
@@ -69,28 +74,7 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                     srPacket.reportBlocks[1] shouldBe reportBlock2
                 }
             }
-            "blah" {
-                val pktBuf = ByteBuffer.wrap(byteArrayOf(
-                    0x80.toByte(), 0xC8.toByte(), 0x00.toByte(), 0x06.toByte(),
-                    0xF0.toByte(), 0xA7.toByte(), 0x6B.toByte(), 0x36.toByte(),
-                    0xDF.toByte(), 0x29.toByte(), 0xBB.toByte(), 0x6C.toByte(),
-                    0x0C.toByte(), 0xC2.toByte(), 0xF8.toByte(), 0x38.toByte(),
-                    0x87.toByte(), 0x52.toByte(), 0x0D.toByte(), 0x00.toByte(),
-                    0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x28.toByte(),
-                    0x00.toByte(), 0x00.toByte(), 0x7F.toByte(), 0x49.toByte(),
-                    0x81.toByte(), 0xCA.toByte(), 0x00.toByte(), 0x06.toByte(),
-                    0xF0.toByte(), 0xA7.toByte(), 0x6B.toByte(), 0x36.toByte(),
-                    0x01.toByte(), 0x10.toByte(), 0x77.toByte(), 0x69.toByte(),
-                    0x4E.toByte(), 0x74.toByte(), 0x6F.toByte(), 0x4B.toByte(),
-                    0x39.toByte(), 0x67.toByte(), 0x6F.toByte(), 0x79.toByte(),
-                    0x58.toByte(), 0x4F.toByte(), 0x39.toByte(), 0x58.toByte(),
-                    0x49.toByte(), 0x77.toByte(), 0x00.toByte(), 0x00.toByte()
-                ))
-                val sr = RtcpSrPacket(pktBuf)
-                val newBuf = sr.getBuffer()
-                val newBuf2 = sr.getBuffer()
-            }
-            "from values" {
+            "from explicit values" {
                 val srPacket = RtcpSrPacket(
                     header = expectedHeader,
                     senderInfo = expectedSenderInfo,
@@ -103,6 +87,22 @@ internal class RtcpSrPacketTest : ShouldSpec() {
                     srPacket.header shouldBe expectedHeader
                     srPacket.senderInfo shouldBe expectedSenderInfo
                     srPacket.reportBlocks should containAll(reportBlock1, reportBlock2)
+                }
+            }
+            "from an incomplete set of values" {
+                val srPacket = RtcpSrPacket(
+                    header = RtcpHeader(senderSsrc = 12345),
+                    senderInfo = expectedSenderInfo,
+                    reportBlocks = mutableListOf(
+                            reportBlock1,
+                            reportBlock2
+                    )
+                )
+                val parsedPacket = RtcpSrPacket(srPacket.getBuffer())
+                should("set all values correctly") {
+                    parsedPacket.header shouldBe expectedHeader
+                    parsedPacket.senderInfo shouldBe expectedSenderInfo
+                    parsedPacket.reportBlocks should containAll(reportBlock1, reportBlock2)
                 }
             }
         }
