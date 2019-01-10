@@ -23,6 +23,7 @@ import net.java.sip.communicator.util.*;
 import org.jitsi.meet.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
+import org.jitsi.videobridge.Videobridge;
 import org.jitsi.xmpp.component.*;
 import org.jitsi.xmpp.util.*;
 import org.jxmpp.jid.*;
@@ -159,6 +160,17 @@ public class ComponentImpl
     public String getName()
     {
         return NAME;
+    }
+
+    /**
+     * Returns the {@link Videobridge} instance that is managing conferences
+     * for this component. Returns <tt>null</tt> if no instance is running.
+     *
+     * @return the videobridge instance, <tt>null</tt> when none is running.
+     */
+    public Videobridge getVideobridge()
+    {
+        return common.getVideobridge();
     }
 
     /**
