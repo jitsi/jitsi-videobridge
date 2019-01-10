@@ -14,11 +14,9 @@ class ExecutorShutdownTimeoutException : Exception("Timed out trying to shutdown
 @Throws(ExecutorShutdownTimeoutException::class)
 fun ExecutorService.safeShutdown(timeout: Duration) {
     shutdown()
-    awaitTermination(timeout.toMillis() / 2, TimeUnit.MILLISECONDS)
-    if (!isShutdown) {
+    if (!awaitTermination(timeout.toMillis() / 2, TimeUnit.MILLISECONDS)) {
         shutdownNow()
-        awaitTermination(timeout.toMillis() / 2, TimeUnit.MILLISECONDS)
-        if (!isShutdown) {
+        if (!awaitTermination(timeout.toMillis() / 2, TimeUnit.MILLISECONDS)) {
             throw ExecutorShutdownTimeoutException()
         }
     }
