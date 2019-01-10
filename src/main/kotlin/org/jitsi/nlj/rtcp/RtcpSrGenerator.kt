@@ -52,7 +52,7 @@ class RtcpSrGenerator(
                 )
 
                 val srPacket = RtcpSrPacket(
-                    header = RtcpHeader(packetType = RtcpSrPacket.PT),
+                    header = RtcpHeader(packetType = RtcpSrPacket.PT, senderSsrc = ssrc),
                     senderInfo = senderInfo
                 )
                 rtcpSender(srPacket)
