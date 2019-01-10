@@ -447,9 +447,23 @@ public class VP8FrameProjection
      */
     boolean isFullyProjected(long nowMs)
     {
-        // Assume a frame is fully projected after WAIT_MS. A more predictable
-        // approach would be to check if all the packets have been projected,
-        // i.e. keep a bitmap of received packets of a frame.
+        // XXX The idea is that after we've fully projected all the packets of a
+        // frame, we no longer need the frame projection instance and it can be
+        // expired/discarded to prevent the map that stores these projections
+        // (found in VP8AdaptiveTrackProjectionContext) from growing too big.
+        // Any re-transmissions of that frame can be safely dropped and,
+        // basically, the frame projection instance becomes completely useless.
+        //
+        // To implement this correctly we need 1) a check that determines if all
+        // the packets of the projected frame have been projected and 2nd) an
+        // upper bound of the time that we're willing to wait for the packets to
+        // arrive and be projected (keep in  the sender may decide to never send
+        // some packets).
+        //
+        // Due to lack of time in this method we've only implemented the 2nd,
+        // easier part, so we assume a frame is fully projected after WAIT_MS.
+        // The first approach would require a packet loss bitmap of the received
+        // packets of a frame.
         return nowMs - createdMs > WAIT_MS;
     }
 
