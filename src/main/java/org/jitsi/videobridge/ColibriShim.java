@@ -152,7 +152,6 @@ public class ColibriShim {
     public class ContentShim {
         private final MediaType type;
         private final Map<String, ChannelShim> channels = new HashMap<>();
-        private final Map<String, SctpConnectionShim> sctpConnections = new HashMap<>();
 
         public ContentShim(MediaType type)
         {
@@ -211,7 +210,7 @@ public class ColibriShim {
 
         public SctpConnectionShim createSctpConnection(String conferenceId, String endpointId)
         {
-            synchronized (sctpConnections)
+            synchronized (channels)
             {
                 AbstractEndpoint endpoint =
                         ColibriShim.this.videobridge.getConference(conferenceId, null).getOrCreateEndpoint(endpointId);
@@ -219,7 +218,7 @@ public class ColibriShim {
                 {
                     String sctpConnId = generateUniqueChannelID();
                     SctpConnectionShim connection = new SctpConnectionShim(sctpConnId, endpoint);
-                    sctpConnections.put(sctpConnId, connection);
+                    channels.put(sctpConnId, connection);
 
                     // Trigger the creation of the actual new SCTP connection
                     ((Endpoint)endpoint).createSctpConnection();
@@ -251,9 +250,14 @@ public class ColibriShim {
 
         public SctpConnectionShim getSctpConnection(String id)
         {
-            synchronized (sctpConnections)
+            synchronized (channels)
             {
-                return sctpConnections.get(id);
+                ChannelShim channel = channels.get(id);
+                if (channel instanceof SctpConnectionShim)
+                {
+                    return (SctpConnectionShim)channel;
+                }
+                return null;
             }
         }
 
