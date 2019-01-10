@@ -26,6 +26,7 @@ import unsigned.toUInt
 import unsigned.toULong
 import unsigned.toUShort
 import java.nio.ByteBuffer
+import java.util.Objects
 import kotlin.properties.Delegates
 
 /**
@@ -312,8 +313,7 @@ class RtcpReportBlock {
     }
 
     override fun hashCode(): Int {
-        return ssrc.hashCode() + fractionLost.hashCode() + cumulativePacketsLost.hashCode() +
-                seqNumCycles.hashCode() + seqNum.hashCode() + interarrivalJitter.hashCode() +
-                lastSrTimestamp.hashCode() + delaySinceLastSr.hashCode()
+        return Objects.hash(ssrc, fractionLost, cumulativePacketsLost, seqNumCycles, seqNum,
+                interarrivalJitter, lastSrTimestamp, delaySinceLastSr)
     }
 }
