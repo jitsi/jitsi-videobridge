@@ -222,7 +222,8 @@ class VP8Frame
      * same VP8 base temporal layer (TL0) picture as this instance.
      * @return true if the VP8 frame refers to the same TL0, false otherwise.
      */
-    private boolean matchesTL0PICIDX(@NotNull VP8Frame vp8Frame)
+    private boolean
+    dependsOnSameTemporalBaseLayerFrame(@NotNull VP8Frame vp8Frame)
     {
         return matchesSSRC(vp8Frame) && vp8Frame.tl0PICIDX == tl0PICIDX;
     }
@@ -328,7 +329,7 @@ class VP8Frame
             // XXX this actually makes it possible to miss a reference frame :(
             // It would require significant effort to prevent such a case.
             return isNextTemporalBaseLayerFrame(vp8Frame)
-                || matchesTL0PICIDX(vp8Frame);
+                || dependsOnSameTemporalBaseLayerFrame(vp8Frame);
         }
         else if (isTL0)
         {
@@ -340,7 +341,7 @@ class VP8Frame
             // accept the new frame.
             boolean accept = endingSequenceNumberIsKnown()
                 && (isNextTemporalBaseLayerFrame(vp8Frame)
-                || matchesTL0PICIDX(vp8Frame));
+                || dependsOnSameTemporalBaseLayerFrame(vp8Frame));
 
             if (!accept && isNextTemporalBaseLayerFrame(vp8Frame))
             {
@@ -357,11 +358,21 @@ class VP8Frame
             // or a TL0 reference frame.
 
             return (isNextTemporalBaseLayerFrame(vp8Frame)
-                || (endingSequenceNumberIsKnown() && matchesTL0PICIDX(vp8Frame)));
+                || (endingSequenceNumberIsKnown()
+                && dependsOnSameTemporalBaseLayerFrame(vp8Frame)));
         }
     }
 
-    void setMaxSequenceNumber(int sequenceNumber, boolean isEndingSequenceNumber)
+    /**
+     * Sets the max sequence number that will be forwarded for this frame,
+     * optionally marking it as the ending sequence number.
+     *
+     * @param sequenceNumber the sequence number to be set as the max
+     * @param isEndingSequenceNumber true if this is the last sequence number of
+     * this frame.
+     */
+    void
+    setMaxSequenceNumber(int sequenceNumber, boolean isEndingSequenceNumber)
     {
         maxSequenceNumber = sequenceNumber;
         if (isEndingSequenceNumber)
