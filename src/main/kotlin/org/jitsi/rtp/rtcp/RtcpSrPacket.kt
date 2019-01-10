@@ -74,15 +74,7 @@ class SenderInfo {
      * independently.
      */
     val compactedNtpTimestamp: Int
-        get() {
-            //TODO: not ideal to allocate 2 buffers for this every time
-            val ntpTimestampBuf = ByteBuffer.allocate(8 /* sizeof Long */)
-            ntpTimestampBuf.putLong(ntpTimestamp)
-            val compactedBuf = ByteBuffer.allocate(4 /* sizeof Int */)
-            compactedBuf.put(ntpTimestampBuf.array(), 2, 4)
-            compactedBuf.flip()
-            return compactedBuf.getInt()
-        }
+        get() = ntpTimestamp.and(0x0000FFFFFFFF0000).shr(16).toUInt()
 
     /**
      * RTP timestamp: 32 bits
