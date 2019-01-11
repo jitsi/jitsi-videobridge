@@ -198,6 +198,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return transceiver.receivesSsrc(ssrc);
     }
 
+    public void addReceiveSsrc(long ssrc)
+    {
+        System.out.println("TEMP: endpoint " + getID() + " adding receive ssrc " + ssrc);
+        transceiver.addReceiveSsrc(ssrc);
+    }
+
+    // See onNewSsrcAssociation
+    @Deprecated
     public void addSsrcAssociation(long primarySsrc, long secondarySsrc, String semantics)
     {
         transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);

@@ -844,6 +844,7 @@ public class Videobridge
     {
         List<ColibriConferenceIQ.Channel> createdOrUpdatedChannels = new ArrayList<>();
         Map<String, List<SourceGroupPacketExtension>> endpointSourceGroups = new HashMap<>();
+        Map<String, List<SourcePacketExtension>> endpointSources = new HashMap<>();
 
         for (ColibriConferenceIQ.Channel channelIq : channels)
         {
@@ -902,6 +903,9 @@ public class Videobridge
                     throw new IqProcessingException(
                             XMPPError.Condition.internal_server_error, "Error finding channel " + channelId);
                 }
+                // If this was an existing endpoint, it won't have set an endpoint ID in the IQ, so we look it up
+                // from the shim
+                endpointId = channelShim.endpoint.getID();
             }
             MediaDirection channelDirection = channelIq.getDirection();
             Collection<PayloadTypePacketExtension> channelPayloadTypes = channelIq.getPayloadTypes();
@@ -944,6 +948,12 @@ public class Videobridge
             epHeaderExts.addAll(channelIq.getRtpHeaderExtensions());
             channelShim.rtpHeaderExtensions = channelRtpHeaderExtensions;
 
+            if (channelSources != null)
+            {
+                List<SourcePacketExtension> epSources =
+                        endpointSources.computeIfAbsent(endpointId, key -> new ArrayList<>());
+                epSources.addAll(channelSources);
+            }
             channelShim.sources = channelSources;
 
 
@@ -964,8 +974,27 @@ public class Videobridge
             createdOrUpdatedChannels.add(responseChannelIQ);
         }
 
+        addSources(endpointSources, getConference(conference.getId(), null));
         addSourceGroups(endpointSourceGroups, getConference(conference.getId(), null));
         return createdOrUpdatedChannels;
+    }
+
+    private void addSources(Map<String, List<SourcePacketExtension>> epSources, Conference conference)
+    {
+        epSources.forEach((epId, currEpSources) -> {
+            currEpSources.forEach(epSource -> {
+                AbstractEndpoint ep = conference.getEndpoint(epId);
+                if (ep != null)
+                {
+                    ep.addReceiveSsrc(epSource.getSSRC());
+                }
+                else
+                {
+                    logger.error("Unable to find endpoint " + epId +
+                            " to add incoming SSRC " + epSource.getSSRC());
+                }
+            });
+        });
     }
 
     private void addSourceGroups(Map<String, List<SourceGroupPacketExtension>> epSourceGroups, Conference conference)
