@@ -28,6 +28,7 @@ import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
+import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.SrtpTransformerEncryptNode
 import org.jitsi.nlj.transform.node.outgoing.TccSeqNumTagger
@@ -144,6 +145,7 @@ class RtpSenderImpl(
 
         //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
         outgoingRtcpRoot = pipeline {
+            node(SentRtcpStats())
             simpleNode("RTCP sender ssrc setter") { pktInfos ->
                 tempSenderSsrc?.let { senderSsrc ->
                     pktInfos.forEachAs<RtcpPacket> { _, pkt ->
