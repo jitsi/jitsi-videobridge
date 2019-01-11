@@ -135,7 +135,6 @@ public class ColibriShim {
             {
                 throw new Error("Tried to set a transport manager on an invalid ep type: " + ep.getClass());
             }
-
         }
 
         public void startConnectivityEstablishment(IceUdpTransportPacketExtension transportExtension)
@@ -263,7 +262,13 @@ public class ColibriShim {
 
         public void expire()
         {
-
+            synchronized (channels)
+            {
+                channels.values().forEach(channel -> {
+                    channel.setExpire(0);
+                });
+                channels.clear();
+            }
         }
     }
     public class ConferenceShim {
@@ -275,11 +280,13 @@ public class ColibriShim {
         public ConferenceShim(Jid focus, Localpart name, boolean enableLogging, String confGid)
         {
             this.conference = videobridge.createConference(focus, name, enableLogging, confGid);
+            System.out.println("ConferenceShim created conference " + conference.getID());
         }
 
         public ContentShim getOrCreateContent(MediaType type) {
             synchronized (contents)
             {
+                System.out.println("ConferenceShim " + getId() + " creating content " + type);
                 return contents.computeIfAbsent(type, key -> new ContentShim(type));
             }
         }
@@ -294,6 +301,7 @@ public class ColibriShim {
 
         public AbstractEndpoint getOrCreateEndpoint(String endpointId)
         {
+            System.out.println("ConferenceShim " + getId() + " creating endpoint " + endpointId);
             return conference.getOrCreateEndpoint(endpointId);
         }
 
@@ -318,7 +326,18 @@ public class ColibriShim {
          */
         public void expire()
         {
+            synchronized (contents)
+            {
+                contents.values().forEach(ContentShim::expire);
+                contents.clear();
+            }
+            synchronized (channelBundles)
+            {
+                channelBundles.clear();
+            }
 
+            conference.getEndpoints().forEach(AbstractEndpoint::expire);
+            conference.expire();
         }
 
         public void describeChannelBundles(ColibriConferenceIQ iq, Set<String> channelBundleIdsToDescribe)
@@ -395,6 +414,18 @@ public class ColibriShim {
         synchronized (conferenceShims)
         {
             return conferenceShims.get(id);
+        }
+    }
+
+    public void expireConference(String id)
+    {
+        synchronized (conferenceShims)
+        {
+            ConferenceShim conference = conferenceShims.remove(id);
+            if (conference != null)
+            {
+                conference.expire();
+            }
         }
     }
 }
