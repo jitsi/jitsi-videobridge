@@ -1,6 +1,7 @@
 package org.jitsi.videobridge.datachannel;
 
 import org.jitsi.rtp.extensions.*;
+import org.jitsi.util.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi_modified.sctp4j.*;
 
@@ -16,6 +17,8 @@ public class DataChannel
     protected final String label;
 
     protected boolean ready = false;
+
+    protected final Logger logger = Logger.getLogger(this.getClass());
 
     private DataChannelStack.DataChannelEventListener eventListener;
     private DataChannelStack.DataChannelMessageListener messageListener;
@@ -43,7 +46,7 @@ public class DataChannel
         ByteBuffer msg = openMessage.getBuffer();
         if (sctpSocket.send(msg, true, sid, DataChannelProtocolConstants.WEBRTC_DCEP_PPID) < 0)
         {
-            System.out.println("Error sending data channel open message");
+            logger.error("Error sending data channel open message");
         }
     }
 
@@ -72,13 +75,19 @@ public class DataChannel
         else if (message instanceof DataChannelStringMessage)
         {
             DataChannelStringMessage dataChannelStringMessage = (DataChannelStringMessage)message;
-            System.out.println("Received data channel string message: " + dataChannelStringMessage.data);
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Received data channel string message: " + dataChannelStringMessage.data);
+            }
         }
         else if (message instanceof DataChannelBinaryMessage)
         {
             DataChannelBinaryMessage dataChannelBinaryMessage = (DataChannelBinaryMessage)message;
-            System.out.println("Received data channel binary message: " +
-                    ByteBufferKt.toHex(ByteBuffer.wrap(dataChannelBinaryMessage.data)));
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Received data channel binary message: " +
+                        ByteBufferKt.toHex(ByteBuffer.wrap(dataChannelBinaryMessage.data)));
+            }
         }
 
         messageListener.onDataChannelMessage(message);
@@ -86,7 +95,10 @@ public class DataChannel
 
     public void sendString(String message)
     {
-        System.out.println("TEMP: Sending data channel message " + message);
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Sending string data channel message: '" + message + "'");
+        }
         DataChannelStringMessage stringMessage = new DataChannelStringMessage(message);
         sctpSocket.send(stringMessage.getBuffer(), true, sid, DataChannelProtocolConstants.WEBRTC_PPID_STRING);
     }
