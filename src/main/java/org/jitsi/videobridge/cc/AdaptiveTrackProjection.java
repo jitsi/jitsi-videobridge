@@ -63,6 +63,11 @@ public class AdaptiveTrackProjection
      */
     private final WeakReference<MediaStreamTrackDesc> weakSource;
 
+    /**
+     * The main SSRC of the source track (if simulcast is used, this is the SSRC
+     * of the low-quality layer). We use it as the SSRC of the track projection
+     * and also request keyframes from this SSRC.
+     */
     private final long targetSsrc;
 
     /**
