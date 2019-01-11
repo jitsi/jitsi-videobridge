@@ -39,6 +39,7 @@ import java.beans.*;
 import java.io.*;
 import java.net.*;
 import java.nio.*;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -60,8 +61,6 @@ public class IceDtlsTransportManager
     // but, what about thingds like dtlsConnected which only appliesd to IceDtlsTransportManager?
     private List<Runnable> transportConnectedSubscribers = new ArrayList<>();
     private List<Runnable> dtlsConnectedSubscribers = new ArrayList<>();
-    //TODO: temp store dtls transport because newsctpconnection grabs it
-    DTLSTransport dtlsTransport;
     LinkedBlockingQueue<PacketInfo> sctpAppPackets = new LinkedBlockingQueue<>();
     private Transceiver transceiver = null;
     class SocketSenderNode extends Node {
@@ -619,20 +618,20 @@ public class IceDtlsTransportManager
     @Override
     public synchronized void close()
     {
-        logger.info("Closing Transport manager" + id);
+        logger.info("Closing Transport manager " + id);
         if (iceAgent != null) {
             iceAgent.removeStateChangeListener(this::iceAgentStateChange);
         }
         super.close();
-        executor.shutdown();
-        while (!executor.isTerminated()) {
-            try
-            {
-                logger.info("Still waiting for " + getClass() + " to shutdown");
-                executor.awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e)
-            {
-            }
+        try
+        {
+            ExecutorUtilsKt.safeShutdown(executor, Duration.ofSeconds(5));
+        } catch (ExecutorShutdownTimeoutException e)
+        {
+            logger.error("Error shutting down transport manager " + id + ": " + e.toString());
+        } catch (Exception e) {
+            logger.error("Exception while shutting down: " + e.toString());
         }
+        logger.info("Closed transport manager " + id);
     }
 }
