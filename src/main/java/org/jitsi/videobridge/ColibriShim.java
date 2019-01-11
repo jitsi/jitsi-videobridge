@@ -260,7 +260,7 @@ public class ColibriShim {
             }
         }
 
-        public void expire()
+        private void expire()
         {
             synchronized (channels)
             {
@@ -321,10 +321,22 @@ public class ColibriShim {
             }
         }
 
+        public Collection<AbstractEndpoint> getEndpoints()
+        {
+            return conference.getEndpoints();
+        }
+
+        public boolean shouldExpire()
+        {
+            return conference.shouldExpire();
+        }
+
         /**
          * Expire this conference and everything within it
+         * NOTE: this should only be called from {@link ColibriShim} so that the conference shim can be removed
+         * from the list of conferences
          */
-        public void expire()
+        private void expire()
         {
             synchronized (contents)
             {
@@ -337,7 +349,7 @@ public class ColibriShim {
             }
 
             conference.getEndpoints().forEach(AbstractEndpoint::expire);
-            conference.expire();
+            conference.safeExpire();
         }
 
         public void describeChannelBundles(ColibriConferenceIQ iq, Set<String> channelBundleIdsToDescribe)

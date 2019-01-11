@@ -159,7 +159,7 @@ class VideobridgeExpireThread
     }
 
     /**
-     * Expires the {@link Channel}s of a specific <tt>Videobridge</tt> if they
+     * Expires the {@link Conference}s and/or {@link Endpoint}s of a specific <tt>Videobridge</tt> if they
      * have been inactive for more than their advertised <tt>expire</tt> number
      * of seconds.
      *
@@ -169,17 +169,18 @@ class VideobridgeExpireThread
      */
     private void expire(Videobridge videobridge)
     {
-//        logger.info("Running expire()");
-        for (Conference conference : videobridge.getConferences())
+        logger.info("Running expire()");
+        for (ColibriShim.ConferenceShim conferenceShim : videobridge.getColibriShim().getConferences())
         {
             // The Conferences will live an iteration more than the Contents.
-            if (conference.shouldExpire())
+            if (conferenceShim.shouldExpire())
             {
-                EXPIRE_EXECUTOR.execute(conference::safeExpire);
+                logger.info("Conference " + conferenceShim.getId() + " should expire, expiring it");
+                EXPIRE_EXECUTOR.execute(() -> videobridge.getColibriShim().expireConference(conferenceShim.getId()));
             }
             else
             {
-                for (AbstractEndpoint endpoint : conference.getEndpoints())
+                for (AbstractEndpoint endpoint : conferenceShim.getEndpoints())
                 {
                     if (endpoint.shouldExpire())
                     {
