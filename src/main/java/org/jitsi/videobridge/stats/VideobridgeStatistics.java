@@ -613,26 +613,26 @@ public class VideobridgeStatistics
                 }
             }
 
-            for (Conference conference : videobridge.getConferences())
-            {
-                if (!conference.includeInStatistics())
-                {
-                    continue;
-                }
-
-                conferences++;
-                int conferenceEndpoints = conference.getEndpointCount();
-                endpoints += conference.getEndpointCount();
-                if (conferenceEndpoints > largestConferenceSize)
-                {
-                    largestConferenceSize = conferenceEndpoints;
-                }
-
-                int idx
-                    = conferenceEndpoints < conferenceSizes.length
-                    ? conferenceEndpoints
-                    : conferenceSizes.length - 1;
-                conferenceSizes[idx]++;
+//            for (Conference conference : videobridge.getConferences())
+//            {
+//                if (!conference.includeInStatistics())
+//                {
+//                    continue;
+//                }
+//
+//                conferences++;
+//                int conferenceEndpoints = conference.getEndpointCount();
+//                endpoints += conference.getEndpointCount();
+//                if (conferenceEndpoints > largestConferenceSize)
+//                {
+//                    largestConferenceSize = conferenceEndpoints;
+//                }
+//
+//                int idx
+//                    = conferenceEndpoints < conferenceSizes.length
+//                    ? conferenceEndpoints
+//                    : conferenceSizes.length - 1;
+//                conferenceSizes[idx]++;
 
                 //TODO(brian): need to reimplement this in the post-channel world
 //                for (Content content : conference.getContents())
@@ -719,7 +719,7 @@ public class VideobridgeStatistics
 ////                        }
 ////                    }
 //                }
-            }
+//            }
 
             if (videobridge.isShutdownInProgress())
             {
