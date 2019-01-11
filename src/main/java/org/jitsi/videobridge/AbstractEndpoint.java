@@ -322,8 +322,16 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.transceiver.stop();
         receiverExecutor.shutdown();
         senderExecutor.shutdown();
-        getConference().getTransportManager(this.id).close();
-        getConference().endpointExpired(this);
+        Conference conference = getConference();
+        if (conference != null)
+        {
+            TransportManager tm = conference.getTransportManager(this.id);
+            if (tm != null)
+            {
+                tm.close();
+            }
+            conference.endpointExpired(this);
+        }
     }
 
     /**
