@@ -25,6 +25,7 @@ import org.jitsi.util.event.*;
 
 import java.io.*;
 import java.lang.ref.*;
+import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -330,8 +331,17 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         logger.info("Endpoint " + getID() + " expiring");
         this.expired = true;
         this.transceiver.stop();
-        receiverExecutor.shutdown();
-        senderExecutor.shutdown();
+        try
+        {
+            ExecutorUtilsKt.safeShutdown(receiverExecutor, Duration.ofSeconds(5));
+            ExecutorUtilsKt.safeShutdown(senderExecutor, Duration.ofSeconds(5));
+        }
+        catch (ExecutorShutdownTimeoutException e)
+        {
+            logger.error("Endpoint " + getID() + " had an error shutting down its exeuctors: " + e.toString());
+        }
+        logger.info(transceiver.getNodeStats().prettyPrint(0));
+
         Conference conference = getConference();
         if (conference != null)
         {
