@@ -20,6 +20,7 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 
 import java.io.*;
@@ -49,6 +50,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      * The string used to identify this endpoint for the purposes of logging.
      */
     private final String loggingId;
+
+    /**
+     * The {@link Logger} used by the {@link Endpoint} class to print debug
+     * information.
+     */
+    private static final Logger classLogger = Logger.getLogger(AbstractEndpoint.class);
+
+    protected final Logger logger;
 
     /**
      * A reference to the <tt>Conference</tt> this <tt>Endpoint</tt> belongs to.
@@ -98,6 +107,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     protected AbstractEndpoint(Conference conference, String id)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
+        logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = Objects.requireNonNull(id, "id");
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
         receiverExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver " + id + " executor"));

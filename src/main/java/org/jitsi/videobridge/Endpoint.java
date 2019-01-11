@@ -47,11 +47,6 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 public class Endpoint
     extends AbstractEndpoint
 {
-    /**
-     * The {@link Logger} used by the {@link Endpoint} class to print debug
-     * information.
-     */
-    private static final Logger classLogger = Logger.getLogger(Endpoint.class);
 
     /**
      * The name of the <tt>Endpoint</tt> property <tt>pinnedEndpoint</tt> which
@@ -79,12 +74,6 @@ public class Endpoint
      * <tt>Endpoint</tt>.
      */
     private Set<String> selectedEndpoints = new HashSet<>();
-
-    /**
-     * The {@link Logger} to be used by this instance to print debug
-     * information.
-     */
-    private final Logger logger;
 
     /**
      * The {@link SctpManager} instance we'll use to manage the SCTP connection
@@ -131,7 +120,6 @@ public class Endpoint
         super(conference, id);
 
         messageTransport = new EndpointMessageTransport(this);
-        logger = Logger.getLogger(classLogger, conference.getLogger());
 
         audioLevelListener = new AudioLevelListenerImpl(conference.getSpeechActivity());
         transceiver.setAudioLevelListener(audioLevelListener);
