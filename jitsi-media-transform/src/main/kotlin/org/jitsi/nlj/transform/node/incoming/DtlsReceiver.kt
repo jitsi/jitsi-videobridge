@@ -18,7 +18,7 @@ package org.jitsi.nlj.transform.node.incoming
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.dtls.DtlsStack
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.cdebug
 
 /**
  * [DtlsReceiverNode] bridges a chain of modules to a DTLS's transport
@@ -29,7 +29,7 @@ class DtlsReceiver(
         private val dtlsStack: DtlsStack
 ) : Node("DTLS Receiver") {
     override fun doProcessPackets(p: List<PacketInfo>) {
-        logger.cinfo { "DTLS receiver processing incoming DTLS packets" }
+        logger.cdebug { "DTLS receiver processing incoming DTLS packets" }
         val appPackets = dtlsStack.processIncomingDtlsPackets(p)
         next(appPackets)
     }
