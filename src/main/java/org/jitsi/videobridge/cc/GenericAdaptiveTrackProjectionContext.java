@@ -46,6 +46,8 @@ import org.jitsi.util.*;
  * picture IDs in VP8). In this case a codec specific adaptive track projection
  * context implementation will have to be used instead.
  *
+ * Instances of this class are thread-safe.
+ *
  * @author George Politis
  */
 class GenericAdaptiveTrackProjectionContext
@@ -104,6 +106,10 @@ class GenericAdaptiveTrackProjectionContext
      * Determines whether an RTP packet from the source track should be accepted
      * or not. If the track is currently suspended, a key frame is necessary to
      * start accepting packets again.
+     *
+     * Note that, at the time of this writing, there's no practical need for a
+     * synchronized keyword because there's only one thread (the translator
+     * thread) accessing this method at a time.
      *
      * @param rtpPacket the RTP packet to determine whether to accept or not.
      * @param targetIndex the target quality index

@@ -35,6 +35,8 @@ import java.lang.ref.*;
  * forwarded packets so that the the quality switches are transparent from the
  * receiver. See svc.md in the doc folder for more details.
  *
+ * Instances of this class are thread-safe.
+ *
  * @author George Politis
  */
 public class AdaptiveTrackProjection
@@ -202,6 +204,10 @@ public class AdaptiveTrackProjection
      * is different from {@link #contextPayloadType}, then a new adaptive track
      * projection context is created that is appropriate for the new payload
      * type.
+     *
+     * Note that, at the time of this writing, there's no practical need for a
+     * synchronized keyword because there's only one thread (the translator
+     * thread) accessing this method at a time.
      *
      * @param payloadType the payload type of the adaptive track projection to
      * get or create.

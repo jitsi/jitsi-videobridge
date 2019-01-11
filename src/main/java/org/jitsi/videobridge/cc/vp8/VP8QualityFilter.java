@@ -23,7 +23,7 @@ import org.jitsi.util.*;
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
  * their quality, i.e. packets that correspond to qualities that are above a
- * given quality target. Instances of this class are thread safe.
+ * given quality target. Instances of this class are thread-safe.
  *
  * @author George Politis
  */
@@ -143,6 +143,10 @@ class VP8QualityFilter
      * VP8 frame is required because this is were the spatial and/or temporal
      * layer id are found.
      *
+     * Note that, at the time of this writing, there's no practical need for a
+     * synchronized keyword because there's only one thread accessing this
+     * method at a time.
+     *
      * @param firstPacketOfFrame the first packet of the VP8 frame.
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
@@ -239,6 +243,10 @@ class VP8QualityFilter
     /**
      * Determines whether to accept or drop a VP8 keyframe. This method updates
      * the spatial layer id.
+     *
+     * Note that, at the time of this writing, there's no practical need for a
+     * synchronized keyword because there's only one thread accessing this
+     * method at a time.
      *
      * @param firstPacketOfKeyframe the first packet of a VP8 keyframe.
      * @return true to accept the VP8 keyframe, otherwise false.

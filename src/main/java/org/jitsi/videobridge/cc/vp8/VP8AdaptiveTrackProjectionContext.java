@@ -30,7 +30,7 @@ import java.util.concurrent.*;
 /**
  * This class represents a projection of a VP8 RTP stream in the RFC 7667 sense
  * and it is the main entry point for VP8 simulcast/svc RTP/RTCP rewriting. Read
- * svc.md for implementation details. Instances of this class are thread safe.
+ * svc.md for implementation details. Instances of this class are thread-safe.
  *
  * @author George Politis
  */
@@ -154,6 +154,10 @@ public class VP8AdaptiveTrackProjectionContext
      * Defines a packet filter that determines which packets to project in order
      * to produce an RTP stream that can be correctly be decoded at the receiver
      * as well as match, as close as possible, the changing quality target.
+     *
+     * Note that, at the time of this writing, there's no practical need for a
+     * synchronized keyword because there's only one thread accessing this
+     * method at a time.
      *
      * @param rtpPacket the VP8 packet to decide whether or not to project.
      * @return true to project the packet, otherwise false.

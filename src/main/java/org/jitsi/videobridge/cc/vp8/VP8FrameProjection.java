@@ -28,7 +28,7 @@ import java.util.*;
  * Represents a VP8 frame projection. It puts together all the necessary bits
  * and pieces that are useful when projecting an accepted VP8 frame. A
  * projection is responsible for rewriting a VP8 packet. Instances of this class
- * are thread safe.
+ * are thread-safe.
  *
  * @author George Politis
  */
@@ -317,7 +317,7 @@ public class VP8FrameProjection
                 // the call to accept (synchronized) may update the
                 // maxSequenceNumber.
                 //
-                // XXX Calling accept here might seem bizarre so it merit a
+                // XXX Calling accept here might seem bizarre so it merits a
                 // small explanation. This call takes place in the transform
                 // thread, so by the time we get to rewrite the accepted first
                 // packet of a frame, the first packet of another frame may have
