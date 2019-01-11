@@ -558,17 +558,18 @@ public class VideobridgeStatistics
             totalPacketsReceivedOcto += jvbStats.totalPacketsReceivedOcto.get();
             totalPacketsSentOcto += jvbStats.totalPacketsSentOcto.get();
 
-
-            conferences = videobridge.getColibriShim().getConferences().size();
-
             for (ColibriShim.ConferenceShim conferenceShim : videobridge.getColibriShim().getConferences())
             {
                 //TODO: can/should we do everything here via the shim only?
                 Conference conference = conferenceShim.conference;
+                System.out.println("TEMP: getting stats, looking at conference " + conference.getID());
                 if (!conference.includeInStatistics())
                 {
+                    System.out.println("TEMP: conference " + conference.getID() + " should not be included in stats");
                     continue;
                 }
+                System.out.println("TEMP: conference " + conference.getID() + " will be included in stats");
+                conferences++;
                 int conferenceEndpoints = conference.getEndpointCount();
                 if (conferenceEndpoints > largestConferenceSize)
                 {
