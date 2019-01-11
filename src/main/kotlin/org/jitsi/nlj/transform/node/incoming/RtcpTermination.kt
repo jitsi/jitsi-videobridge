@@ -37,6 +37,8 @@ class RtcpTermination(
     private val transportCcEngine: TransportCCEngine? = null
 ) : Node("RTCP termination") {
     private var numNacksReceived = 0
+    private var numFirsReceived = 0
+    private var numPlisReceived = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         val outPackets = mutableListOf<PacketInfo>()
@@ -61,6 +63,11 @@ class RtcpTermination(
                     //TODO
                 }
                 is RtcpFbPliPacket, is RtcpFbFirPacket -> {
+                    if (pkt is RtcpFbPliPacket) {
+                        numPlisReceived++
+                    } else {
+                        numFirsReceived++
+                    }
                     // We'll let these pass through and be forwarded to the sender who will be
                     // responsible for translating/aggregating them
                     logger.cdebug { "BRIAN: passing through ${pkt::class} rtcp packet: ${pkt.getBuffer().toHex()}" }
@@ -84,7 +91,9 @@ class RtcpTermination(
         val parentStats = super.getNodeStats()
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
-            addStat("num nack packets rx: $numNacksReceived")
+            addStat("num NACK packets rx: $numNacksReceived")
+            addStat("num PLI packets rx: $numPlisReceived")
+            addStat("num FIR packets rx: $numFirsReceived")
         }
     }
 }
