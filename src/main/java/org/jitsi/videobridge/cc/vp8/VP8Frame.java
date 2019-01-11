@@ -94,6 +94,13 @@ class VP8Frame
     private boolean endingSequenceNumberIsKnown = false;
 
     /**
+     * The max sequence number that was seen before the arrival of the first
+     * packet of this frame. This is useful for piggybacking any mis-ordered
+     * packets.
+     */
+    private final int maxSequenceNumberSeenBeforeFirstPacket;
+
+    /**
      * The max sequence number that will be forwarded for this frame. Note that
      * this is not necessarily the ending sequence number.
      */
@@ -104,12 +111,18 @@ class VP8Frame
      *
      * @param firstPacketOfFrame The first VP8 packet of the frame that the
      * packet refers to.
+     * @param maxSequenceNumberSeenBeforeFirstPacket the max sequence number
+     * that was seen before the arrival of the first packet of this frame. This
+     * is useful for piggybacking any mis-ordered packets.
      */
-    VP8Frame(@NotNull RawPacket firstPacketOfFrame)
+    VP8Frame(@NotNull RawPacket firstPacketOfFrame,
+             int maxSequenceNumberSeenBeforeFirstPacket)
     {
         this.ssrc = firstPacketOfFrame.getSSRCAsLong();
         this.timestamp = firstPacketOfFrame.getTimestamp();
         this.startingSequenceNumber = firstPacketOfFrame.getSequenceNumber();
+        this.maxSequenceNumberSeenBeforeFirstPacket
+            = maxSequenceNumberSeenBeforeFirstPacket;
 
         byte[] buf = firstPacketOfFrame.getBuffer();
         int payloadOffset = firstPacketOfFrame.getPayloadOffset(),
@@ -379,5 +392,15 @@ class VP8Frame
         {
             endingSequenceNumberIsKnown = true;
         }
+    }
+
+    /**
+     * @return the max sequence number that was seen before the arrival of the
+     * first packet of this frame. This is useful for piggybacking any
+     * mis-ordered packets.
+     */
+    int getMaxSequenceNumberSeenBeforeFirstPacket()
+    {
+        return maxSequenceNumberSeenBeforeFirstPacket;
     }
 }

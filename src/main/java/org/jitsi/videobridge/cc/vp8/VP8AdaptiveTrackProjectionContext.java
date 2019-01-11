@@ -59,6 +59,13 @@ public class VP8AdaptiveTrackProjectionContext
         vp8FrameProjectionMap = new ConcurrentHashMap<>();
 
     /**
+     * A map that stores the maximum sequence number of frames that are not
+     * (yet) accepted/projected.
+     */
+    private final Map<Long, Map<Long, Integer>>
+        ssrcToFrameToMaxSequenceNumberMap = new HashMap<>();
+
+    /**
      * The {@link VP8QualityFilter} instance that does quality filtering on the
      * incoming frames.
      */
@@ -160,6 +167,7 @@ public class VP8AdaptiveTrackProjectionContext
      * method at a time.
      *
      * @param rtpPacket the VP8 packet to decide whether or not to project.
+     * @param targetIndex
      * @return true to project the packet, otherwise false.
      */
     private synchronized
@@ -192,23 +200,25 @@ public class VP8AdaptiveTrackProjectionContext
         int payloadOff = rtpPacket.getPayloadOffset();
         if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buf, payloadOff))
         {
-            return null;
-        }
-
-        // Lastly, check whether the quality of the frame is something that we
-        // want to forward. We don't want to be allocating new objects unless
-        // we're interested in the quality of this frame.
-        if (!vp8QualityFilter.acceptFrame(rtpPacket, targetIndex))
-        {
+            storeMaxSequenceNumberOfFrame(rtpPacket);
             return null;
         }
 
         long nowMs = System.currentTimeMillis();
 
+        // Lastly, check whether the quality of the frame is something that we
+        // want to forward. We don't want to be allocating new objects unless
+        // we're interested in the quality of this frame.
+        if (!vp8QualityFilter.acceptFrame(rtpPacket, targetIndex, nowMs))
+        {
+            return null;
+        }
+
         // We know we want to forward this frame, but we need to make sure it's
         // going to produce a decodable VP8 packet stream.
-        VP8FrameProjection nextVP8FrameProjection
-            = lastVP8FrameProjection.makeNext(rtpPacket, nowMs);
+        VP8FrameProjection nextVP8FrameProjection = lastVP8FrameProjection
+            .makeNext(rtpPacket, getMaxSequenceNumberOfFrame(rtpPacket), nowMs);
+
         if (nextVP8FrameProjection == null)
         {
             return null;
@@ -226,6 +236,47 @@ public class VP8AdaptiveTrackProjectionContext
             e -> e.getValue().isFullyProjected(nowMs));
 
         return nextVP8FrameProjection;
+    }
+
+    private int getMaxSequenceNumberOfFrame(@NotNull RawPacket rtpPacket)
+    {
+        long ssrc = rtpPacket.getSSRCAsLong();
+        Map<Long, Integer> frameToMaxSequenceNumberMap
+            = ssrcToFrameToMaxSequenceNumberMap.get(ssrc);
+
+        if (frameToMaxSequenceNumberMap == null)
+        {
+            return -1;
+        }
+
+        return frameToMaxSequenceNumberMap
+            .getOrDefault(rtpPacket.getTimestamp(), -1);
+    }
+
+    private void storeMaxSequenceNumberOfFrame(@NotNull RawPacket rtpPacket)
+    {
+        long ssrc = rtpPacket.getSSRCAsLong();
+        Map<Long, Integer> frameToMaxSequenceNumberMap
+            = ssrcToFrameToMaxSequenceNumberMap
+            .computeIfAbsent(ssrc, k -> new LRUCache<>(5));
+
+        long timestamp = rtpPacket.getTimestamp();
+        int newMaxSequenceNumber = rtpPacket.getSequenceNumber();
+        if (frameToMaxSequenceNumberMap.containsKey(timestamp))
+        {
+            int previousMaxSequenceNumber
+                = frameToMaxSequenceNumberMap.get(timestamp);
+
+            if (RTPUtils.isOlderSequenceNumberThan(
+                previousMaxSequenceNumber, newMaxSequenceNumber))
+            {
+                frameToMaxSequenceNumberMap.put(timestamp, newMaxSequenceNumber);
+            }
+        }
+        else
+        {
+            frameToMaxSequenceNumberMap.put(timestamp, newMaxSequenceNumber);
+        }
     }
 
     /**

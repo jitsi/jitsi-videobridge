@@ -136,16 +136,23 @@ public class VP8FrameProjection
      *
      * @param firstPacketOfFrame the first RTP packet of the frame that we want
      * to project.
+     * @param maxSequenceNumberSeenBeforeFirstPacket the max sequence number
+     * that was seen before the arrival of the first packet of this frame. This
+     * is useful for piggybacking any mis-ordered packets.
      * @param nowMs the current time in millis
      * @return the VP8 frame projection, if the VP8 frame that is specified as
      * an argument is decodable.
      */
-    VP8FrameProjection makeNext(@NotNull RawPacket firstPacketOfFrame, long nowMs)
+    VP8FrameProjection makeNext(
+        @NotNull RawPacket firstPacketOfFrame,
+        int maxSequenceNumberSeenBeforeFirstPacket,
+        long nowMs)
     {
         // If it's not (a partially transmitted frame) and this is a quality
         // that we want to forward, it is now time to make a new source frame
         // descriptor.
-        VP8Frame nextVP8Frame = new VP8Frame(firstPacketOfFrame);
+        VP8Frame nextVP8Frame = new VP8Frame(
+            firstPacketOfFrame, maxSequenceNumberSeenBeforeFirstPacket);
 
         // vp8Frame == null is the starting condition: the first
         // VP8FrameProjection does not have an attached VP8Frame.
@@ -158,7 +165,7 @@ public class VP8FrameProjection
                 isLast = false;
                 return new VP8FrameProjection(nextVP8Frame, ssrc, timestamp,
                     startingSequenceNumber, extendedPictureId, tl0PICIDX,
-                    createdMs);
+                    nowMs);
             }
             else
             {
@@ -283,50 +290,50 @@ public class VP8FrameProjection
 
         rewriteRtpInternal(rtpPacket);
 
-        if (originalSequenceNumber != vp8Frame.getStartingSequenceNumber())
+        int piggyBackUntilSequenceNumber
+            = vp8Frame.getMaxSequenceNumberSeenBeforeFirstPacket();
+
+        if (piggyBackUntilSequenceNumber < 0
+            || originalSequenceNumber != vp8Frame.getStartingSequenceNumber()
+            || cache == null)
         {
             return AdaptiveTrackProjection.EMPTY_PACKET_ARR;
         }
 
-        // We piggy-back any re-ordered packets of this frame. This is basically
-        // finds every sequence number after the packet we're processing (which
-        // we've detected as being the first packet of the frame) which is
-        // present in the cache, until we hit one of a different frame (which we
-        // check by comparing the timestamps).
-        long vp8FrameSSRC = vp8Frame.getSSRCAsLong()
-            , vp8FrameTimestamp = vp8Frame.getTimestamp();
+        // We piggy-back any re-ordered packets of this frame.
+        long vp8FrameSSRC = vp8Frame.getSSRCAsLong();
 
         List<RawPacket> piggyBackedPackets = new ArrayList<>();
-        boolean done = cache == null;
-        while (!done)
+        int len = RTPUtils.getSequenceNumberDelta(
+            piggyBackUntilSequenceNumber, originalSequenceNumber) + 1;
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Piggybacking " + len + " missed packets from "
+                + originalSequenceNumber
+                + " until " + piggyBackUntilSequenceNumber);
+        }
+
+        for (int i = 0; i < len; i++)
         {
             int piggyBackedPacketSequenceNumber
-                = (originalSequenceNumber + 1 + piggyBackedPackets.size())
-                & RawPacket.SEQUENCE_NUMBER_MASK;
+                = (originalSequenceNumber + i) & RawPacket.SEQUENCE_NUMBER_MASK;
 
             RawPacket lastPacket = cache.get(
                 vp8FrameSSRC, piggyBackedPacketSequenceNumber);
 
-            if (lastPacket == null
-                || vp8FrameTimestamp != lastPacket.getTimestamp())
+            // the call to accept (synchronized) may update the
+            // maxSequenceNumber.
+            //
+            // XXX Calling accept here might seem bizarre so it merits a
+            // small explanation. This call takes place in the transform
+            // thread, so by the time we get to rewrite the accepted first
+            // packet of a frame, the first packet of another frame may have
+            // already been accepted, which means there's no longer space to
+            // piggyback anything.
+            if (accept(lastPacket))
             {
-                done = true;
-            }
-            else
-            {
-                // the call to accept (synchronized) may update the
-                // maxSequenceNumber.
-                //
-                // XXX Calling accept here might seem bizarre so it merits a
-                // small explanation. This call takes place in the transform
-                // thread, so by the time we get to rewrite the accepted first
-                // packet of a frame, the first packet of another frame may have
-                // already been accepted, which means there's no longer space to
-                // piggyback anything.
-                if (accept(lastPacket))
-                {
-                    piggyBackedPackets.add(lastPacket);
-                }
+                piggyBackedPackets.add(lastPacket);
             }
         }
 

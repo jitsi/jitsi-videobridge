@@ -20,6 +20,8 @@ import org.jitsi.impl.neomedia.codec.video.vp8.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 
+import java.util.*;
+
 /**
  * This class is responsible for dropping VP8 simulcast/svc packets based on
  * their quality, i.e. packets that correspond to qualities that are above a
@@ -55,6 +57,11 @@ class VP8QualityFilter
         LD_LAYER_ID = 0, SUSPENDED_LAYER_ID = -1;
 
     /**
+     * A map that caches the spatial/quality layer ID of each simulcast SSRC.
+     */
+    private final Map<Long, Integer> ssrcToSpatialLayerQuality = new HashMap<>();
+
+    /**
      * Holds the arrival time (in millis) of the most recent keyframe group.
      * Reading/writing of this field is synchronized on this instance.
      */
@@ -73,9 +80,10 @@ class VP8QualityFilter
     /**
      * The spatial/quality layer id that this instance tries to achieve. Upon
      * receipt of a packet, we check whether externalSpatialLayerIdTarget
-     * (that's specified as an argument to the {@link #acceptFrame(RawPacket, int)}
-     * method) is set to something different, in which case we set
-     * {@link #needsKeyframe} equal to true and update.
+     * (that's specified as an argument to the
+     * {@link #acceptFrame(RawPacket, int, long)} method) is set to something
+     * different, in which case we set {@link #needsKeyframe} equal to true and
+     * update.
      */
     private int internalSpatialLayerIdTarget = SUSPENDED_LAYER_ID;
 
@@ -87,6 +95,42 @@ class VP8QualityFilter
     private int currentSpatialLayerId = SUSPENDED_LAYER_ID;
 
     /**
+     * Gets the spatial/quality layer ID of a packet. Before this method is able
+     * to return a meaningful value (not -1) it has to have received at least
+     * one keyframe from the SSRC that is queried.
+     *
+     * @param firstPacketOfFrame the RTP packet whose spatial/quality layer
+     * index needs to be returned.
+     * @param isKeyframe a boolean that indicates whether or not the packet that
+     * is specified as an argument is a keyframe
+     * @return the spatial/quality index of the packet that is specified as an
+     * argument, or -1 in case it's impossible to resolve.
+     */
+    private int getSpatialLayerIndex(
+        @NotNull RawPacket firstPacketOfFrame, boolean isKeyframe)
+    {
+        long ssrc = firstPacketOfFrame.getSSRCAsLong();
+        if (ssrcToSpatialLayerQuality.containsKey(ssrc))
+        {
+            return ssrcToSpatialLayerQuality.get(ssrc);
+        }
+        else if (isKeyframe)
+        {
+            int spatialLayerId
+                = getSpatialLayerIndexFromKeyframe(firstPacketOfFrame);
+            if (spatialLayerId > -1)
+            {
+                ssrcToSpatialLayerQuality.put(ssrc, spatialLayerId);
+            }
+
+            return spatialLayerId;
+        }
+        {
+            return -1;
+        }
+    }
+
+    /**
      * Gets the spatial/quality layer ID of a packet. The specified packet MUST
      * be a VP8 keyframe because the frame height, which allows us to map the
      * different simulcast layers into spatial/quality layer IDs, are found in
@@ -96,7 +140,7 @@ class VP8QualityFilter
      * its spatial/quality layer id.
      * @return the spatial/quality layer id of the packet.
      */
-    private static int getSpatialLayerIndex(
+    private static int getSpatialLayerIndexFromKeyframe(
         @NotNull RawPacket firstPacketOfKeyframe)
     {
         byte[] buf = firstPacketOfKeyframe.getBuffer();
@@ -150,10 +194,12 @@ class VP8QualityFilter
      * @param firstPacketOfFrame the first packet of the VP8 frame.
      * @param externalTargetIndex the target quality index that the user of this
      * instance wants to achieve.
+     * @param nowMs the current time (in millis)
      * @return true to accept the VP8 frame, otherwise false.
      */
     synchronized boolean acceptFrame(
-        @NotNull RawPacket firstPacketOfFrame, int externalTargetIndex)
+        @NotNull RawPacket firstPacketOfFrame,
+        int externalTargetIndex, long nowMs)
     {
         // We make local copies of the externalTemporalLayerIdTarget and the
         // externalSpatialLayerIdTarget (as they may be updated by some other
@@ -201,10 +247,16 @@ class VP8QualityFilter
 
         if (DePacketizer.isKeyFrame(buf, payloadOff, payloadLen))
         {
-            return acceptKeyframe(firstPacketOfFrame);
+            return acceptKeyframe(firstPacketOfFrame, nowMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
         {
+            if (!isInSwitchingPhase(nowMs)
+                && isPossibleToSwitch(firstPacketOfFrame))
+            {
+                needsKeyframe = true;
+            }
+
             // This branch reads the {@link #currentSpatialLayerId} and it
             // filters packets based on their temporal layer.
 
@@ -241,6 +293,53 @@ class VP8QualityFilter
     }
 
     /**
+     * Returns a boolean that indicates whether we are in layer switching phase
+     * or not.
+     *
+     * @param nowMs the current time (in millis)
+     * @return true if we're in layer switching phase, false otherwise.
+     */
+    private synchronized boolean isInSwitchingPhase(long nowMs)
+    {
+        long deltaMs = nowMs - mostRecentKeyframeGroupArrivalTimeMs;
+        return deltaMs <= MIN_KEY_FRAME_WAIT_MS;
+    }
+
+    /**
+     * @param firstPacketOfFrame the first packet of a frame.
+     * @return true if it looks like we can re-scale (see implementation of
+     * method for specific details).
+     */
+    private synchronized boolean isPossibleToSwitch(
+        @NotNull RawPacket firstPacketOfFrame)
+    {
+        int spatialLayerId
+            = getSpatialLayerIndex(firstPacketOfFrame, false);
+        if (spatialLayerId == -1)
+        {
+            // We failed to resolve the spatial/quality layer of the packet.
+            return false;
+        }
+
+        if (spatialLayerId > currentSpatialLayerId
+            && currentSpatialLayerId < internalSpatialLayerIdTarget)
+        {
+            // It looks like upscaling is possible.
+            return true;
+        }
+        else if (spatialLayerId < currentSpatialLayerId
+            && currentSpatialLayerId > internalSpatialLayerIdTarget)
+        {
+            // It looks like downscaling is possible.
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    /**
      * Determines whether to accept or drop a VP8 keyframe. This method updates
      * the spatial layer id.
      *
@@ -249,17 +348,18 @@ class VP8QualityFilter
      * method at a time.
      *
      * @param firstPacketOfKeyframe the first packet of a VP8 keyframe.
+     * @param nowMs the current time (in millis)
      * @return true to accept the VP8 keyframe, otherwise false.
      */
     private synchronized boolean acceptKeyframe(
-        @NotNull RawPacket firstPacketOfKeyframe)
+        @NotNull RawPacket firstPacketOfKeyframe, long nowMs)
     {
         // This branch writes the {@link #currentSpatialLayerId} and it
         // determines whether or not we should switch to another simulcast
         // stream.
 
         int spatialLayerIdOfKeyframe
-            = getSpatialLayerIndex(firstPacketOfKeyframe);
+            = getSpatialLayerIndex(firstPacketOfKeyframe, true);
         if (spatialLayerIdOfKeyframe < 0)
         {
             // something went terribly wrong, normally we should be able to
@@ -278,9 +378,7 @@ class VP8QualityFilter
         // whether we'll be able to achieve the internalSpatialLayerIdTarget.
         needsKeyframe = false;
 
-        long nowMs = System.currentTimeMillis();
-        long deltaMs = nowMs - mostRecentKeyframeGroupArrivalTimeMs;
-        if (deltaMs > MIN_KEY_FRAME_WAIT_MS)
+        if (!isInSwitchingPhase(nowMs))
         {
             // During the switching phase we always project the first
             // keyframe because it may very well be the only one that we
