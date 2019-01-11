@@ -570,16 +570,18 @@ public class VideobridgeStatistics
                 }
                 System.out.println("TEMP: conference " + conference.getID() + " will be included in stats");
                 conferences++;
-                int conferenceEndpoints = conference.getEndpointCount();
-                if (conferenceEndpoints > largestConferenceSize)
+                int numConferenceEndpoints = conference.getEndpointCount();
+                if (numConferenceEndpoints > largestConferenceSize)
                 {
-                    largestConferenceSize = conferenceEndpoints;
+                    largestConferenceSize = numConferenceEndpoints;
                 }
                 int conferenceSizeIndex
-                        = conferenceEndpoints < conferenceSizes.length
-                        ? conferenceEndpoints
+                        = numConferenceEndpoints < conferenceSizes.length
+                        ? numConferenceEndpoints
                         : conferenceSizes.length - 1;
                 conferenceSizes[conferenceSizeIndex]++;
+
+                endpoints+= numConferenceEndpoints;
 
                 for (ColibriShim.ContentShim contentShim : conferenceShim.getContents())
                 {
