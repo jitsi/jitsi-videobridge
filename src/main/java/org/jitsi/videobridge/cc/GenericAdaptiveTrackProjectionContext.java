@@ -132,7 +132,7 @@ class GenericAdaptiveTrackProjectionContext
         boolean accept;
         if (needsKeyframe)
         {
-            if (isKeyframe(rtpPacket))
+            if (isKeyframe(rtpPacket, format))
             {
                 needsKeyframe = false;
                 // resume after being suspended, we compute the new seqnum delta
@@ -167,8 +167,10 @@ class GenericAdaptiveTrackProjectionContext
         return accept;
     }
 
-    private boolean isKeyframe(@NotNull RawPacket rtpPacket)
+    private static boolean isKeyframe(
+        @NotNull RawPacket rtpPacket, @NotNull MediaFormat format)
     {
+        // XXX merge with MediaStream.isKeyframe().
         byte[] buf = rtpPacket.getBuffer();
         int payloadOff = rtpPacket.getPayloadOffset(),
             payloadLen = rtpPacket.getPayloadLength();
