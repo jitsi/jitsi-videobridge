@@ -327,7 +327,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     public void expire()
     {
-        System.out.println("Endpoint expiring");
+        logger.info("Endpoint " + getID() + " expiring");
         this.expired = true;
         this.transceiver.stop();
         receiverExecutor.shutdown();
