@@ -37,9 +37,10 @@ import org.jitsi.util.*;
  * (consequently support for key frame detection for the specific media format
  * of the track that is being adapted is necessary).
  *
- * In order to make the suspend/resume operation transparent (at least in the
- * RTP level), instances of this class rewrite the RTP sequence to hide the gaps
- * caused by the suspend/resume operation.
+ * In order to make the suspend/resume operation transparent to the receiver (at
+ * least in the RTP level), instances of this class rewrite the RTP sequence
+ * numbers of the source track to hide the gaps caused by the suspend/resume
+ * operation.
  *
  * This may not be sufficient for fluid playback at the receiver as the decoder
  * may be unable to handle codec specific discontinuities (such as discontinuous
