@@ -306,7 +306,7 @@ public class Videobridge
         // The method Videobridge.getConferenceCountString() should better
         // be executed outside synchronized blocks in order to reduce the
         // risks of causing deadlocks.
-        if (logger.isInfoEnabled())
+        if (logger.isInfoEnabled() && enableLogging)
         {
             logger.info(Logger.Category.STATISTICS,
                         "create_conf," + conference.getLoggingId()
