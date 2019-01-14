@@ -35,6 +35,12 @@ import java.lang.ref.*;
  * forwarded packets so that the the quality switches are transparent from the
  * receiver. See svc.md in the doc folder for more details.
  *
+ * XXX A projection is a "function" of taking an element of one space and
+ * somehow putting it on another space. This is what we're doing here, we're
+ * taking a track of the ingress and we're projecting it to the egress,
+ * depending on the encodings of the input track and how these encodings are
+ * implemented (which depends on the codec that is used).
+ *
  * Instances of this class are thread-safe.
  *
  * @author George Politis
@@ -181,7 +187,15 @@ public class AdaptiveTrackProjection
         int targetIndexCopy = targetIndex;
         boolean accept = contextCopy.accept(rtpPacket, targetIndexCopy);
 
-        if (contextCopy.needsKeyframe() && targetIndexCopy > -1)
+        // We check if the context needs a keyframe regardless of whether or not
+        // the packet was accepted.
+        //
+        // XXX Upon reading this for the first time, one may think it's
+        // sufficient to only check for needing a key frame if the packet wasn't
+        // accepted. But this wouldn't be enough, as we may be accepting packets
+        // of low-quality, while we wish to switch to high-quality.
+        if (contextCopy.needsKeyframe()
+            && targetIndexCopy > RTPEncodingDesc.SUSPENDED_INDEX)
         {
             MediaStreamTrackDesc source = getSource();
             if (source != null)

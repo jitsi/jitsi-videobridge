@@ -120,7 +120,7 @@ class GenericAdaptiveTrackProjectionContext
     public synchronized boolean
     accept(@NotNull RawPacket rtpPacket, int targetIndex)
     {
-        if (targetIndex < 0)
+        if (targetIndex == RTPEncodingDesc.SUSPENDED_INDEX)
         {
             // suspend the stream.
             needsKeyframe = true;
@@ -137,6 +137,10 @@ class GenericAdaptiveTrackProjectionContext
                 needsKeyframe = false;
                 // resume after being suspended, we compute the new seqnum delta
                 // delta = destination - source <=> destination = source + delta
+                // In other words, we compute the using this formula
+                // "delta = destination - source" and in order to find the
+                // destination sequence number we use the equivalent formula
+                // "destination = source + delta".
                 sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
                     maxDestinationSequenceNumber + 1, sourceSequenceNumber);
                 accept = true;
