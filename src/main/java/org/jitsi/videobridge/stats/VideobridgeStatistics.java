@@ -595,22 +595,29 @@ public class VideobridgeStatistics
                     {
                         videoChannels += contentChannelCount;
                     }
-
-                    for (AbstractEndpoint abstractEndpoint : conference.getEndpoints())
+                }
+                for (AbstractEndpoint abstractEndpoint : conference.getEndpoints())
+                {
+                    if (abstractEndpoint instanceof Endpoint)
                     {
-                        if (abstractEndpoint instanceof Endpoint)
-                        {
-                            Endpoint endpoint = (Endpoint)abstractEndpoint;
+                        Endpoint endpoint = (Endpoint)abstractEndpoint;
 
-                            TransceiverStreamStats streamStats = endpoint.transceiver.getStreamStats();
-                            int transceiverPacketsReceived = streamStats.getIncomingStreamStatistics()
-                                    .values()
-                                    .stream()
-                                    .mapToInt(IncomingStreamStatistics.Snapshot::getNumRececivedPackets)
-                                    .sum();
-                            packetsReceived += transceiverPacketsReceived;
+                        TransceiverStreamStats streamStats = endpoint.transceiver.getStreamStats();
+                        int transceiverPacketsReceived = streamStats.getIncomingStreamStatistics()
+                                .values()
+                                .stream()
+                                .mapToInt(IncomingStreamStatistics.Snapshot::getNumRececivedPackets)
+                                .sum();
+                        packetsReceived += transceiverPacketsReceived;
 
-                        }
+                        long transceiverIncomingBitrate = streamStats.getIncomingStreamStatistics()
+                                .values()
+                                .stream()
+                                .mapToLong(IncomingStreamStatistics.Snapshot::getBitrate)
+                                .sum();
+                        System.out.println("TEMP: endpoint " + endpoint.getID() + " has an incoming bitrate of " +
+                                transceiverIncomingBitrate + " bits/second");
+                        bitrateDownloadBps += transceiverIncomingBitrate;
                     }
                 }
             }
