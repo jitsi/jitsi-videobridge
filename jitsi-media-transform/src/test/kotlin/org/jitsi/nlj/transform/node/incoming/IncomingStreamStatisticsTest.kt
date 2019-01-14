@@ -19,34 +19,47 @@ package org.jitsi.nlj.transform.node.incoming
 import io.kotlintest.matchers.plusOrMinus
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
+import org.jitsi.nlj.PacketInfo
+import org.jitsi.rtp.RtpHeader
+import org.jitsi.rtp.RtpPacket
 
-data class PacketInfo(
-    val seqNum: Int,
-    val sentTime: Int,
-    val receivedTime: Int
+private data class StatPacketInfo(
+    val packetInfo: PacketInfo,
+    val sentTimeMs: Long
 )
 
-data class JitterPacketInfo(
-    val packetInfo: PacketInfo,
+private data class JitterPacketInfo(
+    val statPacketInfo: StatPacketInfo,
     val expectedJitter: Double
 )
 
+private fun createStatPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long): StatPacketInfo {
+    val packetInfo = PacketInfo(RtpPacket(header = RtpHeader(sequenceNumber = seqNum)))
+    packetInfo.receivedTime = receivedTime
+    return StatPacketInfo(packetInfo, sentTime)
+}
+
+private fun createJitterPacketInfo(seqNum: Int, sentTime: Long, receivedTime: Long, expectedJitter: Double): JitterPacketInfo {
+    val statPacketInfo = createStatPacketInfo(seqNum, sentTime, receivedTime)
+    return JitterPacketInfo(statPacketInfo, expectedJitter)
+}
+
 // Values taken from this example: http://toncar.cz/Tutorials/VoIP/VoIP_Basics_Jitter.html
-val initialJitterPacketInfo = JitterPacketInfo(PacketInfo(0, 0, 10), 0.0)
-val JitterPacketInfos = listOf(
-    JitterPacketInfo(PacketInfo(1, 20, 30), 0.0),
-    JitterPacketInfo(PacketInfo(2, 40, 49), .0625),
-    JitterPacketInfo(PacketInfo(3, 60, 74), .3711),
-    JitterPacketInfo(PacketInfo(4, 80, 90), .5979),
-    JitterPacketInfo(PacketInfo(5, 100, 111), .6230),
-    JitterPacketInfo(PacketInfo(6, 120, 139), 1.0841),
-    JitterPacketInfo(PacketInfo(7, 140, 150), 1.5788),
-    JitterPacketInfo(PacketInfo(8, 160, 170), 1.4802),
-    JitterPacketInfo(PacketInfo(9, 180, 191), 1.4501),
-    JitterPacketInfo(PacketInfo(10, 200, 210), 1.4220),
-    JitterPacketInfo(PacketInfo(11, 220, 229), 	1.3956),
-    JitterPacketInfo(PacketInfo(12, 240, 250), 1.3709),
-    JitterPacketInfo(PacketInfo(13, 260, 271), 1.3477)
+private val initialJitterPacketInfo = createJitterPacketInfo(0, 0, 10, 0.0)
+private val JitterPacketInfos = listOf(
+    createJitterPacketInfo(1, 20, 30, 0.0),
+    createJitterPacketInfo(2, 40, 49, .0625),
+    createJitterPacketInfo(3, 60, 74, .3711),
+    createJitterPacketInfo(4, 80, 90, .5979),
+    createJitterPacketInfo(5, 100, 111, .6230),
+    createJitterPacketInfo(6, 120, 139, 1.0841),
+    createJitterPacketInfo(7, 140, 150, 1.5788),
+    createJitterPacketInfo(8, 160, 170, 1.4802),
+    createJitterPacketInfo(9, 180, 191, 1.4501),
+    createJitterPacketInfo(10, 200, 210, 1.4220),
+    createJitterPacketInfo(11, 220, 229, 	1.3956),
+    createJitterPacketInfo(12, 240, 250, 1.3709),
+    createJitterPacketInfo(13, 260, 271, 1.3477)
 )
 
 internal class IncomingStreamStatisticsTest : ShouldSpec() {
@@ -62,10 +75,10 @@ internal class IncomingStreamStatisticsTest : ShouldSpec() {
                 JitterPacketInfos.forEach {
                     jitter = IncomingStreamStatistics.calculateJitter(
                         jitter,
-                        previousJitterPacketInfo.packetInfo.sentTime,
-                        previousJitterPacketInfo.packetInfo.receivedTime,
-                        it.packetInfo.sentTime,
-                        it.packetInfo.receivedTime
+                        previousJitterPacketInfo.statPacketInfo.sentTimeMs,
+                        previousJitterPacketInfo.statPacketInfo.packetInfo.receivedTime,
+                        it.statPacketInfo.sentTimeMs,
+                        it.statPacketInfo.packetInfo.receivedTime
                     )
                     jitter shouldBe (it.expectedJitter plusOrMinus .001)
                     previousJitterPacketInfo = it
@@ -102,24 +115,27 @@ internal class IncomingStreamStatisticsTest : ShouldSpec() {
         "When receiving a series of packets with loss" {
             // 17 packets between base and max sequence number, 6 packets lost
             val packetSequence = listOf(
-                PacketInfo(0, 0, 0),
-                PacketInfo(1, 0, 0),
-                PacketInfo(3, 0, 0),
-                PacketInfo(5, 0, 0),
-                PacketInfo(6, 0, 0),
-                PacketInfo(7, 0, 0),
-                PacketInfo(8, 0, 0),
-                PacketInfo(9, 0, 0),
-                PacketInfo(11, 0, 0),
-                PacketInfo(13, 0, 0),
-                PacketInfo(16, 0, 0)
+                createStatPacketInfo(0, 0, 0),
+                createStatPacketInfo(1, 0, 0),
+                createStatPacketInfo(3, 0, 0),
+                createStatPacketInfo(5, 0, 0),
+                createStatPacketInfo(6, 0, 0),
+                createStatPacketInfo(7, 0, 0),
+                createStatPacketInfo(8, 0, 0),
+                createStatPacketInfo(9, 0, 0),
+                createStatPacketInfo(11, 0, 0),
+                createStatPacketInfo(13, 0, 0),
+                createStatPacketInfo(16, 0, 0)
             )
-            val streamStatistics = IncomingStreamStatistics(123L, packetSequence.first().seqNum)
+            val streamStatistics = IncomingStreamStatistics(
+                    123L,
+                    packetSequence.first().packetInfo.packetAs<RtpPacket>().header.sequenceNumber
+            )
             packetSequence.forEach {
                 streamStatistics.packetReceived(
-                    it.seqNum,
-                    it.sentTime,
-                    it.receivedTime
+                    it.packetInfo.packetAs<RtpPacket>(),
+                    it.sentTimeMs,
+                    it.packetInfo.receivedTime
                 )
             }
             val statSnapshot = streamStatistics.getSnapshot()

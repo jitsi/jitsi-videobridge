@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.ice4j.util.RateStatistics
 import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
@@ -22,13 +23,18 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
-import org.jitsi.nlj.util.*
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
+import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.isNewerThan
+import org.jitsi.nlj.util.isNextAfter
+import org.jitsi.nlj.util.numPacketsTo
+import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.service.neomedia.codec.Constants
 import org.jitsi.service.neomedia.format.MediaFormat
 import toUInt
 import unsigned.toUShort
+import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -42,9 +48,9 @@ class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
             val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
                 IncomingStreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
             }
-            payloadFormats.get(rtpPacket.header.payloadType.toByte())?.let {
+            payloadFormats[rtpPacket.header.payloadType.toByte()]?.let {
                 val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
-                stats.packetReceived(rtpPacket.header.sequenceNumber, packetSentTimestamp, packetInfo.receivedTime.toUInt())
+                stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
             }
         }
         next(p)
@@ -109,6 +115,7 @@ class IncomingStreamStatistics(
     private var outOfOrderPacketCount: Int = 0
     private var jitter: Double = 0.0
     private var numReceivedPackets: Int = 0
+    private val bitrate = RateStatistics(Duration.ofSeconds(1).toMillis().toUInt())
     // End variables protected by statsLock
 
     /**
@@ -117,8 +124,8 @@ class IncomingStreamStatistics(
      * 'previously received packet' here is as defined by the order in which the packets were received by this code,
      * which may be different than the order according to sequence number.
      */
-    private var previousPacketSentTimestamp: Int = -1
-    private var previousPacketReceivedTimestamp: Int = -1
+    private var previousPacketSentTimestamp: Long = -1
+    private var previousPacketReceivedTimestamp: Long = -1
     private var probation: Int = INITIAL_MIN_SEQUENTIAL
 
     companion object {
@@ -157,10 +164,10 @@ class IncomingStreamStatistics(
 
         fun calculateJitter(
             currentJitter: Double,
-            previousPacketSentTimestamp: Int,
-            previousPacketReceivedTimestamp: Int,
-            currentPacketSentTimestamp: Int,
-            currentPacketReceivedTimestamp: Int
+            previousPacketSentTimestamp: Long,
+            previousPacketReceivedTimestamp: Long,
+            currentPacketSentTimestamp: Long,
+            currentPacketReceivedTimestamp: Long
         ): Double {
             /**
              * If Si is the RTP timestamp from packet i, and Ri is the time of
@@ -190,7 +197,7 @@ class IncomingStreamStatistics(
     fun getSnapshot(): Snapshot {
         synchronized (statsLock) {
             return Snapshot(numReceivedPackets, maxSeqNum, seqNumCycles, numExpectedPackets,
-                    cumulativePacketsLost, jitter)
+                    cumulativePacketsLost, jitter, bitrate.rate)
         }
     }
 
@@ -207,21 +214,20 @@ class IncomingStreamStatistics(
 //    }
 
     /**
-     * Notify this [IncomingStreamStatistics] instance that an RTP packet for the stream it is tracking has been received and
-     * that it:
-     * 1) Has RTP sequence number [packetSequenceNumber]
-     * 2) Was sent at [packetSentTimestampMs] (note this is NOT the raw RTP timestamp, but the 'translated' timestamp
-     * which is a function of the RTP timestamp and the clockrate)
-     * and
-     * 3) Was received at [packetReceivedTimeMs]
+     * Notify this [IncomingStreamStatistics] instance that an RTP packet [packet] for the stream it is
+     * tracking has been received and that it: was sent at [packetSentTimestampMs] (note this is NOT the
+     * raw RTP timestamp, but the 'translated' timestamp which is a function of the RTP timestamp and the clockrate)
+     * and was received at [packetReceivedTimeMs]
      */
     fun packetReceived(
-        packetSequenceNumber: Int,
-        packetSentTimestampMs: Int,
-        packetReceivedTimeMs: Int
+        packet: RtpPacket,
+        packetSentTimestampMs: Long,
+        packetReceivedTimeMs: Long
     ) {
+        val packetSequenceNumber = packet.header.sequenceNumber
         synchronized(statsLock) {
             numReceivedPackets++
+            bitrate.update(packet.size, System.currentTimeMillis())
             if (packetSequenceNumber isNewerThan maxSeqNum) {
                 if (packetSequenceNumber isNextAfter maxSeqNum) {
                     if (probation > 0) {
@@ -288,7 +294,8 @@ class IncomingStreamStatistics(
         val seqNumCycles: Int = 0,
         val numExpectedPackets: Int = 0,
         val cumulativePacketsLost: Int = 0,
-        val jitter: Double = 0.0
+        val jitter: Double = 0.0,
+        val bitrate: Long = 0
     ) {
         val fractionLost: Int
             get() = (cumulativePacketsLost / numExpectedPackets) * 256
