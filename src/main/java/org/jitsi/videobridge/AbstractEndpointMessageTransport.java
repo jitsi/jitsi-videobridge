@@ -15,13 +15,14 @@
  */
 package org.jitsi.videobridge;
 
-import org.jitsi.service.neomedia.*;
+import org.jitsi.nlj.util.*;
 import org.jitsi.util.*;
 import org.json.simple.*;
 import org.json.simple.parser.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -51,6 +52,14 @@ public abstract class AbstractEndpointMessageTransport
      * information.
      */
     private final Logger logger;
+
+    //TODO(brian): there are some potential deadlock issues when endpoint message eachother (each has their own
+    // lock on their sctpsocket and they try to get one another's when sending a message) so introducing this pool
+    // as a way to process all messages.  Ideally we wouldn't have a dedicated pool here, but I think we need to make
+    // sure that we process messages in order from each endpoint, so using a shared pool won't work until we get
+    // something like a StripedExecutor (or some other way of enforcing ordering of processing), so using this for now.
+    private static final ExecutorService executor =
+            Executors.newSingleThreadExecutor(new NameableThreadFactory("EndpointMessageTransportPool"));
 
     /**
      * Initializes a new {@link AbstractEndpointMessageTransport} instance.
@@ -101,38 +110,40 @@ public abstract class AbstractEndpointMessageTransport
         JSONObject jsonObject,
         String colibriClass)
     {
-        switch (colibriClass)
-        {
-        case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
-            onSelectedEndpointChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
-            onSelectedEndpointsChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
-            onPinnedEndpointChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
-            onPinnedEndpointsChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_CLIENT_HELLO:
-            onClientHello(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_ENDPOINT_MESSAGE:
-            onClientEndpointMessage(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_LASTN_CHANGED:
-            onLastNChangedEvent(src, jsonObject);
-            break;
-        case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
-            onReceiverVideoConstraintEvent(src, jsonObject);
-            break;
-        default:
-            logger.info(
-                "Received a message with unknown colibri class: "
-                    + colibriClass);
-            break;
-        }
+        executor.submit(() -> {
+            switch (colibriClass)
+            {
+                case COLIBRI_CLASS_SELECTED_ENDPOINT_CHANGED:
+                    onSelectedEndpointChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_SELECTED_ENDPOINTS_CHANGED:
+                    onSelectedEndpointsChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_PINNED_ENDPOINT_CHANGED:
+                    onPinnedEndpointChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_PINNED_ENDPOINTS_CHANGED:
+                    onPinnedEndpointsChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_CLIENT_HELLO:
+                    onClientHello(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_ENDPOINT_MESSAGE:
+                    onClientEndpointMessage(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_LASTN_CHANGED:
+                    onLastNChangedEvent(src, jsonObject);
+                    break;
+                case COLIBRI_CLASS_RECEIVER_VIDEO_CONSTRAINT:
+                    onReceiverVideoConstraintEvent(src, jsonObject);
+                    break;
+                default:
+                    logger.info(
+                            "Received a message with unknown colibri class: "
+                                    + colibriClass);
+                    break;
+            }
+        });
     }
 
     /**
