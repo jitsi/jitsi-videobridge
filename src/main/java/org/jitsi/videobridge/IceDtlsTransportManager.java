@@ -421,6 +421,10 @@ public class IceDtlsTransportManager
 
     // Start a thread for each transceiver.  Each thread will read from the transceiver's outgoing queue
     // and send that data on the shared socket
+    // TODO(brian): because we dedicate a thread and block on the queue read, we have to be interrupted to shut
+    //  things down here, which isn't great.  It'd be nice to change this in the future, ideally to a scheme where
+    //  we try and read and, if there's nothing, we stop until data is written to the queue and then we schedule
+    //  a job to read from it again (like yura's changes in ice4j)
     private void installTransceiverOutgoingPacketSenders(MultiplexingDatagramSocket s) {
         executor.submit(() -> {
             while (true) {
@@ -433,10 +437,18 @@ public class IceDtlsTransportManager
                 catch (SocketClosedException e)
                 {
                     logger.info("Socket closed for local ufrag " + iceAgent.getLocalUfrag() + ", stopping writer");
+                    break;
                 }
-                catch (InterruptedException | IOException e)
+                catch (InterruptedException e)
                 {
-                    e.printStackTrace();
+                    logger.info("Socket writer for local ufrag " + iceAgent.getLocalUfrag() + ", interrupted, " +
+                            "stopping");
+                    break;
+                }
+                catch (IOException e)
+                {
+                    logger.error("Socket writer for local ufrag " + iceAgent.getLocalUfrag() + ", had " +
+                            "IO exception: " + e.toString() + ", stopping");
                     break;
                 }
             }
