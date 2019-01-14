@@ -93,7 +93,7 @@ public class PublicRESTBundleActivator
     }
 
     /**
-     * {@inheritDoc} 
+     * {@inheritDoc}
      */
     @Override
     protected void doStop(BundleContext bundleContext)
@@ -282,6 +282,12 @@ public class PublicRESTBundleActivator
                         allowedOrigins
                     );
                 }
+
+                servletContextHandler.addFilter(
+                    TraceFilter.class,
+                    "/*",
+                    EnumSet.of(DispatcherType.REQUEST)
+                );
             }
         }
         return holder;
