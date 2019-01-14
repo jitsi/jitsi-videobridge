@@ -60,7 +60,8 @@ public class VP8AdaptiveTrackProjectionContext
 
     /**
      * A map that stores the maximum sequence number of frames that are not
-     * (yet) accepted/projected.
+     * (yet) accepted/projected. The map goes from ssrc -> timestamp -> highest
+     * sequence number.
      */
     private final Map<Long, Map<Long, Integer>>
         ssrcToFrameToMaxSequenceNumberMap = new HashMap<>();
@@ -200,7 +201,10 @@ public class VP8AdaptiveTrackProjectionContext
         int payloadOff = rtpPacket.getPayloadOffset();
         if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buf, payloadOff))
         {
-            storeMaxSequenceNumberOfFrame(rtpPacket);
+            storeMaxSequenceNumberOfFrame(
+                rtpPacket.getSSRCAsLong(),
+                rtpPacket.getTimestamp(),
+                rtpPacket.getSequenceNumber());
             return null;
         }
 
@@ -216,8 +220,12 @@ public class VP8AdaptiveTrackProjectionContext
 
         // We know we want to forward this frame, but we need to make sure it's
         // going to produce a decodable VP8 packet stream.
+        int maxSequenceNumberSeenBeforeFirstPacket
+            = getMaxSequenceNumberOfFrame(
+                rtpPacket.getSSRCAsLong(), rtpPacket.getTimestamp());
+
         VP8FrameProjection nextVP8FrameProjection = lastVP8FrameProjection
-            .makeNext(rtpPacket, getMaxSequenceNumberOfFrame(rtpPacket), nowMs);
+            .makeNext(rtpPacket, maxSequenceNumberSeenBeforeFirstPacket, nowMs);
 
         if (nextVP8FrameProjection == null)
         {
@@ -238,9 +246,18 @@ public class VP8AdaptiveTrackProjectionContext
         return nextVP8FrameProjection;
     }
 
-    private int getMaxSequenceNumberOfFrame(@NotNull RawPacket rtpPacket)
+    /**
+     * Given a frame (specified by the SSRC and the timestamp that are specified
+     * as arguments), find the highest sequence number we've received from
+     * that frame.
+     *
+     * @param ssrc the SSRC of the frame
+     * @param timestamp the timestamp of the frame
+     * @return the highest sequence number we've received from the frame that is
+     * specified by the SSRC and timestamp arguments.
+     */
+    private int getMaxSequenceNumberOfFrame(long ssrc, long timestamp)
     {
-        long ssrc = rtpPacket.getSSRCAsLong();
         Map<Long, Integer> frameToMaxSequenceNumberMap
             = ssrcToFrameToMaxSequenceNumberMap.get(ssrc);
 
@@ -250,32 +267,42 @@ public class VP8AdaptiveTrackProjectionContext
         }
 
         return frameToMaxSequenceNumberMap
-            .getOrDefault(rtpPacket.getTimestamp(), -1);
+            .getOrDefault(timestamp, -1);
     }
 
-    private void storeMaxSequenceNumberOfFrame(@NotNull RawPacket rtpPacket)
+    /**
+     * Upon arrival of an RTP packet of a video frame (specified by its SSRC,
+     * its timestamp and its sequence number that are specified as arguments),
+     * elects and store the highest sequence number we've received from that
+     * frame.
+     *
+     * @param ssrc the SSRC of the frame
+     * @param timestamp the timestamp of the frame
+     * @param sequenceNumber the sequence number of the RTP packet,
+     * potentially the highest sequence number that we've received from that
+     * frame.
+     */
+    private void storeMaxSequenceNumberOfFrame(
+        long ssrc, long timestamp, int sequenceNumber)
     {
-        long ssrc = rtpPacket.getSSRCAsLong();
         Map<Long, Integer> frameToMaxSequenceNumberMap
             = ssrcToFrameToMaxSequenceNumberMap
             .computeIfAbsent(ssrc, k -> new LRUCache<>(5));
 
-        long timestamp = rtpPacket.getTimestamp();
-        int newMaxSequenceNumber = rtpPacket.getSequenceNumber();
         if (frameToMaxSequenceNumberMap.containsKey(timestamp))
         {
             int previousMaxSequenceNumber
                 = frameToMaxSequenceNumberMap.get(timestamp);
 
             if (RTPUtils.isOlderSequenceNumberThan(
-                previousMaxSequenceNumber, newMaxSequenceNumber))
+                previousMaxSequenceNumber, sequenceNumber))
             {
-                frameToMaxSequenceNumberMap.put(timestamp, newMaxSequenceNumber);
+                frameToMaxSequenceNumberMap.put(timestamp, sequenceNumber);
             }
         }
         else
         {
-            frameToMaxSequenceNumberMap.put(timestamp, newMaxSequenceNumber);
+            frameToMaxSequenceNumberMap.put(timestamp, sequenceNumber);
         }
     }
 

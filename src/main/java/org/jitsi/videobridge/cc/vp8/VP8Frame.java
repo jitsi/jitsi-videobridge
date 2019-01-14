@@ -96,7 +96,8 @@ class VP8Frame
     /**
      * The max sequence number that was seen before the arrival of the first
      * packet of this frame. This is useful for piggybacking any mis-ordered
-     * packets.
+     * packets. For example, if a frame comprised of packets 1,2,3 is received
+     * as 2,1,3 then this field would be equal to 2.
      */
     private final int maxSequenceNumberSeenBeforeFirstPacket;
 
