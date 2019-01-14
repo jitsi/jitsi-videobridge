@@ -251,18 +251,22 @@ public class Endpoint
     {
         super.expire();
 
-        AbstractEndpointMessageTransport messageTransport
-            = getMessageTransport();
-        if (messageTransport != null)
+        try
         {
-            messageTransport.close();
-        }
-        if (sctpManager != null)
-        {
-            sctpManager.closeConnection();
-        }
 
-        logger.info(transceiver.getNodeStats().prettyPrint(0));
+            AbstractEndpointMessageTransport messageTransport = getMessageTransport();
+            if (messageTransport != null)
+            {
+                messageTransport.close();
+            }
+            if (sctpManager != null)
+            {
+                sctpManager.closeConnection();
+            }
+        } catch (Exception e) {
+            logger.error("Exception while expiring endpoint " + getID() + ": " + e.toString());
+        }
+        logger.info("Endpoint " + getID() + " expired");
     }
 
     private DataChannelStack dataChannelStack;
