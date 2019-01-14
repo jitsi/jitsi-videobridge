@@ -602,7 +602,7 @@ public class VideobridgeStatistics
                     {
                         Endpoint endpoint = (Endpoint)abstractEndpoint;
 
-                        TransceiverStreamStats streamStats = endpoint.transceiver.getStreamStats();
+                        TransceiverStats streamStats = endpoint.transceiver.getTransceiverStats();
                         int transceiverPacketsReceived = streamStats.getIncomingStreamStatistics()
                                 .values()
                                 .stream()
@@ -615,9 +615,11 @@ public class VideobridgeStatistics
                                 .stream()
                                 .mapToLong(IncomingStreamStatistics.Snapshot::getBitrate)
                                 .sum();
-                        System.out.println("TEMP: endpoint " + endpoint.getID() + " has an incoming bitrate of " +
-                                transceiverIncomingBitrate + " bits/second");
                         bitrateDownloadBps += transceiverIncomingBitrate;
+
+
+                        rttSumMs += streamStats.getEndpointConnectionStats().getRtt();
+                        rttCount++;
                     }
                 }
             }
