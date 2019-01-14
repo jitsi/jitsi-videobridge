@@ -23,7 +23,7 @@ import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
 import org.jitsi.nlj.stats.PacketIOActivity
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.stats.TransceiverStreamStats
+import org.jitsi.nlj.stats.TransceiverStats
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cinfo
@@ -244,6 +244,9 @@ class Transceiver(
         rtpSender.setSrtcpTransformer(srtcpTransformer)
     }
 
+    /**
+     * Get stats about this tranceiver's pipeline nodes
+     */
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("Transceiver $id").apply {
             addStat("RTP Receiver", rtpReceiver.getNodeStats())
@@ -252,8 +255,11 @@ class Transceiver(
         }
     }
 
-    fun getStreamStats(): TransceiverStreamStats {
-        return TransceiverStreamStats(rtpReceiver.getStreamStats(), rtpSender.getStreamStats())
+    /**
+     * Get various media and network stats
+     */
+    fun getTransceiverStats(): TransceiverStats {
+        return TransceiverStats(endpointConnectionStats.getSnapshot(), rtpReceiver.getStreamStats(), rtpSender.getStreamStats())
     }
 
     override fun stop() {
