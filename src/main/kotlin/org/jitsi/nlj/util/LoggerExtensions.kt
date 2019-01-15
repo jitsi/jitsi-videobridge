@@ -65,8 +65,14 @@ fun <T: Any> getLogger(forClass: Class<T>, levelDelegate: Logger?): Logger {
 /**
  * Create a logger using the given loggerDelegate and levelDelegate
  */
-fun getLogger(loggerDelegate: Logger, levelDelegate: Logger): Logger {
-    return Logger.getLogger(loggerDelegate, levelDelegate)
+fun getLogger(loggerDelegate: Logger, levelDelegate: Logger?): Logger {
+    return if (levelDelegate != null) {
+        Logger.getLogger(loggerDelegate, levelDelegate)
+    } else {
+        //TODO(brian): not sure if this makes sense: if no level delegate was passed, just use the logger
+        // delegate as the level delegate?  There's no helper to use a logger delegate but not a level delegate
+        Logger.getLogger(loggerDelegate, loggerDelegate)
+    }
 }
 
 // Return logger for Kotlin class

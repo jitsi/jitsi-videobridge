@@ -29,6 +29,7 @@ import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.SrtcpPacket
 import org.jitsi.rtp.SrtpPacket
@@ -64,8 +65,10 @@ class RtpReceiverImpl @JvmOverloads constructor(
      * A [ScheduledExecutorService] which can be used for less important
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
-    private val backgroundExecutor: ScheduledExecutorService
+    private val backgroundExecutor: ScheduledExecutorService,
+    logLevelDelegate: Logger? = null
 ) : RtpReceiver() {
+    private val logger = getLogger(classLogger, logLevelDelegate)
     private var running: Boolean = true
     private val inputTreeRoot: Node
     private val incomingPacketQueue = LinkedBlockingQueue<PacketInfo>()
@@ -79,7 +82,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val rtcpTermination = RtcpTermination(rtcpEventNotifier, transportCcEngine)
 
     companion object {
-        private val logger: Logger = Logger.getLogger(this::class.java)
+        private val classLogger: Logger = Logger.getLogger(this::class.java)
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP receiver incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP receiver incoming queue"
     }

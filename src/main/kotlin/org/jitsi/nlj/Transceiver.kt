@@ -65,7 +65,7 @@ class Transceiver(
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
     private val backgroundExecutor: ScheduledExecutorService,
-    private val logLevelDelegate: Logger? = null
+    logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
@@ -93,7 +93,9 @@ class Transceiver(
             transportCcEngine,
             rtcpEventNotifier,
             receiverExecutor,
-            backgroundExecutor)
+            backgroundExecutor,
+            logLevelDelegate
+        )
     val outgoingQueue = LinkedBlockingQueue<PacketInfo>()
 
     init {
