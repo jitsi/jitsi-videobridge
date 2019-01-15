@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.*;
 public class TransportCCEngine
     extends RTCPPacketListenerAdapter
     implements RemoteBitrateObserver,
-        CallStatsObserver
+               CallStatsObserver
 {
     /**
      * The maximum number of received packets and their timestamps to save.
@@ -64,18 +64,18 @@ public class TransportCCEngine
     private static final int MAX_OUTGOING_PACKETS_HISTORY = 1000;
 
     /**
-     * The {@link Logger} used by the {@link org.jitsi.impl.neomedia.rtp.TransportCCEngine} class and its
+     * The {@link Logger} used by the {@link TransportCCEngine} class and its
      * instances for logging output.
      */
     private static final Logger logger
-        = Logger.getLogger(org.jitsi.impl.neomedia.rtp.TransportCCEngine.class);
+        = Logger.getLogger(TransportCCEngine.class);
 
     /**
      * The {@link TimeSeriesLogger} to be used by this instance to print time
      * series.
      */
     private static final TimeSeriesLogger timeSeriesLogger
-        = TimeSeriesLogger.getTimeSeriesLogger(org.jitsi.impl.neomedia.rtp.TransportCCEngine.class);
+        = TimeSeriesLogger.getTimeSeriesLogger(TransportCCEngine.class);
 
     /**
      * The engine which handles incoming RTP packets for this instance. It
@@ -107,7 +107,7 @@ public class TransportCCEngine
 
     /**
      * The list of {@link MediaStream} that are using this
-     * {@link org.jitsi.impl.neomedia.rtp.TransportCCEngine}.
+     * {@link TransportCCEngine}.
      */
     private final List<MediaStream> mediaStreams = new LinkedList<>();
 
@@ -178,22 +178,13 @@ public class TransportCCEngine
     /**
      * Ctor.
      *
-     * @param diagnosicContext the {@link DiagnosticContext} of this instance.
+     * @param diagnosticContext the {@link DiagnosticContext} of this instance.
      */
     public TransportCCEngine(@NotNull DiagnosticContext diagnosticContext)
     {
         this.diagnosticContext = diagnosticContext;
         bitrateEstimatorAbsSendTime
             = new RemoteBitrateEstimatorAbsSendTime(this, diagnosticContext);
-    }
-
-    /**
-     * Used by nlj
-     * @param seq
-     */
-    public void packetReceived(int seq)
-    {
-        packetReceived(seq, 0, false);
     }
 
     /**
@@ -574,7 +565,7 @@ public class TransportCCEngine
 
     /**
      * Adds a {@link MediaStream} to the list of {@link MediaStream}s which
-     * use this {@link org.jitsi.impl.neomedia.rtp.TransportCCEngine}.
+     * use this {@link TransportCCEngine}.
      * @param mediaStream the stream to add.
      */
     public void addMediaStream(MediaStream mediaStream)
@@ -597,7 +588,7 @@ public class TransportCCEngine
 
     /**
      * Removes a {@link MediaStream} from the list of {@link MediaStream}s which
-     * use this {@link org.jitsi.impl.neomedia.rtp.TransportCCEngine}.
+     * use this {@link TransportCCEngine}.
      * @param mediaStream the stream to remove.
      */
     public void removeMediaStream(MediaStream mediaStream)
@@ -622,7 +613,7 @@ public class TransportCCEngine
 
     /**
      * @return one of the {@link MediaStream} instances which use this
-     * {@link org.jitsi.impl.neomedia.rtp.TransportCCEngine}, or null.
+     * {@link TransportCCEngine}, or null.
      */
     private MediaStream getMediaStream()
     {
@@ -651,7 +642,7 @@ public class TransportCCEngine
     }
 
     /**
-     * Handles outgoing RTP packets for this {@link org.jitsi.impl.neomedia.rtp.TransportCCEngine}.
+     * Handles outgoing RTP packets for this {@link TransportCCEngine}.
      */
     public class EgressEngine
             extends SinglePacketTransformerAdapter
@@ -736,7 +727,7 @@ public class TransportCCEngine
 
 
     /**
-     * Handles incoming RTP packets for this {@link org.jitsi.impl.neomedia.rtp.TransportCCEngine}.
+     * Handles incoming RTP packets for this {@link TransportCCEngine}.
      */
     public class IngressEngine
             extends SinglePacketTransformerAdapter
