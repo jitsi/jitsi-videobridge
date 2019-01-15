@@ -113,7 +113,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
         receiverExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver " + id + " executor"));
         senderExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Sender " + id + " executor"));
-        transceiver = new Transceiver(getID(), receiverExecutor, senderExecutor, backgroundExecutor);
+        transceiver = new Transceiver(getID(), receiverExecutor, senderExecutor, backgroundExecutor, logger);
         transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
         {
             @Override
