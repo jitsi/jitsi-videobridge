@@ -33,6 +33,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
 import org.jitsi.util.DiagnosticContext
+import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.nio.ByteBuffer
 import java.util.Arrays
@@ -63,9 +64,10 @@ class Transceiver(
      * A [ScheduledExecutorService] which can be used for less important
      * background tasks, or tasks that need to execute at some fixed delay/rate
      */
-    private val backgroundExecutor: ScheduledExecutorService
+    private val backgroundExecutor: ScheduledExecutorService,
+    private val logLevelDelegate: Logger? = null
 ) : Stoppable, NodeStatsProducer {
-    private val logger = getLogger(this.javaClass)
+    private val logger = getLogger(this.javaClass, logLevelDelegate)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
     private val receiveSsrcs = ConcurrentHashMap.newKeySet<Long>()

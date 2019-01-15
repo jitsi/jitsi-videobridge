@@ -51,6 +51,24 @@ fun <T: Any> getLogger(forClass: Class<T>): Logger {
     return Logger.getLogger(forClass.name)
 }
 
+/**
+ * Create a new logger which delegates its level to another logger
+ */
+fun <T: Any> getLogger(forClass: Class<T>, levelDelegate: Logger?): Logger {
+    return if (levelDelegate != null) {
+        getLogger(getLogger(forClass), levelDelegate)
+    } else {
+        getLogger(forClass)
+    }
+}
+
+/**
+ * Create a logger using the given loggerDelegate and levelDelegate
+ */
+fun getLogger(loggerDelegate: Logger, levelDelegate: Logger): Logger {
+    return Logger.getLogger(loggerDelegate, levelDelegate)
+}
+
 // Return logger for Kotlin class
 fun <T: Any> logger(forClass: KClass<T>): Logger {
     return getLogger(forClass.java)
