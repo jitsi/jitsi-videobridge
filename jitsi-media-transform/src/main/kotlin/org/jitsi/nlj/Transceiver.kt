@@ -83,7 +83,14 @@ class Transceiver(
 
     private val transportCcEngine = TransportCCEngine(DiagnosticContext())
 
-    private val rtpSender: RtpSender = RtpSenderImpl(id, transportCcEngine, rtcpEventNotifier, senderExecutor, backgroundExecutor)
+    private val rtpSender: RtpSender = RtpSenderImpl(
+            id,
+            transportCcEngine,
+            rtcpEventNotifier,
+            senderExecutor,
+            backgroundExecutor,
+            logLevelDelegate
+    )
     private val rtpReceiver: RtpReceiver =
         RtpReceiverImpl(
             id,
