@@ -93,41 +93,6 @@ class EndpointMessageTransport
     }
 
     /**
-     * At the time when new data chanel is opened or {@link SctpConnection}
-     * instance is replaced, this method will reelect the default WebRTC data
-     * channel (the one that's used for writing).
-     *
-     * @param connection - The currently used {@link SctpConnection} instance
-     * from which the default data channel will be obtained.
-     */
-    private void hookUpDefaultWebRtcDataChannel(SctpConnection connection)
-    {
-        // FIXME make "data stream" vs "data channel" naming consistent in both
-        // code and comments
-        WebRtcDataStream _defaultStream
-            = connection != null ? connection.getDefaultDataStream() : null;
-
-        if (_defaultStream != null)
-        {
-            WebRtcDataStream oldDataStream = this.writableWebRtcDataStream;
-
-            this.writableWebRtcDataStream = _defaultStream;
-
-            _defaultStream.setDataCallback(EndpointMessageTransport.this);
-
-            if (oldDataStream == null)
-            {
-                logger.info(
-                    String.format(
-                        "WebRTC data channel established for %s",
-                        connection.getLoggingId()));
-
-                notifyTransportChannelConnected();
-            }
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
