@@ -16,12 +16,13 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainExactly
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 
 internal class GenericNackTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
         "Creating a GenericNack" {

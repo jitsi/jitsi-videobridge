@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.toHex
@@ -24,7 +25,7 @@ import org.jitsi.rtp.rtcp.RtcpPacket
 import java.nio.ByteBuffer
 
 internal class RtcpFbPacketTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val tccPkt = ByteBuffer.wrap(byteArrayOf(
         // V=2, P=false, FMT=15, PT=205, length = 29

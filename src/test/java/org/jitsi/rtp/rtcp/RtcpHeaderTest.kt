@@ -16,13 +16,14 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 internal class RtcpHeaderTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val headerBuf = with(ByteBuffer.allocate(8)) {
         val bitBuffer = BitBuffer(this)

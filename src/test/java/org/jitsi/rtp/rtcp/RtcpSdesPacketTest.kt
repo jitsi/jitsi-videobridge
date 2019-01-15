@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContain
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
@@ -26,7 +27,7 @@ import java.nio.ByteBuffer
 
 
 internal class RtcpSdesPacketTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
         "Creating an RTCP SDES packet" {

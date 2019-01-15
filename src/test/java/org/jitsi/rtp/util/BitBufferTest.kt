@@ -17,6 +17,7 @@
 package org.jitsi.rtp.util
 
 import com.sun.javaws.exceptions.InvalidArgumentException
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.shouldThrow
 import io.kotlintest.specs.ShouldSpec
@@ -24,7 +25,7 @@ import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 internal class BitBufferTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private fun createBitBufferWithData(vararg bytes: Byte): BitBuffer {
         return BitBuffer(ByteBuffer.wrap(bytes))

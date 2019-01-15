@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.maps.shouldContain
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
@@ -24,7 +25,7 @@ import org.junit.jupiter.api.Assertions.*
 import java.nio.ByteBuffer
 
 internal class TccTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val fci = ByteBuffer.wrap(byteArrayOf(
         // base=4, pkt status count=0x1729=5929

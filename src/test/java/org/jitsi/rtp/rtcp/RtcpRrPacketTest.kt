@@ -17,6 +17,7 @@
 package org.jitsi.rtp.rtcp
 
 import com.nhaarman.mockito_kotlin.mock
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.containAll
 import io.kotlintest.matchers.haveSize
 import io.kotlintest.should
@@ -28,7 +29,7 @@ import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 internal class RtcpRrPacketTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     // Report blocks
     private val ssrc1: Long = 12345

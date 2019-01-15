@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.containAll
 import io.kotlintest.matchers.haveSize
 import io.kotlintest.should
@@ -26,7 +27,7 @@ import java.nio.ByteBuffer
 import kotlin.math.exp
 
 internal class RtcpSrPacketTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val expectedSenderInfo = SenderInfo(
         ntpTimestamp = 0x7FFFFFFFFFFFFFFF,

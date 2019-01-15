@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.should
 import io.kotlintest.shouldBe
@@ -24,6 +25,7 @@ import org.jitsi.rtp.util.byteBufferOf
 import java.nio.ByteBuffer
 
 internal class RtxPacketTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
     private val osn = 0x179d
 
     val pkt = ByteBuffer.wrap(byteArrayOf(

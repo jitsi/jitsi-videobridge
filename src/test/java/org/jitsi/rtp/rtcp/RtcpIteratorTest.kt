@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.beInstanceOf
 import io.kotlintest.matchers.beOfType
 import io.kotlintest.matchers.haveSize
@@ -27,7 +28,8 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbPacket
 import java.nio.ByteBuffer
 
 internal class RtcpIteratorTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
+
     private val compoundPacketBuf = ByteBuffer.wrap(byteArrayOf(
         0x81.toByte(), 0xC9.toByte(), 0x00.toByte(), 0x07.toByte(),
         0x50.toByte(), 0x63.toByte(), 0x13.toByte(), 0xDE.toByte(),

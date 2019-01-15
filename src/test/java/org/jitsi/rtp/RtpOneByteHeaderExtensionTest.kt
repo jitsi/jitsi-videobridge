@@ -16,13 +16,14 @@
 
 package org.jitsi.rtp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.util.BitBuffer
 import java.nio.ByteBuffer
 
 internal class RtpOneByteHeaderExtensionTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
     private fun idLengthByte(id: Int, length: Int): Byte {
         return ((id shl 4) or length).toByte()
     }

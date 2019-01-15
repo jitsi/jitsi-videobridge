@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp.rtcpfb
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainExactly
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
@@ -23,7 +24,7 @@ import org.jitsi.rtp.util.RightToLeftBufferUtils
 import java.nio.ByteBuffer
 
 internal class GenericNackBlpTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private fun validateNackBlpBits(expectedOffsets: List<Int>, buf: ByteBuffer) {
         for (i in 0..15) {

@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.put3Bytes
@@ -23,7 +24,7 @@ import org.jitsi.rtp.extensions.toHex
 import java.nio.ByteBuffer
 
 internal class RtcpReportBlockTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val expectedSsrc: Long = 12345
     private val expectedFractionLost: Int = 42

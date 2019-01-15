@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.types.shouldBeSameInstanceAs
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
@@ -27,7 +28,7 @@ import unsigned.toUByte
 import java.nio.ByteBuffer
 
 internal class SdesItemTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
         "Creating an SDES item" {

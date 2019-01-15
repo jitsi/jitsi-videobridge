@@ -16,13 +16,14 @@
 
 package org.jitsi.rtp.util
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.data.forall
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import io.kotlintest.tables.row
 
 internal class RightToLeftByteTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     init {
         val data = 0x0F.toByte()

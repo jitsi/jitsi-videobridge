@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp.rtcp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.shouldBe
 import io.kotlintest.specs.ShouldSpec
 import org.jitsi.rtp.extensions.toHex
@@ -23,7 +24,7 @@ import toUInt
 import java.nio.ByteBuffer
 
 internal class SenderInfoTest : ShouldSpec() {
-    override fun isInstancePerTest(): Boolean = true
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
 
     private val expectedNtpTimestamp: Long = 0x0123456789abcdef
     private val expectedRtpTimestamp: Long = 0xFFFFFFFF

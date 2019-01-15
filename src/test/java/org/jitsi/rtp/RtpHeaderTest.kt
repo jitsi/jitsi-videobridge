@@ -16,6 +16,7 @@
 
 package org.jitsi.rtp
 
+import io.kotlintest.IsolationMode
 import io.kotlintest.matchers.collections.shouldContainInOrder
 import io.kotlintest.matchers.haveSize
 import io.kotlintest.matchers.types.shouldBeTypeOf
@@ -27,6 +28,7 @@ import org.jitsi.rtp.extensions.subBuffer
 import java.nio.ByteBuffer
 
 internal class RtpHeaderTest : ShouldSpec() {
+    override fun isolationMode(): IsolationMode? = IsolationMode.InstancePerLeaf
     // v=2, p=1, x=0, cc=3 = 0xA3
     // m=1, pt=96 = 0xE0
     // seqnum 4224 = 0x10 0x80
