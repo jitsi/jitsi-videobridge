@@ -49,8 +49,14 @@ import java.util.concurrent.*;
 public class IceDtlsTransportManager
     extends IceUdpTransportManager
 {
-    private static final Logger logger
+    /**
+     * The {@link Logger} used by the {@link IceDtlsTransportManager} class to
+     * print debug information. Note that instances should use {@link #logger}
+     * instead.
+     */
+    private static final Logger classLogger
             = Logger.getLogger(IceDtlsTransportManager.class);
+    private final Logger logger;
     private final String ICE_STREAM_NAME;
     //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
     private ExecutorService executor;
@@ -97,6 +103,7 @@ public class IceDtlsTransportManager
             throws IOException
     {
         super(conference, true, 1, "ice-stream-" + id, null);
+        this.logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = id;
         this.ICE_STREAM_NAME = "ice-stream-" + id;
         executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool-" + id));
