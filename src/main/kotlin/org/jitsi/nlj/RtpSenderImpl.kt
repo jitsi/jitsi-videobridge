@@ -39,6 +39,7 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -60,9 +61,10 @@ class RtpSenderImpl(
          * A [ScheduledExecutorService] which can be used for less important
          * background tasks, or tasks that need to execute at some fixed delay/rate
          */
-        val backgroundExecutor: ScheduledExecutorService
+        val backgroundExecutor: ScheduledExecutorService,
+        logLevelDelegate: Logger? = null
 ) : RtpSender() {
-    protected val logger = getLogger(this.javaClass)
+    protected val logger = getLogger(classLogger, logLevelDelegate)
     private val outgoingRtpRoot: Node
     private val outgoingRtxRoot: Node
     private val outgoingRtcpRoot: Node
@@ -108,6 +110,7 @@ class RtpSenderImpl(
     private var tempSenderSsrc: Long? = null
 
     companion object {
+        private val classLogger: Logger = Logger.getLogger(this::class.java)
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
         private const val PACKET_QUEUE_EXIT_EVENT = "Exited RTP sender incoming queue"
     }
