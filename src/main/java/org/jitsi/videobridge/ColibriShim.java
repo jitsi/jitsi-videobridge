@@ -423,8 +423,6 @@ public class ColibriShim {
 
             conferenceShims.put(conference.getId(), conference);
 
-            videobridge.createConference(focus, confName, confGid);
-
             return conference;
         }
     }
