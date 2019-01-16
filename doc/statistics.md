@@ -40,6 +40,9 @@ generated (in UTC).
  * **participants** - The current number of participants.
  * **videostreams** - An estimation of the number of current video streams forwarded by the bridge.
  * **total_udp_connections / total_tcp_connections** - The total number of ICE sessions established over UDP or TCP.
+ * **total_loss_controlled_participant_seconds** -- The total number of participant-seconds that are loss-controlled.
+ * **total_loss_limited_participant_seconds** -- The total number of participant-seconds that are loss-limited.
+ * **total_loss_degraded_participant_seconds** -- The total number of participant-seconds that are loss-degraded.
  * **total_conference_seconds** - The sum of the lengths of all completed conferences, in seconds.
  * **total_conferences_created** - The total number of conferences created on the bridge.
  * **total_failed_conferences** - The total number of failed conferences on the bridge. A conference is marked as failed when all of its channels have failed. A channel is marked as failed if it had no payload activity.
