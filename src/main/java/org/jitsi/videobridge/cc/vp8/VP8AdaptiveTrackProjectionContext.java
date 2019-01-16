@@ -201,7 +201,7 @@ public class VP8AdaptiveTrackProjectionContext
         int payloadOff = rtpPacket.getPayloadOffset();
         if (!DePacketizer.VP8PayloadDescriptor.isStartOfFrame(buf, payloadOff))
         {
-            storeMaxSequenceNumberOfFrame(
+            maybeUpdateMaxSequenceNumberOfFrame(
                 rtpPacket.getSSRCAsLong(),
                 rtpPacket.getTimestamp(),
                 rtpPacket.getSequenceNumber());
@@ -282,7 +282,7 @@ public class VP8AdaptiveTrackProjectionContext
      * potentially the highest sequence number that we've received from that
      * frame.
      */
-    private void storeMaxSequenceNumberOfFrame(
+    private void maybeUpdateMaxSequenceNumberOfFrame(
         long ssrc, long timestamp, int sequenceNumber)
     {
         Map<Long, Integer> frameToMaxSequenceNumberMap
@@ -292,10 +292,11 @@ public class VP8AdaptiveTrackProjectionContext
         if (frameToMaxSequenceNumberMap.containsKey(timestamp))
         {
             int previousMaxSequenceNumber
-                = frameToMaxSequenceNumberMap.get(timestamp);
+                = getMaxSequenceNumberOfFrame(ssrc, timestamp);
 
-            if (RTPUtils.isOlderSequenceNumberThan(
-                previousMaxSequenceNumber, sequenceNumber))
+            if (previousMaxSequenceNumber != -1
+                && RTPUtils.isOlderSequenceNumberThan(
+                    previousMaxSequenceNumber, sequenceNumber))
             {
                 frameToMaxSequenceNumberMap.put(timestamp, sequenceNumber);
             }
