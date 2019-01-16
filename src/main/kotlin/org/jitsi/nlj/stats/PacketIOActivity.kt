@@ -16,7 +16,14 @@
 
 package org.jitsi.nlj.stats
 
+import kotlin.math.max
+
 class PacketIOActivity {
     var lastPacketReceivedTimestampMs: Long = 0
     var lastPacketSentTimestampMs: Long = 0
+
+    val lastOverallActivityTimestampMs: Long
+        get() {
+            return max(lastPacketReceivedTimestampMs, lastPacketSentTimestampMs)
+        }
 }
