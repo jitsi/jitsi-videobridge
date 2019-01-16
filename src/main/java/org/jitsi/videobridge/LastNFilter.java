@@ -19,6 +19,7 @@ package org.jitsi.videobridge;
 import org.jitsi.nlj.*;
 
 import java.util.*;
+import java.util.stream.*;
 
 /**
  * This class is somewhat a placeholder for now--I'm not sure if this is how we'll end up implementing this.  The idea
@@ -29,26 +30,39 @@ import java.util.*;
  */
 public class LastNFilter
 {
-    private int lastNValue = 0;
+    private final String myEndpointId;
+    public LastNFilter(String myEndpointId)
+    {
+        this.myEndpointId = myEndpointId;
+    }
+    // Right now both 'null' and '-1' values will 'disable' lastN
+    private Integer lastNValue = -1;
     private List<String> endpointsSortedByActivity;
 
-    public void setLastNValue(int lastNValue)
+    public void setLastNValue(Integer lastNValue)
     {
         this.lastNValue = lastNValue;
+    }
+
+    public Integer getLastNValue()
+    {
+        return lastNValue;
     }
 
     //TODO: this should be passed as an immutable list (Collections.unmodifiableList(original)).
     // is there any way we can enforce that?
     public void setEndpointsSortedByActivity(List<String> endpointsSortedByActivity)
     {
-        this.endpointsSortedByActivity = endpointsSortedByActivity;
+        this.endpointsSortedByActivity = endpointsSortedByActivity
+                .stream()
+                .filter(epId -> !epId.equals(myEndpointId))
+                .collect(Collectors.toList());
     }
 
-    public boolean wants(PacketInfo packet)
+    public boolean wants(String packetSourceEndpointId)
     {
-        //TODO: here we'll return whether or not we're interested in this packet based on which endpoint it belongs to
-        // and whether or not that endpoint is within the lastn range.  I think we'll want to tag the packetinfo/packet
-        // with the source endpoint id?
-        return true;
+        return (lastNValue == null ||
+                lastNValue < 0 ||
+                (endpointsSortedByActivity.indexOf(packetSourceEndpointId) < lastNValue));
     }
 }

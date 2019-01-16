@@ -40,7 +40,6 @@ public class ColibriShim {
         final String id;
         final AbstractEndpoint endpoint;
         final boolean isOcto;
-        Integer lastN = null;
         MediaDirection direction;
         private Collection<PayloadTypePacketExtension> payloadTypes;
         Collection<RTPHdrExtPacketExtension> rtpHeaderExtensions;
@@ -93,6 +92,13 @@ public class ColibriShim {
             return expired;
         }
 
+        public void setLastN(Integer lastN)
+        {
+            // Since only a single channel (the video channel) should have the lastN value set, we don't worry
+            // about overriding the singular lastN value on the endpoint
+            endpoint.setLastN(lastN);
+        }
+
 
         public void describe(ColibriConferenceIQ.ChannelCommon commonIq)
         {
@@ -106,7 +112,7 @@ public class ColibriShim {
             {
                 ColibriConferenceIQ.Channel iq = (ColibriConferenceIQ.Channel) commonIq;
                 iq.setRTPLevelRelayType(RTPLevelRelayType.TRANSLATOR);
-                iq.setLastN(lastN);
+                iq.setLastN(endpoint.getLastN());
                 iq.setDirection(direction);
 
                 //TODO: initialLocalSsrc/sources.  do we need to set these? when are they used?

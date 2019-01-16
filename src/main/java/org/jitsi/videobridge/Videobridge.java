@@ -934,7 +934,7 @@ public class Videobridge
 
             if (channelLastN != null)
             {
-                channelShim.lastN = channelLastN;
+                channelShim.setLastN(channelLastN);
             }
             ColibriConferenceIQ.Channel responseChannelIQ = new ColibriConferenceIQ.Channel();
             channelShim.describe(responseChannelIQ);

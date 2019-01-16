@@ -17,6 +17,7 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
@@ -71,7 +72,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
      */
     protected final List<WeakReference<ColibriShim.ChannelShim>> channelShims = new LinkedList<>();
 
-    private final LastNFilter lastNFilter = new LastNFilter();
+    private final LastNFilter lastNFilter;
 
     /**
      * The (human readable) display name of this <tt>Endpoint</tt>.
@@ -110,6 +111,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.conference = Objects.requireNonNull(conference, "conference");
         logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = Objects.requireNonNull(id, "id");
+        this.lastNFilter = new LastNFilter(id);
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
         receiverExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver " + id + " executor"));
         senderExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Sender " + id + " executor"));
@@ -143,7 +145,33 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         lastNFilter.setEndpointsSortedByActivity(endpoints);
     }
 
+    public void setLastN(Integer lastN)
+    {
+        lastNFilter.setLastNValue(lastN);
+    }
 
+    public Integer getLastN()
+    {
+        return lastNFilter.getLastNValue();
+    }
+
+    public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
+    {
+        // We always want audio packets
+        if (packetInfo.getPacket() instanceof AudioRtpPacket)
+        {
+            return true;
+        }
+        // Video packets require more checks:
+        // First check if this endpoint fits in lastN
+        if (!lastNFilter.wants(sourceEndpointId))
+        {
+            return false;
+        }
+        // Next check if the bitrate controller will accept this packet
+        //TODO(brian)
+        return true;
+    }
 
     protected void handleIncomingRtp(List<PacketInfo> packetInfos)
     {
@@ -166,10 +194,14 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                 {
                     return;
                 }
-                PacketInfo pktInfoCopy = pktInfo.clone();
-                //TODO: add 'wants' check and we'll need to go through the videochannel(?)
-                endpoint.transceiver.sendRtp(Collections.singletonList(pktInfoCopy));
-
+                //TODO(brian): we don't use a copy when passing to 'wants', which makes sense, but it would be nice
+                // to be able to enforce a 'read only' version of the packet here so we can guarantee nothing is
+                // changed in 'wants'
+                if (endpoint.wants(pktInfo, getID()))
+                {
+                    PacketInfo pktInfoCopy = pktInfo.clone();
+                    endpoint.transceiver.sendRtp(Collections.singletonList(pktInfoCopy));
+                }
             });
         });
     }
