@@ -158,23 +158,6 @@ public class Conference
         = new WeakReferencePropertyChangeListener(this);
 
     /**
-     * Whether media recording is currently enabled for this <tt>Conference</tt>.
-     */
-    private boolean recording = false;
-
-    /**
-     * The directory into which files associated with media recordings
-     * for this <tt>Conference</tt> will be stored.
-     */
-    private String recordingDirectory = null;
-
-    /**
-     * The path to the directory into which files associated with media
-     * recordings for this <tt>Conference</tt> will be stored.
-     */
-    private String recordingPath = null;
-
-    /**
      * The speech activity (representation) of the <tt>Endpoint</tt>s of this
      * <tt>Conference</tt>.
      */

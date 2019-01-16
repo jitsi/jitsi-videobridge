@@ -424,8 +424,6 @@ final class JSONDeserializer
                 = conference.get(JSONSerializer.CHANNEL_BUNDLES);
             Object endpoints
                 = conference.get(JSONSerializer.ENDPOINTS);
-            Object recording
-                = conference.get(ColibriConferenceIQ.Recording.ELEMENT_NAME);
             Object strategy
                 = conference.get(ColibriConferenceIQ
                         .RTCPTerminationStrategy.ELEMENT_NAME);
@@ -457,11 +455,6 @@ final class JSONDeserializer
                 deserializeEndpoints(
                         (JSONArray) endpoints,
                         conferenceIQ);
-            }
-            // recording
-            if (recording != null)
-            {
-                deserializeRecording((JSONObject) recording, conferenceIQ);
             }
             if (strategy != null)
             {
@@ -755,36 +748,6 @@ final class JSONDeserializer
                 deserializePayloadType((JSONObject) payloadType, channelIQ);
             }
         }
-    }
-
-    public static void deserializeRecording(JSONObject recording,
-                                            ColibriConferenceIQ conferenceIQ)
-    {
-        Object state
-            = recording.get(ColibriConferenceIQ.Recording.STATE_ATTR_NAME);
-        if (state == null)
-        {
-            return;
-        }
-
-        ColibriConferenceIQ.Recording recordingIQ
-                = new ColibriConferenceIQ.Recording(state.toString());
-
-        Object token
-            = recording.get(ColibriConferenceIQ.Recording.TOKEN_ATTR_NAME);
-        if (token != null)
-        {
-            recordingIQ.setToken(token.toString());
-        }
-
-        Object directory
-                = recording.get(ColibriConferenceIQ.Recording.DIRECTORY_ATTR_NAME);
-        if (directory != null)
-        {
-            recordingIQ.setDirectory(directory.toString());
-        }
-
-        conferenceIQ.setRecording(recordingIQ);
     }
 
     public static ColibriConferenceIQ.SctpConnection deserializeSctpConnection(
