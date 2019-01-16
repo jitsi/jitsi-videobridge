@@ -58,13 +58,6 @@ public class Endpoint
         = Endpoint.class.getName() + ".selectedEndpoints";
 
     /**
-     * Configuration property for number of streams to cache
-     */
-    @Deprecated
-    public final static String ENABLE_LIPSYNC_HACK_PNAME
-        = Endpoint.class.getName() + ".ENABLE_LIPSYNC_HACK";
-
-    /**
      * The set of IDs of the pinned endpoints of this {@code Endpoint}.
      */
     private Set<String> pinnedEndpoints = new HashSet<>();

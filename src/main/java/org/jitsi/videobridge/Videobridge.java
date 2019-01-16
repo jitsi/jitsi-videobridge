@@ -1601,14 +1601,6 @@ public class Videobridge
                 }
             }
 
-            String enableLipSync
-                = cfg.getString(Endpoint.ENABLE_LIPSYNC_HACK_PNAME);
-            if (enableLipSync != null)
-            {
-                System.setProperty(
-                    VideoChannel.ENABLE_LIPSYNC_HACK_PNAME, enableLipSync);
-            }
-
             String disableNackTerminaton
                 = cfg.getString(VideoChannel.DISABLE_NACK_TERMINATION_PNAME);
             if (disableNackTerminaton != null)
