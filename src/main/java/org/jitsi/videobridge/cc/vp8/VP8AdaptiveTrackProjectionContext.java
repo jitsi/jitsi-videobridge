@@ -63,7 +63,7 @@ public class VP8AdaptiveTrackProjectionContext
      * (yet) accepted/projected. The map goes from ssrc -> timestamp -> highest
      * sequence number.
      */
-    private final Map<Long, Map<Long, Integer>>
+    private final Map<Long, LRUCache<Long, Integer>>
         ssrcToFrameToMaxSequenceNumberMap = new HashMap<>();
 
     /**
