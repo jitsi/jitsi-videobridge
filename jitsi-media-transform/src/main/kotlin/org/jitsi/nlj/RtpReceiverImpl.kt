@@ -171,6 +171,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(RtxHandler())
                                     node(PaddingTermination())
                                     node(VideoParser())
+                                    node(Vp8Parser())
                                     node(RetransmissionRequester(rtcpSender))
                                     node(rtpPacketHandlerWrapper)
                                 }
