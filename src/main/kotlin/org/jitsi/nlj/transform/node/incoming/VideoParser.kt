@@ -26,6 +26,7 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.cinfo
@@ -59,11 +60,16 @@ class VideoParser : Node("Video parser") {
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
             val pt = pkt.header.payloadType.toUByte()
             payloadFormats[pt]?.let { format ->
-                val videoRtpPacket = VideoRtpPacket(pkt.getBuffer())
-                when (format.encoding) {
-                    Constants.VP8 -> {
-                        videoRtpPacket.isKeyFrame = Vp8Utils.isKeyFrame(videoRtpPacket.payload)
-                    }
+                val videoRtpPacket = when (format.encoding) {
+                    Constants.VP8 -> Vp8Packet(pkt.getBuffer())
+                    //TEMP
+//                    Constants.VP8 -> {
+//                        val vp8pkt = Vp8Packet(pkt.getBuffer())
+//                        println("parsed vp8 packet: \n$vp8pkt")
+//                        vp8pkt
+//                    }
+                    //END TEMP
+                    else -> VideoRtpPacket(pkt.getBuffer())
                 }
                 packetInfo.packet = videoRtpPacket
                 outPackets.add(packetInfo)
