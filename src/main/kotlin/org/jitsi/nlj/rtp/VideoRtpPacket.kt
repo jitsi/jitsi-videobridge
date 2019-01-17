@@ -15,7 +15,7 @@
  */
 package org.jitsi.nlj.rtp
 
-import org.jitsi.impl.neomedia.rtp.FrameDesc
+import org.jitsi_modified.impl.neomedia.rtp.FrameDesc
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpHeader
