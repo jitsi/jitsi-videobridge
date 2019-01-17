@@ -62,13 +62,6 @@ class VideoParser : Node("Video parser") {
             payloadFormats[pt]?.let { format ->
                 val videoRtpPacket = when (format.encoding) {
                     Constants.VP8 -> Vp8Packet(pkt.getBuffer())
-                    //TEMP
-//                    Constants.VP8 -> {
-//                        val vp8pkt = Vp8Packet(pkt.getBuffer())
-//                        println("parsed vp8 packet: \n$vp8pkt")
-//                        vp8pkt
-//                    }
-                    //END TEMP
                     else -> VideoRtpPacket(pkt.getBuffer())
                 }
                 packetInfo.packet = videoRtpPacket
