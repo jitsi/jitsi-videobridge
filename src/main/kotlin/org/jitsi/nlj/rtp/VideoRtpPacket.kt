@@ -22,7 +22,7 @@ import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.extensions.clone
 import java.nio.ByteBuffer
 
-class VideoRtpPacket : RtpPacket {
+open class VideoRtpPacket : RtpPacket {
     var isKeyFrame: Boolean = false
     var trackEncodings: Array<RTPEncodingDesc>? = null
 //    var rtpEncodingDesc: RTPEncodingDesc? = null
@@ -40,5 +40,11 @@ class VideoRtpPacket : RtpPacket {
         clone.trackEncodings = trackEncodings
 
         return clone
+    }
+
+    override fun toString(): String = with(StringBuffer()) {
+        append(super.toString())
+        appendln("isKeyFrame? $isKeyFrame")
+        toString()
     }
 }
