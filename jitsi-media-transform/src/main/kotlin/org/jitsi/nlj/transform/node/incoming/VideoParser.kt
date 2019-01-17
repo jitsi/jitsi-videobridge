@@ -15,6 +15,7 @@
  */
 package org.jitsi.nlj.transform.node.incoming
 
+import org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
 import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi_modified.impl.neomedia.codec.video.vp8.VP8Utils
 import org.jitsi.nlj.Event
@@ -22,6 +23,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpEncodingsEvent
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
+import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.transform.node.Node
@@ -30,6 +32,7 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.Packet
 import org.jitsi.rtp.RtpPacket
+import org.jitsi.rtp.extensions.toHex
 import org.jitsi.service.neomedia.MediaType
 import org.jitsi.service.neomedia.codec.Constants
 import org.jitsi.service.neomedia.format.MediaFormat
@@ -52,48 +55,24 @@ class VideoParser : Node("Video parser") {
     // does this packet represent the start of a frame?
     // does this packet represent the end of a frame?
     override fun doProcessPackets(p: List<PacketInfo>) {
-//        val outPackets = mutableListOf<PacketInfo>()
-//        p.forEachAs<RtpPacket> { packetInfo, pkt ->
-//            val pt = pkt.header.payloadType.toUByte()
-//            payloadFormats[pt]?.let { format ->
-//                val videoRtpPacket = VideoRtpPacket(pkt.getBuffer())
-//                val rtpEncodingDesc = getEncoding(videoRtpPacket) ?: run {
-//                    logger.cdebug {
-//                        "Couldn't find rtpencoding desc " +
-//                                "for video packet ${videoRtpPacket.header.ssrc} ${videoRtpPacket.header.sequenceNumber}"
-//                    }
-//                    return@forEachAs
-//                }
-////                val frameDesc = frames.computeIfAbsent(videoRtpPacket.header.timestamp) { FrameDesc(videoRtpPacket.header.timestamp, System.currentTimeMillis()) }
-////                val frameDesc = frames.computeIfAbsent(videoRtpPacket.header.timestamp) { FrameDesc(rtpEncodingDesc, videoRtpPacket.toRawPacket(), System.currentTimeMillis()) }
-//                rtpEncodingDesc.update(videoRtpPacket.toRawPacket(), System.currentTimeMillis())
-//                val frameDesc = rtpEncodingDesc.findFrameDesc(videoRtpPacket.header.timestamp)
-//                videoRtpPacket.frameDesc = frameDesc
-//                videoRtpPacket.trackEncodings = rtpEncodings.toTypedArray()
-//                //TODO: this will need some cleanup to allow for other codecs (and other methods of denoting these
-//                // things like frame markings)
-////                if (format.encoding == Constants.VP8) {
-//////                    videoRtpPacket.isKeyFrame = VP8Utils.isKeyFrame(videoRtpPacket.payload)
-////                    if (VP8Utils.isKeyFrame(videoRtpPacket.payload)) {
-//////                        logger.cdebug { "BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is part of a key frame" }
-////                        frameDesc.independent = true
-////                    }
-////                    if (VP8Utils.isStartOfFrame(videoRtpPacket.payload)) {
-////                        frameDesc.start = videoRtpPacket.header.sequenceNumber
-//////                        logger.cdebug { "BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the start of a frame" }
-////                    } else if (videoRtpPacket.header.marker) {
-//////                        logger.cdebug { "BRIAN: detected packet ${pkt.header.ssrc} ${pkt.header.sequenceNumber} is the end of a frame" }
-////                        frameDesc.end = videoRtpPacket.header.sequenceNumber
-////                    }
-////                }
-//                packetInfo.packet = videoRtpPacket
-//                outPackets.add(packetInfo)
-//            } ?: run {
-//                outPackets.add(packetInfo)
-//            }
-//        }
-//        next(outPackets)
-        next(p)
+        val outPackets = mutableListOf<PacketInfo>()
+        p.forEachAs<RtpPacket> { packetInfo, pkt ->
+            val pt = pkt.header.payloadType.toUByte()
+            payloadFormats[pt]?.let { format ->
+                val videoRtpPacket = VideoRtpPacket(pkt.getBuffer())
+                when (format.encoding) {
+                    Constants.VP8 -> {
+                        videoRtpPacket.isKeyFrame = Vp8Utils.isKeyFrame(videoRtpPacket.payload)
+                    }
+                }
+                packetInfo.packet = videoRtpPacket
+                outPackets.add(packetInfo)
+            } ?: run {
+                logger.error("Unrecognized video payload type $pt, cannot parse video information")
+                outPackets.add(packetInfo)
+            }
+        }
+        next(outPackets)
     }
 
     private fun getEncoding(p: RtpPacket): RTPEncodingDesc? {
