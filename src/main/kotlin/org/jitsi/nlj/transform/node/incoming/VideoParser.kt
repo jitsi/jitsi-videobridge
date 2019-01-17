@@ -48,8 +48,6 @@ import java.util.concurrent.CopyOnWriteArrayList
 class VideoParser : Node("Video parser") {
     private val payloadFormats: MutableMap<Byte, MediaFormat> = ConcurrentHashMap()
     private var rtpEncodings: List<RTPEncodingDesc> = ArrayList()
-    //TODO: i don't *think* we need concurrent here, but remember to change this if we do
-//    private val frames: MutableMap<Long, FrameDesc> = mutableMapOf()
 
     //TODO: things we want to detect here:
     // does this packet belong to a keyframe?
