@@ -102,7 +102,7 @@ public class Endpoint
      */
     private AtomicInteger selectedCount = new AtomicInteger(0);
 
-    private BitrateController bitrateController = new BitrateController(null);
+    private final BitrateController bitrateController;
 
     /**
      * Pool shared by all endpoint instances for IO tasks
@@ -121,6 +121,8 @@ public class Endpoint
     public Endpoint(String id, Conference conference)
     {
         super(conference, id);
+
+        bitrateController = new BitrateController(null, getID());
 
         messageTransport = new EndpointMessageTransport(this);
 

@@ -322,14 +322,20 @@ public class BitrateController
     int lastN;
 
     /**
+     * The ID of the endpoint to which this {@link BitrateController} belongs
+     */
+    private final String destinationEndpointId;
+
+    /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link VideoChannel}.
      *
      * @param dest the {@link VideoChannel} that owns this instance.
      */
-    public BitrateController(VideoChannel dest)
+    public BitrateController(VideoChannel dest, String destinationEndpointId)
     {
         this.dest = dest;
+        this.destinationEndpointId = destinationEndpointId;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
@@ -826,12 +832,6 @@ public class BitrateController
             return null;
         }
 
-        AbstractEndpoint destEndpoint = dest.getEndpoint();
-        if (destEndpoint == null || destEndpoint.isExpired())
-        {
-            return null;
-        }
-
         // Init.
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();
@@ -858,7 +858,7 @@ public class BitrateController
         {
             AbstractEndpoint sourceEndpoint = it.next();
             if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destEndpoint.getID())
+                    || sourceEndpoint.getID().equals(destinationEndpointId)
                     || !selectedEndpointIds.contains(sourceEndpoint.getID()))
             {
                 continue;
@@ -895,7 +895,7 @@ public class BitrateController
             {
                 AbstractEndpoint sourceEndpoint = it.next();
                 if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destEndpoint.getID())
+                    || sourceEndpoint.getID().equals(destinationEndpointId)
                     || !pinnedEndpointIds.contains(sourceEndpoint.getID()))
                 {
                     continue;
@@ -930,7 +930,7 @@ public class BitrateController
             for (AbstractEndpoint sourceEndpoint : conferenceEndpoints)
             {
                 if (sourceEndpoint.isExpired()
-                    || sourceEndpoint.getID().equals(destEndpoint.getID()))
+                    || sourceEndpoint.getID().equals(destinationEndpointId))
                 {
                     continue;
                 }
