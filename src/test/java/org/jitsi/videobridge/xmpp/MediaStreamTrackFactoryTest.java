@@ -19,9 +19,9 @@ package org.jitsi.videobridge.xmpp;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import org.easymock.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.junit.*;
 import org.junit.runner.*;
 import org.powermock.api.easymock.*;
@@ -120,10 +120,8 @@ public class MediaStreamTrackFactoryTest
 
         SourcePacketExtension videoSource = createSource(videoSsrc);
 
-        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
-
         MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+            MediaStreamTrackFactory.createMediaStreamTracks(
                 Collections.singletonList(videoSource), Collections.emptyList());
 
         assertNotNull(tracks);
@@ -151,10 +149,8 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
                 SourceGroupPacketExtension.SEMANTICS_FID, videoSource, rtx);
 
-        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
-
         MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+            MediaStreamTrackFactory.createMediaStreamTracks(
                 Arrays.asList(videoSource, rtx), Arrays.asList(rtxGroup));
 
         assertNotNull(tracks);
@@ -202,10 +198,8 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
                 SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
 
-        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
-
         MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+            MediaStreamTrackFactory.createMediaStreamTracks(
                 Arrays.asList(
                     videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3),
                 Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
@@ -260,10 +254,8 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
                 SourceGroupPacketExtension.SEMANTICS_FID, videoSource3, rtx3);
 
-        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
-
         MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+            MediaStreamTrackFactory.createMediaStreamTracks(
                 Arrays.asList(
                     videoSource1, videoSource2, videoSource3, rtx1, rtx2, rtx3),
                 Arrays.asList(simGroup, rtxGroup1, rtxGroup2, rtxGroup3));
@@ -324,11 +316,8 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
             SourceGroupPacketExtension.SEMANTICS_FID, videoSource4, rtx4);
 
-        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
-
         MediaStreamTrackDesc[] tracks =
             MediaStreamTrackFactory.createMediaStreamTracks(
-                receiver,
                 Arrays.asList(
                     videoSource1, videoSource2, videoSource3, videoSource4,
                     videoSource5, rtx1, rtx2, rtx3, rtx4),
@@ -356,10 +345,8 @@ public class MediaStreamTrackFactoryTest
             = createGroup(
             SourceGroupPacketExtension.SEMANTICS_SIMULCAST);
 
-        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
-
         MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
+            MediaStreamTrackFactory.createMediaStreamTracks(
                 Arrays.asList(
                     videoSource1),
                 Arrays.asList(simGroup));
@@ -378,13 +365,11 @@ public class MediaStreamTrackFactoryTest
 
         SourcePacketExtension videoSource1 = createSource(null);
 
-        MediaStreamTrackReceiver receiver = new MediaStreamTrackReceiver(null);
-
         MediaStreamTrackDesc[] tracks =
-            MediaStreamTrackFactory.createMediaStreamTracks(receiver,
-                Arrays.asList(
-                    videoSource1),
-                Collections.emptyList());
+            MediaStreamTrackFactory.createMediaStreamTracks(
+                Arrays.asList(videoSource1),
+                Collections.emptyList()
+            );
 
         assertNotNull(tracks);
         assertEquals(0, tracks.length);

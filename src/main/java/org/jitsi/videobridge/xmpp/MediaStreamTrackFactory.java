@@ -18,11 +18,11 @@ package org.jitsi.videobridge.xmpp;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jitsimeet.*;
-import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.util.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.stream.*;
@@ -250,7 +250,7 @@ public class MediaStreamTrackFactory
      * @return a map of secondary ssrc -> type (rtx, fec, etc.)
      */
     private static List<SecondarySsrc> getSecondarySsrcs(
-        long ssrc, List<SourceGroupPacketExtension> sourceGroups)
+        long ssrc, Collection<SourceGroupPacketExtension> sourceGroups)
     {
         List<SecondarySsrc> secondarySsrcs = new ArrayList<>();
         for (SourceGroupPacketExtension sourceGroup : sourceGroups)
@@ -283,7 +283,7 @@ public class MediaStreamTrackFactory
      * type
      */
     private static Map<Long, SecondarySsrcs> getAllSecondarySsrcs(
-            TrackSsrcs ssrcs, List<SourceGroupPacketExtension> sourceGroups)
+            TrackSsrcs ssrcs, Collection<SourceGroupPacketExtension> sourceGroups)
     {
         Map<Long, SecondarySsrcs> allSecondarySsrcs = new HashMap<>();
 
@@ -376,8 +376,8 @@ public class MediaStreamTrackFactory
      * a set of primary video ssrcs belonging to a single track (video source)
      */
     private static List<TrackSsrcs> getTrackSsrcs(
-            List<SourcePacketExtension> sources,
-            List<SourceGroupPacketExtension> sourceGroups)
+            Collection<SourcePacketExtension> sources,
+            Collection<SourceGroupPacketExtension> sourceGroups)
     {
         //FIXME: determining the individual tracks should be done via msid,
         // but somewhere along the line we seem to lose the msid information
@@ -481,8 +481,8 @@ public class MediaStreamTrackFactory
      * @param trackSsrcsList the list of {@link TrackSsrcs} to update.
      */
     private static void setOwners(
-        List<SourcePacketExtension> sources,
-        List<TrackSsrcs> trackSsrcsList)
+        Collection<SourcePacketExtension> sources,
+        Collection<TrackSsrcs> trackSsrcsList)
     {
         for (TrackSsrcs trackSsrcs : trackSsrcsList)
         {
@@ -529,20 +529,18 @@ public class MediaStreamTrackFactory
     /**
      * Creates {@link MediaStreamTrackDesc}s from signaling params
      *
-     * @param mediaStreamTrackReceiver the {@link MediaStreamTrackReceiver} that
      * will receive the created {@link MediaStreamTrackDesc}s.
      * @param sources The {@link List} of {@link SourcePacketExtension} that
      * describes the list of jingle sources.
      * @param sourceGroups The {@link List} of
      * {@link SourceGroupPacketExtension} that describes the list of jingle
      * source groups.
-     * @return the {@link MediaStreamTrackReceiver} that are described in the
+     * @return an array of {@link MediaStreamTrackDesc} that are described in the
      * jingle sources and source groups.
      */
     public static MediaStreamTrackDesc[] createMediaStreamTracks(
-        MediaStreamTrackReceiver mediaStreamTrackReceiver,
-        List<SourcePacketExtension> sources,
-        List<SourceGroupPacketExtension> sourceGroups)
+        Collection<SourcePacketExtension> sources,
+        Collection<SourceGroupPacketExtension> sourceGroups)
     {
         List<TrackSsrcs> trackSsrcsList = getTrackSsrcs(sources, sourceGroups);
         List<MediaStreamTrackDesc> tracks = new ArrayList<>();
@@ -559,7 +557,6 @@ public class MediaStreamTrackFactory
                 = getAllSecondarySsrcs(trackSsrcs, sourceGroups);
             MediaStreamTrackDesc track
                 = createTrack(
-                        mediaStreamTrackReceiver,
                         trackSsrcs,
                         numSpatialLayersPerStream,
                         numTemporalLayersPerStream,
@@ -670,7 +667,6 @@ public class MediaStreamTrackFactory
 
     /**
      * Creates a single MediaStreamTrack with the given information
-     * @param receiver the {@link MediaStreamTrackReceiver}
      * @param primarySsrcs the set of primary video ssrcs belonging to this track
      * @param numSpatialLayersPerStream the number of spatial layers per stream
      * for this track
@@ -682,7 +678,6 @@ public class MediaStreamTrackFactory
      * @return the created MediaStreamTrack
      */
     private static MediaStreamTrackDesc createTrack(
-            MediaStreamTrackReceiver receiver,
             TrackSsrcs primarySsrcs,
             int numSpatialLayersPerStream,
             int numTemporalLayersPerStream,
@@ -693,8 +688,7 @@ public class MediaStreamTrackFactory
                 * numSpatialLayersPerStream * numTemporalLayersPerStream;
         RTPEncodingDesc[] rtpEncodings = new RTPEncodingDesc[numEncodings];
         MediaStreamTrackDesc track
-            = new MediaStreamTrackDesc(
-                receiver, rtpEncodings, primarySsrcs.owner);
+            = new MediaStreamTrackDesc(rtpEncodings, primarySsrcs.owner);
 
         RTPEncodingDesc[] encodings
             = createRTPEncodings(

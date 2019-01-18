@@ -23,6 +23,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.io.*;
 import java.lang.ref.*;
@@ -280,6 +281,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                 expire();
             }
         }
+    }
+
+    public void setMediaStreamTracks(MediaStreamTrackDesc[] mediaStreamTracks)
+    {
+        transceiver.setMediaStreamTracks(mediaStreamTracks);
     }
 
     /**

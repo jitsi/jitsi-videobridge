@@ -40,6 +40,7 @@ import org.jitsi.videobridge.util.*;
 import org.jitsi.videobridge.transport.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jitsi.xmpp.util.*;
+import org.jitsi_modified.impl.neomedia.rtp.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.*;
 import org.jivesoftware.smackx.pubsub.*;
@@ -931,6 +932,20 @@ public class Videobridge
                 epSourceGroups.addAll(channelSourceGroups);
             }
             channelShim.sourceGroups = channelSourceGroups;
+
+            if (MediaType.VIDEO.equals(content.getType()) && !(channelShim.sources == null || channelShim.sources.isEmpty()))
+            {
+                MediaStreamTrackDesc[] tracks =
+                        MediaStreamTrackFactory.createMediaStreamTracks(channelShim.sources, channelShim.sourceGroups);
+                //TEMP
+                System.out.println("TEMP: created media stream tracks:");
+                for (MediaStreamTrackDesc track : tracks)
+                {
+                    System.out.println(track.toString());
+                }
+                //END TEMP
+                channelShim.endpoint.setMediaStreamTracks(tracks);
+            }
 
             if (channelLastN != null)
             {
