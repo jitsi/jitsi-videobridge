@@ -311,6 +311,12 @@ public class BitrateController
     private Set<String> selectedEndpointIds = Collections.emptySet();
 
     /**
+     * The IDs of the endpoints which have been pinned by the endpoint to which this
+     * {@link BitrateController} belongs
+     */
+    private Set<String> pinnedEndpointIds = Collections.emptySet();
+
+    /**
      * The last-n value for the endpoint to which this {@link BitrateController} belongs
      */
     int lastN;
@@ -882,8 +888,7 @@ public class BitrateController
         }
 
         // Then, bubble-up the pinned endpoints.
-        Set<String> pinnedEndpoints = destEndpoint.getPinnedEndpoints();
-        if (!pinnedEndpoints.isEmpty())
+        if (!pinnedEndpointIds.isEmpty())
         {
             for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
                  it.hasNext() && endpointPriority < adjustedLastN;)
@@ -891,7 +896,7 @@ public class BitrateController
                 AbstractEndpoint sourceEndpoint = it.next();
                 if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID())
-                    || !pinnedEndpoints.contains(sourceEndpoint.getID()))
+                    || !pinnedEndpointIds.contains(sourceEndpoint.getID()))
                 {
                     continue;
                 }
@@ -986,6 +991,17 @@ public class BitrateController
     public void setSelectedEndpointIds(Set<String> selectedEndpointIds)
     {
         this.selectedEndpointIds = new HashSet<>(selectedEndpointIds);
+    }
+
+    /**
+     * Set the endpoint IDs the endpoint to which this
+     * {@link BitrateController} belongs has pinned
+     * @param pinnedEndpointIds the endpoint IDs the endpoint to which this
+     *                            {@link BitrateController} belongs has pinned
+     */
+    public void setPinnedEndpointIds(Set<String> pinnedEndpointIds)
+    {
+        this.pinnedEndpointIds = new HashSet<>(pinnedEndpointIds);
     }
 
     public void setLastN(int lastN)

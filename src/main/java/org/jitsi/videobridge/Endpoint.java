@@ -161,6 +161,8 @@ public class Endpoint
                     + Arrays.toString(pinnedEndpoints.toArray()));
             }
 
+            bitrateController.setPinnedEndpointIds(pinnedEndpoints);
+
             firePropertyChange(PINNED_ENDPOINTS_PROPERTY_NAME,
                 oldPinnedEndpoints, pinnedEndpoints);
         }
