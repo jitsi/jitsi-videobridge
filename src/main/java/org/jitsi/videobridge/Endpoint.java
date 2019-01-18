@@ -206,6 +206,13 @@ public class Endpoint
         }
     }
 
+    @Override
+    public void setLastN(Integer lastN)
+    {
+        super.setLastN(lastN);
+        bitrateController.setLastN(lastN);
+    }
+
     /**
      * Previously, an endpoint expired when all of its channels did.  Channels now only exist in their 'shim'
      * form for backwards compatibility, so to find out whether or not the endpoint expired, we'll check the

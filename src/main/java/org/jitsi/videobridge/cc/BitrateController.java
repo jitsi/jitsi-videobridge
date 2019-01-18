@@ -311,6 +311,11 @@ public class BitrateController
     private Set<String> selectedEndpointIds = Collections.emptySet();
 
     /**
+     * The last-n value for the endpoint to which this {@link BitrateController} belongs
+     */
+    int lastN;
+
+    /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link VideoChannel}.
      *
@@ -825,17 +830,17 @@ public class BitrateController
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();
 
-        int lastN = dest.getLastN();
-        if (lastN < 0)
+        int adjustedLastN = this.lastN;
+        if (adjustedLastN < 0)
         {
             // If lastN is disabled, pretend lastN == szConference.
-            lastN = conferenceEndpoints.size() - 1;
+            adjustedLastN = conferenceEndpoints.size() - 1;
         }
         else
         {
             // If lastN is enabled, pretend lastN at most as big as the size
             // of the conference.
-            lastN = Math.min(lastN, conferenceEndpoints.size() - 1);
+            adjustedLastN = Math.min(lastN, conferenceEndpoints.size() - 1);
         }
 
         int endpointPriority = 0;
@@ -843,7 +848,7 @@ public class BitrateController
         // First, bubble-up the selected endpoints (whoever's on-stage needs to
         // be visible).
         for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
-             it.hasNext() && endpointPriority < lastN;)
+             it.hasNext() && endpointPriority < adjustedLastN;)
         {
             AbstractEndpoint sourceEndpoint = it.next();
             if (sourceEndpoint.isExpired()
@@ -881,7 +886,7 @@ public class BitrateController
         if (!pinnedEndpoints.isEmpty())
         {
             for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
-                 it.hasNext() && endpointPriority < lastN;)
+                 it.hasNext() && endpointPriority < adjustedLastN;)
             {
                 AbstractEndpoint sourceEndpoint = it.next();
                 if (sourceEndpoint.isExpired()
@@ -925,7 +930,7 @@ public class BitrateController
                     continue;
                 }
 
-                boolean forwarded = endpointPriority < lastN;
+                boolean forwarded = endpointPriority < adjustedLastN;
 
                 MediaStreamTrackDesc[] tracks
                     = sourceEndpoint.getMediaStreamTracks(MediaType.VIDEO);
@@ -981,6 +986,11 @@ public class BitrateController
     public void setSelectedEndpointIds(Set<String> selectedEndpointIds)
     {
         this.selectedEndpointIds = new HashSet<>(selectedEndpointIds);
+    }
+
+    public void setLastN(int lastN)
+    {
+        this.lastN = lastN;
     }
 
     /**
