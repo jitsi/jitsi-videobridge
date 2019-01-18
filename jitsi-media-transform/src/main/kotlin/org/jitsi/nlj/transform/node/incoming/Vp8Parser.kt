@@ -32,7 +32,6 @@ class Vp8Parser : Node("Vp8 parser") {
     private val ssrcToSpatialLayerQuality: MutableMap<Long, Int> = HashMap()
 
     override fun doProcessPackets(p: List<PacketInfo>) {
-        //TODO(brian): if we only route vp8 packets here, we can change this to expect Vp8Packet instead
         p.forEachAs<VideoRtpPacket> { _, pkt ->
             if (pkt is Vp8Packet) {
                 // If this was part of a keyframe, it will have already had it set
@@ -41,7 +40,6 @@ class Vp8Parser : Node("Vp8 parser") {
                 } else {
                     pkt.spatialLayerIndex = ssrcToSpatialLayerQuality[pkt.header.ssrc] ?: -1
                 }
-                println("TEMP: fully parsed vp8 packet is now:\n $pkt")
             }
         }
         next(p)

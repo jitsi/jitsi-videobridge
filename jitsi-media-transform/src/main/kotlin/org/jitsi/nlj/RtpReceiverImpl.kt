@@ -16,14 +16,30 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
-import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpRrGenerator
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.stats.NodeStatsBlock
-import org.jitsi.nlj.transform.node.*
-import org.jitsi.nlj.transform.node.incoming.*
+import org.jitsi.nlj.transform.node.MediaTypeParser
+import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.transform.node.NodeEventVisitor
+import org.jitsi.nlj.transform.node.NodeStatsVisitor
+import org.jitsi.nlj.transform.node.PacketParser
+import org.jitsi.nlj.transform.node.PayloadTypeFilterNode
+import org.jitsi.nlj.transform.node.incoming.AudioLevelReader
+import org.jitsi.nlj.transform.node.incoming.IncomingStatisticsTracker
+import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
+import org.jitsi.nlj.transform.node.incoming.PaddingTermination
+import org.jitsi.nlj.transform.node.incoming.RetransmissionRequester
+import org.jitsi.nlj.transform.node.incoming.RtcpTermination
+import org.jitsi.nlj.transform.node.incoming.RtxHandler
+import org.jitsi.nlj.transform.node.incoming.SrtcpTransformerDecryptNode
+import org.jitsi.nlj.transform.node.incoming.SrtpTransformerDecryptNode
+import org.jitsi.nlj.transform.node.incoming.TccGeneratorNode
+import org.jitsi.nlj.transform.node.incoming.VideoBitrateCalculator
+import org.jitsi.nlj.transform.node.incoming.VideoParser
+import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
 import org.jitsi.nlj.util.Util.Companion.getMbps
@@ -172,6 +188,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
                                     node(PaddingTermination())
                                     node(VideoParser())
                                     node(Vp8Parser())
+                                    node(VideoBitrateCalculator())
                                     node(RetransmissionRequester(rtcpSender))
                                     node(rtpPacketHandlerWrapper)
                                 }
