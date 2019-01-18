@@ -20,6 +20,7 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.util.*;
+import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
@@ -101,6 +102,8 @@ public class Endpoint
      */
     private AtomicInteger selectedCount = new AtomicInteger(0);
 
+    private BitrateController bitrateController = new BitrateController(null);
+
     /**
      * Pool shared by all endpoint instances for IO tasks
      */
@@ -132,16 +135,6 @@ public class Endpoint
     public EndpointMessageTransport getMessageTransport()
     {
         return messageTransport;
-    }
-
-    /**
-     * @return the {@link Set} of selected endpoints, represented as a set of
-     * endpoint IDs.
-     */
-    @Override
-    public Set<String> getSelectedEndpoints()
-    {
-        return selectedEndpoints;
     }
 
     /**
@@ -186,6 +179,8 @@ public class Endpoint
                 logger.debug(getID() + " selected "
                     + Arrays.toString(selectedEndpoints.toArray()));
             }
+
+            bitrateController.setSelectedEndpointIds(Collections.unmodifiableSet(selectedEndpoints));
 
             firePropertyChange(SELECTED_ENDPOINTS_PROPERTY_NAME,
                 oldSelectedEndpoints, selectedEndpoints);

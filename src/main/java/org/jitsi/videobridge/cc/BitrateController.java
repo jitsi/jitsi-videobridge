@@ -305,6 +305,12 @@ public class BitrateController
     private int maxRxFrameHeightPx = -1;
 
     /**
+     * The IDs of the endpoints which have been selected by the endpoint to which this
+     * {@link BitrateController} belongs
+     */
+    private Set<String> selectedEndpointIds = Collections.emptySet();
+
+    /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link VideoChannel}.
      *
@@ -836,14 +842,13 @@ public class BitrateController
 
         // First, bubble-up the selected endpoints (whoever's on-stage needs to
         // be visible).
-        Set<String> selectedEndpoints = destEndpoint.getSelectedEndpoints();
         for (Iterator<AbstractEndpoint> it = conferenceEndpoints.iterator();
              it.hasNext() && endpointPriority < lastN;)
         {
             AbstractEndpoint sourceEndpoint = it.next();
             if (sourceEndpoint.isExpired()
                     || sourceEndpoint.getID().equals(destEndpoint.getID())
-                    || !selectedEndpoints.contains(sourceEndpoint.getID()))
+                    || !selectedEndpointIds.contains(sourceEndpoint.getID()))
             {
                 continue;
             }
@@ -965,6 +970,17 @@ public class BitrateController
     public void setMaxRxFrameHeightPx(int maxRxFrameHeightPx)
     {
         this.maxRxFrameHeightPx = maxRxFrameHeightPx;
+    }
+
+    /**
+     * Set the endpoint IDs the endpoint to which this
+     * {@link BitrateController} belongs has selected
+     * @param selectedEndpointIds the endpoint IDs the endpoint to which this
+     *                            {@link BitrateController} belongs has selected
+     */
+    public void setSelectedEndpointIds(Set<String> selectedEndpointIds)
+    {
+        this.selectedEndpointIds = new HashSet<>(selectedEndpointIds);
     }
 
     /**
