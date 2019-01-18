@@ -15,9 +15,9 @@
  */
 package org.jitsi.nlj
 
-import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
+import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 interface Event
 
@@ -36,4 +36,4 @@ class SsrcAssociationEvent(
     val type: String
 ) : Event
 
-class RtpEncodingsEvent(val rtpEncodings: List<RTPEncodingDesc>) : Event
+class SetMediaStreamTracksEvent(val mediaStreamTrackDescs: Array<MediaStreamTrackDesc>) : Event
