@@ -24,6 +24,11 @@ import java.nio.ByteBuffer
 
 class Vp8Packet : VideoRtpPacket {
     var temporalLayerIndex: Int = -1
+    /**
+     * This is currently used as an overall spatial index, not an in-band spatial quality index a la vp9.  That is,
+     * this index will correspond to an overall simulcast layer index across multiple simulcast stream.  e.g.
+     * 180p stream packets will have 0, 360p -> 1, 720p -> 2
+     */
     var spatialLayerIndex: Int = -1
 
     constructor (buf: ByteBuffer) : super(buf) {

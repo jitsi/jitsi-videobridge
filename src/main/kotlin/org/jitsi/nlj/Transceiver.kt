@@ -16,7 +16,6 @@
 package org.jitsi.nlj
 
 import org.bouncycastle.crypto.tls.TlsContext
-import org.jitsi.impl.neomedia.rtp.RTPEncodingDesc
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -34,9 +33,9 @@ import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
 import org.jitsi.util.DiagnosticContext
 import org.jitsi.util.Logger
+import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.nio.ByteBuffer
-import java.util.Arrays
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.LinkedBlockingQueue
@@ -170,10 +169,8 @@ class Transceiver(
 
     fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)
 
-    fun setRtpEncodings(rtpEncodings: Array<RTPEncodingDesc>) {
-        val event = RtpEncodingsEvent(Arrays.asList(*rtpEncodings))
-        rtpReceiver.handleEvent(event)
-        rtpSender.handleEvent(event)
+    fun setMediaStreamTracks(mediaStreamTracks: Array<MediaStreamTrackDesc>) {
+        rtpReceiver.handleEvent(SetMediaStreamTracksEvent(mediaStreamTracks))
     }
 
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {

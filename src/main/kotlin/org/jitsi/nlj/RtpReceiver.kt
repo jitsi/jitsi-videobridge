@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.transform.node.incoming.IncomingStreamStatistics
+import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 abstract class RtpReceiver :
     PacketHandler, EventHandler, Stoppable {

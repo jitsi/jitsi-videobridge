@@ -25,7 +25,10 @@ import java.nio.ByteBuffer
 open class VideoRtpPacket : RtpPacket {
     var isKeyFrame: Boolean = false
     var trackEncodings: Array<RTPEncodingDesc>? = null
-//    var rtpEncodingDesc: RTPEncodingDesc? = null
+    /**
+     * The estimated bitrate of the encoding to which this packet belongs
+     */
+    var bitrateSnapshot: Long? = null
 
     constructor(buf: ByteBuffer) : super(buf)
 
@@ -45,6 +48,7 @@ open class VideoRtpPacket : RtpPacket {
     override fun toString(): String = with(StringBuffer()) {
         append(super.toString())
         appendln("isKeyFrame? $isKeyFrame")
+        appendln("bitrate snapshot: $bitrateSnapshot bps")
         toString()
     }
 }
