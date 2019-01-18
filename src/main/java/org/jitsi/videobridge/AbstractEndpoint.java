@@ -156,6 +156,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.getLastNValue();
     }
 
+    //TODO(brian): the nice thing about having 'wants' as a pre-check before we forward a packet is that if
+    // 'wants' returns false, we don't have to make a copy of the packet to forward down.  If, instead, we
+    // had a scheme where we pass a packet reference and the egress pipeline copies once it decides the packet should
+    // be accepted (or, even better, a packet is automatically copied on first modification) then we could
+    // avoid this separate call and just have the pipeline
     public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
     {
         // We always want audio packets
@@ -165,6 +170,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         }
         // Video packets require more checks:
         // First check if this endpoint fits in lastN
+        //TODO(brian): this doesn't take into account adaptive-last-n
         if (!lastNFilter.wants(sourceEndpointId))
         {
             return false;
