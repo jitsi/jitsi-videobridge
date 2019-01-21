@@ -15,15 +15,15 @@
  */
 package org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation;
 
-import net.sf.fmj.media.rtp.*;
-import org.jitsi.impl.neomedia.*;
-import org.jitsi.nlj.stats.*;
+import org.jetbrains.annotations.*;
+import org.jitsi.nlj.*;
+import org.jitsi.rtp.*;
+import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.rtp.*;
 import org.jitsi.util.concurrent.*;
-import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator;
+import org.jitsi_modified.service.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -38,7 +38,6 @@ import java.util.concurrent.*;
  * @author George Politis
  */
 public class BandwidthEstimatorImpl
-    extends RTCPReportAdapter
     implements BandwidthEstimator, RecurringRunnable
 {
     /**
@@ -98,57 +97,28 @@ public class BandwidthEstimatorImpl
         // Hook us up to receive Report Blocks and REMBs.
 //        MediaStreamStats stats = stream.getMediaStreamStats();
 //        stats.addRTCPPacketListener(sendSideBandwidthEstimation);
-        //TODO(brian): do we still need this?
-//        stats.getRTCPReports().addRTCPReportListener(this);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * bitrate_controller_impl.cc
-     * BitrateControllerImpl::OnReceivedRtcpReceiverReport
-     */
-    @Override
-    public void rtcpReportReceived(RTCPReport report)
+    public void rtcpReportBlocksReceived(Collection<RtcpReportBlock> reportBlocks)
     {
-        if (report == null || report.getFeedbackReports() == null
-                || report.getFeedbackReports().isEmpty())
-        {
-            return;
-        }
-
+        System.out.println("BandwidthEstimatorImpl got reportblocks");
         long total_number_of_packets = 0;
         long fraction_lost_aggregate = 0;
-
-        // Compute the a weighted average of the fraction loss from all report
-        // blocks.
-        for (RTCPFeedback feedback : report.getFeedbackReports())
+        for (RtcpReportBlock reportBlock : reportBlocks)
         {
-            long ssrc = feedback.getSSRC();
-            long extSeqNum = feedback.getXtndSeqNum();
-
-            Long lastEHSN
-                    = ssrc_to_last_received_extended_high_seq_num_.get(ssrc);
-            if (lastEHSN == null)
-            {
-                lastEHSN = extSeqNum;
-            }
-
-            ssrc_to_last_received_extended_high_seq_num_.put(ssrc, extSeqNum);
+            Long ssrc = reportBlock.getSsrc();
+            Long extSeqNum = reportBlock.getExtendedHighestSeqNum();
+            Long lastEHSN = ssrc_to_last_received_extended_high_seq_num_.computeIfAbsent(ssrc, key -> extSeqNum);
 
             if (lastEHSN >= extSeqNum)
             {
                 //the first report for this SSRC
                 continue;
             }
-
             long number_of_packets = extSeqNum - lastEHSN;
-
-            fraction_lost_aggregate
-                    += number_of_packets * feedback.getFractionLost();
+            fraction_lost_aggregate += number_of_packets * reportBlock.getFractionLost();
             total_number_of_packets += number_of_packets;
         }
-
         if (total_number_of_packets == 0)
         {
             fraction_lost_aggregate = 0;
@@ -162,7 +132,6 @@ public class BandwidthEstimatorImpl
         {
             return;
         }
-
         synchronized (sendSideBandwidthEstimation)
         {
             lastUpdateTime = System.currentTimeMillis();
@@ -216,6 +185,26 @@ public class BandwidthEstimatorImpl
     public void onRttUpdate(double newRtt)
     {
         sendSideBandwidthEstimation.onRttUpdate(newRtt);
+    }
+
+    @Override
+    public void onRtcpPacketReceived(@NotNull PacketInfo packetInfo)
+    {
+        Packet packet = packetInfo.getPacket();
+        if (packet instanceof RtcpSrPacket ||
+                packet instanceof RtcpRrPacket)
+        {
+            if (packet instanceof RtcpSrPacket)
+            {
+                RtcpSrPacket srPacket = (RtcpSrPacket)packet;
+                rtcpReportBlocksReceived(srPacket.getReportBlocks());
+            }
+            else
+            {
+                RtcpRrPacket rrPacket = (RtcpRrPacket)packet;
+                rtcpReportBlocksReceived(rrPacket.getReportBlocks());
+            }
+        }
     }
 
     /**

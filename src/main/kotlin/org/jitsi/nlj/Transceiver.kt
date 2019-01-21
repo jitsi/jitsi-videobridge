@@ -122,6 +122,7 @@ class Transceiver(
         }
 
         endpointConnectionStats.addListener(bandwidthEstimator)
+        rtcpEventNotifier.addRtcpEventListener(bandwidthEstimator)
     }
 
     /**

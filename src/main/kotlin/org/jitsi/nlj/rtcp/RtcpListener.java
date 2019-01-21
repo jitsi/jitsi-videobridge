@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-package org.jitsi.nlj.rtcp
+package org.jitsi.nlj.rtcp;
 
-import org.jitsi.nlj.PacketInfo
-import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.nlj.PacketInfo;
+import org.jitsi.rtp.rtcp.RtcpPacket;
 
-interface RtcpListener {
-    fun onRtcpPacketReceived(packetInfo: PacketInfo) {}
-    fun onRtcpPacketSent(packet: RtcpPacket) {}
+/**
+ * NOTE(brian): Java doesn't see default implementation interface methods when
+ * written from kotlin, so this is implemented in java (which works for both
+ * kotlin and java) because I got tired of adding no-op methods for one of
+ * these methods as most listeners care about one but not the other
+ */
+public interface RtcpListener {
+    default void onRtcpPacketReceived(PacketInfo packetInfo) {}
+    default void onRtcpPacketSent(RtcpPacket packet) {}
 }
 
