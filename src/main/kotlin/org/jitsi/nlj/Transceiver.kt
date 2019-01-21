@@ -202,6 +202,8 @@ class Transceiver(
     // and change all the storage of the media stream tracks to use a list
     fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> = mediaStreamTracks
 
+    fun requestKeyFrame(mediaSsrc: Long) = rtpSender.requestKeyframe(mediaSsrc)
+
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
         payloadTypes[rtpPayloadType] = format
         logger.cinfo { "Payload type added: $rtpPayloadType -> $format" }

@@ -48,4 +48,5 @@ abstract class RtpSender : EventHandler, Stoppable,NodeStatsProducer {
     abstract fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer)
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
     abstract fun getStreamStats(): Map<Long, OutgoingStreamStatistics.Snapshot>
+    abstract fun requestKeyframe(mediaSsrc: Long)
 }
