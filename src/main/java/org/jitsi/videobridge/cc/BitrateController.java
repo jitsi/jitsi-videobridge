@@ -396,11 +396,11 @@ public class BitrateController
 
     /**
      * Defines a packet filter that controls which RTP packets to be written
-     * into the {@link Channel} that owns this {@link BitrateController}.
+     * into the {@link AbstractEndpoint} that owns this {@link BitrateController}.
      *
      * @param pkt that packet for which to decide to accept
      * @return <tt>true</tt> to allow the specified packet to be
-     * written into the {@link Channel} that owns this {@link BitrateController}
+     * written into the {@link AbstractEndpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
     public boolean accept(RawPacket pkt)
@@ -1053,13 +1053,13 @@ public class BitrateController
 
         /**
          * Indicates whether this {@link Endpoint} is forwarded or not to the
-         * {@link VideoChannel} that owns this {@link BitrateController}.
+         * {@link AbstractEndpoint} that owns this {@link BitrateController}.
          */
         private final boolean fitsInLastN;
 
         /**
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
-         * at the {@link VideoChannel} that owns this {@link BitrateController}.
+         * at the {@link AbstractEndpoint} that owns this {@link BitrateController}.
          */
         private final boolean selected;
 
