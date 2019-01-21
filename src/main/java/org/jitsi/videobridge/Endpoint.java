@@ -122,7 +122,7 @@ public class Endpoint
     {
         super(conference, id);
 
-        bitrateController = new BitrateController(null, getID());
+        bitrateController = new BitrateController(null, getID(), transceiver.getBandwidthEstimator());
 
         messageTransport = new EndpointMessageTransport(this);
 
