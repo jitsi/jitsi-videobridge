@@ -933,6 +933,9 @@ public class Videobridge
             }
             channelShim.sourceGroups = channelSourceGroups;
 
+            //TODO(brian): we only create tracks for video right now, which is a bit weird (even though that's the
+            // only place we use them).  We should either create them for both audio and video and index them by
+            // media type or name these methods to better reflect they are for video
             if (MediaType.VIDEO.equals(content.getType()) && !(channelShim.sources == null || channelShim.sources.isEmpty()))
             {
                 MediaStreamTrackDesc[] tracks =

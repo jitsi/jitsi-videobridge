@@ -294,6 +294,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         transceiver.setMediaStreamTracks(mediaStreamTracks);
     }
 
+    public MediaStreamTrackDesc[] getMediaStreamTracks()
+    {
+        return transceiver.getMediaStreamTracks();
+    }
+
     /**
      * Returns the display name of this <tt>Endpoint</tt>.
      *
