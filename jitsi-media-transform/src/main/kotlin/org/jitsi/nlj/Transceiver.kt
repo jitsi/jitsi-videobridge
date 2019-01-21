@@ -84,7 +84,7 @@ class Transceiver(
 
     private val transportCcEngine = TransportCCEngine(DiagnosticContext())
 
-    private val bandwidthEstimator: BandwidthEstimator = BandwidthEstimatorImpl(null)
+    private val bandwidthEstimator: BandwidthEstimator = BandwidthEstimatorImpl()
 
     private val rtpSender: RtpSender = RtpSenderImpl(
             id,
