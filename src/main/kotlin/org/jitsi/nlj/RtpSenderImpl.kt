@@ -16,6 +16,7 @@
 package org.jitsi.nlj
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
+import org.jitsi.nlj.rtcp.KeyframeRequester
 import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.rtcp.RtcpSrGenerator
@@ -84,6 +85,7 @@ class RtpSenderImpl(
     private val outgoingPacketCache = PacketCache()
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
+    private val keyframeRequester = KeyframeRequester()
     /**
      * The SR generator runs on its own in the background.  It will access the outgoing stats via the given
      * [OutgoingStatisticsTracker] to grab a snapshot of the current state for filling out an SR and sending it
@@ -147,7 +149,9 @@ class RtpSenderImpl(
         rtcpEventNotifier.addRtcpEventListener(nackHandler)
 
         //TODO: aggregate/translate PLI/FIR/etc in the egress RTCP pipeline
+        //TODO: are we setting outgoing rtcp sequence numbers correctly? just add a simple node here to rewrite them
         outgoingRtcpRoot = pipeline {
+            node(keyframeRequester)
             node(SentRtcpStats())
             simpleNode("RTCP sender ssrc setter") { pktInfos ->
                 tempSenderSsrc?.let { senderSsrc ->
@@ -196,6 +200,10 @@ class RtpSenderImpl(
 
     override fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer) {
         srtcpEncryptWrapper.setTransformer(srtcpTransformer)
+    }
+
+    override fun requestKeyframe(mediaSsrc: Long) {
+        keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
     private fun doWork() {
