@@ -21,6 +21,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -156,6 +157,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.getLastNValue();
     }
 
+    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format) {
+        transceiver.addDynamicRtpPayloadType(rtpPayloadType, format);
+    }
+
     //TODO(brian): the nice thing about having 'wants' as a pre-check before we forward a packet is that if
     // 'wants' returns false, we don't have to make a copy of the packet to forward down.  If, instead, we
     // had a scheme where we pass a packet reference and the egress pipeline copies once it decides the packet should
@@ -171,13 +176,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         // Video packets require more checks:
         // First check if this endpoint fits in lastN
         //TODO(brian): this doesn't take into account adaptive-last-n
-        if (!lastNFilter.wants(sourceEndpointId))
-        {
-            return false;
-        }
-        // Next check if the bitrate controller will accept this packet
-        //TODO(brian)
-        return true;
+        return lastNFilter.wants(sourceEndpointId);
     }
 
     protected void handleIncomingRtp(List<PacketInfo> packetInfos)

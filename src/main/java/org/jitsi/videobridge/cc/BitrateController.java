@@ -22,6 +22,7 @@ import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
+import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -328,10 +329,13 @@ public class BitrateController
 
     private final Consumer<Long> keyframeRequester;
 
+
     //TODO(brian): throwing this here temporarily because it's needed and it used to be pulled from the Stream.
     // this was really an approximation for determining whether or not adaptivity/probing is supported, so we should
     // just detect that and set something appropriately in BitrateController
     private final boolean supportsRtx = true;
+
+    private final Map<Byte, MediaFormat> payloadTypeFormats = new HashMap<>();
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -477,183 +481,183 @@ public class BitrateController
      */
     public void update(List<AbstractEndpoint> conferenceEndpoints, long bweBps)
     {
-        if (bweBps > -1)
-        {
-            if (!isLargerThanBweThreshold(lastBwe, bweBps))
-            {
-                // If this is a "negligible" change in the bandwidth estimation
-                // wrt the last bandwidth estimation that we reacted to, then
-                // do not update the bitrate allocation. The goal is to limit
-                // the resolution changes due to bandwidth estimation changes,
-                // as often resolution changes can negatively impact user
-                // experience.
-                return;
-            }
-
-            lastBwe = bweBps;
-        }
-
-        // Gather the conference allocation input.
-        if (conferenceEndpoints == null)
-        {
-            conferenceEndpoints
-                = dest.getConferenceSpeechActivity().getEndpoints();
-        }
-        else
-        {
-            // Create a copy as we may modify the list in the prioritize method.
-            conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
-        }
-
-        long nowMs = System.currentTimeMillis();
-        boolean trustBwe = this.trustBwe;
-        if (trustBwe)
-        {
-            // Ignore the bandwidth estimations in the first 10 seconds because
-            // the REMBs don't ramp up fast enough. This needs to go but it's
-            // related to our GCC implementation that needs to be brought up to
-            // speed.
-            if (firstMediaMs == -1 || nowMs - firstMediaMs < 10000)
-            {
-                trustBwe = false;
-            }
-        }
-
-        if (bweBps == -1 && trustBwe)
-        {
-            bweBps = bandwidthEstimator.getLatestEstimate();
-        }
-
-        if (bweBps < 0 || !trustBwe || !supportsRtx)
-        {
-            bweBps = Long.MAX_VALUE;
-        }
-
-        // Compute the bitrate allocation.
-        TrackBitrateAllocation[]
-            trackBitrateAllocations = allocate(bweBps, conferenceEndpoints);
-
-        // Update the the controllers based on the allocation and send a
-        // notification to the client the set of forwarded endpoints has
-        // changed.
-        Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
-
-        Set<String> newForwardedEndpointIds = new HashSet<>();
-        Set<String> endpointsEnteringLastNIds = new HashSet<>();
-        Set<String> conferenceEndpointIds = new HashSet<>();
-
-        // Accumulators used for tracing purposes.
-        long totalIdealBps = 0, totalTargetBps = 0;
-        int totalIdealIdx = 0, totalTargetIdx = 0;
-
-        List<AdaptiveTrackProjection> adaptiveTrackProjections = new ArrayList<>();
-        if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
-        {
-            for (TrackBitrateAllocation
-                trackBitrateAllocation : trackBitrateAllocations)
-            {
-                conferenceEndpointIds.add(trackBitrateAllocation.endpointID);
-
-                int trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
-                    trackIdealIdx = trackBitrateAllocation.getIdealIndex();
-
-                // Review this.
-                AdaptiveTrackProjection adaptiveTrackProjection
-                    = lookupOrCreateAdaptiveTrackProjection(trackBitrateAllocation);
-
-                if (adaptiveTrackProjection != null)
-                {
-                    adaptiveTrackProjections.add(adaptiveTrackProjection);
-                    adaptiveTrackProjection.setTargetIndex(trackTargetIdx);
-                    adaptiveTrackProjection.setIdealIndex(trackIdealIdx);
-
-                    if (trackBitrateAllocation.track != null
-                            && enableVideoQualityTracing)
-                    {
-                        long trackTargetBps
-                            = trackBitrateAllocation.getTargetBitrate();
-                        long trackIdealBps
-                            = trackBitrateAllocation.getIdealBitrate();
-                        totalTargetBps += trackTargetBps;
-                        totalIdealBps += trackIdealBps;
-                        totalTargetIdx += trackTargetIdx;
-                        totalIdealIdx += trackIdealIdx;
-                        // time series that tracks how a media stream track
-                        // gets forwarded to a specific receiver.
-                        timeSeriesLogger.trace(diagnosticContext
-                            .makeTimeSeriesPoint("track_quality", nowMs)
-                            .addField("track_id",
-                                trackBitrateAllocation.track.hashCode())
-                            .addField("target_idx", trackTargetIdx)
-                            .addField("ideal_idx", trackIdealIdx)
-                            .addField("target_bps", trackTargetBps)
-                            .addField("selected",
-                                trackBitrateAllocation.selected)
-                            .addField("oversending",
-                                trackBitrateAllocation.oversending)
-                            .addField("preferred_idx",
-                                trackBitrateAllocation.ratedPreferredIdx)
-                            .addField("endpoint_id",
-                                trackBitrateAllocation.endpointID)
-                            .addField("ideal_bps", trackIdealBps));
-                    }
-                }
-
-                if (trackTargetIdx > -1)
-                {
-                    newForwardedEndpointIds
-                        .add(trackBitrateAllocation.endpointID);
-                    if (!oldForwardedEndpointIds
-                        .contains(trackBitrateAllocation.endpointID))
-                    {
-                        endpointsEnteringLastNIds
-                            .add(trackBitrateAllocation.endpointID);
-                    }
-                }
-            }
-        }
-        else
-        {
-            for (AdaptiveTrackProjection adaptiveTrackProjection
-                : adaptiveTrackProjectionMap.values())
-            {
-                if (enableVideoQualityTracing)
-                {
-                    totalIdealIdx--;
-                    totalTargetIdx--;
-                }
-                adaptiveTrackProjection
-                    .setTargetIndex(RTPEncodingDesc.SUSPENDED_INDEX);
-                adaptiveTrackProjection
-                    .setIdealIndex(RTPEncodingDesc.SUSPENDED_INDEX);
-            }
-        }
-
-        if (enableVideoQualityTracing)
-        {
-            timeSeriesLogger.trace(diagnosticContext
-                    .makeTimeSeriesPoint("video_quality", nowMs)
-                    .addField("total_target_idx", totalTargetIdx)
-                    .addField("total_ideal_idx", totalIdealIdx)
-                    .addField("available_bps", bweBps)
-                    .addField("total_target_bps", totalTargetBps)
-                    .addField("total_ideal_bps", totalIdealBps));
-        }
-
-        // The BandwidthProber will pick this up.
-        this.adaptiveTrackProjections
-            = Collections.unmodifiableList(adaptiveTrackProjections);
-
-        if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
-        {
-            //TODO(brian): i think this is just for adaptive-lastn.  need to bring this back
-//            dest.sendLastNEndpointsChangeEvent(
-//                newForwardedEndpointIds,
-//                endpointsEnteringLastNIds,
-//                conferenceEndpointIds);
-        }
-
-        this.forwardedEndpointIds = newForwardedEndpointIds;
+//        if (bweBps > -1)
+//        {
+//            if (!isLargerThanBweThreshold(lastBwe, bweBps))
+//            {
+//                // If this is a "negligible" change in the bandwidth estimation
+//                // wrt the last bandwidth estimation that we reacted to, then
+//                // do not update the bitrate allocation. The goal is to limit
+//                // the resolution changes due to bandwidth estimation changes,
+//                // as often resolution changes can negatively impact user
+//                // experience.
+//                return;
+//            }
+//
+//            lastBwe = bweBps;
+//        }
+//
+//        // Gather the conference allocation input.
+//        if (conferenceEndpoints == null)
+//        {
+//            conferenceEndpoints
+//                = dest.getConferenceSpeechActivity().getEndpoints();
+//        }
+//        else
+//        {
+//            // Create a copy as we may modify the list in the prioritize method.
+//            conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
+//        }
+//
+//        long nowMs = System.currentTimeMillis();
+//        boolean trustBwe = this.trustBwe;
+//        if (trustBwe)
+//        {
+//            // Ignore the bandwidth estimations in the first 10 seconds because
+//            // the REMBs don't ramp up fast enough. This needs to go but it's
+//            // related to our GCC implementation that needs to be brought up to
+//            // speed.
+//            if (firstMediaMs == -1 || nowMs - firstMediaMs < 10000)
+//            {
+//                trustBwe = false;
+//            }
+//        }
+//
+//        if (bweBps == -1 && trustBwe)
+//        {
+//            bweBps = bandwidthEstimator.getLatestEstimate();
+//        }
+//
+//        if (bweBps < 0 || !trustBwe || !supportsRtx)
+//        {
+//            bweBps = Long.MAX_VALUE;
+//        }
+//
+//        // Compute the bitrate allocation.
+//        TrackBitrateAllocation[]
+//            trackBitrateAllocations = allocate(bweBps, conferenceEndpoints);
+//
+//        // Update the the controllers based on the allocation and send a
+//        // notification to the client the set of forwarded endpoints has
+//        // changed.
+//        Set<String> oldForwardedEndpointIds = forwardedEndpointIds;
+//
+//        Set<String> newForwardedEndpointIds = new HashSet<>();
+//        Set<String> endpointsEnteringLastNIds = new HashSet<>();
+//        Set<String> conferenceEndpointIds = new HashSet<>();
+//
+//        // Accumulators used for tracing purposes.
+//        long totalIdealBps = 0, totalTargetBps = 0;
+//        int totalIdealIdx = 0, totalTargetIdx = 0;
+//
+//        List<AdaptiveTrackProjection> adaptiveTrackProjections = new ArrayList<>();
+//        if (!ArrayUtils.isNullOrEmpty(trackBitrateAllocations))
+//        {
+//            for (TrackBitrateAllocation
+//                trackBitrateAllocation : trackBitrateAllocations)
+//            {
+//                conferenceEndpointIds.add(trackBitrateAllocation.endpointID);
+//
+//                int trackTargetIdx = trackBitrateAllocation.getTargetIndex(),
+//                    trackIdealIdx = trackBitrateAllocation.getIdealIndex();
+//
+//                // Review this.
+//                AdaptiveTrackProjection adaptiveTrackProjection
+//                    = lookupOrCreateAdaptiveTrackProjection(trackBitrateAllocation);
+//
+//                if (adaptiveTrackProjection != null)
+//                {
+//                    adaptiveTrackProjections.add(adaptiveTrackProjection);
+//                    adaptiveTrackProjection.setTargetIndex(trackTargetIdx);
+//                    adaptiveTrackProjection.setIdealIndex(trackIdealIdx);
+//
+//                    if (trackBitrateAllocation.track != null
+//                            && enableVideoQualityTracing)
+//                    {
+//                        long trackTargetBps
+//                            = trackBitrateAllocation.getTargetBitrate();
+//                        long trackIdealBps
+//                            = trackBitrateAllocation.getIdealBitrate();
+//                        totalTargetBps += trackTargetBps;
+//                        totalIdealBps += trackIdealBps;
+//                        totalTargetIdx += trackTargetIdx;
+//                        totalIdealIdx += trackIdealIdx;
+//                        // time series that tracks how a media stream track
+//                        // gets forwarded to a specific receiver.
+//                        timeSeriesLogger.trace(diagnosticContext
+//                            .makeTimeSeriesPoint("track_quality", nowMs)
+//                            .addField("track_id",
+//                                trackBitrateAllocation.track.hashCode())
+//                            .addField("target_idx", trackTargetIdx)
+//                            .addField("ideal_idx", trackIdealIdx)
+//                            .addField("target_bps", trackTargetBps)
+//                            .addField("selected",
+//                                trackBitrateAllocation.selected)
+//                            .addField("oversending",
+//                                trackBitrateAllocation.oversending)
+//                            .addField("preferred_idx",
+//                                trackBitrateAllocation.ratedPreferredIdx)
+//                            .addField("endpoint_id",
+//                                trackBitrateAllocation.endpointID)
+//                            .addField("ideal_bps", trackIdealBps));
+//                    }
+//                }
+//
+//                if (trackTargetIdx > -1)
+//                {
+//                    newForwardedEndpointIds
+//                        .add(trackBitrateAllocation.endpointID);
+//                    if (!oldForwardedEndpointIds
+//                        .contains(trackBitrateAllocation.endpointID))
+//                    {
+//                        endpointsEnteringLastNIds
+//                            .add(trackBitrateAllocation.endpointID);
+//                    }
+//                }
+//            }
+//        }
+//        else
+//        {
+//            for (AdaptiveTrackProjection adaptiveTrackProjection
+//                : adaptiveTrackProjectionMap.values())
+//            {
+//                if (enableVideoQualityTracing)
+//                {
+//                    totalIdealIdx--;
+//                    totalTargetIdx--;
+//                }
+//                adaptiveTrackProjection
+//                    .setTargetIndex(RTPEncodingDesc.SUSPENDED_INDEX);
+//                adaptiveTrackProjection
+//                    .setIdealIndex(RTPEncodingDesc.SUSPENDED_INDEX);
+//            }
+//        }
+//
+//        if (enableVideoQualityTracing)
+//        {
+//            timeSeriesLogger.trace(diagnosticContext
+//                    .makeTimeSeriesPoint("video_quality", nowMs)
+//                    .addField("total_target_idx", totalTargetIdx)
+//                    .addField("total_ideal_idx", totalIdealIdx)
+//                    .addField("available_bps", bweBps)
+//                    .addField("total_target_bps", totalTargetBps)
+//                    .addField("total_ideal_bps", totalIdealBps));
+//        }
+//
+//        // The BandwidthProber will pick this up.
+//        this.adaptiveTrackProjections
+//            = Collections.unmodifiableList(adaptiveTrackProjections);
+//
+//        if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
+//        {
+//            //TODO(brian): i think this is just for adaptive-lastn.  need to bring this back
+////            dest.sendLastNEndpointsChangeEvent(
+////                newForwardedEndpointIds,
+////                endpointsEnteringLastNIds,
+////                conferenceEndpointIds);
+//        }
+//
+//        this.forwardedEndpointIds = newForwardedEndpointIds;
     }
 
     /**
@@ -691,6 +695,10 @@ public class BitrateController
 
             adaptiveTrackProjection = new AdaptiveTrackProjection(
                 trackBitrateAllocation.track, keyframeRequester);
+            for (Map.Entry<Byte, MediaFormat> entry : payloadTypeFormats.entrySet())
+            {
+                adaptiveTrackProjection.addDynamicRtpPayloadType(entry.getKey(), entry.getValue());
+            }
 
             // Route all encodings to the specified bitrate controller.
             for (RTPEncodingDesc rtpEncoding : rtpEncodings)
@@ -1001,6 +1009,12 @@ public class BitrateController
     public void setLastN(int lastN)
     {
         this.lastN = lastN;
+    }
+
+    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
+    {
+        payloadTypeFormats.put(rtpPayloadType, format);
+        adaptiveTrackProjections.forEach(atp -> atp.addDynamicRtpPayloadType(rtpPayloadType, format));
     }
 
     /**

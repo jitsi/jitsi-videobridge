@@ -26,6 +26,7 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
 import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc;
 
 import java.lang.ref.*;
+import java.util.*;
 import java.util.function.*;
 
 /**
@@ -109,6 +110,10 @@ public class AdaptiveTrackProjection
      * The target quality index for this track projection.
      */
     private int targetIndex = RTPEncodingDesc.SUSPENDED_INDEX;
+
+    //TODO(brian): we need this to know which frameprojectioncontext to make
+    // based on the payload type of a packet.  is there a better way?
+    private final Map<Byte, MediaFormat> payloadTypeFormats = new HashMap<>();
 
     /**
      * Ctor.
@@ -236,23 +241,18 @@ public class AdaptiveTrackProjection
     private synchronized
     AdaptiveTrackProjectionContext getContext(int payloadType)
     {
-        //TODO(brian): add a way for this to access the format based on the payload type
-//        if (context == null || contextPayloadType != payloadType)
-//        {
-//            MediaStreamTrackDesc source = getSource();
-//            MediaFormat format = source
-//                .getMediaStreamTrackReceiver()
-//                .getStream().getDynamicRTPPayloadTypes().get((byte) payloadType);
-//
-//            context = makeContext(source, format);
-//            contextPayloadType = payloadType;
-//            return context;
-//        }
-//        else
-//        {
-//            return context;
-//        }
-        return null;
+        if (context == null || contextPayloadType != payloadType)
+        {
+            MediaFormat format = payloadTypeFormats.get((byte)payloadType);
+            MediaStreamTrackDesc source = getSource();
+            context = makeContext(source, format);
+            contextPayloadType = payloadType;
+            return context;
+        }
+        else
+        {
+            return context;
+        }
     }
 
     /**
@@ -352,5 +352,10 @@ public class AdaptiveTrackProjection
     public long getSSRC()
     {
         return targetSsrc;
+    }
+
+    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
+    {
+        payloadTypeFormats.put(rtpPayloadType, format);
     }
 }

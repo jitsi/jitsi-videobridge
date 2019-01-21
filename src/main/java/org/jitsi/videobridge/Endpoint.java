@@ -19,6 +19,8 @@ import org.jitsi.nlj.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
+import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
@@ -219,6 +221,23 @@ public class Endpoint
     {
         super.setLastN(lastN);
         bitrateController.setLastN(lastN);
+    }
+
+    @Override
+    public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
+    {
+        if (super.wants(packetInfo, sourceEndpointId))
+        {
+            RawPacket packet = PacketExtensionsKt.toRawPacket(packetInfo.getPacket());
+            return bitrateController.accept(packet);
+        }
+        return false;
+    }
+
+    @Override
+    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
+    {
+        super.addDynamicRtpPayloadType(rtpPayloadType, format);
     }
 
     /**
