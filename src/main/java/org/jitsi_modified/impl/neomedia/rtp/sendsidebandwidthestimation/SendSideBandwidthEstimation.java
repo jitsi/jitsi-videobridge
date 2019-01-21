@@ -277,25 +277,25 @@ class SendSideBandwidthEstimation
     /**
      * The {@link DiagnosticContext} of this instance.
      */
-    private final DiagnosticContext diagnosticContext;
+    //TODO(brian): bring this back? it was being retrieved from the MediaStreamImpl
+//    private final DiagnosticContext diagnosticContext;
 
     private final List<Listener> listeners
         = new LinkedList<>();
 
     /**
-     * The {@link MediaStream} for this {@link SendSideBandwidthEstimation}.
+     * The most recent RTT calculation we've received for our connection with the remote endpoint
      */
-    private final MediaStream mediaStream;
+    private long rtt;
 
     /**
      * The instance that holds stats for this instance.
      */
     private final StatisticsImpl statistics = new StatisticsImpl();
 
-    SendSideBandwidthEstimation(MediaStreamImpl stream, long startBitrate)
+    SendSideBandwidthEstimation(long startBitrate)
     {
-        mediaStream = stream;
-        diagnosticContext = stream.getDiagnosticContext();
+//        diagnosticContext = stream.getDiagnosticContext();
 
         float lossExperimentProbability = (float) cfg.getDouble(
             LOSS_EXPERIMENT_PROBABILITY_PNAME,
@@ -636,13 +636,20 @@ class SendSideBandwidthEstimation
         return statistics;
     }
 
+    @Override
+    public void onRttUpdate(double newRtt)
+    {
+        //TODO(brian): does it make sense to use rtt as a long in here? which is more approriate, double or long?
+        // we should make all types for rtt consistent
+        this.rtt = (long)newRtt;
+    }
+
     /**
      * Returns the last calculated RTT to the endpoint.
      * @return the last calculated RTT to the endpoint.
      */
     private synchronized long getRtt()
     {
-        long rtt = mediaStream.getMediaStreamStats().getSendStats().getRtt();
         if (rtt < 0 || rtt > 1000)
         {
             logger.warn("RTT not calculated, or has a suspiciously high value ("
@@ -812,36 +819,37 @@ class SendSideBandwidthEstimation
                         break;
                     }
 
-                    if (timeSeriesLogger.isTraceEnabled())
-                    {
-                        timeSeriesLogger.trace(diagnosticContext
-                            .makeTimeSeriesPoint("loss_estimate")
-                            .addField("state", currentState.name())
-                            .addField("max_loss",
-                                currentStateLossStatistics.getMax() / 256.0f)
-                            .addField("min_loss",
-                                currentStateLossStatistics.getMin() / 256.0f)
-                            .addField("avg_loss",
-                                currentStateLossStatistics.getAverage()/256.0f)
-                            .addField("max_bps",
-                                currentStateBitrateStatistics.getMax())
-                            .addField("min_bps",
-                                currentStateBitrateStatistics.getMin())
-                            .addField("avg_bps",
-                                currentStateBitrateStatistics.getAverage())
-                            .addField("duration_ms",
-                                currentStateCumulativeDurationMs)
-                            .addField("consecutive_visits",
-                                currentStateConsecutiveVisits)
-                            .addField("bitrate_threshold",
-                                bitrate_threshold_bps_)
-                            .addField("low_loss_threshold",
-                                low_loss_threshold_)
-                            .addField("high_loss_threshold",
-                                high_loss_threshold_)
-                            .addField("delta_bps",
-                                bitrate_ - currentStateStartBitrateBps));
-                    }
+                    //TODO(brian): see note about diagnosticsContext
+//                    if (timeSeriesLogger.isTraceEnabled())
+//                    {
+//                        timeSeriesLogger.trace(diagnosticContext
+//                            .makeTimeSeriesPoint("loss_estimate")
+//                            .addField("state", currentState.name())
+//                            .addField("max_loss",
+//                                currentStateLossStatistics.getMax() / 256.0f)
+//                            .addField("min_loss",
+//                                currentStateLossStatistics.getMin() / 256.0f)
+//                            .addField("avg_loss",
+//                                currentStateLossStatistics.getAverage()/256.0f)
+//                            .addField("max_bps",
+//                                currentStateBitrateStatistics.getMax())
+//                            .addField("min_bps",
+//                                currentStateBitrateStatistics.getMin())
+//                            .addField("avg_bps",
+//                                currentStateBitrateStatistics.getAverage())
+//                            .addField("duration_ms",
+//                                currentStateCumulativeDurationMs)
+//                            .addField("consecutive_visits",
+//                                currentStateConsecutiveVisits)
+//                            .addField("bitrate_threshold",
+//                                bitrate_threshold_bps_)
+//                            .addField("low_loss_threshold",
+//                                low_loss_threshold_)
+//                            .addField("high_loss_threshold",
+//                                high_loss_threshold_)
+//                            .addField("delta_bps",
+//                                bitrate_ - currentStateStartBitrateBps));
+//                    }
                 }
 
                 currentState = nextState;

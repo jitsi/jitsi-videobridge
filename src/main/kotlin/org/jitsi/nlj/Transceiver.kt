@@ -35,6 +35,8 @@ import org.jitsi.util.DiagnosticContext
 import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
+import org.jitsi_modified.impl.neomedia.rtp.sendsidebandwidthestimation.BandwidthEstimatorImpl
+import org.jitsi_modified.service.neomedia.rtp.BandwidthEstimator
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -82,6 +84,8 @@ class Transceiver(
 
     private val transportCcEngine = TransportCCEngine(DiagnosticContext())
 
+    private val bandwidthEstimator: BandwidthEstimator = BandwidthEstimatorImpl(null)
+
     private val rtpSender: RtpSender = RtpSenderImpl(
             id,
             transportCcEngine,
@@ -116,6 +120,8 @@ class Transceiver(
                 outgoingQueue.addAll(p)
             }
         }
+
+        endpointConnectionStats.addListener(bandwidthEstimator)
     }
 
     /**
