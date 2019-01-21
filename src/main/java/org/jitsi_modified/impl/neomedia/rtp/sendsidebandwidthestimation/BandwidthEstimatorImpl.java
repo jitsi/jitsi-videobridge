@@ -22,6 +22,7 @@ import org.jitsi.rtp.rtcp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 import org.jitsi_modified.service.neomedia.rtp.*;
 
@@ -87,10 +88,10 @@ public class BandwidthEstimatorImpl
      * Initializes a new instance which is to belong to a particular
      * {@link MediaStream}.
      */
-    public BandwidthEstimatorImpl()
+    public BandwidthEstimatorImpl(DiagnosticContext diagnosticContext)
     {
         sendSideBandwidthEstimation
-            = new SendSideBandwidthEstimation(START_BITRATE_BPS);
+            = new SendSideBandwidthEstimation(diagnosticContext, START_BITRATE_BPS);
         sendSideBandwidthEstimation.setMinMaxBitrate(
                 MIN_BITRATE_BPS, MAX_BITRATE_BPS);
 

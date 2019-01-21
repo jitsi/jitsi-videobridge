@@ -272,7 +272,7 @@ class SendSideBandwidthEstimation
      * The {@link DiagnosticContext} of this instance.
      */
     //TODO(brian): bring this back? it was being retrieved from the MediaStreamImpl
-//    private final DiagnosticContext diagnosticContext;
+    private final DiagnosticContext diagnosticContext;
 
     private final List<Listener> listeners
         = new LinkedList<>();
@@ -287,9 +287,9 @@ class SendSideBandwidthEstimation
      */
     private final StatisticsImpl statistics = new StatisticsImpl();
 
-    SendSideBandwidthEstimation(long startBitrate)
+    SendSideBandwidthEstimation(DiagnosticContext diagnosticContext, long startBitrate)
     {
-//        diagnosticContext = stream.getDiagnosticContext();
+        this.diagnosticContext = diagnosticContext;
 
         float lossExperimentProbability = (float) cfg.getDouble(
             LOSS_EXPERIMENT_PROBABILITY_PNAME,
@@ -804,37 +804,36 @@ class SendSideBandwidthEstimation
                         break;
                     }
 
-                    //TODO(brian): see note about diagnosticsContext
-//                    if (timeSeriesLogger.isTraceEnabled())
-//                    {
-//                        timeSeriesLogger.trace(diagnosticContext
-//                            .makeTimeSeriesPoint("loss_estimate")
-//                            .addField("state", currentState.name())
-//                            .addField("max_loss",
-//                                currentStateLossStatistics.getMax() / 256.0f)
-//                            .addField("min_loss",
-//                                currentStateLossStatistics.getMin() / 256.0f)
-//                            .addField("avg_loss",
-//                                currentStateLossStatistics.getAverage()/256.0f)
-//                            .addField("max_bps",
-//                                currentStateBitrateStatistics.getMax())
-//                            .addField("min_bps",
-//                                currentStateBitrateStatistics.getMin())
-//                            .addField("avg_bps",
-//                                currentStateBitrateStatistics.getAverage())
-//                            .addField("duration_ms",
-//                                currentStateCumulativeDurationMs)
-//                            .addField("consecutive_visits",
-//                                currentStateConsecutiveVisits)
-//                            .addField("bitrate_threshold",
-//                                bitrate_threshold_bps_)
-//                            .addField("low_loss_threshold",
-//                                low_loss_threshold_)
-//                            .addField("high_loss_threshold",
-//                                high_loss_threshold_)
-//                            .addField("delta_bps",
-//                                bitrate_ - currentStateStartBitrateBps));
-//                    }
+                    if (timeSeriesLogger.isTraceEnabled())
+                    {
+                        timeSeriesLogger.trace(diagnosticContext
+                            .makeTimeSeriesPoint("loss_estimate")
+                            .addField("state", currentState.name())
+                            .addField("max_loss",
+                                currentStateLossStatistics.getMax() / 256.0f)
+                            .addField("min_loss",
+                                currentStateLossStatistics.getMin() / 256.0f)
+                            .addField("avg_loss",
+                                currentStateLossStatistics.getAverage()/256.0f)
+                            .addField("max_bps",
+                                currentStateBitrateStatistics.getMax())
+                            .addField("min_bps",
+                                currentStateBitrateStatistics.getMin())
+                            .addField("avg_bps",
+                                currentStateBitrateStatistics.getAverage())
+                            .addField("duration_ms",
+                                currentStateCumulativeDurationMs)
+                            .addField("consecutive_visits",
+                                currentStateConsecutiveVisits)
+                            .addField("bitrate_threshold",
+                                bitrate_threshold_bps_)
+                            .addField("low_loss_threshold",
+                                low_loss_threshold_)
+                            .addField("high_loss_threshold",
+                                high_loss_threshold_)
+                            .addField("delta_bps",
+                                bitrate_ - currentStateStartBitrateBps));
+                    }
                 }
 
                 currentState = nextState;

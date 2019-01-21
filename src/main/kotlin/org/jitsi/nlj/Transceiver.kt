@@ -83,9 +83,13 @@ class Transceiver(
      */
     private val rtcpEventNotifier = RtcpEventNotifier()
 
-    private val transportCcEngine = TransportCCEngine(DiagnosticContext(), this)
+    //NOTE(brian): there were a number of classes in the old code that used this.  I believe it was previously
+    // held in the VideoChannel.  We'll create one here and pass it where it's needed.
+    val diagnosticContext = DiagnosticContext()
 
-    private val bandwidthEstimator: BandwidthEstimator = BandwidthEstimatorImpl()
+    private val transportCcEngine = TransportCCEngine(diagnosticContext, this)
+
+    private val bandwidthEstimator: BandwidthEstimator = BandwidthEstimatorImpl(diagnosticContext)
 
     private val rtpSender: RtpSender = RtpSenderImpl(
             id,
