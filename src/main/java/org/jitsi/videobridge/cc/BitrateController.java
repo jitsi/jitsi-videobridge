@@ -329,17 +329,25 @@ public class BitrateController
 
     private final BandwidthEstimator bandwidthEstimator;
 
+    private final DiagnosticContext diagnosticContext;
+
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link VideoChannel}.
      *
      * @param dest the {@link VideoChannel} that owns this instance.
      */
-    public BitrateController(VideoChannel dest, String destinationEndpointId, @NotNull BandwidthEstimator bandwidthEstimator)
+    public BitrateController(
+            VideoChannel dest,
+            String destinationEndpointId,
+            @NotNull BandwidthEstimator bandwidthEstimator,
+            @NotNull DiagnosticContext diagnosticContext
+    )
     {
         this.dest = dest;
         this.destinationEndpointId = destinationEndpointId;
         this.bandwidthEstimator = bandwidthEstimator;
+        this.diagnosticContext = diagnosticContext;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
@@ -570,8 +578,6 @@ public class BitrateController
                     if (trackBitrateAllocation.track != null
                             && enableVideoQualityTracing)
                     {
-                        DiagnosticContext diagnosticContext
-                            = destStream.getDiagnosticContext();
                         long trackTargetBps
                             = trackBitrateAllocation.getTargetBitrate();
                         long trackIdealBps
@@ -633,8 +639,6 @@ public class BitrateController
 
         if (enableVideoQualityTracing)
         {
-            DiagnosticContext diagnosticContext
-                = destStream.getDiagnosticContext();
             timeSeriesLogger.trace(diagnosticContext
                     .makeTimeSeriesPoint("video_quality", nowMs)
                     .addField("total_target_idx", totalTargetIdx)
