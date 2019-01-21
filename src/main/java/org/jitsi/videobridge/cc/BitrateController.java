@@ -650,10 +650,11 @@ public class BitrateController
 
         if (!newForwardedEndpointIds.equals(oldForwardedEndpointIds))
         {
-            dest.sendLastNEndpointsChangeEvent(
-                newForwardedEndpointIds,
-                endpointsEnteringLastNIds,
-                conferenceEndpointIds);
+            //TODO(brian): i think this is just for adaptive-lastn.  need to bring this back
+//            dest.sendLastNEndpointsChangeEvent(
+//                newForwardedEndpointIds,
+//                endpointsEnteringLastNIds,
+//                conferenceEndpointIds);
         }
 
         this.forwardedEndpointIds = newForwardedEndpointIds;
