@@ -29,6 +29,7 @@ import org.jitsi_modified.service.neomedia.rtp.*;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.*;
 
 /**
  * The {@link BitrateController} is attached to a destination {@link
@@ -331,6 +332,8 @@ public class BitrateController
 
     private final DiagnosticContext diagnosticContext;
 
+    private final Consumer<Long> keyframeRequester;
+
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link VideoChannel}.
@@ -341,13 +344,15 @@ public class BitrateController
             VideoChannel dest,
             String destinationEndpointId,
             @NotNull BandwidthEstimator bandwidthEstimator,
-            @NotNull DiagnosticContext diagnosticContext
+            @NotNull DiagnosticContext diagnosticContext,
+            Consumer<Long> keyframeRequester
     )
     {
         this.dest = dest;
         this.destinationEndpointId = destinationEndpointId;
         this.bandwidthEstimator = bandwidthEstimator;
         this.diagnosticContext = diagnosticContext;
+        this.keyframeRequester = keyframeRequester;
 
         ConfigurationService cfg = LibJitsi.getConfigurationService();
 
@@ -693,7 +698,7 @@ public class BitrateController
             }
 
             adaptiveTrackProjection = new AdaptiveTrackProjection(
-                trackBitrateAllocation.track);
+                trackBitrateAllocation.track, keyframeRequester);
 
             // Route all encodings to the specified bitrate controller.
             for (RTPEncodingDesc rtpEncoding : rtpEncodings)

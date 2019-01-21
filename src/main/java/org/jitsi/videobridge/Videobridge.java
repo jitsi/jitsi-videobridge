@@ -1057,6 +1057,7 @@ public class Videobridge
                     } else {
                         logger.info("Notifying ep " + epId + " about payload type mapping: " +
                                 pt.getID() + " -> " + mediaFormat.toString());
+                        //TODO(brian): send in the feedback types as well
                         ep.transceiver.addDynamicRtpPayloadType((byte)pt.getID(), mediaFormat);
                     }
                 });

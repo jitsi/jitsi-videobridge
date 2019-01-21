@@ -16,17 +16,17 @@
 package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
-import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.impl.neomedia.rtp.translator.*;
-import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.vp8.*;
+import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
+import org.jitsi_modified.impl.neomedia.rtp.RTPEncodingDesc;
 
 import java.lang.ref.*;
+import java.util.function.*;
 
 /**
  * Filters the packets coming from a specific {@link MediaStreamTrackDesc}
@@ -116,10 +116,11 @@ public class AdaptiveTrackProjection
      * @param source the {@link MediaStreamTrackDesc} that owns the packets
      * that this instance filters.
      */
-    AdaptiveTrackProjection(@NotNull MediaStreamTrackDesc source)
+    AdaptiveTrackProjection(@NotNull MediaStreamTrackDesc source, Consumer<Long> keyframeRequester)
     {
         weakSource = new WeakReference<>(source);
         targetSsrc = source.getRTPEncodings()[0].getPrimarySSRC();
+        this.keyframeRequester = keyframeRequester;
     }
 
     /**
@@ -170,6 +171,11 @@ public class AdaptiveTrackProjection
     }
 
     /**
+     * The callback we'll invoke when we want to request a keyframe for a stream.
+     */
+    private final Consumer<Long> keyframeRequester;
+
+    /**
      * Determines whether an RTP packet needs to be accepted or not.
      *
      * @param rtpPacket the RTP packet to determine whether to accept or not.
@@ -200,12 +206,11 @@ public class AdaptiveTrackProjection
             MediaStreamTrackDesc source = getSource();
             if (source != null)
             {
-                ((RTPTranslatorImpl) source
-                    .getMediaStreamTrackReceiver()
-                    .getStream()
-                    .getRTPTranslator())
-                    .getRtcpFeedbackMessageSender()
-                    .requestKeyframe(targetSsrc);
+                //NOTE(brian): using a Consumer for keyframe requester makes this call look a little
+                // confusing (invoking it with 'accept') but that's how the interface is defined
+                // and it's the only built-in single argument functional interface.  In the future
+                // we can make our own interface here to clean it up a bit
+                keyframeRequester.accept(targetSsrc);
             }
         }
 
@@ -231,21 +236,23 @@ public class AdaptiveTrackProjection
     private synchronized
     AdaptiveTrackProjectionContext getContext(int payloadType)
     {
-        if (context == null || contextPayloadType != payloadType)
-        {
-            MediaStreamTrackDesc source = getSource();
-            MediaFormat format = source
-                .getMediaStreamTrackReceiver()
-                .getStream().getDynamicRTPPayloadTypes().get((byte) payloadType);
-
-            context = makeContext(source, format);
-            contextPayloadType = payloadType;
-            return context;
-        }
-        else
-        {
-            return context;
-        }
+        //TODO(brian): add a way for this to access the format based on the payload type
+//        if (context == null || contextPayloadType != payloadType)
+//        {
+//            MediaStreamTrackDesc source = getSource();
+//            MediaFormat format = source
+//                .getMediaStreamTrackReceiver()
+//                .getStream().getDynamicRTPPayloadTypes().get((byte) payloadType);
+//
+//            context = makeContext(source, format);
+//            contextPayloadType = payloadType;
+//            return context;
+//        }
+//        else
+//        {
+//            return context;
+//        }
+        return null;
     }
 
     /**
@@ -294,28 +301,29 @@ public class AdaptiveTrackProjection
         MediaStreamTrackDesc source = getSource();
         if (source != null)
         {
-            MediaStreamImpl
-                stream = source.getMediaStreamTrackReceiver().getStream();
-
-            if (stream != null)
-            {
-                CachingTransformer
-                    cachingTransformer = stream.getCachingTransformer();
-
-                if (cachingTransformer != null)
-                {
-                    incomingRawPacketCache
-                        = cachingTransformer.getIncomingRawPacketCache();
-                }
-                else
-                {
-                    logger.warn("incoming packet cache is null.");
-                }
-            }
-            else
-            {
-                logger.warn("stream is null.");
-            }
+            //TODO(brian): give this access to the incoming raw packet cache
+//            MediaStreamImpl
+//                stream = source.getMediaStreamTrackReceiver().getStream();
+//
+//            if (stream != null)
+//            {
+//                CachingTransformer
+//                    cachingTransformer = stream.getCachingTransformer();
+//
+//                if (cachingTransformer != null)
+//                {
+//                    incomingRawPacketCache
+//                        = cachingTransformer.getIncomingRawPacketCache();
+//                }
+//                else
+//                {
+//                    logger.warn("incoming packet cache is null.");
+//                }
+//            }
+//            else
+//            {
+//                logger.warn("stream is null.");
+//            }
         }
 
         return contextCopy.rewriteRtp(rtpPacket, incomingRawPacketCache);
