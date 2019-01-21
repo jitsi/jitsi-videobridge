@@ -128,14 +128,17 @@ public class TransportCCEngine
      */
     private final RemoteBitrateEstimatorAbsSendTime bitrateEstimatorAbsSendTime;
 
+    private final RemoteBitrateObserver remoteBitrateObserver;
+
     /**
      * Ctor.
      *
      * @param diagnosticContext the {@link DiagnosticContext} of this instance.
      */
-    public TransportCCEngine(@NotNull DiagnosticContext diagnosticContext)
+    public TransportCCEngine(@NotNull DiagnosticContext diagnosticContext, RemoteBitrateObserver remoteBitrateObserver)
     {
         this.diagnosticContext = diagnosticContext;
+        this.remoteBitrateObserver = remoteBitrateObserver;
         bitrateEstimatorAbsSendTime
             = new RemoteBitrateEstimatorAbsSendTime(this, diagnosticContext);
     }
@@ -159,17 +162,7 @@ public class TransportCCEngine
     @Override
     public void onReceiveBitrateChanged(Collection<Long> ssrcs, long bitrate)
     {
-        VideoMediaStream videoStream;
-        for (MediaStream stream : mediaStreams)
-        {
-            if (stream instanceof VideoMediaStream)
-            {
-                videoStream = (VideoMediaStream) stream;
-                videoStream.getOrCreateBandwidthEstimator()
-                    .updateReceiverEstimate(bitrate);
-                break;
-            }
-        }
+        remoteBitrateObserver.onReceiveBitrateChanged(ssrcs, bitrate);
     }
 
     public void tccReceived(RtcpFbTccPacket tccPacket)

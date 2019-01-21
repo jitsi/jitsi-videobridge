@@ -16,6 +16,7 @@
 package org.jitsi.nlj
 
 import org.bouncycastle.crypto.tls.TlsContext
+import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateObserver
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
@@ -67,7 +68,7 @@ class Transceiver(
      */
     private val backgroundExecutor: ScheduledExecutorService,
     logLevelDelegate: Logger? = null
-) : Stoppable, NodeStatsProducer {
+) : Stoppable, NodeStatsProducer, RemoteBitrateObserver {
     private val logger = getLogger(this.javaClass, logLevelDelegate)
     private val rtpExtensions = mutableMapOf<Byte, RTPExtension>()
     private val payloadTypes = mutableMapOf<Byte, MediaFormat>()
@@ -82,7 +83,7 @@ class Transceiver(
      */
     private val rtcpEventNotifier = RtcpEventNotifier()
 
-    private val transportCcEngine = TransportCCEngine(DiagnosticContext())
+    private val transportCcEngine = TransportCCEngine(DiagnosticContext(), this)
 
     private val bandwidthEstimator: BandwidthEstimator = BandwidthEstimatorImpl()
 
@@ -123,6 +124,10 @@ class Transceiver(
 
         endpointConnectionStats.addListener(bandwidthEstimator)
         rtcpEventNotifier.addRtcpEventListener(bandwidthEstimator)
+    }
+
+    override fun onReceiveBitrateChanged(ssrcs: MutableCollection<Long>?, bandwidth: Long) {
+        bandwidthEstimator.updateReceiverEstimate(bandwidth)
     }
 
     /**
