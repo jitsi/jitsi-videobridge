@@ -123,7 +123,6 @@ public class Endpoint
         super(conference, id);
 
         bitrateController = new BitrateController(
-                null,
                 getID(),
                 transceiver.getBandwidthEstimator(),
                 transceiver.getDiagnosticContext(),

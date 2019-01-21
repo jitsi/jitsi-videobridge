@@ -33,8 +33,8 @@ import java.util.function.*;
 
 /**
  * The {@link BitrateController} is attached to a destination {@link
- * VideoChannel} and its purpose is 1st to selectively drop incoming packets
- * based on their source {@link VideoChannel} and 2nd to rewrite the accepted
+ * Endpoint} and its purpose is 1st to selectively drop incoming packets
+ * based on their source {@link Endpoint} and 2nd to rewrite the accepted
  * packets so that they form a correct RTP stream without gaps in their
  * sequence numbers nor in their timestamps.
  *
@@ -44,7 +44,7 @@ import java.util.function.*;
  * which bitstream to send to which receiver.
  *
  * For example, suppose we're in a 3-way simulcast-enabled video call (so 3
- * source {@link VideoChannel}s) where the endpoints are sending two
+ * source {@link Endpoint}s) where the endpoints are sending two
  * non-scalable RTP streams of the same video source. The bitrate controller,
  * will chose to forward only one RTP stream at a time to a specific destination
  * endpoint.
@@ -71,7 +71,7 @@ import java.util.function.*;
  * {@link RTPEncodingDesc} and its properties are bitrate and subjective quality
  * index. Specifically, the incoming packets belong to some {@link FrameDesc},
  * which belongs to some {@link RTPEncodingDesc}, which belongs to some {@link
- * MediaStreamTrackDesc}, which belongs to the source {@link VideoChannel}.
+ * MediaStreamTrackDesc}, which belongs to the source {@link Endpoint}.
  * This hierarchy allows for fine-grained filtering up to the {@link FrameDesc}
  * level.
  *
@@ -228,12 +228,6 @@ public class BitrateController
         = Collections.unmodifiableSet(new HashSet<>(0));
 
     /**
-     * The {@link VideoChannel} which owns this {@link BitrateController} and
-     * is the destination of the packets that this instance accepts.
-     */
-    private final VideoChannel dest;
-
-    /**
      * The {@link AdaptiveTrackProjection}s that this instance is managing, keyed
      * by the SSRCs of the associated {@link MediaStreamTrackDesc}.
      */
@@ -295,7 +289,7 @@ public class BitrateController
     private long lastBwe = -1;
 
     /**
-     * The current padding parameters list for {@link #dest}.
+     * The current padding parameters list for {@link Endpoint}.
      */
     private List<AdaptiveTrackProjection> adaptiveTrackProjections;
 
@@ -336,19 +330,16 @@ public class BitrateController
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
-     * belong to a particular {@link VideoChannel}.
+     * belong to a particular {@link Endpoint}.
      *
-     * @param dest the {@link VideoChannel} that owns this instance.
      */
     public BitrateController(
-            VideoChannel dest,
             String destinationEndpointId,
             @NotNull BandwidthEstimator bandwidthEstimator,
             @NotNull DiagnosticContext diagnosticContext,
             Consumer<Long> keyframeRequester
     )
     {
-        this.dest = dest;
         this.destinationEndpointId = destinationEndpointId;
         this.bandwidthEstimator = bandwidthEstimator;
         this.diagnosticContext = diagnosticContext;
@@ -398,9 +389,9 @@ public class BitrateController
     }
 
     /**
-     * Gets the current padding parameters list for {@link #dest}.
+     * Gets the current padding parameters list for {@link Endpoint}.
      *
-     * @return the current padding parameters list for {@link #dest}.
+     * @return the current padding parameters list for {@link Endpoint}.
      */
     List<AdaptiveTrackProjection> getAdaptiveTrackProjections()
     {
@@ -409,11 +400,11 @@ public class BitrateController
 
     /**
      * Defines a packet filter that controls which RTP packets to be written
-     * into the {@link AbstractEndpoint} that owns this {@link BitrateController}.
+     * into the {@link Endpoint} that owns this {@link BitrateController}.
      *
      * @param pkt that packet for which to decide to accept
      * @return <tt>true</tt> to allow the specified packet to be
-     * written into the {@link AbstractEndpoint} that owns this {@link BitrateController}
+     * written into the {@link Endpoint} that owns this {@link BitrateController}
      * ; otherwise, <tt>false</tt>
      */
     public boolean accept(RawPacket pkt)
@@ -1053,13 +1044,13 @@ public class BitrateController
 
         /**
          * Indicates whether this {@link Endpoint} is forwarded or not to the
-         * {@link AbstractEndpoint} that owns this {@link BitrateController}.
+         * {@link Endpoint} that owns this {@link BitrateController}.
          */
         private final boolean fitsInLastN;
 
         /**
          * Indicates whether this {@link Endpoint} is on-stage/selected or not
-         * at the {@link AbstractEndpoint} that owns this {@link BitrateController}.
+         * at the {@link Endpoint} that owns this {@link BitrateController}.
          */
         private final boolean selected;
 
