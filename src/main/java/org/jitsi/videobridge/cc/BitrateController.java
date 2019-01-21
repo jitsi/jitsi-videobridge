@@ -328,6 +328,11 @@ public class BitrateController
 
     private final Consumer<Long> keyframeRequester;
 
+    //TODO(brian): throwing this here temporarily because it's needed and it used to be pulled from the Stream.
+    // this was really an approximation for determining whether or not adaptivity/probing is supported, so we should
+    // just detect that and set something appropriately in BitrateController
+    private final boolean supportsRtx = true;
+
     /**
      * Initializes a new {@link BitrateController} instance which is to
      * belong to a particular {@link Endpoint}.
@@ -500,9 +505,6 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        VideoMediaStreamImpl destStream
-            = (VideoMediaStreamImpl) dest.getStream();
-
         long nowMs = System.currentTimeMillis();
         boolean trustBwe = this.trustBwe;
         if (trustBwe)
@@ -522,8 +524,7 @@ public class BitrateController
             bweBps = bandwidthEstimator.getLatestEstimate();
         }
 
-        if (bweBps < 0 || !trustBwe
-            || !destStream.getRtxTransformer().destinationSupportsRtx())
+        if (bweBps < 0 || !trustBwe || !supportsRtx)
         {
             bweBps = Long.MAX_VALUE;
         }
