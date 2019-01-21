@@ -87,9 +87,8 @@ public class BandwidthEstimatorImpl
     /**
      * Initializes a new instance which is to belong to a particular
      * {@link MediaStream}.
-     * @param stream the {@link MediaStream}.
      */
-    public BandwidthEstimatorImpl(MediaStreamImpl stream)
+    public BandwidthEstimatorImpl()
     {
         sendSideBandwidthEstimation
             = new SendSideBandwidthEstimation(START_BITRATE_BPS);
@@ -97,9 +96,10 @@ public class BandwidthEstimatorImpl
                 MIN_BITRATE_BPS, MAX_BITRATE_BPS);
 
         // Hook us up to receive Report Blocks and REMBs.
-        MediaStreamStats stats = stream.getMediaStreamStats();
-        stats.addRTCPPacketListener(sendSideBandwidthEstimation);
-        stats.getRTCPReports().addRTCPReportListener(this);
+//        MediaStreamStats stats = stream.getMediaStreamStats();
+//        stats.addRTCPPacketListener(sendSideBandwidthEstimation);
+        //TODO(brian): do we still need this?
+//        stats.getRTCPReports().addRTCPReportListener(this);
     }
 
     /**
