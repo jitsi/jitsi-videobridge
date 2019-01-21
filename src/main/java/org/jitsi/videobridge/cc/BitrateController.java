@@ -504,11 +504,6 @@ public class BitrateController
             conferenceEndpoints = new ArrayList<>(conferenceEndpoints);
         }
 
-        if (!(dest.getStream() instanceof VideoMediaStreamImpl))
-        {
-            return;
-        }
-
         VideoMediaStreamImpl destStream
             = (VideoMediaStreamImpl) dest.getStream();
 
@@ -834,11 +829,6 @@ public class BitrateController
     private TrackBitrateAllocation[] prioritize(
         List<AbstractEndpoint> conferenceEndpoints)
     {
-        if (dest.isExpired())
-        {
-            return null;
-        }
-
         // Init.
         List<TrackBitrateAllocation> trackBitrateAllocations
             = new ArrayList<>();
