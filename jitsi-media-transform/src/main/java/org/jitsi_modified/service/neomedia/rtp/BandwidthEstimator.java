@@ -15,10 +15,12 @@
  */
 package org.jitsi_modified.service.neomedia.rtp;
 
+import org.jitsi.nlj.stats.*;
+
 /**
  * @author Boris Grozev
  */
-public interface BandwidthEstimator
+public interface BandwidthEstimator extends EndpointConnectionStats.EndpointConnectionStatsListener
 {
     /**
      * Adds a listener to be notified about changes to the bandwidth estimation.

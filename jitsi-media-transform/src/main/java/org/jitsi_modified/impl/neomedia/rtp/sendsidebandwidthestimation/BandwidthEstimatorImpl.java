@@ -92,7 +92,7 @@ public class BandwidthEstimatorImpl
     public BandwidthEstimatorImpl(MediaStreamImpl stream)
     {
         sendSideBandwidthEstimation
-            = new SendSideBandwidthEstimation(stream, START_BITRATE_BPS);
+            = new SendSideBandwidthEstimation(START_BITRATE_BPS);
         sendSideBandwidthEstimation.setMinMaxBitrate(
                 MIN_BITRATE_BPS, MAX_BITRATE_BPS);
 
@@ -210,6 +210,12 @@ public class BandwidthEstimatorImpl
     public void updateReceiverEstimate(long bandwidth)
     {
         sendSideBandwidthEstimation.updateReceiverEstimate(bandwidth);
+    }
+
+    @Override
+    public void onRttUpdate(double newRtt)
+    {
+        sendSideBandwidthEstimation.onRttUpdate(newRtt);
     }
 
     /**
