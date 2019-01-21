@@ -625,6 +625,7 @@ class SendSideBandwidthEstimation
      * {@inheritDoc}
      */
     @Override
+    @Deprecated
     public void rembReceived(RTCPREMBPacket remb)
     {
         updateReceiverEstimate(remb.getBitrate());
