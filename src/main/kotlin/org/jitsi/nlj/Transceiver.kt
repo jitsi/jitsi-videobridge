@@ -83,6 +83,8 @@ class Transceiver(
      */
     private val rtcpEventNotifier = RtcpEventNotifier()
 
+    private var mediaStreamTracks = arrayOf<MediaStreamTrackDesc>()
+
     //NOTE(brian): there were a number of classes in the old code that used this.  I believe it was previously
     // held in the VideoChannel.  We'll create one here and pass it where it's needed.
     val diagnosticContext = DiagnosticContext()
@@ -192,8 +194,13 @@ class Transceiver(
     fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)
 
     fun setMediaStreamTracks(mediaStreamTracks: Array<MediaStreamTrackDesc>) {
+        this.mediaStreamTracks = mediaStreamTracks
         rtpReceiver.handleEvent(SetMediaStreamTracksEvent(mediaStreamTracks))
     }
+
+    //TODO(brian): we should only expose an immutable version of this, but Array doesn't have that.  Go in
+    // and change all the storage of the media stream tracks to use a list
+    fun getMediaStreamTracks(): Array<MediaStreamTrackDesc> = mediaStreamTracks
 
     fun addDynamicRtpPayloadType(rtpPayloadType: Byte, format: MediaFormat) {
         payloadTypes[rtpPayloadType] = format
