@@ -18,7 +18,6 @@ package org.jitsi.videobridge;
 import kotlin.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.CandidateType;
-import org.bouncycastle.crypto.tls.*;
 import org.ice4j.*;
 import org.ice4j.ice.*;
 import org.ice4j.socket.*;
@@ -31,7 +30,6 @@ import org.jitsi.nlj.transform.node.incoming.*;
 import org.jitsi.nlj.transform.node.outgoing.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
-import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.transport.*;
 
@@ -123,25 +121,34 @@ public class IceDtlsTransportManager
         }
         logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
                 " starting connectivity establishment with extension: " + remoteTransportInformation.toXML());
+
         // Get the remote fingerprints and set them in the DTLS stack so we
-        // have them to do the DTLS handshake later
+        // can verify the remove certificate later.
+        // TODO(boris): read the Setup attribute and support acting like the
+        // DTLS server.
         List<DtlsFingerprintPacketExtension> fingerprintExtensions
                 = remoteTransportInformation.getChildExtensionsOfType(DtlsFingerprintPacketExtension.class);
 
         Map<String, String> remoteFingerprints = new HashMap<>();
         fingerprintExtensions.forEach(fingerprintExtension -> {
             if (fingerprintExtension.getHash() != null && fingerprintExtension.getFingerprint() != null) {
-                logger.info("Adding fingerprint " + fingerprintExtension.getHash() +
+                logger.debug("Adding fingerprint " + fingerprintExtension.getHash() +
                         " -> " + fingerprintExtension.getFingerprint());
                 remoteFingerprints.put(fingerprintExtension.getHash(), fingerprintExtension.getFingerprint());
             } else {
-                logger.info("Ignoring empty transport extension");
+                logger.debug("Ignoring empty DtlsFingerprint extension");
             }
         });
+
         if (remoteFingerprints.isEmpty()) {
-            logger.info(id + " with local ufrag " + iceAgent.getLocalUfrag() +
-                    " empty transport extension, not starting connectivity yet");
-            return;
+            // Don't pass an empty list to the stack in order to avoid wiping
+            // certificates that were contained in a previous request.
+            logger.debug(id + " with local ufrag " + iceAgent.getLocalUfrag() +
+                    " empty transport extension");
+        }
+        else
+        {
+            dtlsStack.setRemoteFingerprints(remoteFingerprints);
         }
 
         // Set the remote ufrag/password
@@ -500,13 +507,13 @@ public class IceDtlsTransportManager
     private void onIceConnected() {
         iceConnected = true;
         if (iceConnectedProcessed) {
-            logger.info("TransportManager " + id + " already processed ice connected, ignoring new event");
             return;
         }
         // The sctp connection start is triggered by this, but otherwise i don't think we need it (the other channel
         // types no longer do anything needed in there)
         logger.info("BRIAN: iceConnected for transport manager " + id);
         transportConnectedSubscribers.forEach(Runnable::run);
+        //bbb todo look at subscribers
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
@@ -535,7 +542,7 @@ public class IceDtlsTransportManager
         logger.info("BRIAN: transport manager " + this.hashCode() + " starting dtls");
         executor.submit(() -> {
             try {
-                dtlsStack.connect(new TlsClientImpl());
+                dtlsStack.connect();
             }
             catch (Exception e)
             {
