@@ -49,7 +49,7 @@ class RtcpFbFirPacket : PayloadSpecificFbPacket {
         mediaSourceSsrc: Long = 0,
         seqNum: Int = 0
     // The media source ssrc in the feedback header for FIR is unused and should be 0
-    ) : super(mediaSourceSsrc = 0) {
+    ) : super(mediaSourceSsrc = mediaSourceSsrc) {
         fci = Fir(mediaSourceSsrc, seqNum)
     }
 
