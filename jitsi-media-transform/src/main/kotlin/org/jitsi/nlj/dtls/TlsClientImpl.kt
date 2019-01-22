@@ -30,13 +30,23 @@ import org.bouncycastle.crypto.tls.TlsCredentials
 import org.bouncycastle.crypto.tls.TlsSRTPUtils
 import org.bouncycastle.crypto.tls.TlsUtils
 import org.bouncycastle.crypto.tls.UseSRTPData
+import org.jitsi.nlj.util.getLogger
 import java.util.*
 
 /**
  * Implementation of [DefaultTlsClient].
  */
-class TlsClientImpl : DefaultTlsClient() {
+class TlsClientImpl(
+        /**
+         * The function to call when the server certificate is available.
+         */
+    private val notifyServerCertificate: (Certificate) -> Unit
+) : DefaultTlsClient() {
+
+    private val logger = getLogger(this.javaClass)
+
     private var clientCredentials: TlsCredentials? = null
+
     /**
      * The SRTP Master Key Identifier (MKI) used by the
      * <tt>SRTPCryptoContext</tt> associated with this instance. Since the
@@ -44,10 +54,12 @@ class TlsClientImpl : DefaultTlsClient() {
      * {@link TlsUtils#EMPTY_BYTES}.
      */
     private val mki = TlsUtils.EMPTY_BYTES
+
     private val srtpProtectionProfiles = intArrayOf(
         SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_80,
         SRTPProtectionProfile.SRTP_AES128_CM_HMAC_SHA1_32
     )
+
     var chosenSrtpProtectionProfile: Int = 0
 
     fun getContext(): TlsContext = context
@@ -70,8 +82,11 @@ class TlsClientImpl : DefaultTlsClient() {
                 return clientCredentials!!
             }
 
+            /**
+             * (?) BouncyCastle calls this when the DTLS connection is established.
+             */
             override fun notifyServerCertificate(certificate: Certificate) {
-                // TODO: Need access to the remote fingerprints here to verify
+                this@TlsClientImpl.notifyServerCertificate(certificate)
             }
         }
     }
@@ -129,6 +144,7 @@ class TlsClientImpl : DefaultTlsClient() {
             }
             toString()
         }
+        logger.info(stack)
     }
 
     override fun notifyAlertReceived(alertLevel: Short, alertDescription: Short) {

@@ -167,7 +167,7 @@ internal class DtlsStackTest : ShouldSpec() {
             }
         }
 
-        dtls.connect(TlsClientImpl())
+        dtls.connect()
         val message = "Hello, world"
         dtls.sendDtlsAppData(PacketInfo(UnparsedPacket(ByteBuffer.wrap(message.toByteArray()))))
         receivedDataFuture.get() shouldBe message
