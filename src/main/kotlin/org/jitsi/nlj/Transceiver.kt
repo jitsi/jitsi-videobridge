@@ -136,6 +136,10 @@ class Transceiver(
         bandwidthEstimator.updateReceiverEstimate(bandwidth)
     }
 
+    fun onBandwidthEstimateChanged(listener: BandwidthEstimator.Listener) {
+        bandwidthEstimator.addListener(listener)
+    }
+
     //TODO(brian): we expose this because the bitratecontroller in jvb needs access to it but it just uses it
     // to get the latest estimate, maybe we can give it that information another way without having to expose this
     // (a getLatestAvailableBandwidthEstimate method on transceiver? or something else?  the whole bandwidth estimation
