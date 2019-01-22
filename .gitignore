@@ -1,0 +1,10 @@
+/classes/
+/target/
+*.class
+/.classpath
+*.jar
+/.project
+*.swp
+**/.idea/
+*.iml
+.mvn/
