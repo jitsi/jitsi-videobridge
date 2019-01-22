@@ -513,7 +513,6 @@ public class IceDtlsTransportManager
         // types no longer do anything needed in there)
         logger.info("BRIAN: iceConnected for transport manager " + id);
         transportConnectedSubscribers.forEach(Runnable::run);
-        //bbb todo look at subscribers
         iceConnectedProcessed = true;
         MultiplexingDatagramSocket s = iceAgent.getStream(ICE_STREAM_NAME).getComponents().get(0).getSocket();
 
