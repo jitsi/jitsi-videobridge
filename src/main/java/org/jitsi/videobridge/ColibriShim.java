@@ -110,6 +110,7 @@ public class ColibriShim {
                 iq.setDirection(direction);
 
                 //TODO: initialLocalSsrc/sources.  do we need to set these? when are they used?
+                // Boris: I think so. We need to advertise our SSRC to the clients for e.g. FIR/NACK to work
             }
 
             if (isOcto)
@@ -280,9 +281,7 @@ public class ColibriShim {
         {
             synchronized (channels)
             {
-                channels.values().forEach(channel -> {
-                    channel.setExpire(0);
-                });
+                channels.values().forEach(channel -> channel.setExpire(0));
                 channels.clear();
             }
         }

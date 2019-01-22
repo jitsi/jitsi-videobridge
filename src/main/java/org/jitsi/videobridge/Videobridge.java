@@ -60,6 +60,7 @@ import java.util.regex.*;
  * @author Lyubomir Marinov
  * @author Hristo Terezov
  * @author Boris Grozev
+ * @author Brian Baldino
  */
 public class Videobridge
 {
@@ -171,6 +172,8 @@ public class Videobridge
      * IDs.
      */
     private final Map<String, Conference> conferences = new HashMap<>();
+
+    private ColibriShim colibriShim = new ColibriShim(this);
 
     /**
      * Default options passed as second argument to
@@ -685,6 +688,9 @@ public class Videobridge
                         "Conference not found for ID: " + conferenceId);
             }
         }
+        // XXX_Boris: Do we need to bring this back, or just remove the
+        // lastKnownFocus concept (is this from pre-jicofo times?):
+        // conference.setLastKnownFocus(conferenceIQ.getFrom());
 
         ColibriConferenceIQ responseConferenceIQ = new ColibriConferenceIQ();
         conference.describeShallow(responseConferenceIQ);
@@ -788,24 +794,6 @@ public class Videobridge
         return channelBundleIds;
     }
 
-    private class IqProcessingException extends Exception {
-        public final XMPPError.Condition condition;
-        public final String errorMessage;
-
-        public IqProcessingException(XMPPError.Condition condition, String errorMessage) {
-            this.condition = condition;
-            this.errorMessage = errorMessage;
-        }
-
-        @Override
-        public String toString()
-        {
-            return condition.toString() + " " + errorMessage;
-        }
-    }
-
-    private ColibriShim colibriShim = new ColibriShim(this);
-
     //TODO: we've got concurrency issues here, we could:
     // 1) hopefully get rid of the need for this and then we can remove the getter
     // 2) return a copy?
@@ -832,10 +820,8 @@ public class Videobridge
             String channelBundleId = channelIq.getChannelBundleId();
             String endpointId = channelIq.getEndpoint();
 
-            ColibriConferenceIQ.OctoChannel octoChannelIQ
-                    = channelIq instanceof ColibriConferenceIQ.OctoChannel
-                    ? (ColibriConferenceIQ.OctoChannel) channelIq
-                    : null;
+            boolean isOcto
+                    = channelIq instanceof ColibriConferenceIQ.OctoChannel;
 
             ColibriShim.ChannelShim channelShim;
             if (channelId == null)
@@ -852,8 +838,6 @@ public class Videobridge
                 }
                 if (endpointId == null)
                 {
-                    //TODO: is it reasonable to enforce this?
-                    // If we're creating a channel, we need to know which endpoint it belongs
                     throw new IqProcessingException(
                             XMPPError.Condition.bad_request, "Channel creation requested without endpoint ID");
                 }
@@ -863,7 +847,7 @@ public class Videobridge
                     throw new IqProcessingException(
                             XMPPError.Condition.bad_request, "Endpoint ID does not match channel bundle ID");
                 }
-                channelShim = content.createRtpChannel(conference, endpointId, octoChannelIQ != null);
+                channelShim = content.createRtpChannel(conference, endpointId, isOcto);
                 if (channelShim == null)
                 {
                     throw new IqProcessingException(XMPPError.Condition.internal_server_error, "Error creating channel");
@@ -924,11 +908,13 @@ public class Videobridge
 
             List<RTPHdrExtPacketExtension> epHeaderExts =
                     endpointHeaderExts.computeIfAbsent(endpointId, key -> new ArrayList<>());
-            epHeaderExts.addAll(channelIq.getRtpHeaderExtensions());
+            epHeaderExts.addAll(channelRtpHeaderExtensions);
             channelShim.rtpHeaderExtensions = channelRtpHeaderExtensions;
 
             if (channelSources != null)
             {
+                // Note that we only add sources and never remove. They accumulate with successive
+                // colibri requests.
                 List<SourcePacketExtension> epSources =
                         endpointSources.computeIfAbsent(endpointId, key -> new ArrayList<>());
                 epSources.addAll(channelSources);
@@ -938,6 +924,8 @@ public class Videobridge
 
             if (channelSourceGroups != null)
             {
+                // Note that we only add source ground and never remove. They accumulate with successive
+                // colibri requests.
                 List<SourceGroupPacketExtension> epSourceGroups =
                         endpointSourceGroups.computeIfAbsent(endpointId, key -> new ArrayList<>());
                 epSourceGroups.addAll(channelSourceGroups);
@@ -1354,7 +1342,6 @@ public class Videobridge
      * <tt>Videobridge</tt> is to start
      */
     void start(final BundleContext bundleContext)
-        throws Exception
     {
         UlimitCheck.printUlimits();
 
@@ -1578,7 +1565,6 @@ public class Videobridge
      * <tt>Videobridge</tt> is to stop
      */
     void stop(BundleContext bundleContext)
-        throws Exception
     {
         try
         {
@@ -1931,5 +1917,23 @@ public class Videobridge
          * videobridge. Note that this is only updated when conferences expire.
          */
         public AtomicLong totalPacketsSentOcto = new AtomicLong();
+    }
+
+    private class IqProcessingException extends Exception
+    {
+        public final XMPPError.Condition condition;
+        public final String errorMessage;
+
+        public IqProcessingException(XMPPError.Condition condition, String errorMessage)
+        {
+            this.condition = condition;
+            this.errorMessage = errorMessage;
+        }
+
+        @Override
+        public String toString()
+        {
+            return condition.toString() + " " + errorMessage;
+        }
     }
 }
