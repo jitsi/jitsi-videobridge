@@ -700,6 +700,7 @@ public class Conference
     AbstractEndpoint findEndpointByReceiveSSRC(
         long receiveSSRC, MediaType mediaType)
     {
+        // TODO(boris): Implement without using the shim (loop over endpoints)
         ColibriShim colibriShim = videobridge.getColibriShim();
         ColibriShim.ConferenceShim conferenceShim = colibriShim.getConference(this.getID());
         ColibriShim.ContentShim contentShim = conferenceShim.getOrCreateContent(mediaType);
@@ -894,6 +895,8 @@ public class Conference
      */
     MediaService getMediaService()
     {
+        //TODO(boris): Get rid of MediaService altogether (we only use it for
+        //making MediaFormat-s
         MediaService mediaService
             = ServiceUtils.getService(getBundleContext(), MediaService.class);
 
@@ -950,7 +953,7 @@ public class Conference
     TransportManager getTransportManager(String channelBundleId)
     {
         // If create is false then initiator parameter will not be used.
-        // So here it doesnt matter it is true, or false.
+        // So here it doesn't matter it is true, or false.
         return getTransportManager(channelBundleId, false, true);
     }
 
@@ -966,7 +969,6 @@ public class Conference
      * @return the <tt>TransportManager</tt> instance for the channel-bundle
      * with ID <tt>channelBundleId</tt>.
      */
-    private static int numForwarded = 0;
     public IceUdpTransportManager getTransportManager(
             String channelBundleId,
             boolean create,
