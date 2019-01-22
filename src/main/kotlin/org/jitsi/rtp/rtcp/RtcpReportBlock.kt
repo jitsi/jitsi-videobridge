@@ -95,8 +95,19 @@ class RtcpReportBlock {
      *     the same session will generate different extensions to the
      *     sequence number if their start times differ significantly.
      */
-    var seqNumCycles: Int
-    var seqNum: Int
+    var extendedHighestSeqNum: Long
+    /**
+     * A convenience member for accessing the number of sequence number cycles
+     * field from [extendedHighestSeqNum]
+     */
+    val seqNumCycles: Int
+        get() = extendedHighestSeqNum.ushr(16).toUInt()
+    /**
+     * A convenience member for accessing the sequence number field from
+     * [extendedHighestSeqNum]
+     */
+    val seqNum: Int
+        get() = (extendedHighestSeqNum and (0x0000FFFF)).toUInt()
     /**
      * interarrival jitter: 32 bits
      *     An estimate of the statistical variance of the RTP data packet
@@ -206,6 +217,8 @@ class RtcpReportBlock {
             buf.put3Bytes(5, cumulativeLost)
         }
 
+        fun getExtendedHighestSeqNum(buf: ByteBuffer): Long = buf.getInt(8).toULong()
+
         fun getSeqNumCycles(buf: ByteBuffer): Int = buf.getShort(8).toUInt()
         fun setSeqNumCycles(buf: ByteBuffer, seqNumCycles: Int) {
             buf.putShort(8, seqNumCycles.toUShort())
@@ -231,8 +244,7 @@ class RtcpReportBlock {
         this.ssrc = RtcpReportBlock.getSsrc(buf)
         this.fractionLost = RtcpReportBlock.getFractionLost(buf)
         this.cumulativePacketsLost = RtcpReportBlock.getCumulativeLost(buf)
-        this.seqNumCycles = RtcpReportBlock.getSeqNumCycles(buf)
-        this.seqNum = RtcpReportBlock.getSeqNum(buf)
+        this.extendedHighestSeqNum = RtcpReportBlock.getExtendedHighestSeqNum(buf)
         this.interarrivalJitter = RtcpReportBlock.getInterarrivalJitter(buf)
         this.lastSrTimestamp = RtcpReportBlock.getLastSrTimestamp(buf)
         this.delaySinceLastSr = RtcpReportBlock.getDelaySinceLastSr(buf)
@@ -251,8 +263,7 @@ class RtcpReportBlock {
         this.ssrc = ssrc
         this.fractionLost = fractionLost
         this.cumulativePacketsLost = cumulativePacketsLost
-        this.seqNumCycles = seqNumCycles
-        this.seqNum = seqNum
+        this.extendedHighestSeqNum = (seqNumCycles.shl(16) or seqNum).toULong()
         this.interarrivalJitter = interarrivalJitter
         this.lastSrTimestamp = lastSrTimestamp
         this.delaySinceLastSr = delaySinceLastSr
