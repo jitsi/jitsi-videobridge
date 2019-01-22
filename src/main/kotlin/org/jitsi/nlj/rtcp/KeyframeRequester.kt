@@ -20,7 +20,10 @@ import org.jitsi.nlj.Event
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cdebug
+import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
+import java.time.Duration
 
 /**
  * [KeyframeRequester] handles a few things around keyframes:
@@ -31,7 +34,12 @@ import org.jitsi.rtp.rtcp.rtcpfb.RtcpFbFirPacket
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
 class KeyframeRequester : Node("Keyframe Requester") {
+    // Stats
     private var numKeyframesRequestedByBridge: Int = 0
+    private var numKeyframeRequestsDropped: Int = 0
+
+    private var firCommandSequenceNumber: Int = 0
+    private var lastKeyframeRequestTimeMs: Long = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         //TODO: translation
@@ -41,9 +49,17 @@ class KeyframeRequester : Node("Keyframe Requester") {
 
     fun requestKeyframe(mediaSsrc: Long) {
         //TODO(brian): for now hardcode to send an FIR
-        val firPacket = RtcpFbFirPacket(mediaSourceSsrc = mediaSsrc)
-        numKeyframesRequestedByBridge++
-        processPackets(listOf(PacketInfo(firPacket)))
+        val now = System.currentTimeMillis()
+        if (now - lastKeyframeRequestTimeMs < 100) {
+            logger.cdebug { "Sent a keyframe less than 100ms ago, ignoring request" }
+            numKeyframeRequestsDropped++
+        } else {
+            lastKeyframeRequestTimeMs = now
+            val firPacket = RtcpFbFirPacket(mediaSourceSsrc = mediaSsrc, seqNum = firCommandSequenceNumber++)
+            logger.cdebug { "Keyframe requester requesting keyframe with FIR" }
+            numKeyframesRequestedByBridge++
+            processPackets(listOf(PacketInfo(firPacket)))
+        }
     }
 
     override fun handleEvent(event: Event) {
@@ -55,6 +71,7 @@ class KeyframeRequester : Node("Keyframe Requester") {
         return NodeStatsBlock(name).apply {
             addAll(parentStats)
             addStat("num keyframes requested by the bridge: $numKeyframesRequestedByBridge")
+            addStat("num keyframes dropped due to throttling: $numKeyframeRequestsDropped")
         }
     }
 }

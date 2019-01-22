@@ -21,6 +21,7 @@ import org.jitsi.nlj.codec.vp8.Vp8Utils
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 
 /**
@@ -30,6 +31,8 @@ import org.jitsi.nlj.transform.node.Node
  */
 class Vp8Parser : Node("Vp8 parser") {
     private val ssrcToSpatialLayerQuality: MutableMap<Long, Int> = HashMap()
+    // Stats
+    private var numKeyframes: Int = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEachAs<VideoRtpPacket> { _, pkt ->
@@ -40,8 +43,19 @@ class Vp8Parser : Node("Vp8 parser") {
                 } else {
                     pkt.spatialLayerIndex = ssrcToSpatialLayerQuality[pkt.header.ssrc] ?: -1
                 }
+                if (pkt.isKeyFrame) {
+                    numKeyframes++
+                }
             }
         }
         next(p)
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        val parentStats = super.getNodeStats()
+        return NodeStatsBlock(name).apply {
+            addAll(parentStats)
+            addStat("num keyframes: $numKeyframes")
+        }
     }
 }
