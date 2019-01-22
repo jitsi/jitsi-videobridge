@@ -1677,8 +1677,10 @@ public class Videobridge
                 if (conference != null && !conference.isExpired())
                 {
                     conferenceCount++;
-                    //TODO(brian): for now just assume every endpoint has 3 streams (audio/video/data)
-                    streamCount += conference.getEndpointCount() * 3;
+                    //TODO(brian, boris): for now just assume every endpoint
+                    // streams video and there is no last-n
+                    int epCount = conference.getEndpointCount();
+                    streamCount += epCount * epCount;
 
 //                    for (Content content : conference.getContents())
 //                    {
