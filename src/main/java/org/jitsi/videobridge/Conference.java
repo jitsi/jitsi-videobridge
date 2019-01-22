@@ -257,6 +257,10 @@ public class Conference
             videobridgeStatistics.totalConferencesCreated.incrementAndGet();
         }
 
+        // We listen to our own events so we have a centralized place to handle certain
+        // things (e.g. anytime the endpoints list changes)
+        addPropertyChangeListener(propertyChangeListener);
+
         touch();
     }
 
@@ -1079,6 +1083,9 @@ public class Conference
                 .map(this::getEndpoint)
                 .filter(Objects::nonNull)
                 .forEach(AbstractEndpoint::incrementSelectedCount);
+
+            //TODO(brian): hack this for now to drive an update after the endpoint encodings have been set
+            getEndpoints().forEach(ep -> ep.propertyChange(new PropertyChangeEvent(this, Conference.ENDPOINTS_PROPERTY_NAME, null, null)));
         }
     }
 

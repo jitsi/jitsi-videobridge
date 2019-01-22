@@ -26,6 +26,7 @@ import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
+import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.time.*;
@@ -42,7 +43,7 @@ import java.util.concurrent.*;
  * @author Boris Grozev
  */
 public abstract class AbstractEndpoint extends PropertyChangeNotifier
-    implements EncodingsManager.EncodingsUpdateListener
+    implements EncodingsManager.EncodingsUpdateListener, PropertyChangeListener
 {
     /**
      * The (unique) identifier/ID of the endpoint of a participant in a
@@ -134,6 +135,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
             }
         });
         conference.encodingsManager.subscribe(this);
+        conference.addPropertyChangeListener(this);
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent evt)
+    {
     }
 
     @Override
@@ -206,16 +213,16 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                 if (endpoint.wants(pktInfo, getID()))
                 {
                     PacketInfo pktInfoCopy = pktInfo.clone();
-                    endpoint.transceiver.sendRtp(Collections.singletonList(pktInfoCopy));
+                    endpoint.sendRtp(pktInfoCopy);
                 }
             });
         });
     }
 
-    public void sendRtp(List<PacketInfo> packets)
+    public void sendRtp(PacketInfo packetInfo)
     {
         // By default just add it to the sender's queue
-        transceiver.sendRtp(packets);
+        transceiver.sendRtp(Collections.singletonList(packetInfo));
     }
 
     protected void handleIncomingRtcp(List<PacketInfo> packetInfos)
@@ -401,6 +408,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         Conference conference = getConference();
         if (conference != null)
         {
+            conference.removePropertyChangeListener(this);
             TransportManager tm = conference.getTransportManager(this.id);
             if (tm != null)
             {

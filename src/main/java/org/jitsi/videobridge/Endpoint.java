@@ -16,6 +16,7 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
@@ -28,7 +29,9 @@ import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi_modified.sctp4j.*;
+import org.jitsi_modified.service.neomedia.rtp.*;
 
+import java.beans.*;
 import java.io.*;
 import java.lang.ref.*;
 import java.nio.*;
@@ -112,6 +115,15 @@ public class Endpoint
     private static final ExecutorService ioPool =
             Executors.newCachedThreadPool(new NameableThreadFactory("Endpoint ioPool"));
 
+    private void requestKeyframe(long ssrc)
+    {
+        AbstractEndpoint ep = getConference().findEndpointByReceiveSSRC(ssrc, MediaType.VIDEO);
+        if (ep != null)
+        {
+            ep.transceiver.requestKeyFrame(ssrc);
+        }
+    }
+
     /**
      * Initializes a new <tt>Endpoint</tt> instance with a specific (unique)
      * identifier/ID of the endpoint of a participant in a <tt>Conference</tt>.
@@ -128,12 +140,21 @@ public class Endpoint
                 getID(),
                 transceiver.getBandwidthEstimator(),
                 transceiver.getDiagnosticContext(),
-                transceiver::requestKeyFrame);
+                this::requestKeyframe);
 
         messageTransport = new EndpointMessageTransport(this);
 
         audioLevelListener = new AudioLevelListenerImpl(conference.getSpeechActivity());
         transceiver.setAudioLevelListener(audioLevelListener);
+        transceiver.onBandwidthEstimateChanged(new BandwidthEstimator.Listener()
+        {
+            @Override
+            public void bandwidthEstimationChanged(long newValueBps)
+            {
+                System.out.println("TEMP: Endpoint " + getID() + "'s estimated bandwidth is now " + newValueBps + " bps");
+                bitrateController.update(getConference().getSpeechActivity().getEndpoints(), newValueBps);
+            }
+        });
     }
 
     /**
@@ -197,6 +218,17 @@ public class Endpoint
         }
     }
 
+    @Override
+    public void propertyChange(PropertyChangeEvent evt)
+    {
+        System.out.println("TEMP: endpoint " + getID() + " getting notified of an endpoints change");
+        super.propertyChange(evt);
+        if (Conference.ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
+        {
+            bitrateController.update(getConference().getSpeechActivity().getEndpoints(), -1);
+        }
+    }
+
     /**
      * Sends a specific <tt>String</tt> <tt>msg</tt> over the data channel of
      * this <tt>Endpoint</tt>.
@@ -228,16 +260,47 @@ public class Endpoint
     {
         if (super.wants(packetInfo, sourceEndpointId))
         {
+            if (packetInfo.getPacket() instanceof AudioRtpPacket)
+            {
+                return true;
+            }
             RawPacket packet = PacketExtensionsKt.toRawPacket(packetInfo.getPacket());
             return bitrateController.accept(packet);
         }
         return false;
     }
 
+    //TODO(brian): temp declare a pre-set array to use for passing into the transformer
+    RawPacket[] packets = new RawPacket[1];
+    @Override
+    public void sendRtp(PacketInfo packetInfo)
+    {
+        Packet packet = packetInfo.getPacket();
+        if (packet instanceof VideoRtpPacket)
+        {
+            packets[0] = PacketExtensionsKt.toRawPacket(packet);
+            RawPacket[] res = bitrateController.getRTPTransformer().transform(packets);
+            for (RawPacket pkt : res)
+            {
+                if (pkt == null)
+                {
+                    continue;
+                }
+                VideoRtpPacket videoPacket = new VideoRtpPacket(PacketExtensionsKt.getByteBuffer(pkt));
+                super.sendRtp(new PacketInfo(videoPacket));
+            }
+        }
+        else
+        {
+            super.sendRtp(packetInfo);
+        }
+    }
+
     @Override
     public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
     {
         super.addDynamicRtpPayloadType(rtpPayloadType, format);
+        bitrateController.addDynamicRtpPayloadType(rtpPayloadType, format);
     }
 
     /**

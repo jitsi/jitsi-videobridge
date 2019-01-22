@@ -205,9 +205,11 @@ public class AdaptiveTrackProjection
         // sufficient to only check for needing a key frame if the packet wasn't
         // accepted. But this wouldn't be enough, as we may be accepting packets
         // of low-quality, while we wish to switch to high-quality.
+//        System.out.println("TEMP: adaptive track projection has targetIndex " + targetIndexCopy);
         if (contextCopy.needsKeyframe()
             && targetIndexCopy > RTPEncodingDesc.SUSPENDED_INDEX)
         {
+            System.out.println("TEMP: adaptive track projection " + targetSsrc + " needs keyframe");
             MediaStreamTrackDesc source = getSource();
             if (source != null)
             {
@@ -243,6 +245,8 @@ public class AdaptiveTrackProjection
     {
         if (context == null || contextPayloadType != payloadType)
         {
+            System.out.println("TEMP: adaptive track projection " + hashCode() +
+                    " creating context for payload type " + payloadType);
             MediaFormat format = payloadTypeFormats.get((byte)payloadType);
             MediaStreamTrackDesc source = getSource();
             context = makeContext(source, format);
@@ -356,6 +360,9 @@ public class AdaptiveTrackProjection
 
     public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
     {
+        System.out.println("TEMP: adaptive track projection " + hashCode() +
+                " adding payload type mapping " + rtpPayloadType + " -> " +
+                format);
         payloadTypeFormats.put(rtpPayloadType, format);
     }
 }

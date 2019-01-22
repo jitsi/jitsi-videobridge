@@ -49,6 +49,7 @@ import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
 import org.osgi.framework.*;
 
+import java.beans.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
