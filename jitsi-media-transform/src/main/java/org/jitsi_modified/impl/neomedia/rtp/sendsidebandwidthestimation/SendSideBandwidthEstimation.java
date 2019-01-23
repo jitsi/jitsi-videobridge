@@ -271,7 +271,6 @@ class SendSideBandwidthEstimation
     /**
      * The {@link DiagnosticContext} of this instance.
      */
-    //TODO(brian): bring this back? it was being retrieved from the MediaStreamImpl
     private final DiagnosticContext diagnosticContext;
 
     private final List<Listener> listeners
