@@ -22,6 +22,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
@@ -61,7 +62,7 @@ class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
                 // We don't want to track jitter, etc. for RTX streams
-                if (event.payloadType.isRtx) {
+                if (event.payloadType is RtxPayloadType) {
                     logger.cinfo { "Statistics tracker ignoring RTX format: ${event.payloadType}" }
                 } else {
                     payloadTypes[event.payloadType.pt] = event.payloadType

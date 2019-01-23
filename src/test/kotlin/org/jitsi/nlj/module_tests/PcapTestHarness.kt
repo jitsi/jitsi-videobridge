@@ -97,8 +97,8 @@ fun createRtpReceiver(executor: ExecutorService, backgroundExecutor: ScheduledEx
     rtpReceiver.setSrtpTransformer(srtpTransformer)
     rtpReceiver.setSrtcpTransformer(srtcpTransformer)
 
-    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(PayloadType.vp8(100)))
-    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(PayloadType.dummyAudio(111)))
+    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(Vp8PayloadType(100)))
+    rtpReceiver.handleEvent(RtpPayloadTypeAddedEvent(OpusPayloadType(111)))
     rtpReceiver.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
 
     return rtpReceiver

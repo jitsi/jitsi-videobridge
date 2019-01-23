@@ -22,6 +22,8 @@ import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
 import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.PayloadTypeEncoding
+import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
@@ -90,9 +92,9 @@ class RtxHandler : Node("RTX handler") {
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
-                if (event.payloadType.isRtx) {
+                if (event.payloadType is RtxPayloadType) {
                     val rtxPt = event.payloadType.pt.toUInt()
-                    event.payloadType.parameters[PayloadType.RTX_APT]?.toByte()?.toUInt()?.let {
+                    event.payloadType.parameters["apt"]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
                         logger.cinfo { "RtxHandler associating RTX payload type $rtxPt with primary $associatedPt" }
                         associatedPayloadTypes[rtxPt] = associatedPt
