@@ -17,9 +17,8 @@ package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.nlj.format.PayloadType;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.vp8.*;
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc;
@@ -113,7 +112,7 @@ public class AdaptiveTrackProjection
 
     //TODO(brian): we need this to know which frameprojectioncontext to make
     // based on the payload type of a packet.  is there a better way?
-    private final Map<Byte, MediaFormat> payloadTypeFormats = new HashMap<>();
+    private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
 
     /**
      * Ctor.
@@ -247,9 +246,9 @@ public class AdaptiveTrackProjection
         {
             System.out.println("TEMP: adaptive track projection " + hashCode() +
                     " creating context for payload type " + payloadType);
-            MediaFormat format = payloadTypeFormats.get((byte)payloadType);
+            PayloadType pt = payloadTypes.get((byte)payloadType);
             MediaStreamTrackDesc source = getSource();
-            context = makeContext(source, format);
+            context = makeContext(source, pt);
             contextPayloadType = payloadType;
             return context;
         }
@@ -266,22 +265,21 @@ public class AdaptiveTrackProjection
      * (there's a one-to-one mapping between payload type and media format).
      *
      * @param track the ssrc of the track projection.
-     * @param format the media format.
+     * @param payloadType the payload type
      * @return an adaptive track projection context that corresponds to the
      * media format that is specified as a parameter.
      */
     private static AdaptiveTrackProjectionContext makeContext(
-        @NotNull MediaStreamTrackDesc track, @NotNull MediaFormat format)
+        @NotNull MediaStreamTrackDesc track, @NotNull PayloadType payloadType)
     {
-        if (Constants.VP8.equalsIgnoreCase(format.getEncoding())
-            && track.getRTPEncodings().length > 1)
+        if (payloadType.isVp8() && track.getRTPEncodings().length > 1)
         {
             long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
             return new VP8AdaptiveTrackProjectionContext(ssrc);
         }
         else
         {
-            return new GenericAdaptiveTrackProjectionContext(format);
+            return new GenericAdaptiveTrackProjectionContext(payloadType);
         }
     }
 
@@ -360,11 +358,10 @@ public class AdaptiveTrackProjection
         return targetSsrc;
     }
 
-    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
+    public void addPayloadType(PayloadType payloadType)
     {
-        System.out.println("TEMP: adaptive track projection " + hashCode() +
-                " adding payload type mapping " + rtpPayloadType + " -> " +
-                format);
-        payloadTypeFormats.put(rtpPayloadType, format);
+        logger.info("TEMP: adaptive track projection " + hashCode() +
+                " adding payload type mapping " + payloadType);
+        payloadTypes.put(payloadType.getPt(), payloadType);
     }
 }

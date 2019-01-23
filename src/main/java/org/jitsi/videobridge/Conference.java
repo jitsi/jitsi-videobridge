@@ -16,11 +16,9 @@
 package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
-import net.java.sip.communicator.util.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.nlj.util.*;
-import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.*;
@@ -878,29 +876,6 @@ public class Conference
     public Jid getLastKnowFocus()
     {
         return lastKnownFocus;
-    }
-
-    /**
-     * Returns a <tt>MediaService</tt> implementation (if any).
-     *
-     * @return a <tt>MediaService</tt> implementation (if any)
-     */
-    MediaService getMediaService()
-    {
-        //TODO(boris): Get rid of MediaService altogether (we only use it for
-        //making MediaFormat-s
-        MediaService mediaService
-            = ServiceUtils.getService(getBundleContext(), MediaService.class);
-
-        // TODO For an unknown reason, ServiceUtils2.getService fails to
-        // retrieve the MediaService implementation. In the form of a temporary
-        // workaround, get it through LibJitsi.
-        if (mediaService == null)
-        {
-            mediaService = LibJitsi.getMediaService();
-        }
-
-        return mediaService;
     }
 
     /**

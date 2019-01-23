@@ -19,9 +19,8 @@ import net.sf.fmj.media.rtp.*;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtcp.*;
 import org.jitsi.impl.neomedia.rtp.*;
+import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 
 /**
@@ -58,24 +57,23 @@ class GenericAdaptiveTrackProjectionContext
      * Checks if the given packet with the given format is part of a key frame.
      */
     private static boolean isKeyframe(
-            @NotNull RawPacket rtpPacket, @NotNull MediaFormat format)
+            @NotNull RawPacket rtpPacket, @NotNull PayloadType payloadType)
     {
-        // XXX merge with MediaStream.isKeyframe().
         byte[] buf = rtpPacket.getBuffer();
         int payloadOff = rtpPacket.getPayloadOffset(),
                 payloadLen = rtpPacket.getPayloadLength();
 
-        if (Constants.VP8.equalsIgnoreCase(format.getEncoding()))
+        if (payloadType.isVp8())
         {
             return org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
         }
-        else if (Constants.H264.equalsIgnoreCase(format.getEncoding()))
+        else if (payloadType.isH264())
         {
             return org.jitsi.impl.neomedia.codec.video.h264.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
         }
-        else if (Constants.VP9.equalsIgnoreCase(format.getEncoding()))
+        else if (payloadType.isVp9())
         {
             return org.jitsi.impl.neomedia.codec.video.vp9.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
@@ -94,7 +92,7 @@ class GenericAdaptiveTrackProjectionContext
     /**
      * Useful to determine whether a packet is a "keyframe".
      */
-    private final MediaFormat format;
+    private final PayloadType payloadType;
 
     /**
      * The maximum sequence number that we have sent.
@@ -128,11 +126,11 @@ class GenericAdaptiveTrackProjectionContext
     /**
      * Ctor.
      *
-     * @param format the media format to expect
+     * @param payloadType the media format to expect
      */
-    GenericAdaptiveTrackProjectionContext(MediaFormat format)
+    GenericAdaptiveTrackProjectionContext(PayloadType payloadType)
     {
-        this.format = format;
+        this.payloadType = payloadType;
     }
 
     /**
@@ -164,7 +162,7 @@ class GenericAdaptiveTrackProjectionContext
         boolean accept;
         if (needsKeyframe)
         {
-            if (isKeyframe(rtpPacket, format))
+            if (isKeyframe(rtpPacket, payloadType))
             {
                 needsKeyframe = false;
                 // resume after being suspended, we compute the new seqnum delta

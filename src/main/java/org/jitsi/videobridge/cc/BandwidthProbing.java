@@ -249,7 +249,7 @@ package org.jitsi.videobridge.cc;
 //         long mediaSSRC = getSenderSSRC();
 //         if (vp8PT == -1)
 //         {
-//             vp8PT = stream.getDynamicRTPPayloadType(Constants.VP8);
+//             vp8PT = stream.getDynamicRTPPayloadType(PayloadType.VP8);
 //             if (vp8PT == -1)
 //             {
 //                 logger.warn("The VP8 payload type is undefined. Failed to "

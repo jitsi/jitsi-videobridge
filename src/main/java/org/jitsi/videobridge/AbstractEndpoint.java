@@ -17,6 +17,7 @@ package org.jitsi.videobridge;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
@@ -167,8 +168,9 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return lastNFilter.getLastNValue();
     }
 
-    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format) {
-        transceiver.addDynamicRtpPayloadType(rtpPayloadType, format);
+    public void addPayloadType(PayloadType payloadType)
+    {
+        transceiver.addPayloadType(payloadType);
     }
 
     public void setLocalSsrc(MediaType mediaType, long ssrc) {}
