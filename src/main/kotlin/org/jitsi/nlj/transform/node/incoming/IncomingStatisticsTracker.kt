@@ -176,6 +176,7 @@ class IncomingStreamStatistics(
              *
              * D(i,j) = (Rj - Ri) - (Sj - Si) = (Rj - Sj) - (Ri - Si)
              */
+            // TODO(boris) take wraps into account
             val delta = (previousPacketReceivedTimestamp - previousPacketSentTimestamp) -
                     (currentPacketReceivedTimestamp - currentPacketSentTimestamp)
 
