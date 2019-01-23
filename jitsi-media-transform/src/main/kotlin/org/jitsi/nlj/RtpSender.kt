@@ -21,6 +21,7 @@ import org.jitsi.nlj.rtcp.NackHandler
 import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.service.neomedia.MediaType
 
 
 /**
@@ -49,4 +50,5 @@ abstract class RtpSender : EventHandler, Stoppable,NodeStatsProducer {
     abstract fun setSrtcpTransformer(srtcpTransformer: SinglePacketTransformer)
     abstract fun getStreamStats(): Map<Long, OutgoingStreamStatistics.Snapshot>
     abstract fun requestKeyframe(mediaSsrc: Long)
+    abstract fun setLocalSsrc(mediaType: MediaType, ssrc: Long)
 }
