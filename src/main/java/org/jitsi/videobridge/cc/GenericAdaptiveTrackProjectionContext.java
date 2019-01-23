@@ -55,6 +55,14 @@ class GenericAdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
     /**
+     * The <tt>Logger</tt> used by the
+     * <tt>GenericAdaptiveTrackProjectionContext</tt> class and its instances to
+     * log debug information.
+     */
+    private static final Logger logger
+        = Logger.getLogger(GenericAdaptiveTrackProjectionContext.class);
+
+    /**
      * Raised when a track has been resumed (after being suspended).
      */
     private boolean needsKeyframe = true;
@@ -141,8 +149,20 @@ class GenericAdaptiveTrackProjectionContext
                 // "delta = destination - source" and in order to find the
                 // destination sequence number we use the equivalent formula
                 // "destination = source + delta".
+                int destinationSequenceNumber
+                    = maxDestinationSequenceNumber + 1;
                 sequenceNumberDelta = RTPUtils.getSequenceNumberDelta(
-                    maxDestinationSequenceNumber + 1, sourceSequenceNumber);
+                    destinationSequenceNumber, sourceSequenceNumber);
+
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("delta ssrc=" + rtpPacket.getSSRCAsLong()
+                        + ",src_sequence=" + sourceSequenceNumber
+                        + ",dst_sequence=" + destinationSequenceNumber
+                        + ",max_sequence=" + maxDestinationSequenceNumber
+                        + ",delta=" + sequenceNumberDelta);
+                }
+
                 accept = true;
             }
             else
@@ -158,13 +178,28 @@ class GenericAdaptiveTrackProjectionContext
         if (accept)
         {
             int destinationSequenceNumber
-                = (sourceSequenceNumber + sequenceNumberDelta)
-                & RawPacket.SEQUENCE_NUMBER_MASK;
+                = computeDestinationSequenceNumber(sourceSequenceNumber);
 
             if (RTPUtils.isOlderSequenceNumberThan(
                 maxDestinationSequenceNumber, destinationSequenceNumber))
             {
                 maxDestinationSequenceNumber = destinationSequenceNumber;
+            }
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("accept ssrc=" + rtpPacket.getSSRCAsLong()
+                + ",src_sequence=" + sourceSequenceNumber
+                + ",dst_sequence=" + destinationSequenceNumber
+                + ",max_sequence=" + maxDestinationSequenceNumber);
+            }
+        }
+        else
+        {
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("reject ssrc=" + rtpPacket.getSSRCAsLong()
+                    + ",src_sequence=" + sourceSequenceNumber);
             }
         }
 
@@ -226,12 +261,19 @@ class GenericAdaptiveTrackProjectionContext
     {
         int sourceSequenceNumber = rtpPacket.getSequenceNumber();
         int destinationSequenceNumber
-            = (sourceSequenceNumber + sequenceNumberDelta)
-            & RawPacket.SEQUENCE_NUMBER_MASK;
+            = computeDestinationSequenceNumber(sourceSequenceNumber);
 
         if (sourceSequenceNumber != destinationSequenceNumber)
         {
             rtpPacket.setSequenceNumber(destinationSequenceNumber);
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("rewrite ssrc=" + rtpPacket.getSSRCAsLong()
+                + ",src_sequence=" + sourceSequenceNumber
+                + ",dst_sequence=" + destinationSequenceNumber
+                + ",max_sequence=" + maxDestinationSequenceNumber);
         }
 
         synchronized (transmittedSyncRoot)
@@ -241,6 +283,12 @@ class GenericAdaptiveTrackProjectionContext
         }
 
         return EMPTY_PACKET_ARR;
+    }
+
+    private int computeDestinationSequenceNumber(int sourceSequenceNumber)
+    {
+        return (sourceSequenceNumber + sequenceNumberDelta)
+            & RawPacket.SEQUENCE_NUMBER_MASK;
     }
 
     /**
