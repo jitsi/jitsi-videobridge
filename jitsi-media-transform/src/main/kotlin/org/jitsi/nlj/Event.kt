@@ -22,7 +22,12 @@ import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
 interface Event
 
-class RtpPayloadTypeAddedEvent(val payloadType: PayloadType) : Event
+class RtpPayloadTypeAddedEvent(val payloadType: PayloadType) : Event {
+    override fun toString(): String = with(StringBuffer()) {
+        append(payloadType.toString())
+        toString()
+    }
+}
 class RtpPayloadTypeClearEvent : Event
 
 class RtpExtensionAddedEvent(val extensionId: Byte, val rtpExtension: RTPExtension) : Event
