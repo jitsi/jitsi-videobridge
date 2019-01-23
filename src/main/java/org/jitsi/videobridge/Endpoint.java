@@ -263,6 +263,12 @@ public class Endpoint
     }
 
     @Override
+    public void setLocalSsrc(MediaType mediaType, long ssrc)
+    {
+        transceiver.setLocalSsrc(mediaType, ssrc);
+    }
+
+    @Override
     public boolean wants(PacketInfo packetInfo, String sourceEndpointId)
     {
         if (super.wants(packetInfo, sourceEndpointId))

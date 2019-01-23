@@ -246,6 +246,7 @@ public class ColibriShim {
 
                 ChannelShim channelShim =
                         new ChannelShim(channelId, conference.getOrCreateEndpoint(endpointId), localSsrc, isOcto);
+                channelShim.endpoint.setLocalSsrc(type, localSsrc);
                 channels.put(channelId, channelShim);
                 return channelShim;
             }
@@ -328,7 +329,6 @@ public class ColibriShim {
         public ContentShim getOrCreateContent(MediaType type) {
             synchronized (contents)
             {
-                System.out.println("ConferenceShim " + getId() + " creating content " + type);
                 return contents.computeIfAbsent(type, key -> new ContentShim(type));
             }
         }

@@ -21,6 +21,7 @@ import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.transform.node.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.rtcp.rtcpfb.*;
+import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
@@ -169,6 +170,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format) {
         transceiver.addDynamicRtpPayloadType(rtpPayloadType, format);
     }
+
+    public void setLocalSsrc(MediaType mediaType, long ssrc) {}
 
     //TODO(brian): the nice thing about having 'wants' as a pre-check before we forward a packet is that if
     // 'wants' returns false, we don't have to make a copy of the packet to forward down.  If, instead, we
