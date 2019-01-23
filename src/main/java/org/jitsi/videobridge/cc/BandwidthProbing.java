@@ -107,6 +107,8 @@ package org.jitsi.videobridge.cc;
       */
      public boolean enabled = false;
 
+     public Long senderSsrc = null;
+
      /**
       * Ctor.
       *
@@ -289,12 +291,6 @@ package org.jitsi.videobridge.cc;
       */
      private long getSenderSSRC()
      {
-         StreamRTPManager streamRTPManager = dest.getStream().getStreamRTPManager();
-         if (streamRTPManager == null)
-         {
-             return -1;
-         }
-
-         return dest.getStream().getStreamRTPManager().getLocalSSRC();
+         return senderSsrc == null ? -1 : senderSsrc;
      }
  }

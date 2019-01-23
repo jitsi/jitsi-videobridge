@@ -109,6 +109,8 @@ public class Endpoint
 
     private final BitrateController bitrateController;
 
+    private final BandwidthProbing bandwidthProbing = new BandwidthProbing(null);
+
     /**
      * Pool shared by all endpoint instances for IO tasks
      */
@@ -267,6 +269,10 @@ public class Endpoint
     public void setLocalSsrc(MediaType mediaType, long ssrc)
     {
         transceiver.setLocalSsrc(mediaType, ssrc);
+        if (MediaType.VIDEO.equals(mediaType))
+        {
+            bandwidthProbing.senderSsrc = ssrc;
+        }
     }
 
     @Override
