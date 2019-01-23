@@ -335,15 +335,10 @@ public abstract class AbstractEndpointMessageTransport
         }
         int lastN = ((Number) o).intValue();
 
-        //TODO(brian): re-implement the last n storage, enforcements, etc.
-
-//        if (endpoint != null)
-//        {
-//            for (RtpChannel channel : endpoint.getChannels(MediaType.VIDEO))
-//            {
-//                channel.setLastN(lastN);
-//            }
-//        }
+        if (endpoint != null)
+        {
+            endpoint.setLastN(lastN);
+        }
     }
 
     /**
