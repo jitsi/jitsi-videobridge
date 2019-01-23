@@ -62,8 +62,8 @@ class RtpUtils {
          */
         fun millisToNtpTimestamp(timestampMs: Long): Long = TimeUtils.toNtpTime(timestampMs)
 
-        fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Double): Long {
-            return ((rtpTimestamp / ticksPerSecond) * 1000).toLong()
+        fun convertRtpTimestampToMs(rtpTimestamp: Int, ticksPerSecond: Int): Long {
+            return ((rtpTimestamp / (ticksPerSecond as Double)) * 1000).toLong()
         }
     }
 }

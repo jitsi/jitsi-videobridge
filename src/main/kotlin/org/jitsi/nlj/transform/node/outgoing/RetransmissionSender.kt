@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
@@ -29,7 +30,6 @@ import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.RtxPacket
-import org.jitsi.service.neomedia.codec.Constants
 import unsigned.toUInt
 import java.util.concurrent.ConcurrentHashMap
 
@@ -93,9 +93,9 @@ class RetransmissionSender : Node("Retransmission sender") {
     override fun handleEvent(event: Event) {
         when(event) {
             is RtpPayloadTypeAddedEvent -> {
-                if (Constants.RTX.equals(event.format.encoding, true)) {
-                    val rtxPt = event.payloadType.toUInt()
-                    event.format.formatParameters["apt"]?.toByte()?.toUInt()?.let {
+                if (event.payloadType.isRtx) {
+                    val rtxPt = event.payloadType.pt.toUInt()
+                    event.payloadType.parameters[PayloadType.RTX_APT]?.toByte()?.toUInt()?.let {
                         val associatedPt = it
                         logger.cinfo { "Retransmission sender ${hashCode()} associating RTX payload type " +
                                 "$rtxPt with primary $associatedPt" }

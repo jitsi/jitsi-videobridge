@@ -36,8 +36,8 @@ class PayloadTypeFilterNode : Node("RTP payload type filter") {
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
-                logger.cinfo { "Payload type filter ${hashCode()} now accepting PT ${event.payloadType.toUInt()}" }
-                acceptedPayloadTypes.add(event.payloadType.toUInt())
+                logger.cinfo { "Payload type filter ${hashCode()} now accepting PT ${event.payloadType.pt.toUInt()}" }
+                acceptedPayloadTypes.add(event.payloadType.pt.toUInt())
             }
             is RtpPayloadTypeClearEvent -> acceptedPayloadTypes.clear()
         }

@@ -16,12 +16,12 @@
 package org.jitsi_modified.impl.neomedia.transform;
 
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.format.PayloadType;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
 
-import java.util.*;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.*;
 
@@ -59,7 +59,7 @@ public class RetransmissionRequesterImpl
      */
     private final RetransmissionRequesterDelegate retransmissionRequesterDelegate;
 
-    public Map<Byte, MediaFormat> payloadTypeFormats = new ConcurrentHashMap<>();
+    public Map<Byte, PayloadType> payloadTypes = new ConcurrentHashMap<>();
 
     /**
      * The {@link MediaStream} that this instance belongs to.
@@ -97,8 +97,8 @@ public class RetransmissionRequesterImpl
             Long ssrc;
             int seq;
 
-            MediaFormat format = payloadTypeFormats.get(pkt.getPayloadType());
-            if (format == null)
+            PayloadType payloadType = payloadTypes.get(pkt.getPayloadType());
+            if (payloadType == null)
             {
                 ssrc = null;
                 seq = -1;
@@ -106,7 +106,7 @@ public class RetransmissionRequesterImpl
 //                logger.warn("format_not_found" +
 //                        ",stream_hash=" + stream.hashCode());
             }
-//            else if (Constants.RTX.equalsIgnoreCase(format.getEncoding()))
+//            else if (payloadType.isRtx)
 //            {
 //                //TODO: BRIAN re-add this once we get RTX.
                     // --> Actually we shouldn't need this block anymore since we strip

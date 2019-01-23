@@ -20,12 +20,12 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.AudioRtpPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.service.neomedia.MediaType
-import org.jitsi.service.neomedia.format.MediaFormat
 import unsigned.toUByte
 import java.util.concurrent.ConcurrentHashMap
 
@@ -33,11 +33,11 @@ import java.util.concurrent.ConcurrentHashMap
  * Parse RTP packets as either [VideoRtpPacket]s or [AudioRtpPacket]s
  */
 class MediaTypeParser : Node("Media type parser") {
-    private val payloadFormats: MutableMap<Byte, MediaFormat> = ConcurrentHashMap()
+    private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEachAs<RtpPacket> { pktInfo, pkt ->
-            val mediaType = payloadFormats[pkt.header.payloadType.toUByte()]?.mediaType ?: run {
+            val mediaType = payloadTypes[pkt.header.payloadType.toUByte()]?.mediaType ?: run {
                 logger.cdebug { "Unable to find format for payload type ${pkt.header.payloadType}" }
                 return@forEachAs
             }
@@ -52,8 +52,8 @@ class MediaTypeParser : Node("Media type parser") {
 
     override fun handleEvent(event: Event) {
         when (event) {
-            is RtpPayloadTypeAddedEvent -> payloadFormats[event.payloadType] = event.format
-            is RtpPayloadTypeClearEvent -> payloadFormats.clear()
+            is RtpPayloadTypeAddedEvent -> payloadTypes[event.payloadType.pt] = event.payloadType
+            is RtpPayloadTypeClearEvent -> payloadTypes.clear()
         }
         super.handleEvent(event)
     }

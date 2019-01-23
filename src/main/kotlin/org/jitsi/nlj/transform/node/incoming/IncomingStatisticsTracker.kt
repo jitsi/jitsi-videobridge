@@ -21,6 +21,7 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.RtpUtils.Companion.convertRtpTimestampToMs
@@ -30,8 +31,6 @@ import org.jitsi.nlj.util.isNextAfter
 import org.jitsi.nlj.util.numPacketsTo
 import org.jitsi.nlj.util.rolledOverTo
 import org.jitsi.rtp.RtpPacket
-import org.jitsi.service.neomedia.codec.Constants
-import org.jitsi.service.neomedia.format.MediaFormat
 import toUInt
 import unsigned.toUShort
 import java.time.Duration
@@ -42,13 +41,13 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
     private val streamStats: MutableMap<Long, IncomingStreamStatistics> = ConcurrentHashMap()
-    private val payloadFormats: MutableMap<Byte, MediaFormat> = ConcurrentHashMap()
+    private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
     override fun doProcessPackets(p: List<PacketInfo>) {
         p.forEachAs<RtpPacket> { packetInfo, rtpPacket ->
             val stats = streamStats.computeIfAbsent(rtpPacket.header.ssrc) {
                 IncomingStreamStatistics(rtpPacket.header.ssrc, rtpPacket.header.sequenceNumber)
             }
-            payloadFormats[rtpPacket.header.payloadType.toByte()]?.let {
+            payloadTypes[rtpPacket.header.payloadType.toByte()]?.let {
                 val packetSentTimestamp = convertRtpTimestampToMs(rtpPacket.header.timestamp.toUInt(), it.clockRate)
                 stats.packetReceived(rtpPacket, packetSentTimestamp, packetInfo.receivedTime)
             }
@@ -62,13 +61,13 @@ class IncomingStatisticsTracker : Node("Incoming statistics tracker") {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
                 // We don't want to track jitter, etc. for RTX streams
-                if (Constants.RTX.equals(event.format.encoding, true)) {
-                    logger.cinfo { "Statistics tracker ignoring RTX format: ${event.format}" }
+                if (event.payloadType.isRtx) {
+                    logger.cinfo { "Statistics tracker ignoring RTX format: ${event.payloadType}" }
                 } else {
-                    payloadFormats[event.payloadType] = event.format
+                    payloadTypes[event.payloadType.pt] = event.payloadType
                 }
             }
-            is RtpPayloadTypeClearEvent -> payloadFormats.clear()
+            is RtpPayloadTypeClearEvent -> payloadTypes.clear()
         }
         super.handleEvent(event)
     }
