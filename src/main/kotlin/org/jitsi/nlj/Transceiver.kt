@@ -30,6 +30,7 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.extensions.toHex
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.service.neomedia.MediaType
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi.service.neomedia.format.MediaFormat
 import org.jitsi.util.DiagnosticContext
@@ -193,6 +194,13 @@ class Transceiver(
         logger.cinfo { "Transceiver ${hashCode()} removing receive ssrc $ssrc" }
         receiveSsrcs.remove(ssrc)
         rtpReceiver.handleEvent(ReceiveSsrcRemovedEvent(ssrc))
+    }
+
+    /**
+     * Set the 'local' bridge SSRC to [ssrc] for [mediaType]
+     */
+    fun setLocalSsrc(mediaType: MediaType, ssrc: Long) {
+        rtpSender.setLocalSsrc(mediaType, ssrc)
     }
 
     fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)
