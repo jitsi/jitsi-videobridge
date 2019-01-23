@@ -48,6 +48,7 @@ public class ColibriShim {
 
         private Integer expire;
         private boolean expired = false;
+        private final long creationTimestampMs;
 
         public ChannelShim(
                 @NotNull String id,
@@ -57,7 +58,13 @@ public class ColibriShim {
             this.id = id;
             this.endpoint = endpoint;
             this.isOcto = isOcto;
+            this.creationTimestampMs = System.currentTimeMillis();
             endpoint.addChannel(this);
+        }
+
+        public long getCreationTimestampMs()
+        {
+            return creationTimestampMs;
         }
 
         public Collection<PayloadTypePacketExtension> getPayloadTypes() {

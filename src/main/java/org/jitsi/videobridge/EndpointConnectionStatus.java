@@ -15,13 +15,14 @@
  */
 package org.jitsi.videobridge;
 
-import java.util.*;
-
 import net.java.sip.communicator.util.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.osgi.framework.*;
+
+import java.lang.ref.*;
+import java.util.*;
 
 import static org.jitsi.videobridge.EndpointMessageBuilder.*;
 
@@ -233,65 +234,42 @@ public class EndpointConnectionStatus
         Endpoint endpoint = (Endpoint) abstractEndpoint;
         String endpointId = endpoint.getID();
 
-        // Go over all RTP channels to get the latest timestamp
-//        List<RtpChannel> rtpChannels = endpoint.getChannels();
-//        long lastActivity
-//            = rtpChannels.stream()
-//                .mapToLong(RtpChannel::getLastTransportActivityTime)
-//                .max().orElse(0);
-//        long mostRecentChannelCreated
-//            = rtpChannels.stream()
-//                .mapToLong(RtpChannel::getCreationTimestamp)
-//                .max().orElse(0);
+        long mostRecentChannelCreated = endpoint.channelShims.stream()
+                .map(WeakReference<ColibriShim.ChannelShim>::get)
+                .filter(Objects::nonNull)
+                .mapToLong(ColibriShim.ChannelShim::getCreationTimestampMs)
+                .max()
+                .orElse(0);
 
-        // Also check SctpConnection
-//        SctpConnection sctpConnection = endpoint.getSctpConnection();
-//        if (sctpConnection != null)
-//        {
-//            long lastSctpActivity
-//                = sctpConnection.getLastTransportActivityTime();
-//            if (lastSctpActivity > lastActivity)
-//            {
-//                lastActivity = lastSctpActivity;
-//            }
-//            long creationTimestamp = sctpConnection.getCreationTimestamp();
-//            if (creationTimestamp > mostRecentChannelCreated)
-//            {
-//                mostRecentChannelCreated = creationTimestamp;
-//            }
-//        }
-
-        //TODO(brian): this looks at channel activity times, which are now gone.  need to re-implement
-        // some form of that and have this code look there.  for now, hard-coding things to active
-        long lastActivity = System.currentTimeMillis();
+        long lastActivity = endpoint.getLastActivity();
 
         // Transport not initialized yet
-//        if (lastActivity == 0)
-//        {
-//            // Here we check if it's taking too long for the endpoint to connect
-//            // We're doing that by checking how much time has elapsed since
-//            // the first endpoint's channel has been created.
-//            if (System.currentTimeMillis() - mostRecentChannelCreated
-//                    > firstTransferTimeout)
-//            {
-//                if (logger.isDebugEnabled())
-//                    logger.debug(
-//                            endpointId + " is having trouble establishing"
-//                            + " the connection and will be marked as inactive");
-//                // Let the logic below mark endpoint as inactive.
-//                // Beware that FIRST_TRANSFER_TIMEOUT constant MUST be greater
-//                // than MAX_INACTIVITY_LIMIT for this logic to work.
-//                lastActivity = mostRecentChannelCreated;
-//            }
-//            else
-//            {
-//                // Wait for the endpoint to connect...
-//                if (logger.isDebugEnabled())
-//                    logger.debug(
-//                            endpointId + " not ready for activity checks yet");
-//                return;
-//            }
-//        }
+        if (lastActivity == 0)
+        {
+            // Here we check if it's taking too long for the endpoint to connect
+            // We're doing that by checking how much time has elapsed since
+            // the first endpoint's channel has been created.
+            if (System.currentTimeMillis() - mostRecentChannelCreated
+                    > firstTransferTimeout)
+            {
+                if (logger.isDebugEnabled())
+                    logger.debug(
+                            endpointId + " is having trouble establishing"
+                            + " the connection and will be marked as inactive");
+                // Let the logic below mark endpoint as inactive.
+                // Beware that FIRST_TRANSFER_TIMEOUT constant MUST be greater
+                // than MAX_INACTIVITY_LIMIT for this logic to work.
+                lastActivity = mostRecentChannelCreated;
+            }
+            else
+            {
+                // Wait for the endpoint to connect...
+                if (logger.isDebugEnabled())
+                    logger.debug(
+                            endpointId + " not ready for activity checks yet");
+                return;
+            }
+        }
 
         long noActivityForMs = System.currentTimeMillis() - lastActivity;
         boolean inactive = noActivityForMs > maxInactivityLimit;

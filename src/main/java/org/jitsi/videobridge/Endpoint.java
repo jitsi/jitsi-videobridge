@@ -310,6 +310,13 @@ public class Endpoint
         bitrateController.addDynamicRtpPayloadType(rtpPayloadType, format);
     }
 
+    @Override
+    public long getLastActivity()
+    {
+        PacketIOActivity packetIOActivity = this.transceiver.getPacketIOActivity();
+        return packetIOActivity.getLastOverallActivityTimestampMs();
+    }
+
     /**
      * Previously, an endpoint expired when all of its channels did.  Channels now only exist in their 'shim'
      * form for backwards compatibility, so to find out whether or not the endpoint expired, we'll check the
