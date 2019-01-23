@@ -548,10 +548,7 @@ public class Videobridge
 
                 if (bundleContext != null)
                 {
-                    ConfigurationService cfg
-                        = ServiceUtils2.getService(
-                                bundleContext,
-                                ConfigurationService.class);
+                    ConfigurationService cfg = getConfigurationService();
 
                     if (cfg != null)
                     {
@@ -651,7 +648,6 @@ public class Videobridge
     public IQ handleColibriConferenceIq2(ColibriConferenceIQ conferenceIQ, int options)
     {
         Jid focus = conferenceIQ.getFrom();
-        System.out.println("Received colibriConferenceIq \n" + conferenceIQ.toXML());
 
         if (!accept(focus, options))
         {
@@ -1306,13 +1302,11 @@ public class Videobridge
      */
     public boolean isXmppApiEnabled()
     {
-        ConfigurationService config
-            = ServiceUtils.getService(
-                getBundleContext(), ConfigurationService.class);
+        ConfigurationService cfg = getConfigurationService();
 
         // The XMPP API is disabled by default.
-        return config != null &&
-            config.getBoolean(Videobridge.XMPP_API_PNAME, false);
+        return cfg != null &&
+            cfg.getBoolean(Videobridge.XMPP_API_PNAME, false);
     }
 
     /**
@@ -1380,10 +1374,7 @@ public class Videobridge
     {
         UlimitCheck.printUlimits();
 
-        ConfigurationService cfg
-            = ServiceUtils2.getService(
-                    bundleContext,
-                    ConfigurationService.class);
+        ConfigurationService cfg = getConfigurationService();
 
         videobridgeExpireThread.start(bundleContext);
         if (health != null)
@@ -1609,11 +1600,7 @@ public class Videobridge
                 health = null;
             }
 
-            ConfigurationService cfg
-                = ServiceUtils2.getService(
-                    bundleContext,
-                    ConfigurationService.class);
-
+            ConfigurationService cfg = getConfigurationService();
             stopIce4j(bundleContext, cfg);
         }
         finally
@@ -1636,7 +1623,7 @@ public class Videobridge
         ConfigurationService cfg)
     {
         // Shut down harvesters.
-        Harvesters.closeStaticConfiguration(cfg);
+        Harvesters.closeStaticConfiguration();
 
         // Clear all system properties that were ice4j properties. This is done
         // to deal with any properties that are conditionally set during
