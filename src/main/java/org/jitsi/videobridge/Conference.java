@@ -704,22 +704,10 @@ public class Conference
     AbstractEndpoint findEndpointByReceiveSSRC(
         long receiveSSRC, MediaType mediaType)
     {
-        // TODO(boris): Implement without using the shim (loop over endpoints)
-        ColibriShim colibriShim = videobridge.getColibriShim();
-        ColibriShim.ConferenceShim conferenceShim = colibriShim.getConference(this.getID());
-        ColibriShim.ContentShim contentShim = conferenceShim.getOrCreateContent(mediaType);
-
-        for (ColibriShim.ChannelShim channelShim : contentShim.getChannels())
-        {
-            for (SourcePacketExtension sourceExt : channelShim.sources)
-            {
-                if (sourceExt.getSSRC() == receiveSSRC)
-                {
-                    return channelShim.endpoint;
-                }
-            }
-        }
-        return null;
+        return getEndpoints().stream()
+                .filter(ep -> ep.receivesSsrc(receiveSSRC))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
