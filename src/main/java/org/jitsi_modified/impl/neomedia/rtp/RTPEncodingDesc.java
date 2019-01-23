@@ -88,7 +88,7 @@ public class RTPEncodingDesc
      * The ssrcs associated with this encoding (for example, RTX or FLEXFEC)
      * Maps ssrc -> type {@link Constants} (rtx, etc.)
      */
-    private final Map<Long, String> secondarySsrcs = new HashMap<>();
+    private final Map<Long, SsrcAssociationType> secondarySsrcs = new HashMap<>();
 
     /**
      * The index of this instance in the track encodings array.
@@ -205,7 +205,7 @@ public class RTPEncodingDesc
         }
     }
 
-    public void addSecondarySsrc(long ssrc, String type)
+    public void addSecondarySsrc(long ssrc, SsrcAssociationType type)
     {
         secondarySsrcs.put(ssrc, type);
     }
@@ -237,9 +237,9 @@ public class RTPEncodingDesc
      * @return the ssrc for the stream that corresponds to the given type,
      * if it exists; otherwise -1
      */
-    public long getSecondarySsrc(String type)
+    public long getSecondarySsrc(SsrcAssociationType type)
     {
-        for (Map.Entry<Long, String> e : secondarySsrcs.entrySet())
+        for (Map.Entry<Long, SsrcAssociationType> e : secondarySsrcs.entrySet())
         {
             if (e.getValue().equals(type))
             {

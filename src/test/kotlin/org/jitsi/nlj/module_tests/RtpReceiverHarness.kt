@@ -21,7 +21,8 @@ import org.jitsi.nlj.RtpExtensionAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpReceiver
 import org.jitsi.nlj.RtpReceiverImpl
-import org.jitsi.nlj.format.PayloadType
+import org.jitsi.nlj.format.OpusPayloadType
+import org.jitsi.nlj.format.Vp8PayloadType
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
 import org.jitsi.nlj.srtp.SrtpProfileInformation
 import org.jitsi.nlj.srtp.SrtpUtil
@@ -130,8 +131,8 @@ fun main(args: Array<String>) {
     val receivers = mutableListOf<RtpReceiver>()
     repeat(numReceivers) {
         val receiver = createReceiver(executor, backgroundExecutor)
-        receiver.handleEvent(RtpPayloadTypeAddedEvent(PayloadType.vp8(100)))
-        receiver.handleEvent(RtpPayloadTypeAddedEvent(PayloadType.dummyAudio(111)))
+        receiver.handleEvent(RtpPayloadTypeAddedEvent(Vp8PayloadType(100)))
+        receiver.handleEvent(RtpPayloadTypeAddedEvent(OpusPayloadType(111)))
         receiver.handleEvent(RtpExtensionAddedEvent(5, RTPExtension(URI(RTPExtension.TRANSPORT_CC_URN))))
         receivers.add(receiver)
     }
