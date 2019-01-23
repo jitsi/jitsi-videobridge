@@ -18,11 +18,10 @@ package org.jitsi.videobridge.cc;
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.format.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.codec.*;
-import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
@@ -87,6 +86,7 @@ import java.util.function.*;
  *
  * @author George Politis
  */
+@SuppressWarnings("JavadocReference")
 public class BitrateController
     implements TransformEngine
 {
@@ -335,7 +335,7 @@ public class BitrateController
     // just detect that and set something appropriately in BitrateController
     private final boolean supportsRtx = true;
 
-    private final Map<Byte, MediaFormat> payloadTypeFormats = new HashMap<>();
+    private final Map<Byte, PayloadType> payloadTypes = new HashMap<>();
 
     /**
      * Initializes a new {@link BitrateController} instance which is to
@@ -706,12 +706,11 @@ public class BitrateController
 
             adaptiveTrackProjection = new AdaptiveTrackProjection(
                 trackBitrateAllocation.track, keyframeRequester);
-            for (Map.Entry<Byte, MediaFormat> entry : payloadTypeFormats.entrySet())
+            for (PayloadType payloadType : payloadTypes.values())
             {
                 logger.debug("TEMP: BitrateController adding existing payload type " +
-                        "mapping " + entry.getKey() + " -> " + entry.getValue() + " to " +
-                        "new adaptive track projection " + adaptiveTrackProjection.hashCode());
-                adaptiveTrackProjection.addDynamicRtpPayloadType(entry.getKey(), entry.getValue());
+                        "mapping " + payloadType + " to new adaptive track projection " + adaptiveTrackProjection.hashCode());
+                adaptiveTrackProjection.addPayloadType(payloadType);
             }
 
             // Route all encodings to the specified bitrate controller.
@@ -724,7 +723,7 @@ public class BitrateController
                     adaptiveTrackProjection);
 
                 long rtxSsrc
-                    = rtpEncoding.getSecondarySsrc(Constants.RTX);
+                    = rtpEncoding.getSecondarySsrc(PayloadType.RTX);
 
                 if (rtxSsrc != -1)
                 {
@@ -1063,14 +1062,14 @@ public class BitrateController
         this.lastN = lastN;
     }
 
-    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
+    public void addPayloadType(PayloadType payloadType)
     {
-        payloadTypeFormats.put(rtpPayloadType, format);
+        payloadTypes.put(payloadType.getPt(), payloadType);
         adaptiveTrackProjections.forEach(atp -> {
             logger.debug("TEMP: bitrate controller adding new payload type mapping " +
-                    rtpPayloadType + " -> " + format + " to existing adaptive track" +
+                    payloadType + " to existing adaptive track" +
                     " projection " + atp.hashCode());
-            atp.addDynamicRtpPayloadType(rtpPayloadType, format);
+            atp.addPayloadType(payloadType);
         });
     }
 

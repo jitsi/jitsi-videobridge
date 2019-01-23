@@ -18,9 +18,9 @@ package org.jitsi.videobridge.xmpp;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jitsimeet.*;
+import org.jitsi.nlj.format.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
-import org.jitsi.service.neomedia.codec.*;
 import org.jitsi.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
@@ -119,7 +119,7 @@ public class MediaStreamTrackFactory
         {
             secondarySsrcTypeMap = new HashMap<>();
             secondarySsrcTypeMap.put(
-                SourceGroupPacketExtension.SEMANTICS_FID, Constants.RTX);
+                SourceGroupPacketExtension.SEMANTICS_FID, PayloadType.RTX);
         }
 
         return secondarySsrcTypeMap;

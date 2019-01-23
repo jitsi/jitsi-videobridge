@@ -16,12 +16,12 @@
 package org.jitsi.videobridge;
 
 import org.jitsi.nlj.*;
+import org.jitsi.nlj.format.*;
 import org.jitsi.nlj.rtp.*;
 import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
-import org.jitsi.service.neomedia.format.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -49,6 +49,7 @@ import static org.jitsi.videobridge.EndpointMessageBuilder.*;
  * @author Pawel Domas
  * @author George Politis
  */
+@SuppressWarnings("JavadocReference")
 public class Endpoint
     extends AbstractEndpoint
 {
@@ -310,10 +311,10 @@ public class Endpoint
     }
 
     @Override
-    public void addDynamicRtpPayloadType(Byte rtpPayloadType, MediaFormat format)
+    public void addPayloadType(PayloadType payloadType)
     {
-        super.addDynamicRtpPayloadType(rtpPayloadType, format);
-        bitrateController.addDynamicRtpPayloadType(rtpPayloadType, format);
+        super.addPayloadType(payloadType);
+        bitrateController.addPayloadType(payloadType);
     }
 
     @Override
