@@ -23,7 +23,9 @@ package org.jitsi.videobridge.cc;
  import org.jitsi.service.neomedia.codec.*;
  import org.jitsi.util.*;
  import org.jitsi.util.concurrent.*;
+ import org.jitsi.videobridge.*;
  import org.jitsi_modified.impl.neomedia.rtp.*;
+ import org.jitsi_modified.service.neomedia.rtp.*;
 
  import java.util.*;
 
@@ -31,7 +33,7 @@ package org.jitsi.videobridge.cc;
   * @author George Politis
   */
  public class BandwidthProbing
-     extends PeriodicRunnable
+     extends PeriodicRunnable implements BandwidthEstimator.Listener
  {
      /**
       * The system property name that holds a boolean that determines whether or
@@ -83,9 +85,9 @@ package org.jitsi.videobridge.cc;
          cfg != null && cfg.getBoolean(DISABLE_RTX_PROBING_PNAME, false);
 
      /**
-      * The {@link VideoChannel} to probe for available send bandwidth.
+      * The {@link Endpoint} to probe for available send bandwidth.
       */
-     private final VideoChannel dest;
+     private final Endpoint dest;
 
      /**
       * The VP8 payload type to use when probing with the SSRC of the bridge.
@@ -109,16 +111,25 @@ package org.jitsi.videobridge.cc;
 
      public Long senderSsrc = null;
 
+     public Long latestBwe = -1L;
+
+     private DiagnosticContext diagnosticContext;
+
      /**
       * Ctor.
       *
-      * @param dest the {@link VideoChannel} to probe for available send
+      * @param dest the {@link Endpoint} to probe for available send
       * bandwidth.
       */
-     public BandwidthProbing(VideoChannel dest)
+     public BandwidthProbing(Endpoint dest)
      {
          super(PADDING_PERIOD_MS);
          this.dest = dest;
+     }
+
+     public void setDiagnosticContext(DiagnosticContext diagnosticContext)
+     {
+         this.diagnosticContext = diagnosticContext;
      }
 
      /**
@@ -133,9 +144,6 @@ package org.jitsi.videobridge.cc;
          {
              return;
          }
-
-         VideoMediaStreamImpl videoStreamImpl
-             = (VideoMediaStreamImpl) destStream;
 
          List<AdaptiveTrackProjection> adaptiveTrackProjectionList
              = dest.getBitrateController().getAdaptiveTrackProjections();
@@ -187,10 +195,9 @@ package org.jitsi.videobridge.cc;
              return;
          }
 
-         long bweBps = videoStreamImpl
-             .getOrCreateBandwidthEstimator().getLatestEstimate();
+         long latestBweCopy = latestBwe;
 
-         if (totalIdealBps <= bweBps)
+         if (totalIdealBps <= latestBweCopy)
          {
              // it seems like the ideal bps fits in the bandwidth estimation,
              // let's update the bitrate controller.
@@ -201,13 +208,11 @@ package org.jitsi.videobridge.cc;
          }
 
          // How much padding can we afford?
-         long maxPaddingBps = bweBps - totalTargetBps;
+         long maxPaddingBps = latestBweCopy - totalTargetBps;
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
-         if (timeSeriesLogger.isTraceEnabled())
+         if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
-             DiagnosticContext diagnosticContext
-                 = videoStreamImpl.getDiagnosticContext();
              timeSeriesLogger.trace(diagnosticContext
                      .makeTimeSeriesPoint("out_padding")
                      .addField("padding_bps", paddingBps)
@@ -215,7 +220,7 @@ package org.jitsi.videobridge.cc;
                      .addField("total_target_bps", totalTargetBps)
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
-                     .addField("bwe_bps", bweBps));
+                     .addField("bwe_bps", latestBweCopy));
          }
 
          if (paddingBps < 1)
@@ -282,6 +287,12 @@ package org.jitsi.videobridge.cc;
                  logger.warn("Failed to retransmit a packet.");
              }
          }
+     }
+
+     @Override
+     public void bandwidthEstimationChanged(long newBwBps)
+     {
+         this.latestBwe = newBwBps;
      }
 
      /**
