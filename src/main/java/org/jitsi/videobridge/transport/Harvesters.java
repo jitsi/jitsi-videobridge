@@ -238,7 +238,7 @@ public class Harvesters
      * configurable properties of the behavior/logic of the method
      * implementation
      */
-    public static void closeStaticConfiguration(ConfigurationService cfg)
+    public static void closeStaticConfiguration()
     {
         synchronized (Harvesters.class)
         {
