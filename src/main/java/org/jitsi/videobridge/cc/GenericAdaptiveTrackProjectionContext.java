@@ -55,6 +55,38 @@ class GenericAdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
     /**
+     * Checks if the given packet with the given format is part of a key frame.
+     */
+    private static boolean isKeyframe(
+            @NotNull RawPacket rtpPacket, @NotNull MediaFormat format)
+    {
+        // XXX merge with MediaStream.isKeyframe().
+        byte[] buf = rtpPacket.getBuffer();
+        int payloadOff = rtpPacket.getPayloadOffset(),
+                payloadLen = rtpPacket.getPayloadLength();
+
+        if (Constants.VP8.equalsIgnoreCase(format.getEncoding()))
+        {
+            return org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
+                    .isKeyFrame(buf, payloadOff, payloadLen);
+        }
+        else if (Constants.H264.equalsIgnoreCase(format.getEncoding()))
+        {
+            return org.jitsi.impl.neomedia.codec.video.h264.DePacketizer
+                    .isKeyFrame(buf, payloadOff, payloadLen);
+        }
+        else if (Constants.VP9.equalsIgnoreCase(format.getEncoding()))
+        {
+            return org.jitsi.impl.neomedia.codec.video.vp9.DePacketizer
+                    .isKeyFrame(buf, payloadOff, payloadLen);
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    /**
      * Raised when a track has been resumed (after being suspended).
      */
     private boolean needsKeyframe = true;
@@ -169,35 +201,6 @@ class GenericAdaptiveTrackProjectionContext
         }
 
         return accept;
-    }
-
-    private static boolean isKeyframe(
-        @NotNull RawPacket rtpPacket, @NotNull MediaFormat format)
-    {
-        // XXX merge with MediaStream.isKeyframe().
-        byte[] buf = rtpPacket.getBuffer();
-        int payloadOff = rtpPacket.getPayloadOffset(),
-            payloadLen = rtpPacket.getPayloadLength();
-
-        if (Constants.VP8.equalsIgnoreCase(format.getEncoding()))
-        {
-            return org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
-                .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else if (Constants.H264.equalsIgnoreCase(format.getEncoding()))
-        {
-            return org.jitsi.impl.neomedia.codec.video.h264.DePacketizer
-                .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else if (Constants.VP9.equalsIgnoreCase(format.getEncoding()))
-        {
-            return org.jitsi.impl.neomedia.codec.video.vp9.DePacketizer
-                .isKeyFrame(buf, payloadOff, payloadLen);
-        }
-        else
-        {
-            return false;
-        }
     }
 
     /**
