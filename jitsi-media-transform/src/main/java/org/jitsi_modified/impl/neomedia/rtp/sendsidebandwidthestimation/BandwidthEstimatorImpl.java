@@ -94,15 +94,10 @@ public class BandwidthEstimatorImpl
             = new SendSideBandwidthEstimation(diagnosticContext, START_BITRATE_BPS);
         sendSideBandwidthEstimation.setMinMaxBitrate(
                 MIN_BITRATE_BPS, MAX_BITRATE_BPS);
-
-        // Hook us up to receive Report Blocks and REMBs.
-//        MediaStreamStats stats = stream.getMediaStreamStats();
-//        stats.addRTCPPacketListener(sendSideBandwidthEstimation);
     }
 
     public void rtcpReportBlocksReceived(Collection<RtcpReportBlock> reportBlocks)
     {
-        System.out.println("BandwidthEstimatorImpl got reportblocks");
         long total_number_of_packets = 0;
         long fraction_lost_aggregate = 0;
         for (RtcpReportBlock reportBlock : reportBlocks)
