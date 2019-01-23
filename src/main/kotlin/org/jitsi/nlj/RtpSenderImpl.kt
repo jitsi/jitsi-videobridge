@@ -40,6 +40,7 @@ import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
+import org.jitsi.service.neomedia.MediaType
 import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
@@ -74,6 +75,8 @@ class RtpSenderImpl(
     var firstPacketWrittenTime = -1L
     var lastPacketWrittenTime = -1L
     var running = true
+    private var localVideoSsrc: Long? = null
+    private var localAudioSsrc: Long? = null
 
     private var firstQueueReadTime: Long = -1
     private var lastQueueReadTime: Long = -1
@@ -109,8 +112,6 @@ class RtpSenderImpl(
         }
     }
 
-    private var tempSenderSsrc: Long? = null
-
     companion object {
         private val classLogger: Logger = Logger.getLogger(this::class.java)
         private const val PACKET_QUEUE_ENTRY_EVENT = "Entered RTP sender incoming queue"
@@ -121,16 +122,6 @@ class RtpSenderImpl(
         logger.cinfo { "Sender $id using executor ${executor.hashCode()}" }
 
         outgoingRtpRoot = pipeline {
-            simpleNode("TEMP sender ssrc setter") { pktInfos ->
-                if (tempSenderSsrc == null && pktInfos.isNotEmpty()) {
-                    val pktInfo = pktInfos[0]
-                    if (pktInfo.packet is RtpPacket) {
-                        tempSenderSsrc = (pktInfo.packet as? RtpPacket)?.header?.ssrc
-                        logger.cinfo { "RtpSenderImpl $id setting sender ssrc to $tempSenderSsrc" }
-                    }
-                }
-                pktInfos
-            }
             node(outgoingPacketCache)
             node(absSendTime)
             node(statTracker)
@@ -154,19 +145,11 @@ class RtpSenderImpl(
             node(keyframeRequester)
             node(SentRtcpStats())
             simpleNode("RTCP sender ssrc setter") { pktInfos ->
-                tempSenderSsrc?.let { senderSsrc ->
-                    pktInfos.forEachAs<RtcpPacket> { _, pkt ->
-                        //TODO: get the sender ssrc working right, i think we may be getting the wrong
-                        // one somehow
-                        if (pkt.header.senderSsrc == 0L) {
-                            pkt.header.senderSsrc = senderSsrc
-                        }
-                        pkt.getBuffer()
-//                        logger.cinfo { "Sending RTCP\n$pkt\n\n${pkt.getBuffer().toHex()}" }
-                    }
-                    return@simpleNode pktInfos
+                val senderSsrc = localVideoSsrc ?: return@simpleNode emptyList<PacketInfo>()
+                pktInfos.forEachAs<RtcpPacket> { _, pkt ->
+                    pkt.header.senderSsrc = senderSsrc
                 }
-                emptyList()
+                pktInfos
             }
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
@@ -204,6 +187,14 @@ class RtpSenderImpl(
 
     override fun requestKeyframe(mediaSsrc: Long) {
         keyframeRequester.requestKeyframe(mediaSsrc)
+    }
+
+    override fun setLocalSsrc(mediaType: MediaType, ssrc: Long) {
+        when (mediaType) {
+            MediaType.VIDEO -> localVideoSsrc = ssrc
+            MediaType.AUDIO -> localAudioSsrc = ssrc
+            else -> {}
+        }
     }
 
     private fun doWork() {
