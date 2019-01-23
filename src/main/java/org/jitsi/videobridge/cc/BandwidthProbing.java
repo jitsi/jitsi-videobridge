@@ -194,7 +194,9 @@ package org.jitsi.videobridge.cc;
          {
              // it seems like the ideal bps fits in the bandwidth estimation,
              // let's update the bitrate controller.
-             dest.getBitrateController().update(bweBps);
+             //TODO(brian): this trigger for a bitratecontroller update seems awkward and may not be obsolete
+             // since i now update it every time we get an updated estimate from bandwidth estimator
+//             dest.getBitrateController().update(bweBps);
              return;
          }
 
