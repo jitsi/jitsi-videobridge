@@ -39,6 +39,8 @@ public class ColibriShim {
     {
         final String id;
         final AbstractEndpoint endpoint;
+        // The bridge's ssrc for this channel
+        final long localSsrc;
         final boolean isOcto;
         MediaDirection direction;
         private Collection<PayloadTypePacketExtension> payloadTypes;
@@ -53,10 +55,12 @@ public class ColibriShim {
         public ChannelShim(
                 @NotNull String id,
                 @NotNull AbstractEndpoint endpoint,
+                long localSsrc,
                 boolean isOcto)
         {
             this.id = id;
             this.endpoint = endpoint;
+            this.localSsrc = localSsrc;
             this.isOcto = isOcto;
             this.creationTimestampMs = System.currentTimeMillis();
             endpoint.addChannel(this);
@@ -122,8 +126,12 @@ public class ColibriShim {
                 iq.setLastN(endpoint.getLastN());
                 iq.setDirection(direction);
 
-                //TODO: initialLocalSsrc/sources.  do we need to set these? when are they used?
-                // Boris: I think so. We need to advertise our SSRC to the clients for e.g. FIR/NACK to work
+                if (localSsrc != -1)
+                {
+                    SourcePacketExtension bridgeSource = new SourcePacketExtension();
+                    bridgeSource.setSSRC(localSsrc);
+                    iq.addSource(bridgeSource);
+                }
             }
 
             if (isOcto)
@@ -139,7 +147,7 @@ public class ColibriShim {
                 @NotNull String id,
                 @NotNull AbstractEndpoint endpoint)
         {
-            super(id, endpoint, false);
+            super(id, endpoint, -1, false);
         }
     }
 
@@ -181,6 +189,11 @@ public class ColibriShim {
     public class ContentShim {
         private final MediaType type;
         private final Map<String, ChannelShim> channels = new HashMap<>();
+        //TODO(brian): this used to be called 'initialLocalSSRC' in the content.  'Initial' presumably because
+        // it could be changed in the event of a collision (I think by the other lib?).  Since we send it out
+        // in the initial offer, assuming it's up to the other side not to conflict with us and therefore it
+        // won't need to be changed.
+        final long localSsrc = Videobridge.RANDOM.nextLong() & 0xffff_ffffL;
 
         public ContentShim(MediaType type)
         {
@@ -231,7 +244,8 @@ public class ColibriShim {
             {
                 String channelId = generateUniqueChannelID();
 
-                ChannelShim channelShim = new ChannelShim(channelId, conference.getOrCreateEndpoint(endpointId), isOcto);
+                ChannelShim channelShim =
+                        new ChannelShim(channelId, conference.getOrCreateEndpoint(endpointId), localSsrc, isOcto);
                 channels.put(channelId, channelShim);
                 return channelShim;
             }
