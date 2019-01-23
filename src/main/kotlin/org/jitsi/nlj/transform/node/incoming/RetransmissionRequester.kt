@@ -27,7 +27,6 @@ import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.RawPacket
 import unsigned.toUInt
-import java.nio.ByteBuffer
 
 class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransmission requester") {
     /**
@@ -53,10 +52,10 @@ class RetransmissionRequester(rtcpSender: (RtcpPacket) -> Unit) : Node("Retransm
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
                 logger.cinfo { "RetransmissionRequester ${hashCode()} now accepting " +
-                        "PT ${event.payloadType.toUInt()}" }
-                retransmissionRequester.payloadTypeFormats[event.payloadType] = event.format
+                        "PT ${event.payloadType.pt.toUInt()}" }
+                retransmissionRequester.payloadTypes[event.payloadType.pt] = event.payloadType
             }
-            is RtpPayloadTypeClearEvent -> retransmissionRequester.payloadTypeFormats.clear()
+            is RtpPayloadTypeClearEvent -> retransmissionRequester.payloadTypes.clear()
         }
         super.handleEvent(event)
     }

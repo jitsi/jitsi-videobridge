@@ -21,13 +21,11 @@ import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.rtp.RtpPacket
-import org.jitsi.service.neomedia.MediaType
-import org.jitsi.service.neomedia.codec.Constants
-import org.jitsi.service.neomedia.format.MediaFormat
 import unsigned.toUByte
 import java.util.ArrayList
 import java.util.concurrent.ConcurrentHashMap
@@ -36,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Parse video packets at a codec level and set appropriate meta-information
  */
 class VideoParser : Node("Video parser") {
-    private val payloadFormats: MutableMap<Byte, MediaFormat> = ConcurrentHashMap()
+    private val payloadTypes: MutableMap<Byte, PayloadType> = ConcurrentHashMap()
     private var rtpEncodings: List<RTPEncodingDesc> = ArrayList()
 
     //TODO: things we want to detect here:
@@ -47,11 +45,10 @@ class VideoParser : Node("Video parser") {
         val outPackets = mutableListOf<PacketInfo>()
         p.forEachAs<RtpPacket> { packetInfo, pkt ->
             val pt = pkt.header.payloadType.toUByte()
-            payloadFormats[pt]?.let { format ->
-                val videoRtpPacket = when (format.encoding) {
-                    Constants.VP8 -> Vp8Packet(pkt.getBuffer())
-                    else -> VideoRtpPacket(pkt.getBuffer())
-                }
+            payloadTypes[pt]?.let { payloadType ->
+                val videoRtpPacket = if (payloadType.isVp8)
+                    Vp8Packet(pkt.getBuffer())
+                    else VideoRtpPacket(pkt.getBuffer())
                 packetInfo.packet = videoRtpPacket
                 outPackets.add(packetInfo)
             } ?: run {
@@ -65,11 +62,11 @@ class VideoParser : Node("Video parser") {
     override fun handleEvent(event: Event) {
         when (event) {
             is RtpPayloadTypeAddedEvent -> {
-                if (event.format.mediaType == MediaType.VIDEO) {
-                    payloadFormats[event.payloadType] = event.format
+                if (event.payloadType.isVideo) {
+                    payloadTypes[event.payloadType.pt] = event.payloadType
                 }
             }
-            is RtpPayloadTypeClearEvent -> payloadFormats.clear()
+            is RtpPayloadTypeClearEvent -> payloadTypes.clear()
         }
         super.handleEvent(event)
     }
