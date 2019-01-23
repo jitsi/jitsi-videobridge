@@ -291,6 +291,7 @@ public class AdaptiveTrackProjection
      *
      * @param rtpPacket the RTP packet to rewrite.
      * @return any piggy-backed packets to include with the packet.
+     * XXX unused?
      */
     RawPacket[] rewriteRtp(@NotNull RawPacket rtpPacket)
         throws RewriteException
@@ -338,6 +339,7 @@ public class AdaptiveTrackProjection
      *
      * @param rtcpPacket the RTCP packet to rewrite.
      * @return true to let the RTCP packet through, false to drop.
+     * XXX unused???
      */
     public boolean rewriteRtcp(@NotNull RawPacket rtcpPacket)
     {

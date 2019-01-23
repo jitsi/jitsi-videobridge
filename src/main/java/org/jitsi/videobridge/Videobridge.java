@@ -493,6 +493,7 @@ public class Videobridge
 
     /**
      * Gets the <tt>Conference</tt>s of this <tt>Videobridge</tt>.
+     * TODO: don't expose a weird array API...
      *
      * @return the <tt>Conference</tt>s of this <tt>Videobridge</tt>
      */
@@ -536,6 +537,7 @@ public class Videobridge
      *
      * @return the XML namespace of the <tt>TransportManager</tt> type to be
      * initialized by <tt>Channel</tt> by default
+     * TODO: remove?
      */
     public String getDefaultTransportManager()
     {
