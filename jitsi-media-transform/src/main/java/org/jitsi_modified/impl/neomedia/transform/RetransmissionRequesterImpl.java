@@ -80,13 +80,8 @@ public class RetransmissionRequesterImpl
         retransmissionRequesterDelegate = new RetransmissionRequesterDelegate(/*stream,*/ new TimeProvider());
         retransmissionRequesterDelegate.rtcpSender = rtcpSender;
         recurringRunnableExecutor.registerRecurringRunnable(retransmissionRequesterDelegate);
-        retransmissionRequesterDelegate.setWorkReadyCallback(new Runnable(){
-            @Override
-            public void run()
-            {
-                recurringRunnableExecutor.startOrNotifyThread();
-            }
-        });
+        retransmissionRequesterDelegate.setWorkReadyCallback(
+                recurringRunnableExecutor::startOrNotifyThread);
     }
 
     /**
