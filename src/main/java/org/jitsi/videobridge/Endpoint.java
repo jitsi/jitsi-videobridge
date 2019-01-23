@@ -22,7 +22,6 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
-import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -253,6 +252,14 @@ public class Endpoint
     {
         super.setLastN(lastN);
         bitrateController.setLastN(lastN);
+    }
+
+    @Override
+    public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx)
+    {
+        super.setMaxReceiveFrameHeightPx(maxReceiveFrameHeightPx);
+        bitrateController.setMaxRxFrameHeightPx(maxReceiveFrameHeightPx);
+        bitrateController.update(getConference().getSpeechActivity().getEndpoints(), -1);
     }
 
     @Override

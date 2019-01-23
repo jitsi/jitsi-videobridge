@@ -1031,6 +1031,8 @@ public class BitrateController
      */
     public void setMaxRxFrameHeightPx(int maxRxFrameHeightPx)
     {
+        logger.info("BitrateController " + hashCode() + " setting max receive frame height to " +
+                + maxRxFrameHeightPx + "px");
         this.maxRxFrameHeightPx = maxRxFrameHeightPx;
     }
 

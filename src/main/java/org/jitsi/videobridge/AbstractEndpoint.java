@@ -159,6 +159,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         lastNFilter.setLastNValue(lastN);
     }
 
+    public void setMaxReceiveFrameHeightPx(int maxReceiveFrameHeightPx) { }
+
     public Integer getLastN()
     {
         return lastNFilter.getLastNValue();
