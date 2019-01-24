@@ -399,16 +399,6 @@ public class BitrateController
     }
 
     /**
-     * Gets the current padding parameters list for {@link Endpoint}.
-     *
-     * @return the current padding parameters list for {@link Endpoint}.
-     */
-    List<AdaptiveTrackProjection> getAdaptiveTrackProjections()
-    {
-        return adaptiveTrackProjections;
-    }
-
-    /**
      * Defines a packet filter that controls which RTP packets to be written
      * into the {@link Endpoint} that owns this {@link BitrateController}.
      *
@@ -439,6 +429,67 @@ public class BitrateController
 //        logger.debug("BitrateController " + hashCode() + " found a projection for " +
 //                "packet with ssrc " + ssrc);
         return adaptiveTrackProjection.accept(pkt);
+    }
+
+    public static class StatusSnapshot
+    {
+        final long currentTargetBps;
+        final long currentIdealBps;
+        final Collection<Long> activeSsrcs;
+
+        public StatusSnapshot() {
+            currentTargetBps = -1L;
+            currentIdealBps = -1L;
+            activeSsrcs = Collections.emptyList();
+        }
+        public StatusSnapshot(Long currentTargetBps, Long currentIdealBps, Collection<Long> activeSsrcs)
+        {
+            this.currentTargetBps = currentTargetBps;
+            this.currentIdealBps = currentIdealBps;
+            this.activeSsrcs = activeSsrcs;
+        }
+    }
+
+    /**
+     * Get a snapshot of the following data:
+     * 1) The current target bitrate we're trying to send across our tracks
+     * 2) The idea bitrate we could possibly send, given our tracks
+     * 3) The ssrcs we're currently forwarding
+     * @return the snapshot containing that info
+     */
+    public StatusSnapshot getStatusSnapshot()
+    {
+        if (adaptiveTrackProjections == null || adaptiveTrackProjections.isEmpty())
+        {
+            return new StatusSnapshot();
+        }
+        List<Long> activeSsrcs = new ArrayList<>();
+        long totalTargetBps = 0, totalIdealBps = 0;
+        for (AdaptiveTrackProjection adaptiveTrackProjection : adaptiveTrackProjections)
+        {
+            MediaStreamTrackDesc sourceTrack
+                    = adaptiveTrackProjection.getSource();
+            if (sourceTrack == null)
+            {
+                continue;
+            }
+
+            long targetBps = sourceTrack.getBps(
+                    adaptiveTrackProjection.getTargetIndex());
+            if (targetBps > 0)
+            {
+                long ssrc = adaptiveTrackProjection.getSSRC();
+                if (ssrc > -1)
+                {
+                    activeSsrcs.add(ssrc);
+                }
+            }
+
+            totalTargetBps += targetBps;
+            totalIdealBps += sourceTrack.getBps(
+                    adaptiveTrackProjection.getIdealIndex());
+        }
+        return new StatusSnapshot(totalTargetBps, totalIdealBps, activeSsrcs);
     }
 
     /**

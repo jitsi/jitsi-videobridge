@@ -85,11 +85,6 @@ package org.jitsi.videobridge.cc;
          cfg != null && cfg.getBoolean(DISABLE_RTX_PROBING_PNAME, false);
 
      /**
-      * The {@link Endpoint} to probe for available send bandwidth.
-      */
-     private final Endpoint dest;
-
-     /**
       * The VP8 payload type to use when probing with the SSRC of the bridge.
       */
      private int vp8PT = -1;
@@ -115,21 +110,29 @@ package org.jitsi.videobridge.cc;
 
      private DiagnosticContext diagnosticContext;
 
+     private BitrateController bitrateController;
+
      /**
       * Ctor.
       *
-      * @param dest the {@link Endpoint} to probe for available send
-      * bandwidth.
       */
-     public BandwidthProbing(Endpoint dest)
+     public BandwidthProbing()
      {
          super(PADDING_PERIOD_MS);
-         this.dest = dest;
      }
 
      public void setDiagnosticContext(DiagnosticContext diagnosticContext)
      {
          this.diagnosticContext = diagnosticContext;
+     }
+
+     //TODO(brian): there's data we need from bitratecontroller that may be tough to get another way.
+     // for now, i've tried to at least minimize the dependency by creating the #getStatusSnapshot
+     // method inside bitratecontroller that this can use (so it doesn't have to depend on accessing
+     // the track projections
+     public void setBitrateController(BitrateController bitrateController)
+     {
+        this.bitrateController = bitrateController;
      }
 
      /**
@@ -145,50 +148,13 @@ package org.jitsi.videobridge.cc;
              return;
          }
 
-         List<AdaptiveTrackProjection> adaptiveTrackProjectionList
-             = dest.getBitrateController().getAdaptiveTrackProjections();
-
-         if (adaptiveTrackProjectionList == null || adaptiveTrackProjectionList.isEmpty())
-         {
-             return;
-         }
-
          // We calculate how much to probe for based on the total target bps
          // (what we're able to reach), the total ideal bps (what we want to
          // be able to reach) and the total current bps (what we currently send).
-
-         long totalTargetBps = 0, totalIdealBps = 0;
-
-         List<Long> ssrcsToProtect = new ArrayList<>();
-         for (AdaptiveTrackProjection
-             adaptiveTrackProjection : adaptiveTrackProjectionList)
-         {
-             MediaStreamTrackDesc sourceTrack
-                 = adaptiveTrackProjection.getSource();
-             if (sourceTrack == null)
-             {
-                 continue;
-             }
-
-             long targetBps = sourceTrack.getBps(
-                 adaptiveTrackProjection.getTargetIndex());
-             if (targetBps > 0)
-             {
-                 // Do not protect SSRC if it's not streaming.
-                 long ssrc = adaptiveTrackProjection.getSSRC();
-                 if (ssrc > -1)
-                 {
-                     ssrcsToProtect.add(ssrc);
-                 }
-             }
-
-             totalTargetBps += targetBps;
-             totalIdealBps += sourceTrack.getBps(
-                     adaptiveTrackProjection.getIdealIndex());
-         }
+         BitrateController.StatusSnapshot bitrateControllerStatus = bitrateController.getStatusSnapshot();
 
          // How much padding do we need?
-         long totalNeededBps = totalIdealBps - totalTargetBps;
+         long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
          if (totalNeededBps < 1)
          {
              // Not much.
@@ -197,7 +163,7 @@ package org.jitsi.videobridge.cc;
 
          long latestBweCopy = latestBwe;
 
-         if (totalIdealBps <= latestBweCopy)
+         if (bitrateControllerStatus.currentIdealBps <= latestBweCopy)
          {
              // it seems like the ideal bps fits in the bandwidth estimation,
              // let's update the bitrate controller.
@@ -208,7 +174,7 @@ package org.jitsi.videobridge.cc;
          }
 
          // How much padding can we afford?
-         long maxPaddingBps = latestBweCopy - totalTargetBps;
+         long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
 
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
@@ -216,8 +182,8 @@ package org.jitsi.videobridge.cc;
              timeSeriesLogger.trace(diagnosticContext
                      .makeTimeSeriesPoint("out_padding")
                      .addField("padding_bps", paddingBps)
-                     .addField("total_ideal_bps", totalIdealBps)
-                     .addField("total_target_bps", totalTargetBps)
+                     .addField("total_ideal_bps", bitrateControllerStatus.currentIdealBps)
+                     .addField("total_target_bps", bitrateControllerStatus.currentTargetBps)
                      .addField("needed_bps", totalNeededBps)
                      .addField("max_padding_bps", maxPaddingBps)
                      .addField("bwe_bps", latestBweCopy));
@@ -239,10 +205,10 @@ package org.jitsi.videobridge.cc;
 
          if (!DISABLE_RTX_PROBING)
          {
-             if (!ssrcsToProtect.isEmpty())
+             if (!bitrateControllerStatus.activeSsrcs.isEmpty())
              {
                  // stream protection with padding.
-                 for (Long ssrc : ssrcsToProtect)
+                 for (Long ssrc : bitrateControllerStatus.activeSsrcs)
                  {
                      bytes = rtxTransformer.sendPadding(ssrc, bytes);
                      if (bytes < 1)

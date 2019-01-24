@@ -109,7 +109,7 @@ public class Endpoint
 
     private final BitrateController bitrateController;
 
-    private final BandwidthProbing bandwidthProbing = new BandwidthProbing(this);
+    private final BandwidthProbing bandwidthProbing = new BandwidthProbing();
 
     /**
      * Pool shared by all endpoint instances for IO tasks
@@ -148,6 +148,7 @@ public class Endpoint
 
         audioLevelListener = new AudioLevelListenerImpl(conference.getSpeechActivity());
         bandwidthProbing.setDiagnosticContext(transceiver.getDiagnosticContext());
+        bandwidthProbing.setBitrateController(bitrateController);
         transceiver.setAudioLevelListener(audioLevelListener);
         transceiver.onBandwidthEstimateChanged(new BandwidthEstimator.Listener()
         {
