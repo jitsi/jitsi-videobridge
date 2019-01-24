@@ -28,6 +28,7 @@ import org.jitsi.util.*;
 import org.jitsi.util.event.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.shim.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.beans.*;
@@ -75,10 +76,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     private final Conference conference;
 
     /**
-     * The list of {@link ColibriShim.ChannelShim}s associated with this endpoint.  This allows us to expire the endpoint
-     * once all of its 'channels' have been removed.
+     * The list of {@link ChannelShim}s associated with this endpoint. This
+     * allows us to expire the endpoint once all of its 'channels' have been
+     * removed.
      */
-    protected final List<WeakReference<ColibriShim.ChannelShim>> channelShims = new LinkedList<>();
+    protected final List<WeakReference<ChannelShim>> channelShims
+            = new LinkedList<>();
 
     private final LastNFilter lastNFilter;
 
@@ -266,7 +269,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         return null;
     }
 
-    public void addChannel(ColibriShim.ChannelShim channelShim)
+    public void addChannel(ChannelShim channelShim)
     {
         synchronized (channelShims)
         {
@@ -274,13 +277,13 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         }
     }
 
-    public void removeChannel(ColibriShim.ChannelShim channelShim)
+    public void removeChannel(ChannelShim channelShim)
     {
         synchronized (channelShims)
         {
-            for (Iterator<WeakReference<ColibriShim.ChannelShim>> i = channelShims.iterator(); i.hasNext();)
+            for (Iterator<WeakReference<ChannelShim>> i = channelShims.iterator(); i.hasNext();)
             {
-                ColibriShim.ChannelShim existingChannelShim = i.next().get();
+                ChannelShim existingChannelShim = i.next().get();
                 if (existingChannelShim != null && existingChannelShim.equals(channelShim)) {
                     i.remove();
                 }

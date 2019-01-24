@@ -33,6 +33,7 @@ import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.sctp.*;
 import org.jitsi.videobridge.util.*;
+import org.jitsi.videobridge.shim.*;
 import org.jitsi_modified.sctp4j.*;
 import org.jitsi_modified.service.neomedia.rtp.*;
 
@@ -414,7 +415,7 @@ public class Endpoint
         int maxExpireTimeSecsFromChannelShims = channelShims.stream()
                 .map(WeakReference::get)
                 .filter(Objects::nonNull)
-                .map(ColibriShim.ChannelShim::getExpire)
+                .map(ChannelShim::getExpire)
                 .mapToInt(exp -> exp)
                 .max()
                 .orElse(0);

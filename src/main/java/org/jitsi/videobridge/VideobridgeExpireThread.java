@@ -22,7 +22,6 @@ import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 import org.jitsi.util.concurrent.*;
-import org.jitsi.videobridge.util.*;
 import org.osgi.framework.*;
 
 /**
@@ -31,7 +30,7 @@ import org.osgi.framework.*;
  *
  * @author Lyubomir Marinov
  */
-class VideobridgeExpireThread
+public class VideobridgeExpireThread
 {
     /**
      * The <tt>Logger</tt> used by the <tt>VideobridgeExpireThread</tt> class
@@ -170,17 +169,19 @@ class VideobridgeExpireThread
     private void expire(Videobridge videobridge)
     {
         logger.info("Running expire()");
-        for (ColibriShim.ConferenceShim conferenceShim : videobridge.getColibriShim().getConferences())
+        for (Conference conference : videobridge.getConferences())
         {
             // The Conferences will live an iteration more than the Contents.
-            if (conferenceShim.shouldExpire())
+            if (conference.shouldExpire())
             {
-                logger.info("Conference " + conferenceShim.getId() + " should expire, expiring it");
-                EXPIRE_EXECUTOR.execute(() -> videobridge.getColibriShim().expireConference(conferenceShim.getId()));
+                logger.info("Conference "
+                        + conference.getID() + " should expire, expiring it");
+                EXPIRE_EXECUTOR.execute(
+                        () -> videobridge.expireConference(conference));
             }
             else
             {
-                for (AbstractEndpoint endpoint : conferenceShim.getEndpoints())
+                for (AbstractEndpoint endpoint : conference.getEndpoints())
                 {
                     if (endpoint.shouldExpire())
                     {

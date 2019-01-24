@@ -23,6 +23,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.util.Logger;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.shim.*;
 import org.jitsi.videobridge.util.*;
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.parts.*;
@@ -199,7 +200,13 @@ public class Conference
      */
     private final ExpireableImpl expireableImpl;
 
-    final EncodingsManager encodingsManager = new EncodingsManager();
+    /**
+     * The shim which handles Colibri-related logic for this conference.
+     */
+    private final ConferenceShim shim;
+
+    //TODO not public
+    final public EncodingsManager encodingsManager = new EncodingsManager();
 
     /**
      * Initializes a new <tt>Conference</tt> instance which is to represent a
@@ -227,6 +234,7 @@ public class Conference
                       String gid)
     {
         this.videobridge = Objects.requireNonNull(videobridge, "videobridge");
+        this.shim = new ConferenceShim(this);
         this.id = Objects.requireNonNull(id, "id");
         this.gid = gid;
         this.loggingId = "conf_id=" + id;
@@ -457,54 +465,6 @@ public class Conference
     }
 
     /**
-     * Adds the endpoint of this <tt>Conference</tt> as
-     * <tt>ColibriConferenceIQ.Endpoint</tt> instances in <tt>iq</tt>.
-     * @param iq the <tt>ColibriConferenceIQ</tt> in which to describe.
-     */
-    void describeEndpoints(ColibriConferenceIQ iq)
-    {
-        getEndpoints().forEach(
-            en -> iq.addEndpoint(
-                new ColibriConferenceIQ.Endpoint(
-                    en.getID(), en.getStatsId(), en.getDisplayName())));
-    }
-
-    /**
-     * Sets the values of the properties of a specific
-     * <tt>ColibriConferenceIQ</tt> to the values of the respective
-     * properties of this instance. Thus, the specified <tt>iq</tt> may be
-     * thought of as a description of this instance.
-     * <p>
-     * <b>Note</b>: The copying of the values is deep i.e. the
-     * <tt>Contents</tt>s of this instance are described in the specified
-     * <tt>iq</tt>.
-     * </p>
-     *
-     * @param iq the <tt>ColibriConferenceIQ</tt> to set the values of the
-     * properties of this instance on
-     */
-    //TODO(brian): port this logic over to the shim
-    public void describeDeep(ColibriConferenceIQ iq)
-    {
-        describeShallow(iq);
-
-//        for (Content content : getContents())
-//        {
-//            ColibriConferenceIQ.Content contentIQ
-//                = iq.getOrCreateContent(content.getName());
-//
-//            for (Channel channel : content.getChannels())
-//            {
-//                ColibriConferenceIQ.Channel channelIQ
-//                    = new ColibriConferenceIQ.Channel();
-//
-//                channel.describe(channelIQ);
-//                contentIQ.addChannel(channelIQ);
-//            }
-//        }
-    }
-
-    /**
      * Sets the values of the properties of a specific
      * <tt>ColibriConferenceIQ</tt> to the values of the respective
      * properties of this instance. Thus, the specified <tt>iq</tt> may be
@@ -523,7 +483,6 @@ public class Conference
         iq.setID(getID());
         iq.setName(getName());
     }
-
 
     /**
      * Notifies this instance that {@link #speechActivity} has identified a
@@ -1323,6 +1282,14 @@ public class Conference
     public void safeExpire()
     {
         expireableImpl.safeExpire();
+    }
+
+    /**
+     * @return this {@link Conference}'s Colibri shim.
+     */
+    public ConferenceShim getShim()
+    {
+        return shim;
     }
 
     /**
