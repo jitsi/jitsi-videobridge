@@ -1016,10 +1016,6 @@ final class JSONDeserializer
             {
                 transportIQ = new IceUdpTransportPacketExtension();
             }
-            else if (RawUdpTransportPacketExtension.NAMESPACE.equals(xmlns))
-            {
-                transportIQ = new RawUdpTransportPacketExtension();
-            }
             else
             {
                 transportIQ = null;

@@ -37,11 +37,6 @@ import org.jitsi.util.Logger;
 public abstract class TransportManager
 {
     /**
-     * The ID to be assigned to the next transport candidate.
-     */
-    private static long nextCandidateID = 1;
-
-    /**
      * The <tt>Logger</tt> used by the <tt>TransportManager</tt> class and its
      * instances to print debug information.
      */
@@ -101,10 +96,6 @@ public abstract class TransportManager
             {
                 pe = new IceUdpTransportPacketExtension();
             }
-            else if (RawUdpTransportPacketExtension.NAMESPACE.equals(namespace))
-            {
-                pe = new RawUdpTransportPacketExtension();
-            }
             else
             {
                 pe = null;
@@ -138,16 +129,20 @@ public abstract class TransportManager
         if ((pe == null) || !namespace.equals(pe.getNamespace()))
         {
             if (IceUdpTransportPacketExtension.NAMESPACE.equals(namespace))
+            {
                 pe = new IceUdpTransportPacketExtension();
-            else if (RawUdpTransportPacketExtension.NAMESPACE.equals(namespace))
-                pe = new RawUdpTransportPacketExtension();
+            }
             else
+            {
                 pe = null;
+            }
 
             iq.setTransport(pe);
         }
         if (pe != null)
+        {
             describe(pe);
+        }
     }
 
     /**
@@ -161,22 +156,6 @@ public abstract class TransportManager
      * values of the properties of this instance
      */
     protected abstract void describe(IceUdpTransportPacketExtension pe);
-
-    /**
-     * Generates a new ID to be used for a transport candidate.
-     *
-     * @return a new ID to be used fro a transport candidate
-     */
-    protected String generateCandidateID()
-    {
-        long candidateID;
-
-        synchronized (TransportManager.class)
-        {
-            candidateID = nextCandidateID++;
-        }
-        return Long.toHexString(candidateID);
-    }
 
     /**
      * Gets the XML namespace of the Jingle transport implemented by this
@@ -200,46 +179,6 @@ public abstract class TransportManager
     public abstract void startConnectivityEstablishment(
             IceUdpTransportPacketExtension transport);
 
-//    /**
-//     * Notifies this <tt>TransportManager</tt> that the configured RTP Payload
-//     * Type numbers for one of its <tt>RtpChannel</tt>s have been updated.
-//     *
-//     * @param channel
-//     */
-//    public void payloadTypesChanged(RtpChannel channel)
-//    {
-//        checkPayloadTypes(channel);
-//    }
-
-    //TODO(brian): maybe we want to keep this logic (and reimplement it)?
-//    /**
-//     * Logs a warning if the addition of <tt>channel</tt> to <tt>_channels</tt>
-//     * will result in the same Payload Type number being received by more than
-//     * one channel (which is bound to cause issues and probably indicates a
-//     * problem on the signalling side).
-//     *
-//     * @param channel the <tt>Channel</tt> being added.
-//     */
-//    private void checkPayloadTypes(RtpChannel channel)
-//    {
-//        for (Channel c : getChannels())
-//        {
-//            if (!(c instanceof RtpChannel) || c == channel)
-//                continue;
-//
-//            // We only have a couple of PTs for each channel and this does not
-//            // execute often.
-//            for (int pt1 : ((RtpChannel) c).getReceivePTs())
-//                for (int pt2 : channel.getReceivePTs())
-//                {
-//                    if (pt1 == pt2)
-//                        logger.warn(
-//                                "The same PT (" + pt1 + ") used by two "
-//                                    + "channels in the same bundle.");
-//                }
-//        }
-//    }
-
     /**
      * Checks whether this transport manager has established connectivity.
      *
@@ -252,14 +191,5 @@ public abstract class TransportManager
         //TODO: revisit whether this method makes sense long term and, if so, clean it up when we clean up the
         // transport manager object hierarchy/which types will stick around/etc.
         // no op by default
-    }
-
-    /**
-     * @return the {@link TransportCCEngine} instance, if any, associated with
-     * this transport channel.
-     */
-    public TransportCCEngine getTransportCCEngine()
-    {
-        return null;
     }
 }
