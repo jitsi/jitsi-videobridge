@@ -262,8 +262,7 @@ public class AdaptiveTrackProjection
     private static AdaptiveTrackProjectionContext makeContext(
         @NotNull MediaStreamTrackDesc track, @NotNull MediaFormat format)
     {
-        if (Constants.VP8.equalsIgnoreCase(format.getEncoding())
-            && track.getRTPEncodings().length > 1)
+        if (Constants.VP8.equalsIgnoreCase(format.getEncoding()))
         {
             long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
             return new VP8AdaptiveTrackProjectionContext(ssrc);
