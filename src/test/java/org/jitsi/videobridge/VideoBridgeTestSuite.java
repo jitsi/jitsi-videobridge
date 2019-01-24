@@ -28,7 +28,6 @@ import org.junit.runners.*;
 @Suite.SuiteClasses(
     {
         FocusControlTest.class,
-        RawUdpConferenceTest.class,
         EndpointMessageBuilderTest.class,
         MediaStreamTrackFactoryTest.class,
         BridgeShutdownTest.class, // This one must be the last one

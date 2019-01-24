@@ -166,15 +166,6 @@ public class Main
         String maxPort_ = String.valueOf(maxPort);
         String minPort_ = String.valueOf(minPort);
 
-        // Jingle Raw UDP transport
-        // TODO: Use the common TransportManager.portTracker for Raw UDP too
-        System.setProperty(
-                DefaultStreamConnector.MAX_PORT_NUMBER_PROPERTY_NAME,
-                maxPort_);
-        System.setProperty(
-                DefaultStreamConnector.MIN_PORT_NUMBER_PROPERTY_NAME,
-                minPort_);
-
         // Jingle ICE-UDP transport
         TransportManager.portTracker.tryRange(minPort_, maxPort_);
 

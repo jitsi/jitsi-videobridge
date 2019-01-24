@@ -75,12 +75,6 @@ public class Videobridge
         = "org.jitsi.videobridge.defaultOptions";
 
     /**
-     * The XML namespace of the <tt>TransportManager</tt> type to be initialized
-     * by <tt>Channel</tt> by default.
-     */
-    private static String defaultTransportManager;
-
-    /**
      * The <tt>Logger</tt> used by the <tt>Videobridge</tt> class and its
      * instances to print debug information.
      */
@@ -526,47 +520,6 @@ public class Videobridge
                 ServiceUtils2.getService(
                         bundleContext,
                         ConfigurationService.class);
-        }
-    }
-
-    /**
-     * Gets the XML namespace of the <tt>TransportManager</tt> type to be
-     * initialized by <tt>Channel</tt> by default.
-     *
-     * @return the XML namespace of the <tt>TransportManager</tt> type to be
-     * initialized by <tt>Channel</tt> by default
-     * TODO: remove?
-     */
-    public String getDefaultTransportManager()
-    {
-        synchronized (Videobridge.class)
-        {
-            if (defaultTransportManager == null)
-            {
-                BundleContext bundleContext = getBundleContext();
-
-                if (bundleContext != null)
-                {
-                    ConfigurationService cfg = getConfigurationService();
-
-                    if (cfg != null)
-                    {
-                        defaultTransportManager
-                            = cfg.getString(
-                                    Videobridge.class.getName()
-                                        + ".defaultTransportManager");
-                    }
-                }
-                if (!IceUdpTransportPacketExtension.NAMESPACE.equals(
-                            defaultTransportManager)
-                        && !RawUdpTransportPacketExtension.NAMESPACE.equals(
-                                defaultTransportManager))
-                {
-                    defaultTransportManager
-                        = IceUdpTransportPacketExtension.NAMESPACE;
-                }
-            }
-            return defaultTransportManager;
         }
     }
 
@@ -1436,12 +1389,6 @@ public class Videobridge
                 IceUdpTransportPacketExtension.NAMESPACE,
                 new DefaultPacketExtensionProvider<>(
                         IceUdpTransportPacketExtension.class));
-        // Raw UDP <transport>
-        ProviderManager.addExtensionProvider(
-                RawUdpTransportPacketExtension.ELEMENT_NAME,
-                RawUdpTransportPacketExtension.NAMESPACE,
-                new DefaultPacketExtensionProvider<>(
-                        RawUdpTransportPacketExtension.class));
 
         DefaultPacketExtensionProvider<CandidatePacketExtension>
             candidatePacketExtensionProvider
@@ -1452,11 +1399,6 @@ public class Videobridge
         ProviderManager.addExtensionProvider(
                 CandidatePacketExtension.ELEMENT_NAME,
                 IceUdpTransportPacketExtension.NAMESPACE,
-                candidatePacketExtensionProvider);
-        // Raw UDP <candidate>
-        ProviderManager.addExtensionProvider(
-                CandidatePacketExtension.ELEMENT_NAME,
-                RawUdpTransportPacketExtension.NAMESPACE,
                 candidatePacketExtensionProvider);
         ProviderManager.addExtensionProvider(
                 RtcpmuxPacketExtension.ELEMENT_NAME,
