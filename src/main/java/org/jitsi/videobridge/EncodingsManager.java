@@ -16,7 +16,6 @@
 
 package org.jitsi.videobridge;
 
-import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadTypePacketExtension;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.jitsi.nlj.rtp.*;
 
@@ -76,6 +75,4 @@ public class EncodingsManager {
             this.type = type;
         }
     }
-
-
 }

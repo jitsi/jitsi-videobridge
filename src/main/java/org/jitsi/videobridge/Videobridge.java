@@ -1011,11 +1011,19 @@ public class Videobridge
             if (ep != null) {
                 ep.transceiver.clearPayloadTypes();
                 payloadTypeExtensions.forEach(ext -> {
+                    System.out.println("TEMP: looking at payload type extension: " + ext.toXML());
                     PayloadType pt = PayloadTypeUtil.create(ext);
-                    logger.debug("Notifying ep " + epId
-                            + " about payload type mapping: " + pt);
+                    if (pt == null)
+                    {
+                        logger.warn("Unrecognized payload type " + ext.toXML());
+                    }
+                    else
+                    {
+                        logger.debug("Notifying ep " + epId
+                                + " about payload type mapping: " + pt);
                         ep.addPayloadType(pt);
-                    });
+                    }
+                });
             }
         });
     }

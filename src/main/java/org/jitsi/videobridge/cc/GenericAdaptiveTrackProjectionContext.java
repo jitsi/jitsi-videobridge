@@ -63,17 +63,17 @@ class GenericAdaptiveTrackProjectionContext
         int payloadOff = rtpPacket.getPayloadOffset(),
                 payloadLen = rtpPacket.getPayloadLength();
 
-        if (payloadType.isVp8())
+        if (payloadType instanceof Vp8PayloadType)
         {
             return org.jitsi.impl.neomedia.codec.video.vp8.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
         }
-        else if (payloadType.isH264())
+        else if (payloadType instanceof H264PayloadType)
         {
             return org.jitsi.impl.neomedia.codec.video.h264.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);
         }
-        else if (payloadType.isVp9())
+        else if (payloadType instanceof Vp9PayloadType)
         {
             return org.jitsi.impl.neomedia.codec.video.vp9.DePacketizer
                     .isKeyFrame(buf, payloadOff, payloadLen);

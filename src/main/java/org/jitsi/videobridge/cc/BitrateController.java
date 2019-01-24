@@ -19,6 +19,7 @@ import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.*;
 import org.jitsi.impl.neomedia.transform.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.service.neomedia.*;
@@ -723,7 +724,7 @@ public class BitrateController
                     adaptiveTrackProjection);
 
                 long rtxSsrc
-                    = rtpEncoding.getSecondarySsrc(PayloadType.RTX);
+                    = rtpEncoding.getSecondarySsrc(SsrcAssociationType.RTX);
 
                 if (rtxSsrc != -1)
                 {

@@ -19,6 +19,7 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jitsimeet.*;
 import org.jitsi.nlj.format.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
 import org.jitsi.util.*;
@@ -111,15 +112,15 @@ public class MediaStreamTrackFactory
      * {@link SourceGroupPacketExtension}, which is how we distinguish secondary
      * ssrcs, so we'll translate them into constants defined in libjitsi
      */
-    private static Map<String, String> secondarySsrcTypeMap = null;
+    private static Map<String, SsrcAssociationType> secondarySsrcTypeMap = null;
 
-    private static synchronized Map<String, String> getSecondarySsrcTypeMap()
+    private static synchronized Map<String, SsrcAssociationType> getSecondarySsrcTypeMap()
     {
         if (secondarySsrcTypeMap == null)
         {
             secondarySsrcTypeMap = new HashMap<>();
             secondarySsrcTypeMap.put(
-                SourceGroupPacketExtension.SEMANTICS_FID, PayloadType.RTX);
+                SourceGroupPacketExtension.SEMANTICS_FID, SsrcAssociationType.RTX);
         }
 
         return secondarySsrcTypeMap;
@@ -213,7 +214,7 @@ public class MediaStreamTrackFactory
                     if (ssrcSecondarySsrcs != null)
                     {
                         ssrcSecondarySsrcs.forEach(ssrcSecondarySsrc -> {
-                            String type
+                            SsrcAssociationType type
                                 = getSecondarySsrcTypeMap()
                                         .get(ssrcSecondarySsrc.type);
                             if (type == null)

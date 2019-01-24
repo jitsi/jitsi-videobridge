@@ -17,7 +17,7 @@ package org.jitsi.videobridge.cc;
 
 import org.jetbrains.annotations.*;
 import org.jitsi.impl.neomedia.rtp.*;
-import org.jitsi.nlj.format.PayloadType;
+import org.jitsi.nlj.format.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.cc.vp8.*;
@@ -272,7 +272,7 @@ public class AdaptiveTrackProjection
     private static AdaptiveTrackProjectionContext makeContext(
         @NotNull MediaStreamTrackDesc track, @NotNull PayloadType payloadType)
     {
-        if (payloadType.isVp8() && track.getRTPEncodings().length > 1)
+        if (payloadType instanceof Vp8PayloadType && track.getRTPEncodings().length > 1)
         {
             long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
             return new VP8AdaptiveTrackProjectionContext(ssrc);

@@ -46,33 +46,31 @@ public class PayloadTypeUtil
             parameters.put(parameter.getName(), parameter.getValue());
         }
 
-        // TODO: we must base the media type on signaling, i.e. which
-        //  m-line/content it was advertised in. This will be a requirement
-        // when RTX is used for audio for example. As a temporary solution,
-        // make an educated guess.
-        MediaType mediaType = getMediaType(ext.getName());
+        byte id = (byte)ext.getID();
+        int clockRate = ext.getClockrate();
+        PayloadTypeEncoding encoding = PayloadTypeEncoding.Companion.createFrom(ext.getName());
 
-        return new PayloadType(
-                (byte) ext.getID(),
-                ext.getName(),
-                mediaType,
-                ext.getClockrate(),
-                parameters);
-    }
-
-    /**
-     * Determines the media type based on the encoding name. This is temporary.
-     * @param name the encoding name.
-     */
-    private static MediaType getMediaType(@NotNull String name)
-    {
-        if (name.equalsIgnoreCase(PayloadType.VP8)
-            || name.equalsIgnoreCase(PayloadType.VP9)
-            || name.equalsIgnoreCase(PayloadType.H264)
-            || name.equalsIgnoreCase(PayloadType.RTX))
+        if (PayloadTypeEncoding.VP8 == encoding)
         {
-            return MediaType.VIDEO;
+            return new Vp8PayloadType(id, parameters);
         }
-        return MediaType.AUDIO;
+        else if (PayloadTypeEncoding.H264 == encoding)
+        {
+            return new H264PayloadType(id, parameters);
+        }
+        else if (PayloadTypeEncoding.VP9 == encoding)
+        {
+            return new Vp9PayloadType(id, parameters);
+        }
+        else if (PayloadTypeEncoding.RTX == encoding)
+        {
+            return new RtxPayloadType(id, parameters);
+        }
+        else if (PayloadTypeEncoding.OPUS == encoding)
+        {
+            return new OpusPayloadType(id, parameters);
+        }
+
+        return null;
     }
 }
