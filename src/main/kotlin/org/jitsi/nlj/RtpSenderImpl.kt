@@ -156,7 +156,7 @@ class RtpSenderImpl(
             node(outputPipelineTerminationNode)
         }
 
-        probingDataSender = ProbingDataSender(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
+        probingDataSender = ProbingDataSender(outgoingPacketCache.getPacketCache(), outgoingRtxRoot, absSendTime)
 
         executor.execute(this::doWork)
     }
@@ -227,6 +227,7 @@ class RtpSenderImpl(
             }
         }
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
+        probingDataSender.handleEvent(event)
     }
 
     override fun getNodeStats(): NodeStatsBlock {
