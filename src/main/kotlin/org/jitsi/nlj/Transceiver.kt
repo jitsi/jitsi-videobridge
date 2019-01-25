@@ -18,6 +18,7 @@ package org.jitsi.nlj
 import org.bouncycastle.crypto.tls.TlsContext
 import org.jitsi.impl.neomedia.rtp.remotebitrateestimator.RemoteBitrateObserver
 import org.jitsi.nlj.rtcp.RtcpEventNotifier
+import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.srtp.SrtpUtil
 import org.jitsi.nlj.srtp.TlsRole
 import org.jitsi.nlj.stats.EndpointConnectionStats
@@ -261,9 +262,11 @@ class Transceiver(
 
     // TODO(brian): we may want to handle local and remote ssrc associations differently, as different parts of the
     // code care about one or the other, but currently there is no issue treating them the same.
-    fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: String) {
+    fun addSsrcAssociation(primarySsrc: Long, secondarySsrc: Long, type: SsrcAssociationType) {
         logger.cinfo { "Transeceiver $id adding ssrc association: $primarySsrc <-> $secondarySsrc ($type)"}
-        val ssrcAssociationEvent = SsrcAssociationEvent(primarySsrc, secondarySsrc, type)
+        val ssrcAssociationEvent = SsrcAssociationEvent(primarySsrc, secondarySsrc, type
+
+        )
         rtpReceiver.handleEvent(ssrcAssociationEvent)
         rtpSender.handleEvent(ssrcAssociationEvent)
     }

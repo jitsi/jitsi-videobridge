@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
@@ -104,7 +105,7 @@ class RtxHandler : Node("RTX handler") {
                 associatedPayloadTypes.clear()
             }
             is SsrcAssociationEvent -> {
-                if (event.type.equals(Constants.RTX)) {
+                if (event.type == SsrcAssociationType.RTX) {
                     logger.cinfo { "RtxHandler associating RTX ssrc ${event.secondarySsrc} with primary ${event.primarySsrc}" }
                     associatedSsrcs[event.secondarySsrc] = event.primarySsrc
                 }
