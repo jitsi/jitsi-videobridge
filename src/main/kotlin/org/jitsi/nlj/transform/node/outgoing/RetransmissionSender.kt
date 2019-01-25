@@ -21,6 +21,7 @@ import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
 import org.jitsi.nlj.SsrcAssociationEvent
 import org.jitsi.nlj.forEachAs
+import org.jitsi.nlj.rtp.SsrcAssociationType
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
 import org.jitsi.nlj.util.cdebug
@@ -108,7 +109,7 @@ class RetransmissionSender : Node("Retransmission sender") {
                 associatedPayloadTypes.clear()
             }
             is SsrcAssociationEvent -> {
-                if (event.type == Constants.RTX) {
+                if (event.type == SsrcAssociationType.RTX) {
                     logger.cinfo { "Retransmission sender ${hashCode()} associating RTX ssrc " +
                             "${event.secondarySsrc} with primary ${event.primarySsrc}" }
                     associatedSsrcs[event.primarySsrc] = event.secondarySsrc
