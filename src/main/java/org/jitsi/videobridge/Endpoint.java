@@ -22,6 +22,7 @@ import org.jitsi.nlj.stats.*;
 import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.util.concurrent.*;
 import org.jitsi.videobridge.cc.*;
 import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
@@ -109,7 +110,11 @@ public class Endpoint
 
     private final BitrateController bitrateController;
 
-    private final BandwidthProbing bandwidthProbing = new BandwidthProbing();
+    private final BandwidthProbing bandwidthProbing;
+
+    //TODO(brian): align the recurringrunnable stuff with whatever we end up doing with all the other executors
+    private static final RecurringRunnableExecutor recurringRunnableExecutor =
+            new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
 
     /**
      * Pool shared by all endpoint instances for IO tasks
@@ -147,6 +152,14 @@ public class Endpoint
         messageTransport = new EndpointMessageTransport(this);
 
         audioLevelListener = new AudioLevelListenerImpl(conference.getSpeechActivity());
+        bandwidthProbing = new BandwidthProbing(new BandwidthProbing.ProbingDataSender()
+        {
+            @Override
+            public int sendProbing(long mediaSsrc, int numBytes)
+            {
+                return Endpoint.this.transceiver.sendProbing(mediaSsrc, numBytes);
+            }
+        });
         bandwidthProbing.setDiagnosticContext(transceiver.getDiagnosticContext());
         bandwidthProbing.setBitrateController(bitrateController);
         transceiver.setAudioLevelListener(audioLevelListener);
@@ -160,6 +173,9 @@ public class Endpoint
             }
         });
         transceiver.onBandwidthEstimateChanged(bandwidthProbing);
+
+        bandwidthProbing.enabled = true;
+        recurringRunnableExecutor.registerRecurringRunnable(bandwidthProbing);
     }
 
     /**
@@ -388,6 +404,9 @@ public class Endpoint
         } catch (Exception e) {
             logger.error("Exception while expiring endpoint " + getID() + ": " + e.toString());
         }
+        bandwidthProbing.enabled = false;
+        recurringRunnableExecutor.deRegisterRecurringRunnable(bandwidthProbing);
+
         logger.info("Endpoint " + getID() + " expired");
     }
 

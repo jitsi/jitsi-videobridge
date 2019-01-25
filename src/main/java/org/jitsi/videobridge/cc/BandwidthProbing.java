@@ -23,8 +23,6 @@ package org.jitsi.videobridge.cc;
  import org.jitsi.service.neomedia.codec.*;
  import org.jitsi.util.*;
  import org.jitsi.util.concurrent.*;
- import org.jitsi.videobridge.*;
- import org.jitsi_modified.impl.neomedia.rtp.*;
  import org.jitsi_modified.service.neomedia.rtp.*;
 
  import java.util.*;
@@ -112,13 +110,16 @@ package org.jitsi.videobridge.cc;
 
      private BitrateController bitrateController;
 
+     private ProbingDataSender probingDataSender;
+
      /**
       * Ctor.
       *
       */
-     public BandwidthProbing()
+     public BandwidthProbing(ProbingDataSender probingDataSender)
      {
          super(PADDING_PERIOD_MS);
+         this.probingDataSender = probingDataSender;
      }
 
      public void setDiagnosticContext(DiagnosticContext diagnosticContext)
@@ -155,6 +156,11 @@ package org.jitsi.videobridge.cc;
 
          // How much padding do we need?
          long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
+         if (logger.isDebugEnabled())
+         {
+             logger.debug("TEMP: bandwidth probing running: ideal = " + bitrateControllerStatus.currentIdealBps +
+                     "bps, target = " + bitrateControllerStatus.currentTargetBps + "bps");
+         }
          if (totalNeededBps < 1)
          {
              // Not much.
@@ -176,6 +182,10 @@ package org.jitsi.videobridge.cc;
          // How much padding can we afford?
          long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
+         if (logger.isDebugEnabled())
+         {
+             logger.debug("TEMP: bandwidth probing can send " + paddingBps + " bps");
+         }
 
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
@@ -196,63 +206,41 @@ package org.jitsi.videobridge.cc;
          }
 
 
-         MediaStreamImpl stream = (MediaStreamImpl) destStream;
-
          // XXX a signed int is practically sufficient, as it can represent up to
          // ~ 2GB
          int bytes = (int) (PADDING_PERIOD_MS * paddingBps / 1000 / 8);
-         RtxTransformer rtxTransformer = stream.getRtxTransformer();
-
-         if (!DISABLE_RTX_PROBING)
+         if (logger.isDebugEnabled())
          {
-             if (!bitrateControllerStatus.activeSsrcs.isEmpty())
+             logger.debug("TEMP: probing will send " + bytes + " bytes this round");
+         }
+
+         if (!bitrateControllerStatus.activeSsrcs.isEmpty())
+         {
+             // stream protection with padding.
+             for (Long ssrc : bitrateControllerStatus.activeSsrcs)
              {
-                 // stream protection with padding.
-                 for (Long ssrc : bitrateControllerStatus.activeSsrcs)
+                 long bytesSent = probingDataSender.sendProbing(ssrc, bytes);
+                 bytes -= bytesSent;
+                 if (bytes < 1)
                  {
-                     bytes = rtxTransformer.sendPadding(ssrc, bytes);
-                     if (bytes < 1)
+                     if (logger.isDebugEnabled())
                      {
-                         // We're done.
-                         return;
+                         logger.debug("TEMP: probing sent all data!");
                      }
+                     // We're done.
+                     return;
                  }
              }
          }
-
-         // Send crap with the JVB's SSRC.
-         long mediaSSRC = getSenderSSRC();
-         if (vp8PT == -1)
+         if (logger.isDebugEnabled())
          {
-             vp8PT = stream.getDynamicRTPPayloadType(Constants.VP8);
-             if (vp8PT == -1)
-             {
-                 logger.warn("The VP8 payload type is undefined. Failed to "
-                         + "probe with the SSRC of the bridge.");
-                 return;
-             }
+             logger.debug("TEMP: probing couldn't fulfill desired send, " + bytes + " bytes leftover");
          }
 
-         ts += 3000;
-
-         int pktLen = RawPacket.FIXED_HEADER_SIZE + 0xFF;
-         int len = (bytes / pktLen) + 1 /* account for the mod */;
-
-         for (int i = 0; i < len; i++)
-         {
-             try
-             {
-                 // These packets should not be cached.
-                 RawPacket pkt
-                     = RawPacket.makeRTP(mediaSSRC, vp8PT, seqNum++, ts, pktLen);
-
-                 stream.injectPacket(pkt, /* data */ true, rtxTransformer);
-             }
-             catch (TransmissionFailedException tfe)
-             {
-                 logger.warn("Failed to retransmit a packet.");
-             }
-         }
+         //TODO(brian): if we still need this, it needs to be passed into JMT to the probingdatasender
+//         if (!DISABLE_RTX_PROBING)
+//         {
+//         }
      }
 
      @Override
@@ -271,5 +259,10 @@ package org.jitsi.videobridge.cc;
      private long getSenderSSRC()
      {
          return senderSsrc == null ? -1 : senderSsrc;
+     }
+
+     public interface ProbingDataSender
+     {
+         int sendProbing(long mediaSsrc, int numBytes);
      }
  }
