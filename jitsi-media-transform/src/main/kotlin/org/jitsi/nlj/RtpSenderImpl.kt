@@ -28,6 +28,7 @@ import org.jitsi.nlj.transform.node.PacketCache
 import org.jitsi.nlj.transform.node.outgoing.AbsSendTime
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStatisticsTracker
 import org.jitsi.nlj.transform.node.outgoing.OutgoingStreamStatistics
+import org.jitsi.nlj.transform.node.outgoing.ProbingDataSender
 import org.jitsi.nlj.transform.node.outgoing.RetransmissionSender
 import org.jitsi.nlj.transform.node.outgoing.SentRtcpStats
 import org.jitsi.nlj.transform.node.outgoing.SrtcpTransformerEncryptNode
@@ -89,6 +90,7 @@ class RtpSenderImpl(
     private val absSendTime = AbsSendTime()
     private val statTracker = OutgoingStatisticsTracker()
     private val keyframeRequester = KeyframeRequester()
+    private val probingDataSender: ProbingDataSender
     /**
      * The SR generator runs on its own in the background.  It will access the outgoing stats via the given
      * [OutgoingStatisticsTracker] to grab a snapshot of the current state for filling out an SR and sending it
@@ -154,6 +156,9 @@ class RtpSenderImpl(
             node(srtcpEncryptWrapper)
             node(outputPipelineTerminationNode)
         }
+
+        probingDataSender = ProbingDataSender(outgoingPacketCache.getPacketCache(), outgoingRtxRoot)
+
         executor.execute(this::doWork)
     }
 
@@ -176,6 +181,8 @@ class RtpSenderImpl(
         //TODO: do we want to allow for PacketInfo to be passed in to sendRtcp?
         outgoingRtcpRoot.processPackets(pkts.map { PacketInfo(it) })
     }
+
+    override fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = probingDataSender.sendProbing(mediaSsrc, numBytes)
 
     override fun setSrtpTransformer(srtpTransformer: SinglePacketTransformer) {
         srtpEncryptWrapper.setTransformer(srtpTransformer)

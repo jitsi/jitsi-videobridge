@@ -168,6 +168,8 @@ class Transceiver(
 
     fun sendRtcp(rtcpPackets: List<RtcpPacket>) = rtpSender.sendRtcp(rtcpPackets)
 
+    fun sendProbing(mediaSsrc: Long, numBytes: Int): Int = rtpSender.sendProbing(mediaSsrc, numBytes)
+
     /**
      * Set a handler to be invoked when incoming RTP packets have finished
      * being processed.
