@@ -27,10 +27,13 @@ import org.jitsi.nlj.format.RtxPayloadType
 import org.jitsi.nlj.format.VideoPayloadType
 import org.jitsi.nlj.rtp.PaddingVideoPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
+import org.jitsi.nlj.stats.NodeStatsBlock
+import org.jitsi.nlj.transform.NodeStatsProducer
 import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getByteBuffer
 import org.jitsi.nlj.util.getLogger
 import org.jitsi.rtp.RtpHeader
+import org.jitsi.rtp.extensions.clone
 import org.jitsi.service.neomedia.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
 import unsigned.toUInt
@@ -47,7 +50,7 @@ class ProbingDataSender(
     private val packetCache: NewRawPacketCache,
     private val rtxDataSender: PacketHandler,
     private val garbageDataSender: PacketHandler
-) : EventHandler {
+) : EventHandler, NodeStatsProducer {
 
     private val logger = getLogger(this.javaClass)
 
@@ -55,17 +58,27 @@ class ProbingDataSender(
     private val videoPayloadTypes = mutableSetOf<VideoPayloadType>()
     private var localVideoSsrc: Long? = null
 
+    // Stats
+    private var numProbingBytesSentRtx: Int = 0
+    private var numProbingBytesSentDummyData: Int = 0
+
     fun sendProbing(mediaSsrc: Long, numBytes: Int): Int {
-        var bytesSent = 0
+        var totalBytesSent = 0
 
         if (rtxSupported) {
-            bytesSent += sendRedundantDataOverRtx(mediaSsrc, numBytes)
+            val rtxBytesSent = sendRedundantDataOverRtx(mediaSsrc, numBytes)
+            numProbingBytesSentRtx += rtxBytesSent
+            totalBytesSent += rtxBytesSent
+            logger.cdebug { "Sent $rtxBytesSent bytes of probing data over RTX" }
         }
-        if (bytesSent < numBytes) {
-            bytesSent += sendDummyData(numBytes - bytesSent)
+        if (totalBytesSent < numBytes) {
+            val dummyBytesSent = sendDummyData(numBytes - totalBytesSent)
+            numProbingBytesSentDummyData += dummyBytesSent
+            totalBytesSent += dummyBytesSent
+            logger.cdebug { "Sent $dummyBytesSent bytes of probing data sent as dummy data" }
         }
 
-        return bytesSent
+        return totalBytesSent
     }
     /**
      * Using the RTX stream associated with [mediaSsrc], send [numBytes] of data
@@ -101,14 +114,17 @@ class ProbingDataSender(
                     // The node after this one will be the RetransmissionSender, which handles
                     // encapsulating packets as RTX (with the proper ssrc and payload type) so we
                     // just need to find the packets to retransmit and forward them to the next node
-                    packetsToResend.add(PacketInfo(VideoRtpPacket(rawPacket.getByteBuffer())))
+                    // NOTE(brian): we need to copy the buffer here, since the cache could re-use it
+                    packetsToResend.add(PacketInfo(VideoRtpPacket(rawPacket.getByteBuffer().clone())))
                 }
             }
         }
         //TODO(brian): we're in a thread context mess here.  we'll be sending these out from the bandwidthprobing
         // context (or whoever calls this) which i don't think we want.  Need look at getting all the pipeline
         // work posted to one thread so we don't have to worry about concurrency nightmares
-        rtxDataSender.processPackets(packetsToResend)
+        if (packetsToResend.isNotEmpty()) {
+            rtxDataSender.processPackets(packetsToResend)
+        }
 
         return bytesSent
     }
@@ -147,7 +163,7 @@ class ProbingDataSender(
         when(event) {
             is RtpPayloadTypeAddedEvent -> {
                 if (event.payloadType is RtxPayloadType) {
-                    logger.cdebug { "Probing data sender sees an RTX payload type, enabling RTX probing"}
+                    logger.cdebug { "RTX payload type signaled, enabling RTX probing"}
                     rtxSupported = true
                 } else if (event.payloadType is VideoPayloadType) {
                     videoPayloadTypes.add(event.payloadType)
@@ -159,9 +175,17 @@ class ProbingDataSender(
             }
             is SetLocalSsrcEvent -> {
                 if (MediaType.VIDEO.equals(event.mediaType)) {
+                    logger.cdebug { "Setting video ssrc to ${event.ssrc}" }
                     localVideoSsrc = event.ssrc
                 }
             }
+        }
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        return NodeStatsBlock("Probing data sender").apply {
+            addStat( "num bytes of probing data sent as RTX: $numProbingBytesSentRtx")
+            addStat( "num bytes of probing data sent as dummy: $numProbingBytesSentDummyData")
         }
     }
 }
