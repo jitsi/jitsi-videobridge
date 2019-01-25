@@ -17,14 +17,24 @@
 package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.nlj.Event
+import org.jitsi.nlj.EventHandler
 import org.jitsi.nlj.PacketHandler
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.RtpPayloadTypeAddedEvent
 import org.jitsi.nlj.RtpPayloadTypeClearEvent
-import org.jitsi.nlj.SsrcAssociationEvent
+import org.jitsi.nlj.SetLocalSsrcEvent
+import org.jitsi.nlj.format.RtxPayloadType
+import org.jitsi.nlj.format.VideoPayloadType
+import org.jitsi.nlj.rtp.PaddingVideoPacket
 import org.jitsi.nlj.rtp.VideoRtpPacket
-import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cdebug
 import org.jitsi.nlj.util.getByteBuffer
+import org.jitsi.nlj.util.getLogger
+import org.jitsi.rtp.RtpHeader
+import org.jitsi.service.neomedia.MediaType
 import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
+import unsigned.toUInt
+import java.util.Random
 
 /**
  * [ProbingDataSender] currently supports probing via 2 methods:
@@ -35,15 +45,27 @@ import org.jitsi_modified.impl.neomedia.rtp.NewRawPacketCache
  */
 class ProbingDataSender(
     private val packetCache: NewRawPacketCache,
-    private val rtxDataSender: PacketHandler/*,
-    private val garbageDataSender: PacketHandler TODO*/) {
+    private val rtxDataSender: PacketHandler,
+    private val garbageDataSender: PacketHandler
+) : EventHandler {
+
+    private val logger = getLogger(this.javaClass)
+
+    private var rtxSupported = false
+    private val videoPayloadTypes = mutableSetOf<VideoPayloadType>()
+    private var localVideoSsrc: Long? = null
 
     fun sendProbing(mediaSsrc: Long, numBytes: Int): Int {
-        //TODO(brian): in the future we'll check if RTX is supported and, if not, send it using the
-        // bridge's ssrc
-        //TODO(brian): also, if we can't send the full amount of data using RTX (because there are not
-        // the proper packets to retransmit to fill it) send data using bridge ssrc
-        return sendRedundantDataOverRtx(mediaSsrc, numBytes)
+        var bytesSent = 0
+
+        if (rtxSupported) {
+            bytesSent += sendRedundantDataOverRtx(mediaSsrc, numBytes)
+        }
+        if (bytesSent < numBytes) {
+            bytesSent += sendDummyData(numBytes - bytesSent)
+        }
+
+        return bytesSent
     }
     /**
      * Using the RTX stream associated with [mediaSsrc], send [numBytes] of data
@@ -55,7 +77,7 @@ class ProbingDataSender(
         val lastNPackets =
                 packetCache.getMany(mediaSsrc, numBytes) ?: return bytesSent
 
-        // XXX this constant is not great, however the final place of the stream
+        // XXX this constant (2) is not great, however the final place of the stream
         // protection strategy is not clear at this point so I expect the code
         // will change before taking its final form.
         val packetsToResend = mutableListOf<PacketInfo>()
@@ -80,24 +102,6 @@ class ProbingDataSender(
                     // encapsulating packets as RTX (with the proper ssrc and payload type) so we
                     // just need to find the packets to retransmit and forward them to the next node
                     packetsToResend.add(PacketInfo(VideoRtpPacket(rawPacket.getByteBuffer())))
-//                    Byte apt = rtx2apt.get(container.pkt.getPayloadType());
-//
-//                    // XXX if the client doesn't support RTX, then we can not
-//                    // effectively ramp-up bwe using duplicates because they
-//                    // would be dropped too early in the SRTP layer. So we are
-//                    // forced to use the bridge's SSRC and thus increase the
-//                    // probability of losses.
-//
-//                    if (bytes - len > 0 && apt != null)
-//                    {
-//                        retransmit(container.pkt, apt, this);
-//                        bytes -= len;
-//                    }
-//                    else
-//                    {
-//                        // Don't break as we might be able to squeeze in the
-//                        // next packet.
-//                    }
                 }
             }
         }
@@ -109,34 +113,55 @@ class ProbingDataSender(
         return bytesSent
     }
 
-//    override fun handleEvent(event: Event) {
-//        when(event) {
-//            is RtpPayloadTypeAddedEvent -> {
-//                if (event.payloadType is RtxPayloadType) {
-//                    val rtxPt = event.payloadType.pt.toUInt()
-//                    event.payloadType.parameters["apt"]?.toByte()?.toUInt()?.let {
-//                        val associatedPt = it
-//                        logger.cinfo { "Retransmission sender ${hashCode()} associating RTX payload type " +
-//                                "$rtxPt with primary $associatedPt" }
-//                        associatedPayloadTypes[associatedPt] = rtxPt
-//                    } ?: run {
-//                        logger.cerror { "Unable to parse RTX associated payload type from event: $event" }
-//                    }
-//                }
-//            }
-//            is RtpPayloadTypeClearEvent -> {
-//                associatedPayloadTypes.clear()
-//            }
-//            is SsrcAssociationEvent -> {
-//                if (event.type == SsrcAssociationType.RTX) {
-//                    logger.cinfo { "Retransmission sender ${hashCode()} associating RTX ssrc " +
-//                            "${event.secondarySsrc} with primary ${event.primarySsrc}" }
-//                    associatedSsrcs[event.primarySsrc] = event.secondarySsrc
-//                }
-//            }
-//        }
-//        super.handleEvent(event)
-//    }
+    private var currDummyTimestamp = Random().nextLong() and 0xFFFFFFFF
+    private var currDummySeqNum = Random().nextInt(0xFFFF)
 
+    private fun sendDummyData(numBytes: Int): Int {
+        var bytesSent = 0
+        val pt = videoPayloadTypes.firstOrNull() ?: return bytesSent
+        val senderSsrc = localVideoSsrc ?: return bytesSent
+        //TODO(brian): shouldn't this take into account numBytes? what if it's less than
+        // the size of one dummy packet?
+        val packetLength = RtpHeader.FIXED_SIZE_BYTES + 0xFF
+        val numPackets = (numBytes / packetLength) + 1 /* account for the mod */
+        for (i in 0 until numPackets) {
+            val paddingPacket = PaddingVideoPacket(
+                RtpHeader(
+                    payloadType = pt.pt.toUInt(),
+                    ssrc = senderSsrc,
+                    timestamp = currDummyTimestamp,
+                    sequenceNumber = currDummySeqNum),
+                packetLength
+            )
+            garbageDataSender.processPackets(listOf(PacketInfo(paddingPacket)))
 
+            currDummySeqNum++
+            bytesSent += packetLength
+        }
+        currDummyTimestamp += 3000
+
+        return bytesSent
+    }
+
+    override fun handleEvent(event: Event) {
+        when(event) {
+            is RtpPayloadTypeAddedEvent -> {
+                if (event.payloadType is RtxPayloadType) {
+                    logger.cdebug { "Probing data sender sees an RTX payload type, enabling RTX probing"}
+                    rtxSupported = true
+                } else if (event.payloadType is VideoPayloadType) {
+                    videoPayloadTypes.add(event.payloadType)
+                }
+            }
+            is RtpPayloadTypeClearEvent -> {
+                rtxSupported = false
+                videoPayloadTypes.clear()
+            }
+            is SetLocalSsrcEvent -> {
+                if (MediaType.VIDEO.equals(event.mediaType)) {
+                    localVideoSsrc = event.ssrc
+                }
+            }
+        }
+    }
 }
