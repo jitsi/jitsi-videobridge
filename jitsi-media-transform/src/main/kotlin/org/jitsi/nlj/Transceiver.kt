@@ -203,7 +203,9 @@ class Transceiver(
      * Set the 'local' bridge SSRC to [ssrc] for [mediaType]
      */
     fun setLocalSsrc(mediaType: MediaType, ssrc: Long) {
-        rtpSender.setLocalSsrc(mediaType, ssrc)
+        val localSsrcSetEvent = SetLocalSsrcEvent(mediaType, ssrc)
+        rtpSender.handleEvent(localSsrcSetEvent)
+        rtpReceiver.handleEvent(localSsrcSetEvent)
     }
 
     fun receivesSsrc(ssrc: Long): Boolean = receiveSsrcs.contains(ssrc)

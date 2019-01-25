@@ -17,6 +17,7 @@ package org.jitsi.nlj
 
 import org.jitsi.nlj.format.PayloadType
 import org.jitsi.nlj.rtp.SsrcAssociationType
+import org.jitsi.service.neomedia.MediaType
 import org.jitsi.service.neomedia.RTPExtension
 import org.jitsi_modified.impl.neomedia.rtp.MediaStreamTrackDesc
 
@@ -43,3 +44,5 @@ class SsrcAssociationEvent(
 ) : Event
 
 class SetMediaStreamTracksEvent(val mediaStreamTrackDescs: Array<MediaStreamTrackDesc>) : Event
+
+class SetLocalSsrcEvent(val mediaType: MediaType, val ssrc: Long) : Event
