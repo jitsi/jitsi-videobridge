@@ -1014,7 +1014,7 @@ public class Videobridge
                     PayloadType pt = PayloadTypeUtil.create(ext);
                     logger.debug("Notifying ep " + epId
                             + " about payload type mapping: " + pt);
-                        ep.transceiver.addPayloadType(pt);
+                        ep.addPayloadType(pt);
                     });
             }
         });
