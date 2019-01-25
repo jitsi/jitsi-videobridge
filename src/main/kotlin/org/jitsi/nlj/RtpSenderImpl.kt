@@ -39,7 +39,6 @@ import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
 import org.jitsi.nlj.util.getLogger
-import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.rtcp.RtcpPacket
 import org.jitsi.service.neomedia.MediaType
 import org.jitsi.util.Logger
@@ -196,14 +195,6 @@ class RtpSenderImpl(
         keyframeRequester.requestKeyframe(mediaSsrc)
     }
 
-    override fun setLocalSsrc(mediaType: MediaType, ssrc: Long) {
-        when (mediaType) {
-            MediaType.VIDEO -> localVideoSsrc = ssrc
-            MediaType.AUDIO -> localAudioSsrc = ssrc
-            else -> {}
-        }
-    }
-
     private fun doWork() {
         while (running) {
             val now = System.currentTimeMillis()
@@ -226,6 +217,15 @@ class RtpSenderImpl(
     }
 
     override fun handleEvent(event: Event) {
+        when (event) {
+            is SetLocalSsrcEvent -> {
+                when (event.mediaType) {
+                    MediaType.VIDEO -> localVideoSsrc = event.ssrc
+                    MediaType.AUDIO -> localAudioSsrc = event.ssrc
+                    else -> {}
+                }
+            }
+        }
         outputPipelineTerminationNode.reverseVisit(NodeEventVisitor(event))
     }
 
