@@ -156,11 +156,6 @@ package org.jitsi.videobridge.cc;
 
          // How much padding do we need?
          long totalNeededBps = bitrateControllerStatus.currentIdealBps - bitrateControllerStatus.currentTargetBps;
-         if (logger.isDebugEnabled())
-         {
-             logger.debug("TEMP: bandwidth probing running: ideal = " + bitrateControllerStatus.currentIdealBps +
-                     "bps, target = " + bitrateControllerStatus.currentTargetBps + "bps");
-         }
          if (totalNeededBps < 1)
          {
              // Not much.
@@ -182,10 +177,6 @@ package org.jitsi.videobridge.cc;
          // How much padding can we afford?
          long maxPaddingBps = latestBweCopy - bitrateControllerStatus.currentTargetBps;
          long paddingBps = Math.min(totalNeededBps, maxPaddingBps);
-         if (logger.isDebugEnabled())
-         {
-             logger.debug("TEMP: bandwidth probing can send " + paddingBps + " bps");
-         }
 
          if (timeSeriesLogger.isTraceEnabled() && diagnosticContext != null)
          {
@@ -209,10 +200,6 @@ package org.jitsi.videobridge.cc;
          // XXX a signed int is practically sufficient, as it can represent up to
          // ~ 2GB
          int bytes = (int) (PADDING_PERIOD_MS * paddingBps / 1000 / 8);
-         if (logger.isDebugEnabled())
-         {
-             logger.debug("TEMP: probing will send " + bytes + " bytes this round");
-         }
 
          if (!bitrateControllerStatus.activeSsrcs.isEmpty())
          {
@@ -223,18 +210,10 @@ package org.jitsi.videobridge.cc;
                  bytes -= bytesSent;
                  if (bytes < 1)
                  {
-                     if (logger.isDebugEnabled())
-                     {
-                         logger.debug("TEMP: probing sent all data!");
-                     }
                      // We're done.
                      return;
                  }
              }
-         }
-         if (logger.isDebugEnabled())
-         {
-             logger.debug("TEMP: probing couldn't fulfill desired send, " + bytes + " bytes leftover");
          }
 
          //TODO(brian): if we still need this, it needs to be passed into JMT to the probingdatasender
