@@ -96,7 +96,8 @@ public class RtpChannelDatagramFilter
         int off = p.getOffset();
         int len = p.getLength();
 
-        if (RawPacket.isInvalid(buf, off, len))
+        // If isHeaderValid fails, this is not a valid RTP packet either.
+        if (!RTCPUtils.isHeaderValid(buf, off, len))
         {
             return acceptNonRtp && DTLSDatagramFilter.isDTLS(p);
         }
