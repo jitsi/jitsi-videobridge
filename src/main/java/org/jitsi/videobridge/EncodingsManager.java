@@ -18,6 +18,7 @@ package org.jitsi.videobridge;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.PayloadTypePacketExtension;
 import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.jitsi.nlj.rtp.*;
 
 import java.util.*;
 
@@ -36,12 +37,13 @@ public class EncodingsManager {
     private Map<String, List<SsrcAssociation>> ssrcAssociations = new HashMap<>();
     private Set<EncodingsUpdateListener> listeners = new ConcurrentHashSet<>();
 
-    public void addSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, String semantics) {
+    public void addSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, SsrcAssociationType type)
+    {
         List<SsrcAssociation> epSsrcAssociations = ssrcAssociations.computeIfAbsent(epId, k -> new ArrayList<>());
-        epSsrcAssociations.add(new SsrcAssociation(primarySsrc, secondarySsrc, semantics));
+        epSsrcAssociations.add(new SsrcAssociation(primarySsrc, secondarySsrc, type));
 
         listeners.forEach(listener -> {
-            listener.onNewSsrcAssociation(epId, primarySsrc, secondarySsrc, semantics);
+            listener.onNewSsrcAssociation(epId, primarySsrc, secondarySsrc, type);
         });
     }
 
@@ -54,24 +56,24 @@ public class EncodingsManager {
 
         ssrcAssociations.forEach((epId, ssrcAssociations) -> {
             ssrcAssociations.forEach(ssrcAssociation -> {
-                listener.onNewSsrcAssociation(epId, ssrcAssociation.primarySsrc, ssrcAssociation.secondarySsrc, ssrcAssociation.semantics);
+                listener.onNewSsrcAssociation(epId, ssrcAssociation.primarySsrc, ssrcAssociation.secondarySsrc, ssrcAssociation.type);
             });
         });
     }
 
     interface EncodingsUpdateListener {
-        void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, String semantics);
+        void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, SsrcAssociationType type);
     }
 
     private class SsrcAssociation {
         private long primarySsrc;
         private long secondarySsrc;
-        private String semantics;
+        private SsrcAssociationType type;
 
-        SsrcAssociation(long primarySsrc, long secondarySsrc, String semantics) {
+        SsrcAssociation(long primarySsrc, long secondarySsrc, SsrcAssociationType type) {
             this.primarySsrc = primarySsrc;
             this.secondarySsrc = secondarySsrc;
-            this.semantics = semantics;
+            this.type = type;
         }
     }
 

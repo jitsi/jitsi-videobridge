@@ -26,6 +26,7 @@ import org.ice4j.ice.harvest.*;
 import org.ice4j.stack.*;
 import org.jitsi.eventadmin.*;
 import org.jitsi.impl.neomedia.transform.*;
+import org.jitsi.nlj.rtp.*;
 import org.jitsi.osgi.*;
 import org.jitsi.service.configuration.*;
 import org.jitsi.service.libjitsi.*;
@@ -982,6 +983,22 @@ public class Videobridge
             });
         });
     }
+    private static SsrcAssociationType groupSemanticsToSsrcAssociationType(String sourceGroupSemantics)
+    {
+        if (sourceGroupSemantics.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FID))
+        {
+            return SsrcAssociationType.RTX;
+        }
+        else if (sourceGroupSemantics.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
+        {
+            return SsrcAssociationType.SIM;
+        }
+        else if (sourceGroupSemantics.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FEC))
+        {
+            return SsrcAssociationType.FEC;
+        }
+        return null;
+    }
 
     private void addSourceGroups(Map<String, List<SourceGroupPacketExtension>> epSourceGroups, Conference conference)
     {
@@ -989,19 +1006,17 @@ public class Videobridge
             currEpSourceGroups.forEach(srcGroup -> {
                 long primarySsrc = srcGroup.getSources().get(0).getSSRC();
                 long secondarySsrc = srcGroup.getSources().get(1).getSSRC();
-                // Translate FID -> RTX (Do it this way so it's effectively final and can be used in the lambda
-                // below)
-                String semantics =
-                        srcGroup.getSemantics().equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_FID) ? Constants.RTX : srcGroup.getSemantics();
-                if (!semantics.equalsIgnoreCase(SourceGroupPacketExtension.SEMANTICS_SIMULCAST))
-                {
-                    conference.encodingsManager.addSsrcAssociation(epId, primarySsrc, secondarySsrc, semantics);
-                }
 
+                //TODO(brian): we should move the fact that we don't care about SIM groups to a lower level
+                // (endpoint or transceiver)
+                SsrcAssociationType ssrcAssociationType = groupSemanticsToSsrcAssociationType(srcGroup.getSemantics());
+                if (ssrcAssociationType != null && ssrcAssociationType != SsrcAssociationType.SIM)
+                {
+                    conference.encodingsManager.addSsrcAssociation(epId, primarySsrc, secondarySsrc, ssrcAssociationType);
+                }
             });
         });
     }
-
 
     private void notifyEndpointsOfRtpHeaderExtensions(
             Map<String, List<RTPHdrExtPacketExtension>> epHeaderExtensions,

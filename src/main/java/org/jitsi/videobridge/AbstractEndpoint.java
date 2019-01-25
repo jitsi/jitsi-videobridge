@@ -145,8 +145,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     }
 
     @Override
-    public void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, String semantics) {
-        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
+    public void onNewSsrcAssociation(String epId, long primarySsrc, long secondarySsrc, SsrcAssociationType type) {
+        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, type);
     }
 
     void speechActivityEndpointsChanged(List<String> endpoints)
@@ -252,13 +252,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         System.out.println("TEMP: endpoint " + getID() + " adding receive ssrc " + ssrc);
         transceiver.addReceiveSsrc(ssrc);
-    }
-
-    // See onNewSsrcAssociation
-    @Deprecated
-    public void addSsrcAssociation(long primarySsrc, long secondarySsrc, String semantics)
-    {
-        transceiver.addSsrcAssociation(primarySsrc, secondarySsrc, semantics);
     }
 
     /**
