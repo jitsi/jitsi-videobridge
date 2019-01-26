@@ -27,7 +27,6 @@ import net.java.sip.communicator.util.*;
 import org.eclipse.jetty.server.*;
 import org.jitsi.rest.*;
 import org.jitsi.videobridge.*;
-import org.jitsi.videobridge.health.*;
 import org.jitsi.videobridge.stats.*;
 import org.jitsi.videobridge.xmpp.*;
 import org.jivesoftware.smack.packet.*;

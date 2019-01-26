@@ -737,7 +737,7 @@ public class BitrateController
         {
             int ssrc = trackBitrateAllocation.targetSSRC;
             logger.debug("TEMP: looking up or creating a track projection " +
-                    "for ssrc " + ssrc);
+                    "for ssrc " + (ssrc & 0xFFFF_FFFFL));
 
             AdaptiveTrackProjection adaptiveTrackProjection
                 = adaptiveTrackProjectionMap.get(ssrc & 0xFFFF_FFFFL);
