@@ -23,6 +23,7 @@ import org.jitsi.nlj.rtp.VideoRtpPacket
 import org.jitsi.nlj.rtp.codec.vp8.Vp8Packet
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.Node
+import org.jitsi.nlj.util.cdebug
 
 /**
  * Some [Vp8Packet] fields are not able to be determined by looking at a single VP8 packet (for example the spatial
@@ -44,6 +45,7 @@ class Vp8Parser : Node("Vp8 parser") {
                     pkt.spatialLayerIndex = ssrcToSpatialLayerQuality[pkt.header.ssrc] ?: -1
                 }
                 if (pkt.isKeyFrame) {
+                    logger.cdebug { "Received a keyframe for ssrc ${pkt.header.ssrc}" }
                     numKeyframes++
                 }
             }
