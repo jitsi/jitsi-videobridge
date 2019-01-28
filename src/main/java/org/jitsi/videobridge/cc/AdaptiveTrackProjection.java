@@ -189,6 +189,10 @@ public class AdaptiveTrackProjection
     {
         AdaptiveTrackProjectionContext
             contextCopy = getContext(RawPacket.getPayloadType(rtpPacket));
+        if (contextCopy == null)
+        {
+            return false;
+        }
 
         // XXX We want to let the context know that the stream has been
         // suspended so that it can raise the needsKeyframe flag and also allow
@@ -208,7 +212,9 @@ public class AdaptiveTrackProjection
         if (contextCopy.needsKeyframe()
             && targetIndexCopy > RTPEncodingDesc.SUSPENDED_INDEX)
         {
-            System.out.println("TEMP: adaptive track projection " + targetSsrc + " needs keyframe");
+            logger.debug(hashCode() + " TEMP: adaptive track projection " + targetSsrc + "(" +
+                            contextCopy.hashCode() + ") needs keyframe, " +
+                    "target index = " + targetIndexCopy);
             MediaStreamTrackDesc source = getSource();
             if (source != null)
             {
@@ -244,9 +250,15 @@ public class AdaptiveTrackProjection
     {
         if (context == null || contextPayloadType != payloadType)
         {
-            System.out.println("TEMP: adaptive track projection " + hashCode() +
+            logger.debug(hashCode() + " TEMP: adaptive track projection " + hashCode() +
                     " creating context for payload type " + payloadType);
             PayloadType pt = payloadTypes.get((byte)payloadType);
+            if (pt == null)
+            {
+                logger.error("No payload type object signalled for payload type " + payloadType + " yet, " +
+                        "cannot create track projection context");
+                return null;
+            }
             MediaStreamTrackDesc source = getSource();
             context = makeContext(source, pt);
             contextPayloadType = payloadType;
@@ -272,13 +284,17 @@ public class AdaptiveTrackProjection
     private static AdaptiveTrackProjectionContext makeContext(
         @NotNull MediaStreamTrackDesc track, @NotNull PayloadType payloadType)
     {
+        logger.info("Creating track projection context from track " + track + " and payload type " +
+                payloadType);
         if (payloadType instanceof Vp8PayloadType && track.getRTPEncodings().length > 1)
         {
+            logger.debug("Creating vp8 projection");
             long ssrc = track.getRTPEncodings()[0].getPrimarySSRC();
             return new VP8AdaptiveTrackProjectionContext(ssrc);
         }
         else
         {
+            logger.debug("Creating generic projection");
             return new GenericAdaptiveTrackProjectionContext(payloadType);
         }
     }
@@ -360,7 +376,7 @@ public class AdaptiveTrackProjection
 
     public void addPayloadType(PayloadType payloadType)
     {
-        logger.info("TEMP: adaptive track projection " + hashCode() +
+        logger.info(hashCode() + " TEMP: adaptive track projection " + hashCode() +
                 " adding payload type mapping " + payloadType);
         payloadTypes.put(payloadType.getPt(), payloadType);
     }

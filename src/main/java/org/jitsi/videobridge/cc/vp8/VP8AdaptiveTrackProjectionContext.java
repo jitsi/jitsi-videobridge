@@ -37,6 +37,8 @@ import java.util.concurrent.*;
 public class VP8AdaptiveTrackProjectionContext
     implements AdaptiveTrackProjectionContext
 {
+    private static final Logger logger
+            = Logger.getLogger(VP8AdaptiveTrackProjectionContext.class);
     /**
      * A map of partially transmitted {@link VP8FrameProjection}s, i.e.
      * projections of VP8 frames for which we haven't transmitted all their
@@ -315,11 +317,25 @@ public class VP8AdaptiveTrackProjectionContext
     {
         if (vp8QualityFilter.needsKeyframe())
         {
+            logger.debug(hashCode() + " TEMP: quality filter " + vp8QualityFilter.hashCode() + " says vp8 track needs keyframe");
             return true;
         }
 
         VP8Frame lastVP8Frame = lastVP8FrameProjection.getVP8Frame();
-        return lastVP8Frame == null || lastVP8Frame.needsKeyframe();
+        if (lastVP8Frame == null)
+        {
+            logger.debug(hashCode() + "TEMP: track projection last frame is null, needs keyframe");
+        }
+        else if (lastVP8Frame.needsKeyframe())
+        {
+            logger.debug(hashCode() + "TEMP: last vp8 frame says we need keyframe");
+        }
+        boolean result = lastVP8Frame == null || lastVP8Frame.needsKeyframe();
+        if (result)
+        {
+            logger.debug(hashCode() + "TEMP: vp8 track projection does need keyframe");
+        }
+        return result;
     }
 
     /**

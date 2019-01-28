@@ -247,6 +247,7 @@ class VP8QualityFilter
 
         if (DePacketizer.isKeyFrame(buf, payloadOff, payloadLen))
         {
+            logger.debug(hashCode() + " Quality filter got keyframe for stream " + firstPacketOfFrame.getSSRCAsLong());
             return acceptKeyframe(firstPacketOfFrame, nowMs);
         }
         else if (currentSpatialLayerId > SUSPENDED_LAYER_ID)
@@ -364,13 +365,14 @@ class VP8QualityFilter
         {
             // something went terribly wrong, normally we should be able to
             // extract the layer id from a keyframe.
+            logger.error(hashCode() + " unable to get layer id from keyframe");
             return false;
         }
 
         if (logger.isDebugEnabled())
         {
             logger.debug(
-                "Received a keyframe of spatial layer: " + spatialLayerIdOfKeyframe);
+                hashCode() + " Received a keyframe of spatial layer: " + spatialLayerIdOfKeyframe);
 
         }
 
@@ -389,7 +391,7 @@ class VP8QualityFilter
 
             if (logger.isDebugEnabled())
             {
-                logger.debug("First keyframe in this kf group " +
+                logger.debug(hashCode() + " First keyframe in this kf group " +
                     "currentSpatialLayerId: " + spatialLayerIdOfKeyframe +
                     ". Target is " + internalSpatialLayerIdTarget);
             }
@@ -421,7 +423,7 @@ class VP8QualityFilter
                 currentSpatialLayerId = spatialLayerIdOfKeyframe;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Upscaling to spatial layer "
+                    logger.debug(hashCode() + " Upscaling to spatial layer "
                         + spatialLayerIdOfKeyframe
                         + ". The target is " + internalSpatialLayerIdTarget);
                 }
@@ -434,7 +436,7 @@ class VP8QualityFilter
                 currentSpatialLayerId = spatialLayerIdOfKeyframe;
                 if (logger.isDebugEnabled())
                 {
-                    logger.debug("Downscaling to spatial layer "
+                    logger.debug(hashCode() + " Downscaling to spatial layer "
                         + spatialLayerIdOfKeyframe + ". The target is + "
                         + internalSpatialLayerIdTarget);
                 }
