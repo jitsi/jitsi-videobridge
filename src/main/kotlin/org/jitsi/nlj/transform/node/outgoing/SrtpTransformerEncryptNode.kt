@@ -17,12 +17,16 @@ package org.jitsi.nlj.transform.node.outgoing
 
 import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
+import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
+import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.toRawPacket
+import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.util.ByteBufferUtils
 
 class SrtpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTP Encrypt wrapper") {
+    private var numEncryptFailures = 0
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         pkts.forEach {
             val rp = it.packet.toRawPacket()
@@ -36,8 +40,19 @@ class SrtpTransformerEncryptNode : AbstractSrtpTransformerNode("SRTP Encrypt wra
                 )
                 // Change the PacketInfo to contain the new packet
                 it.packet = srtpPacket
+            } ?: run {
+                logger.cerror { "SRTP encryption failed for packet ${it.packetAs<RtpPacket>().header.ssrc} ${it.packetAs<RtpPacket>().header.sequenceNumber}" }
+                numEncryptFailures++
             }
         }
         return pkts
+    }
+
+    override fun getNodeStats(): NodeStatsBlock {
+        val parentStats = super.getNodeStats()
+        return NodeStatsBlock(name).apply {
+            addAll(parentStats)
+            addStat("num encrypt failures: $numEncryptFailures")
+        }
     }
 }
