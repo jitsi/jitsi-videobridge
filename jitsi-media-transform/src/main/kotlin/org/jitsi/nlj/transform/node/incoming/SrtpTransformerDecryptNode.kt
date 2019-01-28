@@ -19,19 +19,18 @@ import org.jitsi.impl.neomedia.transform.SinglePacketTransformer
 import org.jitsi.nlj.PacketInfo
 import org.jitsi.nlj.stats.NodeStatsBlock
 import org.jitsi.nlj.transform.node.AbstractSrtpTransformerNode
-import org.jitsi.nlj.util.cinfo
+import org.jitsi.nlj.util.cerror
+import org.jitsi.nlj.util.toRawPacket
 import org.jitsi.rtp.RtpPacket
 import org.jitsi.rtp.SrtpPacket
 import org.jitsi.rtp.util.ByteBufferUtils
-import org.jitsi.service.neomedia.RawPacket
 
 class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wrapper") {
     private var numDecryptFailures = 0
     override fun doTransform(pkts: List<PacketInfo>, transformer: SinglePacketTransformer): List<PacketInfo> {
         val decryptedPackets = mutableListOf<PacketInfo>()
         pkts.forEach {
-            val packetBuf = it.packet.getBuffer()
-            val rp = RawPacket(packetBuf.array(), packetBuf.arrayOffset(), packetBuf.limit())
+            val rp = it.packet.toRawPacket();
             transformer.reverseTransform(rp)?.let { decryptedRawPacket ->
                 val rtpPacket = RtpPacket(
                     ByteBufferUtils.wrapSubArray(
@@ -43,7 +42,7 @@ class SrtpTransformerDecryptNode : AbstractSrtpTransformerNode("SRTP decrypt wra
                 it.packet = rtpPacket
                 decryptedPackets.add(it)
             } ?: run {
-                logger.cinfo { "SRTP decryption failed for packet ${it.packetAs<SrtpPacket>().header.ssrc} ${it.packetAs<SrtpPacket>().header.sequenceNumber}" }
+                logger.cerror { "SRTP decryption failed for packet ${it.packetAs<SrtpPacket>().header.ssrc} ${it.packetAs<SrtpPacket>().header.sequenceNumber}" }
                 numDecryptFailures++
             }
         }
