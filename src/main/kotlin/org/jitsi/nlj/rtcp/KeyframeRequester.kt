@@ -34,12 +34,12 @@ import java.time.Duration
  * 3) Aggregation.  This class will pace outgoing requests such that we don't spam the sender
  */
 class KeyframeRequester : Node("Keyframe Requester") {
+    // Map a SSRC to the timestamp (in ms) of when we last requested a keyframe for it
+    private val keyframeRequests = mutableMapOf<Long, Long>()
+    private var firCommandSequenceNumber: Int = 0
     // Stats
     private var numKeyframesRequestedByBridge: Int = 0
     private var numKeyframeRequestsDropped: Int = 0
-
-    private var firCommandSequenceNumber: Int = 0
-    private var lastKeyframeRequestTimeMs: Long = 0
 
     override fun doProcessPackets(p: List<PacketInfo>) {
         //TODO: translation
@@ -50,13 +50,13 @@ class KeyframeRequester : Node("Keyframe Requester") {
     fun requestKeyframe(mediaSsrc: Long) {
         //TODO(brian): for now hardcode to send an FIR
         val now = System.currentTimeMillis()
-        if (now - lastKeyframeRequestTimeMs < 100) {
-            logger.cdebug { "Sent a keyframe less than 100ms ago, ignoring request" }
+        if (now - keyframeRequests.getOrDefault(mediaSsrc, 0) < 100) {
+            logger.cdebug { "Sent a keyframe request less than 100ms ago for $mediaSsrc, ignoring request" }
             numKeyframeRequestsDropped++
         } else {
-            lastKeyframeRequestTimeMs = now
+            keyframeRequests[mediaSsrc] = now
             val firPacket = RtcpFbFirPacket(mediaSourceSsrc = mediaSsrc, seqNum = firCommandSequenceNumber++)
-            logger.cdebug { "Keyframe requester requesting keyframe with FIR" }
+            logger.cdebug { "Keyframe requester requesting keyframe with FIR for $mediaSsrc" }
             numKeyframesRequestedByBridge++
             processPackets(listOf(PacketInfo(firPacket)))
         }
