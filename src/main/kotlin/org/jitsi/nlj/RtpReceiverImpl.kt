@@ -42,6 +42,7 @@ import org.jitsi.nlj.transform.node.incoming.VideoParser
 import org.jitsi.nlj.transform.node.incoming.Vp8Parser
 import org.jitsi.nlj.transform.packetPath
 import org.jitsi.nlj.transform.pipeline
+import org.jitsi.nlj.util.PacketInfoQueue
 import org.jitsi.nlj.util.Util.Companion.getMbps
 import org.jitsi.nlj.util.cerror
 import org.jitsi.nlj.util.cinfo
@@ -58,9 +59,7 @@ import org.jitsi.util.Logger
 import org.jitsi_modified.impl.neomedia.rtp.TransportCCEngine
 import java.time.Duration
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
 
 class RtpReceiverImpl @JvmOverloads constructor(
     val id: String,
@@ -87,7 +86,7 @@ class RtpReceiverImpl @JvmOverloads constructor(
     private val logger = getLogger(classLogger, logLevelDelegate)
     private var running: Boolean = true
     private val inputTreeRoot: Node
-    private val incomingPacketQueue = LinkedBlockingQueue<PacketInfo>()
+    private val incomingPacketQueue = PacketInfoQueue(id, executor, this::processPacket)
     private val srtpDecryptWrapper = SrtpTransformerDecryptNode()
     private val srtcpDecryptWrapper = SrtcpTransformerDecryptNode()
     private val tccGenerator = TccGeneratorNode(rtcpSender)
@@ -247,35 +246,33 @@ class RtpReceiverImpl @JvmOverloads constructor(
                 }
             }
         }
-        executor.execute(this::doWork)
     }
 
-    private fun doWork() {
-        while (running) {
+    private fun processPacket(packet: PacketInfo): Boolean {
+        if (running) {
             val now = System.currentTimeMillis()
             if (firstQueueReadTime == -1L) {
                 firstQueueReadTime = now
             }
             numQueueReads++
             lastQueueReadTime = now
-            incomingPacketQueue.poll(100, TimeUnit.MILLISECONDS)?.let {
-                it.addEvent(PACKET_QUEUE_EXIT_EVENT)
-                bytesProcessed += it.packet.size
-                packetsProcessed++
-                if (firstPacketProcessedTime == 0L) {
-                    firstPacketProcessedTime = System.currentTimeMillis()
-                }
-                lastPacketProcessedTime = System.currentTimeMillis()
-                processPackets(listOf(it))
+            packet.addEvent(PACKET_QUEUE_EXIT_EVENT)
+            bytesProcessed += packet.packet.size
+            packetsProcessed++
+            if (firstPacketProcessedTime == 0L) {
+                firstPacketProcessedTime = System.currentTimeMillis()
             }
+            lastPacketProcessedTime = System.currentTimeMillis()
+            processPackets(listOf(packet))
+            return true
         }
+        return false
     }
 
     override fun processPackets(pkts: List<PacketInfo>) = inputTreeRoot.processPackets(pkts)
 
     override fun getNodeStats(): NodeStatsBlock {
         return NodeStatsBlock("RTP receiver $id").apply {
-            addStat( "queue size: ${incomingPacketQueue.size}")
             addStat( "Received $packetsReceived packets ($bytesReceived bytes) in " + "${lastPacketWrittenTime - firstPacketWrittenTime}ms " + "(${getMbps(bytesReceived, Duration.ofMillis(lastPacketWrittenTime - firstPacketWrittenTime))} mbps)")
             addStat("Processed $packetsProcessed " + "(${(packetsProcessed / (packetsReceived.toDouble())) * 100}%) ($bytesProcessed bytes) in " + "${lastPacketProcessedTime - firstPacketProcessedTime}ms " + "(${getMbps(bytesProcessed, Duration.ofMillis(lastPacketProcessedTime - firstPacketProcessedTime))} mbps)")
             val queueReadTotal = lastQueueReadTime - firstQueueReadTime
