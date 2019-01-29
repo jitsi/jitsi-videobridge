@@ -97,7 +97,12 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     //Public for now since the channel needs to reach in and grab it
     public Transceiver transceiver;
-    private ExecutorService receiverExecutor;
+    //TODO(brian): a single threaded executor probably won't work for larger conferences, but if
+    // we can determine how much a thread can handle, we can use something to adjust the amount of
+    // threads at runtime (or maybe cached?  but using cached seems to result in using 1 thread per
+    // endpoint)
+    private static ExecutorService receiverExecutor =
+            Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver executor"));
     private ExecutorService senderExecutor;
     // We'll still continue to share a single background executor, as I think it's sufficient.
     // TODO: Though should investigate how many threads may be needed, and also verify we don't have any concurrency
@@ -118,7 +123,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.id = Objects.requireNonNull(id, "id");
         this.lastNFilter = new LastNFilter(id);
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
-        receiverExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver " + id + " executor"));
         senderExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Sender " + id + " executor"));
         transceiver = new Transceiver(getID(), receiverExecutor, senderExecutor, backgroundExecutor, logger);
         transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
@@ -382,11 +386,11 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     public void expire()
     {
         logger.info("Endpoint " + getID() + " expiring");
+        logger.info(UtilKt.getStackTrace());
         this.expired = true;
         this.transceiver.stop();
         try
         {
-            ExecutorUtilsKt.safeShutdown(receiverExecutor, Duration.ofSeconds(5));
             ExecutorUtilsKt.safeShutdown(senderExecutor, Duration.ofSeconds(5));
         }
         catch (ExecutorShutdownTimeoutException e)
