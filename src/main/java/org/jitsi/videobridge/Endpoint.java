@@ -242,7 +242,6 @@ public class Endpoint
     @Override
     public void propertyChange(PropertyChangeEvent evt)
     {
-        System.out.println("TEMP: endpoint " + getID() + " getting notified of an endpoints change");
         super.propertyChange(evt);
         if (Conference.ENDPOINTS_PROPERTY_NAME.equals(evt.getPropertyName()))
         {

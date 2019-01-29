@@ -951,8 +951,6 @@ public class Conference
                 try
                 {
                     transportManager = new IceDtlsTransportManager(channelBundleId, this);
-                    logger.info("BRIAN: CREATING NEW TRANSPORT MANAGER " + transportManager.hashCode() +
-                            " for bundle id " + channelBundleId + " from:\n" + UtilKt.getStackTrace());
                 }
                 catch (IOException ioe)
                 {

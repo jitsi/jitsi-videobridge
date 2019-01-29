@@ -231,7 +231,7 @@ public abstract class IceUdpTransportManager
 
         useComponentSocket
                 = cfg.getBoolean(USE_COMPONENT_SOCKET_PNAME, useComponentSocket);
-        classLogger.info("Using component socket: " + useComponentSocket);
+        logger.info("Using component socket: " + useComponentSocket);
 
         iceUfragPrefix = cfg.getString(ICE_UFRAG_PREFIX_PNAME, null);
         String strategyName = cfg.getString(KEEP_ALIVE_STRATEGY_PNAME);
@@ -239,7 +239,7 @@ public abstract class IceUdpTransportManager
                 = KeepAliveStrategy.fromString(strategyName);
         if (strategyName != null && strategy == null)
         {
-            classLogger.warn("Invalid keep alive strategy name: "
+            logger.warn("Invalid keep alive strategy name: "
                     + strategyName);
         }
         else if (strategy != null)

@@ -152,7 +152,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     void speechActivityEndpointsChanged(List<String> endpoints)
     {
-        System.out.println("Endpoint " + getID() + " got notified about active endpoints: " + endpoints);
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Endpoint " + getID() + " got notified about active endpoints: " + endpoints);
+        }
         lastNFilter.setEndpointsSortedByActivity(endpoints);
     }
 
@@ -252,7 +255,10 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     public void addReceiveSsrc(long ssrc)
     {
-        System.out.println("TEMP: endpoint " + getID() + " adding receive ssrc " + ssrc);
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("Endpoint " + getID() + " adding receive ssrc " + ssrc);
+        }
         transceiver.addReceiveSsrc(ssrc);
     }
 
@@ -271,8 +277,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         {
             channelShims.add(new WeakReference<>(channelShim));
         }
-        System.out.println("Endpoint added channel shim, now have " + channelShims.size() +
-                " channel shims");
     }
 
     public void removeChannel(ColibriShim.ChannelShim channelShim)
@@ -286,8 +290,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
                     i.remove();
                 }
             }
-            System.out.println("Endpoint removed channel shim, now have " + channelShims.size() +
-                    " channel shims");
             if (channelShims.isEmpty())
             {
                 expire();

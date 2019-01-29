@@ -61,12 +61,12 @@ public class ConferenceSpeechActivity
     private static final ExecutorService executorService
         = ExecutorUtils.newCachedThreadPool(true, "ConferenceSpeechActivity");
 
+    private static final Logger classLogger = Logger.getLogger(ConferenceSpeechActivity.class);
     /**
      * The <tt>Logger</tt> used by the <tt>ConferenceSpeechActivity</tt> class
      * and its instances to print debug information.
      */
-    private static final Logger logger
-        = Logger.getLogger(ConferenceSpeechActivity.class);
+    private final Logger logger;
 
     /**
      * Parses an <tt>Object</tt> as a synchronization source identifier (SSRC).
@@ -202,6 +202,7 @@ public class ConferenceSpeechActivity
     public ConferenceSpeechActivity(Conference conference)
     {
         this.conference = Objects.requireNonNull(conference, "conference");
+        logger = Logger.getLogger(classLogger, conference.getLogger());
 
         /*
          * The PropertyChangeListener will weakly reference this instance and
