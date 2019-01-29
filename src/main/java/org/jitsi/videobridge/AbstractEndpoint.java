@@ -200,18 +200,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     {
         // For now, just write every packet to every channel other than ourselves
         packetInfos.forEach(pktInfo -> {
-//            pktInfo.getMetaData().forEach((name, value) -> {
-//                if (name instanceof String && ((String) name).contains("TimeTag"))
-//                {
-//                    Long timestamp = (Long)value;
-//                    RtpPacket packet = (RtpPacket)pktInfo.getPacket();
-//                    logger.info("Packet " + packet.getHeader().getSsrc() + " " +
-//                            packet.getHeader().getSequenceNumber() + " took " +
-//                            (System.currentTimeMillis() - timestamp) + " ms to get through the" +
-//                            " receive pipeline");
-//                }
-//
-//            });
             getConference().getEndpointsFast().forEach(endpoint -> {
                 if (endpoint == this)
                 {
