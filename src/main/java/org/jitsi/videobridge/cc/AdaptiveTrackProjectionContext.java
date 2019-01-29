@@ -17,6 +17,7 @@ package org.jitsi.videobridge.cc;
 
 import org.jitsi.impl.neomedia.rtp.*;
 import org.jitsi.service.neomedia.*;
+import org.jitsi.service.neomedia.format.*;
 
 /**
  * Implementations of this interface are responsible for projecting a specific
@@ -81,4 +82,16 @@ public interface AdaptiveTrackProjectionContext
      * case it needs to be dropped.
      */
     boolean rewriteRtcp(RawPacket rtcpPacket);
+
+    /**
+     * @return the RTP state that describes the max sequence number, max
+     * timestamp and other RTP-level details.
+     */
+    RtpState getRtpState();
+
+    /**
+     * @return the {@link MediaFormat} of the RTP packets that this context
+     * processes.
+     */
+    MediaFormat getFormat();
 }
