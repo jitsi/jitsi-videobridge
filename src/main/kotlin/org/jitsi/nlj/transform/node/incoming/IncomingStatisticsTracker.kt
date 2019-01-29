@@ -308,7 +308,8 @@ class IncomingStreamStatistics(
                 seqNumCycles,
                 numExpectedPackets - previousSnapshot.numExpectedPackets,
                 cumulativePacketsLost - previousSnapshot.cumulativePacketsLost,
-                jitter
+                jitter,
+                bitrate
             )
         }
     }
