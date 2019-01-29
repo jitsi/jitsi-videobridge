@@ -506,8 +506,15 @@ public class Endpoint
             }
         });
         socket.listen();
-        onTransportManagerSet.thenRun(() -> {
+        // We don't want to block the calling thread on the onTransportManagerSet future completing
+        // to add the onDtlsHandshakeComplete handler, so we'll asynchronously run the code which
+        // adds the onDtlsHandshakeComplete handler from the IO pool.
+        onTransportManagerSet.thenRunAsync(() -> {
             ((IceDtlsTransportManager)transportManager).onDtlsHandshakeComplete(() -> {
+                // We don't want to block the thread calling onDtlsHandshakeComplete so run
+                // the socket acceptance in an IO pool thread
+                //TODO(brian): we should have a common 'notifier'/'publisher' interface that
+                // has notify/notifyAsync logic so we don't have to worry about this everywhere
                 ioPool.submit(() -> {
                     while (!socket.accept())
                     {
@@ -522,7 +529,7 @@ public class Endpoint
                     logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
                 });
             });
-        });
+        }, ioPool);
     }
 
     /**
