@@ -103,7 +103,8 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
     // endpoint)
     private static ExecutorService receiverExecutor =
             Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver executor"));
-    private ExecutorService senderExecutor;
+    private static ExecutorService senderExecutor =
+            Executors.newSingleThreadExecutor(new NameableThreadFactory("Sender executor"));
     // We'll still continue to share a single background executor, as I think it's sufficient.
     // TODO: Though should investigate how many threads may be needed, and also verify we don't have any concurrency
     // issues with the code using this pool
@@ -123,7 +124,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.id = Objects.requireNonNull(id, "id");
         this.lastNFilter = new LastNFilter(id);
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
-        senderExecutor = Executors.newSingleThreadExecutor(new NameableThreadFactory("Sender " + id + " executor"));
         transceiver = new Transceiver(getID(), receiverExecutor, senderExecutor, backgroundExecutor, logger);
         transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
         {
@@ -389,14 +389,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         logger.info(UtilKt.getStackTrace());
         this.expired = true;
         this.transceiver.stop();
-        try
-        {
-            ExecutorUtilsKt.safeShutdown(senderExecutor, Duration.ofSeconds(5));
-        }
-        catch (ExecutorShutdownTimeoutException e)
-        {
-            logger.error("Endpoint " + getID() + " had an error shutting down its exeuctors: " + e.toString());
-        }
         logger.info(transceiver.getNodeStats().prettyPrint(0));
 
         Conference conference = getConference();
