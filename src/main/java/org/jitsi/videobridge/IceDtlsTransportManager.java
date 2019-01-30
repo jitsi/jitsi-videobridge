@@ -432,42 +432,31 @@ public class IceDtlsTransportManager
         outgoingDtlsPipelineRoot.processPackets(Collections.singletonList(packet));
     }
 
-    // Start a thread for each transceiver.  Each thread will read from the transceiver's outgoing queue
-    // and send that data on the shared socket
-    // TODO(brian): because we dedicate a thread and block on the queue read, we have to be interrupted to shut
-    //  things down here, which isn't great.  It'd be nice to change this in the future, ideally to a scheme where
-    //  we try and read and, if there's nothing, we stop until data is written to the queue and then we schedule
-    //  a job to read from it again (like yura's changes in ice4j)
-    //TODO(change the transceiver's outgoing queue to be a PacketQueue and clean this up, since they'll
-    // sit on 'take' forever otherwise
+    /**
+     * Create a PacketQueue to hold the outgoing packets.  We'll install a handler which will
+     * synchronously add the outgoing packets into that queue, and handle packets from that
+     * point (send them out on the socket) in the IO_POOL
+     * @param s
+     */
     private void installTransceiverOutgoingPacketSenders(MultiplexingDatagramSocket s) {
-        TaskPools.IO_POOL.submit(() -> {
-            while (true) {
+        PacketInfoQueue outgoingQueue = new PacketInfoQueue(this.id, TaskPools.IO_POOL, pktInfo -> {
+            if (!closed)
+            {
+                Packet pkt = pktInfo.getPacket();
                 try
                 {
-                    PacketInfo pktInfo = transceiver.getOutgoingQueue().take();
-                    Packet pkt = pktInfo.getPacket();
                     s.send(new DatagramPacket(pkt.getBuffer().array(), pkt.getBuffer().arrayOffset(), pkt.getBuffer().limit()));
-                }
-                catch (SocketClosedException e)
+                } catch (IOException e)
                 {
-                    logger.info("Socket closed for local ufrag " + iceAgent.getLocalUfrag() + ", stopping writer");
-                    break;
+                    logger.error("Error sending on socket for local ufrag " + iceAgent.getLocalUfrag() +
+                            ", stopping writer");
+                    return false;
                 }
-                catch (InterruptedException e)
-                {
-                    logger.info("Socket writer for local ufrag " + iceAgent.getLocalUfrag() + ", interrupted, " +
-                            "stopping");
-                    break;
-                }
-                catch (IOException e)
-                {
-                    logger.error("Socket writer for local ufrag " + iceAgent.getLocalUfrag() + ", had " +
-                            "IO exception: " + e.toString() + ", stopping");
-                    break;
-                }
+                return true;
             }
+            return false;
         });
+        transceiver.setOutgoingPacketHandler(packets -> packets.forEach(outgoingQueue::add));
     }
 
     // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver

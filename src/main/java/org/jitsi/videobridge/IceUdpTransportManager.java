@@ -111,7 +111,7 @@ public abstract class IceUdpTransportManager
     /**
      * Whether this <tt>TransportManager</tt> has been closed.
      */
-    private boolean closed = false;
+    protected boolean closed = false;
 
     /**
      * The <tt>Conference</tt> object that this <tt>TransportManager</tt> is
