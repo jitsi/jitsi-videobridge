@@ -32,6 +32,7 @@ import org.jitsi.nlj.util.*;
 import org.jitsi.rtp.*;
 import org.jitsi.util.*;
 import org.jitsi.videobridge.transport.*;
+import org.jitsi.videobridge.util.*;
 
 import java.beans.*;
 import java.io.*;
@@ -56,8 +57,6 @@ public class IceDtlsTransportManager
             = Logger.getLogger(IceDtlsTransportManager.class);
     private final Logger logger;
     private final String ICE_STREAM_NAME;
-    //TODO: we use this for a few different things (dtls connect, socket read, socket write).  do we need it?
-    private ExecutorService executor;
     private DtlsClientStack dtlsStack = new DtlsClientStack();
     private DtlsReceiver dtlsReceiver = new DtlsReceiver(dtlsStack);
     private DtlsSender dtlsSender = new DtlsSender(dtlsStack);
@@ -104,7 +103,7 @@ public class IceDtlsTransportManager
         this.logger = Logger.getLogger(classLogger, conference.getLogger());
         this.id = id;
         this.ICE_STREAM_NAME = "ice-stream-" + id;
-        executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool-" + id));
+//        executor = Executors.newCachedThreadPool(new NameableThreadFactory("Transport manager threadpool-" + id));
         iceAgent.addStateChangeListener(this::iceAgentStateChange);
         logger.info("BRIAN: finished IceDtlsTransportManager ctor");
     }
@@ -439,8 +438,10 @@ public class IceDtlsTransportManager
     //  things down here, which isn't great.  It'd be nice to change this in the future, ideally to a scheme where
     //  we try and read and, if there's nothing, we stop until data is written to the queue and then we schedule
     //  a job to read from it again (like yura's changes in ice4j)
+    //TODO(change the transceiver's outgoing queue to be a PacketQueue and clean this up, since they'll
+    // sit on 'take' forever otherwise
     private void installTransceiverOutgoingPacketSenders(MultiplexingDatagramSocket s) {
-        executor.submit(() -> {
+        TaskPools.IO_POOL.submit(() -> {
             while (true) {
                 try
                 {
@@ -471,12 +472,12 @@ public class IceDtlsTransportManager
 
     // Start a thread to read from the socket.  Handle DTLS, forward srtp off to the transceiver
     private void installIncomingPacketReader(MultiplexingDatagramSocket s) {
-        //todo(brian): i'm not sure we'll want to run this via this executor.  this executor is intended for io
-        // operations, which this mainly is, but it does also do the work of handling the packets a bit (in the
-        // dtls case) so maybe should keep this to just io heavy part (reading from the queue)?
-        executor.submit(() -> {
+        //TODO(brian): this does a bit more than just read from the socket (does a bit of processing
+        // for each packet) but I think it's little enough (it'll only be a bit of the DTLS path)
+        // that running it in the IO pool is fine
+        TaskPools.IO_POOL.submit(() -> {
             byte[] buf = new byte[1500];
-            while (true) {
+            while (!closed) {
                 DatagramPacket p = new DatagramPacket(buf, 0, 1500);
                 try
                 {
@@ -539,7 +540,7 @@ public class IceDtlsTransportManager
 
         packetSender.socket = s;
         logger.info("BRIAN: transport manager " + this.hashCode() + " starting dtls");
-        executor.submit(() -> {
+        TaskPools.IO_POOL.submit(() -> {
             try {
                 dtlsStack.connect();
             }
@@ -648,15 +649,6 @@ public class IceDtlsTransportManager
             iceAgent.removeStateChangeListener(this::iceAgentStateChange);
         }
         super.close();
-        try
-        {
-            ExecutorUtilsKt.safeShutdown(executor, Duration.ofSeconds(5));
-        } catch (ExecutorShutdownTimeoutException e)
-        {
-            logger.error("Error shutting down transport manager " + id + ": " + e.toString());
-        } catch (Exception e) {
-            logger.error("Exception while shutting down: " + e.toString());
-        }
         logger.info("Closed transport manager " + id);
     }
 }

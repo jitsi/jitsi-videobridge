@@ -28,6 +28,7 @@ import org.jitsi.videobridge.datachannel.*;
 import org.jitsi.videobridge.datachannel.protocol.*;
 import org.jitsi.videobridge.rest.*;
 import org.jitsi.videobridge.sctp.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.sctp4j.*;
 import org.jitsi_modified.service.neomedia.rtp.*;
 
@@ -115,12 +116,6 @@ public class Endpoint
     //TODO(brian): align the recurringrunnable stuff with whatever we end up doing with all the other executors
     private static final RecurringRunnableExecutor recurringRunnableExecutor =
             new RecurringRunnableExecutor(Endpoint.class.getSimpleName());
-
-    /**
-     * Pool shared by all endpoint instances for IO tasks
-     */
-    private static final ExecutorService ioPool =
-            Executors.newCachedThreadPool(new NameableThreadFactory("Endpoint ioPool"));
 
     private void requestKeyframe(long ssrc)
     {
@@ -317,6 +312,11 @@ public class Endpoint
         if (packet instanceof VideoRtpPacket)
         {
             packets[0] = PacketExtensionsKt.toRawPacket(packet);
+            //TODO(brian): we lose all information in packetinfo here, unfortunately, because
+            // the bitratecontroller can return more than/less than what was passed in (and in
+            // different order) so we can't just reassign a transformed packet back into its
+            // proper packetinfo.  need to change those classes to work with the new packet
+            // types
             RawPacket[] res = bitrateController.getRTPTransformer().transform(packets);
             for (RawPacket pkt : res)
             {
@@ -449,7 +449,7 @@ public class Endpoint
             logger.info("Endpoint " + getID() + " dtls handshake is complete, starting a reader for incoming SCTP" +
                     " packets");
             //TODO(brian): i think this work is not that CPU intensive, so using the IO pool is ok?
-            ioPool.submit(this::readIncomingSctpPackets);
+            TaskPools.IO_POOL.submit(this::readIncomingSctpPackets);
         });
 
         ((IceDtlsTransportManager)transportManager).setTransceiver(this.transceiver);
@@ -515,7 +515,7 @@ public class Endpoint
                 // the socket acceptance in an IO pool thread
                 //TODO(brian): we should have a common 'notifier'/'publisher' interface that
                 // has notify/notifyAsync logic so we don't have to worry about this everywhere
-                ioPool.submit(() -> {
+                TaskPools.IO_POOL.submit(() -> {
                     while (!socket.accept())
                     {
                         try
@@ -529,7 +529,7 @@ public class Endpoint
                     logger.info("SCTP socket " + socket.hashCode() + " accepted connection");
                 });
             });
-        }, ioPool);
+        }, TaskPools.IO_POOL);
     }
 
     /**

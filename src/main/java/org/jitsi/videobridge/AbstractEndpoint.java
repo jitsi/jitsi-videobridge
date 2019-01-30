@@ -26,6 +26,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.format.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.util.*;
 import org.jitsi_modified.impl.neomedia.rtp.*;
 
 import java.beans.*;
@@ -97,20 +98,6 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
 
     //Public for now since the channel needs to reach in and grab it
     public Transceiver transceiver;
-    //TODO(brian): a single threaded executor probably won't work for larger conferences, but if
-    // we can determine how much a thread can handle, we can use something to adjust the amount of
-    // threads at runtime (or maybe cached?  but using cached seems to result in using 1 thread per
-    // endpoint)
-    private static ExecutorService receiverExecutor =
-            Executors.newSingleThreadExecutor(new NameableThreadFactory("Receiver executor"));
-    private static ExecutorService senderExecutor =
-            Executors.newSingleThreadExecutor(new NameableThreadFactory("Sender executor"));
-    // We'll still continue to share a single background executor, as I think it's sufficient.
-    // TODO: Though should investigate how many threads may be needed, and also verify we don't have any concurrency
-    // issues with the code using this pool
-    private static ScheduledExecutorService backgroundExecutor =
-            Executors.newScheduledThreadPool(1, new NameableThreadFactory("Background transceiver thread"));
-
     /**
      * Initializes a new {@link AbstractEndpoint} instance.
      * @param conference the {@link Conference} which this endpoint is to be a
@@ -124,7 +111,7 @@ public abstract class AbstractEndpoint extends PropertyChangeNotifier
         this.id = Objects.requireNonNull(id, "id");
         this.lastNFilter = new LastNFilter(id);
         loggingId = conference.getLoggingId() + ",endp_id=" + id;
-        transceiver = new Transceiver(getID(), receiverExecutor, senderExecutor, backgroundExecutor, logger);
+        transceiver = new Transceiver(getID(), TaskPools.CPU_POOL, TaskPools.CPU_POOL, TaskPools.SCHEDULED_POOL, logger);
         transceiver.setIncomingRtpHandler(new Node("RTP receiver chain handler")
         {
             @Override

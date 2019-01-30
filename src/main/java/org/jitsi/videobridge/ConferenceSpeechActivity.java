@@ -20,6 +20,7 @@ import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.event.*;
 import org.jitsi.util.*;
 import org.jitsi.util.event.*;
+import org.jitsi.videobridge.util.*;
 import org.json.simple.*;
 
 import java.beans.*;
@@ -54,12 +55,6 @@ public class ConferenceSpeechActivity
      */
     public static final String ENDPOINTS_PROPERTY_NAME
         = ConferenceSpeechActivity.class.getName() + ".endpoints";
-
-    /**
-     * The pool of threads utilized by <tt>ConferenceSpeechActivity</tt>.
-     */
-    private static final ExecutorService executorService
-        = ExecutorUtils.newCachedThreadPool(true, "ConferenceSpeechActivity");
 
     private static final Logger classLogger = Logger.getLogger(ConferenceSpeechActivity.class);
     /**
@@ -522,6 +517,6 @@ public class ConferenceSpeechActivity
 
     private void postPropertyChange(String property, Object oldValue, Object newValue)
     {
-        executorService.submit(() -> firePropertyChange(property, oldValue, newValue));
+        TaskPools.IO_POOL.submit(() -> firePropertyChange(property, oldValue, newValue));
     }
 }
